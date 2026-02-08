@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.7';
+const VERSION = '0.6.8';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -413,7 +413,7 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   }
 
   // Handle session expired - retry
-  if (data.error?.code === 'invalid_session' || data.error?.code === 'session_expired') {
+  if (data.error?.code === 'session_invalid' || data.error?.code === 'invalid_session' || data.error?.code === 'session_expired') {
     if (DEBUG) console.log(`${c.dim}[DEBUG] Session expired, creating new session...${c.reset}`);
     const oldSession = await loadSession();
     const newSession = await createSession();
