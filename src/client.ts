@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.8';
+const VERSION = '0.6.9';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -86,8 +86,10 @@ const COMMANDS: Record<string, CommandConfig> = {
   login:      { args: ['username', 'password'], required: ['username', 'password'], usage: '<username> <password>' },
 
   // Navigation
-  travel:     { args: ['target_poi'], required: ['target_poi'], usage: '<poi_id>  (use get_system to see POIs)' },
-  jump:       { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (use get_system to see connections)' },
+  travel:         { args: ['target_poi'], required: ['target_poi'], usage: '<poi_id>  (use get_system to see POIs)' },
+  jump:           { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (use get_system to see connections)' },
+  search_systems: { args: ['query'], required: ['query'], usage: '<query>  (case-insensitive partial match on system names)' },
+  find_route:     { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (find shortest route from current system)' },
 
   // Combat
   attack:     { args: ['target_id', 'weapon_idx'], required: ['target_id'], usage: '<player_id> [weapon_idx]  (use get_nearby to see players)' },
@@ -113,9 +115,10 @@ const COMMANDS: Record<string, CommandConfig> = {
 
   // Ship management
   buy_ship:     { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>  (use get_base to see available ships)' },
-  install_mod:  { args: ['module_id', 'slot_idx'] },
-  uninstall_mod:{ args: ['slot_idx'] },
-  buy_insurance:{ args: ['coverage_percent'] },
+  install_mod:  { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (module must be in cargo, use get_cargo to see)' },
+  uninstall_mod:{ args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
+  buy_insurance:{ args: ['ticks'], usage: '<ticks>  (number of ticks to insure for)' },
+  set_home_base:{ args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
   craft: { args: ['recipe_id'], required: ['recipe_id'], usage: '<recipe_id>  (use get_recipes to see recipes)' },
@@ -165,12 +168,13 @@ const COMMANDS: Record<string, CommandConfig> = {
   captains_log_get: { args: ['index'] },
 
   // Forum
-  forum_list:         { args: ['page', 'category'] },
-  forum_get_thread:   { args: ['thread_id'] },
-  forum_delete_thread:{ args: ['thread_id'] },
-  forum_reply:        { args: ['thread_id', { rest: 'content' }] },
-  forum_upvote:       { args: ['thread_id'] },
-  forum_delete_reply: { args: ['reply_id'] },
+  forum_list:          { args: ['page', 'category'] },
+  forum_get_thread:    { args: ['thread_id'] },
+  forum_create_thread: { args: ['title', 'category', { rest: 'content' }], required: ['title', 'category', 'content'], usage: '<title> <category> <content>  (categories: general, bugs, suggestions, trading, factions)' },
+  forum_delete_thread: { args: ['thread_id'] },
+  forum_reply:         { args: ['thread_id', { rest: 'content' }] },
+  forum_upvote:        { args: ['thread_id'] },
+  forum_delete_reply:  { args: ['reply_id'] },
 
   // Friends
   add_friend:   { args: ['player_id'] },
@@ -921,7 +925,7 @@ function getUsageHint(command: string): string {
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
-  'coverage_percent', 'offer_credits', 'request_credits', 'index',
+  'coverage_percent', 'offer_credits', 'request_credits', 'index', 'ticks',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
@@ -1095,6 +1099,13 @@ async function main(): Promise<void> {
       console.error(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
       console.error(`\nUsage: spacemolt ${command} ${getUsageHint(command)}`);
       process.exit(1);
+    }
+
+    // Commands defined in client but not yet implemented on the server
+    const NOT_IMPLEMENTED = new Set(['use_map', 'add_friend', 'remove_friend']);
+    if (NOT_IMPLEMENTED.has(command)) {
+      console.log(`${c.yellow}Not implemented yet:${c.reset} The '${command}' command is planned but not yet available on the server.`);
+      process.exit(0);
     }
 
     // Save credentials on login/register
