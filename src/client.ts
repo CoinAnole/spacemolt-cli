@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.9';
+const VERSION = '0.6.10';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -84,41 +84,54 @@ const COMMANDS: Record<string, CommandConfig> = {
   // Authentication
   register:   { args: ['username', 'empire'], required: ['username', 'empire'], usage: '<username> <empire>  (empires: solarian, voidborn, crimson, nebula, outerrim)' },
   login:      { args: ['username', 'password'], required: ['username', 'password'], usage: '<username> <password>' },
+  logout:     {},
 
   // Navigation
   travel:         { args: ['target_poi'], required: ['target_poi'], usage: '<poi_id>  (use get_system to see POIs)' },
   jump:           { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (use get_system to see connections)' },
+  dock:           {},
+  undock:         {},
   search_systems: { args: ['query'], required: ['query'], usage: '<query>  (case-insensitive partial match on system names)' },
   find_route:     { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (find shortest route from current system)' },
 
+  // Mining
+  mine: {},
+
   // Combat
-  attack:     { args: ['target_id', 'weapon_idx'], required: ['target_id'], usage: '<player_id> [weapon_idx]  (use get_nearby to see players)' },
-  scan:       { args: ['target_id'], required: ['target_id'], usage: '<player_id>' },
-  cloak:      { args: ['enable'] },
+  attack:        { args: ['target_id', 'weapon_idx'], required: ['target_id'], usage: '<player_id> [weapon_idx]  (use get_nearby to see players)' },
+  scan:          { args: ['target_id'], required: ['target_id'], usage: '<player_id>' },
+  cloak:         { args: ['enable'] },
+  self_destruct: {},
 
   // Trading
-  sell:       { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_cargo to see items)' },
-  buy:        { args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>  (use get_listings to see market)' },
-  buy_listing:{ args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>' },
-  list_item:  { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>' },
-  cancel_list:{ args: ['listing_id'] },
+  sell:        { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_cargo to see items)' },
+  buy:         { args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>  (use get_listings to see market)' },
+  buy_listing: { args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>' },
+  list_item:   { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>' },
+  cancel_list: { args: ['listing_id'] },
 
   // P2P Trading
-  trade_offer:  { args: ['target_id', 'offer_credits', 'request_credits'], required: ['target_id'], usage: '<player_id> [offer_credits] [request_credits]' },
-  trade_accept: { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>  (use get_trades to see offers)' },
-  trade_decline:{ args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
-  trade_cancel: { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
+  trade_offer:   { args: ['target_id', 'offer_credits', 'request_credits'], required: ['target_id'], usage: '<player_id> [offer_credits] [request_credits]' },
+  trade_accept:  { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>  (use get_trades to see offers)' },
+  trade_decline: { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
+  trade_cancel:  { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
 
   // Wrecks
-  loot_wreck:   { args: ['wreck_id', 'item_id', 'quantity'], required: ['wreck_id', 'item_id'], usage: '<wreck_id> <item_id> [quantity]  (use get_wrecks to see wrecks)' },
-  salvage_wreck:{ args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>' },
+  loot_wreck:    { args: ['wreck_id', 'item_id', 'quantity'], required: ['wreck_id', 'item_id'], usage: '<wreck_id> <item_id> [quantity]  (use get_wrecks to see wrecks)' },
+  salvage_wreck: { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>' },
 
   // Ship management
-  buy_ship:     { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>  (use get_base to see available ships)' },
-  install_mod:  { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (module must be in cargo, use get_cargo to see)' },
-  uninstall_mod:{ args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
-  buy_insurance:{ args: ['ticks'], usage: '<ticks>  (number of ticks to insure for)' },
-  set_home_base:{ args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
+  buy_ship:      { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>  (use get_base to see available ships)' },
+  sell_ship:     {},
+  install_mod:   { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (module must be in cargo, use get_cargo to see)' },
+  uninstall_mod: { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
+  refuel:        {},
+  repair:        {},
+
+  // Insurance
+  buy_insurance:  { args: ['ticks'], usage: '<ticks>  (number of ticks to insure for)' },
+  claim_insurance:{},
+  set_home_base:  { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
   craft: { args: ['recipe_id'], required: ['recipe_id'], usage: '<recipe_id>  (use get_recipes to see recipes)' },
@@ -127,45 +140,58 @@ const COMMANDS: Record<string, CommandConfig> = {
   chat: { args: ['channel', { rest: 'content' }], required: ['channel', 'content'], usage: '<channel> <message>  (channels: local, system, faction, private)' },
 
   // Factions
-  create_faction:       { args: ['name', 'tag'], required: ['name', 'tag'], usage: '<name> <tag>  (tag is 4 characters)' },
-  join_faction:         { args: ['faction_id'] },
-  faction_info:         { args: ['faction_id'] },
+  create_faction:        { args: ['name', 'tag'], required: ['name', 'tag'], usage: '<name> <tag>  (tag is 4 characters)' },
+  join_faction:          { args: ['faction_id'] },
+  leave_faction:         {},
+  faction_info:          { args: ['faction_id'] },
+  faction_list:          { args: ['limit', 'offset'] },
+  faction_get_invites:   {},
   faction_decline_invite:{ args: ['faction_id'] },
-  faction_set_ally:     { args: ['target_faction_id'] },
-  faction_set_enemy:    { args: ['target_faction_id'] },
-  faction_declare_war:  { args: ['target_faction_id'] },
-  faction_propose_peace:{ args: ['target_faction_id'] },
-  faction_accept_peace: { args: ['target_faction_id'] },
-  faction_invite:       { args: ['player_id'] },
-  faction_kick:         { args: ['player_id'] },
-  faction_promote:      { args: ['player_id', 'role_id'] },
+  faction_set_ally:      { args: ['target_faction_id'] },
+  faction_set_enemy:     { args: ['target_faction_id'] },
+  faction_declare_war:   { args: ['target_faction_id'] },
+  faction_propose_peace: { args: ['target_faction_id'] },
+  faction_accept_peace:  { args: ['target_faction_id'] },
+  faction_invite:        { args: ['player_id'] },
+  faction_kick:          { args: ['player_id'] },
+  faction_promote:       { args: ['player_id', 'role_id'] },
 
   // Player settings
-  set_status:   { args: ['status_message', 'clan_tag'] },
-  set_colors:   { args: ['primary_color', 'secondary_color'] },
-  set_anonymous:{ args: ['anonymous'] },
+  set_status:    { args: ['status_message', 'clan_tag'] },
+  set_colors:    { args: ['primary_color', 'secondary_color'] },
+  set_anonymous: { args: ['anonymous'] },
 
-  // Maps and notes
-  get_map:    { args: ['system_id'] },
-  use_map:    { args: ['map_item_id'] },
-  read_note:  { args: ['note_id'] },
-  write_note: { args: ['note_id', { rest: 'content' }] },
-  create_note:{ args: ['title', { rest: 'content' }] },
+  // Notes
+  create_note: { args: ['title', { rest: 'content' }] },
+  write_note:  { args: ['note_id', { rest: 'content' }] },
+  read_note:   { args: ['note_id'] },
+  get_notes:   {},
+
+  // Maps (not yet implemented on server)
+  get_map:  { args: ['system_id'] },
+  use_map:  { args: ['map_item_id'] },
 
   // Drones
   deploy_drone: { args: ['drone_item_id', 'target_id'] },
   recall_drone: { args: ['drone_id'] },  // Special: 'all' -> { all: 'true' }
   order_drone:  { args: ['command', 'target_id'] },
+  get_drones:   {},
 
-  // Base building/raiding
-  build_base:       { args: ['name', 'type'] },
-  attack_base:      { args: ['base_id'] },
-  loot_base_wreck:  { args: ['wreck_id', 'item_id', 'quantity'] },
-  salvage_base_wreck:{ args: ['wreck_id'] },
+  // Base building
+  build_base:    { args: ['name', 'type'] },
+  get_base_cost: {},
+
+  // Base raiding
+  attack_base:        { args: ['base_id'] },
+  raid_status:        {},
+  get_base_wrecks:    {},
+  loot_base_wreck:    { args: ['wreck_id', 'item_id', 'quantity'] },
+  salvage_base_wreck: { args: ['wreck_id'] },
 
   // Captain's log
-  captains_log_add: { args: [{ rest: 'entry' }] },
-  captains_log_get: { args: ['index'] },
+  captains_log_add:  { args: [{ rest: 'entry' }] },
+  captains_log_list: {},
+  captains_log_get:  { args: ['index'] },
 
   // Forum
   forum_list:          { args: ['page', 'category'] },
@@ -176,17 +202,36 @@ const COMMANDS: Record<string, CommandConfig> = {
   forum_upvote:        { args: ['thread_id'] },
   forum_delete_reply:  { args: ['reply_id'] },
 
-  // Friends
-  add_friend:   { args: ['player_id'] },
-  remove_friend:{ args: ['player_id'] },
+  // Friends (not yet implemented on server)
+  add_friend:    { args: ['player_id'] },
+  remove_friend: { args: ['player_id'] },
 
   // Missions
-  accept_mission:  { args: ['mission_id'] },
-  complete_mission:{ args: ['mission_id'] },
-  abandon_mission: { args: ['mission_id'] },
+  get_missions:       {},
+  get_active_missions:{},
+  accept_mission:     { args: ['mission_id'] },
+  complete_mission:   { args: ['mission_id'] },
+  abandon_mission:    { args: ['mission_id'] },
 
-  // Jettison
+  // Cargo
   jettison: { args: ['item_id', 'quantity'] },
+
+  // Query commands
+  get_status:   {},
+  get_system:   {},
+  get_poi:      {},
+  get_base:     {},
+  get_ship:     {},
+  get_ships:    {},
+  get_cargo:    {},
+  get_nearby:   {},
+  get_skills:   {},
+  get_recipes:  {},
+  get_listings: {},
+  get_trades:   {},
+  get_wrecks:   {},
+  get_version:  {},
+  get_commands: {},
 
   // Help
   help: { args: ['topic'] },
@@ -227,9 +272,13 @@ const ERROR_HELP: Record<string, string> = {
 // Version Update Check
 // =============================================================================
 
+const UPDATE_NOTIFY_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours between update notifications
+
 interface UpdateCheckCache {
   checked_at: string;
   latest_version: string;
+  notified_at?: string;       // when we last showed the update notice
+  notified_version?: string;  // which version we last notified about
 }
 
 function getUpdateCachePath(): string {
@@ -270,41 +319,52 @@ async function checkForUpdates(): Promise<void> {
 
   try {
     // Check cache to avoid spamming GitHub API
-    const cache = await loadUpdateCache();
+    let cache = await loadUpdateCache();
+    let latestVersion: string | null = null;
+
     if (cache) {
       const lastCheck = new Date(cache.checked_at).getTime();
       if (Date.now() - lastCheck < UPDATE_CHECK_INTERVAL_MS) {
         // Use cached result
-        if (compareVersions(VERSION, cache.latest_version) > 0) {
-          printUpdateNotice(cache.latest_version);
-        }
-        return;
+        latestVersion = cache.latest_version;
       }
     }
 
-    // Fetch latest release from GitHub
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
-      signal: AbortSignal.timeout(3000), // 3 second timeout
-    });
+    // Fetch from GitHub if cache is stale or missing
+    if (!latestVersion) {
+      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+        headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
+        signal: AbortSignal.timeout(3000), // 3 second timeout
+      });
 
-    if (!response.ok) {
-      if (DEBUG) console.log(`${c.dim}[DEBUG] Update check failed: HTTP ${response.status}${c.reset}`);
-      return;
+      if (!response.ok) {
+        if (DEBUG) console.log(`${c.dim}[DEBUG] Update check failed: HTTP ${response.status}${c.reset}`);
+        return;
+      }
+
+      const release = await response.json() as { tag_name: string };
+      latestVersion = release.tag_name.replace(/^v/, '');
+
+      // Update cache with fresh check time
+      cache = { ...cache, checked_at: new Date().toISOString(), latest_version: latestVersion } as UpdateCheckCache;
+      await saveUpdateCache(cache);
     }
 
-    const release = await response.json() as { tag_name: string };
-    const latestVersion = release.tag_name.replace(/^v/, '');
-
-    // Save to cache
-    await saveUpdateCache({
-      checked_at: new Date().toISOString(),
-      latest_version: latestVersion,
-    });
-
     // Check if update is available
-    if (compareVersions(VERSION, latestVersion) > 0) {
+    if (compareVersions(VERSION, latestVersion) <= 0) return;
+
+    // Only show notification if we haven't recently notified about this version
+    const isNewVersion = cache?.notified_version !== latestVersion;
+    const lastNotified = cache?.notified_at ? new Date(cache.notified_at).getTime() : 0;
+    const notifyExpired = Date.now() - lastNotified > UPDATE_NOTIFY_INTERVAL_MS;
+
+    if (isNewVersion || notifyExpired) {
       printUpdateNotice(latestVersion);
+      await saveUpdateCache({
+        ...cache!,
+        notified_at: new Date().toISOString(),
+        notified_version: latestVersion,
+      });
     }
   } catch (error) {
     // Silently ignore update check failures - don't disrupt the user's workflow
