@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.10';
+const VERSION = '0.6.11';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -105,7 +105,7 @@ const COMMANDS: Record<string, CommandConfig> = {
 
   // Trading
   sell:        { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_cargo to see items)' },
-  buy:         { args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>  (use get_listings to see market)' },
+  buy:         { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (use get_listings to see market)' },
   buy_listing: { args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>' },
   list_item:   { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>' },
   cancel_list: { args: ['listing_id'] },
@@ -1073,7 +1073,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   ${c.cyan}Mining & Trading:${c.reset}
     mine                      Mine at asteroid belt
     sell <item_id> <qty>      Sell to NPC market
-    buy <listing_id> <qty>    Buy from market
+    buy <item_id> [qty]       Buy from market
     refuel                    Refuel at station
     repair                    Repair at station
 
