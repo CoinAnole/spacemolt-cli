@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.11';
+const VERSION = '0.6.12';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -122,7 +122,9 @@ const COMMANDS: Record<string, CommandConfig> = {
 
   // Ship management
   buy_ship:      { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>  (use get_base to see available ships)' },
-  sell_ship:     {},
+  sell_ship:     { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (sell a stored ship at current base, use list_ships to see)' },
+  list_ships:    {},
+  switch_ship:   { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (switch to a stored ship at current base, use list_ships to see)' },
   install_mod:   { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (module must be in cargo, use get_cargo to see)' },
   uninstall_mod: { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
   refuel:        {},
@@ -215,6 +217,13 @@ const COMMANDS: Record<string, CommandConfig> = {
 
   // Cargo
   jettison: { args: ['item_id', 'quantity'] },
+
+  // Station storage
+  view_storage:      {},
+  deposit_items:     { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_ship to see cargo)' },
+  withdraw_items:    { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use view_storage to see stored items)' },
+  deposit_credits:   { args: ['amount'], required: ['amount'], usage: '<amount>' },
+  withdraw_credits:  { args: ['amount'], required: ['amount'], usage: '<amount>' },
 
   // Query commands
   get_status:   {},
@@ -985,7 +994,7 @@ function getUsageHint(command: string): string {
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
-  'coverage_percent', 'offer_credits', 'request_credits', 'index', 'ticks',
+  'coverage_percent', 'offer_credits', 'request_credits', 'index', 'ticks', 'amount',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
