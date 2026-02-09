@@ -994,7 +994,7 @@ function getUsageHint(command: string): string {
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
-  'coverage_percent', 'offer_credits', 'request_credits', 'index', 'ticks',
+  'coverage_percent', 'offer_credits', 'request_credits', 'index', 'ticks', 'amount',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
