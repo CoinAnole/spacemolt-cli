@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.13';
+const VERSION = '0.6.14';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -225,6 +225,15 @@ const COMMANDS: Record<string, CommandConfig> = {
   deposit_credits:   { args: ['amount'], required: ['amount'], usage: '<amount>' },
   withdraw_credits:  { args: ['amount'], required: ['amount'], usage: '<amount>' },
   send_gift:         { args: ['recipient', 'item_id', 'quantity', 'credits', 'message'], required: ['recipient'], usage: '<recipient> [item_id=... quantity=...] [credits=...] [message="..."]  (async transfer to their storage here)' },
+
+  // Exchange
+  create_sell_order: { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>  (list items for sale)' },
+  create_buy_order:  { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>  (place a buy offer)' },
+  view_market:       { args: ['item_id'], usage: '[item_id]  (view order book, optionally filtered)' },
+  view_orders:       {},
+  cancel_order:      { args: ['order_id'], required: ['order_id'], usage: '<order_id>  (cancel and return escrow)' },
+  modify_order:      { args: ['order_id', 'new_price'], required: ['order_id', 'new_price'], usage: '<order_id> <new_price>  (change price on existing order)' },
+  estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
 
   // Query commands
   get_status:   {},
@@ -890,7 +899,7 @@ const resultFormatters: ResultFormatter[] = [
       console.log(`\n(No listings at this market)`);
     } else {
       for (const listing of listings) {
-        const seller = listing.seller_name || listing.seller_id || 'NPC';
+        const seller = listing.seller_name || listing.seller || listing.seller_id || 'NPC';
         console.log(`\n  ${listing.item_id}: ${listing.quantity} @ ${listing.price_each} each`);
         console.log(`    Listing ID: ${listing.listing_id}`);
         console.log(`    Seller: ${seller}`);
@@ -994,7 +1003,7 @@ function getUsageHint(command: string): string {
 
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
-  'quantity', 'price_each', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
+  'quantity', 'price_each', 'new_price', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
   'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount',
 ]);
 
