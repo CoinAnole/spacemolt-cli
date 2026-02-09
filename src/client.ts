@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.12';
+const VERSION = '0.6.13';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -224,6 +224,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   withdraw_items:    { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use view_storage to see stored items)' },
   deposit_credits:   { args: ['amount'], required: ['amount'], usage: '<amount>' },
   withdraw_credits:  { args: ['amount'], required: ['amount'], usage: '<amount>' },
+  send_gift:         { args: ['recipient', 'item_id', 'quantity', 'credits', 'message'], required: ['recipient'], usage: '<recipient> [item_id=... quantity=...] [credits=...] [message="..."]  (async transfer to their storage here)' },
 
   // Query commands
   get_status:   {},
@@ -994,7 +995,7 @@ function getUsageHint(command: string): string {
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
-  'coverage_percent', 'offer_credits', 'request_credits', 'index', 'ticks', 'amount',
+  'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
