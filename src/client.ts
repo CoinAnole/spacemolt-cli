@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.15';
+const VERSION = '0.6.16';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -63,7 +63,7 @@ interface Session {
 
 interface APIResponse {
   result?: Record<string, unknown>;
-  notifications?: Array<{ type: string; data: unknown; timestamp: string }>;
+  notifications?: Array<{ type: string; msg_type?: string; data: unknown; timestamp: string }>;
   session?: { id: string; player_id?: string; created_at: string; expires_at: string };
   error?: { code: string; message: string; wait_seconds?: number };
 }
@@ -690,7 +690,7 @@ function displayNotifications(notifications?: APIResponse['notifications']): voi
   for (const n of notifications) {
     const data = n.data as NotificationData;
     const time = new Date(n.timestamp).toLocaleTimeString();
-    const handler = notificationHandlers[n.type];
+    const handler = notificationHandlers[n.msg_type || n.type];
 
     if (handler) {
       handler(data, time);
