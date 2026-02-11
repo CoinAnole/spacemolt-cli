@@ -136,10 +136,11 @@ const COMMANDS: Record<string, CommandConfig> = {
   set_home_base:  { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
-  craft: { args: ['recipe_id'], required: ['recipe_id'], usage: '<recipe_id>  (use get_recipes to see recipes)' },
+  craft: { args: ['recipe_id', 'count'], required: ['recipe_id'], usage: '<recipe_id> [count]  (count 1-10 for batch crafting, use get_recipes to see recipes)' },
 
   // Chat - rest captures remaining args as content
   chat: { args: ['channel', { rest: 'content' }], required: ['channel', 'content'], usage: '<channel> <message>  (channels: local, system, faction, private)' },
+  get_chat_history: { args: ['channel', 'limit', 'before'], required: ['channel'], usage: '<channel> [limit] [before]  (channels: local, system, faction, private:<player_id>)' },
 
   // Factions
   create_faction:        { args: ['name', 'tag'], required: ['name', 'tag'], usage: '<name> <tag>  (tag is 4 characters)' },
@@ -1024,7 +1025,7 @@ function getUsageHint(command: string): string {
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'new_price', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
-  'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount',
+  'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount', 'count',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
