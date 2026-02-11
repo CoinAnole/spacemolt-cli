@@ -235,6 +235,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   cancel_order:      { args: ['order_id'], required: ['order_id'], usage: '<order_id>  (cancel and return escrow)' },
   modify_order:      { args: ['order_id', 'new_price'], required: ['order_id', 'new_price'], usage: '<order_id> <new_price>  (change price on existing order)' },
   estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
+  analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (scan market prices across systems based on market_analysis skill)' },
 
   // Query commands
   get_status:   {},
@@ -252,6 +253,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_wrecks:   {},
   get_version:  {},
   get_commands: {},
+  survey_system: {},
 
   // Help
   help: { args: ['topic'] },
