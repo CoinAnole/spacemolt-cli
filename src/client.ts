@@ -498,7 +498,7 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
     await saveSession(session);
   }
 
-  // Handle session expired - retry
+  // Handle session expired - create new session, re-login if possible, then retry
   if (data.error?.code === 'session_invalid' || data.error?.code === 'invalid_session' || data.error?.code === 'session_expired') {
     if (DEBUG) console.log(`${c.dim}[DEBUG] Session expired, creating new session...${c.reset}`);
     const oldSession = await loadSession();
@@ -507,9 +507,20 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
       newSession.username = oldSession.username;
       newSession.password = oldSession.password;
       await saveSession(newSession);
-      if (DEBUG) console.log(`${c.dim}[DEBUG] Credentials preserved in new session${c.reset}`);
+      // Auto-re-login with stored credentials
+      if (DEBUG) console.log(`${c.dim}[DEBUG] Re-authenticating as ${oldSession.username}...${c.reset}`);
+      const loginResp = await execute('login', { username: oldSession.username, password: oldSession.password });
+      if (loginResp.error) {
+        console.error(`${c.red}[SESSION]${c.reset} Session expired and auto-login failed: ${loginResp.error.message}`);
+        console.error(`${c.yellow}Run "spacemolt login <username> <password>" to re-authenticate.${c.reset}`);
+        return data; // Return the original error
+      }
+      console.log(`${c.dim}[SESSION]${c.reset} Session recovered, re-authenticated as ${oldSession.username}`);
     }
-    return execute(command, payload);
+    if (command !== 'login' && command !== 'register') {
+      return execute(command, payload);
+    }
+    return data;
   }
 
   // Handle rate limit - wait and retry
