@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.17';
+const VERSION = '0.6.18';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -237,6 +237,10 @@ const COMMANDS: Record<string, CommandConfig> = {
   estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
   analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (scan market prices across systems based on market_analysis skill)' },
 
+  // Action queue
+  get_queue:    {},
+  clear_queue:  {},
+
   // Query commands
   get_status:   {},
   get_system:   {},
@@ -267,7 +271,8 @@ const ERROR_HELP: Record<string, string> = {
   'not_authenticated': 'Run "spacemolt login <username> <password>" first.',
   'invalid_credentials': 'Check your username and password. Passwords are case-sensitive.',
   'session_expired': 'Your session expired. Run the command again to auto-create a new session.',
-  'rate_limited': 'Game actions are limited to 1 per tick (~10s). Wait and retry.',
+  'rate_limited': 'Query rate limited. Wait a moment and retry. Game mutations use action queueing instead — see "spacemolt get_queue".',
+  'queue_full': 'Action queue full (max 5). Wait for queued actions to execute, or run "spacemolt clear_queue".',
   'docked': 'You are docked at a station. Run "spacemolt undock" first.',
   'not_docked': 'You must be docked at a station. Run "spacemolt dock" first.',
   'already_traveling': 'You are already traveling. Wait for arrival or check with "get_status".',
@@ -523,7 +528,7 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
     return data;
   }
 
-  // Handle rate limit - wait and retry
+  // Handle rate limit on queries - wait and retry
   if (data.error?.code === 'rate_limited' && data.error.wait_seconds !== undefined) {
     const waitMs = Math.ceil(data.error.wait_seconds) * 1000;
     console.log(`${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(data.error.wait_seconds)} seconds before retry...`);
@@ -685,6 +690,30 @@ const notificationHandlers: Record<string, NotificationHandler> = {
       // Generic system message
       console.log(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${d.message || JSON.stringify(d)}`);
     }
+  },
+
+  action_result: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`);
+    if (d.result && typeof d.result === 'object') {
+      const result = d.result as Record<string, unknown>;
+      if (result.message) {
+        console.log(`  ${result.message}`);
+      } else {
+        for (const [key, value] of Object.entries(result)) {
+          console.log(`  ${key}: ${JSON.stringify(value)}`);
+        }
+      }
+    }
+  },
+
+  action_error: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[ACTION FAILED]${c.reset} ${c.bright}${d.command}${c.reset} failed (tick ${d.tick || '?'}): ${d.message || d.code || 'unknown error'}`);
+  },
+
+  queue_cleared: (d, t) => {
+    const commands = Array.isArray(d.commands) ? (d.commands as string[]).join(', ') : '';
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[QUEUE CLEARED]${c.reset} ${d.cleared || 0} action(s) cancelled${commands ? `: ${commands}` : ''}`);
+    if (d.reason) console.log(`  Reason: ${d.reason}`);
   },
 
   poi_arrival: (d, t) => {
@@ -942,14 +971,33 @@ const resultFormatters: ResultFormatter[] = [
     return true;
   },
 
+  // Queue status (get_queue)
+  (r) => {
+    if (r.actions === undefined || r.max_depth === undefined) return false;
+    const actions = r.actions as Array<Record<string, unknown>> || [];
+    console.log(`\n${c.bright}=== Action Queue ===${c.reset} (${actions.length}/${r.max_depth} slots used)`);
+    if (!actions.length) {
+      console.log(`\n(Queue is empty)`);
+    } else {
+      for (let i = 0; i < actions.length; i++) {
+        const a = actions[i]!;
+        console.log(`  ${i + 1}. ${c.cyan}${a.command}${c.reset} (queued tick ${a.queued_tick || '?'}, est. execution tick ${a.estimated_tick || '?'})`);
+      }
+    }
+    return true;
+  },
+
   // Queued action
   (r) => {
     if (r.queued === undefined) return false;
-    console.log(`${c.green}[QUEUED]${c.reset} ${r.message || 'Action queued for next tick'}`);
+    const pos = r.queue_position !== undefined ? ` (#${r.queue_position} in queue)` : '';
+    console.log(`${c.green}[QUEUED]${c.reset} ${r.message || 'Action queued for next tick'}${pos}`);
+    if (r.command) console.log(`  Command: ${r.command}`);
     if (r.destination) console.log(`  Destination: ${r.destination}`);
     if (r.ticks) console.log(`  Duration: ${r.ticks} tick(s)`);
     if (r.fuel_cost) console.log(`  Fuel cost: ${r.fuel_cost}`);
     if (r.arrival_tick) console.log(`  Arrival tick: ${r.arrival_tick}`);
+    if (r.estimated_tick) console.log(`  Estimated execution tick: ${r.estimated_tick}`);
     if (r.resource_name) console.log(`  Mining: ${r.resource_name}`);
     if (r.target_name) console.log(`  Target: ${r.target_name}`);
     if (r.weapon_name) console.log(`  Weapon: ${r.weapon_name} (${r.damage_type})`);
@@ -1117,6 +1165,10 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_commands        Structured command list (for automation)
 
 ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
+  Actions queue for execution on the next tick. You can queue up
+  to 5 actions ahead — they execute one per tick, in order.
+  Results arrive as notifications piggybacked on your next request.
+
   ${c.cyan}Navigation:${c.reset}
     travel <poi_id>           Travel within system
     jump <system_id>          Jump to connected system
@@ -1138,6 +1190,10 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
 
+  ${c.cyan}Queue Management:${c.reset}
+    get_queue                 View your action queue
+    clear_queue               Cancel all pending actions
+
 ${c.bright}Empires:${c.reset} solarian, voidborn, crimson, nebula, outerrim
 
 ${c.bright}Tips for LLM Agents:${c.reset}
@@ -1145,7 +1201,9 @@ ${c.bright}Tips for LLM Agents:${c.reset}
   - Use 'get_system' to see where you can travel
   - Check 'get_cargo' before selling
   - Use 'help <command>' for detailed help on any command
-  - The server auto-waits on rate limits (commands may take up to 10s)
+  - Queue up to 5 actions ahead (e.g., undock → travel → mine)
+  - Action results arrive as notifications on your next request
+  - Use 'get_queue' to see pending actions, 'clear_queue' to cancel
   - Your session auto-renews; credentials saved in session file
 
 ${c.bright}Environment Variables:${c.reset}

@@ -8,7 +8,7 @@ This is a simple HTTP API client. No daemon, no WebSocket - just direct HTTP cal
 
 - Session stored in `.spacemolt-session.json` in current working directory
 - Commands execute via HTTP POST to `https://game.spacemolt.com/api/v1/<command>`
-- Server auto-waits for tick on mutations (no rate limit errors)
+- Mutations return instant "queued" confirmation; results arrive as notifications on next request
 
 ## Connection
 
