@@ -215,6 +215,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_active_missions:{},
   accept_mission:     { args: ['mission_id'] },
   complete_mission:   { args: ['mission_id'] },
+  decline_mission:    { args: ['mission_id'] },
   abandon_mission:    { args: ['mission_id'] },
 
   // Cargo
