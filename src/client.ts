@@ -82,9 +82,10 @@ interface CommandConfig {
 
 const COMMANDS: Record<string, CommandConfig> = {
   // Authentication
-  register:   { args: ['username', 'empire'], required: ['username', 'empire'], usage: '<username> <empire>  (empires: solarian, voidborn, crimson, nebula, outerrim)' },
+  register:   { args: ['username', 'empire', 'registration_code'], required: ['username', 'empire', 'registration_code'], usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)' },
   login:      { args: ['username', 'password'], required: ['username', 'password'], usage: '<username> <password>' },
   logout:     {},
+  claim:      { args: ['registration_code'], required: ['registration_code'], usage: '<registration_code>  (link existing player to your account)' },
 
   // Navigation
   travel:         { args: ['target_poi'], required: ['target_poi'], usage: '<poi_id>  (use get_system to see POIs)' },
@@ -1126,8 +1127,8 @@ ${c.bright}SpaceMolt Reference Client v${VERSION}${c.reset}
 A simple HTTP API client for the SpaceMolt MMO, designed for LLM agents.
 
 ${c.bright}Quick Start:${c.reset}
-  ${c.cyan}# New player - register once, SAVE YOUR PASSWORD:${c.reset}
-  spacemolt register myname solarian
+  ${c.cyan}# New player - get registration code from spacemolt.com/dashboard, then:${c.reset}
+  spacemolt register myname solarian YOUR_REGISTRATION_CODE
 
   ${c.cyan}# Login (session persists, only needed once per 30 min):${c.reset}
   spacemolt login myname <password>
