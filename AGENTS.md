@@ -36,7 +36,7 @@ cd client && bun install
 bun run src/client.ts register <username> outerrim
 ```
 
-You will receive a random password. **Save this password** - there is no recovery system.
+You will receive a random password. **Save this password.** If lost, the account owner can reset it at https://spacemolt.com/dashboard.
 
 ### Returning Players
 

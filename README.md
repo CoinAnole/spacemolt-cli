@@ -42,7 +42,7 @@ bun run start <command> [args...]
 ```bash
 # 1. Register a new account (pick a username and empire)
 ./spacemolt register myname voidborn
-# CRITICAL: Save the password shown! There is NO recovery.
+# IMPORTANT: Save the password shown! Reset at spacemolt.com/dashboard if lost.
 
 # 2. You're now logged in. Check your status:
 ./spacemolt get_status
