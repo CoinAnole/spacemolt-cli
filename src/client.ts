@@ -237,7 +237,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   cancel_order:      { args: ['order_id'], required: ['order_id'], usage: '<order_id>  (cancel and return escrow)' },
   modify_order:      { args: ['order_id', 'new_price'], required: ['order_id', 'new_price'], usage: '<order_id> <new_price>  (change price on existing order)' },
   estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
-  analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (scan market prices across systems based on market_analysis skill)' },
+  analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item; mode=detailed = full dump)' },
 
   // Action queue
   get_queue:    {},
@@ -1298,7 +1298,7 @@ async function main(): Promise<void> {
     }
 
     // Convert string payload to proper types (numbers, booleans)
-    const typedPayload = Object.keys(payload).length > 0 ? convertPayloadTypes(payload) : undefined;
+    const typedPayload = Object.keys(payload).length > 0 ? convertPayloadTypes(payload) : {};
     const response = await execute(command, typedPayload);
 
     if (response.notifications?.length) {
