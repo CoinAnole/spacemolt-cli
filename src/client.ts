@@ -137,7 +137,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   set_home_base:  { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
-  craft: { args: ['recipe_id', 'count'], required: ['recipe_id'], usage: '<recipe_id> [count]  (count 1-10 for batch crafting, use get_recipes to see recipes)' },
+  craft: { args: ['recipe_id', 'count'], required: ['recipe_id'], usage: '<recipe_id> [count]  (count 1-10 for batch crafting, uses cargo + station storage, use get_recipes to see recipes)' },
 
   // Chat - rest captures remaining args as content
   chat: { args: ['channel', { rest: 'content' }], required: ['channel', 'content'], usage: '<channel> <message>  (channels: local, system, faction, private)' },
