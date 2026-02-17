@@ -568,7 +568,7 @@ const notificationHandlers: Record<string, NotificationHandler> = {
       console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by ${d.killer_name || 'unknown'}!`);
     }
     if (d.combat_log) {
-      const log = d.combat_log;
+      const log = d.combat_log as Record<string, any>;
       if (log.message) console.log(`  ${log.message}`);
       if (log.attacker_ship) console.log(`  Attacker ship: ${log.attacker_ship}`);
       if (log.weapons_used && Object.keys(log.weapons_used).length > 0) {
