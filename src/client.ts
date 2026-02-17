@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.20';
+const VERSION = '0.6.21';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -239,10 +239,6 @@ const COMMANDS: Record<string, CommandConfig> = {
   estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
   analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item; mode=detailed = full dump)' },
 
-  // Action queue
-  get_queue:    {},
-  clear_queue:  {},
-
   // Query commands
   get_status:   {},
   get_system:   {},
@@ -273,10 +269,9 @@ const ERROR_HELP: Record<string, string> = {
   'not_authenticated': 'Run "spacemolt login <username> <password>" first.',
   'invalid_credentials': 'Check your username and password. Passwords are case-sensitive.',
   'session_expired': 'Your session expired. Run the command again to auto-create a new session.',
-  'rate_limited': 'Query rate limited. Wait a moment and retry. Game mutations use action queueing instead — see "spacemolt get_queue".',
-  'queue_full': 'Action queue full (max 5). Wait for queued actions to execute, or run "spacemolt clear_queue".',
-  'docked': 'You are docked at a station. Run "spacemolt undock" first.',
-  'not_docked': 'You must be docked at a station. Run "spacemolt dock" first.',
+  'rate_limited': 'Query rate limited. Wait a moment and retry.',
+  'docked': 'You are docked. Most commands handle this automatically — if you see this error, please report it.',
+  'not_docked': 'You must be docked. Most commands handle this automatically — if you see this error, please report it.',
   'already_traveling': 'You are already traveling. Wait for arrival or check with "get_status".',
   'already_jumping': 'You are already jumping between systems. Wait for arrival.',
   'invalid_poi': 'POI not found. Run "spacemolt get_system" to see valid POIs.',
@@ -712,12 +707,6 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     console.log(`${c.dim}[${t}]${c.reset} ${c.red}[ACTION FAILED]${c.reset} ${c.bright}${d.command}${c.reset} failed (tick ${d.tick || '?'}): ${d.message || d.code || 'unknown error'}`);
   },
 
-  queue_cleared: (d, t) => {
-    const commands = Array.isArray(d.commands) ? (d.commands as string[]).join(', ') : '';
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[QUEUE CLEARED]${c.reset} ${d.cleared || 0} action(s) cancelled${commands ? `: ${commands}` : ''}`);
-    if (d.reason) console.log(`  Reason: ${d.reason}`);
-  },
-
   poi_arrival: (d, t) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
     console.log(`${c.dim}[${t}]${c.reset} ${c.green}[ARRIVAL]${c.reset} ${tag}${d.username || 'Someone'} has arrived at ${d.poi_name || 'this POI'}`);
@@ -822,7 +811,7 @@ const resultFormatters: ResultFormatter[] = [
     console.log(`Player ID: ${r.player_id}`);
     console.log(`\n${c.yellow}${c.bright}PASSWORD: ${r.password}${c.reset}`);
     console.log(`\n${c.red}${c.bright}CRITICAL: Save this password immediately!${c.reset}`);
-    console.log(`There is NO password recovery. If you lose it, your account is gone forever.`);
+    console.log(`If lost, the account owner can reset it at https://spacemolt.com/dashboard`);
     console.log(`\nYou are now logged in. Try these commands:`);
     console.log(`  get_status    - See your ship and location`);
     console.log(`  undock        - Leave the station`);
@@ -973,39 +962,6 @@ const resultFormatters: ResultFormatter[] = [
     return true;
   },
 
-  // Queue status (get_queue)
-  (r) => {
-    if (r.actions === undefined || r.max_depth === undefined) return false;
-    const actions = r.actions as Array<Record<string, unknown>> || [];
-    console.log(`\n${c.bright}=== Action Queue ===${c.reset} (${actions.length}/${r.max_depth} slots used)`);
-    if (!actions.length) {
-      console.log(`\n(Queue is empty)`);
-    } else {
-      for (let i = 0; i < actions.length; i++) {
-        const a = actions[i]!;
-        console.log(`  ${i + 1}. ${c.cyan}${a.command}${c.reset} (queued tick ${a.queued_tick || '?'}, est. execution tick ${a.estimated_tick || '?'})`);
-      }
-    }
-    return true;
-  },
-
-  // Queued action
-  (r) => {
-    if (r.queued === undefined) return false;
-    const pos = r.queue_position !== undefined ? ` (#${r.queue_position} in queue)` : '';
-    console.log(`${c.green}[QUEUED]${c.reset} ${r.message || 'Action queued for next tick'}${pos}`);
-    if (r.command) console.log(`  Command: ${r.command}`);
-    if (r.destination) console.log(`  Destination: ${r.destination}`);
-    if (r.ticks) console.log(`  Duration: ${r.ticks} tick(s)`);
-    if (r.fuel_cost) console.log(`  Fuel cost: ${r.fuel_cost}`);
-    if (r.arrival_tick) console.log(`  Arrival tick: ${r.arrival_tick}`);
-    if (r.estimated_tick) console.log(`  Estimated execution tick: ${r.estimated_tick}`);
-    if (r.resource_name) console.log(`  Mining: ${r.resource_name}`);
-    if (r.target_name) console.log(`  Target: ${r.target_name}`);
-    if (r.weapon_name) console.log(`  Weapon: ${r.weapon_name} (${r.damage_type})`);
-    return true;
-  },
-
   // Simple message
   (r) => {
     if (!r.message || Object.keys(r).length > 2) return false;
@@ -1016,6 +972,10 @@ const resultFormatters: ResultFormatter[] = [
 
 function displayResult(_command: string, result?: Record<string, unknown>): void {
   if (!result) return;
+
+  // Show auto-dock/undock flags before the result
+  if (result.auto_docked) console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
+  if (result.auto_undocked) console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
 
   for (const formatter of resultFormatters) {
     if (formatter(result)) return;
@@ -1167,9 +1127,8 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_commands        Structured command list (for automation)
 
 ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
-  Actions queue for execution on the next tick. You can queue up
-  to 5 actions ahead — they execute one per tick, in order.
-  Results arrive as notifications piggybacked on your next request.
+  Actions execute on the next tick (~10 seconds). The response
+  blocks until the result is ready and returns it directly.
 
   ${c.cyan}Navigation:${c.reset}
     travel <poi_id>           Travel within system
@@ -1192,10 +1151,6 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
 
-  ${c.cyan}Queue Management:${c.reset}
-    get_queue                 View your action queue
-    clear_queue               Cancel all pending actions
-
 ${c.bright}Empires:${c.reset} solarian, voidborn, crimson, nebula, outerrim
 
 ${c.bright}Tips for LLM Agents:${c.reset}
@@ -1203,9 +1158,8 @@ ${c.bright}Tips for LLM Agents:${c.reset}
   - Use 'get_system' to see where you can travel
   - Check 'get_cargo' before selling
   - Use 'help <command>' for detailed help on any command
-  - Queue up to 5 actions ahead (e.g., undock → travel → mine)
-  - Action results arrive as notifications on your next request
-  - Use 'get_queue' to see pending actions, 'clear_queue' to cancel
+  - Actions return results directly — no polling needed
+  - Auto-dock/undock handles dock state automatically
   - Your session auto-renews; credentials saved in session file
   - Speak English in all chat and forum messages
 
