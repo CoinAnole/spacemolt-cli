@@ -106,10 +106,7 @@ const COMMANDS: Record<string, CommandConfig> = {
 
   // Trading
   sell:        { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_cargo to see items)' },
-  buy:         { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (use get_listings to see market)' },
-  buy_listing: { args: ['listing_id', 'quantity'], required: ['listing_id', 'quantity'], usage: '<listing_id> <quantity>' },
-  list_item:   { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>' },
-  cancel_list: { args: ['listing_id'] },
+  buy:         { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (use view_market to see order book)' },
 
   // P2P Trading
   trade_offer:   { args: ['target_id', 'offer_credits', 'request_credits'], required: ['target_id'], usage: '<player_id> [offer_credits] [request_credits]' },
@@ -130,10 +127,9 @@ const COMMANDS: Record<string, CommandConfig> = {
   uninstall_mod: { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
   refuel:        {},
   repair:        {},
+  use_item:      { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (consumables: repair_kit, shield_cell, emergency_warp, etc.)' },
 
   // Insurance
-  buy_insurance:  { args: ['ticks'], usage: '<ticks>  (number of ticks to insure for)' },
-  claim_insurance:{},
   set_home_base:  { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
@@ -159,6 +155,37 @@ const COMMANDS: Record<string, CommandConfig> = {
   faction_invite:        { args: ['player_id'] },
   faction_kick:          { args: ['player_id'] },
   faction_promote:       { args: ['player_id', 'role_id'] },
+  faction_edit:          {},
+  faction_create_role:   { args: ['name', 'priority'] },
+  faction_edit_role:     { args: ['role_id'] },
+  faction_delete_role:   { args: ['role_id'] },
+
+  // Faction storage
+  view_faction_storage:     {},
+  faction_deposit_items:    { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
+  faction_withdraw_items:   { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
+  faction_deposit_credits:  { args: ['amount'], required: ['amount'] },
+  faction_withdraw_credits: { args: ['amount'], required: ['amount'] },
+  faction_gift:             { args: ['faction_id'], required: ['faction_id'] },
+  faction_create_sell_order:{ args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'] },
+  faction_create_buy_order: { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'] },
+
+  // Faction rooms
+  faction_rooms:       {},
+  faction_visit_room:  { args: ['room_id'], required: ['room_id'] },
+  faction_write_room:  { args: ['room_id'] },
+  faction_delete_room: { args: ['room_id'], required: ['room_id'] },
+
+  // Faction missions & intel
+  faction_post_mission:        {},
+  faction_cancel_mission:      { args: ['template_id'], required: ['template_id'] },
+  faction_list_missions:       {},
+  faction_submit_intel:        {},
+  faction_query_intel:         { args: ['system_name'] },
+  faction_intel_status:        {},
+  faction_submit_trade_intel:  {},
+  faction_query_trade_intel:   { args: ['base_id'] },
+  faction_trade_intel_status:  {},
 
   // Player settings
   set_status:    { args: ['status_message', 'clan_tag'] },
@@ -170,27 +197,6 @@ const COMMANDS: Record<string, CommandConfig> = {
   write_note:  { args: ['note_id', { rest: 'content' }] },
   read_note:   { args: ['note_id'] },
   get_notes:   {},
-
-  // Maps (not yet implemented on server)
-  get_map:  { args: ['system_id'] },
-  use_map:  { args: ['map_item_id'] },
-
-  // Drones
-  deploy_drone: { args: ['drone_item_id', 'target_id'] },
-  recall_drone: { args: ['drone_id'] },  // Special: 'all' -> { all: 'true' }
-  order_drone:  { args: ['command', 'target_id'] },
-  get_drones:   {},
-
-  // Base building
-  build_base:    { args: ['name', 'type'] },
-  get_base_cost: {},
-
-  // Base raiding
-  attack_base:        { args: ['base_id'] },
-  raid_status:        {},
-  get_base_wrecks:    {},
-  loot_base_wreck:    { args: ['wreck_id', 'item_id', 'quantity'] },
-  salvage_base_wreck: { args: ['wreck_id'] },
 
   // Captain's log
   captains_log_add:  { args: [{ rest: 'entry' }] },
@@ -206,16 +212,12 @@ const COMMANDS: Record<string, CommandConfig> = {
   forum_upvote:        { args: ['thread_id'] },
   forum_delete_reply:  { args: ['reply_id'] },
 
-  // Friends (not yet implemented on server)
-  add_friend:    { args: ['player_id'] },
-  remove_friend: { args: ['player_id'] },
-
   // Missions
   get_missions:       {},
   get_active_missions:{},
   accept_mission:     { args: ['mission_id'] },
   complete_mission:   { args: ['mission_id'] },
-  decline_mission:    { args: ['mission_id'] },
+  decline_mission:    { args: ['template_id'] },
   abandon_mission:    { args: ['mission_id'] },
 
   // Cargo
@@ -239,6 +241,9 @@ const COMMANDS: Record<string, CommandConfig> = {
   estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
   analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item; mode=detailed = full dump)' },
 
+  // Facilities
+  facility:     { args: ['action', 'facility_type'], usage: '<action> [facility_type]  (actions: types, build, list, toggle, upgrade, help)' },
+
   // Query commands
   get_status:   {},
   get_system:   {},
@@ -250,7 +255,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_nearby:   {},
   get_skills:   {},
   get_recipes:  {},
-  get_listings: {},
+  get_map:      {},
   get_trades:   {},
   get_wrecks:   {},
   get_version:  {},
@@ -1010,12 +1015,7 @@ function parseArgs(args: string[]): { command: string; payload: Record<string, s
       const argDef = argDefs[positionalIndex];
       if (argDef) {
         if (typeof argDef === 'string') {
-          // Special case: recall_drone 'all' -> { all: 'true' }
-          if (command === 'recall_drone' && arg === 'all') {
-            payload.all = 'true';
-          } else {
-            payload[argDef] = arg;
-          }
+          payload[argDef] = arg;
         } else if (argDef.rest) {
           // Rest argument - consume remaining args
           payload[argDef.rest] = args.slice(i).join(' ');
@@ -1049,6 +1049,7 @@ function getUsageHint(command: string): string {
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'new_price', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
   'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount', 'count',
+  'priority', 'expiration_hours', 'per_page', 'level',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
