@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
 
 // Re-implement compareVersions for testing (since it's not exported)
 function compareVersions(current: string, latest: string): number {
@@ -53,5 +55,72 @@ describe("compareVersions", () => {
     expect(compareVersions("v0.6.5", "v0.6.6")).toBe(1);
     expect(compareVersions("0.6.5", "v0.6.6")).toBe(1);
     expect(compareVersions("v0.6.5", "0.6.6")).toBe(1);
+  });
+});
+
+describe("version sync", () => {
+  test("package.json and client.ts VERSION match", () => {
+    const pkgPath = path.join(import.meta.dir, "..", "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    const pkgVersion = pkg.version;
+
+    const clientPath = path.join(import.meta.dir, "client.ts");
+    const clientSrc = fs.readFileSync(clientPath, "utf-8");
+    const match = clientSrc.match(/const VERSION = '([^']+)'/);
+    expect(match).not.toBeNull();
+    const clientVersion = match![1];
+
+    expect(clientVersion).toBe(pkgVersion);
+  });
+});
+
+// Re-implement convertPayloadTypes and NUMERIC_FIELDS for testing
+const NUMERIC_FIELDS = new Set([
+  'quantity', 'price_each', 'new_price', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
+  'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount', 'count',
+  'priority', 'expiration_hours', 'per_page', 'level', 'max_price', 'price', 'page_size',
+]);
+
+function convertPayloadTypes(payload: Record<string, string>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (NUMERIC_FIELDS.has(key)) {
+      const num = parseFloat(value);
+      if (!isNaN(num)) { result[key] = num; continue; }
+    }
+    if (value === 'true') { result[key] = true; continue; }
+    if (value === 'false') { result[key] = false; continue; }
+    result[key] = value;
+  }
+  return result;
+}
+
+describe("convertPayloadTypes", () => {
+  test("converts numeric fields to numbers", () => {
+    const result = convertPayloadTypes({ quantity: "10", price: "500", page_size: "20", max_price: "10000" });
+    expect(result.quantity).toBe(10);
+    expect(result.price).toBe(500);
+    expect(result.page_size).toBe(20);
+    expect(result.max_price).toBe(10000);
+  });
+
+  test("leaves non-numeric fields as strings", () => {
+    const result = convertPayloadTypes({ item_id: "ore_iron", ship_class: "prospector" });
+    expect(result.item_id).toBe("ore_iron");
+    expect(result.ship_class).toBe("prospector");
+  });
+
+  test("converts boolean strings", () => {
+    const result = convertPayloadTypes({ provide_materials: "true", auto_list: "false" });
+    expect(result.provide_materials).toBe(true);
+    expect(result.auto_list).toBe(false);
+  });
+
+  test("handles mixed payload", () => {
+    const result = convertPayloadTypes({ type: "ships", page: "2", page_size: "10", search: "mining" });
+    expect(result.type).toBe("ships");
+    expect(result.page).toBe(2);
+    expect(result.page_size).toBe(10);
+    expect(result.search).toBe("mining");
   });
 });

@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.6.21';
+const VERSION = '0.7.0';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -105,8 +105,8 @@ const COMMANDS: Record<string, CommandConfig> = {
   self_destruct: {},
 
   // Trading
-  sell:        { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_cargo to see items)' },
-  buy:         { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (use view_market to see order book)' },
+  sell:        { args: ['item_id', 'quantity', 'auto_list'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity> [auto_list=true]  (use get_cargo to see items)' },
+  buy:         { args: ['item_id', 'quantity', 'auto_list', 'deliver_to'], required: ['item_id'], usage: '<item_id> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to see order book)' },
 
   // P2P Trading
   trade_offer:   { args: ['target_id', 'offer_credits', 'request_credits'], required: ['target_id'], usage: '<player_id> [offer_credits] [request_credits]' },
@@ -125,7 +125,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   switch_ship:   { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (switch to a stored ship at current base, use list_ships to see)' },
   install_mod:   { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (module must be in cargo, use get_cargo to see)' },
   uninstall_mod: { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
-  refuel:        {},
+  refuel:        { args: ['item_id', 'quantity'] },
   repair:        {},
   use_item:      { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (consumables: repair_kit, shield_cell, emergency_warp, etc.)' },
 
@@ -133,7 +133,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   set_home_base:  { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
-  craft: { args: ['recipe_id', 'count'], required: ['recipe_id'], usage: '<recipe_id> [count]  (count 1-10 for batch crafting, uses cargo + station storage, use get_recipes to see recipes)' },
+  craft: { args: ['recipe_id', 'count'], required: ['recipe_id'], usage: '<recipe_id> [count]  (count 1-10 for batch crafting, uses cargo + station storage, use catalog type=recipes to browse)' },
 
   // Chat - rest captures remaining args as content
   chat: { args: ['channel', { rest: 'content' }], required: ['channel', 'content'], usage: '<channel> <message>  (channels: local, system, faction, private)' },
@@ -155,7 +155,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   faction_invite:        { args: ['player_id'] },
   faction_kick:          { args: ['player_id'] },
   faction_promote:       { args: ['player_id', 'role_id'] },
-  faction_edit:          {},
+  faction_edit:          { args: ['description', 'charter', 'primary_color', 'secondary_color'] },
   faction_create_role:   { args: ['name', 'priority'] },
   faction_edit_role:     { args: ['role_id'] },
   faction_delete_role:   { args: ['role_id'] },
@@ -209,7 +209,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   forum_create_thread: { args: ['title', 'category', { rest: 'content' }], required: ['title', 'category', 'content'], usage: '<title> <category> <content>  (categories: general, bugs, suggestions, trading, factions)' },
   forum_delete_thread: { args: ['thread_id'] },
   forum_reply:         { args: ['thread_id', { rest: 'content' }] },
-  forum_upvote:        { args: ['thread_id'] },
+  forum_upvote:        { args: ['thread_id', 'reply_id'] },
   forum_delete_reply:  { args: ['reply_id'] },
 
   // Missions
@@ -244,26 +244,57 @@ const COMMANDS: Record<string, CommandConfig> = {
   // Facilities
   facility:     { args: ['action', 'facility_type'], usage: '<action> [facility_type]  (actions: types, build, list, toggle, upgrade, help)' },
 
+  // Battle
+  battle:            { args: ['action', 'stance', 'target_id', 'side_id'], required: ['action'], usage: '<action> [stance] [target_id] [side_id]  (actions: join, leave, stance, target, etc.)' },
+  get_battle_status: {},
+  reload:            { args: ['weapon_instance_id', 'ammo_item_id'], required: ['weapon_instance_id', 'ammo_item_id'], usage: '<weapon_instance_id> <ammo_item_id>' },
+
+  // Salvage & Tow
+  tow_wreck:    { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>  (use get_wrecks to see wrecks)' },
+  release_tow:  {},
+  scrap_wreck:  {},
+  sell_wreck:   {},
+
+  // Shipyard
+  shipyard_showroom:  { args: ['category', 'scale'] },
+  commission_ship:    { args: ['ship_class', 'provide_materials'], required: ['ship_class'], usage: '<ship_class> [provide_materials=true/false]' },
+  commission_quote:   { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>' },
+  commission_status:  { args: ['base_id'] },
+  claim_commission:   { args: ['commission_id'], required: ['commission_id'], usage: '<commission_id>' },
+  cancel_commission:  { args: ['commission_id'], required: ['commission_id'], usage: '<commission_id>' },
+
+  // Ship Exchange
+  list_ship_for_sale: { args: ['ship_id', 'price'], required: ['ship_id', 'price'], usage: '<ship_id> <price>' },
+  browse_ships:       { args: ['base_id', 'class_id', 'max_price'] },
+  buy_listed_ship:    { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
+  cancel_ship_listing:{ args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
+
+  // Insurance
+  buy_insurance:      { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (number of ticks of coverage)' },
+  get_insurance_quote:{},
+  claim_insurance:    {},
+
   // Query commands
   get_status:   {},
   get_system:   {},
   get_poi:      {},
   get_base:     {},
   get_ship:     {},
-  get_ships:    {},
   get_cargo:    {},
   get_nearby:   {},
   get_skills:   {},
-  get_recipes:  {},
   get_map:      {},
   get_trades:   {},
   get_wrecks:   {},
-  get_version:  {},
+  get_version:  { args: ['count', 'page'] },
   get_commands: {},
   survey_system: {},
 
-  // Help
-  help: { args: ['topic'] },
+  // Reference & Help
+  catalog:          { args: ['type', 'id', 'category', 'search', 'page', 'page_size'], required: ['type'], usage: '<type> [id] [category] [search] [page] [page_size]  (types: ships, items, skills, recipes)' },
+  get_guide:        { args: ['guide'] },
+  search_changelog: { args: ['text', 'id'] },
+  help:             { args: ['topic'] },
 };
 
 // =============================================================================
@@ -1049,7 +1080,7 @@ function getUsageHint(command: string): string {
 const NUMERIC_FIELDS = new Set([
   'quantity', 'price_each', 'new_price', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
   'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount', 'count',
-  'priority', 'expiration_hours', 'per_page', 'level',
+  'priority', 'expiration_hours', 'per_page', 'level', 'max_price', 'price', 'page_size',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
@@ -1124,6 +1155,10 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_skills          Your skill levels and XP
   get_wrecks          Wrecks at POI (for looting)
   get_map             Galaxy map (all systems)
+  get_battle_status   Current battle state
+  catalog <type>      Browse ships/items/skills/recipes
+  get_guide [guide]   Game guide and onboarding info
+  search_changelog    Search release notes
   help                Full command list from server
   get_commands        Structured command list (for automation)
 
@@ -1148,6 +1183,35 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     attack <player_id>        Attack player at POI
     scan <player_id>          Scan player for info
     cloak true/false          Toggle cloaking
+
+  ${c.cyan}Battle:${c.reset}
+    battle <action>           Battle system (join, leave, stance, target)
+    reload <weapon> <ammo>    Reload weapon with ammo
+
+  ${c.cyan}Salvage & Tow:${c.reset}
+    tow_wreck <wreck_id>      Tow a wreck
+    release_tow               Release towed wreck
+    scrap_wreck               Scrap towed wreck for materials
+    sell_wreck                Sell towed wreck at station
+
+  ${c.cyan}Shipyard:${c.reset}
+    shipyard_showroom         Browse ships at station shipyard
+    commission_ship <class>   Order a custom ship build
+    commission_quote <class>  Get build quote
+    commission_status         Check build progress
+    claim_commission <id>     Pick up completed ship
+    cancel_commission <id>    Cancel active commission
+
+  ${c.cyan}Ship Exchange:${c.reset}
+    list_ship_for_sale        List a stored ship for sale
+    browse_ships              Browse ships for sale at station
+    buy_listed_ship <id>      Buy a player-listed ship
+    cancel_ship_listing <id>  Cancel your ship listing
+
+  ${c.cyan}Insurance:${c.reset}
+    buy_insurance <ticks>     Purchase ship insurance
+    get_insurance_quote       Get insurance pricing
+    claim_insurance           File insurance claim
 
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
@@ -1228,13 +1292,6 @@ async function main(): Promise<void> {
       console.error(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
       console.error(`\nUsage: spacemolt ${command} ${getUsageHint(command)}`);
       process.exit(1);
-    }
-
-    // Commands defined in client but not yet implemented on the server
-    const NOT_IMPLEMENTED = new Set(['use_map', 'add_friend', 'remove_friend']);
-    if (NOT_IMPLEMENTED.has(command)) {
-      console.log(`${c.yellow}Not implemented yet:${c.reset} The '${command}' command is planned but not yet available on the server.`);
-      process.exit(0);
     }
 
     // Save credentials on login/register
