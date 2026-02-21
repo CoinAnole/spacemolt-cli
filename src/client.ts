@@ -31,7 +31,7 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -274,21 +274,59 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_insurance_quote:{},
   claim_insurance:    {},
 
+  // Base building & raiding
+  build_base:         { args: ['name'], required: ['name'], usage: '<name>  (build a base at current POI)' },
+  get_base_cost:      {},
+  attack_base:        { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (raid an enemy base)' },
+  raid_status:        {},
+  get_base_wrecks:    {},
+  loot_base_wreck:    { args: ['wreck_id', 'item_id', 'quantity'], required: ['wreck_id', 'item_id'], usage: '<wreck_id> <item_id> [quantity]' },
+  salvage_base_wreck: { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>' },
+
+  // Drones
+  deploy_drone: { args: ['drone_type'], required: ['drone_type'], usage: '<drone_type>  (deploy an offensive drone)' },
+  recall_drone: { args: ['drone_id'], required: ['drone_id'], usage: '<drone_id>  (recall a deployed drone)' },
+  order_drone:  { args: ['drone_id', 'order', 'target_id'], required: ['drone_id', 'order'], usage: '<drone_id> <order> [target_id]  (give drone orders)' },
+  get_drones:   {},
+
+  // Friends
+  add_friend:             { args: ['player_id'], required: ['player_id'], usage: '<player_id>' },
+  remove_friend:          { args: ['player_id'], required: ['player_id'], usage: '<player_id>' },
+  get_friends:            {},
+  get_friend_requests:    {},
+  accept_friend_request:  { args: ['player_id'], required: ['player_id'], usage: '<player_id>' },
+  decline_friend_request: { args: ['player_id'], required: ['player_id'], usage: '<player_id>' },
+
   // Query commands
   get_status:   {},
   get_system:   {},
   get_poi:      {},
   get_base:     {},
   get_ship:     {},
+  get_ships:    {},
   get_cargo:    {},
   get_nearby:   {},
   get_skills:   {},
+  get_recipes:  {},
   get_map:      {},
   get_trades:   {},
   get_wrecks:   {},
   get_version:  { args: ['count', 'page'] },
   get_commands: {},
+  get_location: {},
   survey_system: {},
+
+  // V2 state commands
+  get_state:      {},
+  v2_get_player:  {},
+  v2_get_ship:    {},
+  v2_get_cargo:   {},
+  v2_get_missions:{},
+  v2_get_queue:   {},
+  v2_get_skills:  {},
+
+  // Unified commands
+  storage: { args: ['action', 'item_id', 'quantity'], usage: '<action> [item_id] [quantity]  (unified storage interface)' },
 
   // Reference & Help
   catalog:          { args: ['type', 'id', 'category', 'search', 'page', 'page_size'], required: ['type'], usage: '<type> [id] [category] [search] [page] [page_size]  (types: ships, items, skills, recipes)' },
@@ -710,6 +748,94 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     if (d.wreck_id) console.log(`  Wreck ID for looting: ${d.wreck_id}`);
   },
 
+  player_kill: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[KILL]${c.reset} You destroyed ${d.victim_name || d.target_name || 'unknown'}!`);
+    if (d.bounty) console.log(`  Bounty: ${d.bounty} credits`);
+    if (d.wreck_id) console.log(`  Wreck: ${d.wreck_id}`);
+  },
+
+  pirate_warning: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.message || 'Pirates detected nearby!'}`);
+  },
+
+  pirate_spawn: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.num_pirates || 1} pirate(s) appeared!`);
+  },
+
+  pirate_combat: (d, t) => {
+    const destroyed = d.destroyed ? ' - YOU WERE DESTROYED!' : '';
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} Pirate dealt ${d.damage || 0} damage${destroyed}`);
+  },
+
+  pirate_destroyed: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[PIRATES]${c.reset} Pirate destroyed!`);
+    if (d.loot) console.log(`  Loot: ${JSON.stringify(d.loot)}`);
+  },
+
+  battle_started: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BATTLE]${c.reset} Battle started! ID: ${d.battle_id || 'unknown'}`);
+  },
+
+  battle_update: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[BATTLE]${c.reset} Battle tick ${d.tick || '?'} - ${d.message || 'combat continues'}`);
+  },
+
+  battle_damage: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[BATTLE]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} damage`);
+  },
+
+  battle_joined: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} joined the battle`);
+  },
+
+  battle_left: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} left the battle`);
+  },
+
+  battle_ended: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[BATTLE]${c.reset} Battle ended! ${d.message || ''}`);
+  },
+
+  skill_xp_gain: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[XP]${c.reset} +${d.xp_gained || d.xp || 0} XP in ${d.skill_id || 'unknown'} (${d.current_xp || '?'}/${d.next_level_xp || '?'})`);
+  },
+
+  trade_complete: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[TRADE]${c.reset} Trade completed with ${d.partner_name || d.with || 'someone'}!`);
+  },
+
+  trade_declined: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade declined by ${d.from_name || 'someone'}`);
+  },
+
+  trade_cancelled: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade cancelled (ID: ${d.trade_id || 'unknown'})`);
+  },
+
+  friend_request_accepted: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.from_name || d.username || 'Someone'} accepted your friend request!`);
+  },
+
+  friend_removed: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[FRIEND]${c.reset} ${d.from_name || d.username || 'Someone'} removed you as a friend`);
+  },
+
+  friend_online: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.username || 'A friend'} is now online`);
+  },
+
+  friend_offline: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.dim}[FRIEND]${c.reset} ${d.username || 'A friend'} went offline`);
+  },
+
+  version_info: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[VERSION]${c.reset} Server version: ${d.version || 'unknown'}`);
+  },
+
+  queue_cleared: (d, t) => {
+    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[QUEUE]${c.reset} Action queue cleared${d.reason ? `: ${d.reason}` : ''}`);
+  },
+
   friend_request: (d, t) => {
     console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[FRIEND]${c.reset} ${d.from_name || 'Someone'} sent you a friend request`);
     console.log(`  Use: accept_friend_request or decline_friend_request`);
@@ -718,7 +844,7 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   system: (d, t) => {
     // Handle different system notification types
     if (d.type === 'gameplay_tip') {
-      console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}💡 TIP:${c.reset} ${d.message}`);
+      console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${d.message}`);
     } else {
       // Generic system message
       console.log(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${d.message || JSON.stringify(d)}`);
