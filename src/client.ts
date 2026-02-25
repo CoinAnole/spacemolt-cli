@@ -509,7 +509,7 @@ async function saveSession(session: Session): Promise<void> {
 
 async function createSession(): Promise<Session> {
   if (DEBUG) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
-  const response = await fetch(`${API_BASE}/session`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+  const response = await fetch(`${API_BASE}/session`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` } });
   const data = await response.json() as APIResponse;
   if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
   if (!data.session) throw new Error('No session in response');
@@ -548,7 +548,7 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   const startTime = Date.now();
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Session-Id': session.id },
+    headers: { 'Content-Type': 'application/json', 'X-Session-Id': session.id, 'User-Agent': `SpaceMolt-Client/${VERSION}` },
     body: payload ? JSON.stringify(payload) : undefined,
   });
   const elapsed = Date.now() - startTime;
