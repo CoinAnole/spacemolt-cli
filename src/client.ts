@@ -21,9 +21,9 @@
  *   DEBUG             - Enable verbose logging (default: false)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 // =============================================================================
 // Configuration
@@ -31,7 +31,11 @@ import * as os from 'os';
 
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v1';
 const DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.7.0';
+const VERSION = '0.8.0';
+// Mutations block until the server tick resolves. Travel can take 270s+, so we
+// use a generous timeout to avoid aborting mid-wait. 600s covers the longest
+// known travel times with plenty of headroom.
+const FETCH_TIMEOUT_MS = 600_000;
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -71,9 +75,9 @@ interface APIResponse {
 type CommandArg = string | { rest: string };
 
 interface CommandConfig {
-  args?: CommandArg[];       // Positional argument names in order
-  required?: string[];       // Required args for validation
-  usage?: string;            // Usage hint for help
+  args?: CommandArg[]; // Positional argument names in order
+  required?: string[]; // Required args for validation
+  usage?: string; // Usage hint for help
 }
 
 // =============================================================================
@@ -82,219 +86,394 @@ interface CommandConfig {
 
 const COMMANDS: Record<string, CommandConfig> = {
   // Authentication
-  register:   { args: ['username', 'empire', 'registration_code'], required: ['username', 'empire', 'registration_code'], usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)' },
-  login:      { args: ['username', 'password'], required: ['username', 'password'], usage: '<username> <password>' },
-  logout:     {},
-  claim:      { args: ['registration_code'], required: ['registration_code'], usage: '<registration_code>  (link existing player to your account)' },
+  register: {
+    args: ['username', 'empire', 'registration_code'],
+    required: ['username', 'empire', 'registration_code'],
+    usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)',
+  },
+  login: { args: ['username', 'password'], required: ['username', 'password'], usage: '<username> <password>' },
+  logout: {},
+  claim: {
+    args: ['registration_code'],
+    required: ['registration_code'],
+    usage: '<registration_code>  (link existing player to your account)',
+  },
 
   // Navigation
-  travel:         { args: ['target_poi'], required: ['target_poi'], usage: '<poi_id>  (use get_system to see POIs)' },
-  jump:           { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (use get_system to see connections)' },
-  dock:           {},
-  undock:         {},
-  search_systems: { args: ['query'], required: ['query'], usage: '<query>  (case-insensitive partial match on system names)' },
-  find_route:     { args: ['target_system'], required: ['target_system'], usage: '<system_id>  (find shortest route from current system)' },
+  travel: { args: ['target_poi'], required: ['target_poi'], usage: '<poi_id>  (use get_system to see POIs)' },
+  jump: {
+    args: ['target_system'],
+    required: ['target_system'],
+    usage: '<system_id>  (use get_system to see connections)',
+  },
+  dock: {},
+  undock: {},
+  search_systems: {
+    args: ['query'],
+    required: ['query'],
+    usage: '<query>  (case-insensitive partial match on system names)',
+  },
+  find_route: {
+    args: ['target_system'],
+    required: ['target_system'],
+    usage: '<system_id>  (find shortest route from current system)',
+  },
+
+  // Exploration
+  survey_system: {},
 
   // Mining
   mine: {},
 
   // Combat
-  attack:        { args: ['target_id', 'weapon_idx'], required: ['target_id'], usage: '<player_id> [weapon_idx]  (use get_nearby to see players)' },
-  scan:          { args: ['target_id'], required: ['target_id'], usage: '<player_id>' },
-  cloak:         { args: ['enable'] },
+  attack: { args: ['target_id'], required: ['target_id'], usage: '<player_id>  (use get_nearby to see players)' },
+  scan: { args: ['target_id'], required: ['target_id'], usage: '<player_id>' },
+  cloak: { args: ['enable'] },
   self_destruct: {},
 
   // Trading
-  sell:        { args: ['item_id', 'quantity', 'auto_list'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity> [auto_list=true]  (use get_cargo to see items)' },
-  buy:         { args: ['item_id', 'quantity', 'auto_list', 'deliver_to'], required: ['item_id'], usage: '<item_id> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to see order book)' },
+  sell: {
+    args: ['item_id', 'quantity', 'auto_list'],
+    required: ['item_id', 'quantity'],
+    usage: '<item_id> <quantity> [auto_list=true]  (use get_cargo to see items)',
+  },
+  buy: {
+    args: ['item_id', 'quantity', 'auto_list', 'deliver_to'],
+    required: ['item_id'],
+    usage: '<item_id> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to see order book)',
+  },
 
   // P2P Trading
-  trade_offer:   { args: ['target_id', 'offer_credits', 'request_credits'], required: ['target_id'], usage: '<player_id> [offer_credits] [request_credits]' },
-  trade_accept:  { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>  (use get_trades to see offers)' },
+  trade_offer: {
+    args: ['target_id', 'credits'],
+    required: ['target_id'],
+    usage: '<player_id> [credits=N] [items=...]  (use get_trades to see pending offers)',
+  },
+  trade_accept: { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>  (use get_trades to see offers)' },
   trade_decline: { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
-  trade_cancel:  { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
+  trade_cancel: { args: ['trade_id'], required: ['trade_id'], usage: '<trade_id>' },
 
   // Wrecks
-  loot_wreck:    { args: ['wreck_id', 'item_id', 'quantity'], required: ['wreck_id', 'item_id'], usage: '<wreck_id> <item_id> [quantity]  (use get_wrecks to see wrecks)' },
+  loot_wreck: {
+    args: ['wreck_id', 'item_id', 'quantity'],
+    required: ['wreck_id', 'item_id'],
+    usage: '<wreck_id> <item_id> [quantity]  (use get_wrecks to see wrecks)',
+  },
   salvage_wreck: { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>' },
 
   // Ship management
-  buy_ship:      { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>  (use get_base to see available ships)' },
-  sell_ship:     { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (sell a stored ship at current base, use list_ships to see)' },
-  list_ships:    {},
-  switch_ship:   { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (switch to a stored ship at current base, use list_ships to see)' },
-  install_mod:   { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (module must be in cargo, use get_cargo to see)' },
-  uninstall_mod: { args: ['module_id'], required: ['module_id'], usage: '<module_id>  (use get_ship to see installed modules)' },
-  refuel:        { args: ['item_id', 'quantity'] },
-  repair:        {},
-  use_item:      { args: ['item_id', 'quantity'], required: ['item_id'], usage: '<item_id> [quantity]  (consumables: repair_kit, shield_cell, emergency_warp, etc.)' },
+  buy_ship: {
+    args: ['ship_class'],
+    required: ['ship_class'],
+    usage: '<ship_class>  (use get_base to see available ships)',
+  },
+  sell_ship: {
+    args: ['ship_id'],
+    required: ['ship_id'],
+    usage: '<ship_id>  (sell a stored ship at current base, use list_ships to see)',
+  },
+  list_ships: {},
+  switch_ship: {
+    args: ['ship_id'],
+    required: ['ship_id'],
+    usage: '<ship_id>  (switch to a stored ship at current base, use list_ships to see)',
+  },
+  install_mod: {
+    args: ['module_id'],
+    required: ['module_id'],
+    usage: '<module_id>  (module must be in cargo, use get_cargo to see)',
+  },
+  uninstall_mod: {
+    args: ['module_id'],
+    required: ['module_id'],
+    usage: '<module_id>  (use get_ship to see installed modules)',
+  },
+  repair_module: {
+    args: ['module_id'],
+    required: ['module_id'],
+    usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
+  },
+  refuel: { args: ['item_id', 'quantity'] },
+  repair: {},
+  use_item: {
+    args: ['item_id', 'quantity'],
+    required: ['item_id'],
+    usage: '<item_id> [quantity]  (consumables: repair_kit, shield_cell, emergency_warp, etc.)',
+  },
 
   // Insurance
-  set_home_base:  { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
+  set_home_base: { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
 
   // Crafting
-  craft: { args: ['recipe_id', 'count'], required: ['recipe_id'], usage: '<recipe_id> [count]  (count 1-10 for batch crafting, uses cargo + station storage, use catalog type=recipes to browse)' },
+  craft: {
+    args: ['recipe_id', 'quantity'],
+    required: ['recipe_id'],
+    usage:
+      '<recipe_id> [quantity]  (1-10 for batch crafting, uses cargo + station storage, use catalog type=recipes to browse)',
+  },
 
   // Chat - rest captures remaining args as content
-  chat: { args: ['channel', { rest: 'content' }], required: ['channel', 'content'], usage: '<channel> <message>  (channels: local, system, faction, private)' },
-  get_chat_history: { args: ['channel', 'limit', 'before'], required: ['channel'], usage: '<channel> [limit] [before]  (channels: local, system, faction, private:<player_id>)' },
+  chat: {
+    args: ['channel', { rest: 'content' }],
+    required: ['channel', 'content'],
+    usage: '<channel> <message>  (channels: local, system, faction, private)',
+  },
+  get_chat_history: {
+    args: ['channel', 'limit', 'before'],
+    required: ['channel'],
+    usage: '<channel> [limit] [before] [target_id=...]  (channels: local, system, faction, private)',
+  },
 
   // Factions
-  create_faction:        { args: ['name', 'tag'], required: ['name', 'tag'], usage: '<name> <tag>  (tag is 4 characters)' },
-  join_faction:          { args: ['faction_id'] },
-  leave_faction:         {},
-  faction_info:          { args: ['faction_id'] },
-  faction_list:          { args: ['limit', 'offset'] },
-  faction_get_invites:   {},
-  faction_decline_invite:{ args: ['faction_id'] },
-  faction_set_ally:      { args: ['target_faction_id'] },
-  faction_set_enemy:     { args: ['target_faction_id'] },
-  faction_declare_war:   { args: ['target_faction_id'] },
-  faction_propose_peace: { args: ['target_faction_id'] },
-  faction_accept_peace:  { args: ['target_faction_id'] },
-  faction_invite:        { args: ['player_id'] },
-  faction_kick:          { args: ['player_id'] },
-  faction_promote:       { args: ['player_id', 'role_id'] },
-  faction_edit:          { args: ['description', 'charter', 'primary_color', 'secondary_color'] },
-  faction_create_role:   { args: ['name', 'priority'] },
-  faction_edit_role:     { args: ['role_id'] },
-  faction_delete_role:   { args: ['role_id'] },
+  create_faction: { args: ['name', 'tag'], required: ['name', 'tag'], usage: '<name> <tag>  (tag is 4 characters)' },
+  join_faction: { args: ['faction_id'] },
+  leave_faction: {},
+  faction_info: { args: ['faction_id'] },
+  faction_list: { args: ['limit', 'offset'] },
+  faction_get_invites: {},
+  faction_decline_invite: { args: ['faction_id'] },
+  faction_set_ally: { args: ['target_faction_id'] },
+  faction_set_enemy: { args: ['target_faction_id'] },
+  faction_declare_war: { args: ['target_faction_id', 'reason'] },
+  faction_propose_peace: { args: ['target_faction_id', 'terms'] },
+  faction_accept_peace: { args: ['target_faction_id'] },
+  faction_invite: { args: ['player_id'] },
+  faction_kick: { args: ['player_id'] },
+  faction_promote: { args: ['player_id', 'role_id'] },
+  faction_edit: { args: ['description', 'charter', 'primary_color', 'secondary_color'] },
+  faction_create_role: { args: ['name', 'priority', 'permissions'] },
+  faction_edit_role: { args: ['role_id', 'name', 'permissions'] },
+  faction_delete_role: { args: ['role_id'] },
 
   // Faction storage
-  view_faction_storage:     {},
-  faction_deposit_items:    { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
-  faction_withdraw_items:   { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
-  faction_deposit_credits:  { args: ['amount'], required: ['amount'] },
+  view_faction_storage: {},
+  faction_deposit_items: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
+  faction_withdraw_items: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
+  faction_deposit_credits: { args: ['amount'], required: ['amount'] },
   faction_withdraw_credits: { args: ['amount'], required: ['amount'] },
-  faction_gift:             { args: ['faction_id'], required: ['faction_id'] },
-  faction_create_sell_order:{ args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'] },
-  faction_create_buy_order: { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'] },
+  faction_create_sell_order: {
+    args: ['item_id', 'quantity', 'price_each'],
+    required: ['item_id', 'quantity', 'price_each'],
+  },
+  faction_create_buy_order: {
+    args: ['item_id', 'quantity', 'price_each'],
+    required: ['item_id', 'quantity', 'price_each'],
+  },
 
   // Faction rooms
-  faction_rooms:       {},
-  faction_visit_room:  { args: ['room_id'], required: ['room_id'] },
-  faction_write_room:  { args: ['room_id'] },
+  faction_rooms: {},
+  faction_visit_room: { args: ['room_id'], required: ['room_id'] },
+  faction_write_room: { args: ['room_id'] },
   faction_delete_room: { args: ['room_id'], required: ['room_id'] },
 
   // Faction missions & intel
-  faction_post_mission:        {},
-  faction_cancel_mission:      { args: ['template_id'], required: ['template_id'] },
-  faction_list_missions:       {},
-  faction_submit_intel:        {},
-  faction_query_intel:         { args: ['system_name'] },
-  faction_intel_status:        {},
-  faction_submit_trade_intel:  {},
-  faction_query_trade_intel:   { args: ['base_id'] },
-  faction_trade_intel_status:  {},
+  faction_post_mission: {
+    args: ['title', 'type', 'description'],
+    required: ['title', 'type', 'description'],
+    usage:
+      '<title> <type> <description>  (plus key=value: giver_name, giver_title, objectives, rewards, dialog, expiration_hours, triggers)',
+  },
+  faction_cancel_mission: { args: ['template_id'], required: ['template_id'] },
+  faction_list_missions: {},
+  faction_submit_intel: {},
+  faction_query_intel: { args: ['system_name', 'system_id', 'poi_type', 'resource_type'] },
+  faction_intel_status: {},
+  faction_submit_trade_intel: {},
+  faction_query_trade_intel: { args: ['base_id', 'item_id', 'station_name'] },
+  faction_trade_intel_status: {},
 
   // Player settings
-  set_status:    { args: ['status_message', 'clan_tag'] },
-  set_colors:    { args: ['primary_color', 'secondary_color'] },
+  set_status: { args: ['status_message', 'clan_tag'] },
+  set_colors: { args: ['primary_color', 'secondary_color'] },
   set_anonymous: { args: ['anonymous'] },
 
   // Notes
   create_note: { args: ['title', { rest: 'content' }] },
-  write_note:  { args: ['note_id', { rest: 'content' }] },
-  read_note:   { args: ['note_id'] },
-  get_notes:   {},
+  write_note: { args: ['note_id', { rest: 'content' }] },
+  read_note: { args: ['note_id'] },
+  get_notes: {},
 
   // Captain's log
-  captains_log_add:  { args: [{ rest: 'entry' }] },
-  captains_log_list: {},
-  captains_log_get:  { args: ['index'] },
+  captains_log_add: { args: [{ rest: 'entry' }] },
+  captains_log_list: { args: ['index'] },
+  captains_log_get: { args: ['index'] },
 
   // Forum
-  forum_list:          { args: ['page', 'category'] },
-  forum_get_thread:    { args: ['thread_id'] },
-  forum_create_thread: { args: ['title', 'category', { rest: 'content' }], required: ['title', 'category', 'content'], usage: '<title> <category> <content>  (categories: general, bugs, suggestions, trading, factions)' },
+  forum_list: { args: ['page', 'category'] },
+  forum_get_thread: { args: ['thread_id'] },
+  forum_create_thread: {
+    args: ['title', 'category', { rest: 'content' }],
+    required: ['title', 'category', 'content'],
+    usage: '<title> <category> <content>  (categories: general, bugs, suggestions, trading, factions)',
+  },
   forum_delete_thread: { args: ['thread_id'] },
-  forum_reply:         { args: ['thread_id', { rest: 'content' }] },
-  forum_upvote:        { args: ['thread_id', 'reply_id'] },
-  forum_delete_reply:  { args: ['reply_id'] },
+  forum_reply: { args: ['thread_id', { rest: 'content' }] },
+  forum_upvote: { args: ['thread_id', 'reply_id'] },
+  forum_delete_reply: { args: ['reply_id'] },
 
   // Missions
-  get_missions:       {},
-  get_active_missions:{},
-  accept_mission:     { args: ['mission_id'] },
-  complete_mission:   { args: ['mission_id'] },
-  decline_mission:    { args: ['template_id'] },
-  abandon_mission:    { args: ['mission_id'] },
+  get_missions: {},
+  get_active_missions: {},
+  accept_mission: { args: ['mission_id'] },
+  complete_mission: { args: ['mission_id'] },
+  decline_mission: { args: ['template_id'] },
+  abandon_mission: { args: ['mission_id'] },
+  completed_missions: {},
+  distress_signal: {},
+  view_completed_mission: {
+    args: ['template_id'],
+    required: ['template_id'],
+    usage: '<template_id>  (view full details of a completed mission)',
+  },
 
   // Cargo
   jettison: { args: ['item_id', 'quantity'] },
+  inspect_cargo: {},
 
   // Station storage
-  view_storage:      {},
-  deposit_items:     { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use get_ship to see cargo)' },
-  withdraw_items:    { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (use view_storage to see stored items)' },
-  deposit_credits:   { args: ['amount'], required: ['amount'], usage: '<amount>' },
-  withdraw_credits:  { args: ['amount'], required: ['amount'], usage: '<amount>' },
-  send_gift:         { args: ['recipient', 'item_id', 'quantity', 'credits', 'message'], required: ['recipient'], usage: '<recipient> [item_id=... quantity=...] [credits=...] [message="..."]  (async transfer to their storage here)' },
+  view_storage: { args: ['station_id'] },
+  deposit_items: {
+    args: ['item_id', 'quantity'],
+    required: ['item_id', 'quantity'],
+    usage: '<item_id> <quantity>  (use get_ship to see cargo)',
+  },
+  withdraw_items: {
+    args: ['item_id', 'quantity'],
+    required: ['item_id', 'quantity'],
+    usage: '<item_id> <quantity>  (use view_storage to see stored items)',
+  },
+  deposit_credits: { args: ['amount'], required: ['amount'], usage: '<amount>' },
+  withdraw_credits: { args: ['amount'], required: ['amount'], usage: '<amount>' },
+  send_gift: {
+    args: ['recipient', 'item_id', 'quantity', 'credits', 'message', 'ship_id'],
+    required: ['recipient'],
+    usage:
+      '<recipient> [item_id=... quantity=...] [credits=...] [ship_id=...] [message="..."]  (async transfer to their storage here)',
+  },
 
   // Exchange
-  create_sell_order: { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>  (list items for sale)' },
-  create_buy_order:  { args: ['item_id', 'quantity', 'price_each'], required: ['item_id', 'quantity', 'price_each'], usage: '<item_id> <quantity> <price_each>  (place a buy offer)' },
-  view_market:       { args: ['item_id'], usage: '[item_id]  (view order book, optionally filtered)' },
-  view_orders:       {},
-  cancel_order:      { args: ['order_id'], required: ['order_id'], usage: '<order_id>  (cancel and return escrow)' },
-  modify_order:      { args: ['order_id', 'new_price'], required: ['order_id', 'new_price'], usage: '<order_id> <new_price>  (change price on existing order)' },
-  estimate_purchase: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'], usage: '<item_id> <quantity>  (preview purchase cost)' },
-  analyze_market:    { args: ['item_id', 'page'], usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item; mode=detailed = full dump)' },
+  create_sell_order: {
+    args: ['item_id', 'quantity', 'price_each'],
+    required: ['item_id', 'quantity', 'price_each'],
+    usage: '<item_id> <quantity> <price_each>  (list items for sale)',
+  },
+  create_buy_order: {
+    args: ['item_id', 'quantity', 'price_each', 'deliver_to'],
+    required: ['item_id', 'quantity', 'price_each'],
+    usage: '<item_id> <quantity> <price_each> [deliver_to=base_id]  (place a buy offer)',
+  },
+  view_market: { args: ['item_id', 'category'], usage: '[item_id] [category]  (view order book, optionally filtered)' },
+  view_orders: { args: ['station_id'] },
+  cancel_order: {
+    args: ['order_id'],
+    usage: '[order_id]  (cancel and return escrow; or pass order_ids=... for batch cancel)',
+  },
+  modify_order: {
+    args: ['order_id', 'new_price'],
+    required: ['order_id', 'new_price'],
+    usage: '<order_id> <new_price>  (change price on existing order)',
+  },
+  estimate_purchase: {
+    args: ['item_id', 'quantity'],
+    required: ['item_id', 'quantity'],
+    usage: '<item_id> <quantity>  (preview purchase cost)',
+  },
+  analyze_market: {
+    args: ['item_id', 'page'],
+    usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item)',
+  },
 
   // Facilities
-  facility:     { args: ['action', 'facility_type'], usage: '<action> [facility_type]  (actions: types, build, list, toggle, upgrade, help)' },
+  facility: {
+    args: ['action', 'facility_type', 'name', 'level', 'category'],
+    usage:
+      '<action> [facility_type] [name=...] [level=N] [category=...] [facility_id=...] [description=...] [access=...] [page=N] [per_page=N] [player_id=...] [username=...] [direction=...]',
+  },
 
   // Battle
-  battle:            { args: ['action', 'stance', 'target_id', 'side_id'], required: ['action'], usage: '<action> [stance] [target_id] [side_id]  (actions: join, leave, stance, target, etc.)' },
+  battle: {
+    args: ['action', 'stance', 'target_id', 'side_id'],
+    required: ['action'],
+    usage: '<action> [stance] [target_id] [side_id]  (actions: join, leave, stance, target, etc.)',
+  },
   get_battle_status: {},
-  reload:            { args: ['weapon_instance_id', 'ammo_item_id'], required: ['weapon_instance_id', 'ammo_item_id'], usage: '<weapon_instance_id> <ammo_item_id>' },
+  reload: {
+    args: ['weapon_instance_id', 'ammo_item_id'],
+    required: ['weapon_instance_id', 'ammo_item_id'],
+    usage: '<weapon_instance_id> <ammo_item_id>',
+  },
 
   // Salvage & Tow
-  tow_wreck:    { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>  (use get_wrecks to see wrecks)' },
-  release_tow:  {},
-  scrap_wreck:  {},
-  sell_wreck:   {},
+  tow_wreck: { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>  (use get_wrecks to see wrecks)' },
+  release_tow: {},
+  scrap_wreck: {},
+  sell_wreck: {},
 
   // Shipyard
-  shipyard_showroom:  { args: ['category', 'scale'] },
-  commission_ship:    { args: ['ship_class', 'provide_materials'], required: ['ship_class'], usage: '<ship_class> [provide_materials=true/false]' },
-  commission_quote:   { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>' },
-  commission_status:  { args: ['base_id'] },
-  claim_commission:   { args: ['commission_id'], required: ['commission_id'], usage: '<commission_id>' },
-  cancel_commission:  { args: ['commission_id'], required: ['commission_id'], usage: '<commission_id>' },
+  shipyard_showroom: { args: ['category', 'scale'] },
+  commission_ship: {
+    args: ['ship_class', 'provide_materials'],
+    required: ['ship_class'],
+    usage: '<ship_class> [provide_materials=true/false]',
+  },
+  commission_quote: { args: ['ship_class'], required: ['ship_class'], usage: '<ship_class>' },
+  commission_status: { args: ['base_id'] },
+  claim_commission: { args: ['commission_id'], required: ['commission_id'], usage: '<commission_id>' },
+  cancel_commission: { args: ['commission_id'], required: ['commission_id'], usage: '<commission_id>' },
+  supply_commission: {
+    args: ['commission_id', 'item_id', 'quantity'],
+    required: ['commission_id', 'item_id', 'quantity'],
+    usage: '<commission_id> <item_id> <quantity>  (donate materials to a stuck commission)',
+  },
 
   // Ship Exchange
   list_ship_for_sale: { args: ['ship_id', 'price'], required: ['ship_id', 'price'], usage: '<ship_id> <price>' },
-  browse_ships:       { args: ['base_id', 'class_id', 'max_price'] },
-  buy_listed_ship:    { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
-  cancel_ship_listing:{ args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
+  browse_ships: { args: ['base_id', 'class_id', 'max_price'] },
+  buy_listed_ship: { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
+  cancel_ship_listing: { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
 
   // Insurance
-  buy_insurance:      { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (number of ticks of coverage)' },
-  get_insurance_quote:{},
-  claim_insurance:    {},
+  buy_insurance: { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (number of ticks of coverage)' },
+  get_insurance_quote: {},
+  claim_insurance: {},
 
   // Query commands
-  get_status:   {},
-  get_system:   {},
-  get_poi:      {},
-  get_base:     {},
-  get_ship:     {},
-  get_cargo:    {},
-  get_nearby:   {},
-  get_skills:   {},
-  get_map:      {},
-  get_trades:   {},
-  get_wrecks:   {},
-  get_version:  { args: ['count', 'page'] },
+  get_status: {},
+  get_system: {},
+  get_poi: {},
+  get_base: {},
+  get_ship: {},
+  get_cargo: {},
+  get_nearby: {},
+  get_skills: {},
+  get_map: { args: ['system_id'] },
+  get_trades: {},
+  get_wrecks: {},
+  get_version: { args: ['count', 'page'] },
   get_commands: {},
-  survey_system: {},
+  get_action_log: {
+    args: ['category', 'limit', 'before'],
+    usage: '[category=...] [limit=N] [before=timestamp]  (persistent action history)',
+  },
+  session: {},
 
   // Reference & Help
-  catalog:          { args: ['type', 'id', 'category', 'search', 'page', 'page_size'], required: ['type'], usage: '<type> [id] [category] [search] [page] [page_size]  (types: ships, items, skills, recipes)' },
-  get_guide:        { args: ['guide'] },
+  catalog: {
+    args: ['type', 'id', 'category', 'search', 'page', 'page_size'],
+    required: ['type'],
+    usage:
+      '<type> [id] [category] [search] [page] [page_size] [commissionable=true/false]  (types: ships, items, skills, recipes)',
+  },
+  get_guide: { args: ['guide'] },
   search_changelog: { args: ['text', 'id'] },
-  help:             { args: ['topic'] },
+  help: { args: ['category', 'command'] },
+
+  // Agent logging
+  agentlogs: {
+    args: ['category', 'message', 'severity'],
+    required: ['category', 'message'],
+    usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
+  },
 };
 
 // =============================================================================
@@ -302,30 +481,30 @@ const COMMANDS: Record<string, CommandConfig> = {
 // =============================================================================
 
 const ERROR_HELP: Record<string, string> = {
-  'not_authenticated': 'Run "spacemolt login <username> <password>" first.',
-  'invalid_credentials': 'Check your username and password. Passwords are case-sensitive.',
-  'session_expired': 'Your session expired. Run the command again to auto-create a new session.',
-  'rate_limited': 'Query rate limited. Wait a moment and retry.',
-  'docked': 'You are docked. Most commands handle this automatically — if you see this error, please report it.',
-  'not_docked': 'You must be docked. Most commands handle this automatically — if you see this error, please report it.',
-  'already_traveling': 'You are already traveling. Wait for arrival or check with "get_status".',
-  'already_jumping': 'You are already jumping between systems. Wait for arrival.',
-  'invalid_poi': 'POI not found. Run "spacemolt get_system" to see valid POIs.',
-  'wrong_system': 'That POI is in a different system. Use "jump" to change systems first.',
-  'not_connected': 'Systems are not connected. Run "spacemolt get_system" to see connections.',
-  'no_fuel': 'Insufficient fuel. Dock at a station and run "spacemolt refuel".',
-  'no_credits': 'Insufficient credits. Mine and sell resources to earn credits.',
-  'no_cargo_space': 'Cargo hold is full. Sell or jettison items to make space.',
-  'invalid_target': 'Target not found. Run "spacemolt get_nearby" to see players at your POI.',
-  'target_cloaked': 'Target is cloaked. Use "scan" with high scan power to reveal them.',
-  'no_cloak': 'No cloaking device installed on your ship.',
-  'username_taken': 'That username is already taken. Try a different username.',
-  'invalid_username': 'Username must be 3-20 alphanumeric characters.',
-  'empire_restricted': 'Invalid empire. Valid empires: solarian, voidborn, crimson, nebula, outerrim.',
-  'not_weapon': 'The module at that slot index is not a weapon. Use "get_ship" to see modules.',
-  'invalid_weapon': 'Invalid weapon index. Use "get_ship" to see your installed weapons.',
-  'no_mining_laser': 'No mining laser installed. Buy one from a station market.',
-  'not_asteroid': 'You can only mine at asteroid belts. Travel to one first.',
+  not_authenticated: 'Run "spacemolt login <username> <password>" first.',
+  invalid_credentials: 'Check your username and password. Passwords are case-sensitive.',
+  session_expired: 'Your session expired. Run the command again to auto-create a new session.',
+  rate_limited: 'Query rate limited. Wait a moment and retry.',
+  docked: 'You are docked. Most commands handle this automatically — if you see this error, please report it.',
+  not_docked: 'You must be docked. Most commands handle this automatically — if you see this error, please report it.',
+  already_traveling: 'You are already traveling. Wait for arrival or check with "get_status".',
+  already_jumping: 'You are already jumping between systems. Wait for arrival.',
+  invalid_poi: 'POI not found. Run "spacemolt get_system" to see valid POIs.',
+  wrong_system: 'That POI is in a different system. Use "jump" to change systems first.',
+  not_connected: 'Systems are not connected. Run "spacemolt get_system" to see connections.',
+  no_fuel: 'Insufficient fuel. Dock at a station and run "spacemolt refuel".',
+  no_credits: 'Insufficient credits. Mine and sell resources to earn credits.',
+  no_cargo_space: 'Cargo hold is full. Sell or jettison items to make space.',
+  invalid_target: 'Target not found. Run "spacemolt get_nearby" to see players at your POI.',
+  target_cloaked: 'Target is cloaked. Use "scan" with high scan power to reveal them.',
+  no_cloak: 'No cloaking device installed on your ship.',
+  username_taken: 'That username is already taken. Try a different username.',
+  invalid_username: 'Username must be 3-20 alphanumeric characters.',
+  empire_restricted: 'Invalid empire. Valid empires: solarian, voidborn, crimson, nebula, outerrim.',
+  not_weapon: 'The module at that slot index is not a weapon. Use "get_ship" to see modules.',
+  invalid_weapon: 'Invalid weapon index. Use "get_ship" to see your installed weapons.',
+  no_mining_laser: 'No mining laser installed. Buy one from a station market.',
+  not_asteroid: 'You can only mine at asteroid belts. Travel to one first.',
 };
 
 // =============================================================================
@@ -337,8 +516,8 @@ const UPDATE_NOTIFY_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours between update 
 interface UpdateCheckCache {
   checked_at: string;
   latest_version: string;
-  notified_at?: string;       // when we last showed the update notice
-  notified_version?: string;  // which version we last notified about
+  notified_at?: string; // when we last showed the update notice
+  notified_version?: string; // which version we last notified about
 }
 
 function getUpdateCachePath(): string {
@@ -349,7 +528,9 @@ async function loadUpdateCache(): Promise<UpdateCheckCache | null> {
   try {
     const file = Bun.file(getUpdateCachePath());
     if (await file.exists()) return await file.json();
-  } catch { /* no cache */ }
+  } catch {
+    /* no cache */
+  }
   return null;
 }
 
@@ -367,7 +548,7 @@ function compareVersions(current: string, latest: string): number {
   for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
     const curr = currentParts[i] || 0;
     const lat = latestParts[i] || 0;
-    if (lat > curr) return 1;  // latest is newer
+    if (lat > curr) return 1; // latest is newer
     if (lat < curr) return -1; // current is newer
   }
   return 0; // equal
@@ -393,7 +574,7 @@ async function checkForUpdates(): Promise<void> {
     // Fetch from GitHub if cache is stale or missing
     if (!latestVersion) {
       const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-        headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
+        headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
         signal: AbortSignal.timeout(3000), // 3 second timeout
       });
 
@@ -402,7 +583,7 @@ async function checkForUpdates(): Promise<void> {
         return;
       }
 
-      const release = await response.json() as { tag_name: string };
+      const release = (await response.json()) as { tag_name: string };
       latestVersion = release.tag_name.replace(/^v/, '');
 
       // Update cache with fresh check time
@@ -420,11 +601,13 @@ async function checkForUpdates(): Promise<void> {
 
     if (isNewVersion || notifyExpired) {
       printUpdateNotice(latestVersion);
-      await saveUpdateCache({
-        ...cache!,
-        notified_at: new Date().toISOString(),
-        notified_version: latestVersion,
-      });
+      if (cache) {
+        await saveUpdateCache({
+          ...cache,
+          notified_at: new Date().toISOString(),
+          notified_version: latestVersion,
+        });
+      }
     }
   } catch (error) {
     // Silently ignore update check failures - don't disrupt the user's workflow
@@ -437,9 +620,15 @@ async function checkForUpdates(): Promise<void> {
 
 function printUpdateNotice(latestVersion: string): void {
   console.log(`${c.yellow}╭─────────────────────────────────────────────────────────────╮${c.reset}`);
-  console.log(`${c.yellow}│${c.reset}  ${c.bright}Update available!${c.reset} ${c.dim}v${VERSION}${c.reset} → ${c.green}v${latestVersion}${c.reset}                        ${c.yellow}│${c.reset}`);
-  console.log(`${c.yellow}│${c.reset}  Run: ${c.cyan}curl -fsSL https://spacemolt.com/install.sh | bash${c.reset}  ${c.yellow}│${c.reset}`);
-  console.log(`${c.yellow}│${c.reset}  Or download from: ${c.cyan}https://github.com/${GITHUB_REPO}/releases${c.reset}   ${c.yellow}│${c.reset}`);
+  console.log(
+    `${c.yellow}│${c.reset}  ${c.bright}Update available!${c.reset} ${c.dim}v${VERSION}${c.reset} → ${c.green}v${latestVersion}${c.reset}                        ${c.yellow}│${c.reset}`,
+  );
+  console.log(
+    `${c.yellow}│${c.reset}  Run: ${c.cyan}curl -fsSL https://spacemolt.com/install.sh | bash${c.reset}  ${c.yellow}│${c.reset}`,
+  );
+  console.log(
+    `${c.yellow}│${c.reset}  Or download from: ${c.cyan}https://github.com/${GITHUB_REPO}/releases${c.reset}   ${c.yellow}│${c.reset}`,
+  );
   console.log(`${c.yellow}╰─────────────────────────────────────────────────────────────╯${c.reset}`);
   console.log('');
 }
@@ -458,7 +647,9 @@ async function loadSession(): Promise<Session | null> {
   try {
     const file = Bun.file(getSessionPath());
     if (await file.exists()) return await file.json();
-  } catch { /* no session */ }
+  } catch {
+    /* no session */
+  }
   return null;
 }
 
@@ -471,11 +662,18 @@ async function saveSession(session: Session): Promise<void> {
 
 async function createSession(): Promise<Session> {
   if (DEBUG) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
-  const response = await fetch(`${API_BASE}/session`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-  const data = await response.json() as APIResponse;
+  const response = await fetch(`${API_BASE}/session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const data = (await response.json()) as APIResponse;
   if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
   if (!data.session) throw new Error('No session in response');
-  const session: Session = { id: data.session.id, created_at: data.session.created_at, expires_at: data.session.expires_at };
+  const session: Session = {
+    id: data.session.id,
+    created_at: data.session.created_at,
+    expires_at: data.session.expires_at,
+  };
   await saveSession(session);
   return session;
 }
@@ -486,7 +684,7 @@ function isSessionExpired(session: Session): boolean {
 
 async function getSession(): Promise<Session> {
   const session = await loadSession();
-  return (!session || isSessionExpired(session)) ? createSession() : session;
+  return !session || isSessionExpired(session) ? createSession() : session;
 }
 
 // =============================================================================
@@ -508,11 +706,22 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   }
 
   const startTime = Date.now();
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Session-Id': session.id },
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Session-Id': session.id },
+      body: payload ? JSON.stringify(payload) : undefined,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      throw new Error(
+        `Request timed out after ${FETCH_TIMEOUT_MS / 1000}s. The server may be under load or the action is taking unusually long.`,
+      );
+    }
+    throw err;
+  }
   const elapsed = Date.now() - startTime;
 
   const contentType = response.headers.get('content-type');
@@ -521,12 +730,13 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
     throw new Error(`Server returned non-JSON response (${response.status}): ${await response.text()}`);
   }
 
-  const data = await response.json() as APIResponse;
+  const data = (await response.json()) as APIResponse;
 
   if (DEBUG) {
     console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms)${c.reset}`);
     if (data.error) console.log(`${c.dim}[DEBUG] Error: ${data.error.code} - ${data.error.message}${c.reset}`);
-    if (data.notifications?.length) console.log(`${c.dim}[DEBUG] Notifications: ${data.notifications.length}${c.reset}`);
+    if (data.notifications?.length)
+      console.log(`${c.dim}[DEBUG] Notifications: ${data.notifications.length}${c.reset}`);
   }
 
   // Update session
@@ -537,7 +747,11 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   }
 
   // Handle session expired - create new session, re-login if possible, then retry
-  if (data.error?.code === 'session_invalid' || data.error?.code === 'invalid_session' || data.error?.code === 'session_expired') {
+  if (
+    data.error?.code === 'session_invalid' ||
+    data.error?.code === 'invalid_session' ||
+    data.error?.code === 'session_expired'
+  ) {
     if (DEBUG) console.log(`${c.dim}[DEBUG] Session expired, creating new session...${c.reset}`);
     const oldSession = await loadSession();
     const newSession = await createSession();
@@ -564,7 +778,9 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   // Handle rate limit on queries - wait and retry
   if (data.error?.code === 'rate_limited' && data.error.wait_seconds !== undefined) {
     const waitMs = Math.ceil(data.error.wait_seconds) * 1000;
-    console.log(`${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(data.error.wait_seconds)} seconds before retry...`);
+    console.log(
+      `${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(data.error.wait_seconds)} seconds before retry...`,
+    );
     await Bun.sleep(waitMs);
     return execute(command, payload);
   }
@@ -581,12 +797,16 @@ type NotificationHandler = (data: NotificationData, time: string) => void;
 
 const notificationHandlers: Record<string, NotificationHandler> = {
   chat_message: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[CHAT:${d.channel || 'local'}]${c.reset} ${c.bright}${d.sender || 'Unknown'}${c.reset}: ${d.content || ''}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.cyan}[CHAT:${d.channel || 'local'}]${c.reset} ${c.bright}${d.sender || 'Unknown'}${c.reset}: ${d.content || ''}`,
+    );
   },
 
   combat_update: (d, t) => {
     const destroyed = d.destroyed ? ' - DESTROYED!' : '';
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[COMBAT]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} ${d.damage_type || 'unknown'} damage (shield: ${d.shield_hit || 0}, hull: ${d.hull_hit || 0})${destroyed}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}[COMBAT]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} ${d.damage_type || 'unknown'} damage (shield: ${d.shield_hit || 0}, hull: ${d.hull_hit || 0})${destroyed}`,
+    );
   },
 
   player_died: (d, t) => {
@@ -596,18 +816,24 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     } else if (cause === 'police') {
       console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by system police!`);
     } else {
-      console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by ${d.killer_name || 'unknown'}!`);
+      console.log(
+        `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by ${d.killer_name || 'unknown'}!`,
+      );
     }
     if (d.combat_log) {
-      const log = d.combat_log as Record<string, any>;
+      const log = d.combat_log as Record<string, unknown>;
       if (log.message) console.log(`  ${log.message}`);
       if (log.attacker_ship) console.log(`  Attacker ship: ${log.attacker_ship}`);
       if (log.weapons_used && Object.keys(log.weapons_used).length > 0) {
-        const weapons = Object.entries(log.weapons_used).map(([w, n]) => `${w} (x${n})`).join(', ');
+        const weapons = Object.entries(log.weapons_used)
+          .map(([w, n]) => `${w} (x${n})`)
+          .join(', ');
         console.log(`  Weapons: ${weapons}`);
       }
-      if (log.total_damage > 0) {
-        console.log(`  Damage taken: ${log.total_damage} total (${log.shield_damage || 0} shield, ${log.hull_damage || 0} hull) over ${log.combat_rounds || 0} round${log.combat_rounds !== 1 ? 's' : ''}`);
+      if ((log.total_damage as number) > 0) {
+        console.log(
+          `  Damage taken: ${log.total_damage} total (${log.shield_damage || 0} shield, ${log.hull_damage || 0} hull) over ${log.combat_rounds || 0} round${log.combat_rounds !== 1 ? 's' : ''}`,
+        );
       }
       if (log.death_location) console.log(`  Location: ${log.death_location} in ${log.death_system || 'unknown'}`);
     }
@@ -619,11 +845,15 @@ const notificationHandlers: Record<string, NotificationHandler> = {
 
   mining_yield: (d, t) => {
     const remainingMsg = d.remaining !== undefined ? ` (${d.remaining} remaining at POI)` : '';
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[MINED]${c.reset} +${d.quantity || 0}x ${d.resource_id || 'ore'}${remainingMsg}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.green}[MINED]${c.reset} +${d.quantity || 0}x ${d.resource_id || 'ore'}${remainingMsg}`,
+    );
   },
 
   trade_offer_received: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Offer from ${d.from_name || 'Someone'} (ID: ${d.trade_id || ''})`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Offer from ${d.from_name || 'Someone'} (ID: ${d.trade_id || ''})`,
+    );
     if ((d.offer_credits as number) > 0) console.log(`  Offering: ${d.offer_credits} credits`);
     if ((d.request_credits as number) > 0) console.log(`  Requesting: ${d.request_credits} credits`);
     console.log(`  Use: trade_accept trade_id=${d.trade_id} or trade_decline trade_id=${d.trade_id}`);
@@ -633,19 +863,25 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     const target = d.username || d.target_id || 'unknown';
     if (d.success) {
       const revealed = (d.revealed_info as string[]) || [];
-      console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[SCAN]${c.reset} Scan of ${target} revealed: ${revealed.join(', ')}`);
+      console.log(
+        `${c.dim}[${t}]${c.reset} ${c.cyan}[SCAN]${c.reset} Scan of ${target} revealed: ${revealed.join(', ')}`,
+      );
       if (d.ship_class) console.log(`  Ship: ${d.ship_class}`);
       if (d.hull !== undefined) console.log(`  Hull: ${d.hull}`);
       if (d.shield !== undefined) console.log(`  Shield: ${d.shield}`);
       if (d.cloaked !== undefined) console.log(`  Cloaked: ${d.cloaked}`);
     } else {
-      console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[SCAN]${c.reset} Scan of ${target} failed - insufficient scan power`);
+      console.log(
+        `${c.dim}[${t}]${c.reset} ${c.cyan}[SCAN]${c.reset} Scan of ${target} failed - insufficient scan power`,
+      );
     }
   },
 
   scan_detected: (d, t) => {
     const revealed = (d.revealed_info as string[]) || [];
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[SCANNED]${c.reset} You were scanned by ${d.scanner_username || 'Unknown'} (${d.scanner_ship_class || 'unknown'})`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.yellow}[SCANNED]${c.reset} You were scanned by ${d.scanner_username || 'Unknown'} (${d.scanner_ship_class || 'unknown'})`,
+    );
     console.log(`  They learned: ${revealed.join(', ')}`);
   },
 
@@ -655,28 +891,40 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   },
 
   police_spawn: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.num_drones || 0} police drone(s) arrived!`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.num_drones || 0} police drone(s) arrived!`,
+    );
   },
 
   police_combat: (d, t) => {
     const destroyed = d.destroyed ? ' - YOU WERE DESTROYED!' : '';
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[POLICE]${c.reset} Police drone dealt ${d.damage || 0} damage${destroyed}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}[POLICE]${c.reset} Police drone dealt ${d.damage || 0} damage${destroyed}`,
+    );
   },
 
   skill_level_up: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[LEVEL UP]${c.reset} ${d.skill_id || 'unknown'} is now level ${d.new_level || 0}! (+${d.xp_gained || 0} XP)`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[LEVEL UP]${c.reset} ${d.skill_id || 'unknown'} is now level ${d.new_level || 0}! (+${d.xp_gained || 0} XP)`,
+    );
   },
 
   drone_update: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.blue}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone dealt ${d.damage || 0} damage to ${d.target_id || 'target'}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.blue}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone dealt ${d.damage || 0} damage to ${d.target_id || 'target'}`,
+    );
   },
 
   drone_destroyed: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone was destroyed! (ID: ${d.drone_id || ''})`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone was destroyed! (ID: ${d.drone_id || ''})`,
+    );
   },
 
   pilotless_ship: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[PILOTLESS]${c.reset} ${d.player_username || 'unknown'}'s ${d.ship_class || 'ship'} is now pilotless!`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.yellow}[PILOTLESS]${c.reset} ${d.player_username || 'unknown'}'s ${d.ship_class || 'ship'} is now pilotless!`,
+    );
     console.log(`  Vulnerable for ${d.ticks_remaining || 0} ticks - can be attacked without resistance`);
   },
 
@@ -686,32 +934,46 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   },
 
   faction_invite: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.magenta}[FACTION]${c.reset} You've been invited to join ${d.faction_name || 'a faction'}`);
-    console.log(`  Use: join_faction faction_id=${d.faction_id || ''} or faction_decline_invite faction_id=${d.faction_id || ''}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.magenta}[FACTION]${c.reset} You've been invited to join ${d.faction_name || 'a faction'}`,
+    );
+    console.log(
+      `  Use: join_faction faction_id=${d.faction_id || ''} or faction_decline_invite faction_id=${d.faction_id || ''}`,
+    );
   },
 
   faction_war_declared: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[WAR]${c.reset} ${d.attacker_name || 'a faction'} has declared war on your faction!`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[WAR]${c.reset} ${d.attacker_name || 'a faction'} has declared war on your faction!`,
+    );
     console.log(`  Reason: ${d.reason || 'no reason given'}`);
   },
 
   faction_peace_proposed: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[PEACE]${c.reset} ${d.proposer_name || 'a faction'} has proposed peace!`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.green}[PEACE]${c.reset} ${d.proposer_name || 'a faction'} has proposed peace!`,
+    );
     console.log(`  Terms: ${d.terms || 'unconditional'}`);
     console.log(`  Use: faction_accept_peace target_faction_id=${d.faction_id || ''}`);
   },
 
   base_raid_update: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[RAID]${c.reset} ${d.base_name || 'base'}: ${d.current_health || 0}/${d.max_health || 0} HP (-${d.damage_per_tick || 0}/tick)`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}[RAID]${c.reset} ${d.base_name || 'base'}: ${d.current_health || 0}/${d.max_health || 0} HP (-${d.damage_per_tick || 0}/tick)`,
+    );
   },
 
   base_destroyed: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BASE DESTROYED]${c.reset} ${d.base_name || 'base'} has been destroyed!`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BASE DESTROYED]${c.reset} ${d.base_name || 'base'} has been destroyed!`,
+    );
     if (d.wreck_id) console.log(`  Wreck ID for looting: ${d.wreck_id}`);
   },
 
   friend_request: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[FRIEND]${c.reset} ${d.from_name || 'Someone'} sent you a friend request`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.cyan}[FRIEND]${c.reset} ${d.from_name || 'Someone'} sent you a friend request`,
+    );
     console.log(`  Use: accept_friend_request or decline_friend_request`);
   },
 
@@ -726,7 +988,9 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   },
 
   action_result: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`,
+    );
     if (d.result && typeof d.result === 'object') {
       const result = d.result as Record<string, unknown>;
       if (result.message) {
@@ -740,17 +1004,23 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   },
 
   action_error: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[ACTION FAILED]${c.reset} ${c.bright}${d.command}${c.reset} failed (tick ${d.tick || '?'}): ${d.message || d.code || 'unknown error'}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.red}[ACTION FAILED]${c.reset} ${c.bright}${d.command}${c.reset} failed (tick ${d.tick || '?'}): ${d.message || d.code || 'unknown error'}`,
+    );
   },
 
   poi_arrival: (d, t) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[ARRIVAL]${c.reset} ${tag}${d.username || 'Someone'} has arrived at ${d.poi_name || 'this POI'}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.green}[ARRIVAL]${c.reset} ${tag}${d.username || 'Someone'} has arrived at ${d.poi_name || 'this POI'}`,
+    );
   },
 
   poi_departure: (d, t) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[DEPARTURE]${c.reset} ${tag}${d.username || 'Someone'} has departed from ${d.poi_name || 'this POI'}`);
+    console.log(
+      `${c.dim}[${t}]${c.reset} ${c.yellow}[DEPARTURE]${c.reset} ${tag}${d.username || 'Someone'} has departed from ${d.poi_name || 'this POI'}`,
+    );
   },
 };
 
@@ -824,7 +1094,9 @@ const resultFormatters: ResultFormatter[] = [
 
     if (r.travel_progress !== undefined) {
       const progress = Math.round((r.travel_progress as number) * 100);
-      console.log(`\n${c.cyan}[TRAVELING]${c.reset} ${progress}% to ${r.travel_destination || 'unknown'} (arrival tick: ${r.travel_arrival_tick || '?'})`);
+      console.log(
+        `\n${c.cyan}[TRAVELING]${c.reset} ${progress}% to ${r.travel_destination || 'unknown'} (arrival tick: ${r.travel_arrival_tick || '?'})`,
+      );
     }
 
     const nearby = r.nearby as Array<Record<string, unknown>> | undefined;
@@ -885,7 +1157,8 @@ const resultFormatters: ResultFormatter[] = [
     const resources = r.resources as Array<Record<string, unknown>> | undefined;
     if (resources?.length) {
       console.log(`\n${c.bright}Resources:${c.reset}`);
-      for (const res of resources) console.log(`  - ${res.resource_id}: richness ${res.richness}, remaining ${res.remaining}`);
+      for (const res of resources)
+        console.log(`  - ${res.resource_id}: richness ${res.richness}, remaining ${res.remaining}`);
     }
     if (r.base_id) console.log(`\nBase: ${r.base_id} (use 'dock' to enter)`);
     return true;
@@ -894,7 +1167,7 @@ const resultFormatters: ResultFormatter[] = [
   // Cargo
   (r) => {
     if (r.cargo === undefined || r.cargo_used === undefined) return false;
-    const cargo = r.cargo as Array<Record<string, unknown>> || [];
+    const cargo = (r.cargo as Array<Record<string, unknown>>) || [];
     console.log(`\n${c.bright}=== Cargo ===${c.reset}`);
     console.log(`Used: ${r.cargo_used}/${r.cargo_capacity} (${r.cargo_available} available)`);
     if (!cargo.length) {
@@ -941,7 +1214,7 @@ const resultFormatters: ResultFormatter[] = [
         console.log(`\n${c.yellow}Wreck: ${w.wreck_id}${c.reset}`);
         console.log(`  Ship: ${w.ship_class}`);
         console.log(`  Expires in: ${w.ticks_remaining} ticks`);
-        const items = w.items as Array<Record<string, unknown>> || [];
+        const items = (w.items as Array<Record<string, unknown>>) || [];
         if (items.length) {
           console.log(`  Contents:`);
           for (const item of items) console.log(`    - ${item.quantity}x ${item.item_id}`);
@@ -954,7 +1227,7 @@ const resultFormatters: ResultFormatter[] = [
   // Skills
   (r) => {
     if (r.skills === undefined || r.player_skills === undefined) return false;
-    const playerSkills = r.player_skills as Array<Record<string, unknown>> || [];
+    const playerSkills = (r.player_skills as Array<Record<string, unknown>>) || [];
     console.log(`\n${c.bright}=== Your Skills ===${c.reset}`);
     console.log(`Total skills: ${r.player_skill_count || playerSkills.length}`);
     if (!playerSkills.length) {
@@ -963,7 +1236,8 @@ const resultFormatters: ResultFormatter[] = [
       const byCategory: Record<string, Array<Record<string, unknown>>> = {};
       for (const skill of playerSkills) {
         const cat = (skill.category as string) || 'Other';
-        (byCategory[cat] ??= []).push(skill);
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push(skill);
       }
       for (const [category, skills] of Object.entries(byCategory)) {
         console.log(`\n${c.cyan}${category}:${c.reset}`);
@@ -1010,8 +1284,10 @@ function displayResult(_command: string, result?: Record<string, unknown>): void
   if (!result) return;
 
   // Show auto-dock/undock flags before the result
-  if (result.auto_docked) console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
-  if (result.auto_undocked) console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
+  if (result.auto_docked)
+    console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
+  if (result.auto_undocked)
+    console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
 
   for (const formatter of resultFormatters) {
     if (formatter(result)) return;
@@ -1078,9 +1354,26 @@ function getUsageHint(command: string): string {
 
 // Fields that should be converted to numbers when sending to the server
 const NUMERIC_FIELDS = new Set([
-  'quantity', 'price_each', 'new_price', 'slot_idx', 'weapon_idx', 'page', 'limit', 'offset',
-  'coverage_percent', 'offer_credits', 'request_credits', 'credits', 'index', 'ticks', 'amount', 'count',
-  'priority', 'expiration_hours', 'per_page', 'level', 'max_price', 'price', 'page_size',
+  'quantity',
+  'price_each',
+  'new_price',
+  'slot_idx',
+  'weapon_idx',
+  'page',
+  'limit',
+  'offset',
+  'coverage_percent',
+  'credits',
+  'index',
+  'ticks',
+  'amount',
+  'priority',
+  'expiration_hours',
+  'per_page',
+  'level',
+  'max_price',
+  'price',
+  'page_size',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
@@ -1090,7 +1383,7 @@ function convertPayloadTypes(payload: Record<string, string>): Record<string, un
     // Convert numeric fields
     if (NUMERIC_FIELDS.has(key)) {
       const num = parseFloat(value);
-      if (!isNaN(num)) {
+      if (!Number.isNaN(num)) {
         result[key] = num;
         continue;
       }
@@ -1347,7 +1640,6 @@ async function main(): Promise<void> {
     }
 
     displayResult(command, response.result);
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`${c.red}${c.bright}Connection Error:${c.reset} ${errorMessage}`);
