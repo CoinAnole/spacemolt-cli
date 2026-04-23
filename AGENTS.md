@@ -105,8 +105,7 @@ SPACEMOLT_SESSION=/path/to/session.json bun run src/client.ts get_status
 ## API Version Notes
 
 - The client now defaults to `https://game.spacemolt.com/api/v2`
-- Commands with a verified v2 mapping use `POST /api/v2/{tool}/{action}`
-- Commands without a verified v2 mapping fall back to `POST /api/v1/<command>`
+- Commands use `POST /api/v2/{tool}/{action}` (help/get_guide now route through `spacemolt_catalog` in v2, no longer falling back to v1)
 - You can force legacy behavior with `SPACEMOLT_URL=https://game.spacemolt.com/api/v1`
 
 ## Documentation

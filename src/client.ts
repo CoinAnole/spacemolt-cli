@@ -685,7 +685,9 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   fleet: { tool: 'spacemolt_fleet', action: 'status' },
 
   // Catalog (single endpoint: /api/v2/spacemolt_catalog)
-  catalog: { tool: 'spacemolt_catalog', action: 'catalog' },
+  catalog:   { tool: 'spacemolt_catalog', action: 'catalog' },
+  get_guide: { tool: 'spacemolt_catalog', action: 'get_guide' },
+  help:      { tool: 'spacemolt_catalog', action: 'help' },
 
   // Battle (advanced actions)
   battle:            { tool: 'spacemolt_battle', action: 'status' },
@@ -696,8 +698,6 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
 // Commands that fall back to v1 (no verified v2 POST endpoint)
 const V1_FALLBACK_COMMANDS = new Set([
   'session',        // /api/v2/session is for creation only, not a command
-  'get_guide',      // /api/v2/spacemolt_catalog/help is GET-only
-  'help',           // /api/v2/spacemolt/help is GET-only
   'send_gift',      // not in v2 spec
   'deposit_credits',
   'withdraw_credits',
@@ -2065,7 +2065,8 @@ ${c.bright}Environment Variables:${c.reset}
 
 ${c.bright}API Routing:${c.reset}
   - v2 is the default transport and uses /api/v2/{tool}/{action}
-  - Commands without a verified v2 mapping fall back to /api/v1/<command>
+  - `help` and `get_guide` route through v2 catalog (no longer fall back to v1)
+  - Remaining unmapped commands still fall back to /api/v1/<command>
   - Set SPACEMOLT_URL=https://game.spacemolt.com/api/v1 to force legacy v1
 
 ${c.bright}Documentation:${c.reset}
