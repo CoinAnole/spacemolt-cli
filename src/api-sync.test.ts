@@ -15,7 +15,11 @@ import * as path from 'node:path';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 
-const UNDOCUMENTED_IN_SPEC = new Set<string>([]);
+const UNDOCUMENTED_IN_SPEC = new Set<string>([
+  '/api/v2/spacemolt_catalog/catalog',
+  '/api/v2/spacemolt_catalog/get_guide',
+  '/api/v2/spacemolt_catalog/help',
+]);
 
 /**
  * Extracts the command names from the COMMANDS block in client.ts.
@@ -24,9 +28,9 @@ const UNDOCUMENTED_IN_SPEC = new Set<string>([]);
  */
 function extractClientCommands(src: string): string[] {
   // Isolate the COMMANDS block — from its opening brace to the closing `};`
-  // at column 0, stopping before ERROR_HELP
+  // at column 0, stopping before V2_TOOL_MAP
   const start = src.indexOf('const COMMANDS:');
-  const end = src.indexOf('\nconst ERROR_HELP');
+  const end = src.indexOf('\nconst V2_TOOL_MAP');
   if (start === -1 || end === -1) throw new Error('Could not locate COMMANDS block in client.ts');
 
   const block = src.slice(start, end);
@@ -37,26 +41,16 @@ function extractClientCommands(src: string): string[] {
 
 function extractV2ToolMap(src: string): Record<string, string> {
   const start = src.indexOf('const V2_TOOL_MAP:');
-  const end = src.indexOf('\nconst V1_FALLBACK_COMMANDS');
+  const end = src.indexOf('\n\n// =============================================================================\n// Error Help Messages');
   if (start === -1 || end === -1) throw new Error('Could not locate V2_TOOL_MAP block in client.ts');
 
   const block = src.slice(start, end);
-  const matches = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*\{\s*tool:\s*'([^']+)',\s*action:\s*'([^']+)'\\s*\},?$/gm)];
+  const matches = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*\{\s*tool:\s*'([^']+)',\s*action:\s*'([^']+)'\s*\},?$/gm)];
   return Object.fromEntries(matches.map((m) => {
     const [, cmd, tool, action] = m;
     const route = tool === action ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
     return [cmd, route];
   }));
-}
-
-function extractFallbackCommands(src: string): Set<string> {
-  const start = src.indexOf('const V1_FALLBACK_COMMANDS = new Set([');
-  const end = src.indexOf(']);', start);
-  if (start === -1 || end === -1) throw new Error('Could not locate V1_FALLBACK_COMMANDS block in client.ts');
-
-  const block = src.slice(start, end);
-  const matches = [...block.matchAll(/'([^']+)'/g)];
-  return new Set(matches.map((m) => m[1]).filter((value): value is string => Boolean(value)));
 }
 
 const skip = process.env.SKIP_API_SYNC === '1';
@@ -69,7 +63,6 @@ describe('api sync', () => {
       const src = fs.readFileSync(clientPath, 'utf-8');
       const clientCommands = new Set(extractClientCommands(src));
       const v2ToolMap = extractV2ToolMap(src);
-      const fallbackCommands = extractFallbackCommands(src);
 
       // Fetch the live OpenAPI spec
       const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
@@ -95,10 +88,10 @@ describe('api sync', () => {
         `Stale V2 mappings in client.ts (not in v2 OpenAPI):\n  ${staleMappings.join('\n  ')}\n\nFix the tool/action pair or move the route to UNDOCUMENTED_IN_SPEC if the spec is behind.`,
       ).toEqual([]);
 
-      const unmappedCommands = [...clientCommands].filter((cmd) => !(cmd in v2ToolMap) && !fallbackCommands.has(cmd));
+      const unmappedCommands = [...clientCommands].filter((cmd) => !(cmd in v2ToolMap));
       expect(
         unmappedCommands,
-        `Commands in client.ts missing from both V2_TOOL_MAP and V1_FALLBACK_COMMANDS:\n  ${unmappedCommands.join('\n  ')}\n\nMap the command to a v2 tool/action or explicitly list it as a v1 fallback.`,
+        `Commands in client.ts missing from V2_TOOL_MAP:\n  ${unmappedCommands.join('\n  ')}\n\nMap every command to a v2 tool/action.`,
       ).toEqual([]);
     },
     15_000,

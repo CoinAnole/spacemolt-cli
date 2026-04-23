@@ -30,7 +30,6 @@ import * as path from 'node:path';
 // =============================================================================
 
 const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
-const DEFAULT_V1_API_BASE = 'https://game.spacemolt.com/api/v1';
 const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 const DEBUG = process.env.DEBUG === 'true';
 const VERSION = '0.9.0';
@@ -246,12 +245,6 @@ const COMMANDS: Record<string, CommandConfig> = {
   faction_edit_role: { args: ['role_id', 'name', 'permissions'] },
   faction_delete_role: { args: ['role_id'] },
 
-  // Faction storage
-  view_faction_storage: {},
-  faction_deposit_items: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
-  faction_withdraw_items: { args: ['item_id', 'quantity'], required: ['item_id', 'quantity'] },
-  faction_deposit_credits: { args: ['amount'], required: ['amount'] },
-  faction_withdraw_credits: { args: ['amount'], required: ['amount'] },
   faction_create_sell_order: {
     args: ['item_id', 'quantity', 'price_each'],
     required: ['item_id', 'quantity', 'price_each'],
@@ -340,8 +333,6 @@ const COMMANDS: Record<string, CommandConfig> = {
     required: ['item_id', 'quantity'],
     usage: '<item_id> <quantity>  (use view_storage to see stored items)',
   },
-  deposit_credits: { args: ['amount'], required: ['amount'], usage: '<amount>' },
-  withdraw_credits: { args: ['amount'], required: ['amount'], usage: '<amount>' },
   send_gift: {
     args: ['recipient', 'item_id', 'quantity', 'credits', 'message', 'ship_id'],
     required: ['recipient'],
@@ -434,15 +425,6 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_insurance_quote: {},
   claim_insurance: {},
 
-  // Drones
-  deploy_drone: { args: ['drone_type'], required: ['drone_type'], usage: '<drone_type>  (deploy an offensive drone)' },
-  recall_drone: { args: ['drone_id'], required: ['drone_id'], usage: '<drone_id>  (recall a deployed drone)' },
-  order_drone: {
-    args: ['drone_id', 'order', 'target_id'],
-    required: ['drone_id', 'order'],
-    usage: '<drone_id> <order> [target_id]  (give drone orders)',
-  },
-
   // Query commands
   get_status: {},
   get_system: {},
@@ -480,10 +462,6 @@ const COMMANDS: Record<string, CommandConfig> = {
     args: ['action', 'player_id'],
     required: ['action'],
     usage: '<action> [player_id]  (actions: create, invite, accept, decline, leave, kick, disband, status)',
-  },
-  storage: {
-    args: ['action', 'item_id', 'quantity'],
-    usage: '<action> [item_id] [quantity]  (unified storage interface)',
   },
 
   // Reference & Help
@@ -549,6 +527,12 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   cloak:              { tool: 'spacemolt', action: 'cloak' },
   self_destruct:      { tool: 'spacemolt', action: 'self_destruct' },
   get_ship:           { tool: 'spacemolt', action: 'get_ship' },
+  v2_get_player:      { tool: 'spacemolt', action: 'get_player' },
+  v2_get_ship:        { tool: 'spacemolt', action: 'get_ship' },
+  v2_get_cargo:       { tool: 'spacemolt', action: 'get_cargo' },
+  v2_get_missions:    { tool: 'spacemolt', action: 'get_missions' },
+  v2_get_queue:       { tool: 'spacemolt', action: 'get_queue' },
+  v2_get_skills:      { tool: 'spacemolt', action: 'get_skills' },
   get_ships:          { tool: 'spacemolt', action: 'get_ships' },
   install_mod:        { tool: 'spacemolt', action: 'install_mod' },
   uninstall_mod:      { tool: 'spacemolt', action: 'uninstall_mod' },
@@ -586,6 +570,7 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   view_storage:     { tool: 'spacemolt_storage', action: 'view' },
   deposit_items:    { tool: 'spacemolt_storage', action: 'deposit' },
   withdraw_items:   { tool: 'spacemolt_storage', action: 'withdraw' },
+  send_gift:        { tool: 'spacemolt_storage', action: 'deposit' },
 
   // Market (advanced commands not in core spacemolt)
   view_market:       { tool: 'spacemolt_market', action: 'view_market' },
@@ -656,6 +641,7 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   forum_upvote:          { tool: 'spacemolt_social', action: 'forum_upvote' },
   forum_delete_reply:    { tool: 'spacemolt_social', action: 'forum_delete_reply' },
   get_action_log:    { tool: 'spacemolt_social', action: 'get_action_log' },
+  agentlogs:         { tool: 'agentlogs', action: 'agentlogs' },
 
   // Transfer
   get_trades:    { tool: 'spacemolt_transfer', action: 'get_trades' },
@@ -688,30 +674,13 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   catalog:   { tool: 'spacemolt_catalog', action: 'catalog' },
   get_guide: { tool: 'spacemolt_catalog', action: 'get_guide' },
   help:      { tool: 'spacemolt_catalog', action: 'help' },
+  session:   { tool: 'session', action: 'session' },
 
   // Battle (advanced actions)
   battle:            { tool: 'spacemolt_battle', action: 'status' },
   get_battle_status: { tool: 'spacemolt_battle', action: 'status' },
   reload:            { tool: 'spacemolt_battle', action: 'reload' },
 };
-
-// Commands that fall back to v1 (no verified v2 POST endpoint)
-const V1_FALLBACK_COMMANDS = new Set([
-  'session',        // /api/v2/session is for creation only, not a command
-  'send_gift',      // not in v2 spec
-  'deposit_credits',
-  'withdraw_credits',
-  'view_faction_storage',
-  'faction_deposit_items',
-  'faction_withdraw_items',
-  'faction_deposit_credits',
-  'faction_withdraw_credits',
-  'deploy_drone',
-  'recall_drone',
-  'order_drone',
-  'agentlogs',      // /api/v2/agentlogs exists but uses different auth pattern
-  'storage',        // unified v1 interface
-]);
 
 // =============================================================================
 // Error Help Messages
@@ -878,16 +847,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isV1ApiBase(base: string): boolean {
-  return /\/api\/v1\/?$/.test(base);
-}
-
-function getV1ApiBase(): string {
-  if (isV1ApiBase(API_BASE)) return trimTrailingSlash(API_BASE);
-  if (/\/api\/v2\/?$/.test(API_BASE)) return trimTrailingSlash(API_BASE).replace(/\/api\/v2$/, '/api/v1');
-  return DEFAULT_V1_API_BASE;
-}
-
 function getStructuredResult(response: APIResponse): Record<string, unknown> | undefined {
   return isRecord(response.structuredContent) ? response.structuredContent : undefined;
 }
@@ -956,23 +915,12 @@ async function getSession(): Promise<Session> {
 
 async function execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
   const session = await getSession();
-  let url: string;
-  let routeKind: 'v1' | 'v2' | 'v1-fallback';
+  const mapping = V2_TOOL_MAP[command];
+  if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
-  if (isV1ApiBase(API_BASE)) {
-    url = `${trimTrailingSlash(API_BASE)}/${command}`;
-    routeKind = 'v1';
-  } else {
-    const mapping = V2_TOOL_MAP[command];
-    if (mapping) {
-      const routePath = mapping.tool === mapping.action ? mapping.tool : `${mapping.tool}/${mapping.action}`;
-      url = `${trimTrailingSlash(API_BASE)}/${routePath}`;
-      routeKind = 'v2';
-    } else {
-      url = `${getV1ApiBase()}/${command}`;
-      routeKind = 'v1-fallback';
-    }
-  }
+  const routePath = mapping.tool === mapping.action ? mapping.tool : `${mapping.tool}/${mapping.action}`;
+  const url = `${trimTrailingSlash(API_BASE)}/${routePath}`;
+  const routeKind: 'v2' = 'v2';
 
   if (DEBUG) {
     console.log(`${c.dim}[DEBUG] Request: POST ${url}${c.reset}`);
@@ -983,8 +931,6 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
       if (safePayload.password) safePayload.password = '***';
       console.log(`${c.dim}[DEBUG] Payload: ${JSON.stringify(safePayload)}${c.reset}`);
     }
-  } else if (routeKind === 'v1-fallback') {
-    console.log(`${c.dim}[V1 FALLBACK]${c.reset} ${command}`);
   }
 
   const startTime = Date.now();
@@ -2064,10 +2010,9 @@ ${c.bright}Environment Variables:${c.reset}
   DEBUG=true          Show verbose request/response logging
 
 ${c.bright}API Routing:${c.reset}
-  - v2 is the default transport and uses /api/v2/{tool}/{action}
-  - `help` and `get_guide` route through v2 catalog (no longer fall back to v1)
-  - Remaining unmapped commands still fall back to /api/v1/<command>
-  - Set SPACEMOLT_URL=https://game.spacemolt.com/api/v1 to force legacy v1
+  - The client uses v2 exclusively
+  - Commands route to /api/v2/{tool}/{action}
+  - help and get_guide route through v2 catalog
 
 ${c.bright}Documentation:${c.reset}
   API Reference: https://game.spacemolt.com/api/v2/openapi.json

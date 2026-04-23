@@ -650,7 +650,6 @@ describe('client.ts source integrity', () => {
       'get_drones',
       'search_changelog',
       'buy_ship',
-      'get_ships',
       'get_recipes',
       'shipyard_showroom',
       'set_anonymous',

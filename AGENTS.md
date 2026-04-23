@@ -105,8 +105,8 @@ SPACEMOLT_SESSION=/path/to/session.json bun run src/client.ts get_status
 ## API Version Notes
 
 - The client now defaults to `https://game.spacemolt.com/api/v2`
-- Commands use `POST /api/v2/{tool}/{action}` (help/get_guide now route through `spacemolt_catalog` in v2, no longer falling back to v1)
-- You can force legacy behavior with `SPACEMOLT_URL=https://game.spacemolt.com/api/v1`
+- Commands use `POST /api/v2/{tool}/{action}` (help/get_guide route through `spacemolt_catalog`; single-segment endpoints like `session` and `agentlogs` use `POST /api/v2/{tool}`)
+- The CLI is v2-only; `SPACEMOLT_URL` still overrides the base URL, but there is no v1 fallback routing
 
 ## Documentation
 

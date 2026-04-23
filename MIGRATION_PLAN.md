@@ -1,8 +1,10 @@
 # SpaceMolt Client v1 → v2 API Migration Plan
 
+Status: completed. The CLI now routes exclusively through the v2 API and no longer contains any v1 fallback path.
+
 ## Context
 
-The SpaceMolt HTTP API v2 (server v0.271.1) is now the preferred HTTP interface. The current CLI client (`src/client.ts`) uses v1 exclusively. This plan migrates the client to v2 while maintaining backward compatibility and all existing CLI ergonomics.
+The SpaceMolt HTTP API v2 (server v0.271.1) is now the preferred HTTP interface. The CLI migration is complete; this document remains as historical reference.
 
 ## What Changes in v2
 
@@ -85,7 +87,7 @@ const V2_TOOL_MAP: Record<string, { tool: string; action: string }> = {
 };
 ```
 
-**Important**: For commands not yet in the map (e.g., undocumented commands, drone commands, v2 state commands), fall back to v1. This ensures zero breakage during migration.
+Implementation note: the final client does not retain a v1 fallback branch. Commands without a verified v2 route were either mapped to v2, kept as v2 aliases, or removed from the CLI.
 
 ### Step 2: Update the API Base URL Default
 
@@ -94,7 +96,7 @@ Change `API_BASE` from v1 to v2:
 const API_BASE = process.env.SPACEMOLT_URL || 'https://game.spacemolt.com/api/v2';
 ```
 
-Users can still override with `SPACEMOLT_URL=https://game.spacemolt.com/api/v1` to force v1.
+`SPACEMOLT_URL` can still override the base URL, but the client no longer rewrites or falls back to v1 routes.
 
 ### Step 3: Update the `execute()` Function
 
@@ -107,15 +109,10 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   // Look up v2 tool/action mapping
   const mapping = V2_TOOL_MAP[command];
   
-  let url: string;
-  if (mapping) {
-    // v2 path
-    url = `${API_BASE}/${mapping.tool}/${mapping.action}`;
-  } else {
-    // Fallback to v1 flat command
-    const v1Base = 'https://game.spacemolt.com/api/v1';
-    url = `${v1Base}/${command}`;
-  }
+  if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
+
+  const routePath = mapping.tool === mapping.action ? mapping.tool : `${mapping.tool}/${mapping.action}`;
+  const url = `${API_BASE}/${routePath}`;
 
   // ... rest of fetch logic remains the same
 }
@@ -166,7 +163,7 @@ Modify `src/api-sync.test.ts`:
 
 2. Update the help text in `showHelp()`:
    - Change the `SPACEMOLT_URL` default in the environment variables section to v2
-   - Add a note about v1 fallback
+   - State that the client is v2-only
 
 3. Update `package.json` version to `0.9.0`
 
@@ -180,7 +177,7 @@ Modify `src/api-sync.test.ts`:
 
 4. **Error handling**: v2 error codes should be compatible. The existing `session_invalid`, `session_expired` codes should work the same.
 
-5. **Commands without v2 mapping**: Keep the v1 fallback path clean. Log a debug message when falling back to v1 so users know which commands haven't been migrated yet.
+5. **Commands without v2 mapping**: do not keep them in the CLI. Either map them to a verified v2 endpoint or remove the command surface.
 
 ## Complete Command-to-Tool Mapping
 
@@ -349,28 +346,11 @@ Here is the FULL mapping based on the 16 v2 tools and the existing command set i
 ### spacemolt_fleet
 - fleet → spacemolt_fleet/manage
 
-### Commands falling back to v1 (not yet mapped)
-- deposit_credits → v1 fallback
-- withdraw_credits → v1 fallback
-- deploy_drone → v1 fallback
-- recall_drone → v1 fallback
-- order_drone → v1 fallback
-- get_state → v1 fallback
-- v2_get_player → v1 fallback
-- v2_get_ship → v1 fallback
-- v2_get_cargo → v1 fallback
-- v2_get_missions → v1 fallback
-- v2_get_queue → v1 fallback
-- v2_get_skills → v1 fallback
-- captain's log commands → v1 fallback (captains_log_add, captains_log_list, captains_log_get)
-- notes → v1 fallback (create_note, write_note, read_note, get_notes)
-- forum → v1 fallback (forum_list, forum_get_thread, forum_create_thread, etc.)
-- missions → check if accept_mission, complete_mission, decline_mission, etc. are in spacemolt tool
-- insurance → check if buy_insurance, get_insurance_quote, claim_insurance, view_insurance, set_home_base are in a tool
-- agentlogs → v1 fallback
-- storage (unified) → v1 fallback
-
-**Note**: Some of these "v1 fallback" commands may actually be in the v2 spec under a tool name not obvious from the documentation. The Codex implementation should attempt to identify the correct v2 tool/action for ALL commands by checking the OpenAPI v2 spec. If a command genuinely has no v2 equivalent, keep it on v1.
+### Final State
+- `session`, `agentlogs`, and `send_gift` are routed through verified v2 endpoints.
+- Redundant aliases were removed instead of being preserved as special cases: `deposit_credits`, `withdraw_credits`, `view_faction_storage`, `faction_deposit_items`, `faction_withdraw_items`, `faction_deposit_credits`, `faction_withdraw_credits`, and `storage`.
+- Commands with no v2 endpoint were removed from the CLI surface: `deploy_drone`, `recall_drone`, and `order_drone`.
+- Compatibility aliases `v2_get_player`, `v2_get_ship`, `v2_get_cargo`, `v2_get_missions`, `v2_get_queue`, and `v2_get_skills` resolve to the same v2 routes as their canonical `get_*` commands.
 
 ## Testing Strategy
 
