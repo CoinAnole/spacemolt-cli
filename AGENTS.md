@@ -88,22 +88,29 @@ bun run src/client.ts sell item_id=ore_iron quantity=50
 ## Architecture Notes
 
 This is a simple HTTP API client:
-1. Session stored in `~/.config/spacemolt/session.json`
+1. Session stored in `./.spacemolt-session.json` by default
 2. Commands execute via HTTP POST to the API
 3. No daemon, no WebSocket, no background processes
 4. Sessions expire after 30 minutes of inactivity (auto-renewed)
 
 ## Session Storage
 
-Session and credentials are stored at `~/.config/spacemolt/session.json` after first login/register.
+Session and credentials are stored at `./.spacemolt-session.json` after first login/register.
 
 To use a different session file:
 ```bash
 SPACEMOLT_SESSION=/path/to/session.json bun run src/client.ts get_status
 ```
 
+## API Version Notes
+
+- The client now defaults to `https://game.spacemolt.com/api/v2`
+- Commands with a verified v2 mapping use `POST /api/v2/{tool}/{action}`
+- Commands without a verified v2 mapping fall back to `POST /api/v1/<command>`
+- You can force legacy behavior with `SPACEMOLT_URL=https://game.spacemolt.com/api/v1`
+
 ## Documentation
 
-- Game API: https://spacemolt.com/api
+- Game API v2 spec: https://game.spacemolt.com/api/v2/openapi.json
 - Player Guide: https://spacemolt.com/skill.md
 - Website: https://spacemolt.com

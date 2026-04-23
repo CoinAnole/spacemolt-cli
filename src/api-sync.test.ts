@@ -13,33 +13,9 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-const OPENAPI_URL = 'https://game.spacemolt.com/api/openapi.json';
+const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 
-// Server endpoints confirmed to exist but not yet documented in the OpenAPI spec.
-// Verify periodically with: curl -s https://game.spacemolt.com/api/openapi.json | jq '.paths | keys'
-const UNDOCUMENTED_IN_SPEC = new Set([
-  // Unified interface commands
-  'get_location', // Returns rich location data despite not being in spec
-  'storage', // Unified deposit/withdraw/view interface
-
-  // Station credit management
-  'deposit_credits',
-  'withdraw_credits',
-
-  // Drone commands
-  'deploy_drone',
-  'recall_drone',
-  'order_drone',
-
-  // v2 state commands (experimental)
-  'get_state',
-  'v2_get_player',
-  'v2_get_ship',
-  'v2_get_cargo',
-  'v2_get_missions',
-  'v2_get_queue',
-  'v2_get_skills',
-]);
+const UNDOCUMENTED_IN_SPEC = new Set<string>([]);
 
 /**
  * Extracts the command names from the COMMANDS block in client.ts.
@@ -56,18 +32,44 @@ function extractClientCommands(src: string): string[] {
   const block = src.slice(start, end);
   // Match 2-space-indented top-level keys: `  keyname: {` or `  keyname: (`
   const matches = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)];
-  return matches.map((m) => m[1]);
+  return matches.map((m) => m[1]).filter((value): value is string => Boolean(value));
+}
+
+function extractV2ToolMap(src: string): Record<string, string> {
+  const start = src.indexOf('const V2_TOOL_MAP:');
+  const end = src.indexOf('\nconst V1_FALLBACK_COMMANDS');
+  if (start === -1 || end === -1) throw new Error('Could not locate V2_TOOL_MAP block in client.ts');
+
+  const block = src.slice(start, end);
+  const matches = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*\{\s*tool:\s*'([^']+)',\s*action:\s*'([^']+)'\\s*\},?$/gm)];
+  return Object.fromEntries(matches.map((m) => {
+    const [, cmd, tool, action] = m;
+    const route = tool === action ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
+    return [cmd, route];
+  }));
+}
+
+function extractFallbackCommands(src: string): Set<string> {
+  const start = src.indexOf('const V1_FALLBACK_COMMANDS = new Set([');
+  const end = src.indexOf(']);', start);
+  if (start === -1 || end === -1) throw new Error('Could not locate V1_FALLBACK_COMMANDS block in client.ts');
+
+  const block = src.slice(start, end);
+  const matches = [...block.matchAll(/'([^']+)'/g)];
+  return new Set(matches.map((m) => m[1]).filter((value): value is string => Boolean(value)));
 }
 
 const skip = process.env.SKIP_API_SYNC === '1';
 
 describe('api sync', () => {
   test.skipIf(skip)(
-    'client.ts COMMANDS matches live OpenAPI spec',
+    'client.ts V2 map matches live OpenAPI spec',
     async () => {
       const clientPath = path.join(import.meta.dir, 'client.ts');
       const src = fs.readFileSync(clientPath, 'utf-8');
       const clientCommands = new Set(extractClientCommands(src));
+      const v2ToolMap = extractV2ToolMap(src);
+      const fallbackCommands = extractFallbackCommands(src);
 
       // Fetch the live OpenAPI spec
       const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
@@ -76,26 +78,27 @@ describe('api sync', () => {
         return;
       }
       expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
-      const spec = (await resp.json()) as { paths: Record<string, unknown> };
+      const spec = (await resp.json()) as { paths: Record<string, { post?: unknown }> };
+      const v2PostPaths = new Set(
+        Object.entries(spec.paths)
+          .filter(([, methods]) => Boolean(methods.post))
+          .map(([route]) => route),
+      );
 
-      // All spec paths are POST endpoints at /<command>
-      const apiEndpoints = new Set(Object.keys(spec.paths).map((p) => p.replace(/^\//, '')));
+      for (const route of UNDOCUMENTED_IN_SPEC) v2PostPaths.add(route);
 
-      // Add undocumented endpoints that we've verified exist on the server
-      for (const cmd of UNDOCUMENTED_IN_SPEC) apiEndpoints.add(cmd);
-
-      // Hard fail: commands in client that don't exist in the API
-      const staleCommands = [...clientCommands].filter((cmd) => !apiEndpoints.has(cmd));
+      const staleMappings = Object.entries(v2ToolMap)
+        .filter(([, route]) => !v2PostPaths.has(route))
+        .map(([command, route]) => `${command} -> ${route}`);
       expect(
-        staleCommands,
-        `Stale commands in client.ts (not in server API):\n  ${staleCommands.join('\n  ')}\n\nRemove these or move them to UNDOCUMENTED_IN_SPEC if they exist but aren't in the spec.`,
+        staleMappings,
+        `Stale V2 mappings in client.ts (not in v2 OpenAPI):\n  ${staleMappings.join('\n  ')}\n\nFix the tool/action pair or move the route to UNDOCUMENTED_IN_SPEC if the spec is behind.`,
       ).toEqual([]);
 
-      // Hard fail: API endpoints missing from client
-      const missingCommands = [...apiEndpoints].filter((cmd) => !clientCommands.has(cmd));
+      const unmappedCommands = [...clientCommands].filter((cmd) => !(cmd in v2ToolMap) && !fallbackCommands.has(cmd));
       expect(
-        missingCommands,
-        `API endpoints missing from client.ts:\n  ${missingCommands.join('\n  ')}\n\nAdd these to COMMANDS in client.ts.`,
+        unmappedCommands,
+        `Commands in client.ts missing from both V2_TOOL_MAP and V1_FALLBACK_COMMANDS:\n  ${unmappedCommands.join('\n  ')}\n\nMap the command to a v2 tool/action or explicitly list it as a v1 fallback.`,
       ).toEqual([]);
     },
     15_000,
