@@ -1747,6 +1747,29 @@ const resultFormatters: ResultFormatter[] = [
 function displayStructuredResult(result: Record<string, unknown>): void {
   if (!result) return;
 
+  // Normalize get_status response: the v2 API returns location data in a
+  // separate `location` object rather than enriched `system`/`poi` fields
+  // and player fields like `current_system`/`current_poi`/`docked_at_base`.
+  // The login endpoint still returns the old shape.  Merge the location
+  // object into the expected shape so formatters work for both.
+  const loc = result.location as Record<string, unknown> | undefined;
+  if (loc && !result.system) {
+    result.system = { id: loc.system_id, name: loc.system_name };
+  }
+  if (loc && !result.poi) {
+    result.poi = { id: loc.poi_id, name: loc.poi_name, base_name: loc.poi_id };
+  }
+  if (loc && result.player) {
+    const p = result.player as Record<string, unknown>;
+    if (p.current_system === undefined) p.current_system = loc.system_name;
+    if (p.current_poi === undefined) p.current_poi = loc.poi_name;
+    if (p.docked_at_base === undefined && loc.docked_at) p.docked_at_base = loc.docked_at;
+  }
+  // get_status puts nearby_players inside location; lift to top-level for formatter
+  if (loc?.nearby_players && !result.nearby) {
+    result.nearby = loc.nearby_players;
+  }
+
   // Show auto-dock/undock flags before the result
   if (result.auto_docked)
     console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
