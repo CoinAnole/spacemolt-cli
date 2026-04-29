@@ -31,7 +31,8 @@ import * as path from 'node:path';
 
 const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
-const DEBUG = process.env.DEBUG === 'true';
+let JSON_OUTPUT = process.env.SPACEMOLT_OUTPUT === 'json';
+let DEBUG = process.env.DEBUG === 'true';
 const VERSION = '0.9.0';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
@@ -72,6 +73,11 @@ interface APIResponse {
   notifications?: Array<{ type: string; msg_type?: string; data: unknown; timestamp: string }>;
   session?: { id: string; player_id?: string; created_at: string; expires_at: string };
   error?: { code: string; message: string; wait_seconds?: number; retry_after?: number };
+}
+
+interface GlobalOptions {
+  json: boolean;
+  args: string[];
 }
 
 type CommandArg = string | { rest: string };
@@ -995,11 +1001,15 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
       if (DEBUG) console.log(`${c.dim}[DEBUG] Re-authenticating as ${oldSession.username}...${c.reset}`);
       const loginResp = await execute('login', { username: oldSession.username, password: oldSession.password });
       if (loginResp.error) {
-        console.error(`${c.red}[SESSION]${c.reset} Session expired and auto-login failed: ${loginResp.error.message}`);
-        console.error(`${c.yellow}Run "spacemolt login <username> <password>" to re-authenticate.${c.reset}`);
+        if (!JSON_OUTPUT) {
+          console.error(`${c.red}[SESSION]${c.reset} Session expired and auto-login failed: ${loginResp.error.message}`);
+          console.error(`${c.yellow}Run "spacemolt login <username> <password>" to re-authenticate.${c.reset}`);
+        }
         return data; // Return the original error
       }
-      console.log(`${c.dim}[SESSION]${c.reset} Session recovered, re-authenticated as ${oldSession.username}`);
+      if (!JSON_OUTPUT) {
+        console.log(`${c.dim}[SESSION]${c.reset} Session recovered, re-authenticated as ${oldSession.username}`);
+      }
     }
     if (command !== 'login' && command !== 'register') {
       return execute(command, payload);
@@ -1011,9 +1021,11 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   const retryAfter = data.error?.retry_after ?? data.error?.wait_seconds;
   if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
     const waitMs = Math.ceil(retryAfter) * 1000;
-    console.log(
-      `${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`,
-    );
+    if (!JSON_OUTPUT) {
+      console.log(
+        `${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`,
+      );
+    }
     await Bun.sleep(waitMs);
     return execute(command, payload);
   }
@@ -1806,6 +1818,26 @@ function displayResult(command: string, response: APIResponse): void {
   if (command === 'session') return;
 }
 
+function parseGlobalOptions(args: string[]): GlobalOptions {
+  const json = args[0] === '--json' || process.env.SPACEMOLT_OUTPUT === 'json';
+  if (json) {
+    JSON_OUTPUT = true;
+    DEBUG = false;
+  }
+  return {
+    json,
+    args: json && args[0] === '--json' ? args.slice(1) : args,
+  };
+}
+
+function printJsonResponse(response: APIResponse): void {
+  console.log(JSON.stringify(response, null, 2));
+}
+
+function printJsonError(code: string, message: string): void {
+  printJsonResponse({ error: { code, message } });
+}
+
 // =============================================================================
 // Argument Parsing
 // =============================================================================
@@ -1940,6 +1972,7 @@ ${c.bright}Quick Start:${c.reset}
 
 ${c.bright}Usage:${c.reset}
   spacemolt <command> [args...]
+  spacemolt --json <command> [args...]
 
   Arguments can be positional or key=value:
     spacemolt travel sol_asteroid_belt
@@ -2065,10 +2098,11 @@ function displayError(
 // =============================================================================
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
+  const options = parseGlobalOptions(process.argv.slice(2));
+  const args = options.args;
 
   // Check for updates in the background (non-blocking)
-  checkForUpdates();
+  if (!options.json) checkForUpdates();
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     showHelp();
@@ -2097,6 +2131,10 @@ async function main(): Promise<void> {
   try {
     const missingArg = validateRequiredArgs(command, payload);
     if (missingArg) {
+      if (options.json) {
+        printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`);
+        process.exit(1);
+      }
       console.error(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
       console.error(`\nUsage: spacemolt ${command} ${getUsageHint(command)}`);
       process.exit(1);
@@ -2121,13 +2159,18 @@ async function main(): Promise<void> {
     const typedPayload = Object.keys(payload).length > 0 ? convertPayloadTypes(payload) : {};
     const response = await execute(command, typedPayload);
 
-    if (response.notifications?.length) {
+    if (options.json && response.error) {
+      printJsonResponse(response);
+      process.exit(1);
+    }
+
+    if (!options.json && response.notifications?.length) {
       console.log(`${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`);
       displayNotifications(response.notifications);
       console.log('');
     }
 
-    if (response.error) {
+    if (!options.json && response.error) {
       displayError(command, response.error);
       process.exit(1);
     }
@@ -2174,9 +2217,18 @@ async function main(): Promise<void> {
       }
     }
 
+    if (options.json) {
+      printJsonResponse(response);
+      process.exit(response.error ? 1 : 0);
+    }
+
     displayResult(command, response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    if (options.json) {
+      printJsonError('connection_error', errorMessage);
+      process.exit(1);
+    }
     console.error(`${c.red}${c.bright}Connection Error:${c.reset} ${errorMessage}`);
     console.error('');
 
