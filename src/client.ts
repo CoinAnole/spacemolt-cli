@@ -91,6 +91,8 @@ interface CommandConfig {
 interface V2Route {
   tool: string;
   action: string;
+  /** Static payload fields to inject (e.g., target=faction for faction storage commands) */
+  defaults?: Record<string, string>;
 }
 
 // =============================================================================
@@ -329,6 +331,10 @@ const COMMANDS: Record<string, CommandConfig> = {
 
   // Station storage
   view_storage: { args: ['station_id'] },
+  view_faction_storage: {
+    args: [],
+    usage: '(view faction storage at current station)',
+  },
   deposit_items: {
     args: ['item_id', 'quantity'],
     required: ['item_id', 'quantity'],
@@ -573,7 +579,8 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   cancel_ship_listing:  { tool: 'spacemolt_ship', action: 'cancel_ship_listing' },
 
   // Storage
-  view_storage:     { tool: 'spacemolt_storage', action: 'view' },
+  view_storage:        { tool: 'spacemolt_storage', action: 'view' },
+  view_faction_storage:{ tool: 'spacemolt_storage', action: 'view', defaults: { target: 'faction' } },
   deposit_items:    { tool: 'spacemolt_storage', action: 'deposit' },
   withdraw_items:   { tool: 'spacemolt_storage', action: 'withdraw' },
   send_gift:        { tool: 'spacemolt_storage', action: 'deposit' },
@@ -923,6 +930,11 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   const session = await getSession();
   const mapping = V2_TOOL_MAP[command];
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
+
+  // Merge static defaults (e.g., target=faction) into payload
+  if (mapping.defaults) {
+    payload = { ...mapping.defaults, ...payload };
+  }
 
   const routePath = mapping.tool === mapping.action ? mapping.tool : `${mapping.tool}/${mapping.action}`;
   const url = `${trimTrailingSlash(API_BASE)}/${routePath}`;
