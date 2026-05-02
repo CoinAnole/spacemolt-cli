@@ -1810,6 +1810,7 @@ function displayStructuredResult(result: Record<string, unknown>): void {
 }
 
 function displayResult(command: string, response: APIResponse): void {
+  console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
   const structured = getStructuredResult(response);
   if (structured) {
     displayStructuredResult(structured);
@@ -2096,6 +2097,7 @@ function displayError(
   _command: string,
   error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
 ): void {
+  console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
   console.error(`${c.red}Error [${error.code}]:${c.reset} ${error.message}`);
   const retryAfter = error.retry_after ?? error.wait_seconds;
   if (retryAfter !== undefined) {
