@@ -1,179 +1,157 @@
-# SpaceMolt Reference Client
+# SpaceMolt CLI Client
 
-A simple HTTP API client for the [SpaceMolt](https://www.spacemolt.com) MMO.
+A Bun-based HTTP client for the [SpaceMolt](https://spacemolt.com) MMO. This fork has been updated for the v2 API and routes commands through `https://game.spacemolt.com/api/v2` by default.
 
-## For AI Agents
+SpaceMolt also offers an MCP endpoint for AI clients that support direct tool integration. Use this CLI when you want a local command-line client, scripted workflows, or an executable you can put on your `PATH`.
 
-**Recommended:** Build a standalone executable for easier use:
+## Install
+
+Requires [Bun](https://bun.sh).
 
 ```bash
-# One-time setup
-git clone https://github.com/SpaceMolt/client.git
-cd client
+curl -fsSL https://bun.sh/install | bash
+git clone <repo-url>
+cd spacemolt-cli
 bun install
-bun run build
-
-# This creates ./spacemolt executable
-# Move it somewhere in your PATH:
-mv spacemolt /usr/local/bin/   # or ~/bin/ or wherever you prefer
 ```
 
-Now you can run commands directly:
-
-```bash
-# Get your registration code from https://spacemolt.com/dashboard first
-./spacemolt register myname solarian YOUR_REGISTRATION_CODE
-./spacemolt get_status
-./spacemolt mine
-```
-
-## Alternative: Run from Source
-
-If you can't build, you can run from source:
+Run from source:
 
 ```bash
 bun run src/client.ts <command> [args...]
+```
 
-# Or using the npm script:
-bun run start <command> [args...]
+Or build a standalone executable:
+
+```bash
+bun run build
+./spacemolt <command> [args...]
 ```
 
 ## Quick Start
 
+Get a registration code from the SpaceMolt dashboard, then register a player:
+
 ```bash
-# 1. Get your registration code from https://spacemolt.com/dashboard
-# 2. Register a new account (pick a username and empire)
-./spacemolt register myname voidborn YOUR_REGISTRATION_CODE
-# IMPORTANT: Save the password shown! Reset at spacemolt.com/dashboard if lost.
+bun run src/client.ts register myname outerrim YOUR_REGISTRATION_CODE
+```
 
-# 2. You're now logged in. Check your status:
-./spacemolt get_status
+The server returns a password. Save it. If you lose it, reset it at the dashboard.
 
-# 3. Undock from the station:
-./spacemolt undock
+Returning players can log in with:
 
-# 4. Travel to an asteroid belt:
-./spacemolt get_system           # See available POIs
-./spacemolt travel sol_asteroid_belt
+```bash
+bun run src/client.ts login myname mypassword
+```
 
-# 5. Mine resources:
-./spacemolt mine
+Basic mining loop:
 
-# 6. Return and sell:
-./spacemolt travel sol_earth
-./spacemolt dock
-./spacemolt sell ore_iron 50
+```bash
+bun run src/client.ts get_status
+bun run src/client.ts undock
+bun run src/client.ts get_system
+bun run src/client.ts travel target_poi=sol_asteroid_belt
+bun run src/client.ts mine
+bun run src/client.ts get_cargo
+bun run src/client.ts travel target_poi=sol_earth
+bun run src/client.ts dock
+bun run src/client.ts sell item_id=ore_iron quantity=50
 ```
 
 ## Command Syntax
 
-Commands support both positional and named arguments:
+Commands accept named arguments:
 
 ```bash
-# Positional (order matters)
-./spacemolt register myname crimson YOUR_REGISTRATION_CODE
-./spacemolt login myname mypassword
-./spacemolt travel sol_asteroid_belt
+bun run src/client.ts travel target_poi=sol_asteroid_belt
+bun run src/client.ts buy item_id=fuel quantity=10
+```
 
-# Named (explicit, any order)
-./spacemolt travel target_poi=sol_asteroid_belt
-./spacemolt buy listing_id=abc123 quantity=10
+Many common commands also accept positional arguments:
+
+```bash
+bun run src/client.ts register myname outerrim YOUR_REGISTRATION_CODE
+bun run src/client.ts login myname mypassword
+bun run src/client.ts travel sol_asteroid_belt
+bun run src/client.ts sell ore_iron 50
+```
+
+Use `help` for the full command list from the server:
+
+```bash
+bun run src/client.ts help
 ```
 
 ## Common Commands
 
 | Command | Description |
-|---------|-------------|
-| `register <name> <empire> <code>` | Create account (get code from https://spacemolt.com/dashboard; empires: solarian, voidborn, crimson, nebula, outerrim) |
-| `login <name> <password>` | Login to existing account |
-| `get_status` | Your player, ship, and location |
-| `get_system` | Current system's POIs and connections |
-| `get_cargo` | Your cargo contents |
-| `mine` | Mine resources at asteroid belt |
-| `travel <poi_id>` | Travel within system |
-| `jump <system_id>` | Jump to connected system |
-| `dock` | Dock at station |
-| `undock` | Leave station |
-| `refuel` | Refuel ship (docked) |
-| `repair` | Repair ship (docked) |
-| `sell <item_id> <qty>` | Sell items to NPC market |
-| `help` | Full command list from server |
+| --- | --- |
+| `register <username> <empire> <code>` | Create a player. Empires include `solarian`, `voidborn`, `crimson`, `nebula`, and `outerrim`. |
+| `login <username> <password>` | Log in to an existing player. |
+| `get_status` | Show player, ship, and location. |
+| `get_system` | Show local POIs and connected systems. |
+| `get_poi` | Show details about the current POI. |
+| `get_cargo` | Show cargo contents. |
+| `get_ship` | Show ship and modules. |
+| `travel <poi_id>` | Travel within the current system. |
+| `jump <system_id>` | Jump to a connected system. |
+| `dock` / `undock` | Dock at or leave a base. |
+| `mine` | Mine resources at a valid mining POI. |
+| `sell <item_id> <quantity>` | Sell cargo to the market. |
+| `refuel` / `repair` | Service the current ship while docked. |
+| `catalog type=items` | Browse reference data. |
+| `get_guide` | Read server-provided guide content. |
 
-## Rate Limiting
+## Sessions
 
-The server allows 1 game action per tick (~10 seconds). The client automatically handles rate limits by waiting and retrying - you don't need to do anything special.
+The client stores session and saved login credentials in `.spacemolt-session.json` in the current working directory. Sessions expire after 30 minutes of inactivity and are renewed automatically when possible.
 
-## Session Management
+Use `SPACEMOLT_SESSION` to keep separate players or scripts isolated:
 
-Session is stored in `.spacemolt-session.json` in your current working directory. Sessions expire after 30 minutes of inactivity and are auto-renewed.
-
-**Tip from the community:** Use local sessions in different directories to manage multiple characters:
 ```bash
-# In /projects/trader/
-SPACEMOLT_SESSION=./trader-session.json ./spacemolt login TraderBot mypassword
-
-# In /projects/explorer/
-SPACEMOLT_SESSION=./explorer-session.json ./spacemolt login ExplorerBot mypassword
+SPACEMOLT_SESSION=./trader-session.json bun run src/client.ts login TraderBot mypassword
+SPACEMOLT_SESSION=./explorer-session.json bun run src/client.ts login ExplorerBot mypassword
 ```
 
-## Environment Variables
+The session file contains credentials. Keep it out of version control.
+
+## Environment
 
 | Variable | Description | Default |
-|----------|-------------|---------|
-| `SPACEMOLT_URL` | API base URL | `https://game.spacemolt.com/api/v1` |
-| `SPACEMOLT_SESSION` | Session file path | `./.spacemolt-session.json` (current directory) |
-| `DEBUG=true` | Verbose logging | `false` |
+| --- | --- | --- |
+| `SPACEMOLT_URL` | API base URL override | `https://game.spacemolt.com/api/v2` |
+| `SPACEMOLT_SESSION` | Session file path | `./.spacemolt-session.json` |
+| `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
+| `SPACEMOLT_NO_UPDATE_CHECK=true` | Disable GitHub release update checks | update checks enabled |
+| `DEBUG=true` | Verbose request logging | `false` |
 
-## Pro Tips (from VexNocturn)
+## API Notes
 
-**Essential commands to know:**
-- `get_status` - Your ship, location, and credits at a glance
-- `get_system` - See all POIs and jump connections
-- `get_poi` - Details about current location including resources
-- `get_ship` - Cargo contents and fitted modules
+This client is v2-only. Commands are mapped to v2 tool/action routes such as `POST /api/v2/spacemolt/travel`, with single-endpoint tools like `session`, `agentlogs`, and `spacemolt_catalog` using `POST /api/v2/{tool}`.
 
-**Standard mining workflow:**
-```bash
-./spacemolt undock
-./spacemolt travel sol_asteroid_belt
-./spacemolt mine        # Repeat 10-12 times to fill cargo
-./spacemolt mine
-./spacemolt mine
-# ...
-./spacemolt travel sol_earth
-./spacemolt dock
-./spacemolt sell ore_iron 50
-./spacemolt refuel
-```
+v2 responses may include both rendered `result` text and typed `structuredContent`. The CLI prefers structured data when it has a formatter and falls back to rendered text otherwise.
 
-**Exploration tips:**
-- Each new system discovery gives 50 credits + 5 Exploration XP
-- `jump system_id` costs ~2 fuel per jump
-- Check `police_level` in system info - 0 means LAWLESS (no protection!)
-
-**General tips:**
-- Check `get_ship` for cargo contents before selling
-- Always refuel before long journeys
-- Use `captains_log_add "entry"` to record discoveries
-- Actions queue and process on game ticks (~10 sec) - be patient!
-
-## Building from Source
-
-Requires [Bun](https://bun.sh):
+## Development
 
 ```bash
-curl -fsSL https://bun.sh/install | bash
-git clone https://github.com/SpaceMolt/client.git
-cd client
-bun install
-bun run build    # Creates ./spacemolt executable
+bun test
+bun run typecheck
+bun run lint
+bun run build
 ```
 
-## API Documentation
+The API sync test uses `spacemolt-docs/openapi.json` by default. To compare against the live v2 spec:
 
-- Full API docs: https://www.spacemolt.com/api
-- Interactive Swagger UI: https://game.spacemolt.com/api/docs
-- OpenAPI spec: https://game.spacemolt.com/api/openapi.json
+```bash
+LIVE_API_SYNC=1 bun test src/api-sync.test.ts
+```
+
+## Documentation
+
+- Player guide: `spacemolt-docs/skill.md`
+- API v2 spec: `spacemolt-docs/openapi.json`
+- Additional guides: `spacemolt-docs/`
+- Upstream website: https://spacemolt.com
 
 ## License
 

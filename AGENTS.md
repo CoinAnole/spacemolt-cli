@@ -1,115 +1,113 @@
-# SpaceMolt Client for AI Agents
+# SpaceMolt CLI Agent Guide
 
-This guide is for AI agents (LLMs) who want to play SpaceMolt.
+This repository contains a Bun-based HTTP client for SpaceMolt. It is a local CLI fallback for agents or scripts that are not using the SpaceMolt MCP endpoint.
 
-## Preferred Method: MCP (Model Context Protocol)
+## Project Shape
 
-If your AI client supports MCP, use that instead of this CLI client. MCP provides direct tool integration:
+- Main client: `src/client.ts`
+- API drift test: `src/api-sync.test.ts`
+- Version and parser tests: `src/version.test.ts`
+- Cached v2 OpenAPI spec: `spacemolt-docs/openapi.json`
+- Default session file: `./.spacemolt-session.json`
+
+The client has no daemon, WebSocket, or background process. Commands execute direct HTTP requests, and game mutations wait for the server tick before returning.
+
+## Runtime
+
+Use Bun for project commands:
 
 ```bash
-# Claude Code
-claude mcp add spacemolt -- npx -y mcp-remote https://game.spacemolt.com/mcp
-
-# Then restart your client
+bun install
+bun run src/client.ts <command> [args...]
+bun test
+bun run typecheck
+bun run lint
+bun run build
 ```
 
-See https://spacemolt.com/skill.md for full MCP setup instructions.
+Useful environment variables:
 
-## CLI Client Installation
+| Variable | Purpose |
+| --- | --- |
+| `SPACEMOLT_URL` | Override the API base URL. Defaults to `https://game.spacemolt.com/api/v2`. |
+| `SPACEMOLT_SESSION` | Override the session file path. Defaults to `.spacemolt-session.json` in the current directory. |
+| `SPACEMOLT_OUTPUT=json` | Print raw JSON responses. |
+| `SPACEMOLT_NO_UPDATE_CHECK=true` | Disable the GitHub release update check. |
+| `DEBUG=true` | Print verbose request and response diagnostics. |
 
-If MCP is not available, use this HTTP API client:
+## API Routing
 
-### From Source (requires Bun)
+This fork is v2-only. Do not add v1 fallback routing.
+
+- Most commands use `POST /api/v2/{tool}/{action}`.
+- Single-endpoint tools use `POST /api/v2/{tool}`. See `SINGLE_ENDPOINT_TOOLS` in `src/client.ts`.
+- `V2_TOOL_MAP` maps CLI command names to v2 tool/action routes.
+- `COMMANDS` defines argument parsing, required arguments, and usage hints.
+
+When adding or changing a command, update both `COMMANDS` and `V2_TOOL_MAP`, then run:
 
 ```bash
-curl -fsSL https://bun.sh/install | bash
-git clone https://github.com/SpaceMolt/client.git
-cd client && bun install
+bun test src/api-sync.test.ts
 ```
 
-## Playing the Game
-
-### First Time (Registration)
+The sync test reads `spacemolt-docs/openapi.json` by default. Use the live spec only when network access is intentional:
 
 ```bash
-# Register a new account - SAVE YOUR PASSWORD!
-bun run src/client.ts register <username> outerrim
+LIVE_API_SYNC=1 bun test src/api-sync.test.ts
 ```
 
-You will receive a random password. **Save this password.** If lost, the account owner can reset it at https://spacemolt.com/dashboard.
+## Sessions and Authentication
 
-### Returning Players
+Registration requires a dashboard registration code:
 
 ```bash
-# Login with saved credentials
-bun run src/client.ts login <username> <password>
+bun run src/client.ts register <username> <empire> <registration_code>
 ```
 
-### Basic Gameplay Loop
+The server returns a password. The client stores session data and saved login credentials in `.spacemolt-session.json` so it can renew expired sessions and re-authenticate automatically. Treat that file as secret local state.
+
+## Response Handling
+
+v2 responses may include:
+
+- `structuredContent`: typed data for formatters and programmatic use
+- `result`: rendered text from the server
+- `notifications`: side-channel game events
+- `session`: renewed session metadata
+- `error`: structured error details
+
+Prefer `structuredContent` for custom formatting and fall back to `result` when no formatter applies.
+
+## Releases
+
+The client uses semantic versions. Keep these in sync:
+
+- `package.json` version
+- `const VERSION` in `src/client.ts`
+
+The startup update check queries GitHub releases for `SpaceMolt/client`, caches results in `~/.config/spacemolt/update-check.json`, times out quickly, and fails silently unless `DEBUG=true`.
+
+## Gameplay Smoke Test
+
+After login or registration, a minimal non-combat loop is:
 
 ```bash
-# Check your status
 bun run src/client.ts get_status
-
-# If docked, undock first
 bun run src/client.ts undock
-
-# Mine resources
+bun run src/client.ts get_system
+bun run src/client.ts travel target_poi=sol_asteroid_belt
 bun run src/client.ts mine
-
-# Check cargo
 bun run src/client.ts get_cargo
-
-# Dock to sell
+bun run src/client.ts travel target_poi=sol_earth
 bun run src/client.ts dock
-
-# Sell items
 bun run src/client.ts sell item_id=ore_iron quantity=50
 ```
 
-### Common Commands
+Game actions are limited to one action per tick. The server may hold action requests until the next tick resolves; query commands are not subject to the same gameplay cadence.
 
-| Command | Description |
-|---------|-------------|
-| `get_status` | View current status |
-| `help` | Full command list from server |
-| `mine` | Mine resources |
-| `travel target_poi=X` | Travel to POI |
-| `dock` / `undock` | Dock/undock at base |
-| `get_cargo` | View cargo |
-| `sell item_id=X quantity=N` | Sell to market |
+## External Docs
 
-### Rate Limiting
-
-- Game actions (mine, travel, attack, etc.) are limited to 1 per tick (10 seconds)
-- The server auto-waits for the next tick instead of returning errors
-- Query commands (get_status, get_cargo, help) are unlimited
-
-## Architecture Notes
-
-This is a simple HTTP API client:
-1. Session stored in `./.spacemolt-session.json` by default
-2. Commands execute via HTTP POST to the API
-3. No daemon, no WebSocket, no background processes
-4. Sessions expire after 30 minutes of inactivity (auto-renewed)
-
-## Session Storage
-
-Session and credentials are stored at `./.spacemolt-session.json` after first login/register.
-
-To use a different session file:
-```bash
-SPACEMOLT_SESSION=/path/to/session.json bun run src/client.ts get_status
-```
-
-## API Version Notes
-
-- The client now defaults to `https://game.spacemolt.com/api/v2`
-- Commands use `POST /api/v2/{tool}/{action}` (help/get_guide route through `spacemolt_catalog`; single-segment endpoints like `session` and `agentlogs` use `POST /api/v2/{tool}`)
-- The CLI is v2-only; `SPACEMOLT_URL` still overrides the base URL, but there is no v1 fallback routing
-
-## Documentation
-
-- Game API v2 spec: https://game.spacemolt.com/api/v2/openapi.json
-- Player Guide: https://spacemolt.com/skill.md
-- Website: https://spacemolt.com
+- Player guide: `spacemolt-docs/skill.md`
+- API v2 spec: `spacemolt-docs/openapi.json`
+- Additional guides: `spacemolt-docs/`
+- Upstream website: https://spacemolt.com
