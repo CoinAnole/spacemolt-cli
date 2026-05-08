@@ -17,11 +17,7 @@ import * as path from 'node:path';
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
 
-const UNDOCUMENTED_IN_SPEC = new Set<string>([
-  '/api/v2/spacemolt_catalog/catalog',
-  '/api/v2/spacemolt_catalog/get_guide',
-  '/api/v2/spacemolt_catalog/help',
-]);
+const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
 /**
  * Extracts the command names from the COMMANDS block in client.ts.
@@ -61,7 +57,7 @@ function extractV2ToolMap(src: string): Record<string, string> {
     const [, cmd] = keyMatch;
     const [, tool] = toolMatch;
     const [, action] = actionMatch;
-    routes[cmd] = tool === action ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
+    routes[cmd] = tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
   }
   return routes;
 }
@@ -98,8 +94,6 @@ describe('api sync', () => {
           .filter(([, methods]) => Boolean(methods.post))
           .map(([route]) => route),
       );
-
-      for (const route of UNDOCUMENTED_IN_SPEC) v2PostPaths.add(route);
 
       const staleMappings = Object.entries(v2ToolMap)
         .filter(([, route]) => !v2PostPaths.has(route))

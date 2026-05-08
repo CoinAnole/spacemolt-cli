@@ -40,6 +40,7 @@ const VERSION = '0.9.0';
 const FETCH_TIMEOUT_MS = 600_000;
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
 // ANSI colors
 const c = {
@@ -993,7 +994,10 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
     payload = { ...mapping.defaults, ...payload };
   }
 
-  const routePath = mapping.tool === mapping.action ? mapping.tool : `${mapping.tool}/${mapping.action}`;
+  const routePath =
+    mapping.tool === mapping.action || SINGLE_ENDPOINT_TOOLS.has(mapping.tool)
+      ? mapping.tool
+      : `${mapping.tool}/${mapping.action}`;
   const url = `${trimTrailingSlash(API_BASE)}/${routePath}`;
   const routeKind: 'v2' = 'v2';
 
