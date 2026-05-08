@@ -1,0 +1,3 @@
+[submodule "spacemolt-docs"]
+	path = spacemolt-docs
+	url = https://github.com/CoinAnole/spacemolt-docs.git
