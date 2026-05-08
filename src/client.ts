@@ -553,203 +553,203 @@ const COMMANDS: Record<string, CommandConfig> = {
 
 const V2_TOOL_MAP: Record<string, V2Route> = {
   // Auth
-  register:           { tool: 'spacemolt_auth', action: 'register' },
-  login:              { tool: 'spacemolt_auth', action: 'login' },
-  login_token:        { tool: 'spacemolt_auth', action: 'login_token' },
-  logout:             { tool: 'spacemolt_auth', action: 'logout' },
-  claim:              { tool: 'spacemolt_auth', action: 'claim' },
+  register: { tool: 'spacemolt_auth', action: 'register' },
+  login: { tool: 'spacemolt_auth', action: 'login' },
+  login_token: { tool: 'spacemolt_auth', action: 'login_token' },
+  logout: { tool: 'spacemolt_auth', action: 'logout' },
+  claim: { tool: 'spacemolt_auth', action: 'claim' },
 
   // Core spacemolt (most commands live under the single 'spacemolt' tool)
-  travel:             { tool: 'spacemolt', action: 'travel' },
-  jump:               { tool: 'spacemolt', action: 'jump' },
-  dock:               { tool: 'spacemolt', action: 'dock' },
-  undock:             { tool: 'spacemolt', action: 'undock' },
-  mine:               { tool: 'spacemolt', action: 'mine' },
-  sell:               { tool: 'spacemolt', action: 'sell' },
-  buy:                { tool: 'spacemolt', action: 'buy' },
-  refuel:             { tool: 'spacemolt', action: 'refuel' },
-  repair:             { tool: 'spacemolt', action: 'repair' },
-  use_item:           { tool: 'spacemolt', action: 'use_item' },
-  craft:              { tool: 'spacemolt', action: 'craft' },
-  jettison:           { tool: 'spacemolt', action: 'jettison' },
-  get_status:         { tool: 'spacemolt', action: 'get_status' },
-  get_system:         { tool: 'spacemolt', action: 'get_system' },
-  get_poi:            { tool: 'spacemolt', action: 'get_poi' },
-  get_base:           { tool: 'spacemolt', action: 'get_base' },
-  get_cargo:          { tool: 'spacemolt', action: 'get_cargo' },
-  get_nearby:         { tool: 'spacemolt', action: 'get_nearby' },
-  get_skills:         { tool: 'spacemolt', action: 'get_skills' },
-  get_version:        { tool: 'spacemolt', action: 'get_version' },
-  get_commands:       { tool: 'spacemolt', action: 'get_commands' },
-  get_location:       { tool: 'spacemolt', action: 'get_location' },
-  get_notifications:  { tool: 'spacemolt', action: 'get_notifications' },
-  get_player:         { tool: 'spacemolt', action: 'get_player' },
-  get_map:            { tool: 'spacemolt', action: 'get_map' },
-  search_systems:     { tool: 'spacemolt', action: 'search_systems' },
-  find_route:         { tool: 'spacemolt', action: 'find_route' },
-  get_system_agents:  { tool: 'spacemolt', action: 'get_system_agents' },
-  survey_system:      { tool: 'spacemolt', action: 'survey_system' },
-  get_state:          { tool: 'spacemolt', action: 'get_state' },
-  get_queue:          { tool: 'spacemolt', action: 'get_queue' },
-  attack:             { tool: 'spacemolt', action: 'attack' },
-  scan:               { tool: 'spacemolt', action: 'scan' },
-  cloak:              { tool: 'spacemolt', action: 'cloak' },
-  self_destruct:      { tool: 'spacemolt', action: 'self_destruct' },
-  get_ship:           { tool: 'spacemolt', action: 'get_ship' },
-  v2_get_player:      { tool: 'spacemolt', action: 'get_player' },
-  v2_get_ship:        { tool: 'spacemolt', action: 'get_ship' },
-  v2_get_cargo:       { tool: 'spacemolt', action: 'get_cargo' },
-  v2_get_missions:    { tool: 'spacemolt', action: 'get_missions' },
-  v2_get_queue:       { tool: 'spacemolt', action: 'get_queue' },
-  v2_get_skills:      { tool: 'spacemolt', action: 'get_skills' },
-  get_ships:          { tool: 'spacemolt', action: 'get_ships' },
-  install_mod:        { tool: 'spacemolt', action: 'install_mod' },
-  uninstall_mod:      { tool: 'spacemolt', action: 'uninstall_mod' },
-  repair_module:      { tool: 'spacemolt', action: 'repair_module' },
+  travel: { tool: 'spacemolt', action: 'travel' },
+  jump: { tool: 'spacemolt', action: 'jump' },
+  dock: { tool: 'spacemolt', action: 'dock' },
+  undock: { tool: 'spacemolt', action: 'undock' },
+  mine: { tool: 'spacemolt', action: 'mine' },
+  sell: { tool: 'spacemolt', action: 'sell' },
+  buy: { tool: 'spacemolt', action: 'buy' },
+  refuel: { tool: 'spacemolt', action: 'refuel' },
+  repair: { tool: 'spacemolt', action: 'repair' },
+  use_item: { tool: 'spacemolt', action: 'use_item' },
+  craft: { tool: 'spacemolt', action: 'craft' },
+  jettison: { tool: 'spacemolt', action: 'jettison' },
+  get_status: { tool: 'spacemolt', action: 'get_status' },
+  get_system: { tool: 'spacemolt', action: 'get_system' },
+  get_poi: { tool: 'spacemolt', action: 'get_poi' },
+  get_base: { tool: 'spacemolt', action: 'get_base' },
+  get_cargo: { tool: 'spacemolt', action: 'get_cargo' },
+  get_nearby: { tool: 'spacemolt', action: 'get_nearby' },
+  get_skills: { tool: 'spacemolt', action: 'get_skills' },
+  get_version: { tool: 'spacemolt', action: 'get_version' },
+  get_commands: { tool: 'spacemolt', action: 'get_commands' },
+  get_location: { tool: 'spacemolt', action: 'get_location' },
+  get_notifications: { tool: 'spacemolt', action: 'get_notifications' },
+  get_player: { tool: 'spacemolt', action: 'get_player' },
+  get_map: { tool: 'spacemolt', action: 'get_map' },
+  search_systems: { tool: 'spacemolt', action: 'search_systems' },
+  find_route: { tool: 'spacemolt', action: 'find_route' },
+  get_system_agents: { tool: 'spacemolt', action: 'get_system_agents' },
+  survey_system: { tool: 'spacemolt', action: 'survey_system' },
+  get_state: { tool: 'spacemolt', action: 'get_state' },
+  get_queue: { tool: 'spacemolt', action: 'get_queue' },
+  attack: { tool: 'spacemolt', action: 'attack' },
+  scan: { tool: 'spacemolt', action: 'scan' },
+  cloak: { tool: 'spacemolt', action: 'cloak' },
+  self_destruct: { tool: 'spacemolt', action: 'self_destruct' },
+  get_ship: { tool: 'spacemolt', action: 'get_ship' },
+  v2_get_player: { tool: 'spacemolt', action: 'get_player' },
+  v2_get_ship: { tool: 'spacemolt', action: 'get_ship' },
+  v2_get_cargo: { tool: 'spacemolt', action: 'get_cargo' },
+  v2_get_missions: { tool: 'spacemolt', action: 'get_missions' },
+  v2_get_queue: { tool: 'spacemolt', action: 'get_queue' },
+  v2_get_skills: { tool: 'spacemolt', action: 'get_skills' },
+  get_ships: { tool: 'spacemolt', action: 'get_ships' },
+  install_mod: { tool: 'spacemolt', action: 'install_mod' },
+  uninstall_mod: { tool: 'spacemolt', action: 'uninstall_mod' },
+  repair_module: { tool: 'spacemolt', action: 'repair_module' },
 
   // Missions
-  get_missions:           { tool: 'spacemolt', action: 'get_missions' },
-  get_active_missions:    { tool: 'spacemolt', action: 'get_active_missions' },
-  accept_mission:         { tool: 'spacemolt', action: 'accept_mission' },
-  complete_mission:       { tool: 'spacemolt', action: 'complete_mission' },
-  decline_mission:        { tool: 'spacemolt', action: 'decline_mission' },
-  abandon_mission:        { tool: 'spacemolt', action: 'abandon_mission' },
-  completed_missions:     { tool: 'spacemolt', action: 'completed_missions' },
+  get_missions: { tool: 'spacemolt', action: 'get_missions' },
+  get_active_missions: { tool: 'spacemolt', action: 'get_active_missions' },
+  accept_mission: { tool: 'spacemolt', action: 'accept_mission' },
+  complete_mission: { tool: 'spacemolt', action: 'complete_mission' },
+  decline_mission: { tool: 'spacemolt', action: 'decline_mission' },
+  abandon_mission: { tool: 'spacemolt', action: 'abandon_mission' },
+  completed_missions: { tool: 'spacemolt', action: 'completed_missions' },
   view_completed_mission: { tool: 'spacemolt', action: 'view_completed_mission' },
-  distress_signal:        { tool: 'spacemolt', action: 'distress_signal' },
+  distress_signal: { tool: 'spacemolt', action: 'distress_signal' },
 
   // Ship sub-tool (shipyard/commission commands)
-  name_ship:            { tool: 'spacemolt_ship', action: 'rename_ship' },
-  sell_ship:            { tool: 'spacemolt_ship', action: 'sell_ship' },
-  list_ships:           { tool: 'spacemolt_ship', action: 'list_ships' },
-  switch_ship:          { tool: 'spacemolt_ship', action: 'switch_ship' },
-  refit_ship:           { tool: 'spacemolt_ship', action: 'refit_ship' },
-  commission_ship:      { tool: 'spacemolt_ship', action: 'commission_ship' },
-  commission_quote:     { tool: 'spacemolt_ship', action: 'commission_quote' },
-  commission_status:    { tool: 'spacemolt_ship', action: 'commission_status' },
-  claim_commission:     { tool: 'spacemolt_ship', action: 'claim_commission' },
-  cancel_commission:    { tool: 'spacemolt_ship', action: 'cancel_commission' },
-  supply_commission:    { tool: 'spacemolt_ship', action: 'supply_commission' },
-  list_ship_for_sale:   { tool: 'spacemolt_ship', action: 'list_ship_for_sale' },
-  browse_ships:         { tool: 'spacemolt_ship', action: 'browse_ships' },
-  buy_listed_ship:      { tool: 'spacemolt_ship', action: 'buy_listed_ship' },
-  cancel_ship_listing:  { tool: 'spacemolt_ship', action: 'cancel_ship_listing' },
+  name_ship: { tool: 'spacemolt_ship', action: 'rename_ship' },
+  sell_ship: { tool: 'spacemolt_ship', action: 'sell_ship' },
+  list_ships: { tool: 'spacemolt_ship', action: 'list_ships' },
+  switch_ship: { tool: 'spacemolt_ship', action: 'switch_ship' },
+  refit_ship: { tool: 'spacemolt_ship', action: 'refit_ship' },
+  commission_ship: { tool: 'spacemolt_ship', action: 'commission_ship' },
+  commission_quote: { tool: 'spacemolt_ship', action: 'commission_quote' },
+  commission_status: { tool: 'spacemolt_ship', action: 'commission_status' },
+  claim_commission: { tool: 'spacemolt_ship', action: 'claim_commission' },
+  cancel_commission: { tool: 'spacemolt_ship', action: 'cancel_commission' },
+  supply_commission: { tool: 'spacemolt_ship', action: 'supply_commission' },
+  list_ship_for_sale: { tool: 'spacemolt_ship', action: 'list_ship_for_sale' },
+  browse_ships: { tool: 'spacemolt_ship', action: 'browse_ships' },
+  buy_listed_ship: { tool: 'spacemolt_ship', action: 'buy_listed_ship' },
+  cancel_ship_listing: { tool: 'spacemolt_ship', action: 'cancel_ship_listing' },
 
   // Storage
-  view_storage:        { tool: 'spacemolt_storage', action: 'view' },
-  view_faction_storage:{ tool: 'spacemolt_storage', action: 'view', defaults: { target: 'faction' } },
-  deposit_items:    { tool: 'spacemolt_storage', action: 'deposit' },
-  withdraw_items:   { tool: 'spacemolt_storage', action: 'withdraw' },
-  send_gift:        { tool: 'spacemolt_storage', action: 'deposit' },
+  view_storage: { tool: 'spacemolt_storage', action: 'view' },
+  view_faction_storage: { tool: 'spacemolt_storage', action: 'view', defaults: { target: 'faction' } },
+  deposit_items: { tool: 'spacemolt_storage', action: 'deposit' },
+  withdraw_items: { tool: 'spacemolt_storage', action: 'withdraw' },
+  send_gift: { tool: 'spacemolt_storage', action: 'deposit' },
 
   // Market (advanced commands not in core spacemolt)
-  view_market:       { tool: 'spacemolt_market', action: 'view_market' },
-  view_orders:       { tool: 'spacemolt_market', action: 'view_orders' },
+  view_market: { tool: 'spacemolt_market', action: 'view_market' },
+  view_orders: { tool: 'spacemolt_market', action: 'view_orders' },
   create_sell_order: { tool: 'spacemolt_market', action: 'create_sell_order' },
-  create_buy_order:  { tool: 'spacemolt_market', action: 'create_buy_order' },
-  cancel_order:      { tool: 'spacemolt_market', action: 'cancel_order' },
-  modify_order:      { tool: 'spacemolt_market', action: 'modify_order' },
+  create_buy_order: { tool: 'spacemolt_market', action: 'create_buy_order' },
+  cancel_order: { tool: 'spacemolt_market', action: 'cancel_order' },
+  modify_order: { tool: 'spacemolt_market', action: 'modify_order' },
   estimate_purchase: { tool: 'spacemolt_market', action: 'estimate_purchase' },
-  analyze_market:    { tool: 'spacemolt_market', action: 'analyze_market' },
+  analyze_market: { tool: 'spacemolt_market', action: 'analyze_market' },
 
   // Faction
-  create_faction:         { tool: 'spacemolt_faction', action: 'create' },
-  join_faction:           { tool: 'spacemolt_faction', action: 'join' },
-  leave_faction:          { tool: 'spacemolt_faction', action: 'leave' },
-  faction_info:           { tool: 'spacemolt_faction', action: 'info' },
-  faction_list:           { tool: 'spacemolt_faction', action: 'list' },
-  faction_get_invites:    { tool: 'spacemolt_faction', action: 'get_invites' },
+  create_faction: { tool: 'spacemolt_faction', action: 'create' },
+  join_faction: { tool: 'spacemolt_faction', action: 'join' },
+  leave_faction: { tool: 'spacemolt_faction', action: 'leave' },
+  faction_info: { tool: 'spacemolt_faction', action: 'info' },
+  faction_list: { tool: 'spacemolt_faction', action: 'list' },
+  faction_get_invites: { tool: 'spacemolt_faction', action: 'get_invites' },
   faction_decline_invite: { tool: 'spacemolt_faction', action: 'decline_invite' },
-  faction_set_ally:       { tool: 'spacemolt_faction', action: 'set_ally' },
-  faction_set_enemy:      { tool: 'spacemolt_faction', action: 'set_enemy' },
-  faction_declare_war:    { tool: 'spacemolt_faction', action: 'declare_war' },
-  faction_propose_peace:  { tool: 'spacemolt_faction', action: 'propose_peace' },
-  faction_accept_peace:   { tool: 'spacemolt_faction', action: 'accept_peace' },
-  faction_invite:         { tool: 'spacemolt_faction', action: 'invite' },
-  faction_kick:           { tool: 'spacemolt_faction', action: 'kick' },
-  faction_rooms:          { tool: 'spacemolt_faction', action: 'rooms' },
-  faction_visit_room:     { tool: 'spacemolt_faction', action: 'visit_room' },
-  faction_delete_room:    { tool: 'spacemolt_faction', action: 'delete_room' },
+  faction_set_ally: { tool: 'spacemolt_faction', action: 'set_ally' },
+  faction_set_enemy: { tool: 'spacemolt_faction', action: 'set_enemy' },
+  faction_declare_war: { tool: 'spacemolt_faction', action: 'declare_war' },
+  faction_propose_peace: { tool: 'spacemolt_faction', action: 'propose_peace' },
+  faction_accept_peace: { tool: 'spacemolt_faction', action: 'accept_peace' },
+  faction_invite: { tool: 'spacemolt_faction', action: 'invite' },
+  faction_kick: { tool: 'spacemolt_faction', action: 'kick' },
+  faction_rooms: { tool: 'spacemolt_faction', action: 'rooms' },
+  faction_visit_room: { tool: 'spacemolt_faction', action: 'visit_room' },
+  faction_delete_room: { tool: 'spacemolt_faction', action: 'delete_room' },
   faction_cancel_mission: { tool: 'spacemolt_faction', action: 'cancel_mission' },
-  faction_list_missions:  { tool: 'spacemolt_faction', action: 'list_missions' },
-  faction_delete_role:    { tool: 'spacemolt_faction', action: 'delete_role' },
+  faction_list_missions: { tool: 'spacemolt_faction', action: 'list_missions' },
+  faction_delete_role: { tool: 'spacemolt_faction', action: 'delete_role' },
   // Faction admin
-  faction_promote:        { tool: 'spacemolt_faction_admin', action: 'promote' },
-  faction_edit:           { tool: 'spacemolt_faction_admin', action: 'edit' },
-  faction_write_room:     { tool: 'spacemolt_faction_admin', action: 'write_room' },
-  faction_post_mission:   { tool: 'spacemolt_faction_admin', action: 'post_mission' },
-  faction_create_role:    { tool: 'spacemolt_faction_admin', action: 'create_role' },
-  faction_edit_role:      { tool: 'spacemolt_faction_admin', action: 'edit_role' },
+  faction_promote: { tool: 'spacemolt_faction_admin', action: 'promote' },
+  faction_edit: { tool: 'spacemolt_faction_admin', action: 'edit' },
+  faction_write_room: { tool: 'spacemolt_faction_admin', action: 'write_room' },
+  faction_post_mission: { tool: 'spacemolt_faction_admin', action: 'post_mission' },
+  faction_create_role: { tool: 'spacemolt_faction_admin', action: 'create_role' },
+  faction_edit_role: { tool: 'spacemolt_faction_admin', action: 'edit_role' },
   // Faction commerce
-  faction_create_buy_order:  { tool: 'spacemolt_faction_commerce', action: 'create_buy_order' },
+  faction_create_buy_order: { tool: 'spacemolt_faction_commerce', action: 'create_buy_order' },
   faction_create_sell_order: { tool: 'spacemolt_faction_commerce', action: 'create_sell_order' },
   // Faction intel (moved to spacemolt_intel in v2)
-  faction_query_intel:         { tool: 'spacemolt_intel', action: 'query_intel' },
-  faction_submit_intel:        { tool: 'spacemolt_intel', action: 'submit_intel' },
-  faction_intel_status:        { tool: 'spacemolt_intel', action: 'intel_status' },
-  faction_query_trade_intel:   { tool: 'spacemolt_intel', action: 'query_trade_intel' },
-  faction_submit_trade_intel:  { tool: 'spacemolt_intel', action: 'submit_trade_intel' },
-  faction_trade_intel_status:  { tool: 'spacemolt_intel', action: 'trade_intel_status' },
+  faction_query_intel: { tool: 'spacemolt_intel', action: 'query_intel' },
+  faction_submit_intel: { tool: 'spacemolt_intel', action: 'submit_intel' },
+  faction_intel_status: { tool: 'spacemolt_intel', action: 'intel_status' },
+  faction_query_trade_intel: { tool: 'spacemolt_intel', action: 'query_trade_intel' },
+  faction_submit_trade_intel: { tool: 'spacemolt_intel', action: 'submit_trade_intel' },
+  faction_trade_intel_status: { tool: 'spacemolt_intel', action: 'trade_intel_status' },
 
   // Social
-  chat:              { tool: 'spacemolt_social', action: 'chat' },
-  get_chat_history:  { tool: 'spacemolt_social', action: 'get_chat_history' },
-  set_status:        { tool: 'spacemolt_social', action: 'set_status' },
-  set_colors:        { tool: 'spacemolt_social', action: 'set_colors' },
-  create_note:       { tool: 'spacemolt_social', action: 'create_note' },
-  write_note:        { tool: 'spacemolt_social', action: 'write_note' },
-  read_note:         { tool: 'spacemolt_social', action: 'read_note' },
-  get_notes:         { tool: 'spacemolt_social', action: 'get_notes' },
-  captains_log_add:  { tool: 'spacemolt_social', action: 'captains_log_add' },
+  chat: { tool: 'spacemolt_social', action: 'chat' },
+  get_chat_history: { tool: 'spacemolt_social', action: 'get_chat_history' },
+  set_status: { tool: 'spacemolt_social', action: 'set_status' },
+  set_colors: { tool: 'spacemolt_social', action: 'set_colors' },
+  create_note: { tool: 'spacemolt_social', action: 'create_note' },
+  write_note: { tool: 'spacemolt_social', action: 'write_note' },
+  read_note: { tool: 'spacemolt_social', action: 'read_note' },
+  get_notes: { tool: 'spacemolt_social', action: 'get_notes' },
+  captains_log_add: { tool: 'spacemolt_social', action: 'captains_log_add' },
   captains_log_list: { tool: 'spacemolt_social', action: 'captains_log_list' },
-  captains_log_get:  { tool: 'spacemolt_social', action: 'captains_log_get' },
-  forum_list:            { tool: 'spacemolt_social', action: 'forum_list' },
-  forum_get_thread:      { tool: 'spacemolt_social', action: 'forum_get_thread' },
-  forum_create_thread:   { tool: 'spacemolt_social', action: 'forum_create_thread' },
-  forum_delete_thread:   { tool: 'spacemolt_social', action: 'forum_delete_thread' },
-  forum_reply:           { tool: 'spacemolt_social', action: 'forum_reply' },
-  forum_upvote:          { tool: 'spacemolt_social', action: 'forum_upvote' },
-  forum_delete_reply:    { tool: 'spacemolt_social', action: 'forum_delete_reply' },
-  get_action_log:    { tool: 'spacemolt_social', action: 'get_action_log' },
-  agentlogs:         { tool: 'agentlogs', action: 'agentlogs' },
+  captains_log_get: { tool: 'spacemolt_social', action: 'captains_log_get' },
+  forum_list: { tool: 'spacemolt_social', action: 'forum_list' },
+  forum_get_thread: { tool: 'spacemolt_social', action: 'forum_get_thread' },
+  forum_create_thread: { tool: 'spacemolt_social', action: 'forum_create_thread' },
+  forum_delete_thread: { tool: 'spacemolt_social', action: 'forum_delete_thread' },
+  forum_reply: { tool: 'spacemolt_social', action: 'forum_reply' },
+  forum_upvote: { tool: 'spacemolt_social', action: 'forum_upvote' },
+  forum_delete_reply: { tool: 'spacemolt_social', action: 'forum_delete_reply' },
+  get_action_log: { tool: 'spacemolt_social', action: 'get_action_log' },
+  agentlogs: { tool: 'agentlogs', action: 'agentlogs' },
 
   // Transfer
-  get_trades:    { tool: 'spacemolt_transfer', action: 'get_trades' },
-  trade_offer:   { tool: 'spacemolt_transfer', action: 'trade_offer' },
-  trade_accept:  { tool: 'spacemolt_transfer', action: 'trade_accept' },
+  get_trades: { tool: 'spacemolt_transfer', action: 'get_trades' },
+  trade_offer: { tool: 'spacemolt_transfer', action: 'trade_offer' },
+  trade_accept: { tool: 'spacemolt_transfer', action: 'trade_accept' },
   trade_decline: { tool: 'spacemolt_transfer', action: 'trade_decline' },
-  trade_cancel:  { tool: 'spacemolt_transfer', action: 'trade_cancel' },
+  trade_cancel: { tool: 'spacemolt_transfer', action: 'trade_cancel' },
 
   // Facility (default to 'list' action)
-  facility:      { tool: 'spacemolt_facility', action: 'list' },
+  facility: { tool: 'spacemolt_facility', action: 'list' },
 
   // Salvage
-  get_wrecks:         { tool: 'spacemolt_salvage', action: 'wrecks' },
-  loot_wreck:         { tool: 'spacemolt_salvage', action: 'loot' },
-  salvage_wreck:      { tool: 'spacemolt_salvage', action: 'salvage' },
-  tow_wreck:          { tool: 'spacemolt_salvage', action: 'tow' },
-  release_tow:        { tool: 'spacemolt_salvage', action: 'release' },
-  scrap_wreck:        { tool: 'spacemolt_salvage', action: 'scrap' },
-  sell_wreck:         { tool: 'spacemolt_salvage', action: 'sell' },
-  buy_insurance:      { tool: 'spacemolt_salvage', action: 'insure' },
-  get_insurance_quote:{ tool: 'spacemolt_salvage', action: 'quote' },
-  claim_insurance:    { tool: 'spacemolt_salvage', action: 'policies' },
-  view_insurance:     { tool: 'spacemolt_salvage', action: 'policies' },
-  set_home_base:      { tool: 'spacemolt_salvage', action: 'set_home' },
+  get_wrecks: { tool: 'spacemolt_salvage', action: 'wrecks' },
+  loot_wreck: { tool: 'spacemolt_salvage', action: 'loot' },
+  salvage_wreck: { tool: 'spacemolt_salvage', action: 'salvage' },
+  tow_wreck: { tool: 'spacemolt_salvage', action: 'tow' },
+  release_tow: { tool: 'spacemolt_salvage', action: 'release' },
+  scrap_wreck: { tool: 'spacemolt_salvage', action: 'scrap' },
+  sell_wreck: { tool: 'spacemolt_salvage', action: 'sell' },
+  buy_insurance: { tool: 'spacemolt_salvage', action: 'insure' },
+  get_insurance_quote: { tool: 'spacemolt_salvage', action: 'quote' },
+  claim_insurance: { tool: 'spacemolt_salvage', action: 'policies' },
+  view_insurance: { tool: 'spacemolt_salvage', action: 'policies' },
+  set_home_base: { tool: 'spacemolt_salvage', action: 'set_home' },
 
   // Fleet (default to 'status')
   fleet: { tool: 'spacemolt_fleet', action: 'status' },
 
   // Catalog (single endpoint: /api/v2/spacemolt_catalog)
-  catalog:   { tool: 'spacemolt_catalog', action: 'catalog' },
+  catalog: { tool: 'spacemolt_catalog', action: 'catalog' },
   get_guide: { tool: 'spacemolt_catalog', action: 'get_guide' },
-  help:      { tool: 'spacemolt_catalog', action: 'help' },
-  session:   { tool: 'session', action: 'session' },
+  help: { tool: 'spacemolt_catalog', action: 'help' },
+  session: { tool: 'session', action: 'session' },
 
   // Battle (advanced actions)
-  battle:            { tool: 'spacemolt_battle', action: 'status' },
+  battle: { tool: 'spacemolt_battle', action: 'status' },
   get_battle_status: { tool: 'spacemolt_battle', action: 'status' },
-  reload:            { tool: 'spacemolt_battle', action: 'reload' },
+  reload: { tool: 'spacemolt_battle', action: 'reload' },
 };
 
 // =============================================================================
@@ -1071,7 +1071,9 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
       const loginResp = await execute('login', { username: oldSession.username, password: oldSession.password });
       if (loginResp.error) {
         if (!JSON_OUTPUT) {
-          console.error(`${c.red}[SESSION]${c.reset} Session expired and auto-login failed: ${loginResp.error.message}`);
+          console.error(
+            `${c.red}[SESSION]${c.reset} Session expired and auto-login failed: ${loginResp.error.message}`,
+          );
           console.error(`${c.yellow}Run "spacemolt login <username> <password>" to re-authenticate.${c.reset}`);
         }
         return data; // Return the original error
@@ -1091,9 +1093,7 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
     const waitMs = Math.ceil(retryAfter) * 1000;
     if (!JSON_OUTPUT) {
-      console.log(
-        `${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`,
-      );
+      console.log(`${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
     }
     await Bun.sleep(waitMs);
     return execute(command, payload);
@@ -1570,7 +1570,9 @@ const resultFormatters: ResultFormatter[] = [
     console.log(`\n${c.bright}=== System: ${sys.name} ===${c.reset}`);
     console.log(`ID: ${sys.id}`);
     console.log(`Empire: ${sys.empire || 'None'}`);
-    console.log(`Police Level: ${sys.police_level} (${r.security_status || sys.security_status || 'unknown security'})`);
+    console.log(
+      `Police Level: ${sys.police_level} (${r.security_status || sys.security_status || 'unknown security'})`,
+    );
     if (sys.description) console.log(`Description: ${sys.description}`);
 
     const pois = sys.pois as Array<Record<string, unknown> | string>;
@@ -1598,7 +1600,9 @@ const resultFormatters: ResultFormatter[] = [
 
     const currentPoi = r.poi as Record<string, unknown> | undefined;
     if (currentPoi) {
-      console.log(`\n${c.bright}Current POI:${c.reset} ${currentPoi.name} (${currentPoi.type})  ${c.dim}${currentPoi.id}${c.reset}`);
+      console.log(
+        `\n${c.bright}Current POI:${c.reset} ${currentPoi.name} (${currentPoi.type})  ${c.dim}${currentPoi.id}${c.reset}`,
+      );
     }
     return true;
   }),
@@ -1620,7 +1624,9 @@ const resultFormatters: ResultFormatter[] = [
       for (const res of resources) {
         const display = res.remaining_display || `${res.remaining} remaining`;
         if (display === 'depleted' || res.remaining === 0) {
-          console.log(`  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${c.reset}\x1b[29m`);
+          console.log(
+            `  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${c.reset}\x1b[29m`,
+          );
           continue;
         }
 
@@ -2007,7 +2013,10 @@ function displayStructuredResult(command: string, result: Record<string, unknown
     (formatter) => formatter.hintKeys?.length && formatter.hintKeys.every((key) => resultKeys.includes(key)),
   );
   if (nearMisses.length > 0) {
-    const names = nearMisses.map((formatter) => formatter.formatterName).filter(Boolean).join(', ');
+    const names = nearMisses
+      .map((formatter) => formatter.formatterName)
+      .filter(Boolean)
+      .join(', ');
     console.error(
       `${c.yellow}[DRIFT WARNING]${c.reset} '${command}' response has keys matching formatter(s) [${names}] but none matched. Response keys: [${resultKeys.join(', ')}]`,
     );

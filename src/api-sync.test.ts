@@ -1,11 +1,12 @@
 /**
- * API sync test — verifies that the commands in client.ts match the live server.
+ * API sync test — verifies that the commands in client.ts match the v2 API spec.
  *
  * Catches two classes of drift:
  *   - Stale commands: in client.ts but not in the server API (hard fail)
  *   - Missing commands: in the server API but not in client.ts (hard fail)
  *
  * Run with: bun test src/api-sync.test.ts
+ * Use live spec: LIVE_API_SYNC=1 bun test src/api-sync.test.ts
  * Skip with: SKIP_API_SYNC=1 bun test
  */
 
@@ -14,6 +15,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
+const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
 
 const UNDOCUMENTED_IN_SPEC = new Set<string>([
   '/api/v2/spacemolt_catalog/catalog',
@@ -41,37 +43,56 @@ function extractClientCommands(src: string): string[] {
 
 function extractV2ToolMap(src: string): Record<string, string> {
   const start = src.indexOf('const V2_TOOL_MAP:');
-  const end = src.indexOf('\n\n// =============================================================================\n// Error Help Messages');
+  const end = src.indexOf(
+    '\n\n// =============================================================================\n// Error Help Messages',
+  );
   if (start === -1 || end === -1) throw new Error('Could not locate V2_TOOL_MAP block in client.ts');
 
   const block = src.slice(start, end);
-  const matches = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*\{\s*tool:\s*'([^']+)',\s*action:\s*'([^']+)'\s*\},?$/gm)];
-  return Object.fromEntries(matches.map((m) => {
-    const [, cmd, tool, action] = m;
-    const route = tool === action ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
-    return [cmd, route];
-  }));
+  const routes: Record<string, string> = {};
+  for (const line of block.split('\n')) {
+    const keyMatch = line.match(/^\s{2}([a-z][a-z0-9_]+):\s*\{/);
+    if (!keyMatch?.[1]) continue;
+
+    const toolMatch = line.match(/\btool:\s*'([^']+)'/);
+    const actionMatch = line.match(/\baction:\s*'([^']+)'/);
+    if (!toolMatch?.[1] || !actionMatch?.[1]) continue;
+
+    const [, cmd] = keyMatch;
+    const [, tool] = toolMatch;
+    const [, action] = actionMatch;
+    routes[cmd] = tool === action ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
+  }
+  return routes;
+}
+
+async function loadOpenApiSpec(): Promise<{ paths: Record<string, { post?: unknown }> }> {
+  if (process.env.LIVE_API_SYNC === '1') {
+    const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
+    if (resp.status === 429) {
+      console.log('[SKIP] OpenAPI spec rate-limited (429) — skipping API sync check');
+      return { paths: {} };
+    }
+    expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
+    return (await resp.json()) as { paths: Record<string, { post?: unknown }> };
+  }
+
+  return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as { paths: Record<string, { post?: unknown }> };
 }
 
 const skip = process.env.SKIP_API_SYNC === '1';
 
 describe('api sync', () => {
   test.skipIf(skip)(
-    'client.ts V2 map matches live OpenAPI spec',
+    'client.ts V2 map matches OpenAPI spec',
     async () => {
       const clientPath = path.join(import.meta.dir, 'client.ts');
       const src = fs.readFileSync(clientPath, 'utf-8');
       const clientCommands = new Set(extractClientCommands(src));
       const v2ToolMap = extractV2ToolMap(src);
 
-      // Fetch the live OpenAPI spec
-      const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
-      if (resp.status === 429) {
-        console.log('[SKIP] OpenAPI spec rate-limited (429) — skipping API sync check');
-        return;
-      }
-      expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
-      const spec = (await resp.json()) as { paths: Record<string, { post?: unknown }> };
+      const spec = await loadOpenApiSpec();
+      if (Object.keys(spec.paths).length === 0) return;
       const v2PostPaths = new Set(
         Object.entries(spec.paths)
           .filter(([, methods]) => Boolean(methods.post))
