@@ -33,7 +33,7 @@ const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 let JSON_OUTPUT = process.env.SPACEMOLT_OUTPUT === 'json';
 let DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.9.0';
+const VERSION = '0.9.1';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
 // known travel times with plenty of headroom.
