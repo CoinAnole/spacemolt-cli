@@ -55,6 +55,15 @@ function convertPayloadTypes(payload: Record<string, string>): Record<string, un
   return result;
 }
 
+function normalizeCommandPayload(command: string, payload?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (command === 'send_gift' && payload?.ship_id && !payload.item_id) {
+    const normalized: Record<string, unknown> = { ...payload, item_id: payload.ship_id };
+    delete normalized.ship_id;
+    return normalized;
+  }
+  return payload;
+}
+
 function compareVersions(current: string, latest: string): number {
   const currentParts = current.replace(/^v/, '').split('.').map(Number);
   const latestParts = latest.replace(/^v/, '').split('.').map(Number);
@@ -233,6 +242,48 @@ describe('convertPayloadTypes', () => {
   test('leaves non-numeric string in numeric field as string', () => {
     const result = convertPayloadTypes({ quantity: 'abc' });
     expect(result.quantity).toBe('abc');
+  });
+});
+
+describe('normalizeCommandPayload', () => {
+  test('send_gift maps ship_id to item_id for the storage deposit endpoint', () => {
+    const result = normalizeCommandPayload('send_gift', {
+      recipient: 'PlayerName',
+      ship_id: 'ship_456',
+    });
+
+    expect(result).toEqual({
+      recipient: 'PlayerName',
+      item_id: 'ship_456',
+    });
+  });
+
+  test('send_gift keeps explicit item_id unchanged', () => {
+    const result = normalizeCommandPayload('send_gift', {
+      recipient: 'PlayerName',
+      item_id: 'ore_iron',
+      ship_id: 'ship_456',
+      quantity: 10,
+    });
+
+    expect(result).toEqual({
+      recipient: 'PlayerName',
+      item_id: 'ore_iron',
+      ship_id: 'ship_456',
+      quantity: 10,
+    });
+  });
+
+  test('send_gift credit gifts are unchanged', () => {
+    const result = normalizeCommandPayload('send_gift', {
+      recipient: 'PlayerName',
+      credits: 1000,
+    });
+
+    expect(result).toEqual({
+      recipient: 'PlayerName',
+      credits: 1000,
+    });
   });
 });
 

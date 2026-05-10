@@ -926,6 +926,15 @@ function getObjectResult(response: APIResponse): Record<string, unknown> | undef
   return isRecord(response.result) ? response.result : undefined;
 }
 
+function normalizeCommandPayload(command: string, payload?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (command === 'send_gift' && payload?.ship_id && !payload.item_id) {
+    const normalized: Record<string, unknown> = { ...payload, item_id: payload.ship_id };
+    delete normalized.ship_id;
+    return normalized;
+  }
+  return payload;
+}
+
 // =============================================================================
 // Session Management
 // =============================================================================
@@ -988,6 +997,8 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   const session = await getSession();
   const mapping = V2_TOOL_MAP[command];
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
+
+  payload = normalizeCommandPayload(command, payload);
 
   // Merge static defaults (e.g., target=faction) into payload
   if (mapping.defaults) {
