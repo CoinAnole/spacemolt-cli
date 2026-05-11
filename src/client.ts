@@ -33,7 +33,7 @@ const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 let JSON_OUTPUT = process.env.SPACEMOLT_OUTPUT === 'json';
 let DEBUG = process.env.DEBUG === 'true';
-const VERSION = '0.9.1';
+const VERSION = '1.0.0';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
 // known travel times with plenty of headroom.
@@ -112,6 +112,40 @@ function printItemTable(items: Array<Record<string, unknown>>, indent = '  '): v
   }
 }
 
+function firstArray(result: Record<string, unknown>, keys: string[]): Array<Record<string, unknown>> | undefined {
+  for (const key of keys) {
+    const value = result[key];
+    if (Array.isArray(value)) return value as Array<Record<string, unknown>>;
+  }
+  return undefined;
+}
+
+function valueOf(row: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && value !== '') return String(value);
+  }
+  return '';
+}
+
+function printCompactTable(title: string, rows: Array<Record<string, unknown>>, columns: Array<[string, string[]]>): void {
+  console.log(`\n${c.bright}=== ${title} ===${c.reset}`);
+  if (!rows.length) {
+    console.log('(None)');
+    return;
+  }
+
+  const widths = columns.map(([label, keys]) =>
+    Math.max(label.length, ...rows.map((row) => valueOf(row, keys).length)),
+  );
+  console.log('');
+  console.log(`  ${columns.map(([label], idx) => label.padEnd(widths[idx] || label.length)).join(' | ')}`);
+  console.log(`  ${widths.map((width) => '-'.repeat(width)).join('-+-')}`);
+  for (const row of rows) {
+    console.log(`  ${columns.map(([, keys], idx) => valueOf(row, keys).padEnd(widths[idx] || 0)).join(' | ')}`);
+  }
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -149,6 +183,7 @@ interface CommandConfig {
 interface V2Route {
   tool: string;
   action: string;
+  method?: 'GET' | 'POST';
   /** Static payload fields to inject (e.g., target=faction for faction storage commands) */
   defaults?: Record<string, string>;
 }
@@ -165,6 +200,7 @@ const COMMANDS: Record<string, CommandConfig> = {
     usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)',
   },
   login: { args: ['username', 'password'], required: ['username', 'password'], usage: '<username> <password>' },
+  login_token: { args: ['token'], required: ['token'], usage: '<token>' },
   logout: {},
   claim: {
     args: ['registration_code'],
@@ -259,6 +295,7 @@ const COMMANDS: Record<string, CommandConfig> = {
     required: ['module_id'],
     usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
   },
+  refit_ship: {},
   refuel: { args: ['item_id', 'quantity'] },
   repair: {},
   use_item: {
@@ -300,6 +337,8 @@ const COMMANDS: Record<string, CommandConfig> = {
   faction_decline_invite: { args: ['faction_id'] },
   faction_set_ally: { args: ['target_faction_id'] },
   faction_set_enemy: { args: ['target_faction_id'] },
+  faction_remove_ally: { args: ['target_faction_id'], required: ['target_faction_id'] },
+  faction_remove_enemy: { args: ['target_faction_id'], required: ['target_faction_id'] },
   faction_declare_war: { args: ['target_faction_id', 'reason'] },
   faction_propose_peace: { args: ['target_faction_id', 'terms'] },
   faction_accept_peace: { args: ['target_faction_id'] },
@@ -349,12 +388,14 @@ const COMMANDS: Record<string, CommandConfig> = {
   create_note: { args: ['title', { rest: 'content' }] },
   write_note: { args: ['note_id', { rest: 'content' }] },
   read_note: { args: ['note_id'] },
+  delete_note: { args: ['note_id'], required: ['note_id'] },
   get_notes: {},
 
   // Captain's log
   captains_log_add: { args: [{ rest: 'entry' }] },
   captains_log_list: { args: ['index'] },
   captains_log_get: { args: ['index'] },
+  captains_log_delete: { args: ['index'], required: ['index'] },
 
   // Forum
   forum_list: { args: ['page', 'category'] },
@@ -442,19 +483,37 @@ const COMMANDS: Record<string, CommandConfig> = {
     usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item)',
   },
 
+  // Drones
+  list_drones: {},
+  get_drone: { args: ['drone_id'], required: ['drone_id'], usage: '<drone_id>' },
+  deploy_drone: { args: ['drone_id'], required: ['drone_id'], usage: '<drone_id>' },
+  load_drone: { args: ['drone_item_id'], required: ['drone_item_id'], usage: '<drone_item_id>' },
+  unload_drone: { args: ['drone_id'], required: ['drone_id'], usage: '<drone_id>' },
+  recall_drone: { args: ['drone_id'], usage: '[drone_id] [all=true]' },
+  upload_drone: { args: ['drone_id', { rest: 'script' }], required: ['drone_id', 'script'], usage: '<drone_id> <script>' },
+
   // Facilities
-  facility: {
-    args: ['action', 'facility_type', 'name', 'level', 'category'],
-    usage:
-      '<action> [facility_type] [name=...] [level=N] [category=...] [facility_id=...] [description=...] [access=...] [page=N] [per_page=N] [player_id=...] [username=...] [direction=...]',
-  },
+  facility_list: {},
+  facility_types: { args: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'] },
+  facility_upgrades: { args: ['facility_type', 'facility_id'] },
+  facility_build: { args: ['facility_type'], required: ['facility_type'], usage: '<facility_type>' },
+  facility_upgrade: { args: ['facility_type', 'facility_id'], required: ['facility_type'], usage: '<facility_type> [facility_id]' },
+  facility_toggle: { args: ['facility_id'], required: ['facility_id'], usage: '<facility_id>' },
+  facility_transfer: { args: ['facility_id', 'direction', 'player_id'], required: ['facility_id', 'direction'] },
+  personal_facility_build: { args: ['facility_type'], required: ['facility_type'], usage: '<facility_type>' },
+  personal_facility_decorate: { args: ['description', 'access'], usage: '<description> [access=private/public]' },
+  personal_facility_visit: { args: ['username'], usage: '[username]' },
+  faction_facility_list: {},
+  faction_facility_build: { args: ['facility_type'], required: ['facility_type'], usage: '<facility_type>' },
+  faction_facility_upgrade: { args: ['facility_type', 'facility_id'], required: ['facility_type'] },
+  faction_facility_toggle: { args: ['facility_id'], required: ['facility_id'] },
 
   // Battle
-  battle: {
-    args: ['action', 'stance', 'target_id', 'side_id'],
-    required: ['action'],
-    usage: '<action> [stance] [target_id] [side_id]  (actions: join, leave, stance, target, etc.)',
-  },
+  battle_engage: { args: ['side_id'] },
+  battle_advance: {},
+  battle_retreat: {},
+  battle_stance: { args: ['stance'], required: ['stance'], usage: '<stance>' },
+  battle_target: { args: ['target_id'], required: ['target_id'], usage: '<target_id>' },
   get_battle_status: {},
   reload: {
     args: ['weapon_instance_id', 'ammo_item_id'],
@@ -494,6 +553,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   buy_insurance: { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (number of ticks of coverage)' },
   get_insurance_quote: {},
   claim_insurance: {},
+  view_insurance: {},
 
   // Query commands
   get_status: {},
@@ -512,6 +572,10 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_location: {},
   get_notifications: {},
   survey_system: {},
+  get_player: {},
+  get_system_agents: {},
+  get_queue: {},
+  get_ships: {},
   get_action_log: {
     args: ['category', 'limit', 'before'],
     usage: '[category=...] [limit=N] [before=timestamp]  (persistent action history)',
@@ -527,12 +591,15 @@ const COMMANDS: Record<string, CommandConfig> = {
   v2_get_queue: {},
   v2_get_skills: {},
 
-  // Unified commands
-  fleet: {
-    args: ['action', 'player_id'],
-    required: ['action'],
-    usage: '<action> [player_id]  (actions: create, invite, accept, decline, leave, kick, disband, status)',
-  },
+  // Fleet
+  fleet_status: {},
+  create_fleet: {},
+  fleet_invite: { args: ['player_id'], required: ['player_id'], usage: '<player_id_or_name>' },
+  fleet_accept: {},
+  fleet_decline: {},
+  fleet_leave: {},
+  fleet_kick: { args: ['player_id'], required: ['player_id'], usage: '<player_id_or_name>' },
+  fleet_disband: {},
 
   // Reference & Help
   catalog: {
@@ -663,6 +730,8 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   faction_decline_invite: { tool: 'spacemolt_faction', action: 'decline_invite' },
   faction_set_ally: { tool: 'spacemolt_faction', action: 'set_ally' },
   faction_set_enemy: { tool: 'spacemolt_faction', action: 'set_enemy' },
+  faction_remove_ally: { tool: 'spacemolt_faction', action: 'remove_ally' },
+  faction_remove_enemy: { tool: 'spacemolt_faction', action: 'remove_enemy' },
   faction_declare_war: { tool: 'spacemolt_faction', action: 'declare_war' },
   faction_propose_peace: { tool: 'spacemolt_faction', action: 'propose_peace' },
   faction_accept_peace: { tool: 'spacemolt_faction', action: 'accept_peace' },
@@ -700,10 +769,12 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   create_note: { tool: 'spacemolt_social', action: 'create_note' },
   write_note: { tool: 'spacemolt_social', action: 'write_note' },
   read_note: { tool: 'spacemolt_social', action: 'read_note' },
+  delete_note: { tool: 'spacemolt_social', action: 'delete_note' },
   get_notes: { tool: 'spacemolt_social', action: 'get_notes' },
   captains_log_add: { tool: 'spacemolt_social', action: 'captains_log_add' },
   captains_log_list: { tool: 'spacemolt_social', action: 'captains_log_list' },
   captains_log_get: { tool: 'spacemolt_social', action: 'captains_log_get' },
+  captains_log_delete: { tool: 'spacemolt_social', action: 'captains_log_delete' },
   forum_list: { tool: 'spacemolt_social', action: 'forum_list' },
   forum_get_thread: { tool: 'spacemolt_social', action: 'forum_get_thread' },
   forum_create_thread: { tool: 'spacemolt_social', action: 'forum_create_thread' },
@@ -721,8 +792,30 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   trade_decline: { tool: 'spacemolt_transfer', action: 'trade_decline' },
   trade_cancel: { tool: 'spacemolt_transfer', action: 'trade_cancel' },
 
-  // Facility (default to 'list' action)
-  facility: { tool: 'spacemolt_facility', action: 'list' },
+  // Drones
+  list_drones: { tool: 'spacemolt_drone', action: 'list' },
+  get_drone: { tool: 'spacemolt_drone', action: 'get' },
+  deploy_drone: { tool: 'spacemolt_drone', action: 'deploy' },
+  load_drone: { tool: 'spacemolt_drone', action: 'load' },
+  unload_drone: { tool: 'spacemolt_drone', action: 'unload' },
+  recall_drone: { tool: 'spacemolt_drone', action: 'recall' },
+  upload_drone: { tool: 'spacemolt_drone', action: 'upload' },
+
+  // Facilities
+  facility_list: { tool: 'spacemolt_facility', action: 'list' },
+  facility_types: { tool: 'spacemolt_facility', action: 'types' },
+  facility_upgrades: { tool: 'spacemolt_facility', action: 'upgrades' },
+  facility_build: { tool: 'spacemolt_facility', action: 'build' },
+  facility_upgrade: { tool: 'spacemolt_facility', action: 'upgrade' },
+  facility_toggle: { tool: 'spacemolt_facility', action: 'toggle' },
+  facility_transfer: { tool: 'spacemolt_facility', action: 'transfer' },
+  personal_facility_build: { tool: 'spacemolt_facility', action: 'personal_build' },
+  personal_facility_decorate: { tool: 'spacemolt_facility', action: 'personal_decorate' },
+  personal_facility_visit: { tool: 'spacemolt_facility', action: 'personal_visit' },
+  faction_facility_list: { tool: 'spacemolt_facility', action: 'faction_list' },
+  faction_facility_build: { tool: 'spacemolt_facility', action: 'faction_build' },
+  faction_facility_upgrade: { tool: 'spacemolt_facility', action: 'faction_upgrade' },
+  faction_facility_toggle: { tool: 'spacemolt_facility', action: 'faction_toggle' },
 
   // Salvage
   get_wrecks: { tool: 'spacemolt_salvage', action: 'wrecks' },
@@ -738,17 +831,28 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   view_insurance: { tool: 'spacemolt_salvage', action: 'policies' },
   set_home_base: { tool: 'spacemolt_salvage', action: 'set_home' },
 
-  // Fleet (default to 'status')
-  fleet: { tool: 'spacemolt_fleet', action: 'status' },
+  // Fleet
+  fleet_status: { tool: 'spacemolt_fleet', action: 'status' },
+  create_fleet: { tool: 'spacemolt_fleet', action: 'create' },
+  fleet_invite: { tool: 'spacemolt_fleet', action: 'invite' },
+  fleet_accept: { tool: 'spacemolt_fleet', action: 'accept' },
+  fleet_decline: { tool: 'spacemolt_fleet', action: 'decline' },
+  fleet_leave: { tool: 'spacemolt_fleet', action: 'leave' },
+  fleet_kick: { tool: 'spacemolt_fleet', action: 'kick' },
+  fleet_disband: { tool: 'spacemolt_fleet', action: 'disband' },
 
-  // Catalog (single endpoint: /api/v2/spacemolt_catalog)
+  // Catalog and built-in help
   catalog: { tool: 'spacemolt_catalog', action: 'catalog' },
-  get_guide: { tool: 'spacemolt_catalog', action: 'get_guide' },
-  help: { tool: 'spacemolt_catalog', action: 'help' },
+  get_guide: { tool: 'spacemolt', action: 'get_guide' },
+  help: { tool: 'spacemolt', action: 'help', method: 'GET' },
   session: { tool: 'session', action: 'session' },
 
-  // Battle (advanced actions)
-  battle: { tool: 'spacemolt_battle', action: 'status' },
+  // Battle
+  battle_engage: { tool: 'spacemolt_battle', action: 'engage' },
+  battle_advance: { tool: 'spacemolt_battle', action: 'advance' },
+  battle_retreat: { tool: 'spacemolt_battle', action: 'retreat' },
+  battle_stance: { tool: 'spacemolt_battle', action: 'stance' },
+  battle_target: { tool: 'spacemolt_battle', action: 'target' },
   get_battle_status: { tool: 'spacemolt_battle', action: 'status' },
   reload: { tool: 'spacemolt_battle', action: 'reload' },
 };
@@ -935,6 +1039,65 @@ function normalizeCommandPayload(command: string, payload?: Record<string, unkno
   return payload;
 }
 
+function normalizeParsedPayload(command: string, payload: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = { ...payload };
+  const rename = (from: string, to: string) => {
+    if (normalized[from] !== undefined && normalized[to] === undefined) normalized[to] = normalized[from];
+    if (from !== to) delete normalized[from];
+  };
+
+  const idAliases: Record<string, string[]> = {
+    travel: ['target_poi'],
+    jump: ['target_system'],
+    find_route: ['target_system'],
+    get_guide: ['guide'],
+    attack: ['target_id'],
+    scan: ['target_id'],
+    accept_mission: ['mission_id'],
+    complete_mission: ['mission_id'],
+    abandon_mission: ['mission_id'],
+    decline_mission: ['template_id'],
+    view_completed_mission: ['template_id'],
+    faction_cancel_mission: ['template_id'],
+    install_mod: ['module_id'],
+    uninstall_mod: ['module_id'],
+    repair_module: ['module_id'],
+    switch_ship: ['ship_id'],
+    sell_ship: ['ship_id'],
+    buy_listed_ship: ['listing_id'],
+    cancel_ship_listing: ['listing_id'],
+    claim_commission: ['commission_id'],
+    cancel_commission: ['commission_id'],
+    get_drone: ['drone_id'],
+    deploy_drone: ['drone_id'],
+    load_drone: ['drone_item_id'],
+    unload_drone: ['drone_id'],
+    recall_drone: ['drone_id'],
+    upload_drone: ['drone_id'],
+    battle_stance: ['stance'],
+    battle_target: ['target_id'],
+    fleet_invite: ['player_id'],
+    fleet_kick: ['player_id'],
+    faction_set_ally: ['target_faction_id'],
+    faction_set_enemy: ['target_faction_id'],
+    faction_remove_ally: ['target_faction_id'],
+    faction_remove_enemy: ['target_faction_id'],
+  };
+
+  for (const alias of idAliases[command] || []) rename(alias, 'id');
+
+  if (command === 'search_systems') rename('query', 'text');
+  if (command === 'chat') rename('channel', 'target');
+  if (command === 'reload') {
+    rename('weapon_instance_id', 'id');
+    rename('ammo_item_id', 'target');
+  }
+  if (command === 'delete_note') rename('note_id', 'target');
+  if (command === 'upload_drone') rename('script', 'text');
+
+  return normalized;
+}
+
 // =============================================================================
 // Session Management
 // =============================================================================
@@ -1010,10 +1173,11 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
       ? mapping.tool
       : `${mapping.tool}/${mapping.action}`;
   const url = `${trimTrailingSlash(API_BASE)}/${routePath}`;
+  const method = mapping.method || 'POST';
   const routeKind: 'v2' = 'v2';
 
   if (DEBUG) {
-    console.log(`${c.dim}[DEBUG] Request: POST ${url}${c.reset}`);
+    console.log(`${c.dim}[DEBUG] Request: ${method} ${url}${c.reset}`);
     console.log(`${c.dim}[DEBUG] Route: ${routeKind}${c.reset}`);
     console.log(`${c.dim}[DEBUG] Session: ${session.id.substring(0, 8)}...${c.reset}`);
     if (payload) {
@@ -1027,13 +1191,13 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   let response: Response;
   try {
     response = await fetch(url, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         'X-Session-Id': session.id,
         'User-Agent': `SpaceMolt-Client/${VERSION}`,
       },
-      body: payload ? JSON.stringify(payload) : undefined,
+      body: method === 'POST' && payload ? JSON.stringify(payload) : undefined,
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
   } catch (err) {
@@ -1965,17 +2129,135 @@ const resultFormatters: ResultFormatter[] = [
   }),
 
   // Chat confirmation
-  namedFormatter('chat_sent', ['channel'], (r) => {
-    if (!r.channel || (r.action && r.action !== 'chat')) return false;
+  namedFormatter('chat_sent', ['content'], (r) => {
+    const channel = r.channel || r.target;
+    if (!channel || (r.action && r.action !== 'chat')) return false;
     if (!r.action && !r.message && !r.content && !r.sent_at && !r.timestamp) return false;
     if (r.message || r.content) {
       const timestamp = r.sent_at || r.timestamp;
       const time = timestamp ? `${c.dim}${new Date(timestamp as string).toLocaleTimeString()}${c.reset} ` : '';
-      console.log(`${c.green}[${r.channel}]${c.reset} ${time}${r.message || r.content}`);
+      console.log(`${c.green}[${channel}]${c.reset} ${time}${r.message || r.content}`);
     } else {
-      console.log(`${c.green}Chat sent:${c.reset} ${r.channel}`);
+      console.log(`${c.green}Chat sent:${c.reset} ${channel}`);
     }
     if (r.warning) console.log(`${c.yellow}Warning:${c.reset} ${r.warning}`);
+    return true;
+  }),
+
+  namedFormatter('drones', ['drones'], (r) => {
+    const drones = firstArray(r, ['drones']);
+    if (!drones) return false;
+    printCompactTable('Drones', drones, [
+      ['Name', ['name', 'type_name', 'drone_type', 'item_id']],
+      ['ID', ['drone_id', 'id']],
+      ['Status', ['status', 'state']],
+      ['Location', ['poi_name', 'poi_id', 'location', 'base_id']],
+      ['Cargo', ['cargo_used', 'cargo']],
+    ]);
+    return true;
+  }),
+
+  namedFormatter('drone', ['drone'], (r) => {
+    const drone = r.drone as Record<string, unknown> | undefined;
+    if (!drone) return false;
+    printCompactTable('Drone', [drone], [
+      ['Name', ['name', 'type_name', 'drone_type', 'item_id']],
+      ['ID', ['drone_id', 'id']],
+      ['Status', ['status', 'state']],
+      ['Location', ['poi_name', 'poi_id', 'location', 'base_id']],
+    ]);
+    if (drone.script || r.script) console.log(`\n${c.bright}Script:${c.reset}\n${drone.script || r.script}`);
+    return true;
+  }),
+
+  namedFormatter('facilities', ['facilities'], (r) => {
+    const facilities = firstArray(r, ['facilities', 'facility_types', 'upgrades']);
+    if (!facilities) return false;
+    printCompactTable('Facilities', facilities, [
+      ['Name', ['name', 'type_name', 'facility_type']],
+      ['ID', ['facility_id', 'id', 'type_id']],
+      ['Level', ['level', 'tier']],
+      ['Status', ['status', 'enabled', 'active']],
+      ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
+    ]);
+    return true;
+  }),
+
+  namedFormatter('facility', ['facility'], (r) => {
+    const facility = r.facility as Record<string, unknown> | undefined;
+    if (!facility) return false;
+    printCompactTable('Facility', [facility], [
+      ['Name', ['name', 'type_name', 'facility_type']],
+      ['ID', ['facility_id', 'id']],
+      ['Level', ['level', 'tier']],
+      ['Status', ['status', 'enabled', 'active']],
+      ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
+    ]);
+    return true;
+  }),
+
+  namedFormatter('fleet', ['fleet'], (r) => {
+    const fleet = r.fleet as Record<string, unknown> | undefined;
+    if (!fleet) return false;
+    console.log(`\n${c.bright}=== Fleet ===${c.reset}`);
+    console.log(`ID: ${fleet.fleet_id || fleet.id || 'unknown'}`);
+    if (fleet.leader_name || fleet.leader_id) console.log(`Leader: ${fleet.leader_name || fleet.leader_id}`);
+    const members = (fleet.members || r.members) as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(members)) {
+      printCompactTable('Fleet Members', members, [
+        ['Name', ['username', 'name', 'player_name']],
+        ['ID', ['player_id', 'id']],
+        ['Ship', ['ship_class', 'ship_name']],
+        ['Location', ['system_name', 'current_system', 'poi_name', 'current_poi']],
+        ['Status', ['status', 'state']],
+      ]);
+    }
+    return true;
+  }),
+
+  namedFormatter('battle_status', ['battle'], (r) => {
+    const battle = r.battle as Record<string, unknown> | undefined;
+    if (!battle) return false;
+    console.log(`\n${c.bright}=== Battle ===${c.reset}`);
+    console.log(`ID: ${battle.battle_id || battle.id || 'unknown'}`);
+    if (battle.status || battle.phase) console.log(`Status: ${battle.status || battle.phase}`);
+    if (battle.range_band || battle.range) console.log(`Range: ${battle.range_band || battle.range}`);
+    const participants = (battle.participants || r.participants) as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(participants)) {
+      printCompactTable('Participants', participants, [
+        ['Name', ['username', 'name', 'player_name']],
+        ['ID', ['player_id', 'id']],
+        ['Side', ['side_id', 'side']],
+        ['Stance', ['stance']],
+        ['Target', ['target_name', 'target_id']],
+      ]);
+    }
+    return true;
+  }),
+
+  namedFormatter('market_orders', ['orders'], (r) => {
+    const orders = firstArray(r, ['orders']);
+    if (!orders) return false;
+    printCompactTable('Market Orders', orders, [
+      ['Item', ['item_id', 'item_name']],
+      ['ID', ['order_id', 'listing_id', 'id']],
+      ['Side', ['side', 'type']],
+      ['Qty', ['quantity', 'remaining']],
+      ['Price', ['price_each', 'price']],
+    ]);
+    return true;
+  }),
+
+  namedFormatter('intel', ['intel'], (r) => {
+    const intel = firstArray(r, ['intel', 'results', 'trade_intel']);
+    if (!intel) return false;
+    printCompactTable('Intel', intel, [
+      ['System', ['system_name', 'system_id']],
+      ['POI/Base', ['poi_name', 'poi_id', 'base_name', 'base_id']],
+      ['Type', ['poi_type', 'resource_type', 'item_id']],
+      ['Value', ['quantity', 'price_each', 'confidence']],
+      ['Updated', ['updated_at', 'created_at']],
+    ]);
     return true;
   }),
 
@@ -2128,8 +2410,13 @@ function parseArgs(args: string[]): { command: string; payload: Record<string, s
 function validateRequiredArgs(command: string, payload: Record<string, string>): string | null {
   const required = COMMANDS[command]?.required;
   if (!required) return null;
+  const normalized = normalizeParsedPayload(command, payload);
   for (const arg of required) {
-    if (!payload[arg]) return arg;
+    if (payload[arg]) continue;
+    const canonicalRequired = normalizeParsedPayload(command, { [arg]: '__required__' });
+    const canonicalKeys = Object.keys(canonicalRequired);
+    if (canonicalKeys.some((key) => normalized[key])) continue;
+    return arg;
   }
   return null;
 }
@@ -2160,6 +2447,7 @@ const NUMERIC_FIELDS = new Set([
   'max_price',
   'price',
   'page_size',
+  'side_id',
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
@@ -2236,6 +2524,9 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_wrecks          Wrecks at POI (for looting)
   get_map             Galaxy map (all systems)
   get_battle_status   Current battle state
+  list_drones         Drones in your ship bay and deployed nearby
+  fleet_status        Current fleet membership and members
+  facility_list       Facilities at your current base
   catalog <type>      Browse ships/items/skills/recipes
   get_guide [guide]   Game guide and onboarding info
   help                Full command list from server
@@ -2264,8 +2555,18 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     cloak true/false          Toggle cloaking
 
   ${c.cyan}Battle:${c.reset}
-    battle <action>           Battle system (join, leave, stance, target)
+    battle_engage             Join or start a battle
+    battle_advance            Advance battle range
+    battle_retreat            Retreat from battle
+    battle_stance <stance>    Set stance (fire/evade/brace/flee)
+    battle_target <target>    Focus a battle target
     reload <weapon> <ammo>    Reload weapon with ammo
+
+  ${c.cyan}Drones:${c.reset}
+    load_drone <item_id>      Load a drone from cargo
+    deploy_drone <drone_id>   Deploy a loaded drone
+    recall_drone [drone_id]   Recall one drone, or all=true
+    upload_drone <id> <code>  Upload DroneLang script
 
   ${c.cyan}Salvage & Tow:${c.reset}
     tow_wreck <wreck_id>      Tow a wreck
@@ -2290,6 +2591,17 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     buy_insurance <ticks>     Purchase ship insurance
     get_insurance_quote       Get insurance pricing
     claim_insurance           File insurance claim
+    view_insurance            View active policies
+
+  ${c.cyan}Fleet & Facilities:${c.reset}
+    create_fleet              Create a fleet
+    fleet_invite <player>     Invite a player
+    fleet_accept              Accept a fleet invite
+    fleet_leave               Leave your fleet
+    fleet_disband             Disband your fleet
+    facility_build <type>     Build a base facility
+    facility_upgrade <type>   Upgrade a base facility
+    facility_toggle <id>      Toggle a facility
 
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
@@ -2314,7 +2626,7 @@ ${c.bright}Environment Variables:${c.reset}
 ${c.bright}API Routing:${c.reset}
   - The client uses v2 exclusively
   - Commands route to /api/v2/{tool}/{action}
-  - help and get_guide route through v2 catalog
+  - help and get_guide route through v2 spacemolt endpoints
 
 ${c.bright}Documentation:${c.reset}
   API Reference: https://game.spacemolt.com/api/v2/openapi.json
@@ -2402,8 +2714,10 @@ async function main(): Promise<void> {
       await saveSession(session);
     }
 
+    const requestPayload = normalizeParsedPayload(command, payload);
+
     // Convert string payload to proper types (numbers, booleans)
-    const typedPayload = Object.keys(payload).length > 0 ? convertPayloadTypes(payload) : {};
+    const typedPayload = Object.keys(requestPayload).length > 0 ? convertPayloadTypes(requestPayload) : {};
     const response = await execute(command, typedPayload);
 
     if (options.json && response.error) {

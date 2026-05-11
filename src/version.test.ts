@@ -30,6 +30,7 @@ const NUMERIC_FIELDS = new Set([
   'max_price',
   'price',
   'page_size',
+  'side_id',
 ]);
 
 function convertPayloadTypes(payload: Record<string, string>): Record<string, unknown> {
@@ -62,6 +63,65 @@ function normalizeCommandPayload(command: string, payload?: Record<string, unkno
     return normalized;
   }
   return payload;
+}
+
+function normalizeParsedPayload(command: string, payload: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = { ...payload };
+  const rename = (from: string, to: string) => {
+    if (normalized[from] !== undefined && normalized[to] === undefined) normalized[to] = normalized[from];
+    if (from !== to) delete normalized[from];
+  };
+
+  const idAliases: Record<string, string[]> = {
+    travel: ['target_poi'],
+    jump: ['target_system'],
+    find_route: ['target_system'],
+    get_guide: ['guide'],
+    attack: ['target_id'],
+    scan: ['target_id'],
+    accept_mission: ['mission_id'],
+    complete_mission: ['mission_id'],
+    abandon_mission: ['mission_id'],
+    decline_mission: ['template_id'],
+    view_completed_mission: ['template_id'],
+    faction_cancel_mission: ['template_id'],
+    install_mod: ['module_id'],
+    uninstall_mod: ['module_id'],
+    repair_module: ['module_id'],
+    switch_ship: ['ship_id'],
+    sell_ship: ['ship_id'],
+    buy_listed_ship: ['listing_id'],
+    cancel_ship_listing: ['listing_id'],
+    claim_commission: ['commission_id'],
+    cancel_commission: ['commission_id'],
+    get_drone: ['drone_id'],
+    deploy_drone: ['drone_id'],
+    load_drone: ['drone_item_id'],
+    unload_drone: ['drone_id'],
+    recall_drone: ['drone_id'],
+    upload_drone: ['drone_id'],
+    battle_stance: ['stance'],
+    battle_target: ['target_id'],
+    fleet_invite: ['player_id'],
+    fleet_kick: ['player_id'],
+    faction_set_ally: ['target_faction_id'],
+    faction_set_enemy: ['target_faction_id'],
+    faction_remove_ally: ['target_faction_id'],
+    faction_remove_enemy: ['target_faction_id'],
+  };
+
+  for (const alias of idAliases[command] || []) rename(alias, 'id');
+
+  if (command === 'search_systems') rename('query', 'text');
+  if (command === 'chat') rename('channel', 'target');
+  if (command === 'reload') {
+    rename('weapon_instance_id', 'id');
+    rename('ammo_item_id', 'target');
+  }
+  if (command === 'delete_note') rename('note_id', 'target');
+  if (command === 'upload_drone') rename('script', 'text');
+
+  return normalized;
 }
 
 function compareVersions(current: string, latest: string): number {
@@ -124,8 +184,13 @@ function validateRequiredArgs(
 ): string | null {
   const required = commands[command]?.required;
   if (!required) return null;
+  const normalized = normalizeParsedPayload(command, payload);
   for (const arg of required) {
-    if (!payload[arg]) return arg;
+    if (payload[arg]) continue;
+    const canonicalRequired = normalizeParsedPayload(command, { [arg]: '__required__' });
+    const canonicalKeys = Object.keys(canonicalRequired);
+    if (canonicalKeys.some((key) => normalized[key])) continue;
+    return arg;
   }
   return null;
 }
@@ -239,6 +304,11 @@ describe('convertPayloadTypes', () => {
     expect(result.expiration_hours).toBe(24);
   });
 
+  test('handles battle side_id as numeric', () => {
+    const result = convertPayloadTypes({ side_id: '2' });
+    expect(result.side_id).toBe(2);
+  });
+
   test('leaves non-numeric string in numeric field as string', () => {
     const result = convertPayloadTypes({ quantity: 'abc' });
     expect(result.quantity).toBe('abc');
@@ -287,6 +357,40 @@ describe('normalizeCommandPayload', () => {
   });
 });
 
+describe('normalizeParsedPayload', () => {
+  test('navigation aliases are sent as id/text', () => {
+    expect(normalizeParsedPayload('travel', { target_poi: 'sol_asteroid_belt' })).toEqual({
+      id: 'sol_asteroid_belt',
+    });
+    expect(normalizeParsedPayload('jump', { target_system: 'alpha' })).toEqual({ id: 'alpha' });
+    expect(normalizeParsedPayload('search_systems', { query: 'sol' })).toEqual({ text: 'sol' });
+  });
+
+  test('chat keeps friendly channel but sends target', () => {
+    expect(normalizeParsedPayload('chat', { channel: 'local', content: 'hello' })).toEqual({
+      target: 'local',
+      content: 'hello',
+    });
+  });
+
+  test('reload uses canonical id and target fields', () => {
+    expect(
+      normalizeParsedPayload('reload', { weapon_instance_id: 'weapon_1', ammo_item_id: 'ammo_light' }),
+    ).toEqual({ id: 'weapon_1', target: 'ammo_light' });
+  });
+
+  test('new feature command aliases normalize to API fields', () => {
+    expect(normalizeParsedPayload('upload_drone', { drone_id: 'drone_1', script: 'scan' })).toEqual({
+      id: 'drone_1',
+      text: 'scan',
+    });
+    expect(normalizeParsedPayload('battle_target', { target_id: 'player_1' })).toEqual({ id: 'player_1' });
+    expect(normalizeParsedPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
+    expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
+    expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+  });
+});
+
 // =============================================================================
 // parseArgs
 // =============================================================================
@@ -328,6 +432,19 @@ const SAMPLE_COMMANDS: Record<string, CommandConfig> = {
   faction_declare_war: { args: ['target_faction_id', 'reason'] },
   faction_query_intel: { args: ['system_name', 'system_id', 'poi_type', 'resource_type'] },
   faction_create_role: { args: ['name', 'priority', 'permissions'] },
+  faction_remove_ally: { args: ['target_faction_id'], required: ['target_faction_id'] },
+  list_drones: {},
+  get_drone: { args: ['drone_id'], required: ['drone_id'] },
+  upload_drone: { args: ['drone_id', { rest: 'script' }], required: ['drone_id', 'script'] },
+  battle_stance: { args: ['stance'], required: ['stance'] },
+  battle_target: { args: ['target_id'], required: ['target_id'] },
+  reload: { args: ['weapon_instance_id', 'ammo_item_id'], required: ['weapon_instance_id', 'ammo_item_id'] },
+  fleet_status: {},
+  fleet_invite: { args: ['player_id'], required: ['player_id'] },
+  facility_build: { args: ['facility_type'], required: ['facility_type'] },
+  facility_toggle: { args: ['facility_id'], required: ['facility_id'] },
+  delete_note: { args: ['note_id'], required: ['note_id'] },
+  captains_log_delete: { args: ['index'], required: ['index'] },
 };
 
 describe('parseArgs - basic', () => {
@@ -535,6 +652,36 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     const missing = validateRequiredArgs('cancel_order', {}, SAMPLE_COMMANDS);
     expect(missing).toBeNull();
   });
+
+  test('new explicit drone commands parse positional payloads', () => {
+    expect(parseArgs(['list_drones'], SAMPLE_COMMANDS).payload).toEqual({});
+    expect(parseArgs(['get_drone', 'drone_1'], SAMPLE_COMMANDS).payload.drone_id).toBe('drone_1');
+    expect(parseArgs(['upload_drone', 'drone_1', 'scan', 'asteroids'], SAMPLE_COMMANDS).payload).toEqual({
+      drone_id: 'drone_1',
+      script: 'scan asteroids',
+    });
+  });
+
+  test('new explicit battle commands parse positional payloads', () => {
+    expect(parseArgs(['battle_stance', 'brace'], SAMPLE_COMMANDS).payload.stance).toBe('brace');
+    expect(parseArgs(['battle_target', 'player_1'], SAMPLE_COMMANDS).payload.target_id).toBe('player_1');
+    expect(parseArgs(['reload', 'weapon_1', 'ammo_light'], SAMPLE_COMMANDS).payload).toEqual({
+      weapon_instance_id: 'weapon_1',
+      ammo_item_id: 'ammo_light',
+    });
+  });
+
+  test('new explicit fleet and facility commands parse positional payloads', () => {
+    expect(parseArgs(['fleet_status'], SAMPLE_COMMANDS).payload).toEqual({});
+    expect(parseArgs(['fleet_invite', 'PlayerName'], SAMPLE_COMMANDS).payload.player_id).toBe('PlayerName');
+    expect(parseArgs(['facility_build', 'ore_refinery'], SAMPLE_COMMANDS).payload.facility_type).toBe('ore_refinery');
+    expect(parseArgs(['facility_toggle', 'fac_1'], SAMPLE_COMMANDS).payload.facility_id).toBe('fac_1');
+  });
+
+  test('new note and captains log delete commands parse positional payloads', () => {
+    expect(parseArgs(['delete_note', 'note_1'], SAMPLE_COMMANDS).payload.note_id).toBe('note_1');
+    expect(parseArgs(['captains_log_delete', '3'], SAMPLE_COMMANDS).payload.index).toBe('3');
+  });
 });
 
 // =============================================================================
@@ -565,6 +712,12 @@ describe('validateRequiredArgs', () => {
   test('trade_offer requires target_id but not credits', () => {
     expect(validateRequiredArgs('trade_offer', {}, SAMPLE_COMMANDS)).toBe('target_id');
     expect(validateRequiredArgs('trade_offer', { target_id: 'abc' }, SAMPLE_COMMANDS)).toBeNull();
+  });
+
+  test('canonical API field satisfies friendly required arg after normalization', () => {
+    expect(validateRequiredArgs('travel', { id: 'sol_earth' }, SAMPLE_COMMANDS)).toBeNull();
+    expect(validateRequiredArgs('battle_target', { id: 'player_1' }, SAMPLE_COMMANDS)).toBeNull();
+    expect(validateRequiredArgs('delete_note', { target: 'note_1' }, SAMPLE_COMMANDS)).toBeNull();
   });
 
   test('supply_commission requires all three args', () => {

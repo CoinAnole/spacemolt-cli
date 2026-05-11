@@ -37,7 +37,7 @@ function extractClientCommands(src: string): string[] {
   return matches.map((m) => m[1]).filter((value): value is string => Boolean(value));
 }
 
-function extractV2ToolMap(src: string): Record<string, string> {
+function extractV2ToolMap(src: string): Record<string, { route: string; method: 'GET' | 'POST' }> {
   const start = src.indexOf('const V2_TOOL_MAP:');
   const end = src.indexOf(
     '\n\n// =============================================================================\n// Error Help Messages',
@@ -45,24 +45,28 @@ function extractV2ToolMap(src: string): Record<string, string> {
   if (start === -1 || end === -1) throw new Error('Could not locate V2_TOOL_MAP block in client.ts');
 
   const block = src.slice(start, end);
-  const routes: Record<string, string> = {};
+  const routes: Record<string, { route: string; method: 'GET' | 'POST' }> = {};
   for (const line of block.split('\n')) {
     const keyMatch = line.match(/^\s{2}([a-z][a-z0-9_]+):\s*\{/);
     if (!keyMatch?.[1]) continue;
 
     const toolMatch = line.match(/\btool:\s*'([^']+)'/);
     const actionMatch = line.match(/\baction:\s*'([^']+)'/);
+    const methodMatch = line.match(/\bmethod:\s*'([^']+)'/);
     if (!toolMatch?.[1] || !actionMatch?.[1]) continue;
 
     const [, cmd] = keyMatch;
     const [, tool] = toolMatch;
     const [, action] = actionMatch;
-    routes[cmd] = tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
+    routes[cmd] = {
+      route: tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`,
+      method: methodMatch?.[1] === 'GET' ? 'GET' : 'POST',
+    };
   }
   return routes;
 }
 
-async function loadOpenApiSpec(): Promise<{ paths: Record<string, { post?: unknown }> }> {
+async function loadOpenApiSpec(): Promise<{ paths: Record<string, { get?: unknown; post?: unknown }> }> {
   if (process.env.LIVE_API_SYNC === '1') {
     const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
     if (resp.status === 429) {
@@ -70,10 +74,12 @@ async function loadOpenApiSpec(): Promise<{ paths: Record<string, { post?: unkno
       return { paths: {} };
     }
     expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
-    return (await resp.json()) as { paths: Record<string, { post?: unknown }> };
+    return (await resp.json()) as { paths: Record<string, { get?: unknown; post?: unknown }> };
   }
 
-  return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as { paths: Record<string, { post?: unknown }> };
+  return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as {
+    paths: Record<string, { get?: unknown; post?: unknown }>;
+  };
 }
 
 const skip = process.env.SKIP_API_SYNC === '1';
@@ -89,15 +95,18 @@ describe('api sync', () => {
 
       const spec = await loadOpenApiSpec();
       if (Object.keys(spec.paths).length === 0) return;
-      const v2PostPaths = new Set(
-        Object.entries(spec.paths)
-          .filter(([, methods]) => Boolean(methods.post))
-          .map(([route]) => route),
+      const v2Routes = new Set(
+        Object.entries(spec.paths).flatMap(([route, methods]) => {
+          const routes: string[] = [];
+          if (methods.get) routes.push(`GET ${route}`);
+          if (methods.post) routes.push(`POST ${route}`);
+          return routes;
+        }),
       );
 
       const staleMappings = Object.entries(v2ToolMap)
-        .filter(([, route]) => !v2PostPaths.has(route))
-        .map(([command, route]) => `${command} -> ${route}`);
+        .filter(([, mapping]) => !v2Routes.has(`${mapping.method} ${mapping.route}`))
+        .map(([command, mapping]) => `${command} -> ${mapping.method} ${mapping.route}`);
       expect(
         staleMappings,
         `Stale V2 mappings in client.ts (not in v2 OpenAPI):\n  ${staleMappings.join('\n  ')}\n\nFix the tool/action pair or move the route to UNDOCUMENTED_IN_SPEC if the spec is behind.`,
