@@ -2599,9 +2599,15 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     fleet_accept              Accept a fleet invite
     fleet_leave               Leave your fleet
     fleet_disband             Disband your fleet
-    facility_build <type>     Build a base facility
-    facility_upgrade <type>   Upgrade a base facility
+    facility_list             List all facilities at current base
+    facility_types [category]  Browse facility types (use category=faction, infrastructure, etc.)
+    facility_build <type>     Build a player facility
+    facility_upgrade <type>   Upgrade a player facility
     facility_toggle <id>      Toggle a facility
+    faction_facility_list     List faction facilities at current base
+    faction_facility_build <type>  Build a faction facility
+    faction_facility_upgrade <type>  Upgrade a faction facility
+    faction_facility_toggle <id>     Toggle a faction facility
 
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
