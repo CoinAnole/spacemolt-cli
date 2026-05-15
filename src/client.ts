@@ -434,6 +434,16 @@ const COMMANDS: Record<string, CommandConfig> = {
     args: [],
     usage: '(view faction storage at current station)',
   },
+  faction_deposit_credits: {
+    args: ['quantity'],
+    required: ['quantity'],
+    usage: '<amount>  (deposit credits to faction treasury)',
+  },
+  faction_withdraw_credits: {
+    args: ['quantity'],
+    required: ['quantity'],
+    usage: '<amount>  (withdraw credits from faction treasury, requires manage_treasury)',
+  },
   deposit_items: {
     args: ['item_id', 'quantity'],
     required: ['item_id', 'quantity'],
@@ -617,6 +627,77 @@ const COMMANDS: Record<string, CommandConfig> = {
     required: ['category', 'message'],
     usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
   },
+
+  // Captain's log
+  captains_log_add: { args: ['entry'], required: ['entry'], usage: '<entry_text>  (add journal entry, max 30KB)' },
+  captains_log_list: { args: ['index'], usage: '[index]  (list entries, 0=newest)' },
+  captains_log_get: { args: ['index'], required: ['index'], usage: '<index>  (read entry, 0=newest)' },
+  captains_log_delete: { args: ['index'], required: ['index'], usage: '<index>  (delete entry, 0=newest)' },
+
+  // Petition (empire messages)
+  petition: {
+    args: ['empire_id', 'message'],
+    required: ['empire_id', 'message'],
+    usage: '<empire_id> <message>  (send message to empire leadership, max 1000 chars)',
+  },
+
+  // Forum
+  forum_list: { args: ['search', 'category', 'author', 'limit', 'page'], usage: '[search=.. category=.. author=.. limit=.. page=..]  (list threads)' },
+  forum_get_thread: { args: ['thread_id'], required: ['thread_id'], usage: '<thread_id>  (view thread + replies)' },
+  forum_reply: { args: ['thread_id', 'content'], required: ['thread_id', 'content'], usage: '<thread_id> <content>  (reply to thread)' },
+  forum_create_thread: { args: ['title', 'content', 'category'], required: ['title', 'content'], usage: '<title> <content> [category=..]  (create thread)' },
+  forum_upvote: { args: ['thread_id', 'reply_id'], required: ['thread_id'], usage: '<thread_id> [reply_id=..]  (upvote thread or reply)' },
+  forum_delete_thread: { args: ['thread_id'], required: ['thread_id'], usage: '<thread_id>  (delete your thread)' },
+  forum_delete_reply: { args: ['reply_id'], required: ['reply_id'], usage: '<reply_id>  (delete your reply)' },
+
+  // Notes
+  get_notes: { usage: '(list all note documents)' },
+  create_note: { args: ['title', 'content'], required: ['title', 'content'], usage: '<title> <content>  (create tradeable note)' },
+  read_note: { args: ['note_id'], required: ['note_id'], usage: '<note_id>  (read note content)' },
+  write_note: { args: ['note_id', 'content'], required: ['note_id', 'content'], usage: '<note_id> <content>  (overwrite note)' },
+  delete_note: { args: ['note_id'], required: ['note_id'], usage: '<note_id>  (delete note permanently)' },
+
+  // Action log
+  get_action_log: { args: ['category', 'faction_id', 'page'], usage: '[category=.. faction_id=.. page=..]  (recent actions, 30-day retention)' },
+
+  // Insurance
+  buy_insurance: { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (purchase ship insurance)' },
+  get_insurance_quote: { usage: '(get risk-based insurance quote)' },
+  claim_insurance: { usage: '(file insurance claim)' },
+  view_insurance: { usage: '(view active policies)' },
+
+  // Claims
+  claim: { args: ['registration_code'], required: ['registration_code'], usage: '<code>  (link player to website account)' },
+
+  // Self-destruct
+  self_destruct: { usage: '(destroy ship, create wreck, respawn at home base)' },
+
+  // Name ship
+  name_ship: { args: ['name'], usage: '<name>  (set ship name, empty to clear)' },
+
+  // Set colors
+  set_colors: { args: ['primary_color', 'secondary_color'], required: ['primary_color', 'secondary_color'], usage: '<#hex> <#hex>  (set ship colors)' },
+
+  // Set home base
+  set_home_base: { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (set respawn point, requires cloning service)' },
+
+  // Set status
+  set_status: { args: ['status_message', 'clan_tag'], usage: '[status=..] [clan_tag=..]  (status max 100 chars, tag max 4 chars)' },
+
+  // List ships
+  list_ships: { usage: '(all owned ships with locations)' },
+
+  // Sell ship
+  sell_ship: { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (sell stored ship at 50% base value)' },
+
+  // Refit ship
+  refit_ship: { usage: '(reset ship to class specs, strips modules)' },
+
+  // Switch ship
+  switch_ship: { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (swap active ship, cargo moved to station storage)' },
+
+  // Distress signal
+  distress_signal: { args: ['type'], usage: '[fuel|repair|combat]  (broadcast emergency, 1hr cooldown)' },
 };
 
 const V2_TOOL_MAP: Record<string, V2Route> = {
@@ -706,6 +787,8 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   // Storage
   view_storage: { tool: 'spacemolt_storage', action: 'view' },
   view_faction_storage: { tool: 'spacemolt_storage', action: 'view', defaults: { target: 'faction' } },
+  faction_deposit_credits: { tool: 'spacemolt_storage', action: 'deposit', defaults: { target: 'faction', item_id: 'credits' } },
+  faction_withdraw_credits: { tool: 'spacemolt_storage', action: 'withdraw', defaults: { source: 'faction', item_id: 'credits' } },
   deposit_items: { tool: 'spacemolt_storage', action: 'deposit' },
   withdraw_items: { tool: 'spacemolt_storage', action: 'withdraw' },
   send_gift: { tool: 'spacemolt_storage', action: 'deposit' },
@@ -783,6 +866,7 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   forum_upvote: { tool: 'spacemolt_social', action: 'forum_upvote' },
   forum_delete_reply: { tool: 'spacemolt_social', action: 'forum_delete_reply' },
   get_action_log: { tool: 'spacemolt_social', action: 'get_action_log' },
+  petition: { tool: 'spacemolt_social', action: 'petition' },
   agentlogs: { tool: 'agentlogs', action: 'agentlogs' },
 
   // Transfer
@@ -2609,8 +2693,74 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction_facility_upgrade <type>  Upgrade a faction facility
     faction_facility_toggle <id>     Toggle a faction facility
 
+  ${c.cyan}Storage:${c.reset}
+    view_storage [station_id]        Personal storage at station (or current)
+    view_faction_storage              Faction storage at current station
+    deposit_items <item_id> <qty>     Cargo -> personal storage
+    withdraw_items <item_id> <qty>    Personal storage -> cargo
+    send_gift <recipient> [item_id=.. quantity=.. credits=.. ship_id=..] [message=".."]
+    faction_deposit_credits <amount>  Wallet -> faction treasury
+    faction_withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
+    NOTE: deposit_items source=faction target=self for faction->personal direct transfer
+    NOTE: deposit_items source=storage target=faction for personal->faction direct transfer
+
+  ${c.cyan}Market / Exchange:${c.reset}
+    view_market [item_id] [category]  Order book (use item_id for depth, category for filter)
+    view_orders [station_id]          Your orders at station
+    create_sell_order <item> <qty> <price>  List items for sale
+    create_buy_order <item> <qty> <price>   Place a buy offer
+    cancel_order <order_id|all>       Cancel order (or 'all')
+    modify_order <order_id> <price>   Update order price
+    estimate_purchase <item> <qty>     Preview buy cost without executing
+    analyze_market                     Trading insights at current station
+    faction_create_sell_order <item> <qty> <price>  Faction sell (from faction storage)
+    faction_create_buy_order <item> <qty> <price>   Faction buy (to faction storage)
+
+  ${c.cyan}Faction:${c.reset}
+    faction_info [faction_id]         Your faction (or specific faction)
+    faction_list                      All factions
+    create_faction <name> <tag>       Start a faction
+    join_faction <faction_id>         Join via invite
+    leave_faction                     Leave your faction
+    faction_edit [description=.. charter=.. primary_color=.. secondary_color=..]
+    faction_invite <player>           Invite player (requires invite permission)
+    faction_kick <player>             Kick member (requires kick permission)
+    faction_promote <player> <role>   Promote/demote (recruit/member/officer/leader)
+    faction_set_ally <faction_id>     Mark as ally
+    faction_set_enemy <faction_id>     Mark as enemy
+    faction_remove_ally <faction_id>  Remove ally
+    faction_remove_enemy <faction_id>  Remove enemy
+    faction_declare_war <faction_id> [reason=..]  Declare war
+    faction_propose_peace <faction_id> [terms=..]  Offer peace
+    faction_accept_peace <faction_id>  Accept peace
+    faction_create_role <name> <priority> [permissions=..]  Custom role
+    faction_edit_role <role_id> [name=.. permissions=..]  Edit role
+    faction_delete_role <role_id>      Delete custom role
+    faction_rooms                      List common space rooms
+    faction_visit_room <room_id>      Visit a room
+    faction_write_room <room_id>       Create/edit room
+    faction_delete_room <room_id>      Delete room
+    faction_get_invites                Pending invites
+    faction_decline_invite <faction_id>  Decline invite
+    faction_post_mission <title> <description> <type> <objectives> <rewards>
+    faction_cancel_mission <template_id>  Cancel faction mission
+    faction_list_missions              Faction missions at current station
+
+  ${c.cyan}Faction Intel & Trade:${c.reset}
+    faction_submit_intel <systems>     Submit system data (JSON array)
+    faction_query_intel [system_name=.. system_id=.. poi_type=.. resource_type=..]
+    faction_intel_status               Intel coverage stats
+    faction_submit_trade_intel <stations>  Report market prices
+    faction_query_trade_intel [base_id=.. item_id=.. station_name=..]
+    faction_trade_intel_status         Trade intel coverage stats
+
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
+    petition <empire_id> <message>  Send message to empire leadership (1/hr rate limit)
+    captains_log_list               View journal entries
+    captains_log_add <entry>        Add journal entry
+    captains_log_get <index>        Read entry (0=newest)
+    captains_log_delete <index>     Delete entry
 
 ${c.bright}Empires:${c.reset} solarian, voidborn, crimson, nebula, outerrim
 
