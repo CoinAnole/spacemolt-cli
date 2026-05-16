@@ -434,8 +434,8 @@ const COMMANDS: Record<string, CommandConfig> = {
   // Station storage
   view_storage: { args: ['station_id'] },
   view_faction_storage: {
-    args: [],
-    usage: '(view faction storage at current station)',
+    args: ['station_id'],
+    usage: '[station_id]  (view faction storage, omit for current station)',
   },
   faction_deposit_credits: {
     args: ['quantity'],
