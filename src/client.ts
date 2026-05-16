@@ -2185,6 +2185,45 @@ const resultFormatters: ResultFormatter[] = [
     return true;
   }),
 
+  // Market order book
+  namedFormatter('view_market', ['items'], (r) => {
+    if (r.action !== 'view_market' || !r.base_id) return false;
+    const items = r.items as Array<Record<string, unknown>>;
+    if (!items || items.length === 0) {
+      console.log(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n  (empty)`);
+      return true;
+    }
+    console.log(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n`);
+    for (const item of items) {
+      const name = String(item.item_name || item.item_id || 'unknown');
+      const buyOrders = item.buy_orders as Array<Record<string, unknown>> | undefined;
+      const sellOrders = item.sell_orders as Array<Record<string, unknown>> | undefined;
+      console.log(`${c.bright}${name}${c.reset}`);
+      if (buyOrders && buyOrders.length > 0) {
+        console.log(`  Buy orders (${buyOrders.length}):`);
+        for (const o of buyOrders) {
+          const price = Number(o.price_each).toLocaleString();
+          const qty = Number(o.quantity).toLocaleString();
+          const src = o.source && o.source !== 'station' && o.source !== 'player' ? ` [${o.source}]` : '';
+          console.log(`    ${c.green}${price} cr${c.reset} x ${qty}${src}`);
+        }
+      }
+      if (sellOrders && sellOrders.length > 0) {
+        console.log(`  Sell orders (${sellOrders.length}):`);
+        for (const o of sellOrders) {
+          const price = Number(o.price_each).toLocaleString();
+          const qty = Number(o.quantity).toLocaleString();
+          console.log(`    ${c.red}${price} cr${c.reset} x ${qty}`);
+        }
+      }
+      if (!buyOrders?.length && !sellOrders?.length) {
+        console.log('  (no orders)');
+      }
+      console.log('');
+    }
+    return true;
+  }),
+
   // Station storage
   namedFormatter('storage', ['base_id', 'items'], (r) => {
     if (!r.base_id || !Array.isArray(r.items)) return false;
