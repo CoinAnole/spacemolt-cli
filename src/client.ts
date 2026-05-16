@@ -296,7 +296,10 @@ const COMMANDS: Record<string, CommandConfig> = {
     usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
   },
   refit_ship: {},
-  refuel: { args: ['item_id', 'quantity'] },
+  refuel: {
+    args: ['id', 'quantity', 'target'],
+    usage: '[id] [quantity] [target=player|fleet]  (station fuel uses dynamic reserve pricing; fuel cells can be selected by id)',
+  },
   repair: {},
   use_item: {
     args: ['item_id', 'quantity'],
@@ -957,7 +960,9 @@ const ERROR_HELP: Record<string, string> = {
   invalid_poi: 'POI not found. Run "spacemolt get_system" to see valid POIs.',
   wrong_system: 'That POI is in a different system. Use "jump" to change systems first.',
   not_connected: 'Systems are not connected. Run "spacemolt get_system" to see connections.',
-  no_fuel: 'Insufficient fuel. Dock at a station and run "spacemolt refuel".',
+  no_fuel: 'Insufficient fuel. Dock at a station and run "spacemolt refuel"; if station reserves are depleted, use fuel cells or try another supplied station.',
+  no_station_fuel: 'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
+  station_fuel_depleted: 'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
   no_credits: 'Insufficient credits. Mine and sell resources to earn credits.',
   no_cargo_space: 'Cargo hold is full. Sell or jettison items to make space.',
   invalid_target: 'Target not found. Run "spacemolt get_nearby" to see players at your POI.',
@@ -2630,7 +2635,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     mine                      Mine at asteroid belt
     sell <item_id> <qty>      Sell to NPC market
     buy <item_id> [qty]       Buy from market
-    refuel                    Refuel at station
+    refuel [id] [qty]         Refuel at station or use fuel cells
     repair                    Repair at station
 
   ${c.cyan}Combat:${c.reset}
