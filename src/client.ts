@@ -2459,16 +2459,29 @@ function printJsonError(code: string, message: string): void {
 // Argument Parsing
 // =============================================================================
 
-function parseArgs(args: string[]): { command: string; payload: Record<string, string> } {
+function parseArgs(args: string[]): { command: string; payload: Record<string, string>; warnings: string[] } {
   const command = args[0] || '';
   const payload: Record<string, string> = {};
+  const warnings: string[] = [];
   const config = COMMANDS[command];
   const argDefs = config?.args || [];
+  // Collect all valid arg names (positional strings + required) for --flag detection
+  const validArgNames = new Set<string>();
+  for (const def of argDefs) {
+    if (typeof def === 'string') validArgNames.add(def);
+    else if (def && typeof def === 'object' && def.rest) validArgNames.add(def.rest);
+  }
+  if (config?.required) for (const r of config.required) validArgNames.add(r);
   let positionalIndex = 0;
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
     if (!arg) continue;
+
+    // Warn on bare --flag (no =) that looks like a flag but isn't a known arg
+    if (arg.startsWith('--') && arg.indexOf('=') === -1 && !validArgNames.has(arg.slice(2))) {
+      warnings.push(`Unknown flag "${arg}" — treated as positional arg. Use "spacemolt ${command}" for usage.`);
+    }
 
     const eqIndex = arg.indexOf('=');
     if (eqIndex > 0) {
@@ -2493,7 +2506,7 @@ function parseArgs(args: string[]): { command: string; payload: Record<string, s
     }
   }
 
-  return { command, payload };
+  return { command, payload, warnings };
 }
 
 function validateRequiredArgs(command: string, payload: Record<string, string>): string | null {
@@ -2835,11 +2848,15 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const { command, payload } = parseArgs(args);
+  const { command, payload, warnings } = parseArgs(args);
 
   if (!command) {
     showHelp();
     process.exit(0);
+  }
+
+  if (warnings.length > 0) {
+    for (const w of warnings) console.error(`${c.yellow}Warning:${c.reset} ${w}`);
   }
 
   if (DEBUG) {
