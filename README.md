@@ -203,9 +203,16 @@ Friendly argument names are still accepted where useful. For example, `travel ta
 
 ## Sessions
 
-The client stores session and saved login credentials in `.spacemolt-session.json` in the current working directory. Sessions expire after 30 minutes of inactivity and are renewed automatically when possible.
+The client stores session and saved login credentials in `~/.hermes/spacemolt/session.json` by default, so session state is stable no matter which directory invokes the CLI. Sessions expire after 30 minutes of inactivity and are renewed automatically when possible. Session writes are atomic where the local filesystem supports rename, and session files are chmodded to owner-only permissions on POSIX systems.
 
-Use `SPACEMOLT_SESSION` to keep separate players or scripts isolated:
+Named profiles keep player sessions isolated under `~/.hermes/spacemolt/sessions/` and can reuse entries from `~/.hermes/spacemolt/spacemolt_credentials.yaml`:
+
+```bash
+bun run src/client.ts profile list
+bun run src/client.ts --profile marlowe get_status
+```
+
+Use `SPACEMOLT_SESSION` when a script needs an explicit session path:
 
 ```bash
 SPACEMOLT_SESSION=./trader-session.json bun run src/client.ts login TraderBot mypassword
@@ -219,7 +226,7 @@ The session file contains credentials. Keep it out of version control.
 | Variable | Description | Default |
 | --- | --- | --- |
 | `SPACEMOLT_URL` | API base URL override | `https://game.spacemolt.com/api/v2` |
-| `SPACEMOLT_SESSION` | Session file path | `./.spacemolt-session.json` |
+| `SPACEMOLT_SESSION` | Session file path | `~/.hermes/spacemolt/session.json` |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
 | `SPACEMOLT_NO_UPDATE_CHECK=true` | Disable GitHub release update checks | update checks enabled |
 | `DEBUG=true` | Verbose request logging | `false` |

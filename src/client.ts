@@ -3,7 +3,7 @@
  * SpaceMolt Reference Client
  *
  * A simple HTTP API client for SpaceMolt, designed for LLM agents.
- * Stores session in ./.spacemolt-session.json (current working directory)
+ * Stores session in ~/.hermes/spacemolt/session.json
  *
  * Usage:
  *   spacemolt <command> [key=value ...] or [positional args]
@@ -17,7 +17,7 @@
  *
  * Environment:
  *   SPACEMOLT_URL     - API base URL (default: https://game.spacemolt.com/api/v2)
- *   SPACEMOLT_SESSION - Session file path (default: ./.spacemolt-session.json)
+ *   SPACEMOLT_SESSION - Session file path (default: ~/.hermes/spacemolt/session.json)
  *   DEBUG             - Enable verbose logging (default: false)
  */
 
@@ -216,8 +216,17 @@ interface GlobalOptions {
   json: boolean;
   quiet: boolean;
   plain: boolean;
+  profile?: string;
   fields?: string[];
   args: string[];
+}
+
+interface CredentialProfile {
+  name: string;
+  username?: string;
+  password?: string;
+  empire?: string;
+  registration_code?: string;
 }
 
 interface CommandGroup {
@@ -530,15 +539,108 @@ function normalizeCommandPayload(
 // Session Management
 // =============================================================================
 
+let ACTIVE_PROFILE: string | undefined;
+const SESSION_FILE_MODE = 0o600;
+const SESSION_DIR_MODE = 0o700;
+const SPACEMOLT_HOME = path.join(os.homedir(), '.hermes', 'spacemolt');
+const DEFAULT_SESSION_PATH = path.join(SPACEMOLT_HOME, 'session.json');
+const DEFAULT_CREDENTIALS_PATH = path.join(SPACEMOLT_HOME, 'spacemolt_credentials.yaml');
+const LEGACY_CREDENTIALS_PATH = path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml');
+
+function validateProfileName(profile: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) {
+    throw new Error('Profile names may only contain letters, numbers, dots, dashes, and underscores.');
+  }
+  return profile;
+}
+
+function getCredentialsPath(): string {
+  if (fs.existsSync(DEFAULT_CREDENTIALS_PATH)) return DEFAULT_CREDENTIALS_PATH;
+  if (fs.existsSync(LEGACY_CREDENTIALS_PATH)) return LEGACY_CREDENTIALS_PATH;
+  return path.join(process.cwd(), 'spacemolt_credentials.yaml');
+}
+
+function parseCredentialProfiles(contents: string): CredentialProfile[] {
+  const profiles: CredentialProfile[] = [];
+  let inCredentials = false;
+  let current: CredentialProfile | undefined;
+
+  for (const line of contents.split(/\r?\n/)) {
+    if (/^credentials:\s*$/.test(line)) {
+      inCredentials = true;
+      continue;
+    }
+    if (!inCredentials || line.trim() === '' || line.trimStart().startsWith('#')) continue;
+
+    const profileMatch = line.match(/^ {2}([A-Za-z0-9._-]+):\s*$/);
+    if (profileMatch?.[1]) {
+      current = { name: profileMatch[1] };
+      profiles.push(current);
+      continue;
+    }
+
+    const fieldMatch = line.match(/^ {4}([A-Za-z0-9_]+):\s*(.*)$/);
+    if (current && fieldMatch?.[1]) {
+      const rawValue = (fieldMatch[2] || '').trim();
+      const value = rawValue.replace(/^["']|["']$/g, '');
+      if (['username', 'password', 'empire', 'registration_code'].includes(fieldMatch[1])) {
+        current[fieldMatch[1] as keyof Omit<CredentialProfile, 'name'>] = value;
+      }
+    }
+  }
+
+  return profiles;
+}
+
+function loadCredentialProfiles(): CredentialProfile[] {
+  try {
+    return parseCredentialProfiles(fs.readFileSync(getCredentialsPath(), 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+function findCredentialProfile(name: string): CredentialProfile | undefined {
+  return loadCredentialProfiles().find((profile) => profile.name === name);
+}
+
+function showProfiles(): void {
+  const profiles = loadCredentialProfiles();
+  if (!profiles.length) {
+    console.log(`No profiles found in ${getCredentialsPath()}.`);
+    return;
+  }
+
+  console.log(`${c.bright}Profiles${c.reset}`);
+  for (const profile of profiles) {
+    const user = profile.username ? ` username=${profile.username}` : '';
+    const empire = profile.empire ? ` empire=${profile.empire}` : '';
+    console.log(`  ${profile.name}${user}${empire}`);
+  }
+}
+
 function getSessionPath(): string {
-  // Use current working directory by default (not home directory)
-  // This keeps credentials local to the project, avoiding global state
-  return process.env.SPACEMOLT_SESSION || path.join(process.cwd(), '.spacemolt-session.json');
+  if (process.env.SPACEMOLT_SESSION) return process.env.SPACEMOLT_SESSION;
+  if (ACTIVE_PROFILE) {
+    return path.join(SPACEMOLT_HOME, 'sessions', `${ACTIVE_PROFILE}.json`);
+  }
+  return DEFAULT_SESSION_PATH;
+}
+
+function hardenPermissions(targetPath: string, mode: number): void {
+  if (process.platform === 'win32') return;
+  try {
+    fs.chmodSync(targetPath, mode);
+  } catch {
+    /* best effort */
+  }
 }
 
 async function loadSession(): Promise<Session | null> {
   try {
-    const file = Bun.file(getSessionPath());
+    const sessionPath = getSessionPath();
+    const file = Bun.file(sessionPath);
+    if (await file.exists()) hardenPermissions(sessionPath, SESSION_FILE_MODE);
     if (await file.exists()) return await file.json();
   } catch {
     /* no session */
@@ -549,8 +651,34 @@ async function loadSession(): Promise<Session | null> {
 async function saveSession(session: Session): Promise<void> {
   const sessionPath = getSessionPath();
   const parentDir = path.dirname(sessionPath);
-  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });
-  await Bun.write(sessionPath, JSON.stringify(session, null, 2));
+  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
+  hardenPermissions(parentDir, SESSION_DIR_MODE);
+
+  const tmpPath = path.join(
+    parentDir,
+    `.${path.basename(sessionPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+  );
+  const contents = `${JSON.stringify(session, null, 2)}\n`;
+
+  try {
+    const handle = await fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE);
+    try {
+      await handle.writeFile(contents, 'utf-8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    hardenPermissions(tmpPath, SESSION_FILE_MODE);
+    await fs.promises.rename(tmpPath, sessionPath);
+    hardenPermissions(sessionPath, SESSION_FILE_MODE);
+  } catch (err) {
+    try {
+      await fs.promises.unlink(tmpPath);
+    } catch {
+      /* best effort */
+    }
+    throw err;
+  }
 }
 
 async function createSession(): Promise<Session> {
@@ -567,6 +695,9 @@ async function createSession(): Promise<Session> {
     created_at: data.session.created_at,
     expires_at: data.session.expires_at,
   };
+  const profile = ACTIVE_PROFILE ? findCredentialProfile(ACTIVE_PROFILE) : undefined;
+  if (profile?.username) session.username = profile.username;
+  if (profile?.password) session.password = profile.password;
   await saveSession(session);
   return session;
 }
@@ -580,12 +711,56 @@ async function getSession(): Promise<Session> {
   return !session || isSessionExpired(session) ? createSession() : session;
 }
 
+function extractPlayerId(response: APIResponse): string | undefined {
+  const structured = getStructuredResult(response);
+  const result = getObjectResult(response);
+  const resultRecord = structured || result;
+  const player = isRecord(resultRecord?.player) ? resultRecord.player : undefined;
+  return typeof player?.id === 'string'
+    ? player.id
+    : typeof resultRecord?.player_id === 'string'
+      ? resultRecord.player_id
+      : response.session?.player_id;
+}
+
+async function authenticateProfileSession(session: Session): Promise<APIResponse | null> {
+  if (!ACTIVE_PROFILE || !session.username || !session.password || session.player_id) return null;
+
+  if (DEBUG)
+    console.log(`${c.dim}[DEBUG] Authenticating profile ${ACTIVE_PROFILE} as ${session.username}...${c.reset}`);
+  const response = await fetch(`${trimTrailingSlash(API_BASE)}/spacemolt_auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-Id': session.id,
+      'User-Agent': `SpaceMolt-Client/${VERSION}`,
+    },
+    body: JSON.stringify({ username: session.username, password: session.password }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  const data = (await response.json()) as APIResponse;
+  if (data.error) return data;
+
+  if (data.session) {
+    session.expires_at = data.session.expires_at;
+    if (data.session.player_id) session.player_id = data.session.player_id;
+  }
+  const playerId = extractPlayerId(data);
+  if (playerId) session.player_id = playerId;
+  await saveSession(session);
+  return null;
+}
+
 // =============================================================================
 // HTTP API
 // =============================================================================
 
 async function execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
   const session = await getSession();
+  if (command !== 'login' && command !== 'register') {
+    const authError = await authenticateProfileSession(session);
+    if (authError) return authError;
+  }
   const mapping = V2_TOOL_MAP[command];
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
@@ -1862,6 +2037,27 @@ function parseGlobalOptions(args: string[]): GlobalOptions {
       result.quiet = true;
     } else if (arg === '--plain' || arg === '-p') {
       result.plain = true;
+    } else if (arg === '--profile') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        try {
+          result.profile = validateProfileName(nextArg);
+        } catch (err) {
+          console.error(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
+          process.exit(1);
+        }
+        i++;
+      } else {
+        console.error(`${c.red}Error:${c.reset} --profile requires a profile name.`);
+        process.exit(1);
+      }
+    } else if (arg.startsWith('--profile=')) {
+      try {
+        result.profile = validateProfileName(arg.slice('--profile='.length));
+      } catch (err) {
+        console.error(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+      }
     } else if (arg === '--fields' || arg === '-f') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
@@ -1898,6 +2094,7 @@ function parseGlobalOptions(args: string[]): GlobalOptions {
   }
   QUIET = result.quiet;
   PLAIN = result.plain;
+  ACTIVE_PROFILE = result.profile;
 
   return {
     ...result,
@@ -2213,6 +2410,7 @@ ${c.bright}Usage:${c.reset}
    spacemolt --quiet <command> [args...]
    spacemolt --plain <command> [args...]
    spacemolt --fields key1,key2.key3 <command> [args...]
+   spacemolt --profile <name> <command> [args...]
 
    Arguments can be positional or key=value:
      spacemolt travel sol_asteroid_belt
@@ -2223,8 +2421,10 @@ ${c.bright}Usage:${c.reset}
      --quiet, -q     Suppress notifications and info messages
      --plain, -p     No ANSI colors or formatting
      --fields, -f    Extract specific fields from response
+     --profile       Use ~/.hermes/spacemolt/sessions/<name>.json and matching credentials profile
 
     Local command discovery:
+     spacemolt profile list
      spacemolt help nav
      spacemolt help market
      spacemolt commands --search fuel
@@ -2419,7 +2619,8 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Check 'get_cargo' before selling
     - Use '--help <command>' for local CLI usage and examples
     - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
-    - Use 'spacemolt completion bash' (or zsh/fish) to set up tab completion
+   - Use 'spacemolt completion bash' (or zsh/fish) to set up tab completion
+   - Use '--profile <name>' to isolate named player sessions
    - Use 'help command=<command>' for server-provided command details
    - Actions return results directly — no polling needed
    - Auto-dock/undock handles dock state automatically
@@ -2429,7 +2630,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
 
 ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
-   SPACEMOLT_SESSION   Session file (default: ./.spacemolt-session.json)
+   SPACEMOLT_SESSION   Session file (default: ~/.hermes/spacemolt/session.json)
    SPACEMOLT_OUTPUT    Set to 'json' for JSON output
    DEBUG=true          Show verbose request/response logging
 
@@ -2483,6 +2684,21 @@ async function main(): Promise<void> {
   if (args.length === 0) {
     showHelp();
     process.exit(0);
+  }
+
+  if (args[0] === 'profile') {
+    const action = args[1] || 'list';
+    if (action === 'list') {
+      showProfiles();
+      process.exit(0);
+    }
+    if (options.json) {
+      printJsonError('unknown_command', `Unknown profile command: ${action}`);
+      process.exit(1);
+    }
+    console.error(`${c.red}Error:${c.reset} Unknown profile command "${action}"`);
+    console.error('Usage: spacemolt profile list');
+    process.exit(1);
   }
 
   if (args[0] === 'commands') {

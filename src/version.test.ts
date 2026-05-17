@@ -625,6 +625,18 @@ describe('client.ts source integrity', () => {
     expect(src).toContain('AbortSignal.timeout(FETCH_TIMEOUT_MS)');
   });
 
+  test('session writes are atomic and owner-only where possible', () => {
+    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const src = fs.readFileSync(clientPath, 'utf-8');
+    expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt')");
+    expect(src).toContain("path.join(SPACEMOLT_HOME, 'spacemolt_credentials.yaml')");
+    expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml')");
+    expect(src).toContain('SESSION_FILE_MODE = 0o600');
+    expect(src).toContain("fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE)");
+    expect(src).toContain('fs.promises.rename(tmpPath, sessionPath)');
+    expect(src).toContain('hardenPermissions(sessionPath, SESSION_FILE_MODE)');
+  });
+
   test('TimeoutError is handled in execute()', () => {
     const clientPath = path.join(import.meta.dir, 'client.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
@@ -808,6 +820,20 @@ describe('CLI local usability behavior', () => {
     expect(result.exitCode).toBe(1);
     const parsed = JSON.parse(result.stdout);
     expect(parsed).toEqual({ error: { code: 'unknown_command', message: 'Unknown command: trvel' } });
+  });
+
+  test('profile list reads local credential profile names without secrets', () => {
+    const result = runClient(['profile', 'list']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('marlowe');
+    expect(result.stdout).toContain('FuelRescue');
+    expect(result.stdout).not.toContain('REDACTED');
+  });
+
+  test('--profile validates path-safe profile names before network work', () => {
+    const result = runClient(['--profile', '../bad', 'get_status']);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Profile names may only contain');
   });
 });
 
