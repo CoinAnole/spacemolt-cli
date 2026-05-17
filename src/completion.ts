@@ -71,6 +71,10 @@ function getCommandArgNames(command: string): string[] {
 }
 
 function getEnumValues(command: string, arg: string): string[] | undefined {
+  const config = COMMANDS[command];
+  const canonicalArg = config?.aliases?.[arg] || arg;
+  const generatedValues = config?.schema?.[canonicalArg]?.enum;
+  if (generatedValues?.length) return generatedValues;
   return ENUM_VALUES[command]?.[arg];
 }
 

@@ -105,13 +105,29 @@ const NUMERIC_FIELDS = new Set([
   'side_id',
 ]);
 
-export function convertPayloadTypes(payload: Record<string, string>): Record<string, unknown> {
+function getCommandFieldType(command: string | undefined, key: string): string | undefined {
+  if (!command) return undefined;
+  return COMMANDS[command]?.schema?.[key]?.type;
+}
+
+export function convertPayloadTypes(payload: Record<string, string>, command?: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
-    if (NUMERIC_FIELDS.has(key)) {
+    const fieldType = getCommandFieldType(command, key);
+    if (fieldType === 'integer' || fieldType === 'number' || (!fieldType && NUMERIC_FIELDS.has(key))) {
       const num = parseFloat(value);
       if (!Number.isNaN(num)) {
         result[key] = num;
+        continue;
+      }
+    }
+    if (fieldType === 'boolean') {
+      if (value === 'true') {
+        result[key] = true;
+        continue;
+      }
+      if (value === 'false') {
+        result[key] = false;
         continue;
       }
     }

@@ -239,6 +239,14 @@ This client is v2-only. Commands are mapped to static v2 tool/action routes such
 
 v2 responses may include both rendered `result` text and typed `structuredContent`. The CLI prefers structured data when it has a formatter and falls back to rendered text otherwise.
 
+Command route and schema metadata is generated from `spacemolt-docs/openapi.json` into `src/generated/api-commands.ts`:
+
+```bash
+bun run generate:api
+```
+
+Keep user-facing command names, examples, aliases, and discovery hints in `src/commands.ts`; the generated metadata supplies mechanical API facts such as request field types, enum values, and route schemas.
+
 ## Development
 
 ```bash

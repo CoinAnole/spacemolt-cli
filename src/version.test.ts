@@ -139,6 +139,12 @@ describe('convertPayloadTypes', () => {
     const result = convertPayloadTypes({ quantity: 'abc' });
     expect(result.quantity).toBe('abc');
   });
+
+  test('uses generated command schema for command-specific numeric fields', () => {
+    const result = convertPayloadTypes({ tier: '3', page_size: '10' }, 'catalog');
+    expect(result.tier).toBe(3);
+    expect(result.page_size).toBe(10);
+  });
 });
 
 describe('normalizeCommandPayload', () => {
@@ -753,14 +759,20 @@ describe('client.ts source integrity', () => {
   test('COMMANDS block has no duplicate top-level command keys', () => {
     const commandsPath = path.join(import.meta.dir, 'commands.ts');
     const src = fs.readFileSync(commandsPath, 'utf-8');
-    const start = src.indexOf('const COMMANDS:');
-    const end = src.indexOf('\n\nexport const V2_TOOL_MAP');
+    const start = src.indexOf('const COMMAND_OVERRIDES:');
+    const end = src.indexOf('\n\nfunction routePath');
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const block = src.slice(start, end);
     const commands = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]);
     const duplicates = commands.filter((command, index) => commands.indexOf(command) !== index);
     expect(duplicates).toEqual([]);
+  });
+
+  test('generated OpenAPI metadata is merged into command configs', () => {
+    expect(COMMANDS.travel?.schema?.id?.type).toBe('string');
+    expect(COMMANDS.travel?.required).toContain('target_poi');
+    expect(COMMANDS.catalog?.schema?.type?.enum).toContain('items');
   });
 
   test('local AI usability helpers are present', () => {

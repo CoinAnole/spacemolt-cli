@@ -1,3 +1,5 @@
+import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands.ts';
+
 export type CommandArg = string | { rest: string };
 
 export interface V2Route {
@@ -6,6 +8,13 @@ export interface V2Route {
   method?: 'GET' | 'POST';
   /** Static payload fields to inject (e.g., target=faction for faction storage commands) */
   defaults?: Record<string, string>;
+}
+
+export interface CommandFieldSchema {
+  type?: string;
+  enum?: string[];
+  description?: string;
+  positionalIndex?: number;
 }
 
 export interface CommandConfig {
@@ -19,11 +28,12 @@ export interface CommandConfig {
   category?: string;
   aliases?: Record<string, string>;
   route: V2Route;
+  schema?: Record<string, CommandFieldSchema>;
 }
 
 export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
-export const COMMANDS: Record<string, CommandConfig> = {
+const COMMAND_OVERRIDES: Record<string, CommandConfig> = {
   register: {
     args: ['username', 'empire', 'registration_code'],
     required: ['username', 'empire', 'registration_code'],
@@ -2208,6 +2218,41 @@ export const COMMANDS: Record<string, CommandConfig> = {
     },
   },
 };
+
+function routePath(tool: string, action: string): string {
+  return tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
+}
+
+function routeSignature(route: V2Route): string {
+  return `${route.method || 'POST'} ${routePath(route.tool, route.action)}`;
+}
+
+function positionalArgs(generated?: GeneratedApiRoute): string[] | undefined {
+  if (!generated?.schema) return undefined;
+  const args = Object.entries(generated.schema)
+    .filter(([, schema]) => schema.positionalIndex !== undefined)
+    .sort((a, b) => (a[1].positionalIndex ?? 0) - (b[1].positionalIndex ?? 0))
+    .map(([field]) => field);
+  return args.length > 0 ? args : undefined;
+}
+
+function mergeCommandConfig(config: CommandConfig): CommandConfig {
+  const generated = GENERATED_API_ROUTES[routeSignature(config.route)];
+  return {
+    ...config,
+    args: config.args ?? positionalArgs(generated),
+    required: config.required ?? generated?.required,
+    route: {
+      ...config.route,
+      method: config.route.method ?? generated?.route.method,
+    },
+    schema: generated?.schema,
+  };
+}
+
+export const COMMANDS: Record<string, CommandConfig> = Object.fromEntries(
+  Object.entries(COMMAND_OVERRIDES).map(([command, config]) => [command, mergeCommandConfig(config)]),
+);
 
 export const V2_TOOL_MAP: Record<string, V2Route> = Object.fromEntries(
   Object.entries(COMMANDS).map(([command, config]) => [command, config.route]),

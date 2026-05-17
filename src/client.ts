@@ -2898,7 +2898,7 @@ async function main(): Promise<void> {
     const requestPayload = normalizeParsedPayload(command, payload);
 
     // Convert string payload to proper types (numbers, booleans)
-    const typedPayload = Object.keys(requestPayload).length > 0 ? convertPayloadTypes(requestPayload) : {};
+    const typedPayload = Object.keys(requestPayload).length > 0 ? convertPayloadTypes(requestPayload, command) : {};
     const response = await execute(command, typedPayload);
 
     if (options.json && response.error) {
