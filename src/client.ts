@@ -2670,7 +2670,7 @@ function printJsonError(code: string, message: string): void {
 // Argument Parsing
 // =============================================================================
 
-function parseArgs(args: string[]): { command: string; payload: Record<string, string>; warnings: string[] } {
+export function parseArgs(args: string[]): { command: string; payload: Record<string, string>; warnings: string[] } {
   const command = args[0] || '';
   const payload: Record<string, string> = {};
   const warnings: string[] = [];
@@ -2720,7 +2720,7 @@ function parseArgs(args: string[]): { command: string; payload: Record<string, s
   return { command, payload, warnings };
 }
 
-function validateRequiredArgs(command: string, payload: Record<string, string>): string | null {
+export function validateRequiredArgs(command: string, payload: Record<string, string>): string | null {
   const required = COMMANDS[command]?.required;
   if (!required) return null;
   const normalized = normalizeParsedPayload(command, payload);
@@ -2883,7 +2883,7 @@ const NUMERIC_FIELDS = new Set([
 ]);
 
 // Convert string payload values to appropriate types (numbers, booleans)
-function convertPayloadTypes(payload: Record<string, string>): Record<string, unknown> {
+export function convertPayloadTypes(payload: Record<string, string>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
     // Convert numeric fields
@@ -3350,4 +3350,8 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+export { compareVersions, normalizeCommandPayload, normalizeParsedPayload };
+
+if (import.meta.main) {
+  main();
+}
