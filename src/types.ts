@@ -21,6 +21,7 @@ export interface GlobalOptions {
   json: boolean;
   quiet: boolean;
   plain: boolean;
+  dryRun: boolean;
   profile?: string;
   fields?: string[];
   args: string[];

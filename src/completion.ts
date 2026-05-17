@@ -57,7 +57,9 @@ function generateBashCompletion(): string {
   lines.push('  _init_completion || return');
   lines.push('');
   lines.push('  # Global flags');
-  lines.push('  local global_flags="--json -j --quiet -q --plain -p --fields -f --help -h --version -v"');
+  lines.push(
+    '  local global_flags="--json -j --quiet -q --plain -p --fields -f --dry-run --preview --help -h --version -v"',
+  );
   lines.push('');
   lines.push('  # Top-level special commands');
   lines.push(`  local commands="${COMMANDS_LIST.join(' ')} commands explain help completion"`);
@@ -142,6 +144,8 @@ function generateZshCompletion(): string {
   lines.push(
     '    "(-f --fields)"{-f,--fields}"[Extract response fields]:fields:_values -s , fields key1 key2 key3" \\',
   );
+  lines.push('    "--dry-run[Preview supported mutations without executing]" \\');
+  lines.push('    "--preview[Alias for --dry-run]" \\');
   lines.push('    "(-h --help)"{-h,--help}"[Show help]" \\');
   lines.push('    "(-v --version)"{-v,--version}"[Show version]" \\');
   lines.push('    "1:command:_spacemolt_commands" \\');
@@ -221,6 +225,8 @@ function generateFishCompletion(): string {
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s q -l quiet -d "Suppress notifications"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s p -l plain -d "No ANSI colors"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s f -l fields -d "Extract response fields"');
+  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l dry-run -d "Preview supported mutations"');
+  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l preview -d "Alias for --dry-run"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s h -l help -d "Show help"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s v -l version -d "Show version"');
   lines.push('');

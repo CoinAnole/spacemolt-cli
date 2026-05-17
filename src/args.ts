@@ -24,19 +24,43 @@ export function parseArgs(args: string[]): { command: string; payload: Record<st
     else if (def && typeof def === 'object' && def.rest) validArgNames.add(def.rest);
   }
   if (config?.required) for (const required of config.required) validArgNames.add(required);
+  if (config?.aliases) {
+    for (const [from, to] of Object.entries(config.aliases)) {
+      validArgNames.add(from);
+      validArgNames.add(to);
+    }
+  }
+  if (config?.schema) for (const field of Object.keys(config.schema)) validArgNames.add(field);
   let positionalIndex = 0;
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
     if (!arg) continue;
 
-    if (arg.startsWith('--') && arg.indexOf('=') === -1 && !validArgNames.has(arg.slice(2))) {
-      warnings.push(`Unknown flag "${arg}" — treated as positional arg. Use "spacemolt ${command}" for usage.`);
+    const flag = parseCliFlag(arg);
+    if (flag) {
+      if (!validArgNames.has(flag.key)) {
+        warnings.push(`Unknown flag "${arg}" — passed through as "${flag.key}". Use "spacemolt ${command}" for usage.`);
+      }
+      if (flag.value !== undefined) {
+        payload[flag.key] = flag.value;
+        continue;
+      }
+
+      const nextArg = args[i + 1];
+      const fieldType = getCommandFieldType(command, flag.key);
+      if (fieldType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
+        payload[flag.key] = nextArg;
+        i++;
+      } else {
+        payload[flag.key] = 'true';
+      }
+      continue;
     }
 
-    const eqIndex = arg.indexOf('=');
-    if (eqIndex > 0) {
-      payload[arg.substring(0, eqIndex)] = arg.substring(eqIndex + 1);
+    const keyValue = parseKeyValue(arg);
+    if (keyValue) {
+      payload[keyValue.key] = keyValue.value;
     } else {
       const argDef = argDefs[positionalIndex];
       if (argDef) {
@@ -54,6 +78,23 @@ export function parseArgs(args: string[]): { command: string; payload: Record<st
   }
 
   return { command, payload, warnings };
+}
+
+function normalizeCliKey(key: string): string {
+  return key.replace(/^-+/, '').replace(/-/g, '_');
+}
+
+function parseCliFlag(arg: string): { key: string; value?: string } | null {
+  if (!arg.startsWith('--') || arg === '--') return null;
+  const eqIndex = arg.indexOf('=');
+  if (eqIndex > 0) return { key: normalizeCliKey(arg.slice(2, eqIndex)), value: arg.slice(eqIndex + 1) };
+  return { key: normalizeCliKey(arg.slice(2)) };
+}
+
+function parseKeyValue(arg: string): { key: string; value: string } | null {
+  const eqIndex = arg.indexOf('=');
+  if (eqIndex <= 0) return null;
+  return { key: normalizeCliKey(arg.substring(0, eqIndex)), value: arg.substring(eqIndex + 1) };
 }
 
 export function validateRequiredArgs(command: string, payload: Record<string, string>): string | null {

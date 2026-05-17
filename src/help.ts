@@ -104,6 +104,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptions {
     json: false,
     quiet: false,
     plain: false,
+    dryRun: false,
     fields: undefined,
   };
   const filteredArgs: string[] = [];
@@ -121,6 +122,11 @@ export function parseGlobalOptions(args: string[]): GlobalOptions {
       result.quiet = true;
     } else if (arg === '--plain' || arg === '-p') {
       result.plain = true;
+    } else if (arg === '--dry-run' || arg === '--preview') {
+      result.dryRun = true;
+    } else if (arg.startsWith('--dry-run=') || arg.startsWith('--preview=')) {
+      const value = arg.substring(arg.indexOf('=') + 1).toLowerCase();
+      result.dryRun = value !== 'false' && value !== '0';
     } else if (arg === '--profile') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
@@ -401,6 +407,7 @@ export function showCommandHelp(command: string): boolean {
     console.log(`\n${c.bright}Accepted forms:${c.reset}`);
     console.log(`  ${getUsageLine(command)}`);
     console.log(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
+    console.log(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
 
   if (config.example) {
@@ -452,6 +459,7 @@ export function displayMissingArgument(command: string, missingArg: string): voi
     console.error(`\n${c.bright}Accepted forms:${c.reset}`);
     console.error(`  ${getUsageLine(command)}`);
     console.error(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
+    console.error(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
 
   const example = config?.example;
@@ -464,6 +472,57 @@ export function displayMissingArgument(command: string, missingArg: string): voi
 // =============================================================================
 
 export function showHelp(): void {
+  console.log(`
+${c.bright}SpaceMolt CLI v${VERSION}${c.reset}
+HTTP client for the SpaceMolt MMO.
+
+${c.bright}Start:${c.reset}
+  spacemolt register <username> <empire> <registration_code>
+  spacemolt login <username> <password>
+  spacemolt get_status
+
+${c.bright}Common Loop:${c.reset}
+  spacemolt undock
+  spacemolt get_system
+  spacemolt travel <poi_id>
+  spacemolt mine
+  spacemolt get_cargo
+  spacemolt travel <station_poi_id>
+  spacemolt dock
+  spacemolt sell <item_id> <quantity>
+
+${c.bright}Useful Commands:${c.reset}
+  get_status       Ship, player, location
+  get_system       POIs and connected systems
+  get_cargo        Cargo contents
+  view_market      Market/order book
+  facility_list    Facilities at current base
+  catalog <type>   Browse ships/items/skills/recipes
+
+${c.bright}Command Discovery:${c.reset}
+  spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
+  spacemolt explain <command>     Local usage, args, route
+  spacemolt commands --search fuel
+  spacemolt help all              Full local command reference
+  spacemolt help command=<name>   Server-provided command help
+
+${c.bright}Arguments:${c.reset}
+  Positional:       spacemolt travel sol_asteroid_belt
+  key=value:        spacemolt travel target_poi=sol_asteroid_belt
+  CLI flags:        spacemolt travel --target-poi sol_asteroid_belt
+                    spacemolt sell --item-id ore_iron --quantity=50
+
+${c.bright}Global Flags:${c.reset}
+  --json, -j        Raw JSON
+  --quiet, -q       Suppress extra messages
+  --plain, -p       No ANSI formatting
+  --fields, -f      Extract response fields
+  --profile <name>  Use named session
+  --dry-run         Preview supported mutations without executing them
+`);
+}
+
+export function showFullHelp(): void {
   console.log(`
 ${c.bright}SpaceMolt Reference Client v${VERSION}${c.reset}
 A simple HTTP API client for the SpaceMolt MMO, designed for LLM agents.
@@ -494,9 +553,10 @@ ${c.bright}Usage:${c.reset}
    spacemolt --fields key1,key2.key3 <command> [args...]
    spacemolt --profile <name> <command> [args...]
 
-   Arguments can be positional or key=value:
+   Arguments can be positional, key=value, --flag value, or --flag=value:
      spacemolt travel sol_asteroid_belt
      spacemolt travel target_poi=sol_asteroid_belt
+     spacemolt travel --target-poi sol_asteroid_belt
 
    Output modes:
      --json          Raw JSON response (implies quiet)
@@ -504,6 +564,7 @@ ${c.bright}Usage:${c.reset}
      --plain, -p     No ANSI colors or formatting
      --fields, -f    Extract specific fields from response
      --profile       Use ~/.hermes/spacemolt/sessions/<name>.json and matching credentials profile
+     --dry-run       Preview supported mutations without executing them
 
     Local command discovery:
      spacemolt profile list

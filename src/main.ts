@@ -17,9 +17,11 @@ import {
   showCommandGroups,
   showCommandHelp,
   showCommandSearch,
+  showFullHelp,
   showHelp,
 } from './help.ts';
 import { displayNotifications } from './notifications.ts';
+import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
 import { API_BASE, c, DEBUG, VERSION } from './runtime.ts';
 import { getSession, loadSession, saveSession, showProfiles } from './session.ts';
@@ -82,6 +84,16 @@ export async function main(): Promise<void> {
       process.exit(1);
     }
     console.log(generateCompletion(shell));
+    process.exit(0);
+  }
+
+  if (args[0] === 'help' && !args[1]) {
+    showHelp();
+    process.exit(0);
+  }
+
+  if (args[0] === 'help' && args[1] === 'all') {
+    showFullHelp();
     process.exit(0);
   }
 
@@ -174,7 +186,13 @@ export async function main(): Promise<void> {
 
     // Convert string payload to proper types (numbers, booleans)
     const typedPayload = Object.keys(requestPayload).length > 0 ? convertPayloadTypes(requestPayload, command) : {};
-    const response = await execute(command, typedPayload);
+    const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, typedPayload) : null;
+    const response = options.dryRun
+      ? serverPreviewCommand
+        ? await execute(serverPreviewCommand, typedPayload)
+        : createDryRunResponse(command, typedPayload)
+      : await execute(command, typedPayload);
+    const displayCommand = serverPreviewCommand || command;
 
     if (options.json && response.error) {
       printJsonResponse(response);
@@ -188,7 +206,7 @@ export async function main(): Promise<void> {
     }
 
     if (!options.json && response.error) {
-      displayError(command, response.error);
+      displayError(displayCommand, response.error);
       process.exit(1);
     }
 
@@ -239,7 +257,7 @@ export async function main(): Promise<void> {
       process.exit(response.error ? 1 : 0);
     }
 
-    displayResult(command, response, options.fields);
+    displayResult(displayCommand, response, options.fields);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (options.json) {

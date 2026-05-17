@@ -12,6 +12,7 @@ import {
   validateRequiredArgs,
 } from './client';
 import { COMMANDS } from './commands';
+import { createDryRunResponse, getServerPreviewCommand } from './preview';
 
 // =============================================================================
 // compareVersions
@@ -291,6 +292,46 @@ describe('parseArgs - basic', () => {
     const { payload } = parseArgs(['buy', 'ore_iron', 'deliver_to=my_base']);
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.deliver_to).toBe('my_base');
+  });
+
+  test('--flag value args use command field names', () => {
+    const { payload, warnings } = parseArgs(['sell', '--item-id', 'ore_iron', '--quantity', '50']);
+    expect(warnings).toEqual([]);
+    expect(payload.item_id).toBe('ore_iron');
+    expect(payload.quantity).toBe('50');
+  });
+
+  test('--flag=value args normalize dashes to underscores', () => {
+    const { payload, warnings } = parseArgs(['travel', '--target-poi=sol_earth']);
+    expect(warnings).toEqual([]);
+    expect(payload.target_poi).toBe('sol_earth');
+  });
+
+  test('boolean CLI flags default to true without consuming the next positional arg', () => {
+    const { payload } = parseArgs(['sell', '--auto-list', 'ore_iron', '50']);
+    expect(payload.auto_list).toBe('true');
+    expect(payload.item_id).toBe('ore_iron');
+    expect(payload.quantity).toBe('50');
+  });
+
+  test('unknown CLI flags pass through as payload with a warning', () => {
+    const { payload, warnings } = parseArgs(['buy', '--delivery-mode', 'fast']);
+    expect(payload.delivery_mode).toBe('fast');
+    expect(warnings[0]).toContain('Unknown flag');
+  });
+});
+
+describe('dry-run previews', () => {
+  test('local preview normalizes route and payload without sending a request', () => {
+    const response = createDryRunResponse('scrap_ship', { id: 'ship_1' });
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+    expect(response.structuredContent?.url).toContain('/api/v2/spacemolt_ship/scrap_ship');
+    expect(response.structuredContent?.payload).toEqual({ id: 'ship_1' });
+  });
+
+  test('buy with quantity uses the server estimate endpoint as its preview', () => {
+    expect(getServerPreviewCommand('buy', { item_id: 'ore_iron', quantity: 50 })).toBe('estimate_purchase');
+    expect(getServerPreviewCommand('buy', { item_id: 'ore_iron' })).toBeNull();
   });
 });
 
