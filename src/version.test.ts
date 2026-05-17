@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import {
   compareVersions,
   convertPayloadTypes,
+  getPayloadConversionSchema,
   normalizeCommandPayload,
   normalizeParsedPayload,
   parseArgs,
@@ -63,12 +64,11 @@ describe('compareVersions', () => {
 // =============================================================================
 
 describe('convertPayloadTypes', () => {
-  test('converts numeric fields to numbers', () => {
-    const result = convertPayloadTypes({ quantity: '10', price: '500', page_size: '20', max_price: '10000' });
-    expect(result.quantity).toBe(10);
-    expect(result.price).toBe(500);
-    expect(result.page_size).toBe(20);
-    expect(result.max_price).toBe(10000);
+  test('converts numeric fields using the command schema', () => {
+    expect(convertPayloadTypes({ quantity: '10' }, 'sell').quantity).toBe(10);
+    expect(convertPayloadTypes({ page_size: '20' }, 'catalog').page_size).toBe(20);
+    expect(convertPayloadTypes({ max_price: '10000' }, 'facility_browse_for_sale').max_price).toBe(10000);
+    expect(convertPayloadTypes({ price: '500' }, 'facility_list_for_sale').price).toBe(500);
   });
 
   test('leaves non-numeric fields as strings', () => {
@@ -77,14 +77,20 @@ describe('convertPayloadTypes', () => {
     expect(result.ship_class).toBe('prospector');
   });
 
+  test('does not convert numeric-looking fields without a command schema', () => {
+    const result = convertPayloadTypes({ quantity: '10', page_size: '20', credits: '500' });
+    expect(result.quantity).toBe('10');
+    expect(result.page_size).toBe('20');
+    expect(result.credits).toBe('500');
+  });
+
   test('converts boolean strings', () => {
-    const result = convertPayloadTypes({ provide_materials: 'true', auto_list: 'false' });
-    expect(result.provide_materials).toBe(true);
+    const result = convertPayloadTypes({ auto_list: 'false' }, 'sell');
     expect(result.auto_list).toBe(false);
   });
 
   test('handles mixed payload', () => {
-    const result = convertPayloadTypes({ type: 'ships', page: '2', page_size: '10', search: 'mining' });
+    const result = convertPayloadTypes({ type: 'ships', page: '2', page_size: '10', search: 'mining' }, 'catalog');
     expect(result.type).toBe('ships');
     expect(result.page).toBe(2);
     expect(result.page_size).toBe(10);
@@ -92,42 +98,44 @@ describe('convertPayloadTypes', () => {
   });
 
   test('credits is numeric (trade_offer)', () => {
-    const result = convertPayloadTypes({ target_id: 'abc123', credits: '500' });
+    const result = convertPayloadTypes({ target_id: 'abc123', credits: '500' }, 'trade_offer');
     expect(result.target_id).toBe('abc123');
     expect(result.credits).toBe(500);
   });
 
-  test('deprecated fields offer_credits and request_credits are NOT auto-converted', () => {
-    // These were removed from NUMERIC_FIELDS in v0.8.0
+  test('unknown fields are not auto-converted globally', () => {
     const result = convertPayloadTypes({ offer_credits: '100', request_credits: '200' });
     expect(result.offer_credits).toBe('100');
     expect(result.request_credits).toBe('200');
   });
 
   test('count is NOT auto-converted (use quantity instead)', () => {
-    // count was removed from NUMERIC_FIELDS in v0.8.0; craft now uses quantity
-    const result = convertPayloadTypes({ count: '5' });
+    const result = convertPayloadTypes({ count: '5' }, 'craft');
     expect(result.count).toBe('5');
   });
 
   test('handles ticks and amount as numeric', () => {
-    const result = convertPayloadTypes({ ticks: '100', amount: '2500' });
-    expect(result.ticks).toBe(100);
-    expect(result.amount).toBe(2500);
+    expect(convertPayloadTypes({ ticks: '100' }, 'buy_insurance').ticks).toBe(100);
+    expect(convertPayloadTypes({ quantity: '2500' }, 'faction_deposit_credits').quantity).toBe(2500);
   });
 
   test('handles expiration_hours as numeric', () => {
-    const result = convertPayloadTypes({ expiration_hours: '24' });
+    const result = convertPayloadTypes({ expiration_hours: '24' }, 'faction_post_mission');
     expect(result.expiration_hours).toBe(24);
   });
 
   test('handles battle side_id as numeric', () => {
-    const result = convertPayloadTypes({ side_id: '2' });
+    const result = convertPayloadTypes({ side_id: '2' }, 'battle_engage');
     expect(result.side_id).toBe(2);
   });
 
+  test('leaves id-like fields as strings when the command schema says string', () => {
+    const result = convertPayloadTypes({ id: '123' }, 'travel');
+    expect(result.id).toBe('123');
+  });
+
   test('notification types are split after type conversion', () => {
-    const typed = convertPayloadTypes({ types: 'chat, combat', limit: '10', clear: 'false' });
+    const typed = convertPayloadTypes({ types: 'chat, combat', limit: '10', clear: 'false' }, 'get_notifications');
     const result = normalizeCommandPayload('get_notifications', typed);
     expect(result).toEqual({
       types: ['chat', 'combat'],
@@ -137,7 +145,7 @@ describe('convertPayloadTypes', () => {
   });
 
   test('leaves non-numeric string in numeric field as string', () => {
-    const result = convertPayloadTypes({ quantity: 'abc' });
+    const result = convertPayloadTypes({ quantity: 'abc' }, 'sell');
     expect(result.quantity).toBe('abc');
   });
 
@@ -749,15 +757,13 @@ describe('client.ts source integrity', () => {
     expect(args).not.toContain('topic');
   });
 
-  test('NUMERIC_FIELDS does not contain deprecated fields', () => {
+  test('payload conversion uses command schemas instead of a global numeric field set', () => {
     const argsPath = path.join(import.meta.dir, 'args.ts');
     const src = fs.readFileSync(argsPath, 'utf-8');
-    const numericMatch = src.match(/const NUMERIC_FIELDS = new Set\(\[([^\]]+)\]\)/s);
-    expect(numericMatch).not.toBeNull();
-    const numericDef = numericMatch?.[1];
-    expect(numericDef).not.toContain("'offer_credits'");
-    expect(numericDef).not.toContain("'request_credits'");
-    expect(numericDef).not.toContain("'count'");
+    expect(src).not.toContain('NUMERIC_FIELDS');
+    expect(getPayloadConversionSchema('travel').id?.type).toBe('string');
+    expect(getPayloadConversionSchema('sell').quantity?.type).toBe('integer');
+    expect(getPayloadConversionSchema('trade_offer').credits?.type).toBe('integer');
   });
 
   test('COMMANDS block has no duplicate top-level command keys', () => {

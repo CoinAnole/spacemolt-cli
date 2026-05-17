@@ -1,5 +1,11 @@
 #!/usr/bin/env bun
-export { convertPayloadTypes, normalizeParsedPayload, parseArgs, validateRequiredArgs } from './args.ts';
+export {
+  convertPayloadTypes,
+  getPayloadConversionSchema,
+  normalizeParsedPayload,
+  parseArgs,
+  validateRequiredArgs,
+} from './args.ts';
 export { COMMANDS, V2_TOOL_MAP } from './commands.ts';
 export { displayStructuredResult } from './display/index.ts';
 export { main } from './main.ts';

@@ -81,42 +81,48 @@ export function getArgNames(config: CommandConfig): string[] {
   return names;
 }
 
-const NUMERIC_FIELDS = new Set([
-  'quantity',
-  'price_each',
-  'new_price',
-  'slot_idx',
-  'weapon_idx',
-  'page',
-  'limit',
-  'offset',
-  'coverage_percent',
-  'credits',
-  'index',
-  'ticks',
-  'amount',
-  'priority',
-  'expiration_hours',
-  'per_page',
-  'level',
-  'max_price',
-  'price',
-  'page_size',
-  'side_id',
-]);
+type PayloadConversionSchema = Record<string, { type?: string }>;
+
+const CLI_PAYLOAD_SCHEMA_OVERRIDES: Record<string, PayloadConversionSchema> = {
+  send_gift: {
+    credits: { type: 'integer' },
+    recipient: { type: 'string' },
+    ship_id: { type: 'string' },
+  },
+  trade_offer: {
+    credits: { type: 'integer' },
+    target_id: { type: 'string' },
+  },
+};
+
+export function getPayloadConversionSchema(command: string | undefined): PayloadConversionSchema {
+  if (!command) return {};
+  return {
+    ...(COMMANDS[command]?.schema || {}),
+    ...(CLI_PAYLOAD_SCHEMA_OVERRIDES[command] || {}),
+  };
+}
 
 function getCommandFieldType(command: string | undefined, key: string): string | undefined {
   if (!command) return undefined;
-  return COMMANDS[command]?.schema?.[key]?.type;
+  return getPayloadConversionSchema(command)[key]?.type;
+}
+
+function parseTypedNumber(value: string, fieldType: string): number | undefined {
+  if (value.trim() === '') return undefined;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return undefined;
+  if (fieldType === 'integer' && !Number.isInteger(num)) return undefined;
+  return num;
 }
 
 export function convertPayloadTypes(payload: Record<string, string>, command?: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
     const fieldType = getCommandFieldType(command, key);
-    if (fieldType === 'integer' || fieldType === 'number' || (!fieldType && NUMERIC_FIELDS.has(key))) {
-      const num = parseFloat(value);
-      if (!Number.isNaN(num)) {
+    if (fieldType === 'integer' || fieldType === 'number') {
+      const num = parseTypedNumber(value, fieldType);
+      if (num !== undefined) {
         result[key] = num;
         continue;
       }
