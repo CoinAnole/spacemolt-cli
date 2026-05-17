@@ -27,6 +27,7 @@ import * as path from 'node:path';
 
 import { convertPayloadTypes, getArgNames, normalizeParsedPayload, parseArgs, validateRequiredArgs } from './args.ts';
 import { COMMANDS, SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
+import { generateCompletion } from './completion.ts';
 
 // =============================================================================
 // Configuration
@@ -2223,11 +2224,12 @@ ${c.bright}Usage:${c.reset}
      --plain, -p     No ANSI colors or formatting
      --fields, -f    Extract specific fields from response
 
-   Local command discovery:
+    Local command discovery:
      spacemolt help nav
-    spacemolt help market
-    spacemolt commands --search fuel
-    spacemolt explain travel
+     spacemolt help market
+     spacemolt commands --search fuel
+     spacemolt explain travel
+     spacemolt completion bash|zsh|fish
 
 ${c.bright}Information Commands (unlimited):${c.reset}
   get_status          Your player, ship, location
@@ -2415,8 +2417,9 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Always run 'get_status' first to understand your situation
    - Use 'get_system' to see where you can travel
    - Check 'get_cargo' before selling
-   - Use '--help <command>' for local CLI usage and examples
-   - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
+    - Use '--help <command>' for local CLI usage and examples
+    - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
+    - Use 'spacemolt completion bash' (or zsh/fish) to set up tab completion
    - Use 'help command=<command>' for server-provided command details
    - Actions return results directly — no polling needed
    - Auto-dock/undock handles dock state automatically
@@ -2502,6 +2505,16 @@ async function main(): Promise<void> {
       displayUnknownCommand(explainCommand);
       process.exit(1);
     }
+    process.exit(0);
+  }
+
+  if (args[0] === 'completion') {
+    const shell = args[1] || 'bash';
+    if (!['bash', 'zsh', 'fish'].includes(shell)) {
+      console.error(`${c.red}Error:${c.reset} Unsupported shell: ${shell}. Use bash, zsh, or fish.`);
+      process.exit(1);
+    }
+    console.log(generateCompletion(shell));
     process.exit(0);
   }
 
