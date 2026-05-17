@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   compareVersions,
@@ -581,7 +582,7 @@ describe('version sync', () => {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
     const pkgVersion = pkg.version;
 
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'runtime.ts');
     const clientSrc = fs.readFileSync(clientPath, 'utf-8');
     const match = clientSrc.match(/const VERSION = '([^']+)'/);
     expect(match).not.toBeNull();
@@ -617,7 +618,7 @@ describe('client.ts source integrity', () => {
   });
 
   test('FETCH_TIMEOUT_MS is defined and >= 300000 (covers 270s+ travel)', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'runtime.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
     const match = src.match(/const FETCH_TIMEOUT_MS\s*=\s*([\d_]+)/);
     expect(match).not.toBeNull();
@@ -626,14 +627,14 @@ describe('client.ts source integrity', () => {
   });
 
   test('FETCH_TIMEOUT_MS is applied to the fetch call', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'transport.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
     expect(src).toContain('const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS');
     expect(src).toContain('AbortSignal.timeout(timeoutMs)');
   });
 
   test('session writes are atomic and owner-only where possible', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'session.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
     expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt')");
     expect(src).toContain("path.join(SPACEMOLT_HOME, 'spacemolt_credentials.yaml')");
@@ -645,16 +646,19 @@ describe('client.ts source integrity', () => {
   });
 
   test('TimeoutError is handled in execute()', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'transport.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
     expect(src).toContain('TimeoutError');
   });
 
   test('client HTTP requests go through the shared JSON request helper', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'transport.ts');
+    const apiPath = path.join(import.meta.dir, 'api.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
+    const apiSrc = fs.readFileSync(apiPath, 'utf-8');
     expect(src).toContain('async function requestJson');
     expect(src.match(/fetch\(/g)?.length).toBe(1);
+    expect(apiSrc).toContain('requestJson<APIResponse>');
     expect(src).toContain('Server returned non-JSON response');
     expect(src).toContain('Server returned invalid JSON response');
   });
@@ -776,7 +780,7 @@ describe('client.ts source integrity', () => {
   });
 
   test('local AI usability helpers are present', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientPath = path.join(import.meta.dir, 'help.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
     const commandsPath = path.join(import.meta.dir, 'commands.ts');
     const commandsSrc = fs.readFileSync(commandsPath, 'utf-8');
@@ -794,11 +798,14 @@ describe('client.ts source integrity', () => {
 // CLI local usability behavior
 // =============================================================================
 
-function runClient(args: string[]): { stdout: string; stderr: string; exitCode: number | null } {
+function runClient(
+  args: string[],
+  env: Record<string, string> = {},
+): { stdout: string; stderr: string; exitCode: number | null } {
   const result = Bun.spawnSync({
     cmd: [process.execPath, 'run', 'src/client.ts', ...args],
     cwd: path.join(import.meta.dir, '..'),
-    env: { ...process.env, SPACEMOLT_NO_UPDATE_CHECK: 'true' },
+    env: { ...process.env, ...env, SPACEMOLT_NO_UPDATE_CHECK: 'true' },
     stdout: 'pipe',
     stderr: 'pipe',
   });
@@ -845,7 +852,23 @@ describe('CLI local usability behavior', () => {
   });
 
   test('profile list reads local credential profile names without secrets', () => {
-    const result = runClient(['profile', 'list']);
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
+    const hermesDir = path.join(home, '.hermes', 'spacemolt');
+    fs.mkdirSync(hermesDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(hermesDir, 'spacemolt_credentials.yaml'),
+      [
+        'credentials:',
+        '  marlowe:',
+        '    username: "Marlowe"',
+        '    password: "REDACTED"',
+        '  rescue:',
+        '    username: "FuelRescue"',
+        '    password: "secret"',
+        '',
+      ].join('\n'),
+    );
+    const result = runClient(['profile', 'list'], { HOME: home });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('marlowe');
     expect(result.stdout).toContain('FuelRescue');
