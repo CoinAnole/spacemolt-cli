@@ -46,22 +46,47 @@ function extractV2ToolMap(src: string): Record<string, { route: string; method: 
 
   const block = src.slice(start, end);
   const routes: Record<string, { route: string; method: 'GET' | 'POST' }> = {};
-  for (const line of block.split('\n')) {
-    const keyMatch = line.match(/^\s{2}([a-z][a-z0-9_]+):\s*\{/);
-    if (!keyMatch?.[1]) continue;
+  let currentKey: string | null = null;
+  let currentEntry = '';
+  let depth = 0;
 
-    const toolMatch = line.match(/\btool:\s*'([^']+)'/);
-    const actionMatch = line.match(/\baction:\s*'([^']+)'/);
-    const methodMatch = line.match(/\bmethod:\s*'([^']+)'/);
-    if (!toolMatch?.[1] || !actionMatch?.[1]) continue;
+  const flush = () => {
+    if (!currentKey) return;
+    const toolMatch = currentEntry.match(/\btool:\s*'([^']+)'/);
+    const actionMatch = currentEntry.match(/\baction:\s*'([^']+)'/);
+    const methodMatch = currentEntry.match(/\bmethod:\s*'([^']+)'/);
+    if (!toolMatch?.[1] || !actionMatch?.[1]) return;
 
-    const [, cmd] = keyMatch;
     const [, tool] = toolMatch;
     const [, action] = actionMatch;
-    routes[cmd] = {
+    routes[currentKey] = {
       route: tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`,
       method: methodMatch?.[1] === 'GET' ? 'GET' : 'POST',
     };
+  };
+
+  for (const line of block.split('\n')) {
+    const keyMatch = line.match(/^\s{2}([a-z][a-z0-9_]+):\s*\{/);
+    if (keyMatch?.[1]) {
+      currentKey = keyMatch[1];
+      currentEntry = line;
+      depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+      if (depth === 0) {
+        flush();
+        currentKey = null;
+        currentEntry = '';
+      }
+      continue;
+    }
+
+    if (!currentKey) continue;
+    currentEntry += `\n${line}`;
+    depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+    if (depth === 0) {
+      flush();
+      currentKey = null;
+      currentEntry = '';
+    }
   }
   return routes;
 }

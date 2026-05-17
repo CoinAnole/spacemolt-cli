@@ -120,7 +120,7 @@ function firstArray(result: Record<string, unknown>, keys: string[]): Array<Reco
   return undefined;
 }
 
-function valueOf(row: Record<string, unknown>, keys: string[]): string {
+function rowValue(row: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
     const value = row[key];
     if (value !== undefined && value !== null && value !== '') return String(value);
@@ -128,7 +128,11 @@ function valueOf(row: Record<string, unknown>, keys: string[]): string {
   return '';
 }
 
-function printCompactTable(title: string, rows: Array<Record<string, unknown>>, columns: Array<[string, string[]]>): void {
+function printCompactTable(
+  title: string,
+  rows: Array<Record<string, unknown>>,
+  columns: Array<[string, string[]]>,
+): void {
   console.log(`\n${c.bright}=== ${title} ===${c.reset}`);
   if (!rows.length) {
     console.log('(None)');
@@ -136,13 +140,13 @@ function printCompactTable(title: string, rows: Array<Record<string, unknown>>, 
   }
 
   const widths = columns.map(([label, keys]) =>
-    Math.max(label.length, ...rows.map((row) => valueOf(row, keys).length)),
+    Math.max(label.length, ...rows.map((row) => rowValue(row, keys).length)),
   );
   console.log('');
   console.log(`  ${columns.map(([label], idx) => label.padEnd(widths[idx] || label.length)).join(' | ')}`);
   console.log(`  ${widths.map((width) => '-'.repeat(width)).join('-+-')}`);
   for (const row of rows) {
-    console.log(`  ${columns.map(([, keys], idx) => valueOf(row, keys).padEnd(widths[idx] || 0)).join(' | ')}`);
+    console.log(`  ${columns.map(([, keys], idx) => rowValue(row, keys).padEnd(widths[idx] || 0)).join(' | ')}`);
   }
 }
 
@@ -178,6 +182,10 @@ interface CommandConfig {
   args?: CommandArg[]; // Positional argument names in order
   required?: string[]; // Required args for validation
   usage?: string; // Usage hint for help
+  description?: string; // Short local help description
+  example?: string; // Canonical invocation for agents
+  discoverWith?: string[]; // Commands that reveal valid IDs or state
+  seeAlso?: string[]; // Related commands for next-step help
 }
 
 interface V2Route {
@@ -235,7 +243,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   attack: { args: ['target_id'], required: ['target_id'], usage: '<player_id>  (use get_nearby to see players)' },
   scan: { args: ['target_id'], required: ['target_id'], usage: '<player_id>' },
   cloak: { args: ['enable'] },
-  self_destruct: {},
+  self_destruct: { usage: '(destroy ship, create wreck, respawn at home base)' },
 
   // Trading
   sell: {
@@ -268,17 +276,13 @@ const COMMANDS: Record<string, CommandConfig> = {
   salvage_wreck: { args: ['wreck_id'], required: ['wreck_id'], usage: '<wreck_id>' },
 
   // Ship management
-  name_ship: { args: ['name'], required: ['name'], usage: '<name>  (set a custom name for your current ship)' },
-  sell_ship: {
-    args: ['ship_id'],
-    required: ['ship_id'],
-    usage: '<ship_id>  (sell a stored ship at current base, use list_ships to see)',
-  },
-  list_ships: {},
+  name_ship: { args: ['name'], usage: '<name>  (set ship name, empty to clear)' },
+  sell_ship: { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (sell stored ship at 50% base value)' },
+  list_ships: { usage: '(all owned ships with locations)' },
   switch_ship: {
     args: ['ship_id'],
     required: ['ship_id'],
-    usage: '<ship_id>  (switch to a stored ship at current base, use list_ships to see)',
+    usage: '<ship_id>  (swap active ship, cargo moved to station storage)',
   },
   install_mod: {
     args: ['module_id'],
@@ -295,10 +299,11 @@ const COMMANDS: Record<string, CommandConfig> = {
     required: ['module_id'],
     usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
   },
-  refit_ship: {},
+  refit_ship: { usage: '(reset ship to class specs, strips modules)' },
   refuel: {
     args: ['id', 'quantity', 'target'],
-    usage: '[id] [quantity] [target=player|fleet]  (station fuel uses dynamic reserve pricing; fuel cells can be selected by id)',
+    usage:
+      '[id] [quantity] [target=player|fleet]  (station fuel uses dynamic reserve pricing; fuel cells can be selected by id)',
   },
   repair: {},
   use_item: {
@@ -308,7 +313,11 @@ const COMMANDS: Record<string, CommandConfig> = {
   },
 
   // Insurance
-  set_home_base: { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (must be docked at the base)' },
+  set_home_base: {
+    args: ['base_id'],
+    required: ['base_id'],
+    usage: '<base_id>  (set respawn point, requires cloning service)',
+  },
 
   // Crafting
   craft: {
@@ -385,33 +394,67 @@ const COMMANDS: Record<string, CommandConfig> = {
   faction_trade_intel_status: {},
 
   // Player settings
-  set_status: { args: ['status_message', 'clan_tag'] },
-  set_colors: { args: ['primary_color', 'secondary_color'] },
+  set_status: {
+    args: ['status_message', 'clan_tag'],
+    usage: '[status=..] [clan_tag=..]  (status max 100 chars, tag max 4 chars)',
+  },
+  set_colors: {
+    args: ['primary_color', 'secondary_color'],
+    required: ['primary_color', 'secondary_color'],
+    usage: '<#hex> <#hex>  (set ship colors)',
+  },
   // Notes
-  create_note: { args: ['title', { rest: 'content' }] },
-  write_note: { args: ['note_id', { rest: 'content' }] },
-  read_note: { args: ['note_id'] },
-  delete_note: { args: ['note_id'], required: ['note_id'] },
-  get_notes: {},
+  create_note: {
+    args: ['title', { rest: 'content' }],
+    required: ['title', 'content'],
+    usage: '<title> <content>  (create tradeable note)',
+  },
+  write_note: {
+    args: ['note_id', { rest: 'content' }],
+    required: ['note_id', 'content'],
+    usage: '<note_id> <content>  (overwrite note)',
+  },
+  read_note: { args: ['note_id'], required: ['note_id'], usage: '<note_id>  (read note content)' },
+  delete_note: { args: ['note_id'], required: ['note_id'], usage: '<note_id>  (delete note permanently)' },
+  get_notes: { usage: '(list all note documents)' },
 
   // Captain's log
-  captains_log_add: { args: [{ rest: 'entry' }] },
-  captains_log_list: { args: ['index'] },
-  captains_log_get: { args: ['index'] },
-  captains_log_delete: { args: ['index'], required: ['index'] },
+  captains_log_add: {
+    args: [{ rest: 'entry' }],
+    required: ['entry'],
+    usage: '<entry_text>  (add journal entry, max 30KB)',
+  },
+  captains_log_list: { args: ['index'], usage: '[index]  (list entries, 0=newest)' },
+  captains_log_get: { args: ['index'], required: ['index'], usage: '<index>  (read entry, 0=newest)' },
+  captains_log_delete: {
+    args: ['index'],
+    required: ['index'],
+    usage: '<index>  (delete entry, 0=newest)',
+  },
 
   // Forum
-  forum_list: { args: ['page', 'category'] },
-  forum_get_thread: { args: ['thread_id'] },
-  forum_create_thread: {
-    args: ['title', 'category', { rest: 'content' }],
-    required: ['title', 'category', 'content'],
-    usage: '<title> <category> <content>  (categories: general, bugs, suggestions, trading, factions)',
+  forum_list: {
+    args: ['search', 'category', 'author', 'limit', 'page'],
+    usage: '[search=.. category=.. author=.. limit=.. page=..]  (list threads)',
   },
-  forum_delete_thread: { args: ['thread_id'] },
-  forum_reply: { args: ['thread_id', { rest: 'content' }] },
-  forum_upvote: { args: ['thread_id', 'reply_id'] },
-  forum_delete_reply: { args: ['reply_id'] },
+  forum_get_thread: { args: ['thread_id'], required: ['thread_id'], usage: '<thread_id>  (view thread + replies)' },
+  forum_create_thread: {
+    args: ['title', { rest: 'content' }],
+    required: ['title', 'content'],
+    usage: '<title> <content> [category=..]  (create thread)',
+  },
+  forum_delete_thread: { args: ['thread_id'], required: ['thread_id'], usage: '<thread_id>  (delete your thread)' },
+  forum_reply: {
+    args: ['thread_id', { rest: 'content' }],
+    required: ['thread_id', 'content'],
+    usage: '<thread_id> <content>  (reply to thread)',
+  },
+  forum_upvote: {
+    args: ['thread_id', 'reply_id'],
+    required: ['thread_id'],
+    usage: '<thread_id> [reply_id=..]  (upvote thread or reply)',
+  },
+  forum_delete_reply: { args: ['reply_id'], required: ['reply_id'], usage: '<reply_id>  (delete your reply)' },
 
   // Missions
   get_missions: {},
@@ -421,7 +464,7 @@ const COMMANDS: Record<string, CommandConfig> = {
   decline_mission: { args: ['template_id'] },
   abandon_mission: { args: ['mission_id'] },
   completed_missions: {},
-  distress_signal: {},
+  distress_signal: { args: ['type'], usage: '[fuel|repair|combat]  (broadcast emergency, 1hr cooldown)' },
   view_completed_mission: {
     args: ['template_id'],
     required: ['template_id'],
@@ -503,14 +546,22 @@ const COMMANDS: Record<string, CommandConfig> = {
   load_drone: { args: ['drone_item_id'], required: ['drone_item_id'], usage: '<drone_item_id>' },
   unload_drone: { args: ['drone_id'], required: ['drone_id'], usage: '<drone_id>' },
   recall_drone: { args: ['drone_id'], usage: '[drone_id] [all=true]' },
-  upload_drone: { args: ['drone_id', { rest: 'script' }], required: ['drone_id', 'script'], usage: '<drone_id> <script>' },
+  upload_drone: {
+    args: ['drone_id', { rest: 'script' }],
+    required: ['drone_id', 'script'],
+    usage: '<drone_id> <script>',
+  },
 
   // Facilities
   facility_list: {},
   facility_types: { args: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'] },
   facility_upgrades: { args: ['facility_type', 'facility_id'] },
   facility_build: { args: ['facility_type'], required: ['facility_type'], usage: '<facility_type>' },
-  facility_upgrade: { args: ['facility_type', 'facility_id'], required: ['facility_type'], usage: '<facility_type> [facility_id]' },
+  facility_upgrade: {
+    args: ['facility_type', 'facility_id'],
+    required: ['facility_type'],
+    usage: '<facility_type> [facility_id]',
+  },
   facility_toggle: { args: ['facility_id'], required: ['facility_id'], usage: '<facility_id>' },
   facility_transfer: { args: ['facility_id', 'direction', 'player_id'], required: ['facility_id', 'direction'] },
   personal_facility_build: { args: ['facility_type'], required: ['facility_type'], usage: '<facility_type>' },
@@ -563,10 +614,10 @@ const COMMANDS: Record<string, CommandConfig> = {
   cancel_ship_listing: { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
 
   // Insurance
-  buy_insurance: { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (number of ticks of coverage)' },
-  get_insurance_quote: {},
-  claim_insurance: {},
-  view_insurance: {},
+  buy_insurance: { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (purchase ship insurance)' },
+  get_insurance_quote: { usage: '(get risk-based insurance quote)' },
+  claim_insurance: { usage: '(file insurance claim)' },
+  view_insurance: { usage: '(view active policies)' },
 
   // Query commands
   get_status: {},
@@ -590,8 +641,8 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_queue: {},
   get_ships: {},
   get_action_log: {
-    args: ['category', 'limit', 'before'],
-    usage: '[category=...] [limit=N] [before=timestamp]  (persistent action history)',
+    args: ['category', 'faction_id', 'page'],
+    usage: '[category=.. faction_id=.. page=..]  (recent actions, 30-day retention)',
   },
   session: {},
 
@@ -631,77 +682,176 @@ const COMMANDS: Record<string, CommandConfig> = {
     usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
   },
 
-  // Captain's log
-  captains_log_add: { args: ['entry'], required: ['entry'], usage: '<entry_text>  (add journal entry, max 30KB)' },
-  captains_log_list: { args: ['index'], usage: '[index]  (list entries, 0=newest)' },
-  captains_log_get: { args: ['index'], required: ['index'], usage: '<index>  (read entry, 0=newest)' },
-  captains_log_delete: { args: ['index'], required: ['index'], usage: '<index>  (delete entry, 0=newest)' },
-
   // Petition (empire messages)
   petition: {
     args: ['empire_id', 'message'],
     required: ['empire_id', 'message'],
     usage: '<empire_id> <message>  (send message to empire leadership, max 1000 chars)',
   },
-
-  // Forum
-  forum_list: { args: ['search', 'category', 'author', 'limit', 'page'], usage: '[search=.. category=.. author=.. limit=.. page=..]  (list threads)' },
-  forum_get_thread: { args: ['thread_id'], required: ['thread_id'], usage: '<thread_id>  (view thread + replies)' },
-  forum_reply: { args: ['thread_id', 'content'], required: ['thread_id', 'content'], usage: '<thread_id> <content>  (reply to thread)' },
-  forum_create_thread: { args: ['title', 'content', 'category'], required: ['title', 'content'], usage: '<title> <content> [category=..]  (create thread)' },
-  forum_upvote: { args: ['thread_id', 'reply_id'], required: ['thread_id'], usage: '<thread_id> [reply_id=..]  (upvote thread or reply)' },
-  forum_delete_thread: { args: ['thread_id'], required: ['thread_id'], usage: '<thread_id>  (delete your thread)' },
-  forum_delete_reply: { args: ['reply_id'], required: ['reply_id'], usage: '<reply_id>  (delete your reply)' },
-
-  // Notes
-  get_notes: { usage: '(list all note documents)' },
-  create_note: { args: ['title', 'content'], required: ['title', 'content'], usage: '<title> <content>  (create tradeable note)' },
-  read_note: { args: ['note_id'], required: ['note_id'], usage: '<note_id>  (read note content)' },
-  write_note: { args: ['note_id', 'content'], required: ['note_id', 'content'], usage: '<note_id> <content>  (overwrite note)' },
-  delete_note: { args: ['note_id'], required: ['note_id'], usage: '<note_id>  (delete note permanently)' },
-
-  // Action log
-  get_action_log: { args: ['category', 'faction_id', 'page'], usage: '[category=.. faction_id=.. page=..]  (recent actions, 30-day retention)' },
-
-  // Insurance
-  buy_insurance: { args: ['ticks'], required: ['ticks'], usage: '<ticks>  (purchase ship insurance)' },
-  get_insurance_quote: { usage: '(get risk-based insurance quote)' },
-  claim_insurance: { usage: '(file insurance claim)' },
-  view_insurance: { usage: '(view active policies)' },
-
-  // Claims
-  claim: { args: ['registration_code'], required: ['registration_code'], usage: '<code>  (link player to website account)' },
-
-  // Self-destruct
-  self_destruct: { usage: '(destroy ship, create wreck, respawn at home base)' },
-
-  // Name ship
-  name_ship: { args: ['name'], usage: '<name>  (set ship name, empty to clear)' },
-
-  // Set colors
-  set_colors: { args: ['primary_color', 'secondary_color'], required: ['primary_color', 'secondary_color'], usage: '<#hex> <#hex>  (set ship colors)' },
-
-  // Set home base
-  set_home_base: { args: ['base_id'], required: ['base_id'], usage: '<base_id>  (set respawn point, requires cloning service)' },
-
-  // Set status
-  set_status: { args: ['status_message', 'clan_tag'], usage: '[status=..] [clan_tag=..]  (status max 100 chars, tag max 4 chars)' },
-
-  // List ships
-  list_ships: { usage: '(all owned ships with locations)' },
-
-  // Sell ship
-  sell_ship: { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (sell stored ship at 50% base value)' },
-
-  // Refit ship
-  refit_ship: { usage: '(reset ship to class specs, strips modules)' },
-
-  // Switch ship
-  switch_ship: { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (swap active ship, cargo moved to station storage)' },
-
-  // Distress signal
-  distress_signal: { args: ['type'], usage: '[fuel|repair|combat]  (broadcast emergency, 1hr cooldown)' },
 };
+
+const COMMAND_GUIDANCE: Partial<Record<string, Partial<CommandConfig>>> = {
+  register: {
+    description: 'Create a player using a dashboard registration code.',
+    example: 'spacemolt register myname solarian YOUR_REGISTRATION_CODE',
+    seeAlso: ['login', 'get_status'],
+  },
+  login: {
+    description: 'Authenticate and save credentials in the local session file.',
+    example: 'spacemolt login myname <password>',
+    seeAlso: ['session', 'get_status'],
+  },
+  get_status: {
+    description: 'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.',
+    example: 'spacemolt get_status',
+    seeAlso: ['get_system', 'get_cargo', 'get_ship'],
+  },
+  get_system: {
+    description: 'List current-system POIs and connected systems. Use IDs from this output for travel and jump.',
+    example: 'spacemolt get_system',
+    seeAlso: ['travel', 'jump', 'get_poi'],
+  },
+  travel: {
+    description: 'Move to a POI in the current system. Use get_system first to find valid POI IDs.',
+    example: 'spacemolt travel sol_asteroid_belt',
+    discoverWith: ['get_system', 'get_status'],
+    seeAlso: ['get_system', 'get_poi', 'jump'],
+  },
+  jump: {
+    description: 'Move to a connected system. Use get_system first to find connected system IDs.',
+    example: 'spacemolt jump alpha_centauri',
+    discoverWith: ['get_system', 'find_route'],
+    seeAlso: ['get_system', 'travel', 'refuel'],
+  },
+  mine: {
+    description: 'Mine resources at an asteroid POI. Use get_poi to confirm the current POI has resources.',
+    example: 'spacemolt mine',
+    discoverWith: ['get_status', 'get_poi'],
+    seeAlso: ['get_cargo', 'sell'],
+  },
+  sell: {
+    description: 'Sell cargo items. Use get_cargo first for item IDs and available quantities.',
+    example: 'spacemolt sell ore_iron 50',
+    discoverWith: ['get_cargo', 'view_market'],
+    seeAlso: ['get_cargo', 'view_market'],
+  },
+  buy: {
+    description: 'Buy an item from the current market. Use view_market to inspect available listings.',
+    example: 'spacemolt buy fuel 10',
+    discoverWith: ['view_market', 'get_status'],
+    seeAlso: ['view_market', 'get_cargo'],
+  },
+  refuel: {
+    description: 'Refuel from a station or fuel cell. Usually dock first, then run refuel.',
+    example: 'spacemolt refuel',
+    discoverWith: ['get_status', 'get_cargo'],
+    seeAlso: ['dock', 'get_status'],
+  },
+  attack: {
+    description: 'Attack a nearby target. Use get_nearby first for target IDs.',
+    example: 'spacemolt attack <player_id>',
+    discoverWith: ['get_nearby', 'get_status'],
+    seeAlso: ['scan', 'get_battle_status'],
+  },
+  scan: {
+    description: 'Scan a nearby player for ship and combat details.',
+    example: 'spacemolt scan <player_id>',
+    discoverWith: ['get_nearby'],
+    seeAlso: ['attack', 'get_ship'],
+  },
+  get_cargo: {
+    description: 'List cargo item IDs, quantities, and cargo capacity.',
+    example: 'spacemolt get_cargo',
+    seeAlso: ['sell', 'jettison', 'deposit_items'],
+  },
+  get_ship: {
+    description: 'Show ship stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo.',
+    example: 'spacemolt get_ship',
+    seeAlso: ['install_mod', 'repair_module', 'reload'],
+  },
+  view_market: {
+    description: 'Inspect the market or order book at the current station.',
+    example: 'spacemolt view_market ore_iron',
+    discoverWith: ['get_status'],
+    seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
+  },
+  view_storage: {
+    description: 'Show personal station storage. Omit station_id for the current station.',
+    example: 'spacemolt view_storage',
+    discoverWith: ['get_status'],
+    seeAlso: ['deposit_items', 'withdraw_items'],
+  },
+  deposit_items: {
+    description: 'Move cargo into station storage.',
+    example: 'spacemolt deposit_items ore_iron 50',
+    discoverWith: ['get_cargo', 'view_storage'],
+    seeAlso: ['withdraw_items', 'view_storage'],
+  },
+  withdraw_items: {
+    description: 'Move station storage items into cargo.',
+    example: 'spacemolt withdraw_items ore_iron 50',
+    discoverWith: ['view_storage', 'get_cargo'],
+    seeAlso: ['deposit_items', 'get_cargo'],
+  },
+  catalog: {
+    description: 'Browse reference data such as ships, items, skills, and recipes.',
+    example: 'spacemolt catalog type=items',
+    seeAlso: ['get_guide', 'get_commands'],
+  },
+  get_guide: {
+    description: 'Read server-provided gameplay guides.',
+    example: 'spacemolt get_guide miner',
+    seeAlso: ['catalog', 'help'],
+  },
+  get_commands: {
+    description: 'Fetch structured command data from the server for automation.',
+    example: 'spacemolt get_commands',
+    seeAlso: ['help', 'catalog'],
+  },
+  help: {
+    description: 'Fetch server help. For local CLI usage, run spacemolt --help <command>.',
+    example: 'spacemolt help',
+    seeAlso: ['get_commands', 'get_guide'],
+  },
+  list_drones: {
+    description: 'List loaded and deployed drones.',
+    example: 'spacemolt list_drones',
+    seeAlso: ['get_drone', 'load_drone', 'deploy_drone'],
+  },
+  upload_drone: {
+    description: 'Upload a DroneLang script to a drone.',
+    example: 'spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"',
+    discoverWith: ['list_drones', 'get_drone'],
+    seeAlso: ['get_drone', 'deploy_drone'],
+  },
+  battle_target: {
+    description: 'Focus a target in the current battle.',
+    example: 'spacemolt battle_target <target_id>',
+    discoverWith: ['get_battle_status'],
+    seeAlso: ['battle_stance', 'reload'],
+  },
+  fleet_invite: {
+    description: 'Invite a player to your fleet.',
+    example: 'spacemolt fleet_invite <player_id_or_name>',
+    discoverWith: ['get_nearby', 'get_system_agents'],
+    seeAlso: ['fleet_status', 'create_fleet'],
+  },
+  facility_build: {
+    description: 'Build a player facility at the current base.',
+    example: 'spacemolt facility_build ore_refinery',
+    discoverWith: ['facility_types', 'facility_list'],
+    seeAlso: ['facility_types', 'facility_list'],
+  },
+  agentlogs: {
+    description: 'Submit agent-readable logs to the server.',
+    example: 'spacemolt agentlogs navigation "planned route to sol"',
+    seeAlso: ['get_action_log'],
+  },
+};
+
+for (const [command, guidance] of Object.entries(COMMAND_GUIDANCE)) {
+  Object.assign(COMMANDS[command] || {}, guidance);
+}
 
 const V2_TOOL_MAP: Record<string, V2Route> = {
   // Auth
@@ -790,8 +940,16 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   // Storage
   view_storage: { tool: 'spacemolt_storage', action: 'view' },
   view_faction_storage: { tool: 'spacemolt_storage', action: 'view', defaults: { target: 'faction' } },
-  faction_deposit_credits: { tool: 'spacemolt_storage', action: 'deposit', defaults: { target: 'faction', item_id: 'credits' } },
-  faction_withdraw_credits: { tool: 'spacemolt_storage', action: 'withdraw', defaults: { source: 'faction', item_id: 'credits' } },
+  faction_deposit_credits: {
+    tool: 'spacemolt_storage',
+    action: 'deposit',
+    defaults: { target: 'faction', item_id: 'credits' },
+  },
+  faction_withdraw_credits: {
+    tool: 'spacemolt_storage',
+    action: 'withdraw',
+    defaults: { source: 'faction', item_id: 'credits' },
+  },
   deposit_items: { tool: 'spacemolt_storage', action: 'deposit' },
   withdraw_items: { tool: 'spacemolt_storage', action: 'withdraw' },
   send_gift: { tool: 'spacemolt_storage', action: 'deposit' },
@@ -960,9 +1118,12 @@ const ERROR_HELP: Record<string, string> = {
   invalid_poi: 'POI not found. Run "spacemolt get_system" to see valid POIs.',
   wrong_system: 'That POI is in a different system. Use "jump" to change systems first.',
   not_connected: 'Systems are not connected. Run "spacemolt get_system" to see connections.',
-  no_fuel: 'Insufficient fuel. Dock at a station and run "spacemolt refuel"; if station reserves are depleted, use fuel cells or try another supplied station.',
-  no_station_fuel: 'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
-  station_fuel_depleted: 'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
+  no_fuel:
+    'Insufficient fuel. Dock at a station and run "spacemolt refuel"; if station reserves are depleted, use fuel cells or try another supplied station.',
+  no_station_fuel:
+    'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
+  station_fuel_depleted:
+    'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
   no_credits: 'Insufficient credits. Mine and sell resources to earn credits.',
   no_cargo_space: 'Cargo hold is full. Sell or jettison items to make space.',
   invalid_target: 'Target not found. Run "spacemolt get_nearby" to see players at your POI.',
@@ -1119,7 +1280,10 @@ function getObjectResult(response: APIResponse): Record<string, unknown> | undef
   return isRecord(response.result) ? response.result : undefined;
 }
 
-function normalizeCommandPayload(command: string, payload?: Record<string, unknown>): Record<string, unknown> | undefined {
+function normalizeCommandPayload(
+  command: string,
+  payload?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
   if (command === 'send_gift' && payload?.ship_id && !payload.item_id) {
     const normalized: Record<string, unknown> = { ...payload, item_id: payload.ship_id };
     delete normalized.ship_id;
@@ -2288,12 +2452,16 @@ const resultFormatters: ResultFormatter[] = [
   namedFormatter('drone', ['drone'], (r) => {
     const drone = r.drone as Record<string, unknown> | undefined;
     if (!drone) return false;
-    printCompactTable('Drone', [drone], [
-      ['Name', ['name', 'type_name', 'drone_type', 'item_id']],
-      ['ID', ['drone_id', 'id']],
-      ['Status', ['status', 'state']],
-      ['Location', ['poi_name', 'poi_id', 'location', 'base_id']],
-    ]);
+    printCompactTable(
+      'Drone',
+      [drone],
+      [
+        ['Name', ['name', 'type_name', 'drone_type', 'item_id']],
+        ['ID', ['drone_id', 'id']],
+        ['Status', ['status', 'state']],
+        ['Location', ['poi_name', 'poi_id', 'location', 'base_id']],
+      ],
+    );
     if (drone.script || r.script) console.log(`\n${c.bright}Script:${c.reset}\n${drone.script || r.script}`);
     return true;
   }),
@@ -2314,13 +2482,17 @@ const resultFormatters: ResultFormatter[] = [
   namedFormatter('facility', ['facility'], (r) => {
     const facility = r.facility as Record<string, unknown> | undefined;
     if (!facility) return false;
-    printCompactTable('Facility', [facility], [
-      ['Name', ['name', 'type_name', 'facility_type']],
-      ['ID', ['facility_id', 'id']],
-      ['Level', ['level', 'tier']],
-      ['Status', ['status', 'enabled', 'active']],
-      ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
-    ]);
+    printCompactTable(
+      'Facility',
+      [facility],
+      [
+        ['Name', ['name', 'type_name', 'facility_type']],
+        ['ID', ['facility_id', 'id']],
+        ['Level', ['level', 'tier']],
+        ['Status', ['status', 'enabled', 'active']],
+        ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
+      ],
+    );
     return true;
   }),
 
@@ -2564,6 +2736,125 @@ function validateRequiredArgs(command: string, payload: Record<string, string>):
 
 function getUsageHint(command: string): string {
   return COMMANDS[command]?.usage || '<args...>';
+}
+
+function getUsageLine(command: string): string {
+  return `spacemolt ${command} ${getUsageHint(command)}`.trimEnd();
+}
+
+function getArgNames(config: CommandConfig): string[] {
+  const names: string[] = [];
+  for (const arg of config.args || []) {
+    names.push(typeof arg === 'string' ? arg : arg.rest);
+  }
+  for (const arg of config.required || []) {
+    if (!names.includes(arg)) names.push(arg);
+  }
+  return names;
+}
+
+function levenshtein(a: string, b: string): number {
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = new Array<number>(b.length + 1);
+
+  for (let i = 1; i <= a.length; i++) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      current[j] = Math.min((previous[j] ?? 0) + 1, (current[j - 1] ?? 0) + 1, (previous[j - 1] ?? 0) + cost);
+    }
+    for (let j = 0; j < previous.length; j++) previous[j] = current[j] ?? 0;
+  }
+
+  return previous[b.length] ?? 0;
+}
+
+function suggestCommands(command: string, limit = 3): string[] {
+  if (!command) return [];
+  const normalized = command.toLowerCase();
+  return Object.keys(COMMANDS)
+    .map((candidate) => {
+      const distance = levenshtein(normalized, candidate);
+      const prefixScore = candidate.startsWith(normalized) || normalized.startsWith(candidate) ? -2 : 0;
+      return { candidate, score: distance + prefixScore };
+    })
+    .filter(({ candidate, score }) => score <= Math.max(2, Math.floor(Math.max(command.length, candidate.length) / 3)))
+    .sort((a, b) => a.score - b.score || a.candidate.localeCompare(b.candidate))
+    .slice(0, limit)
+    .map(({ candidate }) => candidate);
+}
+
+function showCommandHelp(command: string): boolean {
+  const config = COMMANDS[command];
+  if (!config) return false;
+
+  console.log(`\n${c.bright}${command}${c.reset}`);
+  if (config.description) console.log(config.description);
+  console.log(`\n${c.bright}Usage:${c.reset}`);
+  console.log(`  ${getUsageLine(command)}`);
+
+  const argNames = getArgNames(config);
+  if (argNames.length > 0) {
+    console.log(`\n${c.bright}Arguments:${c.reset}`);
+    console.log(`  ${argNames.join(', ')}`);
+    console.log(`\n${c.bright}Accepted forms:${c.reset}`);
+    console.log(`  ${getUsageLine(command)}`);
+    console.log(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
+  }
+
+  if (config.example) {
+    console.log(`\n${c.bright}Example:${c.reset}`);
+    console.log(`  ${config.example}`);
+  }
+  if (config.discoverWith?.length) {
+    console.log(`\n${c.bright}Discover valid IDs/state with:${c.reset}`);
+    for (const related of config.discoverWith) console.log(`  spacemolt ${related}`);
+  }
+  if (config.seeAlso?.length) {
+    console.log(`\n${c.bright}See also:${c.reset} ${config.seeAlso.join(', ')}`);
+  }
+  return true;
+}
+
+function printNextSteps(command: string, missingArg?: string): void {
+  const config = COMMANDS[command];
+  const steps: string[] = [];
+  for (const related of config?.discoverWith || []) steps.push(`spacemolt ${related}`);
+  if (!steps.includes('spacemolt get_status')) steps.push('spacemolt get_status');
+  if (command !== 'get_commands' && !steps.includes('spacemolt get_commands')) steps.push('spacemolt get_commands');
+
+  const reason = missingArg && config?.discoverWith?.length ? ` to find a valid ${missingArg}` : '';
+  console.error(
+    `\n${c.cyan}Next:${c.reset} run ${steps
+      .slice(0, 3)
+      .map((step) => `"${step}"`)
+      .join(' or ')}${reason}.`,
+  );
+}
+
+function displayUnknownCommand(command: string): void {
+  console.error(`${c.red}Error:${c.reset} Unknown command "${command}"`);
+  const suggestions = suggestCommands(command);
+  if (suggestions.length > 0) console.error(`Did you mean: ${suggestions.join(', ')}`);
+  console.error(`\nRun "spacemolt --help" for the local command overview.`);
+  console.error(`Run "spacemolt get_commands" for the server command list once connected.`);
+}
+
+function displayMissingArgument(command: string, missingArg: string): void {
+  console.error(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
+  console.error(`\n${c.bright}Usage:${c.reset}`);
+  console.error(`  ${getUsageLine(command)}`);
+
+  const argNames = getArgNames(COMMANDS[command] || {});
+  if (argNames.length > 0) {
+    console.error(`\n${c.bright}Accepted forms:${c.reset}`);
+    console.error(`  ${getUsageLine(command)}`);
+    console.error(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
+  }
+
+  const example = COMMANDS[command]?.example;
+  if (example) console.error(`\n${c.bright}Example:${c.reset}\n  ${example}`);
+  printNextSteps(command, missingArg);
 }
 
 // Fields that should be converted to numbers when sending to the server
@@ -2825,7 +3116,8 @@ ${c.bright}Tips for LLM Agents:${c.reset}
   - Always run 'get_status' first to understand your situation
   - Use 'get_system' to see where you can travel
   - Check 'get_cargo' before selling
-  - Use 'help <command>' for detailed help on any command
+  - Use '--help <command>' for local CLI usage and examples
+  - Use 'help command=<command>' for server-provided command details
   - Actions return results directly — no polling needed
   - Auto-dock/undock handles dock state automatically
   - Your session auto-renews; credentials saved in session file
@@ -2852,7 +3144,7 @@ ${c.bright}Documentation:${c.reset}
 // =============================================================================
 
 function displayError(
-  _command: string,
+  command: string,
   error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
 ): void {
   console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
@@ -2863,6 +3155,7 @@ function displayError(
   }
   const help = ERROR_HELP[error.code];
   if (help) console.error(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
+  if (COMMANDS[command]) printNextSteps(command);
 }
 
 // =============================================================================
@@ -2876,7 +3169,24 @@ async function main(): Promise<void> {
   // Check for updates in the background (non-blocking)
   if (!options.json) checkForUpdates();
 
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+  if (args.length === 0) {
+    showHelp();
+    process.exit(0);
+  }
+
+  if (args[0] === '--help' || args[0] === '-h') {
+    const helpCommand = args[1];
+    if (helpCommand) {
+      if (!showCommandHelp(helpCommand)) {
+        if (options.json) {
+          printJsonError('unknown_command', `Unknown command: ${helpCommand}`);
+          process.exit(1);
+        }
+        displayUnknownCommand(helpCommand);
+        process.exit(1);
+      }
+      process.exit(0);
+    }
     showHelp();
     process.exit(0);
   }
@@ -2905,14 +3215,27 @@ async function main(): Promise<void> {
   }
 
   try {
+    if (!COMMANDS[command]) {
+      if (options.json) {
+        printJsonError('unknown_command', `Unknown command: ${command}`);
+        process.exit(1);
+      }
+      displayUnknownCommand(command);
+      process.exit(1);
+    }
+
+    if (payload.help === 'true' || payload.help === '1') {
+      showCommandHelp(command);
+      process.exit(0);
+    }
+
     const missingArg = validateRequiredArgs(command, payload);
     if (missingArg) {
       if (options.json) {
         printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`);
         process.exit(1);
       }
-      console.error(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
-      console.error(`\nUsage: spacemolt ${command} ${getUsageHint(command)}`);
+      displayMissingArgument(command, missingArg);
       process.exit(1);
     }
 

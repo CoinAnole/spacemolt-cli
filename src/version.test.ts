@@ -56,7 +56,10 @@ function convertPayloadTypes(payload: Record<string, string>): Record<string, un
   return result;
 }
 
-function normalizeCommandPayload(command: string, payload?: Record<string, unknown>): Record<string, unknown> | undefined {
+function normalizeCommandPayload(
+  command: string,
+  payload?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
   if (command === 'send_gift' && payload?.ship_id && !payload.item_id) {
     const normalized: Record<string, unknown> = { ...payload, item_id: payload.ship_id };
     delete normalized.ship_id;
@@ -141,6 +144,10 @@ interface CommandConfig {
   args?: CommandArg[];
   required?: string[];
   usage?: string;
+  description?: string;
+  example?: string;
+  discoverWith?: string[];
+  seeAlso?: string[];
 }
 
 function parseArgs(
@@ -374,9 +381,10 @@ describe('normalizeParsedPayload', () => {
   });
 
   test('reload uses canonical id and target fields', () => {
-    expect(
-      normalizeParsedPayload('reload', { weapon_instance_id: 'weapon_1', ammo_item_id: 'ammo_light' }),
-    ).toEqual({ id: 'weapon_1', target: 'ammo_light' });
+    expect(normalizeParsedPayload('reload', { weapon_instance_id: 'weapon_1', ammo_item_id: 'ammo_light' })).toEqual({
+      id: 'weapon_1',
+      target: 'ammo_light',
+    });
   });
 
   test('new feature command aliases normalize to API fields', () => {
@@ -905,5 +913,83 @@ describe('client.ts source integrity', () => {
     expect(numericDef).not.toContain("'offer_credits'");
     expect(numericDef).not.toContain("'request_credits'");
     expect(numericDef).not.toContain("'count'");
+  });
+
+  test('COMMANDS block has no duplicate top-level command keys', () => {
+    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const src = fs.readFileSync(clientPath, 'utf-8');
+    const start = src.indexOf('const COMMANDS:');
+    const end = src.indexOf('\nconst COMMAND_GUIDANCE');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const block = src.slice(start, end);
+    const commands = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]);
+    const duplicates = commands.filter((command, index) => commands.indexOf(command) !== index);
+    expect(duplicates).toEqual([]);
+  });
+
+  test('local AI usability helpers are present', () => {
+    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const src = fs.readFileSync(clientPath, 'utf-8');
+    expect(src).toContain('function suggestCommands');
+    expect(src).toContain('function showCommandHelp');
+    expect(src).toContain('function displayUnknownCommand');
+    expect(src).toContain('function displayMissingArgument');
+    expect(src).toContain('COMMAND_GUIDANCE');
+  });
+});
+
+// =============================================================================
+// CLI local usability behavior
+// =============================================================================
+
+function runClient(args: string[]): { stdout: string; stderr: string; exitCode: number | null } {
+  const result = Bun.spawnSync({
+    cmd: [process.execPath, 'run', 'src/client.ts', ...args],
+    cwd: path.join(import.meta.dir, '..'),
+    env: { ...process.env, SPACEMOLT_NO_UPDATE_CHECK: 'true' },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  return {
+    stdout: new TextDecoder().decode(result.stdout),
+    stderr: new TextDecoder().decode(result.stderr),
+    exitCode: result.exitCode,
+  };
+}
+
+describe('CLI local usability behavior', () => {
+  test('unknown command fails locally with a suggestion', () => {
+    const result = runClient(['trvel', 'sol_earth']);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Unknown command "trvel"');
+    expect(result.stderr).toContain('Did you mean: travel');
+    expect(result.stderr).not.toContain('Connection Error');
+  });
+
+  test('missing required argument shows usage and next discovery command', () => {
+    const result = runClient(['travel']);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Missing required argument');
+    expect(result.stderr).toContain('Usage:');
+    expect(result.stderr).toContain('spacemolt travel <poi_id>');
+    expect(result.stderr).toContain('spacemolt get_system');
+  });
+
+  test('--help command renders local command help without network', () => {
+    const result = runClient(['--help', 'travel']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('travel');
+    expect(result.stdout).toContain('Usage:');
+    expect(result.stdout).toContain('spacemolt travel sol_asteroid_belt');
+    expect(result.stderr).not.toContain('Connection Error');
+  });
+
+  test('--json unknown command keeps compatible error shape', () => {
+    const result = runClient(['--json', 'trvel']);
+    expect(result.exitCode).toBe(1);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed).toEqual({ error: { code: 'unknown_command', message: 'Unknown command: trvel' } });
   });
 });
