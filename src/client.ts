@@ -462,10 +462,13 @@ async function checkForUpdates(): Promise<void> {
 
     // Fetch from GitHub if cache is stale or missing
     if (!latestVersion) {
-      const response = await requestJson<{ tag_name: string }>(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
-        timeoutMs: 3000,
-      });
+      const response = await requestJson<{ tag_name: string }>(
+        `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
+        {
+          headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
+          timeoutMs: 3000,
+        },
+      );
 
       if (!response.ok) {
         if (DEBUG) console.log(`${c.dim}[DEBUG] Update check failed: HTTP ${response.status}${c.reset}`);
@@ -1532,6 +1535,7 @@ const resultFormatters: ResultFormatter[] = [
 
   // Nearby players, pirates, and empire NPCs
   namedFormatter('nearby', ['nearby'], (r) => {
+    if (r.location && typeof r.location === 'object') return false;
     const players = (Array.isArray(r.nearby) ? r.nearby : r.players) as Array<Record<string, unknown>> | undefined;
     if (!Array.isArray(players)) return false;
     const pirates = (r.pirates as Array<Record<string, unknown>>) || [];
@@ -2989,7 +2993,7 @@ async function main(): Promise<void> {
 
 export { convertPayloadTypes, normalizeParsedPayload, parseArgs, validateRequiredArgs } from './args.ts';
 export { COMMANDS, V2_TOOL_MAP } from './commands.ts';
-export { compareVersions, normalizeCommandPayload };
+export { compareVersions, displayStructuredResult, normalizeCommandPayload };
 
 if (import.meta.main) {
   main();
