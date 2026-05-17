@@ -328,9 +328,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload).toEqual({});
   });
 
-  test('inspect_cargo - no args', () => {
-    const { command, payload } = parseArgs(['inspect_cargo']);
-    expect(command).toBe('inspect_cargo');
+  test('get_cargo - no args', () => {
+    const { command, payload } = parseArgs(['get_cargo']);
+    expect(command).toBe('get_cargo');
     expect(payload).toEqual({});
   });
 
@@ -528,7 +528,7 @@ describe('validateRequiredArgs', () => {
   test('returns null for no-arg commands', () => {
     expect(validateRequiredArgs('mine', {})).toBeNull();
     expect(validateRequiredArgs('distress_signal', {})).toBeNull();
-    expect(validateRequiredArgs('inspect_cargo', {})).toBeNull();
+    expect(validateRequiredArgs('get_cargo', {})).toBeNull();
   });
 
   test('trade_offer requires target_id but not credits', () => {
@@ -581,6 +581,18 @@ describe('version sync', () => {
     const clientVersion = match?.[1];
 
     expect(clientVersion).toBe(pkgVersion);
+  });
+
+  test('README current client version matches package.json', () => {
+    const pkgPath = path.join(import.meta.dir, '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+
+    const readmePath = path.join(import.meta.dir, '..', 'README.md');
+    const readme = fs.readFileSync(readmePath, 'utf-8');
+    const match = readme.match(/Current client version: `([^`]+)`\./);
+    expect(match).not.toBeNull();
+
+    expect(match?.[1]).toBe(pkg.version);
   });
 });
 
@@ -673,6 +685,26 @@ describe('client.ts source integrity', () => {
     for (const cmd of removedCommands) {
       expect(src).not.toContain(`  ${cmd}:`);
     }
+  });
+
+  test('parseArgs fixtures use registered commands', () => {
+    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const clientSrc = fs.readFileSync(clientPath, 'utf-8');
+    const commandsStart = clientSrc.indexOf('const COMMANDS:');
+    const commandsEnd = clientSrc.indexOf('\nconst COMMAND_GUIDANCE');
+    expect(commandsStart).toBeGreaterThanOrEqual(0);
+    expect(commandsEnd).toBeGreaterThan(commandsStart);
+    const commandsBlock = clientSrc.slice(commandsStart, commandsEnd);
+    const registeredCommands = new Set(
+      [...commandsBlock.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]),
+    );
+
+    const testPath = path.join(import.meta.dir, 'version.test.ts');
+    const testSrc = fs.readFileSync(testPath, 'utf-8');
+    const fixtureCommands = [...testSrc.matchAll(/parseArgs\(\[['"]([a-z][a-z0-9_]*)['"]/g)].map((match) => match[1]);
+    const unknownFixtures = [...new Set(fixtureCommands)].filter((command) => !registeredCommands.has(command));
+
+    expect(unknownFixtures).toEqual([]);
   });
 
   test('trade_offer uses credits not offer_credits/request_credits', () => {

@@ -6,7 +6,7 @@ SpaceMolt also offers an MCP endpoint for AI clients that support direct tool in
 
 ## Version
 
-Current client version: `1.0.0`.
+Current client version: `1.1.0`.
 
 This release is a breaking v2 command coverage update. The old `battle <action>`, `fleet <action>`, and `facility <action>` umbrella commands have been removed. Use the explicit command names listed below instead.
 
