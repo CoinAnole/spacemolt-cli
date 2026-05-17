@@ -36,6 +36,8 @@ const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 let JSON_OUTPUT = process.env.SPACEMOLT_OUTPUT === 'json';
 let DEBUG = process.env.DEBUG === 'true';
+let PLAIN = false;
+let QUIET = false;
 const VERSION = '1.1.0';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
@@ -45,7 +47,7 @@ const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // ANSI colors
-const c = {
+const rawColors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
   dim: '\x1b[2m',
@@ -57,8 +59,44 @@ const c = {
   cyan: '\x1b[36m',
 };
 
+function colorize(text: string, code: string): string {
+  if (PLAIN) return text;
+  return code + text + rawColors.reset;
+}
+
+const c = {
+  get reset() {
+    return colorize('', rawColors.reset);
+  },
+  get bright() {
+    return colorize('', rawColors.bright);
+  },
+  get dim() {
+    return colorize('', rawColors.dim);
+  },
+  get red() {
+    return colorize('', rawColors.red);
+  },
+  get green() {
+    return colorize('', rawColors.green);
+  },
+  get yellow() {
+    return colorize('', rawColors.yellow);
+  },
+  get blue() {
+    return colorize('', rawColors.blue);
+  },
+  get magenta() {
+    return colorize('', rawColors.magenta);
+  },
+  get cyan() {
+    return colorize('', rawColors.cyan);
+  },
+};
+
 function hexColor(text: string, fg?: string, bg?: string): string {
   if (!fg && !bg) return text;
+  if (PLAIN) return text;
 
   const hex = (value: string) => {
     if (!/^#[0-9a-fA-F]{6}$/.test(value)) return null;
@@ -75,7 +113,7 @@ function hexColor(text: string, fg?: string, bg?: string): string {
     if (rgb) prefix += `\x1b[48;2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
   }
 
-  return prefix ? `${prefix}${text}${c.reset}` : text;
+  return prefix ? `${prefix}${text}\x1b[0m` : text;
 }
 
 function formatPlayer(p: Record<string, unknown>): string {
@@ -175,6 +213,9 @@ interface APIResponse {
 
 interface GlobalOptions {
   json: boolean;
+  quiet: boolean;
+  plain: boolean;
+  fields?: string[];
   args: string[];
 }
 
@@ -421,6 +462,38 @@ function trimTrailingSlash(value: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getFieldValue(obj: unknown, path: string): unknown {
+  if (!path || typeof obj !== 'object' || obj === null) return undefined;
+
+  const parts = path.split('.');
+  let current: unknown = obj;
+
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    if (Array.isArray(current)) {
+      const index = Number.parseInt(part, 10);
+      current = Number.isNaN(index) ? undefined : current[index];
+    } else if (typeof current === 'object') {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return undefined;
+    }
+  }
+
+  return current;
+}
+
+function extractFields(data: Record<string, unknown>, paths: string[]): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const path of paths) {
+    const value = getFieldValue(data, path);
+    if (value !== undefined) {
+      result[path] = value;
+    }
+  }
+  return result;
 }
 
 function getStructuredResult(response: APIResponse): Record<string, unknown> | undefined {
@@ -982,6 +1055,7 @@ const notificationHandlers: Record<string, NotificationHandler> = {
 
 function displayNotifications(notifications?: APIResponse['notifications']): void {
   if (!notifications?.length) return;
+  if (QUIET) return;
 
   for (const n of notifications) {
     const data = n.data as NotificationData;
@@ -1670,8 +1744,15 @@ const resultFormatters: ResultFormatter[] = [
   },
 ];
 
-function displayStructuredResult(command: string, result: Record<string, unknown>): void {
+function displayStructuredResult(command: string, result: Record<string, unknown>, fields?: string[]): void {
   if (!result) return;
+
+  // Handle --fields extraction
+  if (fields && fields.length > 0) {
+    const extracted = extractFields(result, fields);
+    console.log(JSON.stringify(extracted));
+    return;
+  }
 
   // Normalize get_status response: the v2 API returns location data in a
   // separate `location` object rather than enriched `system`/`poi` fields
@@ -1696,11 +1777,13 @@ function displayStructuredResult(command: string, result: Record<string, unknown
     result.nearby = loc.nearby_players;
   }
 
-  // Show auto-dock/undock flags before the result
-  if (result.auto_docked)
-    console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
-  if (result.auto_undocked)
-    console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
+  // Show auto-dock/undock flags before the result (skip in quiet mode)
+  if (!QUIET) {
+    if (result.auto_docked)
+      console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
+    if (result.auto_undocked)
+      console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
+  }
 
   for (const formatter of resultFormatters) {
     if (formatter(result, command)) return;
@@ -1725,17 +1808,20 @@ function displayStructuredResult(command: string, result: Record<string, unknown
   console.log(JSON.stringify(result, null, 2));
 }
 
-function displayResult(command: string, response: APIResponse): void {
-  console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
+function displayResult(command: string, response: APIResponse, fields?: string[]): void {
+  // Skip timestamp in quiet mode
+  if (!QUIET) {
+    console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
+  }
   const structured = getStructuredResult(response);
   if (structured) {
-    displayStructuredResult(command, structured);
+    displayStructuredResult(command, structured, fields);
     return;
   }
 
   const result = getObjectResult(response);
   if (result) {
-    displayStructuredResult(command, result);
+    displayStructuredResult(command, result, fields);
     return;
   }
 
@@ -1748,14 +1834,64 @@ function displayResult(command: string, response: APIResponse): void {
 }
 
 function parseGlobalOptions(args: string[]): GlobalOptions {
-  const json = args[0] === '--json' || process.env.SPACEMOLT_OUTPUT === 'json';
-  if (json) {
+  const result: Omit<GlobalOptions, 'args'> = {
+    json: false,
+    quiet: false,
+    plain: false,
+    fields: undefined,
+  };
+  const filteredArgs: string[] = [];
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg || arg === '-' || !arg.startsWith('-')) {
+      if (arg) filteredArgs.push(arg);
+      continue;
+    }
+
+    if (arg === '--json' || arg === '-j') {
+      result.json = true;
+    } else if (arg === '--quiet' || arg === '-q') {
+      result.quiet = true;
+    } else if (arg === '--plain' || arg === '-p') {
+      result.plain = true;
+    } else if (arg === '--fields' || arg === '-f') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        result.fields = nextArg
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        i++;
+      }
+    } else if (arg.startsWith('--fields=')) {
+      result.fields = arg
+        .slice('--fields='.length)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (arg.startsWith('-f=')) {
+      result.fields = arg
+        .slice(3)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else {
+      filteredArgs.push(arg);
+    }
+  }
+
+  // Set global mode flags
+  if (result.json) {
     JSON_OUTPUT = true;
     DEBUG = false;
   }
+  QUIET = result.quiet;
+  PLAIN = result.plain;
+
   return {
-    json,
-    args: json && args[0] === '--json' ? args.slice(1) : args,
+    ...result,
+    args: filteredArgs,
   };
 }
 
@@ -2062,15 +2198,24 @@ ${c.bright}Quick Start:${c.reset}
   spacemolt sell ore_iron 50            # Sell 50 iron ore
 
 ${c.bright}Usage:${c.reset}
-  spacemolt <command> [args...]
-  spacemolt --json <command> [args...]
+   spacemolt <command> [args...]
+   spacemolt --json <command> [args...]
+   spacemolt --quiet <command> [args...]
+   spacemolt --plain <command> [args...]
+   spacemolt --fields key1,key2.key3 <command> [args...]
 
-  Arguments can be positional or key=value:
-    spacemolt travel sol_asteroid_belt
-    spacemolt travel target_poi=sol_asteroid_belt
+   Arguments can be positional or key=value:
+     spacemolt travel sol_asteroid_belt
+     spacemolt travel target_poi=sol_asteroid_belt
 
-  Local command discovery:
-    spacemolt help nav
+   Output modes:
+     --json          Raw JSON response (implies quiet)
+     --quiet, -q     Suppress notifications and info messages
+     --plain, -p     No ANSI colors or formatting
+     --fields, -f    Extract specific fields from response
+
+   Local command discovery:
+     spacemolt help nav
     spacemolt help market
     spacemolt commands --search fuel
     spacemolt explain travel
@@ -2258,21 +2403,23 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 ${c.bright}Empires:${c.reset} solarian, voidborn, crimson, nebula, outerrim
 
 ${c.bright}Tips for LLM Agents:${c.reset}
-  - Always run 'get_status' first to understand your situation
-  - Use 'get_system' to see where you can travel
-  - Check 'get_cargo' before selling
-  - Use '--help <command>' for local CLI usage and examples
-  - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
-  - Use 'help command=<command>' for server-provided command details
-  - Actions return results directly — no polling needed
-  - Auto-dock/undock handles dock state automatically
-  - Your session auto-renews; credentials saved in session file
-  - Speak English in all chat and forum messages
+   - Always run 'get_status' first to understand your situation
+   - Use 'get_system' to see where you can travel
+   - Check 'get_cargo' before selling
+   - Use '--help <command>' for local CLI usage and examples
+   - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
+   - Use 'help command=<command>' for server-provided command details
+   - Actions return results directly — no polling needed
+   - Auto-dock/undock handles dock state automatically
+   - Your session auto-renews; credentials saved in session file
+   - Speak English in all chat and forum messages
+   - Use '--fields key1,key2' to extract specific values from structured responses
 
 ${c.bright}Environment Variables:${c.reset}
-  SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
-  SPACEMOLT_SESSION   Session file (default: ./.spacemolt-session.json)
-  DEBUG=true          Show verbose request/response logging
+   SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
+   SPACEMOLT_SESSION   Session file (default: ./.spacemolt-session.json)
+   SPACEMOLT_OUTPUT    Set to 'json' for JSON output
+   DEBUG=true          Show verbose request/response logging
 
 ${c.bright}API Routing:${c.reset}
   - The client uses v2 exclusively
@@ -2293,15 +2440,21 @@ function displayError(
   command: string,
   error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
 ): void {
-  console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
+  // Skip timestamp in quiet mode
+  if (!QUIET) {
+    console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
+  }
   console.error(`${c.red}Error [${error.code}]:${c.reset} ${error.message}`);
   const retryAfter = error.retry_after ?? error.wait_seconds;
   if (retryAfter !== undefined) {
     console.error(`${c.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${c.reset}`);
   }
-  const help = ERROR_HELP[error.code];
-  if (help) console.error(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
-  if (COMMANDS[command]) printNextSteps(command);
+  // Skip help text and next steps in quiet mode
+  if (!QUIET) {
+    const help = ERROR_HELP[error.code];
+    if (help) console.error(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
+    if (COMMANDS[command]) printNextSteps(command);
+  }
 }
 
 // =============================================================================
@@ -2312,8 +2465,8 @@ async function main(): Promise<void> {
   const options = parseGlobalOptions(process.argv.slice(2));
   const args = options.args;
 
-  // Check for updates in the background (non-blocking)
-  if (!options.json) checkForUpdates();
+  // Check for updates in the background (non-blocking) - skip in quiet mode
+  if (!options.json && !options.quiet) checkForUpdates();
 
   if (args.length === 0) {
     showHelp();
@@ -2378,7 +2531,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  if (warnings.length > 0) {
+  if (warnings.length > 0 && !options.quiet) {
     for (const w of warnings) console.error(`${c.yellow}Warning:${c.reset} ${w}`);
   }
 
@@ -2439,7 +2592,7 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    if (!options.json && response.notifications?.length) {
+    if (!options.json && response.notifications?.length && !options.quiet) {
       console.log(`${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`);
       displayNotifications(response.notifications);
       console.log('');
@@ -2497,7 +2650,7 @@ async function main(): Promise<void> {
       process.exit(response.error ? 1 : 0);
     }
 
-    displayResult(command, response);
+    displayResult(command, response, options.fields);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (options.json) {
