@@ -178,6 +178,81 @@ interface GlobalOptions {
   args: string[];
 }
 
+interface CommandGroup {
+  key: string;
+  label: string;
+  aliases: string[];
+  categories: string[];
+}
+
+interface CommandSearchMatch {
+  command: string;
+  score: number;
+}
+
+const COMMAND_GROUPS: CommandGroup[] = [
+  { key: 'auth', label: 'Authentication', aliases: ['authentication', 'login'], categories: ['Authentication'] },
+  { key: 'nav', label: 'Navigation', aliases: ['navigation', 'travel', 'map'], categories: ['Navigation'] },
+  {
+    key: 'market',
+    label: 'Market / Exchange',
+    aliases: ['exchange', 'trade', 'trading'],
+    categories: ['Trading', 'Exchange'],
+  },
+  { key: 'storage', label: 'Storage', aliases: ['cargo', 'station'], categories: ['Cargo', 'Station storage'] },
+  { key: 'combat', label: 'Combat / Battle', aliases: ['battle'], categories: ['Combat', 'Battle'] },
+  {
+    key: 'ship',
+    label: 'Ships',
+    aliases: ['ships', 'shipyard'],
+    categories: ['Ship management', 'Shipyard', 'Ship Exchange'],
+  },
+  {
+    key: 'faction',
+    label: 'Faction',
+    aliases: ['factions'],
+    categories: ['Factions', 'Faction rooms', 'Faction missions & intel'],
+  },
+  { key: 'fleet', label: 'Fleet', aliases: ['fleets'], categories: ['Fleet'] },
+  { key: 'facility', label: 'Facilities', aliases: ['facilities'], categories: ['Facilities'] },
+  {
+    key: 'social',
+    label: 'Social',
+    aliases: ['chat', 'forum'],
+    categories: [
+      'Chat - rest captures remaining args as content',
+      "Captain's log",
+      'Forum',
+      'Notes',
+      'Player settings',
+    ],
+  },
+  {
+    key: 'info',
+    label: 'Information',
+    aliases: ['query', 'queries', 'reference'],
+    categories: ['Query commands', 'Reference & Help', 'V2 state commands'],
+  },
+  {
+    key: 'misc',
+    label: 'Other',
+    aliases: ['other'],
+    categories: [
+      'Mining',
+      'Wrecks',
+      'Insurance',
+      'Crafting',
+      'Missions',
+      'Drones',
+      'Salvage & Tow',
+      'Citizenship',
+      'Agent logging',
+      'Petition (empire messages)',
+      'P2P Trading',
+    ],
+  },
+];
+
 // =============================================================================
 // Error Help Messages
 // =============================================================================
@@ -1731,6 +1806,160 @@ function suggestCommands(command: string, limit = 3): string[] {
     .map(({ candidate }) => candidate);
 }
 
+function normalizeHelpTopic(topic: string): string {
+  return topic.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function commandMatchesCategories(command: string, categories: Set<string>): boolean {
+  const category = COMMANDS[command]?.category;
+  return Boolean(category && categories.has(category));
+}
+
+function findCommandGroup(topic: string): CommandGroup | undefined {
+  const normalized = normalizeHelpTopic(topic);
+  return COMMAND_GROUPS.find(
+    (group) =>
+      normalizeHelpTopic(group.key) === normalized ||
+      normalizeHelpTopic(group.label) === normalized ||
+      group.aliases.some((alias) => normalizeHelpTopic(alias) === normalized),
+  );
+}
+
+function formatCommandSummary(command: string): string {
+  const usage = getUsageHint(command);
+  const description = COMMANDS[command]?.description;
+  const usageText = usage === '<args...>' ? '' : ` ${usage}`;
+  return description ? `${command}${usageText} - ${description}` : `${command}${usageText}`;
+}
+
+function showCommandGroups(): void {
+  console.log(`\n${c.bright}Command Groups${c.reset}`);
+  for (const group of COMMAND_GROUPS) {
+    const categories = new Set(group.categories);
+    const count = Object.keys(COMMANDS).filter((command) => commandMatchesCategories(command, categories)).length;
+    console.log(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
+  }
+  console.log(`\nRun "spacemolt help <group>" to list commands in a group.`);
+  console.log(`Run "spacemolt commands --search <query>" to search local command metadata.`);
+}
+
+function showCommandGroup(topic: string): boolean {
+  const group = findCommandGroup(topic);
+  if (!group) return false;
+
+  const categories = new Set(group.categories);
+  const commands = Object.keys(COMMANDS)
+    .filter((command) => commandMatchesCategories(command, categories))
+    .sort((a, b) => {
+      const categoryCompare = (COMMANDS[a]?.category || '').localeCompare(COMMANDS[b]?.category || '');
+      return categoryCompare || a.localeCompare(b);
+    });
+
+  console.log(`\n${c.bright}${group.label} Commands${c.reset}`);
+  let lastCategory = '';
+  for (const command of commands) {
+    const category = COMMANDS[command]?.category || 'Other';
+    if (category !== lastCategory) {
+      lastCategory = category;
+      console.log(`\n${c.cyan}${category}:${c.reset}`);
+    }
+    console.log(`  ${formatCommandSummary(command)}`);
+  }
+  console.log(`\nRun "spacemolt explain <command>" for argument details and related commands.`);
+  return true;
+}
+
+function commandSearchText(command: string): string {
+  const config = COMMANDS[command];
+  if (!config) return command.toLowerCase();
+  const argNames = getArgNames(config);
+  const parts = [
+    command,
+    config.category,
+    config.usage,
+    config.description,
+    config.example,
+    ...argNames,
+    ...(config.discoverWith || []),
+    ...(config.seeAlso || []),
+  ];
+  return parts.filter(Boolean).join(' ').toLowerCase();
+}
+
+function searchLocalCommands(query: string, limit = 30): string[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return Object.keys(COMMANDS).sort();
+
+  const terms = normalized.split(/\s+/).filter(Boolean);
+  const matches: CommandSearchMatch[] = [];
+  for (const command of Object.keys(COMMANDS)) {
+    const haystack = commandSearchText(command);
+    let score = 0;
+    for (const term of terms) {
+      if (command === term) score += 100;
+      else if (command.startsWith(term)) score += 60;
+      else if (command.includes(term)) score += 35;
+      else if (haystack.includes(term)) score += 20;
+    }
+    if (score > 0) matches.push({ command, score });
+  }
+
+  return matches
+    .sort((a, b) => b.score - a.score || a.command.localeCompare(b.command))
+    .slice(0, limit)
+    .map(({ command }) => command);
+}
+
+function parseCommandSearchQuery(args: string[]): string {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] || '';
+    if (arg === '--search' || arg === '-s')
+      return args
+        .slice(i + 1)
+        .join(' ')
+        .trim();
+    if (arg.startsWith('--search=')) return arg.slice('--search='.length).trim();
+    if (arg.startsWith('search=')) return arg.slice('search='.length).trim();
+  }
+  return args.join(' ').trim();
+}
+
+function showCommandSearch(query: string): void {
+  const results = searchLocalCommands(query);
+  const title = query ? `Commands matching "${query}"` : 'All Commands';
+  console.log(`\n${c.bright}${title}${c.reset}`);
+  if (!results.length) {
+    console.log('  (No local command matches)');
+    const suggestions = suggestCommands(query, 5);
+    if (suggestions.length > 0) console.log(`\nDid you mean: ${suggestions.join(', ')}`);
+    return;
+  }
+  for (const command of results) console.log(`  ${formatCommandSummary(command)}`);
+  if (results.length === 30) console.log(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
+}
+
+function showCommandExplanation(command: string): boolean {
+  const config = COMMANDS[command];
+  if (!config) return false;
+
+  showCommandHelp(command);
+  console.log(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
+  const routePath =
+    config.route.tool === config.route.action || SINGLE_ENDPOINT_TOOLS.has(config.route.tool)
+      ? `/api/v2/${config.route.tool}`
+      : `/api/v2/${config.route.tool}/${config.route.action}`;
+  console.log(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
+  if (config.aliases && Object.keys(config.aliases).length > 0) {
+    console.log(`${c.bright}CLI aliases:${c.reset}`);
+    for (const [from, to] of Object.entries(config.aliases)) console.log(`  ${from} -> ${to}`);
+  }
+  if (config.route.defaults && Object.keys(config.route.defaults).length > 0) {
+    console.log(`${c.bright}Default payload fields:${c.reset}`);
+    for (const [key, value] of Object.entries(config.route.defaults)) console.log(`  ${key}=${value}`);
+  }
+  return true;
+}
+
 function showCommandHelp(command: string): boolean {
   const config = COMMANDS[command];
   if (!config) return false;
@@ -1839,6 +2068,12 @@ ${c.bright}Usage:${c.reset}
   Arguments can be positional or key=value:
     spacemolt travel sol_asteroid_belt
     spacemolt travel target_poi=sol_asteroid_belt
+
+  Local command discovery:
+    spacemolt help nav
+    spacemolt help market
+    spacemolt commands --search fuel
+    spacemolt explain travel
 
 ${c.bright}Information Commands (unlimited):${c.reset}
   get_status          Your player, ship, location
@@ -2027,6 +2262,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
   - Use 'get_system' to see where you can travel
   - Check 'get_cargo' before selling
   - Use '--help <command>' for local CLI usage and examples
+  - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
   - Use 'help command=<command>' for server-provided command details
   - Actions return results directly — no polling needed
   - Auto-dock/undock handles dock state automatically
@@ -2084,20 +2320,48 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
+  if (args[0] === 'commands') {
+    showCommandSearch(parseCommandSearchQuery(args.slice(1)));
+    process.exit(0);
+  }
+
+  if (args[0] === 'explain') {
+    const explainCommand = args[1];
+    if (!explainCommand) {
+      console.error(`${c.red}Error:${c.reset} Missing command name.`);
+      console.error(`Usage: spacemolt explain <command>`);
+      process.exit(1);
+    }
+    if (!showCommandExplanation(explainCommand)) {
+      if (options.json) {
+        printJsonError('unknown_command', `Unknown command: ${explainCommand}`);
+        process.exit(1);
+      }
+      displayUnknownCommand(explainCommand);
+      process.exit(1);
+    }
+    process.exit(0);
+  }
+
+  if (args[0] === 'help' && args[1] && showCommandGroup(args[1])) {
+    process.exit(0);
+  }
+
   if (args[0] === '--help' || args[0] === '-h') {
     const helpCommand = args[1];
     if (helpCommand) {
-      if (!showCommandHelp(helpCommand)) {
-        if (options.json) {
-          printJsonError('unknown_command', `Unknown command: ${helpCommand}`);
-          process.exit(1);
-        }
-        displayUnknownCommand(helpCommand);
+      if (showCommandHelp(helpCommand) || showCommandGroup(helpCommand)) {
+        process.exit(0);
+      }
+      if (options.json) {
+        printJsonError('unknown_command', `Unknown command: ${helpCommand}`);
         process.exit(1);
       }
-      process.exit(0);
+      displayUnknownCommand(helpCommand);
+      process.exit(1);
     }
     showHelp();
+    showCommandGroups();
     process.exit(0);
   }
 
