@@ -4909,6 +4909,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       },
       types: {
         type: 'array',
+        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'tip', 'system'],
         description: 'Filter by notification types. Omit for all types.',
       },
     },

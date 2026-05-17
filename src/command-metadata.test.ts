@@ -67,4 +67,15 @@ describe('command metadata', () => {
       expect(missing).toEqual([]);
     }
   });
+
+  test('completion values include schema-derived boolean choices and argument descriptions', () => {
+    const bash = generateCompletion('bash');
+    expect(bash).toContain('true false');
+
+    for (const shell of ['zsh', 'fish']) {
+      const completion = generateCompletion(shell);
+      expect(completion).toContain('True to activate cloak, false to deactivate');
+      expect(completion).toContain('Filter by notification types. Omit for all types.');
+    }
+  });
 });

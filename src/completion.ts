@@ -3,60 +3,6 @@ import { COMMANDS } from './commands.ts';
 
 const COMMANDS_LIST = Object.keys(COMMANDS).sort();
 
-const ENUM_VALUES: Record<string, Record<string, string[]>> = {
-  register: {
-    empire: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-  chat: {
-    channel: ['local', 'system', 'faction', 'private'],
-  },
-  get_chat_history: {
-    channel: ['local', 'system', 'faction', 'private'],
-  },
-  cloak: {
-    enable: ['true', 'false'],
-  },
-  catalog: {
-    type: ['ships', 'items', 'skills', 'recipes'],
-  },
-  battle_stance: {
-    stance: ['fire', 'evade', 'brace', 'flee'],
-  },
-  distress_signal: {
-    type: ['fuel', 'repair', 'combat'],
-  },
-  agentlogs: {
-    severity: ['info', 'warn', 'error'],
-  },
-  facility_transfer: {
-    direction: ['in', 'out'],
-  },
-  refuel: {
-    target: ['player', 'fleet'],
-  },
-  get_notifications: {
-    types: ['chat', 'combat', 'trade', 'faction', 'mining', 'system'],
-  },
-  citizenship_apply: {
-    empire: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-  citizenship_renounce: {
-    empire: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-  citizenship_withdraw: {
-    empire: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-  citizenship_list: {
-    empire_id: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-  petition: {
-    empire_id: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-  get_empire_info: {
-    empire_id: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
-  },
-};
-
 const HINT_VALUES: Record<string, Record<string, string>> = {
   set_colors: {
     primary_color: '<#hex>',
@@ -70,16 +16,34 @@ function getCommandArgNames(command: string): string[] {
   return getArgNames(config);
 }
 
-function getEnumValues(command: string, arg: string): string[] | undefined {
+function getFieldSchema(command: string, arg: string) {
   const config = COMMANDS[command];
-  const canonicalArg = config?.aliases?.[arg] || arg;
-  const generatedValues = config?.schema?.[canonicalArg]?.enum;
-  if (generatedValues?.length) return generatedValues;
-  return ENUM_VALUES[command]?.[arg];
+  if (!config?.schema) return undefined;
+  const canonicalArg = config.aliases?.[arg] || arg;
+  return config.schema[canonicalArg] || config.schema[arg];
+}
+
+function getEnumValues(command: string, arg: string): string[] | undefined {
+  const schema = getFieldSchema(command, arg);
+  if (schema?.enum?.length) return schema.enum;
+  if (schema?.type === 'boolean') return ['true', 'false'];
+  return undefined;
 }
 
 function getHintValue(command: string, arg: string): string | undefined {
   return HINT_VALUES[command]?.[arg];
+}
+
+function getArgDescription(command: string, arg: string): string {
+  return getFieldSchema(command, arg)?.description || getHintValue(command, arg) || arg;
+}
+
+function escapeDoubleQuotedShell(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`');
+}
+
+function escapeZshMessage(value: string): string {
+  return escapeDoubleQuotedShell(value).replace(/:/g, '\\:');
 }
 
 function generateBashCompletion(): string {
@@ -197,16 +161,17 @@ function generateZshCompletion(): string {
         if (!arg) continue;
         const enums = getEnumValues(cmd, arg);
         const hint = getHintValue(cmd, arg);
+        const description = escapeZshMessage(getArgDescription(cmd, arg));
         const isLast = i === args.length - 1;
         const terminator = isLast ? '' : ' \\';
 
         if (enums && enums.length > 0) {
           const valuesStr = enums.map((v) => `${v}[${v}]`).join(' ');
-          lines.push(`            "${i + 2}:${arg}:${valuesStr}"${terminator}`);
+          lines.push(`            "${i + 2}:${description}:(${valuesStr})"${terminator}`);
         } else if (hint) {
-          lines.push(`            "${i + 2}:${arg}:${hint}"${terminator}`);
+          lines.push(`            "${i + 2}:${description}:${hint}"${terminator}`);
         } else {
-          lines.push(`            "${i + 2}:${arg}:${arg}"${terminator}`);
+          lines.push(`            "${i + 2}:${description}:${arg}"${terminator}`);
         }
       }
     } else {
@@ -261,7 +226,7 @@ function generateFishCompletion(): string {
   lines.push('');
   lines.push('# Commands');
   for (const cmd of COMMANDS_LIST) {
-    const desc = COMMANDS[cmd]?.description || cmd;
+    const desc = escapeDoubleQuotedShell(COMMANDS[cmd]?.description || cmd);
     lines.push(`complete -c spacemolt -n "__fish_use_subcommand" -a ${cmd} -d "${desc}"`);
   }
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a commands -d "Search local commands"');
@@ -277,20 +242,18 @@ function generateFishCompletion(): string {
     lines.push(`# ${cmd}`);
     for (const arg of args) {
       const enums = getEnumValues(cmd, arg);
-      const hint = getHintValue(cmd, arg);
-      let desc = arg;
-      if (enums && enums.length > 0) {
-        desc = `(${enums.join('|')})`;
-      } else if (hint) {
-        desc = hint;
-      }
+      const description = getArgDescription(cmd, arg);
+      const desc = enums && enums.length > 0 ? `${description} (${enums.join('|')})` : description;
 
       if (enums && enums.length > 0) {
         for (const val of enums) {
-          lines.push(`complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${val} -d "${arg}: ${val}"`);
+          const valueDesc = escapeDoubleQuotedShell(`${description}: ${val}`);
+          lines.push(`complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${val} -d "${valueDesc}"`);
         }
       } else {
-        lines.push(`complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${arg} -d "${desc}"`);
+        lines.push(
+          `complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${arg} -d "${escapeDoubleQuotedShell(desc)}"`,
+        );
       }
     }
     lines.push('');

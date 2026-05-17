@@ -20,6 +20,7 @@ interface Operation {
 interface JsonSchema {
   properties?: Record<string, JsonSchema>;
   required?: string[];
+  items?: JsonSchema;
   type?: string;
   enum?: string[];
   description?: string;
@@ -63,6 +64,7 @@ function fieldSchema(schema: JsonSchema): GeneratedField {
   const field: GeneratedField = {};
   if (schema.type) field.type = schema.type;
   if (schema.enum) field.enum = schema.enum;
+  else if (schema.items?.enum) field.enum = schema.items.enum;
   if (schema.description) field.description = schema.description;
   if (schema['x-positional-index'] !== undefined) field.positionalIndex = schema['x-positional-index'];
   return field;

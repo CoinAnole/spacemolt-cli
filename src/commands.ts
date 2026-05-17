@@ -1075,6 +1075,9 @@ const COMMAND_OVERRIDES: Record<string, CommandConfig> = {
       tool: 'spacemolt',
       action: 'distress_signal',
     },
+    aliases: {
+      type: 'distress_type',
+    },
   },
   view_completed_mission: {
     args: ['template_id'],
