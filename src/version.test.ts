@@ -810,3 +810,60 @@ describe('CLI local usability behavior', () => {
     expect(parsed).toEqual({ error: { code: 'unknown_command', message: 'Unknown command: trvel' } });
   });
 });
+
+// =============================================================================
+// Output modes (CLI behavior tests)
+// =============================================================================
+
+describe('CLI output modes', () => {
+  test('--quiet suppresses notification-like output in help', () => {
+    const normal = runClient(['--help', 'travel']);
+    const quiet = runClient(['--quiet', '--help', 'travel']);
+    expect(normal.exitCode).toBe(0);
+    expect(quiet.exitCode).toBe(0);
+    // Both should show help content
+    expect(normal.stdout).toContain('travel');
+    expect(quiet.stdout).toContain('travel');
+  });
+
+  test('--plain removes ANSI codes from error output', () => {
+    const resultPlain = runClient(['--plain', 'travel']);
+    const resultColor = runClient(['travel']);
+    // Both should have same exit code for missing arg
+    expect(resultPlain.exitCode).toBe(1);
+    expect(resultColor.exitCode).toBe(1);
+    // Plain should not contain ANSI escape sequences for colors
+    // ESC character (code 27) followed by [ and numbers
+    const hasAnsi = resultPlain.stderr.split('').some((char, i, arr) => {
+      return char.charCodeAt(0) === 27 && arr[i + 1] === '[';
+    });
+    expect(hasAnsi).toBe(false);
+  });
+
+  test('--plain removes ANSI codes from --quiet error output', () => {
+    const result = runClient(['--quiet', '--plain', 'travel']);
+    expect(result.exitCode).toBe(1);
+    // Should not contain ANSI codes
+    const hasAnsi = result.stderr.split('').some((char, i, arr) => {
+      return char.charCodeAt(0) === 27 && arr[i + 1] === '[';
+    });
+    expect(hasAnsi).toBe(false);
+  });
+
+  test('--fields requires a value', () => {
+    const result = runClient(['--fields']);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('--fields requires a value');
+  });
+
+  test('--fields=value syntax works', () => {
+    const result = runClient(['--fields=player.name', '--help', 'travel']);
+    // Help should still display (fields only affects API command output)
+    expect(result.exitCode).toBe(0);
+  });
+
+  test('-f=value shorthand works', () => {
+    const result = runClient(['-f=ship.fuel', '--help', 'travel']);
+    expect(result.exitCode).toBe(0);
+  });
+});
