@@ -1750,7 +1750,13 @@ function displayStructuredResult(command: string, result: Record<string, unknown
   // Handle --fields extraction
   if (fields && fields.length > 0) {
     const extracted = extractFields(result, fields);
-    console.log(JSON.stringify(extracted));
+    if (PLAIN) {
+      for (const [key, value] of Object.entries(extracted)) {
+        console.log(`${key}=${JSON.stringify(value)}`);
+      }
+    } else {
+      console.log(JSON.stringify(extracted));
+    }
     return;
   }
 
@@ -1863,6 +1869,9 @@ function parseGlobalOptions(args: string[]): GlobalOptions {
           .map((s) => s.trim())
           .filter(Boolean);
         i++;
+      } else {
+        console.error(`${c.red}Error:${c.reset} --fields requires a value: --fields key1,key2.key3`);
+        process.exit(1);
       }
     } else if (arg.startsWith('--fields=')) {
       result.fields = arg
