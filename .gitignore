@@ -42,3 +42,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # official client source
 official-client
+
+# Kilo
+.kilo
