@@ -124,6 +124,16 @@ describe('convertPayloadTypes', () => {
     expect(result.side_id).toBe(2);
   });
 
+  test('notification types are split after type conversion', () => {
+    const typed = convertPayloadTypes({ types: 'chat, combat', limit: '10', clear: 'false' });
+    const result = normalizeCommandPayload('get_notifications', typed);
+    expect(result).toEqual({
+      types: ['chat', 'combat'],
+      limit: 10,
+      clear: false,
+    });
+  });
+
   test('leaves non-numeric string in numeric field as string', () => {
     const result = convertPayloadTypes({ quantity: 'abc' });
     expect(result.quantity).toBe('abc');
@@ -204,6 +214,23 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeParsedPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
     expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeParsedPayload('scrap_ship', { ship_id: 'ship_1' })).toEqual({ id: 'ship_1' });
+    expect(normalizeParsedPayload('get_empire_info', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
+  });
+
+  test('citizenship command aliases normalize to API fields', () => {
+    expect(normalizeParsedPayload('citizenship_apply', { empire: 'solarian' })).toEqual({
+      target: 'solarian',
+    });
+    expect(normalizeParsedPayload('citizenship_renounce', { empire: 'voidborn' })).toEqual({
+      target: 'voidborn',
+    });
+    expect(normalizeParsedPayload('citizenship_withdraw', { empire: 'crimson' })).toEqual({
+      target: 'crimson',
+    });
+    expect(normalizeParsedPayload('citizenship_list', { empire_id: 'nebula' })).toEqual({
+      empire_id: 'nebula',
+    });
   });
 });
 
@@ -440,6 +467,39 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseArgs(['facility_toggle', 'fac_1']).payload.facility_id).toBe('fac_1');
   });
 
+  test('new coverage commands parse positional payloads', () => {
+    expect(parseArgs(['get_empire_info', 'solarian']).payload.empire_id).toBe('solarian');
+    expect(parseArgs(['get_tax_estimate']).payload).toEqual({});
+    expect(parseArgs(['get_notifications', 'clear=false', 'limit=10', 'types=chat,combat']).payload).toEqual({
+      clear: 'false',
+      limit: '10',
+      types: 'chat,combat',
+    });
+    expect(parseArgs(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
+  });
+
+  test('citizenship commands parse positional payloads', () => {
+    expect(parseArgs(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
+    expect(parseArgs(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
+    expect(parseArgs(['citizenship_renounce', 'voidborn']).payload.empire).toBe('voidborn');
+    expect(parseArgs(['citizenship_withdraw', 'crimson']).payload.empire).toBe('crimson');
+  });
+
+  test('facility sale commands parse positional payloads', () => {
+    expect(parseArgs(['facility_list_for_sale', 'facility_1', '5000']).payload).toEqual({
+      facility_id: 'facility_1',
+      price: '5000',
+    });
+    expect(parseArgs(['facility_browse_for_sale', 'ore_refinery', '10000', '2', '25']).payload).toEqual({
+      facility_type: 'ore_refinery',
+      max_price: '10000',
+      page: '2',
+      per_page: '25',
+    });
+    expect(parseArgs(['facility_buy_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
+    expect(parseArgs(['facility_cancel_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
+  });
+
   test('new note and captains log delete commands parse positional payloads', () => {
     expect(parseArgs(['delete_note', 'note_1']).payload.note_id).toBe('note_1');
     expect(parseArgs(['captains_log_delete', '3']).payload.index).toBe('3');
@@ -485,9 +545,7 @@ describe('validateRequiredArgs', () => {
   test('supply_commission requires all three args', () => {
     expect(validateRequiredArgs('supply_commission', {})).toBe('commission_id');
     expect(validateRequiredArgs('supply_commission', { commission_id: 'c1' })).toBe('item_id');
-    expect(validateRequiredArgs('supply_commission', { commission_id: 'c1', item_id: 'iron' })).toBe(
-      'quantity',
-    );
+    expect(validateRequiredArgs('supply_commission', { commission_id: 'c1', item_id: 'iron' })).toBe('quantity');
     expect(
       validateRequiredArgs('supply_commission', { commission_id: 'c1', item_id: 'iron', quantity: '10' }),
     ).toBeNull();
@@ -501,12 +559,8 @@ describe('validateRequiredArgs', () => {
 
   test('faction_post_mission requires title, type, and description', () => {
     expect(validateRequiredArgs('faction_post_mission', {})).toBe('title');
-    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense' })).toBe(
-      'description',
-    );
-    expect(
-      validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' }),
-    ).toBeNull();
+    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense' })).toBe('description');
+    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' })).toBeNull();
   });
 });
 

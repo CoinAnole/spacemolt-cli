@@ -18,6 +18,14 @@ const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
 
 const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
+const SPEC_ROUTES_COVERED_BY_ALIASES = new Set([
+  // The CLI exposes notification polling through POST /api/v2/spacemolt/get_notifications.
+  'GET /api/v2/notifications',
+]);
+
+function isInfrastructureSpecRoute(route: string): boolean {
+  return route.endsWith('/help') || SPEC_ROUTES_COVERED_BY_ALIASES.has(route);
+}
 
 /**
  * Extracts the command names from the COMMANDS block in client.ts.
@@ -135,6 +143,15 @@ describe('api sync', () => {
       expect(
         staleMappings,
         `Stale V2 mappings in client.ts (not in v2 OpenAPI):\n  ${staleMappings.join('\n  ')}\n\nFix the tool/action pair or move the route to UNDOCUMENTED_IN_SPEC if the spec is behind.`,
+      ).toEqual([]);
+
+      const mappedRoutes = new Set(Object.values(v2ToolMap).map((mapping) => `${mapping.method} ${mapping.route}`));
+      const unmappedSpecRoutes = [...v2Routes]
+        .filter((route) => !isInfrastructureSpecRoute(route))
+        .filter((route) => !mappedRoutes.has(route));
+      expect(
+        unmappedSpecRoutes,
+        `V2 OpenAPI routes missing from client.ts V2_TOOL_MAP:\n  ${unmappedSpecRoutes.join('\n  ')}\n\nAdd CLI commands for these routes, or add a narrow alias/infra exemption if intentionally covered elsewhere.`,
       ).toEqual([]);
 
       const unmappedCommands = [...clientCommands].filter((cmd) => !(cmd in v2ToolMap));

@@ -33,7 +33,7 @@ const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 let JSON_OUTPUT = process.env.SPACEMOLT_OUTPUT === 'json';
 let DEBUG = process.env.DEBUG === 'true';
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
 // known travel times with plenty of headroom.
@@ -300,6 +300,7 @@ const COMMANDS: Record<string, CommandConfig> = {
     usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
   },
   refit_ship: { usage: '(reset ship to class specs, strips modules)' },
+  scrap_ship: { args: ['ship_id'], required: ['ship_id'], usage: '<ship_id>  (permanently destroy a stored ship)' },
   refuel: {
     args: ['id', 'quantity', 'target'],
     usage:
@@ -571,6 +572,17 @@ const COMMANDS: Record<string, CommandConfig> = {
   faction_facility_build: { args: ['facility_type'], required: ['facility_type'], usage: '<facility_type>' },
   faction_facility_upgrade: { args: ['facility_type', 'facility_id'], required: ['facility_type'] },
   faction_facility_toggle: { args: ['facility_id'], required: ['facility_id'] },
+  facility_list_for_sale: {
+    args: ['facility_id', 'price'],
+    required: ['facility_id', 'price'],
+    usage: '<facility_id> <price>  (list a facility for sale)',
+  },
+  facility_browse_for_sale: {
+    args: ['facility_type', 'max_price', 'page', 'per_page'],
+    usage: '[facility_type] [max_price] [page] [per_page]  (browse listed facilities)',
+  },
+  facility_buy_listing: { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
+  facility_cancel_listing: { args: ['listing_id'], required: ['listing_id'], usage: '<listing_id>' },
 
   // Battle
   battle_engage: { args: ['side_id'] },
@@ -634,7 +646,12 @@ const COMMANDS: Record<string, CommandConfig> = {
   get_version: { args: ['count', 'page'] },
   get_commands: {},
   get_location: {},
-  get_notifications: {},
+  get_notifications: {
+    args: ['clear', 'limit', 'types'],
+    usage: '[clear=true/false] [limit=50] [types=chat,combat]',
+  },
+  get_empire_info: { args: ['empire_id'], usage: '[empire_id]  (omit for all empires)' },
+  get_tax_estimate: {},
   survey_system: {},
   get_player: {},
   get_system_agents: {},
@@ -664,6 +681,12 @@ const COMMANDS: Record<string, CommandConfig> = {
   fleet_leave: {},
   fleet_kick: { args: ['player_id'], required: ['player_id'], usage: '<player_id_or_name>' },
   fleet_disband: {},
+
+  // Citizenship
+  citizenship_list: { args: ['empire_id'], usage: '[empire_id]' },
+  citizenship_apply: { args: ['empire'], required: ['empire'], usage: '<empire>' },
+  citizenship_renounce: { args: ['empire'], required: ['empire'], usage: '<empire>' },
+  citizenship_withdraw: { args: ['empire'], required: ['empire'], usage: '<empire>' },
 
   // Reference & Help
   catalog: {
@@ -842,6 +865,27 @@ const COMMAND_GUIDANCE: Partial<Record<string, Partial<CommandConfig>>> = {
     discoverWith: ['facility_types', 'facility_list'],
     seeAlso: ['facility_types', 'facility_list'],
   },
+  facility_buy_listing: {
+    description: 'Buy a player-listed facility.',
+    example: 'spacemolt facility_buy_listing <listing_id>',
+    discoverWith: ['facility_browse_for_sale'],
+    seeAlso: ['facility_browse_for_sale', 'facility_cancel_listing'],
+  },
+  get_notifications: {
+    description: 'Poll queued game events such as chat, combat, trade, and faction updates.',
+    example: 'spacemolt get_notifications limit=10 types=chat,combat',
+    seeAlso: ['get_status', 'get_action_log'],
+  },
+  get_empire_info: {
+    description: 'View live policy information for one empire or all empires.',
+    example: 'spacemolt get_empire_info solarian',
+    seeAlso: ['get_tax_estimate', 'petition'],
+  },
+  citizenship_apply: {
+    description: 'Apply for citizenship with an empire.',
+    example: 'spacemolt citizenship_apply solarian',
+    seeAlso: ['citizenship_list', 'get_empire_info'],
+  },
   agentlogs: {
     description: 'Submit agent-readable logs to the server.',
     example: 'spacemolt agentlogs navigation "planned route to sol"',
@@ -908,6 +952,8 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   install_mod: { tool: 'spacemolt', action: 'install_mod' },
   uninstall_mod: { tool: 'spacemolt', action: 'uninstall_mod' },
   repair_module: { tool: 'spacemolt', action: 'repair_module' },
+  get_empire_info: { tool: 'spacemolt', action: 'get_empire_info' },
+  get_tax_estimate: { tool: 'spacemolt', action: 'get_tax_estimate' },
 
   // Missions
   get_missions: { tool: 'spacemolt', action: 'get_missions' },
@@ -932,6 +978,7 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   claim_commission: { tool: 'spacemolt_ship', action: 'claim_commission' },
   cancel_commission: { tool: 'spacemolt_ship', action: 'cancel_commission' },
   supply_commission: { tool: 'spacemolt_ship', action: 'supply_commission' },
+  scrap_ship: { tool: 'spacemolt_ship', action: 'scrap_ship' },
   list_ship_for_sale: { tool: 'spacemolt_ship', action: 'list_ship_for_sale' },
   browse_ships: { tool: 'spacemolt_ship', action: 'browse_ships' },
   buy_listed_ship: { tool: 'spacemolt_ship', action: 'buy_listed_ship' },
@@ -1061,6 +1108,10 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   faction_facility_build: { tool: 'spacemolt_facility', action: 'faction_build' },
   faction_facility_upgrade: { tool: 'spacemolt_facility', action: 'faction_upgrade' },
   faction_facility_toggle: { tool: 'spacemolt_facility', action: 'faction_toggle' },
+  facility_list_for_sale: { tool: 'spacemolt_facility', action: 'list_for_sale' },
+  facility_browse_for_sale: { tool: 'spacemolt_facility', action: 'browse_for_sale' },
+  facility_buy_listing: { tool: 'spacemolt_facility', action: 'buy_listing' },
+  facility_cancel_listing: { tool: 'spacemolt_facility', action: 'cancel_listing' },
 
   // Salvage
   get_wrecks: { tool: 'spacemolt_salvage', action: 'wrecks' },
@@ -1085,6 +1136,12 @@ const V2_TOOL_MAP: Record<string, V2Route> = {
   fleet_leave: { tool: 'spacemolt_fleet', action: 'leave' },
   fleet_kick: { tool: 'spacemolt_fleet', action: 'kick' },
   fleet_disband: { tool: 'spacemolt_fleet', action: 'disband' },
+
+  // Citizenship
+  citizenship_list: { tool: 'spacemolt_citizenship', action: 'list' },
+  citizenship_apply: { tool: 'spacemolt_citizenship', action: 'apply' },
+  citizenship_renounce: { tool: 'spacemolt_citizenship', action: 'renounce' },
+  citizenship_withdraw: { tool: 'spacemolt_citizenship', action: 'withdraw' },
 
   // Catalog and built-in help
   catalog: { tool: 'spacemolt_catalog', action: 'catalog' },
@@ -1289,6 +1346,15 @@ function normalizeCommandPayload(
     delete normalized.ship_id;
     return normalized;
   }
+  if (command === 'get_notifications' && typeof payload?.types === 'string') {
+    return {
+      ...payload,
+      types: payload.types
+        .split(',')
+        .map((type) => type.trim())
+        .filter(Boolean),
+    };
+  }
   return payload;
 }
 
@@ -1315,8 +1381,10 @@ function normalizeParsedPayload(command: string, payload: Record<string, string>
     install_mod: ['module_id'],
     uninstall_mod: ['module_id'],
     repair_module: ['module_id'],
+    get_empire_info: ['empire_id'],
     switch_ship: ['ship_id'],
     sell_ship: ['ship_id'],
+    scrap_ship: ['ship_id'],
     buy_listed_ship: ['listing_id'],
     cancel_ship_listing: ['listing_id'],
     claim_commission: ['commission_id'],
@@ -1338,6 +1406,14 @@ function normalizeParsedPayload(command: string, payload: Record<string, string>
   };
 
   for (const alias of idAliases[command] || []) rename(alias, 'id');
+
+  const targetAliases: Record<string, string[]> = {
+    citizenship_apply: ['empire'],
+    citizenship_renounce: ['empire'],
+    citizenship_withdraw: ['empire'],
+  };
+
+  for (const alias of targetAliases[command] || []) rename(alias, 'target');
 
   if (command === 'search_systems') rename('query', 'text');
   if (command === 'chat') rename('channel', 'target');
@@ -2955,6 +3031,9 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_skills          Your skill levels and XP
   get_wrecks          Wrecks at POI (for looting)
   get_map             Galaxy map (all systems)
+  get_empire_info     Empire policy snapshots
+  get_tax_estimate    Preview taxes owed
+  get_notifications   Poll queued game events
   get_battle_status   Current battle state
   list_drones         Drones in your ship bay and deployed nearby
   fleet_status        Current fleet membership and members
@@ -3012,6 +3091,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     commission_status         Check build progress
     claim_commission <id>     Pick up completed ship
     cancel_commission <id>    Cancel active commission
+    scrap_ship <ship_id>      Permanently destroy a stored ship
 
   ${c.cyan}Ship Exchange:${c.reset}
     list_ship_for_sale        List a stored ship for sale
@@ -3036,10 +3116,20 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility_build <type>     Build a player facility
     facility_upgrade <type>   Upgrade a player facility
     facility_toggle <id>      Toggle a facility
+    facility_list_for_sale <id> <price>  List a facility for sale
+    facility_browse_for_sale             Browse facility listings
+    facility_buy_listing <id>            Buy a listed facility
+    facility_cancel_listing <id>         Cancel a facility listing
     faction_facility_list     List faction facilities at current base
     faction_facility_build <type>  Build a faction facility
     faction_facility_upgrade <type>  Upgrade a faction facility
     faction_facility_toggle <id>     Toggle a faction facility
+
+  ${c.cyan}Citizenship:${c.reset}
+    citizenship_list [empire]       View citizenship applications
+    citizenship_apply <empire>      Apply for citizenship
+    citizenship_renounce <empire>   Renounce citizenship
+    citizenship_withdraw <empire>   Withdraw application
 
   ${c.cyan}Storage:${c.reset}
     view_storage [station_id]        Personal storage at station (or current)
