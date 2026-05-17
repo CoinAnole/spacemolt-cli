@@ -238,6 +238,20 @@ interface CommandGroup {
   categories: string[];
 }
 
+interface JsonRequestOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  sessionId?: string;
+  payload?: Record<string, unknown>;
+  timeoutMs?: number;
+}
+
+interface JsonResponse<T> {
+  status: number;
+  ok: boolean;
+  data: T;
+}
+
 interface CommandSearchMatch {
   command: string;
   score: number;
@@ -389,6 +403,46 @@ function compareVersions(current: string, latest: string): number {
   return 0; // equal
 }
 
+async function requestJson<T = APIResponse>(url: string, options: JsonRequestOptions = {}): Promise<JsonResponse<T>> {
+  const method = options.method || 'GET';
+  const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
+  const headers: Record<string, string> = {
+    'User-Agent': `SpaceMolt-Client/${VERSION}`,
+    ...options.headers,
+  };
+
+  if (options.sessionId) headers['X-Session-Id'] = options.sessionId;
+  if (options.payload !== undefined && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: options.payload !== undefined ? JSON.stringify(options.payload) : undefined,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      throw new Error(
+        `Request timed out after ${timeoutMs / 1000}s. The server may be under load or the action is taking unusually long.`,
+      );
+    }
+    throw err;
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType?.includes('application/json')) {
+    throw new Error(`Server returned non-JSON response (${response.status}): ${await response.text()}`);
+  }
+
+  try {
+    return { status: response.status, ok: response.ok, data: (await response.json()) as T };
+  } catch {
+    throw new Error(`Server returned invalid JSON response (${response.status})`);
+  }
+}
+
 async function checkForUpdates(): Promise<void> {
   // Skip update check if disabled via env var
   if (process.env.SPACEMOLT_NO_UPDATE_CHECK === 'true') return;
@@ -408,9 +462,9 @@ async function checkForUpdates(): Promise<void> {
 
     // Fetch from GitHub if cache is stale or missing
     if (!latestVersion) {
-      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+      const response = await requestJson<{ tag_name: string }>(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
         headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },
-        signal: AbortSignal.timeout(3000), // 3 second timeout
+        timeoutMs: 3000,
       });
 
       if (!response.ok) {
@@ -418,8 +472,7 @@ async function checkForUpdates(): Promise<void> {
         return;
       }
 
-      const release = (await response.json()) as { tag_name: string };
-      latestVersion = release.tag_name.replace(/^v/, '');
+      latestVersion = response.data.tag_name.replace(/^v/, '');
 
       // Update cache with fresh check time
       cache = { ...cache, checked_at: new Date().toISOString(), latest_version: latestVersion } as UpdateCheckCache;
@@ -685,11 +738,11 @@ async function saveSession(session: Session): Promise<void> {
 
 async function createSession(): Promise<Session> {
   if (DEBUG) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
-  const response = await fetch(`${trimTrailingSlash(API_BASE)}/session`, {
+  const response = await requestJson<APIResponse>(`${trimTrailingSlash(API_BASE)}/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
   });
-  const data = (await response.json()) as APIResponse;
+  const data = response.data;
   if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
   if (!data.session) throw new Error('No session in response');
   const session: Session = {
@@ -730,17 +783,12 @@ async function authenticateProfileSession(session: Session): Promise<APIResponse
 
   if (DEBUG)
     console.log(`${c.dim}[DEBUG] Authenticating profile ${ACTIVE_PROFILE} as ${session.username}...${c.reset}`);
-  const response = await fetch(`${trimTrailingSlash(API_BASE)}/spacemolt_auth/login`, {
+  const response = await requestJson<APIResponse>(`${trimTrailingSlash(API_BASE)}/spacemolt_auth/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Session-Id': session.id,
-      'User-Agent': `SpaceMolt-Client/${VERSION}`,
-    },
-    body: JSON.stringify({ username: session.username, password: session.password }),
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    sessionId: session.id,
+    payload: { username: session.username, password: session.password },
   });
-  const data = (await response.json()) as APIResponse;
+  const data = response.data;
   if (data.error) return data;
 
   if (data.session) {
@@ -794,35 +842,14 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
     }
 
     const startTime = Date.now();
-    let response: Response;
-    try {
-      response = await fetch(requestUrl, {
-        method: requestMethod,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Session-Id': currentSession.id,
-          'User-Agent': `SpaceMolt-Client/${VERSION}`,
-        },
-        body: requestMethod === 'POST' && requestPayload ? JSON.stringify(requestPayload) : undefined,
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
-    } catch (err) {
-      if (err instanceof Error && err.name === 'TimeoutError') {
-        throw new Error(
-          `Request timed out after ${FETCH_TIMEOUT_MS / 1000}s. The server may be under load or the action is taking unusually long.`,
-        );
-      }
-      throw err;
-    }
+    const response = await requestJson<APIResponse>(requestUrl, {
+      method: requestMethod,
+      sessionId: currentSession.id,
+      payload: requestMethod === 'POST' && requestPayload ? requestPayload : undefined,
+    });
     const elapsed = Date.now() - startTime;
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      if (DEBUG) console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms) - non-JSON${c.reset}`);
-      throw new Error(`Server returned non-JSON response (${response.status}): ${await response.text()}`);
-    }
-
-    const data = (await response.json()) as APIResponse;
+    const data = response.data;
 
     if (DEBUG) {
       console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms)${c.reset}`);

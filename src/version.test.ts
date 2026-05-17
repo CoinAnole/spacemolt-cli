@@ -622,7 +622,8 @@ describe('client.ts source integrity', () => {
   test('FETCH_TIMEOUT_MS is applied to the fetch call', () => {
     const clientPath = path.join(import.meta.dir, 'client.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).toContain('AbortSignal.timeout(FETCH_TIMEOUT_MS)');
+    expect(src).toContain('const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS');
+    expect(src).toContain('AbortSignal.timeout(timeoutMs)');
   });
 
   test('session writes are atomic and owner-only where possible', () => {
@@ -641,6 +642,15 @@ describe('client.ts source integrity', () => {
     const clientPath = path.join(import.meta.dir, 'client.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
     expect(src).toContain('TimeoutError');
+  });
+
+  test('client HTTP requests go through the shared JSON request helper', () => {
+    const clientPath = path.join(import.meta.dir, 'client.ts');
+    const src = fs.readFileSync(clientPath, 'utf-8');
+    expect(src).toContain('async function requestJson');
+    expect(src.match(/fetch\(/g)?.length).toBe(1);
+    expect(src).toContain('Server returned non-JSON response');
+    expect(src).toContain('Server returned invalid JSON response');
   });
 
   test('faction_gift is removed', () => {
