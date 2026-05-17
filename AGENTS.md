@@ -14,7 +14,18 @@ The client has no daemon, WebSocket, or background process. Commands execute dir
 
 ## Runtime
 
-Use Bun for project commands:
+Bun is installed at `~/.bun/bin/bun` (and `~/.bun/bin/bunx`). If `bun` is not found on `PATH`, use the full path:
+
+```bash
+~/.bun/bin/bun install
+~/.bun/bin/bun run src/client.ts <command> [args...]
+~/.bun/bin/bun test
+~/.bun/bin/bun run typecheck
+~/.bun/bin/bun run lint
+~/.bun/bin/bun run build
+```
+
+If commands fail with "command not found", prepend `~/.bun/bin/` to the command or add `~/.bun/bin` to `PATH`.
 
 ```bash
 bun install
