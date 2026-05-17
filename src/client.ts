@@ -44,6 +44,8 @@ const VERSION = '1.1.0';
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
 // known travel times with plenty of headroom.
 const FETCH_TIMEOUT_MS = 600_000;
+const MAX_SESSION_RECOVERY_ATTEMPTS = 1;
+const MAX_RATE_LIMIT_RETRIES = 3;
 const GITHUB_REPO = 'SpaceMolt/client';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -756,11 +758,6 @@ async function authenticateProfileSession(session: Session): Promise<APIResponse
 // =============================================================================
 
 async function execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
-  const session = await getSession();
-  if (command !== 'login' && command !== 'register') {
-    const authError = await authenticateProfileSession(session);
-    if (authError) return authError;
-  }
   const mapping = V2_TOOL_MAP[command];
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
@@ -779,68 +776,88 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
   const method = mapping.method || 'POST';
   const routeKind: 'v2' = 'v2';
 
-  if (DEBUG) {
-    console.log(`${c.dim}[DEBUG] Request: ${method} ${url}${c.reset}`);
-    console.log(`${c.dim}[DEBUG] Route: ${routeKind}${c.reset}`);
-    console.log(`${c.dim}[DEBUG] Session: ${session.id.substring(0, 8)}...${c.reset}`);
-    if (payload) {
-      const safePayload = { ...payload };
-      if (safePayload.password) safePayload.password = '***';
-      console.log(`${c.dim}[DEBUG] Payload: ${JSON.stringify(safePayload)}${c.reset}`);
+  async function sendRequest(
+    currentSession: Session,
+    requestUrl: string,
+    requestMethod: string,
+    requestPayload?: Record<string, unknown>,
+  ): Promise<APIResponse> {
+    if (DEBUG) {
+      console.log(`${c.dim}[DEBUG] Request: ${requestMethod} ${requestUrl}${c.reset}`);
+      console.log(`${c.dim}[DEBUG] Route: ${routeKind}${c.reset}`);
+      console.log(`${c.dim}[DEBUG] Session: ${currentSession.id.substring(0, 8)}...${c.reset}`);
+      if (requestPayload) {
+        const safePayload = { ...requestPayload };
+        if (safePayload.password) safePayload.password = '***';
+        console.log(`${c.dim}[DEBUG] Payload: ${JSON.stringify(safePayload)}${c.reset}`);
+      }
     }
-  }
 
-  const startTime = Date.now();
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Session-Id': session.id,
-        'User-Agent': `SpaceMolt-Client/${VERSION}`,
-      },
-      body: method === 'POST' && payload ? JSON.stringify(payload) : undefined,
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-  } catch (err) {
-    if (err instanceof Error && err.name === 'TimeoutError') {
-      throw new Error(
-        `Request timed out after ${FETCH_TIMEOUT_MS / 1000}s. The server may be under load or the action is taking unusually long.`,
-      );
+    const startTime = Date.now();
+    let response: Response;
+    try {
+      response = await fetch(requestUrl, {
+        method: requestMethod,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': currentSession.id,
+          'User-Agent': `SpaceMolt-Client/${VERSION}`,
+        },
+        body: requestMethod === 'POST' && requestPayload ? JSON.stringify(requestPayload) : undefined,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        throw new Error(
+          `Request timed out after ${FETCH_TIMEOUT_MS / 1000}s. The server may be under load or the action is taking unusually long.`,
+        );
+      }
+      throw err;
     }
-    throw err;
+    const elapsed = Date.now() - startTime;
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      if (DEBUG) console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms) - non-JSON${c.reset}`);
+      throw new Error(`Server returned non-JSON response (${response.status}): ${await response.text()}`);
+    }
+
+    const data = (await response.json()) as APIResponse;
+
+    if (DEBUG) {
+      console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms)${c.reset}`);
+      if (data.error) console.log(`${c.dim}[DEBUG] Error: ${data.error.code} - ${data.error.message}${c.reset}`);
+      if (data.notifications?.length)
+        console.log(`${c.dim}[DEBUG] Notifications: ${data.notifications.length}${c.reset}`);
+    }
+
+    // Update session
+    if (data.session) {
+      currentSession.expires_at = data.session.expires_at;
+      if (data.session.player_id) currentSession.player_id = data.session.player_id;
+      await saveSession(currentSession);
+    }
+
+    return data;
   }
-  const elapsed = Date.now() - startTime;
 
-  const contentType = response.headers.get('content-type');
-  if (!contentType?.includes('application/json')) {
-    if (DEBUG) console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms) - non-JSON${c.reset}`);
-    throw new Error(`Server returned non-JSON response (${response.status}): ${await response.text()}`);
+  async function request(currentSession: Session, requestPayload?: Record<string, unknown>): Promise<APIResponse> {
+    return sendRequest(currentSession, url, method, requestPayload);
   }
 
-  const data = (await response.json()) as APIResponse;
-
-  if (DEBUG) {
-    console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms)${c.reset}`);
-    if (data.error) console.log(`${c.dim}[DEBUG] Error: ${data.error.code} - ${data.error.message}${c.reset}`);
-    if (data.notifications?.length)
-      console.log(`${c.dim}[DEBUG] Notifications: ${data.notifications.length}${c.reset}`);
+  async function login(currentSession: Session, username: string, password: string): Promise<APIResponse> {
+    const loginMapping = V2_TOOL_MAP.login;
+    if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
+    const loginPayload = normalizeCommandPayload('login', { username, password });
+    const loginRoutePath =
+      loginMapping.tool === loginMapping.action || SINGLE_ENDPOINT_TOOLS.has(loginMapping.tool)
+        ? loginMapping.tool
+        : `${loginMapping.tool}/${loginMapping.action}`;
+    const loginUrl = `${trimTrailingSlash(API_BASE)}/${loginRoutePath}`;
+    return sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
   }
 
-  // Update session
-  if (data.session) {
-    session.expires_at = data.session.expires_at;
-    if (data.session.player_id) session.player_id = data.session.player_id;
-    await saveSession(session);
-  }
-
-  // Handle session expired - create new session, re-login if possible, then retry
-  if (
-    data.error?.code === 'session_invalid' ||
-    data.error?.code === 'invalid_session' ||
-    data.error?.code === 'session_expired'
-  ) {
+  async function recoverSession(): Promise<Session | null> {
     if (DEBUG) console.log(`${c.dim}[DEBUG] Session expired, creating new session...${c.reset}`);
     const oldSession = await loadSession();
     const newSession = await createSession();
@@ -850,7 +867,7 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
       await saveSession(newSession);
       // Auto-re-login with stored credentials
       if (DEBUG) console.log(`${c.dim}[DEBUG] Re-authenticating as ${oldSession.username}...${c.reset}`);
-      const loginResp = await execute('login', { username: oldSession.username, password: oldSession.password });
+      const loginResp = await login(newSession, oldSession.username, oldSession.password);
       if (loginResp.error) {
         if (!JSON_OUTPUT) {
           console.error(
@@ -858,30 +875,58 @@ async function execute(command: string, payload?: Record<string, unknown>): Prom
           );
           console.error(`${c.yellow}Run "spacemolt login <username> <password>" to re-authenticate.${c.reset}`);
         }
-        return data; // Return the original error
+        return null;
       }
       if (!JSON_OUTPUT) {
         console.log(`${c.dim}[SESSION]${c.reset} Session recovered, re-authenticated as ${oldSession.username}`);
       }
     }
+    return newSession;
+  }
+
+  let session = await getSession();
+  let sessionRecoveryAttempts = 0;
+  let rateLimitRetries = 0;
+
+  while (true) {
     if (command !== 'login' && command !== 'register') {
-      return execute(command, payload);
+      const authError = await authenticateProfileSession(session);
+      if (authError) return authError;
     }
+
+    const data = await request(session, payload);
+
+    // Handle session expired - create new session, re-login if possible, then retry
+    if (
+      data.error?.code === 'session_invalid' ||
+      data.error?.code === 'invalid_session' ||
+      data.error?.code === 'session_expired'
+    ) {
+      if (command === 'login' || command === 'register' || sessionRecoveryAttempts >= MAX_SESSION_RECOVERY_ATTEMPTS) {
+        return data;
+      }
+      sessionRecoveryAttempts += 1;
+      const recoveredSession = await recoverSession();
+      if (!recoveredSession) return data;
+      session = recoveredSession;
+      continue;
+    }
+
+    // Handle rate limit on queries - wait and retry
+    const retryAfter = data.error?.retry_after ?? data.error?.wait_seconds;
+    if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
+      if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) return data;
+      rateLimitRetries += 1;
+      const waitMs = Math.ceil(retryAfter) * 1000;
+      if (!JSON_OUTPUT) {
+        console.log(`${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
+      }
+      await Bun.sleep(waitMs);
+      continue;
+    }
+
     return data;
   }
-
-  // Handle rate limit on queries - wait and retry
-  const retryAfter = data.error?.retry_after ?? data.error?.wait_seconds;
-  if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
-    const waitMs = Math.ceil(retryAfter) * 1000;
-    if (!JSON_OUTPUT) {
-      console.log(`${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
-    }
-    await Bun.sleep(waitMs);
-    return execute(command, payload);
-  }
-
-  return data;
 }
 
 // =============================================================================
