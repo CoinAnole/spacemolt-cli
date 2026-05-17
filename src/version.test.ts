@@ -9,6 +9,7 @@ import {
   parseArgs,
   validateRequiredArgs,
 } from './client';
+import { COMMANDS } from './commands';
 
 // =============================================================================
 // compareVersions
@@ -637,8 +638,6 @@ describe('client.ts source integrity', () => {
   });
 
   test('all new v0.8.0 commands are present', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
     const newCommands = [
       'agentlogs',
       'completed_missions',
@@ -650,13 +649,11 @@ describe('client.ts source integrity', () => {
       'view_completed_mission',
     ];
     for (const cmd of newCommands) {
-      expect(src).toContain(`  ${cmd}:`);
+      expect(COMMANDS[cmd]).toBeDefined();
     }
   });
 
   test('deprecated commands are removed', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
     const removedCommands = [
       // Friends system
       'inspect_cargo',
@@ -683,66 +680,46 @@ describe('client.ts source integrity', () => {
       'set_anonymous',
     ];
     for (const cmd of removedCommands) {
-      expect(src).not.toContain(`  ${cmd}:`);
+      expect(COMMANDS[cmd]).toBeUndefined();
     }
   });
 
   test('parseArgs fixtures use registered commands', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const clientSrc = fs.readFileSync(clientPath, 'utf-8');
-    const commandsStart = clientSrc.indexOf('const COMMANDS:');
-    const commandsEnd = clientSrc.indexOf('\nconst COMMAND_GUIDANCE');
-    expect(commandsStart).toBeGreaterThanOrEqual(0);
-    expect(commandsEnd).toBeGreaterThan(commandsStart);
-    const commandsBlock = clientSrc.slice(commandsStart, commandsEnd);
-    const registeredCommands = new Set(
-      [...commandsBlock.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]),
-    );
+    const registeredCommands = new Set(Object.keys(COMMANDS));
 
     const testPath = path.join(import.meta.dir, 'version.test.ts');
     const testSrc = fs.readFileSync(testPath, 'utf-8');
-    const fixtureCommands = [...testSrc.matchAll(/parseArgs\(\[['"]([a-z][a-z0-9_]*)['"]/g)].map((match) => match[1]);
+    const fixtureCommands = [...testSrc.matchAll(/parseArgs\(\[['"]([a-z][a-z0-9_]*)['"]/g)]
+      .map((match) => match[1])
+      .filter((command): command is string => Boolean(command));
     const unknownFixtures = [...new Set(fixtureCommands)].filter((command) => !registeredCommands.has(command));
 
     expect(unknownFixtures).toEqual([]);
   });
 
   test('trade_offer uses credits not offer_credits/request_credits', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    // The trade_offer args should have 'credits' not the old param names
-    const tradeOfferMatch = src.match(/trade_offer:\s*\{[^}]+\}/s);
-    expect(tradeOfferMatch).not.toBeNull();
-    const tradeOfferDef = tradeOfferMatch?.[0];
-    expect(tradeOfferDef).toContain("'credits'");
-    expect(tradeOfferDef).not.toContain("'offer_credits'");
-    expect(tradeOfferDef).not.toContain("'request_credits'");
+    const args = COMMANDS.trade_offer?.args;
+    expect(args).toContain('credits');
+    expect(args).not.toContain('offer_credits');
+    expect(args).not.toContain('request_credits');
   });
 
   test('craft uses quantity not count', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    const craftMatch = src.match(/craft:\s*\{[^}]+\}/s);
-    expect(craftMatch).not.toBeNull();
-    const craftDef = craftMatch?.[0];
-    expect(craftDef).toContain("'quantity'");
-    expect(craftDef).not.toContain("'count'");
+    const args = COMMANDS.craft?.args;
+    expect(args).toContain('quantity');
+    expect(args).not.toContain('count');
   });
 
   test('help uses category and command, not topic', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    const helpMatch = src.match(/^\s+help:\s*\{[^}]+\}/m);
-    expect(helpMatch).not.toBeNull();
-    const helpDef = helpMatch?.[0];
-    expect(helpDef).toContain("'category'");
-    expect(helpDef).toContain("'command'");
-    expect(helpDef).not.toContain("'topic'");
+    const args = COMMANDS.help?.args;
+    expect(args).toContain('category');
+    expect(args).toContain('command');
+    expect(args).not.toContain('topic');
   });
 
   test('NUMERIC_FIELDS does not contain deprecated fields', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
+    const argsPath = path.join(import.meta.dir, 'args.ts');
+    const src = fs.readFileSync(argsPath, 'utf-8');
     const numericMatch = src.match(/const NUMERIC_FIELDS = new Set\(\[([^\]]+)\]\)/s);
     expect(numericMatch).not.toBeNull();
     const numericDef = numericMatch?.[1];
@@ -752,10 +729,10 @@ describe('client.ts source integrity', () => {
   });
 
   test('COMMANDS block has no duplicate top-level command keys', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
+    const commandsPath = path.join(import.meta.dir, 'commands.ts');
+    const src = fs.readFileSync(commandsPath, 'utf-8');
     const start = src.indexOf('const COMMANDS:');
-    const end = src.indexOf('\nconst COMMAND_GUIDANCE');
+    const end = src.indexOf('\n\nexport const V2_TOOL_MAP');
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const block = src.slice(start, end);
@@ -767,11 +744,15 @@ describe('client.ts source integrity', () => {
   test('local AI usability helpers are present', () => {
     const clientPath = path.join(import.meta.dir, 'client.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');
+    const commandsPath = path.join(import.meta.dir, 'commands.ts');
+    const commandsSrc = fs.readFileSync(commandsPath, 'utf-8');
     expect(src).toContain('function suggestCommands');
     expect(src).toContain('function showCommandHelp');
     expect(src).toContain('function displayUnknownCommand');
     expect(src).toContain('function displayMissingArgument');
-    expect(src).toContain('COMMAND_GUIDANCE');
+    expect(commandsSrc).toContain('description:');
+    expect(commandsSrc).toContain('example:');
+    expect(commandsSrc).toContain('seeAlso:');
   });
 });
 

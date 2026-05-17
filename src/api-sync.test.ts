@@ -13,11 +13,11 @@
 import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { COMMANDS, SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
 
-const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 const SPEC_ROUTES_COVERED_BY_ALIASES = new Set([
   // The CLI exposes notification polling through POST /api/v2/spacemolt/get_notifications.
   'GET /api/v2/notifications',
@@ -27,76 +27,8 @@ function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help') || SPEC_ROUTES_COVERED_BY_ALIASES.has(route);
 }
 
-/**
- * Extracts the command names from the COMMANDS block in client.ts.
- * Parses only lines within the COMMANDS const (lines 87–505), not notification
- * handlers or other objects that share the same 2-space key format.
- */
-function extractClientCommands(src: string): string[] {
-  // Isolate the COMMANDS block — from its opening brace to the closing `};`
-  // at column 0, stopping before V2_TOOL_MAP
-  const start = src.indexOf('const COMMANDS:');
-  const end = src.indexOf('\nconst V2_TOOL_MAP');
-  if (start === -1 || end === -1) throw new Error('Could not locate COMMANDS block in client.ts');
-
-  const block = src.slice(start, end);
-  // Match 2-space-indented top-level keys: `  keyname: {` or `  keyname: (`
-  const matches = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)];
-  return matches.map((m) => m[1]).filter((value): value is string => Boolean(value));
-}
-
-function extractV2ToolMap(src: string): Record<string, { route: string; method: 'GET' | 'POST' }> {
-  const start = src.indexOf('const V2_TOOL_MAP:');
-  const end = src.indexOf(
-    '\n\n// =============================================================================\n// Error Help Messages',
-  );
-  if (start === -1 || end === -1) throw new Error('Could not locate V2_TOOL_MAP block in client.ts');
-
-  const block = src.slice(start, end);
-  const routes: Record<string, { route: string; method: 'GET' | 'POST' }> = {};
-  let currentKey: string | null = null;
-  let currentEntry = '';
-  let depth = 0;
-
-  const flush = () => {
-    if (!currentKey) return;
-    const toolMatch = currentEntry.match(/\btool:\s*'([^']+)'/);
-    const actionMatch = currentEntry.match(/\baction:\s*'([^']+)'/);
-    const methodMatch = currentEntry.match(/\bmethod:\s*'([^']+)'/);
-    if (!toolMatch?.[1] || !actionMatch?.[1]) return;
-
-    const [, tool] = toolMatch;
-    const [, action] = actionMatch;
-    routes[currentKey] = {
-      route: tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`,
-      method: methodMatch?.[1] === 'GET' ? 'GET' : 'POST',
-    };
-  };
-
-  for (const line of block.split('\n')) {
-    const keyMatch = line.match(/^\s{2}([a-z][a-z0-9_]+):\s*\{/);
-    if (keyMatch?.[1]) {
-      currentKey = keyMatch[1];
-      currentEntry = line;
-      depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
-      if (depth === 0) {
-        flush();
-        currentKey = null;
-        currentEntry = '';
-      }
-      continue;
-    }
-
-    if (!currentKey) continue;
-    currentEntry += `\n${line}`;
-    depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
-    if (depth === 0) {
-      flush();
-      currentKey = null;
-      currentEntry = '';
-    }
-  }
-  return routes;
+function routePath(tool: string, action: string): string {
+  return tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
 }
 
 async function loadOpenApiSpec(): Promise<{ paths: Record<string, { get?: unknown; post?: unknown }> }> {
@@ -121,10 +53,16 @@ describe('api sync', () => {
   test.skipIf(skip)(
     'client.ts V2 map matches OpenAPI spec',
     async () => {
-      const clientPath = path.join(import.meta.dir, 'client.ts');
-      const src = fs.readFileSync(clientPath, 'utf-8');
-      const clientCommands = new Set(extractClientCommands(src));
-      const v2ToolMap = extractV2ToolMap(src);
+      const clientCommands = new Set(Object.keys(COMMANDS));
+      const v2ToolMap = Object.fromEntries(
+        Object.entries(V2_TOOL_MAP).map(([command, mapping]) => [
+          command,
+          {
+            route: routePath(mapping.tool, mapping.action),
+            method: mapping.method || 'POST',
+          },
+        ]),
+      );
 
       const spec = await loadOpenApiSpec();
       if (Object.keys(spec.paths).length === 0) return;
