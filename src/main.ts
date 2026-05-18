@@ -34,6 +34,8 @@ import { getSession, loadSession, saveSession, showProfiles } from './session.ts
 import type { APIResponse, GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
+export type CliResult = { exitCode: number; stdout?: string; stderr?: string };
+
 type CommandStatus = { type: 'exit'; exitCode: number };
 type ParsedCommand = { type: 'command'; command: string; rawPayload: Record<string, string> };
 type ResolvedCommand = CommandStatus | ParsedCommand;
@@ -371,8 +373,9 @@ function renderConnectionError(error: unknown, options: GlobalOptions): number {
   return 1;
 }
 
-export async function main(): Promise<void> {
-  process.exit(await runInvocation(process.argv.slice(2)));
+export async function main(): Promise<CliResult> {
+  const exitCode = await runInvocation(process.argv.slice(2));
+  return { exitCode };
 }
 
 if (import.meta.main) {
