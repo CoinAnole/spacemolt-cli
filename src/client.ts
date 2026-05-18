@@ -10,6 +10,15 @@ export {
 } from './args.ts';
 export { COMMANDS, V2_TOOL_MAP } from './commands.ts';
 export { displayStructuredResult } from './display/index.ts';
+export {
+  ERROR_CODES,
+  ERROR_REGISTRY,
+  getErrorSuggestion,
+  getRelatedCommands,
+  isAuthError,
+  isKnownErrorCode,
+  isRetryableError,
+} from './errors.ts';
 export { main } from './main.ts';
 export { compareVersions } from './update.ts';
 

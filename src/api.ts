@@ -1,10 +1,17 @@
 import { applyPayloadTransforms } from './args.ts';
 import { SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
+import { ERROR_REGISTRY } from './errors.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, DEBUG, JSON_OUTPUT, MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS } from './runtime.ts';
 import { authenticateProfileSession, createSession, getSession, loadSession, saveSession } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
+
+const SESSION_ERROR_CODES = new Set(
+  Object.entries(ERROR_REGISTRY)
+    .filter(([, entry]) => entry.auth && entry.retryable)
+    .map(([code]) => code),
+);
 
 export interface SpaceMoltClientOptions {
   transport: {
@@ -80,11 +87,7 @@ export class SpaceMoltClient {
 
       const data = await this.sendRequest(session, url, method, payload);
 
-      if (
-        data.error?.code === 'session_invalid' ||
-        data.error?.code === 'invalid_session' ||
-        data.error?.code === 'session_expired'
-      ) {
+      if (data.error && SESSION_ERROR_CODES.has(data.error.code)) {
         if (
           command === 'login' ||
           command === 'register' ||

@@ -1,5 +1,6 @@
 import { getArgNames } from './args.ts';
 import { COMMANDS, SINGLE_ENDPOINT_TOOLS } from './commands.ts';
+import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { c, QUIET, setOutputMode, VERSION } from './runtime.ts';
 import { setActiveProfile, validateProfileName } from './session.ts';
 import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions } from './types.ts';
@@ -67,37 +68,9 @@ const COMMAND_GROUPS: CommandGroup[] = [
   },
 ];
 
-const ERROR_HELP: Record<string, string> = {
-  not_authenticated: 'Run "spacemolt login <username> <password>" first.',
-  invalid_credentials: 'Check your username and password. Passwords are case-sensitive.',
-  session_expired: 'Your session expired. Run the command again to auto-create a new session.',
-  rate_limited: 'Query rate limited. Wait a moment and retry.',
-  docked: 'You are docked. Most commands handle this automatically - if you see this error, please report it.',
-  not_docked: 'You must be docked. Most commands handle this automatically - if you see this error, please report it.',
-  already_traveling: 'You are already traveling. Wait for arrival or check with "get_status".',
-  already_jumping: 'You are already jumping between systems. Wait for arrival.',
-  invalid_poi: 'POI not found. Run "spacemolt get_system" to see valid POIs.',
-  wrong_system: 'That POI is in a different system. Use "jump" to change systems first.',
-  not_connected: 'Systems are not connected. Run "spacemolt get_system" to see connections.',
-  no_fuel:
-    'Insufficient fuel. Dock at a station and run "spacemolt refuel"; if station reserves are depleted, use fuel cells or try another supplied station.',
-  no_station_fuel:
-    'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
-  station_fuel_depleted:
-    'This station has insufficient fuel reserves. Try another supplied station, haul fuel here, or use fuel cells.',
-  no_credits: 'Insufficient credits. Mine and sell resources to earn credits.',
-  no_cargo_space: 'Cargo hold is full. Sell or jettison items to make space.',
-  invalid_target: 'Target not found. Run "spacemolt get_nearby" to see players at your POI.',
-  target_cloaked: 'Target is cloaked. Use "scan" with high scan power to reveal them.',
-  no_cloak: 'No cloaking device installed on your ship.',
-  username_taken: 'That username is already taken. Try a different username.',
-  invalid_username: 'Username must be 3-20 alphanumeric characters.',
-  empire_restricted: 'Invalid empire. Valid empires: solarian, voidborn, crimson, nebula, outerrim.',
-  not_weapon: 'The module at that slot index is not a weapon. Use "get_ship" to see modules.',
-  invalid_weapon: 'Invalid weapon index. Use "get_ship" to see your installed weapons.',
-  no_mining_laser: 'No mining laser installed. Buy one from a station market.',
-  not_asteroid: 'You can only mine at asteroid belts. Travel to one first.',
-};
+const ERROR_HELP: Record<string, string> = Object.fromEntries(
+  Object.entries(ERROR_REGISTRY).map(([code, entry]) => [code, entry.suggestion]),
+);
 
 export function parseGlobalOptions(args: string[]): GlobalOptions {
   const result: Omit<GlobalOptions, 'args'> = {
@@ -796,7 +769,6 @@ export function displayError(
   command: string,
   error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
 ): void {
-  // Skip timestamp in quiet mode
   if (!QUIET) {
     console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
   }
@@ -805,10 +777,15 @@ export function displayError(
   if (retryAfter !== undefined) {
     console.error(`${c.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${c.reset}`);
   }
-  // Skip help text and next steps in quiet mode
   if (!QUIET) {
-    const help = ERROR_HELP[error.code];
+    const help = getErrorSuggestion(error.code);
     if (help) console.error(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
+    if (isRetryableError(error.code) && retryAfter === undefined) {
+      console.error(`${c.dim}This error may be retryable.${c.reset}`);
+    }
+    if (isAuthError(error.code)) {
+      console.error(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
+    }
     if (COMMANDS[command]) printNextSteps(command);
   }
 }
