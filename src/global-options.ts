@@ -60,6 +60,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     json: false,
     quiet: false,
     plain: false,
+    allowUnknown: false,
     dryRun: false,
     fields: undefined,
     noTimestamp: false,
@@ -80,6 +81,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       result.quiet = true;
     } else if (arg === '--plain' || arg === '-p') {
       result.plain = true;
+    } else if (arg === '--raw' || arg === '--allow-unknown' || arg === '-allow-unknown') {
+      result.allowUnknown = true;
     } else if (arg === '--dry-run' || arg === '--preview') {
       result.dryRun = true;
     } else if (arg.startsWith('--dry-run=') || arg.startsWith('--preview=')) {

@@ -4,6 +4,7 @@ import {
   convertPayloadTypes,
   normalizeParsedPayload,
   parseArgs,
+  validateKnownPayloadFields,
   validatePayloadAgainstSchema,
   validateRequiredArgs,
 } from './args.ts';
@@ -166,7 +167,7 @@ export function resolveCommand(invocation: Invocation): ResolvedCommand {
     return { type: 'exit', exitCode: 0 };
   }
 
-  if (warnings.length > 0 && !options.quiet) {
+  if (warnings.length > 0 && !options.allowUnknown && !options.quiet) {
     for (const w of warnings) console.error(`${c.yellow}Warning:${c.reset} ${w}`);
   }
 
@@ -196,6 +197,20 @@ export function preparePayload(
   if (rawPayload.help === 'true' || rawPayload.help === '1') {
     showCommandHelp(command);
     return { type: 'exit', exitCode: 0 };
+  }
+
+  if (!options.allowUnknown) {
+    const unknownFieldErrors = validateKnownPayloadFields(command, rawPayload);
+    if (unknownFieldErrors.length > 0) {
+      if (options.json) {
+        printJsonError('validation_error', unknownFieldErrors.map((e) => e.message).join('; '));
+        return { type: 'exit', exitCode: 1 };
+      }
+      for (const err of unknownFieldErrors) {
+        console.error(`${c.red}Error:${c.reset} ${err.message}`);
+      }
+      return { type: 'exit', exitCode: 1 };
+    }
   }
 
   const missingArg = validateRequiredArgs(command, rawPayload);

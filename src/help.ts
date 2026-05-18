@@ -594,6 +594,7 @@ ${c.bright}Usage:${c.reset}
       --json, -j          Raw JSON response (implies quiet)
       --quiet, -q         Suppress notifications and info messages
       --plain, -p         No ANSI colors or formatting
+      --raw               Allow unknown command fields to pass through
       --fields, -f        Extract specific fields from response
       --format, -fmt <f>  Output format: table (default), json, yaml, text
       --compact           Compact single-line JSON output
@@ -602,6 +603,7 @@ ${c.bright}Usage:${c.reset}
       --jq <expr>         Apply jq-like path expression (.key, .key[], .key[].field)
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them
+      --allow-unknown     Allow unknown command fields to pass through
 
     Local command discovery:
      spacemolt profile list

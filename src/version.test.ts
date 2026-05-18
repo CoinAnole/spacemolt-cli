@@ -10,6 +10,7 @@ import {
   normalizeParsedPayload,
   parseArgs,
   parseGlobalOptions,
+  validateKnownPayloadFields,
   validateRequiredArgs,
 } from './client';
 import { COMMANDS } from './commands';
@@ -286,7 +287,7 @@ describe('parseArgs - basic', () => {
     expect(payload.auto_list).toBe('true');
   });
 
-  test('extra key=value not in arg list is passed through', () => {
+  test('extra key=value not in arg list is parsed for raw-mode pass-through', () => {
     const { payload } = parseArgs(['buy', 'ore_iron', 'deliver_to=my_base']);
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.deliver_to).toBe('my_base');
@@ -312,10 +313,23 @@ describe('parseArgs - basic', () => {
     expect(payload.quantity).toBe('50');
   });
 
-  test('unknown CLI flags pass through as payload with a warning', () => {
+  test('unknown CLI flags parse as payload with a warning before validation', () => {
     const { payload, warnings } = parseArgs(['buy', '--delivery-mode', 'fast']);
     expect(payload.delivery_mode).toBe('fast');
     expect(warnings[0]).toContain('Unknown flag');
+  });
+
+  test('unknown fields are validation errors with suggestions', () => {
+    const { payload } = parseArgs(['sell', 'ore_iron', 'quanity=50']);
+    const errors = validateKnownPayloadFields('sell', payload);
+    expect(errors).toEqual([
+      {
+        field: 'quanity',
+        message:
+          'Unknown field "quanity" for "sell". Did you mean "quantity"? Use --allow-unknown or --raw to pass it through.',
+        code: 'unknown_field',
+      },
+    ]);
   });
 });
 
@@ -908,6 +922,21 @@ describe('CLI local usability behavior', () => {
     expect(parsed).toEqual({ error: { code: 'unknown_command', message: 'Unknown command: trvel' } });
   });
 
+  test('unknown command fields fail locally with a suggestion', () => {
+    const result = runClient(['sell', 'ore_iron', 'quanity=50']);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Unknown field "quanity" for "sell"');
+    expect(result.stderr).toContain('Did you mean "quantity"?');
+    expect(result.stderr).toContain('--allow-unknown');
+    expect(result.stderr).not.toContain('Connection Error');
+  });
+
+  test('--raw allows unknown command fields through', () => {
+    const result = runClient(['--raw', '--dry-run', 'sell', 'ore_iron', '50', 'experimental_mode=true']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"experimental_mode": true');
+  });
+
   test('profile list reads local credential profile names without secrets', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
     const hermesDir = path.join(home, '.hermes', 'spacemolt');
@@ -957,11 +986,18 @@ describe('CLI output modes', () => {
   });
 
   test('global option parser returns structured options', () => {
-    const result = parseGlobalOptions(['--json', '--fields=player.name, ship.fuel', '--profile=pilot', 'get_status']);
+    const result = parseGlobalOptions([
+      '--json',
+      '--fields=player.name, ship.fuel',
+      '--profile=pilot',
+      '--allow-unknown',
+      'get_status',
+    ]);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.options).toMatchObject({
         json: true,
+        allowUnknown: true,
         fields: ['player.name', 'ship.fuel'],
         profile: 'pilot',
         args: ['get_status'],

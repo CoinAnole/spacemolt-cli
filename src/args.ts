@@ -22,19 +22,10 @@ export function normalizeParsedPayload(command: string, payload: Record<string, 
   return normalized;
 }
 
-interface ParsedArgs {
-  command: string;
-  payload: Record<string, string>;
-  warnings: string[];
-}
-
-export function parseArgs(args: string[]): ParsedArgs {
-  const command = args[0] || '';
-  const payload: Record<string, string> = {};
-  const warnings: string[] = [];
+export function getValidArgNames(command: string): Set<string> {
   const config = COMMANDS[command];
   const argDefs = config?.args || [];
-  const validArgNames = new Set<string>();
+  const validArgNames = new Set<string>(['help']);
   for (const def of argDefs) {
     if (typeof def === 'string') validArgNames.add(def);
     else if (def && typeof def === 'object' && def.rest) validArgNames.add(def.rest);
@@ -47,7 +38,28 @@ export function parseArgs(args: string[]): ParsedArgs {
     }
   }
   if (config?.schema) for (const field of Object.keys(config.schema)) validArgNames.add(field);
-  if (config?.fieldRenames) for (const from of Object.keys(config.fieldRenames)) validArgNames.add(from);
+  if (config?.fieldRenames) {
+    for (const [from, to] of Object.entries(config.fieldRenames)) {
+      validArgNames.add(from);
+      validArgNames.add(to);
+    }
+  }
+  return validArgNames;
+}
+
+interface ParsedArgs {
+  command: string;
+  payload: Record<string, string>;
+  warnings: string[];
+}
+
+export function parseArgs(args: string[]): ParsedArgs {
+  const command = args[0] || '';
+  const payload: Record<string, string> = {};
+  const warnings: string[] = [];
+  const config = COMMANDS[command];
+  const argDefs = config?.args || [];
+  const validArgNames = getValidArgNames(command);
   let positionalIndex = 0;
 
   for (let i = 1; i < args.length; i++) {
@@ -131,7 +143,33 @@ export function validateRequiredArgs(command: string, payload: Record<string, st
 export interface ValidationError {
   field: string;
   message: string;
-  code: 'invalid_enum' | 'invalid_integer' | 'invalid_number' | 'invalid_boolean' | 'invalid_field_type';
+  code:
+    | 'unknown_field'
+    | 'invalid_enum'
+    | 'invalid_integer'
+    | 'invalid_number'
+    | 'invalid_boolean'
+    | 'invalid_field_type';
+}
+
+export function validateKnownPayloadFields(command: string, payload: Record<string, string>): ValidationError[] {
+  const config = COMMANDS[command];
+  if (!config) return [];
+  const validArgNames = getValidArgNames(command);
+  const errors: ValidationError[] = [];
+
+  for (const key of Object.keys(payload)) {
+    if (validArgNames.has(key)) continue;
+    const suggestion = suggestClosest(key, [...validArgNames]);
+    const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
+    errors.push({
+      field: key,
+      message: `Unknown field "${key}" for "${command}".${hint} Use --allow-unknown or --raw to pass it through.`,
+      code: 'unknown_field',
+    });
+  }
+
+  return errors;
 }
 
 export function validatePayloadAgainstSchema(command: string, payload: Record<string, string>): ValidationError[] {
@@ -188,6 +226,17 @@ function suggestBooleanCorrection(value: string): string | null {
   if (lower === '1' || lower === 'yes' || lower === 'on') return 'true';
   if (lower === '0' || lower === 'no' || lower === 'off') return 'false';
   return null;
+}
+
+function suggestClosest(value: string, candidates: string[]): string | null {
+  let best: { candidate: string; distance: number } | null = null;
+  for (const candidate of candidates) {
+    const distance = levenshteinDistance(value, candidate);
+    if (!best || distance < best.distance) best = { candidate, distance };
+  }
+  if (!best) return null;
+  const threshold = Math.max(2, Math.floor(Math.max(value.length, best.candidate.length) / 3));
+  return best.distance <= threshold ? best.candidate : null;
 }
 
 function levenshteinDistance(a: string, b: string): number {

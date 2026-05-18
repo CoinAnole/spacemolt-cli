@@ -5,6 +5,7 @@ export {
   getPayloadConversionSchema,
   normalizeParsedPayload,
   parseArgs,
+  validateKnownPayloadFields,
   validatePayloadAgainstSchema,
   validateRequiredArgs,
 } from './args.ts';
