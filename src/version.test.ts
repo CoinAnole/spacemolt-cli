@@ -835,7 +835,7 @@ describe('client.ts source integrity', () => {
     const commandsPath = path.join(import.meta.dir, 'commands.ts');
     const src = fs.readFileSync(commandsPath, 'utf-8');
     const start = src.indexOf('const COMMAND_OVERRIDES:');
-    const end = src.indexOf('\n\nfunction routePath');
+    const end = src.indexOf('\n\nexport function routeToPath');
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const block = src.slice(start, end);

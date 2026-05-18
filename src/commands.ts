@@ -1516,12 +1516,14 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
 };
 
-function routePath(tool: string, action: string): string {
-  return tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
+export function routeToPath(route: Pick<V2Route, 'tool' | 'action'>, options?: { includeApiPrefix?: boolean }): string {
+  const path =
+    route.tool === route.action || SINGLE_ENDPOINT_TOOLS.has(route.tool) ? route.tool : `${route.tool}/${route.action}`;
+  return options?.includeApiPrefix ? `/api/v2/${path}` : path;
 }
 
 export function routeSignature(route: V2Route): string {
-  return `${route.method || 'POST'} ${routePath(route.tool, route.action)}`;
+  return `${route.method || 'POST'} ${routeToPath(route, { includeApiPrefix: true })}`;
 }
 
 function generatedArgs(generated?: GeneratedApiRoute): string[] | undefined {

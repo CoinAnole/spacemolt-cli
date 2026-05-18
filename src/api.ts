@@ -1,5 +1,5 @@
 import { applyPayloadTransforms } from './args.ts';
-import { SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
+import { routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { ERROR_REGISTRY } from './errors.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, DEBUG, JSON_OUTPUT, MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS } from './runtime.ts';
@@ -68,11 +68,7 @@ export class SpaceMoltClient {
       payload = { ...mapping.defaults, ...payload };
     }
 
-    const routePath =
-      mapping.tool === mapping.action || SINGLE_ENDPOINT_TOOLS.has(mapping.tool)
-        ? mapping.tool
-        : `${mapping.tool}/${mapping.action}`;
-    const url = `${this.baseUrl}/${routePath}`;
+    const url = `${this.baseUrl}/${routeToPath(mapping)}`;
     const method = mapping.method || 'POST';
 
     let session = await this.sessionStore.getSession();
@@ -164,11 +160,7 @@ export class SpaceMoltClient {
     const loginMapping = V2_TOOL_MAP.login;
     if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
     const loginPayload = applyPayloadTransforms('login', { username, password });
-    const loginRoutePath =
-      loginMapping.tool === loginMapping.action || SINGLE_ENDPOINT_TOOLS.has(loginMapping.tool)
-        ? loginMapping.tool
-        : `${loginMapping.tool}/${loginMapping.action}`;
-    const loginUrl = `${this.baseUrl}/${loginRoutePath}`;
+    const loginUrl = `${this.baseUrl}/${routeToPath(loginMapping)}`;
     return this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
   }
 

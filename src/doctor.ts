@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { COMMANDS, SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
+import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, c, VERSION } from './runtime.ts';
 import { ACTIVE_PROFILE, getSessionPath, loadSession } from './session.ts';
@@ -24,10 +24,6 @@ function pass(name: string, message: string, detail?: string): DoctorCheck {
 
 function fail(name: string, message: string, detail?: string): DoctorCheck {
   return { name, ok: false, message, detail };
-}
-
-function routePath(tool: string, action: string): string {
-  return tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
 }
 
 export async function runDoctor(): Promise<DoctorResult> {
@@ -86,7 +82,7 @@ export async function runDoctor(): Promise<DoctorResult> {
       const v2ToolMap = Object.fromEntries(
         Object.entries(V2_TOOL_MAP).map(([command, mapping]) => [
           command,
-          { route: routePath(mapping.tool, mapping.action), method: mapping.method || 'POST' },
+          { route: routeToPath(mapping, { includeApiPrefix: true }), method: mapping.method || 'POST' },
         ]),
       );
 

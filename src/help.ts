@@ -1,6 +1,6 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
-import { COMMANDS, SINGLE_ENDPOINT_TOOLS } from './commands.ts';
+import { COMMANDS, routeToPath } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { c, QUIET, VERSION } from './runtime.ts';
@@ -259,10 +259,7 @@ export function showCommandExplanation(command: string): boolean {
 
   showCommandHelp(command);
   console.log(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
-  const routePath =
-    config.route.tool === config.route.action || SINGLE_ENDPOINT_TOOLS.has(config.route.tool)
-      ? `/api/v2/${config.route.tool}`
-      : `/api/v2/${config.route.tool}/${config.route.action}`;
+  const routePath = routeToPath(config.route, { includeApiPrefix: true });
   console.log(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
   if (config.aliases && Object.keys(config.aliases).length > 0) {
     console.log(`${c.bright}CLI aliases:${c.reset}`);

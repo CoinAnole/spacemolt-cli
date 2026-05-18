@@ -13,7 +13,7 @@
 import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { COMMANDS, SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands';
+import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
@@ -25,10 +25,6 @@ const SPEC_ROUTES_COVERED_BY_ALIASES = new Set([
 
 function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help') || SPEC_ROUTES_COVERED_BY_ALIASES.has(route);
-}
-
-function routePath(tool: string, action: string): string {
-  return tool === action || SINGLE_ENDPOINT_TOOLS.has(tool) ? `/api/v2/${tool}` : `/api/v2/${tool}/${action}`;
 }
 
 async function loadOpenApiSpec(): Promise<{ paths: Record<string, { get?: unknown; post?: unknown }> }> {
@@ -58,7 +54,7 @@ describe('api sync', () => {
         Object.entries(V2_TOOL_MAP).map(([command, mapping]) => [
           command,
           {
-            route: routePath(mapping.tool, mapping.action),
+            route: routeToPath(mapping, { includeApiPrefix: true }),
             method: mapping.method || 'POST',
           },
         ]),

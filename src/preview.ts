@@ -1,5 +1,5 @@
 import { applyPayloadTransforms } from './args.ts';
-import { SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
+import { routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
@@ -34,16 +34,12 @@ export function getRoutePreview(command: string, payload: Record<string, unknown
 
   const normalizedPayload = applyPayloadTransforms(command, { ...payload });
   const requestPayload = mapping.defaults ? { ...mapping.defaults, ...normalizedPayload } : normalizedPayload;
-  const routePath =
-    mapping.tool === mapping.action || SINGLE_ENDPOINT_TOOLS.has(mapping.tool)
-      ? mapping.tool
-      : `${mapping.tool}/${mapping.action}`;
 
   return {
     dry_run: true,
     command,
     method: mapping.method || 'POST',
-    url: `${trimTrailingSlash(API_BASE)}/${routePath}`,
+    url: `${trimTrailingSlash(API_BASE)}/${routeToPath(mapping)}`,
     payload: requestPayload,
     server_request_sent: false,
     notes: RISK_NOTES[command] || ['No mutation was sent. This is a client-side route and payload preview.'],
