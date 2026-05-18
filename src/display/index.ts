@@ -8,7 +8,7 @@ import {
 import { COMPACT, c, FORMAT, PLAIN, QUIET } from '../runtime.ts';
 import type { APIResponse, GlobalOptions } from '../types.ts';
 import { toYaml } from '../yaml.ts';
-import { resultFormatters } from './formatters.ts';
+import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
 
 export function displayStructuredResult(
   command: string,
@@ -73,7 +73,11 @@ export function displayStructuredResult(
       console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
   }
 
-  for (const formatter of resultFormatters) {
+  for (const formatter of commandScopedFormatters(resultFormatters, command)) {
+    if (formatter(viewModel, command)) return;
+  }
+
+  for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
     if (formatter(viewModel, command)) return;
   }
 

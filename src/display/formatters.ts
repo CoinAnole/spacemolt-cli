@@ -3,22 +3,57 @@ import { c, firstArray, formatPlayer, printCompactTable, printItemTable } from '
 export type ResultFormatter = ((result: Record<string, unknown>, command?: string) => boolean) & {
   formatterName?: string;
   hintKeys?: string[];
+  commands?: readonly string[];
+  shapeFallback?: boolean;
 };
+
+export interface ResultFormatterOptions {
+  commands?: readonly string[];
+  shapeFallback?: boolean;
+}
+
+function formatter(
+  format: (result: Record<string, unknown>, command?: string) => boolean,
+  options: ResultFormatterOptions = {},
+): ResultFormatter {
+  const resultFormatter = format as ResultFormatter;
+  resultFormatter.commands = options.commands;
+  resultFormatter.shapeFallback = options.shapeFallback ?? false;
+  return resultFormatter;
+}
 
 export function namedFormatter(
   formatterName: string,
   hintKeys: string[],
   format: (result: Record<string, unknown>, command?: string) => boolean,
+  options: ResultFormatterOptions = {},
 ): ResultFormatter {
-  const formatter = format as ResultFormatter;
-  formatter.formatterName = formatterName;
-  formatter.hintKeys = hintKeys;
-  return formatter;
+  const resultFormatter = formatter(format, options);
+  resultFormatter.formatterName = formatterName;
+  resultFormatter.hintKeys = hintKeys;
+  return resultFormatter;
+}
+
+export function formatterMatchesCommand(formatter: ResultFormatter, command: string): boolean {
+  const commands = formatter.commands;
+  if (!commands?.length) return false;
+  const normalizedCommand = command.startsWith('v2_') ? command.slice(3) : command;
+  return commands.includes(command) || commands.includes(normalizedCommand);
+}
+
+export function commandScopedFormatters(formatters: readonly ResultFormatter[], command: string): ResultFormatter[] {
+  return formatters.filter((formatter) => formatterMatchesCommand(formatter, command));
+}
+
+export function shapeFallbackFormatters(formatters: readonly ResultFormatter[], command: string): ResultFormatter[] {
+  return formatters.filter(
+    (formatter) => formatter.shapeFallback && !formatterMatchesCommand(formatter, command),
+  );
 }
 
 export const resultFormatters: ResultFormatter[] = [
   // Player status
-  (r) => {
+  formatter((r) => {
     if (!r.player || !r.ship) return false;
     const p = r.player as Record<string, unknown>;
     const s = r.ship as Record<string, unknown>;
@@ -69,10 +104,10 @@ export const resultFormatters: ResultFormatter[] = [
       if (nearby.length > 5) console.log(`  ... and ${nearby.length - 5} more`);
     }
     return true;
-  },
+  }, { commands: ['get_status'], shapeFallback: true }),
 
   // Registration
-  (r) => {
+  formatter((r) => {
     if (!r.password || !r.player_id) return false;
     console.log(`\n${c.green}${c.bright}=== Registration Successful ===${c.reset}`);
     console.log(`Player ID: ${r.player_id}`);
@@ -85,7 +120,7 @@ export const resultFormatters: ResultFormatter[] = [
     console.log(`  mine          - Mine resources (at asteroid belts)`);
     console.log(`  help          - Get full command list from server`);
     return true;
-  },
+  }, { commands: ['register'] }),
 
   // System info
   namedFormatter('system_info', ['system', 'security_status'], (r) => {
@@ -129,7 +164,7 @@ export const resultFormatters: ResultFormatter[] = [
       );
     }
     return true;
-  }),
+  }, { commands: ['get_system'], shapeFallback: true }),
 
   // POI info
   namedFormatter('poi_info', ['poi'], (r) => {
@@ -178,7 +213,7 @@ export const resultFormatters: ResultFormatter[] = [
     const services = r.services as string[] | undefined;
     if (services?.length) console.log(`\n${c.bright}Services:${c.reset} ${services.join(', ')}`);
     return true;
-  }),
+  }, { commands: ['get_poi'], shapeFallback: true }),
 
   // Cargo
   namedFormatter('cargo', ['cargo'], (r, command) => {
@@ -197,7 +232,7 @@ export const resultFormatters: ResultFormatter[] = [
     }
     printItemTable(cargo);
     return true;
-  }),
+  }, { commands: ['get_cargo'], shapeFallback: true }),
 
   // Nearby players, pirates, and empire NPCs
   namedFormatter('nearby', ['nearby'], (r) => {
@@ -234,10 +269,10 @@ export const resultFormatters: ResultFormatter[] = [
       }
     }
     return true;
-  }),
+  }, { commands: ['get_nearby'], shapeFallback: true }),
 
   // Wrecks
-  (r) => {
+  formatter((r) => {
     if (!Array.isArray(r.wrecks)) return false;
     const wrecks = r.wrecks as Array<Record<string, unknown>>;
     console.log(`\n${c.bright}=== Wrecks at POI ===${c.reset}`);
@@ -256,10 +291,10 @@ export const resultFormatters: ResultFormatter[] = [
       }
     }
     return true;
-  },
+  }, { commands: ['get_wrecks'], shapeFallback: true }),
 
   // Skills (v2 format: player_skills array + skills metadata)
-  (r) => {
+  formatter((r) => {
     if (r.skills === undefined || r.player_skills === undefined) return false;
     const playerSkills = (r.player_skills as Array<Record<string, unknown>>) || [];
     console.log(`\n${c.bright}=== Your Skills ===${c.reset}`);
@@ -282,10 +317,10 @@ export const resultFormatters: ResultFormatter[] = [
       }
     }
     return true;
-  },
+  }, { commands: ['get_skills'], shapeFallback: true }),
 
   // Skills (v1 format: skills as object map of skill_id -> skill data)
-  (r) => {
+  formatter((r) => {
     if (!r.skills || typeof r.skills !== 'object' || Array.isArray(r.skills)) return false;
     const skills = r.skills as Record<
       string,
@@ -322,10 +357,10 @@ export const resultFormatters: ResultFormatter[] = [
       }
     }
     return true;
-  },
+  }, { commands: ['get_skills'], shapeFallback: true }),
 
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
-  (r) => {
+  formatter((r) => {
     if (!Array.isArray(r.listings)) return false;
     const listings = r.listings as Array<Record<string, unknown>>;
     const firstListing = listings[0];
@@ -352,10 +387,10 @@ export const resultFormatters: ResultFormatter[] = [
       console.log(`  Listing ID: ${listing.listing_id}`);
     }
     return true;
-  },
+  }, { commands: ['browse_ships'], shapeFallback: true }),
 
   // Market listings
-  (r) => {
+  formatter((r) => {
     if (!Array.isArray(r.listings)) return false;
     const listings = r.listings as Array<Record<string, unknown>>;
     console.log(`\n${c.bright}=== Market Listings ===${c.reset}`);
@@ -374,11 +409,11 @@ export const resultFormatters: ResultFormatter[] = [
       }
     }
     return true;
-  },
+  }, { commands: ['get_trades'], shapeFallback: true }),
 
   // Location info (get_location) — must come before simple message formatter since
   // the response has both r.location and r.message, which the simple formatter swallows
-  (r) => {
+  formatter((r) => {
     if (!r.location || typeof r.location !== 'object') return false;
     const loc = r.location as {
       system_id: string;
@@ -424,7 +459,7 @@ export const resultFormatters: ResultFormatter[] = [
       console.log(`\n${c.dim}Nearby NPCs: ${loc.nearby_empire_npc_count}${c.reset}`);
     }
     return true;
-  },
+  }, { commands: ['get_location'], shapeFallback: true }),
 
   // Arrival (travel/jump)
   namedFormatter('arrival', ['poi_id', 'online_players'], (r) => {
@@ -440,7 +475,7 @@ export const resultFormatters: ResultFormatter[] = [
       console.log(`\n(No other players here)`);
     }
     return true;
-  }),
+  }, { commands: ['travel', 'jump'], shapeFallback: true }),
 
   // Market order book
   namedFormatter('view_market', ['items'], (r) => {
@@ -479,7 +514,7 @@ export const resultFormatters: ResultFormatter[] = [
       console.log('');
     }
     return true;
-  }),
+  }, { commands: ['view_market'], shapeFallback: true }),
 
   // Station storage
   namedFormatter('storage', ['base_id', 'items'], (r) => {
@@ -511,7 +546,7 @@ export const resultFormatters: ResultFormatter[] = [
       }
     }
     return true;
-  }),
+  }, { commands: ['storage', 'view_storage'], shapeFallback: true }),
 
   // Chat confirmation
   namedFormatter('chat_sent', ['content'], (r) => {
@@ -527,7 +562,7 @@ export const resultFormatters: ResultFormatter[] = [
     }
     if (r.warning) console.log(`${c.yellow}Warning:${c.reset} ${r.warning}`);
     return true;
-  }),
+  }, { commands: ['chat'], shapeFallback: true }),
 
   namedFormatter('drones', ['drones'], (r) => {
     const drones = firstArray(r, ['drones']);
@@ -540,7 +575,7 @@ export const resultFormatters: ResultFormatter[] = [
       ['Cargo', ['cargo_used', 'cargo']],
     ]);
     return true;
-  }),
+  }, { commands: ['list_drones'], shapeFallback: true }),
 
   namedFormatter('drone', ['drone'], (r) => {
     const drone = r.drone as Record<string, unknown> | undefined;
@@ -557,7 +592,7 @@ export const resultFormatters: ResultFormatter[] = [
     );
     if (drone.script || r.script) console.log(`\n${c.bright}Script:${c.reset}\n${drone.script || r.script}`);
     return true;
-  }),
+  }, { commands: ['get_drone'], shapeFallback: true }),
 
   namedFormatter('facilities', ['facilities'], (r) => {
     const facilities = firstArray(r, ['facilities', 'facility_types', 'upgrades']);
@@ -570,7 +605,7 @@ export const resultFormatters: ResultFormatter[] = [
       ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
     ]);
     return true;
-  }),
+  }, { commands: ['facility_list'], shapeFallback: true }),
 
   namedFormatter('facility', ['facility'], (r) => {
     const facility = r.facility as Record<string, unknown> | undefined;
@@ -587,7 +622,7 @@ export const resultFormatters: ResultFormatter[] = [
       ],
     );
     return true;
-  }),
+  }, { commands: ['facility_get'], shapeFallback: true }),
 
   namedFormatter('fleet', ['fleet'], (r) => {
     const fleet = r.fleet as Record<string, unknown> | undefined;
@@ -606,7 +641,7 @@ export const resultFormatters: ResultFormatter[] = [
       ]);
     }
     return true;
-  }),
+  }, { commands: ['fleet_status'], shapeFallback: true }),
 
   namedFormatter('battle_status', ['battle'], (r) => {
     const battle = r.battle as Record<string, unknown> | undefined;
@@ -626,7 +661,7 @@ export const resultFormatters: ResultFormatter[] = [
       ]);
     }
     return true;
-  }),
+  }, { commands: ['get_battle_status'], shapeFallback: true }),
 
   namedFormatter('market_orders', ['orders'], (r) => {
     const orders = firstArray(r, ['orders']);
@@ -639,7 +674,7 @@ export const resultFormatters: ResultFormatter[] = [
       ['Price', ['price_each', 'price']],
     ]);
     return true;
-  }),
+  }, { commands: ['view_orders'], shapeFallback: true }),
 
   namedFormatter('intel', ['intel'], (r) => {
     const intel = firstArray(r, ['intel', 'results', 'trade_intel']);
@@ -652,12 +687,12 @@ export const resultFormatters: ResultFormatter[] = [
       ['Updated', ['updated_at', 'created_at']],
     ]);
     return true;
-  }),
+  }, { commands: ['faction_query_trade_intel', 'faction_trade_intel'], shapeFallback: true }),
 
   // Simple message
-  (r) => {
+  formatter((r) => {
     if (!r.message || Object.keys(r).length > 2) return false;
     console.log(`${c.green}OK:${c.reset} ${r.message}`);
     return true;
-  },
+  }, { shapeFallback: true }),
 ];

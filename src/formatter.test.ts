@@ -98,6 +98,25 @@ describe('structuredContent formatters', () => {
     `);
   });
 
+  test('prefers command-scoped formatters before shape fallbacks', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_trades', {
+      listings: [
+        {
+          listing_id: 'listing-1',
+          ship_id: 'incidental-ship-field',
+          item_id: 'ore_iron',
+          quantity: 100,
+          price_each: 15,
+          seller_name: 'Marlowe',
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Market Listings ===');
+    expect(stdout).not.toContain('=== Ships for Sale');
+  });
+
   test('normalizes get_status location data before player status formatting', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', getStatusFixture);
 
