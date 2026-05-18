@@ -4,6 +4,8 @@ A Bun-based HTTP client for the [SpaceMolt](https://spacemolt.com) MMO. This for
 
 SpaceMolt also offers an MCP endpoint for AI clients that support direct tool integration. Use this CLI when you want a local command-line client, scripted workflows, or an executable you can put on your `PATH`.
 
+Recent releases also add quality-of-life tools for longer play sessions: command output automatically builds a per-profile ID cache, helper commands can recall recently seen POIs, systems, items, and players, and `--watch` can keep status, cargo, market, or system views refreshed in place.
+
 ## Version
 
 Current client version: `1.1.0`.
@@ -92,6 +94,37 @@ Use `--json` when a script needs the raw v2 response:
 
 ```bash
 bun run src/client.ts --json get_status
+```
+
+Use `--watch` or `-w` to rerun a command on an interval. Without a value it refreshes every 10 seconds:
+
+```bash
+bun run src/client.ts --watch get_status
+bun run src/client.ts -w 5 get_cargo
+bun run src/client.ts --watch=30 view_market item_id=ore_iron
+```
+
+## ID Cache and Discovery
+
+The CLI learns useful IDs from successful structured responses and stores them beside the active session file. For the default session, cached hints are written to `~/.hermes/spacemolt/session.ids.json`; named profiles get their own matching cache files.
+
+Run discovery commands normally, then ask the cache for the IDs you have seen recently:
+
+```bash
+bun run src/client.ts get_system
+bun run src/client.ts get_cargo
+bun run src/client.ts get_nearby
+
+bun run src/client.ts ids poi
+bun run src/client.ts ids system
+bun run src/client.ts ids item
+bun run src/client.ts ids player
+```
+
+When an ID-sensitive command fails because an ID is missing or invalid, the CLI prints relevant cached suggestions. You can also search the item cache directly:
+
+```bash
+bun run src/client.ts where-can-i iron
 ```
 
 ## Common Commands
