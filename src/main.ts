@@ -426,7 +426,7 @@ function renderConnectionError(error: unknown, options: GlobalOptions): number {
 
 export async function main(): Promise<CliResult> {
   const exitCode = await runInvocation(process.argv.slice(2));
-  return { exitCode };
+  process.exit(exitCode);
 }
 
 if (import.meta.main) {
