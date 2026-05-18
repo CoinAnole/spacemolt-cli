@@ -1,6 +1,12 @@
 #!/usr/bin/env bun
 import { execute } from './api.ts';
-import { convertPayloadTypes, normalizeParsedPayload, parseArgs, validateRequiredArgs } from './args.ts';
+import {
+  convertPayloadTypes,
+  normalizeParsedPayload,
+  parseArgs,
+  validatePayloadAgainstSchema,
+  validateRequiredArgs,
+} from './args.ts';
 import { COMMANDS } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import { displayResult } from './display/index.ts';
@@ -189,6 +195,18 @@ export function preparePayload(
       return { type: 'exit', exitCode: 1 };
     }
     displayMissingArgument(command, missingArg);
+    return { type: 'exit', exitCode: 1 };
+  }
+
+  const schemaErrors = validatePayloadAgainstSchema(command, rawPayload);
+  if (schemaErrors.length > 0) {
+    if (options.json) {
+      printJsonError('validation_error', schemaErrors.map((e) => e.message).join('; '));
+      return { type: 'exit', exitCode: 1 };
+    }
+    for (const err of schemaErrors) {
+      console.error(`${c.red}Error:${c.reset} ${err.message}`);
+    }
     return { type: 'exit', exitCode: 1 };
   }
 

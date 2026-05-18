@@ -2,8 +2,18 @@ import { COMMANDS, type CommandConfig } from './commands.ts';
 
 export function normalizeParsedPayload(command: string, payload: Record<string, string>): Record<string, string> {
   const normalized: Record<string, string> = { ...payload };
-  const aliases = COMMANDS[command]?.aliases || {};
+  const config = COMMANDS[command];
 
+  // Apply fieldRenames first (deprecated field names -> current names)
+  if (config?.fieldRenames) {
+    for (const [from, to] of Object.entries(config.fieldRenames)) {
+      if (normalized[from] !== undefined && normalized[to] === undefined) normalized[to] = normalized[from];
+      if (from !== to) delete normalized[from];
+    }
+  }
+
+  // Apply aliases
+  const aliases = config?.aliases || {};
   for (const [from, to] of Object.entries(aliases)) {
     if (normalized[from] !== undefined && normalized[to] === undefined) normalized[to] = normalized[from];
     if (from !== to) delete normalized[from];
@@ -12,7 +22,13 @@ export function normalizeParsedPayload(command: string, payload: Record<string, 
   return normalized;
 }
 
-export function parseArgs(args: string[]): { command: string; payload: Record<string, string>; warnings: string[] } {
+interface ParsedArgs {
+  command: string;
+  payload: Record<string, string>;
+  warnings: string[];
+}
+
+export function parseArgs(args: string[]): ParsedArgs {
   const command = args[0] || '';
   const payload: Record<string, string> = {};
   const warnings: string[] = [];
@@ -31,6 +47,7 @@ export function parseArgs(args: string[]): { command: string; payload: Record<st
     }
   }
   if (config?.schema) for (const field of Object.keys(config.schema)) validArgNames.add(field);
+  if (config?.fieldRenames) for (const from of Object.keys(config.fieldRenames)) validArgNames.add(from);
   let positionalIndex = 0;
 
   for (let i = 1; i < args.length; i++) {
@@ -111,6 +128,82 @@ export function validateRequiredArgs(command: string, payload: Record<string, st
   return null;
 }
 
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: 'invalid_enum' | 'invalid_integer' | 'invalid_number' | 'invalid_boolean' | 'invalid_field_type';
+}
+
+export function validatePayloadAgainstSchema(command: string, payload: Record<string, string>): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const config = COMMANDS[command];
+  const schema = config?.schema;
+  if (!schema) return errors;
+
+  for (const [key, value] of Object.entries(payload)) {
+    const fieldSchema = schema[key];
+    if (!fieldSchema) continue;
+
+    if (fieldSchema.enum && fieldSchema.enum.length > 0) {
+      if (!fieldSchema.enum.includes(value)) {
+        errors.push({
+          field: key,
+          message: `Invalid value "${value}" for "${key}". Expected one of: ${fieldSchema.enum.join(', ')}`,
+          code: 'invalid_enum',
+        });
+      }
+    }
+
+    if (fieldSchema.type === 'integer' || fieldSchema.type === 'number') {
+      const num = parseTypedNumber(value, fieldSchema.type);
+      if (num === undefined) {
+        errors.push({
+          field: key,
+          message: `Invalid ${fieldSchema.type} "${value}" for "${key}".`,
+          code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
+        });
+      }
+    }
+
+    if (fieldSchema.type === 'boolean') {
+      if (value !== 'true' && value !== 'false') {
+        const suggestion = suggestBooleanCorrection(value);
+        const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
+        errors.push({
+          field: key,
+          message: `Invalid boolean "${value}" for "${key}". Use true/false.${hint}`,
+          code: 'invalid_boolean',
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+function suggestBooleanCorrection(value: string): string | null {
+  const lower = value.toLowerCase();
+  if (levenshteinDistance(lower, 'true') <= 2 || (lower.startsWith('tr') && lower.length <= 4)) return 'true';
+  if (levenshteinDistance(lower, 'false') <= 2 || (lower.startsWith('fa') && lower.length <= 5)) return 'false';
+  if (lower === '1' || lower === 'yes' || lower === 'on') return 'true';
+  if (lower === '0' || lower === 'no' || lower === 'off') return 'false';
+  return null;
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const current = new Array<number>(b.length + 1);
+  for (let i = 1; i <= a.length; i++) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      current[j] = Math.min((previous[j] ?? 0) + 1, (current[j - 1] ?? 0) + 1, (previous[j - 1] ?? 0) + cost);
+    }
+    for (let j = 0; j < previous.length; j++) previous[j] = current[j] ?? 0;
+  }
+  return previous[b.length] ?? 0;
+}
+
 export function getArgNames(config: CommandConfig): string[] {
   const names: string[] = [];
   for (const arg of config.args || []) {
@@ -122,26 +215,11 @@ export function getArgNames(config: CommandConfig): string[] {
   return names;
 }
 
-type PayloadConversionSchema = Record<string, { type?: string }>;
-
-const CLI_PAYLOAD_SCHEMA_OVERRIDES: Record<string, PayloadConversionSchema> = {
-  send_gift: {
-    credits: { type: 'integer' },
-    recipient: { type: 'string' },
-    ship_id: { type: 'string' },
-  },
-  trade_offer: {
-    credits: { type: 'integer' },
-    target_id: { type: 'string' },
-  },
-};
+type PayloadConversionSchema = Record<string, { type?: string; enum?: string[] }>;
 
 export function getPayloadConversionSchema(command: string | undefined): PayloadConversionSchema {
   if (!command) return {};
-  return {
-    ...(COMMANDS[command]?.schema || {}),
-    ...(CLI_PAYLOAD_SCHEMA_OVERRIDES[command] || {}),
-  };
+  return COMMANDS[command]?.schema || {};
 }
 
 function getCommandFieldType(command: string | undefined, key: string): string | undefined {
@@ -189,4 +267,23 @@ export function convertPayloadTypes(payload: Record<string, string>, command?: s
     result[key] = value;
   }
   return result;
+}
+
+export function applyPayloadTransforms(command: string, payload: Record<string, unknown>): Record<string, unknown> {
+  const config = COMMANDS[command];
+
+  // Apply array field splitting from metadata
+  if (config?.arrayFields) {
+    for (const field of config.arrayFields) {
+      const val = payload[field];
+      if (typeof val === 'string') {
+        payload[field] = val
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+    }
+  }
+
+  return payload;
 }

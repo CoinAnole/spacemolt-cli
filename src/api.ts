@@ -1,5 +1,6 @@
+import { applyPayloadTransforms } from './args.ts';
 import { SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
-import { normalizeCommandPayload, trimTrailingSlash } from './response.ts';
+import { trimTrailingSlash } from './response.ts';
 import { API_BASE, c, DEBUG, JSON_OUTPUT, MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS } from './runtime.ts';
 import { authenticateProfileSession, createSession, getSession, loadSession, saveSession } from './session.ts';
 import { requestJson } from './transport.ts';
@@ -9,7 +10,7 @@ export async function execute(command: string, payload?: Record<string, unknown>
   const mapping = V2_TOOL_MAP[command];
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
-  payload = normalizeCommandPayload(command, payload);
+  payload = applyPayloadTransforms(command, payload ?? {});
 
   // Merge static defaults (e.g., target=faction) into payload
   if (mapping.defaults) {
@@ -75,7 +76,7 @@ export async function execute(command: string, payload?: Record<string, unknown>
   async function login(currentSession: Session, username: string, password: string): Promise<APIResponse> {
     const loginMapping = V2_TOOL_MAP.login;
     if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
-    const loginPayload = normalizeCommandPayload('login', { username, password });
+    const loginPayload = applyPayloadTransforms('login', { username, password });
     const loginRoutePath =
       loginMapping.tool === loginMapping.action || SINGLE_ENDPOINT_TOOLS.has(loginMapping.tool)
         ? loginMapping.tool

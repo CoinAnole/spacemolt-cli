@@ -48,27 +48,6 @@ export function getObjectResult(response: APIResponse): Record<string, unknown> 
   return isRecord(response.result) ? response.result : undefined;
 }
 
-export function normalizeCommandPayload(
-  command: string,
-  payload?: Record<string, unknown>,
-): Record<string, unknown> | undefined {
-  if (command === 'send_gift' && payload?.ship_id && !payload.item_id) {
-    const normalized: Record<string, unknown> = { ...payload, item_id: payload.ship_id };
-    delete normalized.ship_id;
-    return normalized;
-  }
-  if (command === 'get_notifications' && typeof payload?.types === 'string') {
-    return {
-      ...payload,
-      types: payload.types
-        .split(',')
-        .map((type) => type.trim())
-        .filter(Boolean),
-    };
-  }
-  return payload;
-}
-
 export function normalizeStructuredResultForDisplay(result: Record<string, unknown>): Record<string, unknown> {
   const view = structuredClone(result);
   const loc = view.location as Record<string, unknown> | undefined;

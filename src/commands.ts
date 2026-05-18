@@ -29,6 +29,10 @@ export interface CommandConfig {
   aliases?: Record<string, string>;
   route: V2Route;
   schema?: Record<string, CommandFieldSchema>;
+  /** Fields whose string values should be split into arrays (e.g., "a,b,c" => ["a","b","c"]) */
+  arrayFields?: string[];
+  /** Deprecated field names that should be renamed before sending */
+  fieldRenames?: Record<string, string>;
 }
 
 export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
@@ -258,6 +262,12 @@ const COMMAND_OVERRIDES: Record<string, CommandConfig> = {
     route: {
       tool: 'spacemolt_transfer',
       action: 'trade_offer',
+    },
+    aliases: {
+      target_id: 'target',
+    },
+    fieldRenames: {
+      credits: 'offer_credits',
     },
   },
   trade_accept: {
@@ -1190,6 +1200,10 @@ const COMMAND_OVERRIDES: Record<string, CommandConfig> = {
       tool: 'spacemolt_storage',
       action: 'deposit',
     },
+    aliases: {
+      recipient: 'target',
+      ship_id: 'item_id',
+    },
   },
   create_sell_order: {
     args: ['item_id', 'quantity', 'price_each'],
@@ -1911,6 +1925,7 @@ const COMMAND_OVERRIDES: Record<string, CommandConfig> = {
       tool: 'spacemolt',
       action: 'get_notifications',
     },
+    arrayFields: ['types'],
   },
   get_empire_info: {
     args: ['empire_id'],
@@ -2239,12 +2254,31 @@ function positionalArgs(generated?: GeneratedApiRoute): string[] | undefined {
   return args.length > 0 ? args : undefined;
 }
 
+function buildUsageFromSchema(config: CommandConfig, generated: GeneratedApiRoute | undefined): string | undefined {
+  if (config.usage) return config.usage;
+  if (!generated?.schema) return undefined;
+  const req = config.required ?? generated.required;
+  if (!req || req.length === 0) return undefined;
+  const positional = positionalArgs(generated);
+  const allFields = positional || Object.keys(generated.schema);
+  const parts: string[] = [];
+  for (const f of allFields) {
+    const fieldSchema = generated.schema[f];
+    const isRequired = req.includes(f);
+    const hint = fieldSchema?.enum?.join('|') ?? (fieldSchema?.type === 'boolean' ? 'true/false' : '...');
+    parts.push(isRequired ? `<${f}>` : `[${f}=${hint}]`);
+  }
+  return parts.join(' ');
+}
+
 function mergeCommandConfig(config: CommandConfig): CommandConfig {
   const generated = GENERATED_API_ROUTES[routeSignature(config.route)];
   return {
     ...config,
     args: config.args ?? positionalArgs(generated),
     required: config.required ?? generated?.required,
+    description: config.description ?? generated?.summary,
+    usage: buildUsageFromSchema(config, generated),
     route: {
       ...config.route,
       method: config.route.method ?? generated?.route.method,

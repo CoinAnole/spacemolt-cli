@@ -3,10 +3,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
+  applyPayloadTransforms,
   compareVersions,
   convertPayloadTypes,
   getPayloadConversionSchema,
-  normalizeCommandPayload,
   normalizeParsedPayload,
   parseArgs,
   validateRequiredArgs,
@@ -98,10 +98,11 @@ describe('convertPayloadTypes', () => {
     expect(result.search).toBe('mining');
   });
 
-  test('credits is numeric (trade_offer)', () => {
-    const result = convertPayloadTypes({ target_id: 'abc123', credits: '500' }, 'trade_offer');
-    expect(result.target_id).toBe('abc123');
-    expect(result.credits).toBe(500);
+  test('credits is numeric (trade_offer) after field rename', () => {
+    const normalized = normalizeParsedPayload('trade_offer', { target_id: 'abc123', credits: '500' });
+    const result = convertPayloadTypes(normalized, 'trade_offer');
+    expect(result.target).toBe('abc123');
+    expect(result.offer_credits).toBe(500);
   });
 
   test('unknown fields are not auto-converted globally', () => {
@@ -137,7 +138,7 @@ describe('convertPayloadTypes', () => {
 
   test('notification types are split after type conversion', () => {
     const typed = convertPayloadTypes({ types: 'chat, combat', limit: '10', clear: 'false' }, 'get_notifications');
-    const result = normalizeCommandPayload('get_notifications', typed);
+    const result = applyPayloadTransforms('get_notifications', typed);
     expect(result).toEqual({
       types: ['chat', 'combat'],
       limit: 10,
@@ -157,44 +158,40 @@ describe('convertPayloadTypes', () => {
   });
 });
 
-describe('normalizeCommandPayload', () => {
-  test('send_gift maps ship_id to item_id for the storage deposit endpoint', () => {
-    const result = normalizeCommandPayload('send_gift', {
+describe('send_gift alias normalization', () => {
+  test('send_gift maps ship_id to item_id via aliases when item_id is absent', () => {
+    const normalized = normalizeParsedPayload('send_gift', {
       recipient: 'PlayerName',
       ship_id: 'ship_456',
     });
-
-    expect(result).toEqual({
-      recipient: 'PlayerName',
+    expect(normalized).toEqual({
+      target: 'PlayerName',
       item_id: 'ship_456',
     });
   });
 
-  test('send_gift keeps explicit item_id unchanged', () => {
-    const result = normalizeCommandPayload('send_gift', {
+  test('send_gift keeps explicit item_id unchanged when both item_id and ship_id present', () => {
+    const normalized = normalizeParsedPayload('send_gift', {
       recipient: 'PlayerName',
       item_id: 'ore_iron',
       ship_id: 'ship_456',
-      quantity: 10,
+      quantity: '10',
     });
-
-    expect(result).toEqual({
-      recipient: 'PlayerName',
+    expect(normalized).toEqual({
+      target: 'PlayerName',
       item_id: 'ore_iron',
-      ship_id: 'ship_456',
-      quantity: 10,
+      quantity: '10',
     });
   });
 
-  test('send_gift credit gifts are unchanged', () => {
-    const result = normalizeCommandPayload('send_gift', {
+  test('send_gift maps recipient to target', () => {
+    const normalized = normalizeParsedPayload('send_gift', {
       recipient: 'PlayerName',
-      credits: 1000,
+      credits: '1000',
     });
-
-    expect(result).toEqual({
-      recipient: 'PlayerName',
-      credits: 1000,
+    expect(normalized).toEqual({
+      target: 'PlayerName',
+      credits: '1000',
     });
   });
 });
@@ -804,7 +801,7 @@ describe('client.ts source integrity', () => {
     expect(src).not.toContain('NUMERIC_FIELDS');
     expect(getPayloadConversionSchema('travel').id?.type).toBe('string');
     expect(getPayloadConversionSchema('sell').quantity?.type).toBe('integer');
-    expect(getPayloadConversionSchema('trade_offer').credits?.type).toBe('integer');
+    expect(getPayloadConversionSchema('trade_offer').offer_credits?.type).toBe('integer');
   });
 
   test('COMMANDS block has no duplicate top-level command keys', () => {

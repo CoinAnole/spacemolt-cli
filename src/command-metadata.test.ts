@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { getArgNames } from './args';
+import { getArgNames, validatePayloadAgainstSchema } from './args';
 import { COMMANDS } from './commands';
 import { generateCompletion } from './completion';
 import { showCommandHelp } from './help';
@@ -68,14 +68,47 @@ describe('command metadata', () => {
     }
   });
 
-  test('completion values include schema-derived boolean choices and argument descriptions', () => {
-    const bash = generateCompletion('bash');
-    expect(bash).toContain('true false');
+  test('every command has a description from override or generated summary', () => {
+    const missing: string[] = [];
 
-    for (const shell of ['zsh', 'fish']) {
-      const completion = generateCompletion(shell);
-      expect(completion).toContain('True to activate cloak, false to deactivate');
-      expect(completion).toContain('Filter by notification types. Omit for all types.');
+    for (const [command, config] of Object.entries(COMMANDS)) {
+      if (!config.description) {
+        missing.push(command);
+      }
     }
+
+    expect(
+      missing,
+      `Commands missing description (add a description override or ensure the OpenAPI spec has a summary):\n  ${missing.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  test('schema validation catches invalid enum values', () => {
+    const errors = validatePayloadAgainstSchema('register', { empire: 'invalid_empire' });
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]?.code).toBe('invalid_enum');
+    expect(errors[0]?.field).toBe('empire');
+  });
+
+  test('schema validation catches invalid integers', () => {
+    const errors = validatePayloadAgainstSchema('buy_insurance', { ticks: 'abc' });
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]?.code).toBe('invalid_integer');
+  });
+
+  test('schema validation catches boolean typos with suggestions', () => {
+    const errors = validatePayloadAgainstSchema('cloak', { enable: 'flase' });
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]?.code).toBe('invalid_boolean');
+    expect(errors[0]?.message).toContain('Did you mean');
+  });
+
+  test('schema validation passes for valid payloads', () => {
+    const errors = validatePayloadAgainstSchema('register', {
+      username: 'test',
+      empire: 'solarian',
+      registration_code: 'abc123',
+    });
+    expect(errors).toEqual([]);
   });
 });

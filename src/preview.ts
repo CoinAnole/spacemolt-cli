@@ -1,5 +1,6 @@
+import { applyPayloadTransforms } from './args.ts';
 import { SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
-import { normalizeCommandPayload, trimTrailingSlash } from './response.ts';
+import { trimTrailingSlash } from './response.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
@@ -31,7 +32,7 @@ export function getRoutePreview(command: string, payload: Record<string, unknown
   const mapping = V2_TOOL_MAP[command];
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
-  const normalizedPayload = normalizeCommandPayload(command, payload) || {};
+  const normalizedPayload = applyPayloadTransforms(command, { ...payload });
   const requestPayload = mapping.defaults ? { ...mapping.defaults, ...normalizedPayload } : normalizedPayload;
   const routePath =
     mapping.tool === mapping.action || SINGLE_ENDPOINT_TOOLS.has(mapping.tool)
