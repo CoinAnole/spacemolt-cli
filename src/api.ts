@@ -1,79 +1,163 @@
 import { applyPayloadTransforms } from './args.ts';
 import { SINGLE_ENDPOINT_TOOLS, V2_TOOL_MAP } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
-import { API_BASE, c, DEBUG, JSON_OUTPUT, MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS } from './runtime.ts';
+import { API_BASE, DEBUG, JSON_OUTPUT, MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS } from './runtime.ts';
 import { authenticateProfileSession, createSession, getSession, loadSession, saveSession } from './session.ts';
 import { requestJson } from './transport.ts';
-import type { APIResponse, Session } from './types.ts';
+import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
 
-export async function execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
-  const mapping = V2_TOOL_MAP[command];
-  if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
+export interface SpaceMoltClientOptions {
+  transport: {
+    requestJson<T>(url: string, options?: JsonRequestOptions): Promise<{ status: number; data: T }>;
+  };
+  sessionStore: {
+    getSession(): Promise<Session>;
+    loadSession(): Promise<Session | null>;
+    saveSession(session: Session): Promise<void>;
+    createSession(): Promise<Session>;
+    authenticateProfileSession(session: Session): Promise<APIResponse | null>;
+  };
+  clock: {
+    now(): number;
+  };
+  sleep: (ms: number) => Promise<void>;
+  logger: {
+    debug(message: string): void;
+    error(message: string): void;
+    warn(message: string): void;
+  };
+}
 
-  payload = applyPayloadTransforms(command, payload ?? {});
+export class SpaceMoltClient {
+  private readonly transport: SpaceMoltClientOptions['transport'];
+  private readonly sessionStore: SpaceMoltClientOptions['sessionStore'];
+  private readonly clock: SpaceMoltClientOptions['clock'];
+  private readonly sleep: SpaceMoltClientOptions['sleep'];
+  private readonly logger: SpaceMoltClientOptions['logger'];
+  private readonly baseUrl: string;
+  private readonly maxSessionRecoveryAttempts: number;
+  private readonly maxRateLimitRetries: number;
+  private readonly jsonOutput: boolean;
 
-  // Merge static defaults (e.g., target=faction) into payload
-  if (mapping.defaults) {
-    payload = { ...mapping.defaults, ...payload };
+  constructor(options: SpaceMoltClientOptions) {
+    this.transport = options.transport;
+    this.sessionStore = options.sessionStore;
+    this.clock = options.clock;
+    this.sleep = options.sleep;
+    this.logger = options.logger;
+    this.baseUrl = trimTrailingSlash(API_BASE);
+    this.maxSessionRecoveryAttempts = MAX_SESSION_RECOVERY_ATTEMPTS;
+    this.maxRateLimitRetries = MAX_RATE_LIMIT_RETRIES;
+    this.jsonOutput = JSON_OUTPUT;
   }
 
-  const routePath =
-    mapping.tool === mapping.action || SINGLE_ENDPOINT_TOOLS.has(mapping.tool)
-      ? mapping.tool
-      : `${mapping.tool}/${mapping.action}`;
-  const url = `${trimTrailingSlash(API_BASE)}/${routePath}`;
-  const method = mapping.method || 'POST';
-  const routeKind: 'v2' = 'v2';
+  async execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
+    const mapping = V2_TOOL_MAP[command];
+    if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
-  async function sendRequest(
+    payload = applyPayloadTransforms(command, payload ?? {});
+
+    if (mapping.defaults) {
+      payload = { ...mapping.defaults, ...payload };
+    }
+
+    const routePath =
+      mapping.tool === mapping.action || SINGLE_ENDPOINT_TOOLS.has(mapping.tool)
+        ? mapping.tool
+        : `${mapping.tool}/${mapping.action}`;
+    const url = `${this.baseUrl}/${routePath}`;
+    const method = mapping.method || 'POST';
+
+    let session = await this.sessionStore.getSession();
+    let sessionRecoveryAttempts = 0;
+    let rateLimitRetries = 0;
+
+    while (true) {
+      if (command !== 'login' && command !== 'register') {
+        const authError = await this.sessionStore.authenticateProfileSession(session);
+        if (authError) return authError;
+      }
+
+      const data = await this.sendRequest(session, url, method, payload);
+
+      if (
+        data.error?.code === 'session_invalid' ||
+        data.error?.code === 'invalid_session' ||
+        data.error?.code === 'session_expired'
+      ) {
+        if (
+          command === 'login' ||
+          command === 'register' ||
+          sessionRecoveryAttempts >= this.maxSessionRecoveryAttempts
+        ) {
+          return data;
+        }
+        sessionRecoveryAttempts += 1;
+        const recoveredSession = await this.recoverSession();
+        if (!recoveredSession) return data;
+        session = recoveredSession;
+        continue;
+      }
+
+      const retryAfter = data.error?.retry_after ?? data.error?.wait_seconds;
+      if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
+        if (rateLimitRetries >= this.maxRateLimitRetries) return data;
+        rateLimitRetries += 1;
+        const waitMs = Math.ceil(retryAfter) * 1000;
+        if (!this.jsonOutput) {
+          this.logger.warn(`[RATE LIMITED] Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
+        }
+        await this.sleep(waitMs);
+        continue;
+      }
+
+      return data;
+    }
+  }
+
+  private async sendRequest(
     currentSession: Session,
     requestUrl: string,
     requestMethod: string,
     requestPayload?: Record<string, unknown>,
   ): Promise<APIResponse> {
     if (DEBUG) {
-      console.log(`${c.dim}[DEBUG] Request: ${requestMethod} ${requestUrl}${c.reset}`);
-      console.log(`${c.dim}[DEBUG] Route: ${routeKind}${c.reset}`);
-      console.log(`${c.dim}[DEBUG] Session: ${currentSession.id.substring(0, 8)}...${c.reset}`);
+      this.logger.debug(`Request: ${requestMethod} ${requestUrl}`);
+      this.logger.debug(`Route: v2`);
+      this.logger.debug(`Session: ${currentSession.id.substring(0, 8)}...`);
       if (requestPayload) {
         const safePayload = { ...requestPayload };
         if (safePayload.password) safePayload.password = '***';
-        console.log(`${c.dim}[DEBUG] Payload: ${JSON.stringify(safePayload)}${c.reset}`);
+        this.logger.debug(`Payload: ${JSON.stringify(safePayload)}`);
       }
     }
 
-    const startTime = Date.now();
-    const response = await requestJson<APIResponse>(requestUrl, {
+    const startTime = this.clock.now();
+    const response = await this.transport.requestJson<APIResponse>(requestUrl, {
       method: requestMethod,
       sessionId: currentSession.id,
       payload: requestMethod === 'POST' && requestPayload ? requestPayload : undefined,
     });
-    const elapsed = Date.now() - startTime;
+    const elapsed = this.clock.now() - startTime;
 
     const data = response.data;
 
     if (DEBUG) {
-      console.log(`${c.dim}[DEBUG] Response: ${response.status} (${elapsed}ms)${c.reset}`);
-      if (data.error) console.log(`${c.dim}[DEBUG] Error: ${data.error.code} - ${data.error.message}${c.reset}`);
-      if (data.notifications?.length)
-        console.log(`${c.dim}[DEBUG] Notifications: ${data.notifications.length}${c.reset}`);
+      this.logger.debug(`Response: ${response.status} (${elapsed}ms)`);
+      if (data.error) this.logger.debug(`Error: ${data.error.code} - ${data.error.message}`);
+      if (data.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
     }
 
-    // Update session
     if (data.session) {
       currentSession.expires_at = data.session.expires_at;
       if (data.session.player_id) currentSession.player_id = data.session.player_id;
-      await saveSession(currentSession);
+      await this.sessionStore.saveSession(currentSession);
     }
 
     return data;
   }
 
-  async function request(currentSession: Session, requestPayload?: Record<string, unknown>): Promise<APIResponse> {
-    return sendRequest(currentSession, url, method, requestPayload);
-  }
-
-  async function login(currentSession: Session, username: string, password: string): Promise<APIResponse> {
+  private async loginWithSession(currentSession: Session, username: string, password: string): Promise<APIResponse> {
     const loginMapping = V2_TOOL_MAP.login;
     if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
     const loginPayload = applyPayloadTransforms('login', { username, password });
@@ -81,78 +165,47 @@ export async function execute(command: string, payload?: Record<string, unknown>
       loginMapping.tool === loginMapping.action || SINGLE_ENDPOINT_TOOLS.has(loginMapping.tool)
         ? loginMapping.tool
         : `${loginMapping.tool}/${loginMapping.action}`;
-    const loginUrl = `${trimTrailingSlash(API_BASE)}/${loginRoutePath}`;
-    return sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
+    const loginUrl = `${this.baseUrl}/${loginRoutePath}`;
+    return this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
   }
 
-  async function recoverSession(): Promise<Session | null> {
-    if (DEBUG) console.log(`${c.dim}[DEBUG] Session expired, creating new session...${c.reset}`);
-    const oldSession = await loadSession();
-    const newSession = await createSession();
+  private async recoverSession(): Promise<Session | null> {
+    if (DEBUG) this.logger.debug(`Session expired, creating new session...`);
+    const oldSession = await this.sessionStore.loadSession();
+    const newSession = await this.sessionStore.createSession();
     if (oldSession?.username && oldSession?.password) {
       newSession.username = oldSession.username;
       newSession.password = oldSession.password;
-      await saveSession(newSession);
-      // Auto-re-login with stored credentials
-      if (DEBUG) console.log(`${c.dim}[DEBUG] Re-authenticating as ${oldSession.username}...${c.reset}`);
-      const loginResp = await login(newSession, oldSession.username, oldSession.password);
+      await this.sessionStore.saveSession(newSession);
+      if (DEBUG) this.logger.debug(`Re-authenticating as ${oldSession.username}...`);
+      const loginResp = await this.loginWithSession(newSession, oldSession.username, oldSession.password);
       if (loginResp.error) {
-        if (!JSON_OUTPUT) {
-          console.error(
-            `${c.red}[SESSION]${c.reset} Session expired and auto-login failed: ${loginResp.error.message}`,
-          );
-          console.error(`${c.yellow}Run "spacemolt login <username> <password>" to re-authenticate.${c.reset}`);
+        if (!this.jsonOutput) {
+          this.logger.error(`[SESSION] Session expired and auto-login failed: ${loginResp.error.message}`);
+          this.logger.error(`Run "spacemolt login <username> <password>" to re-authenticate.`);
         }
         return null;
       }
-      if (!JSON_OUTPUT) {
-        console.log(`${c.dim}[SESSION]${c.reset} Session recovered, re-authenticated as ${oldSession.username}`);
+      if (!this.jsonOutput) {
+        this.logger.debug(`[SESSION] Session recovered, re-authenticated as ${oldSession.username}`);
       }
     }
     return newSession;
   }
+}
 
-  let session = await getSession();
-  let sessionRecoveryAttempts = 0;
-  let rateLimitRetries = 0;
+const defaultClient = new SpaceMoltClient({
+  transport: { requestJson },
+  sessionStore: { getSession, loadSession, saveSession, createSession, authenticateProfileSession },
+  clock: { now: Date.now },
+  sleep: (ms) => Bun.sleep(ms),
+  logger: {
+    debug: (msg) => console.log(`[DEBUG] ${msg}`),
+    error: (msg) => console.error(msg),
+    warn: (msg) => console.log(msg),
+  },
+});
 
-  while (true) {
-    if (command !== 'login' && command !== 'register') {
-      const authError = await authenticateProfileSession(session);
-      if (authError) return authError;
-    }
-
-    const data = await request(session, payload);
-
-    // Handle session expired - create new session, re-login if possible, then retry
-    if (
-      data.error?.code === 'session_invalid' ||
-      data.error?.code === 'invalid_session' ||
-      data.error?.code === 'session_expired'
-    ) {
-      if (command === 'login' || command === 'register' || sessionRecoveryAttempts >= MAX_SESSION_RECOVERY_ATTEMPTS) {
-        return data;
-      }
-      sessionRecoveryAttempts += 1;
-      const recoveredSession = await recoverSession();
-      if (!recoveredSession) return data;
-      session = recoveredSession;
-      continue;
-    }
-
-    // Handle rate limit on queries - wait and retry
-    const retryAfter = data.error?.retry_after ?? data.error?.wait_seconds;
-    if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
-      if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) return data;
-      rateLimitRetries += 1;
-      const waitMs = Math.ceil(retryAfter) * 1000;
-      if (!JSON_OUTPUT) {
-        console.log(`${c.yellow}[RATE LIMITED]${c.reset} Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
-      }
-      await Bun.sleep(waitMs);
-      continue;
-    }
-
-    return data;
-  }
+export async function execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
+  return defaultClient.execute(command, payload);
 }
