@@ -253,7 +253,7 @@ function levenshteinDistance(a: string, b: string): number {
   return previous[b.length] ?? 0;
 }
 
-export function getArgNames(config: CommandConfig): string[] {
+export function getArgNames(config: Pick<CommandConfig, 'args' | 'required'>): string[] {
   const names: string[] = [];
   for (const arg of config.args || []) {
     names.push(typeof arg === 'string' ? arg : arg.rest);

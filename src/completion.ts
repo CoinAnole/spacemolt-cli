@@ -1,7 +1,7 @@
 import { getArgNames } from './args.ts';
-import { COMMANDS } from './commands.ts';
+import { ALL_COMMANDS } from './commands.ts';
 
-const COMMANDS_LIST = Object.keys(COMMANDS).sort();
+const COMMANDS_LIST = Object.keys(ALL_COMMANDS).sort();
 
 const HINT_VALUES: Record<string, Record<string, string>> = {
   set_colors: {
@@ -11,14 +11,14 @@ const HINT_VALUES: Record<string, Record<string, string>> = {
 };
 
 function getCommandArgNames(command: string): string[] {
-  const config = COMMANDS[command];
+  const config = ALL_COMMANDS[command];
   if (!config) return [];
   return getArgNames(config);
 }
 
 function getFieldSchema(command: string, arg: string) {
-  const config = COMMANDS[command];
-  if (!config?.schema) return undefined;
+  const config = ALL_COMMANDS[command];
+  if (!config || !('schema' in config) || !config.schema) return undefined;
   const canonicalArg = config.aliases?.[arg] || arg;
   return config.schema[canonicalArg] || config.schema[arg];
 }
@@ -206,7 +206,7 @@ function generateZshCompletion(): string {
   lines.push('');
   lines.push('_spacemolt_commands() {');
   lines.push('  local commands');
-  lines.push(`  commands=(${COMMANDS_LIST.map((c) => `${c}[${COMMANDS[c]?.description || c}]`).join(' ')})`);
+  lines.push(`  commands=(${COMMANDS_LIST.map((c) => `${c}[${ALL_COMMANDS[c]?.description || c}]`).join(' ')})`);
   lines.push('  _describe -t commands "spacemolt commands" commands');
   lines.push('}');
   lines.push('');
@@ -232,7 +232,7 @@ function generateFishCompletion(): string {
   lines.push('');
   lines.push('# Commands');
   for (const cmd of COMMANDS_LIST) {
-    const desc = escapeDoubleQuotedShell(COMMANDS[cmd]?.description || cmd);
+    const desc = escapeDoubleQuotedShell(ALL_COMMANDS[cmd]?.description || cmd);
     lines.push(`complete -c spacemolt -n "__fish_use_subcommand" -a ${cmd} -d "${desc}"`);
   }
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a commands -d "Search local commands"');

@@ -1,0 +1,346 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { COMMANDS } from './commands.ts';
+import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
+import { c, QUIET } from './runtime.ts';
+import { getSessionPath, hardenPermissions } from './session.ts';
+import type { APIResponse } from './types.ts';
+
+export type IdKind = 'poi' | 'system' | 'item' | 'player';
+
+export interface IdHint {
+  kind: IdKind;
+  id: string;
+  name?: string;
+  sourceCommand: string;
+  seenAt: string;
+  context?: Record<string, string | number | boolean>;
+}
+
+interface IdCacheFile {
+  version: 1;
+  hints: IdHint[];
+}
+
+const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player']);
+const CACHE_FILE_MODE = 0o600;
+const CACHE_DIR_MODE = 0o700;
+const MAX_HINTS = 500;
+
+export function isIdKind(value: string): value is IdKind {
+  return ID_KINDS.has(value as IdKind);
+}
+
+export function getIdCachePath(): string {
+  const sessionPath = getSessionPath();
+  const parsed = path.parse(sessionPath);
+  return path.join(parsed.dir, `${parsed.name}.ids.json`);
+}
+
+export function loadIdCacheSync(): IdHint[] {
+  try {
+    const cachePath = getIdCachePath();
+    if (!fs.existsSync(cachePath)) return [];
+    hardenPermissions(cachePath, CACHE_FILE_MODE);
+    const parsed = JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as Partial<IdCacheFile>;
+    if (!Array.isArray(parsed.hints)) return [];
+    return parsed.hints.filter(isHint);
+  } catch {
+    return [];
+  }
+}
+
+async function saveIdCache(hints: IdHint[]): Promise<void> {
+  const cachePath = getIdCachePath();
+  const parentDir = path.dirname(cachePath);
+  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: CACHE_DIR_MODE });
+  hardenPermissions(parentDir, CACHE_DIR_MODE);
+  await Bun.write(cachePath, `${JSON.stringify({ version: 1, hints: hints.slice(0, MAX_HINTS) }, null, 2)}\n`);
+  hardenPermissions(cachePath, CACHE_FILE_MODE);
+}
+
+export async function cacheIdsFromResponse(command: string, response: APIResponse): Promise<void> {
+  if (response.error) return;
+  const result = getStructuredResult(response) || getObjectResult(response);
+  if (!result) return;
+
+  const extracted = extractIdHints(command, result, new Date().toISOString());
+  if (extracted.length === 0) return;
+
+  const existing = loadIdCacheSync();
+  const merged = mergeHints(extracted, existing);
+  await saveIdCache(merged);
+}
+
+export function extractIdHints(command: string, result: Record<string, unknown>, seenAt: string): IdHint[] {
+  const hints: IdHint[] = [];
+  const push = (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => {
+    if (!hint.id) return;
+    hints.push({
+      ...hint,
+      sourceCommand: command,
+      seenAt,
+      context: compactContext(hint.context),
+    });
+  };
+
+  const system = isRecord(result.system) ? result.system : undefined;
+  if (system) {
+    push({
+      kind: 'system',
+      id: stringValue(system.id),
+      name: stringValue(system.name),
+      context: pick(system, ['empire']),
+    });
+    for (const poi of arrayRecordsOrStrings(system.pois)) {
+      if (typeof poi === 'string') push({ kind: 'poi', id: poi });
+      else
+        push({
+          kind: 'poi',
+          id: stringValue(poi.id),
+          name: stringValue(poi.name),
+          context: pick(poi, ['type', 'has_base']),
+        });
+    }
+    for (const connection of arrayRecordsOrStrings(system.connections)) {
+      if (typeof connection === 'string') push({ kind: 'system', id: connection });
+      else {
+        push({
+          kind: 'system',
+          id: stringValue(connection.system_id || connection.id),
+          name: stringValue(connection.name),
+          context: pick(connection, ['distance']),
+        });
+      }
+    }
+  }
+
+  const poi = isRecord(result.poi) ? result.poi : undefined;
+  if (poi)
+    push({
+      kind: 'poi',
+      id: stringValue(poi.id || poi.poi_id),
+      name: stringValue(poi.name || poi.poi_name),
+      context: pick(poi, ['type', 'system_id']),
+    });
+
+  const location = isRecord(result.location) ? result.location : undefined;
+  if (location) {
+    push({ kind: 'system', id: stringValue(location.system_id), name: stringValue(location.system_name) });
+    push({
+      kind: 'poi',
+      id: stringValue(location.poi_id),
+      name: stringValue(location.poi_name),
+      context: pick(location, ['docked_at']),
+    });
+    for (const player of arrayRecords(location.nearby_players)) pushPlayer(push, player);
+  }
+
+  for (const item of arrayRecords(result.cargo)) pushItem(push, item, ['quantity', 'size']);
+  for (const item of arrayRecords(result.items)) {
+    const itemWithContext = isRecord(result.base_id) ? item : { ...item, base_id: result.base_id };
+    pushItem(push, itemWithContext, ['quantity', 'category', 'base_id']);
+  }
+  for (const item of arrayRecords(result.inventory)) pushItem(push, item, ['quantity']);
+
+  for (const player of arrayRecords(result.nearby)) pushPlayer(push, player);
+  for (const player of arrayRecords(result.players)) pushPlayer(push, player);
+  for (const player of arrayRecords(result.online_players)) pushPlayer(push, player);
+  for (const player of arrayRecords(result.agents)) pushPlayer(push, player);
+
+  return hints;
+}
+
+export function hintsForKind(kind: IdKind, hints = loadIdCacheSync()): IdHint[] {
+  return sortNewest(dedupeHints(hints.filter((hint) => hint.kind === kind)));
+}
+
+export function searchItemHints(query: string, hints = loadIdCacheSync()): IdHint[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return [];
+  return sortNewest(
+    dedupeHints(
+      hints.filter((hint) => {
+        if (hint.kind !== 'item') return false;
+        return hint.id.toLowerCase().includes(normalized) || (hint.name || '').toLowerCase().includes(normalized);
+      }),
+    ),
+  );
+}
+
+export function idKindForCommandField(command: string, field?: string): IdKind | undefined {
+  const normalizedField = normalizeField(field || '');
+  if (['travel'].includes(command)) return 'poi';
+  if (['jump', 'find_route'].includes(command)) return 'system';
+  if (['attack', 'scan', 'fleet_invite', 'fleet_kick'].includes(command)) return 'player';
+  if (
+    [
+      'sell',
+      'buy',
+      'deposit_items',
+      'withdraw_items',
+      'jettison',
+      'use_item',
+      'create_sell_order',
+      'create_buy_order',
+    ].includes(command)
+  ) {
+    return 'item';
+  }
+  if (normalizedField.includes('poi')) return 'poi';
+  if (normalizedField.includes('system')) return 'system';
+  if (normalizedField.includes('player') || normalizedField.includes('target')) return 'player';
+  if (normalizedField.includes('item')) return 'item';
+  return undefined;
+}
+
+export function printCachedIdSuggestions(command: string, field?: string): void {
+  if (QUIET) return;
+  const kind = idKindForCommandField(command, field);
+  if (!kind) return;
+  const suggestions = hintsForKind(kind).slice(0, 8);
+  if (suggestions.length === 0) return;
+
+  console.error(`\n${c.cyan}Cached ${kind} IDs:${c.reset}`);
+  for (const hint of suggestions) console.error(`  ${formatHint(hint)}`);
+}
+
+export function printIds(kind: IdKind): void {
+  const hints = hintsForKind(kind);
+  if (hints.length === 0) {
+    console.log(`No cached ${kind} IDs yet.`);
+    printDiscoveryCommands(kind);
+    return;
+  }
+
+  console.log(`${c.bright}${kind} IDs${c.reset}`);
+  for (const hint of hints) console.log(`  ${formatHint(hint)}`);
+}
+
+export function printWhereCanI(query: string): void {
+  const matches = searchItemHints(query);
+  if (matches.length === 0) {
+    console.log(`No cached item matches for "${query}".`);
+    console.log(`Try: spacemolt catalog type=items search=${query}`);
+    console.log(`Try: spacemolt view_market ${query}`);
+    return;
+  }
+
+  console.log(`${c.bright}Cached locations for "${query}"${c.reset}`);
+  for (const hint of matches) console.log(`  ${formatHint(hint)}`);
+}
+
+function mergeHints(newHints: IdHint[], existing: IdHint[]): IdHint[] {
+  const merged = new Map<string, IdHint>();
+  for (const hint of [...existing, ...newHints]) merged.set(`${hint.kind}:${hint.id}:${hint.sourceCommand}`, hint);
+  return sortNewest([...merged.values()]);
+}
+
+function dedupeHints(hints: IdHint[]): IdHint[] {
+  const seen = new Set<string>();
+  const result: IdHint[] = [];
+  for (const hint of hints) {
+    const key = `${hint.kind}:${hint.id}:${hint.sourceCommand}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(hint);
+  }
+  return result;
+}
+
+function sortNewest(hints: IdHint[]): IdHint[] {
+  return [...hints].sort((a, b) => b.seenAt.localeCompare(a.seenAt) || a.id.localeCompare(b.id));
+}
+
+function formatHint(hint: IdHint): string {
+  const name = hint.name && hint.name !== hint.id ? ` (${hint.name})` : '';
+  const context = hint.context && Object.keys(hint.context).length > 0 ? ` ${formatContext(hint.context)}` : '';
+  return `${hint.id}${name}${context} ${c.dim}[${hint.sourceCommand}, ${hint.seenAt}]${c.reset}`;
+}
+
+function formatContext(context: Record<string, string | number | boolean>): string {
+  return Object.entries(context)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(' ');
+}
+
+function printDiscoveryCommands(kind: IdKind): void {
+  const commandsByKind: Record<IdKind, string[]> = {
+    poi: ['get_system', 'get_status'],
+    system: ['get_system', 'get_map'],
+    item: ['get_cargo', 'view_market', 'catalog type=items'],
+    player: ['get_nearby', 'get_system_agents'],
+  };
+  console.log(`Run one of these to populate it:`);
+  for (const command of commandsByKind[kind]) console.log(`  spacemolt ${command}`);
+}
+
+function pushItem(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  item: Record<string, unknown>,
+  contextKeys: string[],
+): void {
+  push({
+    kind: 'item',
+    id: stringValue(item.item_id || item.id),
+    name: stringValue(item.item_name || item.name),
+    context: pick(item, contextKeys),
+  });
+}
+
+function pushPlayer(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  player: Record<string, unknown>,
+): void {
+  push({
+    kind: 'player',
+    id: stringValue(player.player_id || player.id || player.username),
+    name: stringValue(player.username || player.name),
+    context: pick(player, ['ship_class', 'faction_tag', 'status']),
+  });
+}
+
+function arrayRecords(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function arrayRecordsOrStrings(value: unknown): Array<Record<string, unknown> | string> {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is Record<string, unknown> | string => isRecord(item) || typeof item === 'string');
+}
+
+function pick(source: Record<string, unknown>, keys: string[]): Record<string, string | number | boolean> {
+  const result: Record<string, string | number | boolean> = {};
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') result[key] = value;
+  }
+  return result;
+}
+
+function compactContext(context: Record<string, string | number | boolean> | undefined) {
+  if (!context || Object.keys(context).length === 0) return undefined;
+  return context;
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function normalizeField(field: string): string {
+  return field.toLowerCase().replace(/-/g, '_');
+}
+
+function isHint(value: unknown): value is IdHint {
+  if (!isRecord(value)) return false;
+  return (
+    isIdKind(String(value.kind)) &&
+    typeof value.id === 'string' &&
+    typeof value.sourceCommand === 'string' &&
+    typeof value.seenAt === 'string'
+  );
+}
+
+export function discoverCommandsFor(command: string): string[] {
+  return COMMANDS[command]?.discoverWith || [];
+}

@@ -30,6 +30,16 @@ import {
   showHelp,
   showProgressiveHelp,
 } from './help.ts';
+import {
+  cacheIdsFromResponse,
+  hintsForKind,
+  idKindForCommandField,
+  isIdKind,
+  printCachedIdSuggestions,
+  printIds,
+  printWhereCanI,
+  searchItemHints,
+} from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
@@ -278,10 +288,12 @@ export async function renderResponse(commandRun: CommandRun, options: GlobalOpti
 
   if (!isJson && response.error) {
     displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp });
+    if (shouldShowCachedIdSuggestions(command, response.error)) printCachedIdSuggestions(command);
     return 1;
   }
 
   await persistResponseCredentials(command, response);
+  if (!options.dryRun) await cacheIdsFromResponse(command, response);
 
   if (isJson) {
     printJsonResponse(response);
@@ -323,6 +335,9 @@ export async function runInvocation(argv: string[]): Promise<number> {
     return doctorResult.ok ? 0 : 1;
   }
 
+  const localExit = runLocalHelperCommand(invocation);
+  if (localExit !== null) return localExit;
+
   const resolved = resolveCommand(invocation);
   if (resolved.type === 'exit') return resolved.exitCode;
 
@@ -335,6 +350,53 @@ export async function runInvocation(argv: string[]): Promise<number> {
   } catch (error) {
     return renderConnectionError(error, invocation.options);
   }
+}
+
+function runLocalHelperCommand(invocation: Invocation): number | null {
+  const command = invocation.args[0];
+  if (command === 'ids') {
+    const kind = invocation.args[1];
+    if (!kind || !isIdKind(kind)) {
+      if (invocation.options.json) {
+        printJsonError('validation_error', 'Usage: spacemolt ids <poi|system|item|player>');
+      } else {
+        console.error(`${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player>`);
+      }
+      return 1;
+    }
+    if (invocation.options.json) {
+      console.log(JSON.stringify({ structuredContent: { kind, ids: hintsForKind(kind) } }, null, 2));
+      return 0;
+    }
+    printIds(kind);
+    return 0;
+  }
+
+  if (command === 'where-can-i') {
+    const query = invocation.args.slice(1).join(' ').trim();
+    if (!query) {
+      if (invocation.options.json) {
+        printJsonError('missing_required_argument', 'Missing required argument: item');
+      } else {
+        console.error(`${c.red}Error:${c.reset} Usage: spacemolt where-can-i <item>`);
+      }
+      return 1;
+    }
+    if (invocation.options.json) {
+      console.log(JSON.stringify({ structuredContent: { query, matches: searchItemHints(query) } }, null, 2));
+      return 0;
+    }
+    printWhereCanI(query);
+    return 0;
+  }
+
+  return null;
+}
+
+function shouldShowCachedIdSuggestions(command: string, error: { code: string; message: string }): boolean {
+  if (!idKindForCommandField(command)) return false;
+  const text = `${error.code} ${error.message}`.toLowerCase();
+  return /invalid|unknown|not_found|not found|missing/.test(text);
 }
 
 async function runWatchLoop(invocation: Invocation): Promise<number> {

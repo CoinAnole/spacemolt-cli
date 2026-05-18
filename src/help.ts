@@ -1,7 +1,8 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
-import { COMMANDS, routeToPath } from './commands.ts';
+import { ALL_COMMANDS, routeToPath } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
+import { printCachedIdSuggestions } from './id-cache.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { c, QUIET, VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
@@ -83,7 +84,7 @@ export function printJsonError(code: string, message: string): void {
 }
 
 export function getUsageHint(command: string): string {
-  return COMMANDS[command]?.usage || '<args...>';
+  return ALL_COMMANDS[command]?.usage || '<args...>';
 }
 
 export function getUsageLine(command: string): string {
@@ -109,7 +110,7 @@ function levenshtein(a: string, b: string): number {
 export function suggestCommands(command: string, limit = 3): string[] {
   if (!command) return [];
   const normalized = command.toLowerCase();
-  return Object.keys(COMMANDS)
+  return Object.keys(ALL_COMMANDS)
     .map((candidate) => {
       const distance = levenshtein(normalized, candidate);
       const prefixScore = candidate.startsWith(normalized) || normalized.startsWith(candidate) ? -2 : 0;
@@ -126,7 +127,7 @@ function normalizeHelpTopic(topic: string): string {
 }
 
 function commandMatchesCategories(command: string, categories: Set<string>): boolean {
-  const category = COMMANDS[command]?.category;
+  const category = ALL_COMMANDS[command]?.category;
   return Boolean(category && categories.has(category));
 }
 
@@ -142,7 +143,7 @@ function findCommandGroup(topic: string): CommandGroup | undefined {
 
 function formatCommandSummary(command: string): string {
   const usage = getUsageHint(command);
-  const description = COMMANDS[command]?.description;
+  const description = ALL_COMMANDS[command]?.description;
   const usageText = usage === '<args...>' ? '' : ` ${usage}`;
   return description ? `${command}${usageText} - ${description}` : `${command}${usageText}`;
 }
@@ -151,7 +152,7 @@ export function showCommandGroups(): void {
   console.log(`\n${c.bright}Command Groups${c.reset}`);
   for (const group of COMMAND_GROUPS) {
     const categories = new Set(group.categories);
-    const count = Object.keys(COMMANDS).filter((command) => commandMatchesCategories(command, categories)).length;
+    const count = Object.keys(ALL_COMMANDS).filter((command) => commandMatchesCategories(command, categories)).length;
     console.log(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
   }
   console.log(`\nRun "spacemolt help <group>" to list commands in a group.`);
@@ -163,17 +164,17 @@ export function showCommandGroup(topic: string): boolean {
   if (!group) return false;
 
   const categories = new Set(group.categories);
-  const commands = Object.keys(COMMANDS)
+  const commands = Object.keys(ALL_COMMANDS)
     .filter((command) => commandMatchesCategories(command, categories))
     .sort((a, b) => {
-      const categoryCompare = (COMMANDS[a]?.category || '').localeCompare(COMMANDS[b]?.category || '');
+      const categoryCompare = (ALL_COMMANDS[a]?.category || '').localeCompare(ALL_COMMANDS[b]?.category || '');
       return categoryCompare || a.localeCompare(b);
     });
 
   console.log(`\n${c.bright}${group.label} Commands${c.reset}`);
   let lastCategory = '';
   for (const command of commands) {
-    const category = COMMANDS[command]?.category || 'Other';
+    const category = ALL_COMMANDS[command]?.category || 'Other';
     if (category !== lastCategory) {
       lastCategory = category;
       console.log(`\n${c.cyan}${category}:${c.reset}`);
@@ -185,7 +186,7 @@ export function showCommandGroup(topic: string): boolean {
 }
 
 function commandSearchText(command: string): string {
-  const config = COMMANDS[command];
+  const config = ALL_COMMANDS[command];
   if (!config) return command.toLowerCase();
   const argNames = getArgNames(config);
   const parts = [
@@ -203,11 +204,11 @@ function commandSearchText(command: string): string {
 
 function searchLocalCommands(query: string, limit = 30): string[] {
   const normalized = query.trim().toLowerCase();
-  if (!normalized) return Object.keys(COMMANDS).sort();
+  if (!normalized) return Object.keys(ALL_COMMANDS).sort();
 
   const terms = normalized.split(/\s+/).filter(Boolean);
   const matches: CommandSearchMatch[] = [];
-  for (const command of Object.keys(COMMANDS)) {
+  for (const command of Object.keys(ALL_COMMANDS)) {
     const haystack = commandSearchText(command);
     let score = 0;
     for (const term of terms) {
@@ -254,18 +255,22 @@ export function showCommandSearch(query: string): void {
 }
 
 export function showCommandExplanation(command: string): boolean {
-  const config = COMMANDS[command];
+  const config = ALL_COMMANDS[command];
   if (!config) return false;
 
   showCommandHelp(command);
   console.log(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
-  const routePath = routeToPath(config.route, { includeApiPrefix: true });
-  console.log(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
+  if ('route' in config) {
+    const routePath = routeToPath(config.route, { includeApiPrefix: true });
+    console.log(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
+  } else {
+    console.log(`${c.bright}Type:${c.reset} local helper command`);
+  }
   if (config.aliases && Object.keys(config.aliases).length > 0) {
     console.log(`${c.bright}CLI aliases:${c.reset}`);
     for (const [from, to] of Object.entries(config.aliases)) console.log(`  ${from} -> ${to}`);
   }
-  if (config.route.defaults && Object.keys(config.route.defaults).length > 0) {
+  if ('route' in config && config.route.defaults && Object.keys(config.route.defaults).length > 0) {
     console.log(`${c.bright}Default payload fields:${c.reset}`);
     for (const [key, value] of Object.entries(config.route.defaults)) console.log(`  ${key}=${value}`);
   }
@@ -273,7 +278,7 @@ export function showCommandExplanation(command: string): boolean {
 }
 
 export function showCommandHelp(command: string): boolean {
-  const config = COMMANDS[command];
+  const config = ALL_COMMANDS[command];
   if (!config) return false;
 
   console.log(`\n${c.bright}${command}${c.reset}`);
@@ -306,7 +311,7 @@ export function showCommandHelp(command: string): boolean {
 }
 
 function printNextSteps(command: string, missingArg?: string): void {
-  const config = COMMANDS[command];
+  const config = ALL_COMMANDS[command];
   const steps: string[] = [];
   for (const related of config?.discoverWith || []) steps.push(`spacemolt ${related}`);
   if (!steps.includes('spacemolt get_status')) steps.push('spacemolt get_status');
@@ -334,7 +339,7 @@ export function displayMissingArgument(command: string, missingArg: string): voi
   console.error(`\n${c.bright}Usage:${c.reset}`);
   console.error(`  ${getUsageLine(command)}`);
 
-  const config = COMMANDS[command];
+  const config = ALL_COMMANDS[command];
   const argNames = config ? getArgNames(config) : [];
   if (argNames.length > 0) {
     console.error(`\n${c.bright}Accepted forms:${c.reset}`);
@@ -345,6 +350,7 @@ export function displayMissingArgument(command: string, missingArg: string): voi
 
   const example = config?.example;
   if (example) console.error(`\n${c.bright}Example:${c.reset}\n  ${example}`);
+  printCachedIdSuggestions(command, missingArg);
   printNextSteps(command, missingArg);
 }
 
@@ -853,6 +859,6 @@ export function displayError(
     if (isAuthError(error.code)) {
       console.error(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
     }
-    if (COMMANDS[command]) printNextSteps(command);
+    if (ALL_COMMANDS[command]) printNextSteps(command);
   }
 }

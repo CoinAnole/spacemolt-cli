@@ -35,6 +35,8 @@ export interface CommandConfig {
   fieldRenames?: Record<string, string>;
 }
 
+export type LocalCommandConfig = Omit<CommandConfig, 'route' | 'schema'>;
+
 export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
 const GENERATED_API_ROUTE_KEYS = Object.keys(GENERATED_API_ROUTES);
@@ -1516,6 +1518,27 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
 };
 
+export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
+  ids: {
+    usage: '<poi|system|item|player>',
+    description: 'Show recently discovered IDs from cached command output.',
+    example: 'spacemolt ids poi',
+    category: 'Reference & Help',
+    args: ['kind'],
+    required: ['kind'],
+    seeAlso: ['get_system', 'get_cargo', 'view_market', 'get_nearby'],
+  },
+  'where-can-i': {
+    usage: '<item>',
+    description: 'Search cached command output for where an item was last seen.',
+    example: 'spacemolt where-can-i ore_iron',
+    category: 'Reference & Help',
+    args: [{ rest: 'item' }],
+    required: ['item'],
+    seeAlso: ['ids', 'catalog', 'view_market'],
+  },
+};
+
 export function routeToPath(route: Pick<V2Route, 'tool' | 'action'>, options?: { includeApiPrefix?: boolean }): string {
   const path =
     route.tool === route.action || SINGLE_ENDPOINT_TOOLS.has(route.tool) ? route.tool : `${route.tool}/${route.action}`;
@@ -1623,6 +1646,11 @@ function mergeCommandConfig(config: CommandOverride): CommandConfig {
 export const COMMANDS: Record<string, CommandConfig> = Object.fromEntries(
   Object.entries(COMMAND_OVERRIDES).map(([command, config]) => [command, mergeCommandConfig(config)]),
 );
+
+export const ALL_COMMANDS: Record<string, CommandConfig | LocalCommandConfig> = {
+  ...COMMANDS,
+  ...LOCAL_COMMANDS,
+};
 
 export const V2_TOOL_MAP: Record<string, V2Route> = Object.fromEntries(
   Object.entries(COMMANDS).map(([command, config]) => [command, config.route]),
