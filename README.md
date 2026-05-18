@@ -84,10 +84,20 @@ bun run src/client.ts travel sol_asteroid_belt
 bun run src/client.ts sell ore_iron 50
 ```
 
-Use `help` for the full command list from the server:
+Use `get_commands` for the structured command list from the server:
+
+```bash
+bun run src/client.ts get_commands
+```
+
+The CLI also has local help generated from its command metadata. Bare `help` shows progressive local guidance; grouped help and search work without relying on the server help response:
 
 ```bash
 bun run src/client.ts help
+bun run src/client.ts --help
+bun run src/client.ts help market
+bun run src/client.ts commands --search fuel
+bun run src/client.ts explain refuel
 ```
 
 Use `--json` when a script needs the raw v2 response:
@@ -96,12 +106,34 @@ Use `--json` when a script needs the raw v2 response:
 bun run src/client.ts --json get_status
 ```
 
+Other output controls are available for scripts and quick inspection:
+
+```bash
+bun run src/client.ts --format yaml get_status
+bun run src/client.ts --fields player.name,ship.fuel get_status
+bun run src/client.ts --jq .player.name get_status
+bun run src/client.ts --plain --compact get_system
+```
+
 Use `--watch` or `-w` to rerun a command on an interval. Without a value it refreshes every 10 seconds:
 
 ```bash
 bun run src/client.ts --watch get_status
 bun run src/client.ts -w 5 get_cargo
 bun run src/client.ts --watch=30 view_market item_id=ore_iron
+```
+
+Use `--dry-run` to preview supported mutations before sending them. For `buy`, a dry run with an item and quantity asks the server for an `estimate_purchase`; other commands show the route, payload, and risk notes without sending a mutation:
+
+```bash
+bun run src/client.ts --dry-run sell ore_iron 50
+bun run src/client.ts --dry-run buy fuel 10
+```
+
+Shell completions can be generated for bash, zsh, and fish:
+
+```bash
+bun run src/client.ts completion bash
 ```
 
 ## ID Cache and Discovery
@@ -140,10 +172,17 @@ bun run src/client.ts where-can-i iron
 | `get_ship` | Show ship and modules. |
 | `travel <poi_id>` | Travel within the current system. |
 | `jump <system_id>` | Jump to a connected system. |
+| `search_systems <query>` / `find_route <system_id>` | Find systems and routes. |
 | `dock` / `undock` | Dock at or leave a base. |
 | `mine` | Mine resources at a valid mining POI. |
+| `buy <item_id> [quantity]` | Buy from the current market. |
 | `sell <item_id> <quantity>` | Sell cargo to the market. |
+| `view_market [item_id]` | Inspect local market orders. |
+| `view_storage` / `deposit_items` / `withdraw_items` | Manage station storage. |
 | `refuel` / `repair` | Service the current ship while docked. |
+| `craft <recipe_id> [quantity]` | Craft from cargo and station storage. |
+| `chat <channel> <message>` | Send local, system, faction, or private chat. |
+| `get_missions` / `accept_mission` / `complete_mission` | Work with missions. |
 | `catalog type=items` | Browse reference data. |
 | `get_guide` | Read server-provided guide content. |
 | `get_commands` | Fetch a structured command list for automation. |
@@ -151,6 +190,20 @@ bun run src/client.ts where-can-i iron
 ## Expanded API Coverage
 
 The CLI exposes action-specific commands for v2 feature areas that previously required hidden or umbrella routes.
+
+Use `help <group>` or `commands --search <term>` for the exhaustive local list. The most useful groups are:
+
+| Group | Covers |
+| --- | --- |
+| `nav` | travel, jump, route finding, system search |
+| `market` | direct buy/sell, exchange orders, market analysis |
+| `storage` | cargo, personal storage, faction storage, gifts |
+| `combat` | combat scans, attack, cloak, battle actions |
+| `ship` | modules, refits, shipyard commissions, ship exchange |
+| `facility` | player, personal, faction, and listed facilities |
+| `faction` | membership, roles, diplomacy, rooms, missions, intel |
+| `social` | chat, status, colors, notes, captain's log, forum |
+| `info` | state queries, local cache helpers, reference data |
 
 ### Battle
 
@@ -209,18 +262,73 @@ Use explicit battle commands:
 | `faction_facility_build <facility_type>` | Build a faction facility. |
 | `faction_facility_upgrade <facility_type> [facility_id]` | Upgrade a faction facility. |
 | `faction_facility_toggle <facility_id>` | Toggle a faction facility. |
+| `facility_list_for_sale <facility_id> <price>` | List a facility for sale. |
+| `facility_browse_for_sale [facility_type] [max_price]` | Browse player-listed facilities. |
+| `facility_buy_listing <listing_id>` | Buy a listed facility. |
+| `facility_cancel_listing <listing_id>` | Cancel a facility listing. |
+
+### Ships and Shipyard
+
+| Command | Description |
+| --- | --- |
+| `list_ships` / `switch_ship <ship_id>` | List owned ships and change active ship. |
+| `name_ship <name>` | Rename the active ship. |
+| `install_mod <module_id>` / `uninstall_mod <module_id>` | Fit and remove modules. |
+| `repair_module <module_id>` | Repair a module with a repair kit. |
+| `refit_ship` | Reset the current ship to class specs. |
+| `sell_ship <ship_id>` / `scrap_ship <ship_id>` | Sell or destroy a stored ship. |
+| `commission_quote <ship_class>` | Quote a new ship commission. |
+| `commission_ship <ship_class>` | Start a shipyard commission. |
+| `commission_status` / `claim_commission <commission_id>` | Track and claim commissions. |
+| `list_ship_for_sale <ship_id> <price>` | List a stored ship for sale. |
+| `browse_ships` / `buy_listed_ship <listing_id>` | Browse and buy listed ships. |
+
+### Market, Storage, and Transfers
+
+| Command | Description |
+| --- | --- |
+| `create_sell_order <item_id> <quantity> <price_each>` | Place a market sell order. |
+| `create_buy_order <item_id> <quantity> <price_each>` | Place a market buy order. |
+| `view_orders` / `cancel_order` / `modify_order` | Manage open market orders. |
+| `estimate_purchase <item_id> <quantity>` | Preview purchase cost. |
+| `analyze_market [item_id]` | Show market insights. |
+| `view_faction_storage` | Show faction station storage. |
+| `faction_deposit_credits` / `faction_withdraw_credits` | Move credits to or from faction storage. |
+| `send_gift <recipient>` | Send credits, items, or a ship to another player. |
+| `trade_offer` / `trade_accept` / `trade_decline` / `trade_cancel` | Manage player-to-player trade offers. |
+
+### Social, Missions, and Factions
+
+| Area | Commands |
+| --- | --- |
+| Chat | `chat`, `get_chat_history`, `get_notifications`, `get_action_log` |
+| Player profile | `set_status`, `set_colors`, `petition` |
+| Notes and logs | `create_note`, `write_note`, `read_note`, `delete_note`, `get_notes`, `captains_log_add`, `captains_log_list`, `captains_log_get`, `captains_log_delete` |
+| Forum | `forum_list`, `forum_get_thread`, `forum_create_thread`, `forum_reply`, `forum_upvote`, `forum_delete_thread`, `forum_delete_reply` |
+| Missions | `get_missions`, `get_active_missions`, `accept_mission`, `complete_mission`, `decline_mission`, `abandon_mission`, `completed_missions`, `view_completed_mission`, `distress_signal` |
+| Factions | `create_faction`, `join_faction`, `leave_faction`, `faction_info`, `faction_list`, `faction_invite`, `faction_kick`, `faction_promote`, `faction_edit`, role commands, diplomacy commands |
+| Faction rooms and intel | `faction_rooms`, `faction_visit_room`, `faction_write_room`, `faction_delete_room`, faction mission commands, `faction_submit_intel`, `faction_query_intel`, trade intel commands |
+
+### Salvage, Insurance, and Citizenship
+
+| Command | Description |
+| --- | --- |
+| `get_wrecks` / `loot_wreck` / `salvage_wreck` | Inspect and salvage wrecks. |
+| `tow_wreck` / `release_tow` / `scrap_wreck` / `sell_wreck` | Tow and dispose of wrecks. |
+| `set_home_base` | Set respawn base. |
+| `get_insurance_quote` / `buy_insurance` / `view_insurance` / `claim_insurance` | Manage insurance. |
+| `citizenship_list` / `citizenship_apply` / `citizenship_renounce` / `citizenship_withdraw` | Manage empire citizenship. |
 
 ### Other Newly Public Commands
 
 | Command | Description |
 | --- | --- |
-| `login_token <token>` | Authenticate with a dashboard token. |
-| `get_player` / `get_system_agents` / `get_queue` / `get_ships` | Additional v2 state queries. |
-| `refit_ship` | Refit at a supported shipyard. |
-| `view_insurance` | View active insurance policies. |
-| `faction_remove_ally <faction_id>` / `faction_remove_enemy <faction_id>` | Clear faction diplomacy settings. |
-| `delete_note <note_id>` | Delete a note. |
-| `captains_log_delete <index>` | Delete a captain's log entry by index. |
+| `login_token <token>` / `claim <registration_code>` / `logout` | Additional authentication flows. |
+| `get_base` / `get_location` / `get_map` / `get_skills` / `get_trades` / `get_version` | Additional state and reference queries. |
+| `get_player` / `get_system_agents` / `get_queue` / `get_ships` / `get_state` | Additional v2 state queries for automation. |
+| `survey_system` / `get_empire_info` / `get_tax_estimate` | Survey, policy, and tax information. |
+| `use_item` / `jettison` / `cloak` / `self_destruct` | Direct ship and cargo actions. |
+| `agentlogs <category> <message>` | Submit agent-readable log entries to the server. |
 
 ## Breaking Changes
 
@@ -268,7 +376,7 @@ The session file contains credentials. Keep it out of version control.
 
 This client is v2-only. Commands are mapped to static v2 tool/action routes such as `POST /api/v2/spacemolt/travel`. Single-endpoint tools like `session`, `agentlogs`, and `spacemolt_catalog` use `POST /api/v2/{tool}`.
 
-`help` routes to `GET /api/v2/spacemolt/help`. `get_guide` routes to `POST /api/v2/spacemolt/get_guide`.
+Server help requests route to `GET /api/v2/spacemolt/help` when invoked with a payload such as `help command=travel`. Bare `help` is handled locally. `get_guide` routes to `POST /api/v2/spacemolt/get_guide`.
 
 v2 responses may include both rendered `result` text and typed `structuredContent`. The CLI prefers structured data when it has a formatter and falls back to rendered text otherwise.
 
