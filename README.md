@@ -8,7 +8,7 @@ Recent releases also add quality-of-life tools for longer play sessions: command
 
 ## Version
 
-Current client version: `1.1.0`.
+Current client version: `2.0.0`.
 
 This release is a breaking v2 command coverage update. The old `battle <action>`, `fleet <action>`, and `facility <action>` umbrella commands have been removed. Use the explicit command names listed below instead.
 

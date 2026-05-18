@@ -10,7 +10,7 @@ export let PLAIN = false;
 export let QUIET = false;
 export let FORMAT: 'table' | 'json' | 'yaml' | 'text' = 'table';
 export let COMPACT = false;
-export const VERSION = '1.1.0';
+export const VERSION = '2.0.0';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
 // known travel times with plenty of headroom.
