@@ -10,6 +10,7 @@ import {
 import { COMMANDS } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import { displayResult } from './display/index.ts';
+import { printDoctorResult, runDoctor } from './doctor.ts';
 import {
   displayError,
   displayMissingArgument,
@@ -284,6 +285,16 @@ export async function runInvocation(argv: string[]): Promise<number> {
   if (invocation.args[0] === 'help' && !invocation.args[1]) {
     await showProgressiveHelp();
     return 0;
+  }
+
+  if (invocation.args[0] === 'doctor') {
+    const doctorResult = await runDoctor();
+    if (invocation.options.json) {
+      console.log(JSON.stringify({ structuredContent: doctorResult }, null, 2));
+    } else {
+      printDoctorResult(doctorResult);
+    }
+    return doctorResult.ok ? 0 : 1;
   }
 
   const resolved = resolveCommand(invocation);
