@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { getArgNames, validatePayloadAgainstSchema } from './args';
-import { COMMANDS } from './commands';
+import { ALLOWED_COMMAND_OVERRIDE_FIELDS, COMMAND_OVERRIDES, COMMANDS } from './commands';
 import { generateCompletion } from './completion';
+import { GENERATED_API_ROUTES } from './generated/api-commands';
 import { showCommandHelp } from './help';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
@@ -34,6 +35,23 @@ function getCompletionEnumCases(): Array<{ command: string; arg: string; values:
 }
 
 describe('command metadata', () => {
+  test('command overrides only contain curated UX fields and reference generated API routes', () => {
+    const allowed = new Set<string>(ALLOWED_COMMAND_OVERRIDE_FIELDS);
+    const failures: string[] = [];
+
+    for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      if (!GENERATED_API_ROUTES[override.apiRoute]) {
+        failures.push(`${command}: unknown generated API route ${override.apiRoute}`);
+      }
+
+      for (const field of Object.keys(override)) {
+        if (!allowed.has(field)) failures.push(`${command}: override field "${field}" is not allowed`);
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
   test('every required arg appears in command args and local help', () => {
     const missing: string[] = [];
 

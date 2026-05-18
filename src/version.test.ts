@@ -605,16 +605,28 @@ describe('validateRequiredArgs', () => {
     ).toBeNull();
   });
 
-  test('agentlogs requires category and message', () => {
+  test('agentlogs requires generated required fields in positional order', () => {
     expect(validateRequiredArgs('agentlogs', {})).toBe('category');
     expect(validateRequiredArgs('agentlogs', { category: 'nav' })).toBe('message');
-    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped' })).toBeNull();
+    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped' })).toBe('severity');
+    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped', severity: 'info' })).toBeNull();
   });
 
-  test('faction_post_mission requires title, type, and description', () => {
+  test('faction_post_mission uses generated required fields', () => {
     expect(validateRequiredArgs('faction_post_mission', {})).toBe('title');
     expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense' })).toBe('description');
-    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' })).toBeNull();
+    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' })).toBe(
+      'objectives',
+    );
+    expect(
+      validateRequiredArgs('faction_post_mission', {
+        title: 'T',
+        type: 'defense',
+        description: 'D',
+        objectives: '[]',
+        rewards: '[]',
+      }),
+    ).toBeNull();
   });
 });
 
