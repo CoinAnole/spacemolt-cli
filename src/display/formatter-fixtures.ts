@@ -281,6 +281,58 @@ export const intelFixture = {
   ],
 };
 
+export const wrecksFixture = {
+  wrecks: [
+    {
+      wreck_id: 'wreck-1',
+      ship_class: 'skiff',
+      ticks_remaining: 5,
+      items: [{ item_id: 'ore_iron', quantity: 10 }],
+    },
+  ],
+};
+
+export const skillsV2Fixture = {
+  skills: [{ skill_id: 'mining', name: 'Mining', category: 'Industry' }],
+  player_skills: [
+    {
+      skill_id: 'mining',
+      name: 'Mining',
+      category: 'Industry',
+      level: 3,
+      max_level: 10,
+      current_xp: 450,
+      next_level_xp: 600,
+    },
+  ],
+  player_skill_count: 1,
+};
+
+export const skillsV1Fixture = {
+  skills: {
+    mining: {
+      name: 'Mining',
+      category: 'Industry',
+      level: 3,
+      max_level: 10,
+      xp: 450,
+      next_level_xp: 600,
+    },
+  },
+};
+
+export const marketListingsFixture = {
+  listings: [
+    {
+      listing_id: 'listing-1',
+      item_id: 'ore_iron',
+      quantity: 100,
+      price_each: 15,
+      seller_name: 'Marlowe',
+    },
+  ],
+};
+
 export const formatterFixtureCases = {
   arrival: { command: 'travel', fixture: arrivalFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
@@ -299,3 +351,29 @@ export const formatterFixtureCases = {
   system_info: { command: 'get_system', fixture: systemInfoFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
 } satisfies Record<string, { command: string; fixture: Record<string, unknown> }>;
+
+export const highValueCommandFixtures: Record<string, { command: string; fixture: Record<string, unknown> }> = {
+  get_status: { command: 'get_status', fixture: getStatusFixture },
+  get_location: { command: 'get_location', fixture: getLocationFixture },
+  get_system: { command: 'get_system', fixture: systemInfoFixture },
+  get_poi: { command: 'get_poi', fixture: poiInfoFixture },
+  get_cargo: { command: 'get_cargo', fixture: cargoFixture },
+  get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
+  get_skills: { command: 'get_skills', fixture: skillsV2Fixture },
+  get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
+  browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
+  view_market: { command: 'view_market', fixture: viewMarketFixture },
+  travel: { command: 'travel', fixture: arrivalFixture },
+  register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
+  chat: { command: 'chat', fixture: chatSentFixture },
+  list_drones: { command: 'list_drones', fixture: dronesFixture },
+  get_drone: { command: 'get_drone', fixture: droneFixture },
+  facility_list: { command: 'facility_list', fixture: facilitiesFixture },
+  fleet_status: { command: 'fleet_status', fixture: fleetFixture },
+  get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
+  view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
+  view_storage: { command: 'view_storage', fixture: storageFixture },
+  faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
+  get_trades: { command: 'get_trades', fixture: marketListingsFixture },
+  skills_v1: { command: 'get_skills', fixture: skillsV1Fixture },
+};

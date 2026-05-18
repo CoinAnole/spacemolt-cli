@@ -5,6 +5,7 @@ import {
   formatterFixtureCases,
   getLocationFixture,
   getStatusFixture,
+  highValueCommandFixtures,
   viewMarketFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
@@ -317,5 +318,24 @@ describe('structuredContent formatters', () => {
       ,
       }
     `);
+  });
+
+  test('high-value commands have formatter coverage', () => {
+    const failures: string[] = [];
+
+    for (const [label, { command, fixture }] of Object.entries(highValueCommandFixtures)) {
+      const { stdout, stderr } = captureStructuredOutput(command, fixture);
+      const usedFallback = stdout.includes('=== Response ===');
+      const hadDrift = stderr.length > 0;
+
+      if (usedFallback) {
+        failures.push(`${label}: fell through to JSON fallback`);
+      }
+      if (hadDrift) {
+        failures.push(`${label}: emitted drift warning: ${stderr}`);
+      }
+    }
+
+    expect(failures).toEqual([]);
   });
 });
