@@ -25,6 +25,7 @@ import {
   showCommandSearch,
   showFullHelp,
   showHelp,
+  showProgressiveHelp,
 } from './help.ts';
 import { displayNotifications } from './notifications.ts';
 import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
@@ -278,6 +279,11 @@ export async function runInvocation(argv: string[]): Promise<number> {
 
   if (invocation.options.watch) {
     return runWatchLoop(invocation);
+  }
+
+  if (invocation.args[0] === 'help' && !invocation.args[1]) {
+    await showProgressiveHelp();
+    return 0;
   }
 
   const resolved = resolveCommand(invocation);

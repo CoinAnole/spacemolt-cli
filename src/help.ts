@@ -1,8 +1,10 @@
+import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import { COMMANDS, SINGLE_ENDPOINT_TOOLS } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
+import { getStructuredResult, isRecord } from './response.ts';
 import { c, QUIET, setOutputMode, VERSION } from './runtime.ts';
-import { setActiveProfile, validateProfileName } from './session.ts';
+import { loadSession, setActiveProfile, validateProfileName } from './session.ts';
 import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions, OutputFormat } from './types.ts';
 
 const COMMAND_GROUPS: CommandGroup[] = [
@@ -509,6 +511,149 @@ export function displayMissingArgument(command: string, missingArg: string): voi
   const example = config?.example;
   if (example) console.error(`\n${c.bright}Example:${c.reset}\n  ${example}`);
   printNextSteps(command, missingArg);
+}
+
+// =============================================================================
+// Progressive Help
+// =============================================================================
+
+interface PlayerState {
+  authenticated: boolean;
+  docked?: boolean;
+  traveling?: boolean;
+  atAsteroidBelt?: boolean;
+  escapePod?: boolean;
+}
+
+async function getPlayerState(): Promise<PlayerState> {
+  const session = await loadSession();
+  if (!session?.player_id) return { authenticated: false };
+
+  try {
+    const response = await execute('get_status');
+    const structured = getStructuredResult(response);
+    const data =
+      structured && isRecord(structured) ? structured : isRecord(response.result) ? response.result : undefined;
+    if (!data) return { authenticated: true };
+
+    const player = isRecord(data.player) ? data.player : undefined;
+    const ship = isRecord(data.ship) ? data.ship : undefined;
+    const poi = isRecord(data.poi) ? data.poi : undefined;
+    const location = isRecord(data.location) ? data.location : undefined;
+
+    const docked = Boolean(player?.docked_at_base) || Boolean(location?.docked_at);
+    const traveling = data.travel_progress !== undefined;
+    const poiType = String(poi?.type || location?.poi_type || '').toLowerCase();
+    const poiName = String(poi?.name || location?.poi_name || '').toLowerCase();
+    const atAsteroidBelt = poiType.includes('asteroid') || poiName.includes('asteroid') || poiName.includes('belt');
+    const escapePod = (ship?.class_id as string) === 'escape_pod';
+
+    return { authenticated: true, docked, traveling, atAsteroidBelt, escapePod };
+  } catch {
+    return { authenticated: true };
+  }
+}
+
+function printStateSection(state: PlayerState): void {
+  if (!state.authenticated) {
+    console.log(`${c.bright}Start:${c.reset}`);
+    console.log(`  1. Get a registration code from https://spacemolt.com/dashboard`);
+    console.log(`  2. spacemolt register <username> <empire> <registration_code>`);
+    console.log(`  3. spacemolt login <username> <password>`);
+    return;
+  }
+
+  if (state.escapePod) {
+    console.log(`${c.yellow}You are in an Escape Pod.${c.reset} Get to a station and acquire a ship.`);
+  }
+
+  console.log(`${c.bright}Suggested Next Steps:${c.reset}`);
+
+  if (state.traveling) {
+    console.log(`  ${c.cyan}[TRAVELING]${c.reset}`);
+    console.log(`    spacemolt get_status          # Check travel progress`);
+    console.log(`    — Travel resolves on the next tick (~10s per tick)`);
+    console.log(`    — Long routes can take many ticks; get_status shows % complete`);
+    return;
+  }
+
+  if (state.docked) {
+    console.log(`  ${c.cyan}[DOCKED]${c.reset}`);
+    console.log(`    spacemolt view_market         # Check market prices`);
+    console.log(`    spacemolt refuel              # Refuel ship`);
+    console.log(`    spacemolt repair              # Repair hull damage`);
+    console.log(`    spacemolt view_storage        # Access station storage`);
+    console.log(`    spacemolt sale_ship           # Buy ships`);
+    console.log(`    spacemolt facility_list       # Check base facilities`);
+    console.log(`    spacemolt undock              # Leave station when ready`);
+    return;
+  }
+
+  if (state.atAsteroidBelt) {
+    console.log(`  ${c.cyan}[ASTEROID BELT]${c.reset}`);
+    console.log(`    spacemolt mine                # Mine resources`);
+    console.log(`    spacemolt get_poi             # See belt resources remaining`);
+    console.log(`    spacemolt get_cargo           # Check what you've mined`);
+    console.log(`    spacemolt travel <station>    # Return to station to sell`);
+    return;
+  }
+
+  console.log(`  ${c.cyan}[IN SPACE]${c.reset}`);
+  console.log(`    spacemolt get_system          # See POIs and connections`);
+  console.log(`    spacemolt travel <poi_id>     # Move to a POI`);
+  console.log(`    spacemolt get_status          # Check ship and location`);
+}
+
+export async function showProgressiveHelp(): Promise<void> {
+  const state = await getPlayerState();
+
+  console.log(`
+${c.bright}SpaceMolt CLI v${VERSION}${c.reset}
+HTTP client for the SpaceMolt MMO.`);
+
+  printStateSection(state);
+
+  if (state.authenticated) {
+    console.log(`
+${c.bright}Useful Commands:${c.reset}`);
+  } else {
+    console.log(`
+${c.bright}Once logged in, try:${c.reset}`);
+  }
+  console.log(`  get_status       Ship, player, location`);
+  console.log(`  get_system       POIs and connected systems`);
+  console.log(`  get_cargo        Cargo contents`);
+  console.log(`  view_market      Market/order book`);
+  console.log(`  facility_list    Facilities at current base`);
+  console.log(`  catalog <type>   Browse ships/items/skills/recipes`);
+
+  console.log(`
+${c.bright}Command Discovery:${c.reset}
+  spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
+  spacemolt explain <command>     Local usage, args, route
+  spacemolt commands --search fuel
+  spacemolt help all              Full local command reference
+  spacemolt help command=<name>   Server-provided command help
+
+${c.bright}Arguments:${c.reset}
+  Positional:       spacemolt travel sol_asteroid_belt
+  key=value:        spacemolt travel target_poi=sol_asteroid_belt
+  CLI flags:        spacemolt travel --target-poi sol_asteroid_belt
+                    spacemolt sell --item-id ore_iron --quantity=50
+
+${c.bright}Global Flags:${c.reset}
+  --json, -j        Raw JSON
+  --quiet, -q       Suppress extra messages
+  --plain, -p       No ANSI formatting
+  --fields, -f      Extract response fields
+  --format, -fmt    Output format: table, json, yaml, text
+  --compact         Compact single-line output
+  --no-timestamp    Suppress timestamps on output
+  --watch, -w       Re-run command on interval (seconds, default 10)
+  --jq              Apply jq-like expression to response
+  --profile <name>  Use named session
+  --dry-run         Preview supported mutations without executing them
+`);
 }
 
 // =============================================================================
