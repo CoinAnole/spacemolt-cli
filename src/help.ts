@@ -70,7 +70,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
   },
 ];
 
-const ERROR_HELP: Record<string, string> = Object.fromEntries(
+const _ERROR_HELP: Record<string, string> = Object.fromEntries(
   Object.entries(ERROR_REGISTRY).map(([code, entry]) => [code, entry.suggestion]),
 );
 

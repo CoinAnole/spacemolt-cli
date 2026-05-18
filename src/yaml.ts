@@ -44,7 +44,7 @@ function yamlArray(items: unknown[], level: number): string {
       lines.push(`${prefix}- ${inlineYaml(item)}`);
     }
   }
-  return '\n' + lines.join('\n');
+  return `\n${lines.join('\n')}`;
 }
 
 function yamlObject(obj: Record<string, unknown>, level: number): string {
@@ -60,7 +60,7 @@ function yamlObject(obj: Record<string, unknown>, level: number): string {
       lines.push(`${prefix}${key}: ${inlineYaml(val)}`);
     }
   }
-  return '\n' + lines.join('\n');
+  return `\n${lines.join('\n')}`;
 }
 
 function inlineYaml(value: unknown): string {
