@@ -240,39 +240,45 @@ export async function runCommand(
 
 export async function renderResponse(commandRun: CommandRun, options: GlobalOptions): Promise<number> {
   const { command, displayCommand, response } = commandRun;
+  const isJson = options.json || options.format === 'json';
 
-  if (options.json && response.error) {
+  if (isJson && response.error) {
     printJsonResponse(response);
     return 1;
   }
 
-  if (!options.json && response.notifications?.length && !options.quiet) {
+  if (!isJson && response.notifications?.length && !options.quiet) {
     console.log(`${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`);
     displayNotifications(response.notifications);
     console.log('');
   }
 
-  if (!options.json && response.error) {
-    displayError(displayCommand, response.error);
+  if (!isJson && response.error) {
+    displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp });
     return 1;
   }
 
   await persistResponseCredentials(command, response);
 
-  if (options.json) {
+  if (isJson) {
     printJsonResponse(response);
     return response.error ? 1 : 0;
   }
 
-  displayResult(displayCommand, response, options.fields);
+  displayResult(displayCommand, response, options);
   return 0;
 }
 
 export async function runInvocation(argv: string[]): Promise<number> {
   const invocation = parseInvocation(argv);
 
-  // Check for updates in the background (non-blocking) - skip in quiet mode
-  if (!invocation.options.json && !invocation.options.quiet) checkForUpdates();
+  if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
+    checkForUpdates();
+  }
+
+  if (invocation.options.watch) {
+    return runWatchLoop(invocation);
+  }
 
   const resolved = resolveCommand(invocation);
   if (resolved.type === 'exit') return resolved.exitCode;
@@ -286,6 +292,51 @@ export async function runInvocation(argv: string[]): Promise<number> {
   } catch (error) {
     return renderConnectionError(error, invocation.options);
   }
+}
+
+async function runWatchLoop(invocation: Invocation): Promise<number> {
+  const interval = invocation.options.watch;
+  if (!interval) return 0;
+
+  let running = true;
+  const stop = () => {
+    running = false;
+  };
+  process.on('SIGINT', stop);
+
+  while (running) {
+    const resolved = resolveCommand(invocation);
+    if (resolved.type === 'exit') return resolved.exitCode;
+
+    try {
+      const prepared = preparePayload(resolved.command, resolved.rawPayload, invocation.options);
+      if (prepared.type === 'exit') return prepared.exitCode;
+
+      const commandRun = await runCommand(resolved.command, prepared.payload, invocation.options);
+
+      process.stdout.write('\x1b[2J\x1b[H');
+
+      const watchOptions: GlobalOptions = {
+        ...invocation.options,
+        noTimestamp: true,
+      };
+      await renderResponse(commandRun, watchOptions);
+
+      if (running) {
+        console.log(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
+        await sleep(interval * 1000);
+      }
+    } catch (error) {
+      return renderConnectionError(error, invocation.options);
+    }
+  }
+
+  process.removeListener('SIGINT', stop);
+  return 0;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function persistSubmittedCredentials(command: string, payload: Record<string, unknown>): Promise<void> {

@@ -1,17 +1,27 @@
+import { evaluateJq, formatJqResult } from '../jq.ts';
 import {
   extractFields,
   getObjectResult,
   getStructuredResult,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
-import { c, PLAIN, QUIET } from '../runtime.ts';
-import type { APIResponse } from '../types.ts';
+import { COMPACT, c, FORMAT, PLAIN, QUIET } from '../runtime.ts';
+import type { APIResponse, GlobalOptions } from '../types.ts';
+import { toYaml } from '../yaml.ts';
 import { resultFormatters } from './formatters.ts';
 
-export function displayStructuredResult(command: string, result: Record<string, unknown>, fields?: string[]): void {
+export function displayStructuredResult(
+  command: string,
+  result: Record<string, unknown>,
+  options?: GlobalOptions,
+): void {
   if (!result) return;
 
-  // Handle --fields extraction
+  const fields = options?.fields;
+  const format = options?.format ?? FORMAT;
+  const compact = options?.compact ?? COMPACT;
+  const jqExpr = options?.jq;
+
   if (fields && fields.length > 0) {
     const extracted = extractFields(result, fields);
     if (PLAIN) {
@@ -24,9 +34,38 @@ export function displayStructuredResult(command: string, result: Record<string, 
     return;
   }
 
+  if (jqExpr) {
+    try {
+      const jqResult = evaluateJq(result, jqExpr);
+      console.log(formatJqResult(jqResult));
+    } catch (err) {
+      console.error(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return;
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (format === 'yaml') {
+    console.log(toYaml(result));
+    return;
+  }
+
+  if (format === 'text') {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (compact) {
+    console.log(JSON.stringify(result));
+    return;
+  }
+
   const viewModel = normalizeStructuredResultForDisplay(result);
 
-  // Show auto-dock/undock flags before the viewModel (skip in quiet mode)
   if (!QUIET) {
     if (viewModel.auto_docked)
       console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
@@ -52,25 +91,24 @@ export function displayStructuredResult(command: string, result: Record<string, 
     );
   }
 
-  // Default: print JSON
   console.log(`\n${c.bright}=== Response ===${c.reset}`);
   console.log(JSON.stringify(viewModel, null, 2));
 }
 
-export function displayResult(command: string, response: APIResponse, fields?: string[]): void {
-  // Skip timestamp in quiet mode
-  if (!QUIET) {
+export function displayResult(command: string, response: APIResponse, options?: GlobalOptions): void {
+  const noTimestamp = options?.noTimestamp ?? false;
+  if (!QUIET && !noTimestamp) {
     console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
   }
   const structured = getStructuredResult(response);
   if (structured) {
-    displayStructuredResult(command, structured, fields);
+    displayStructuredResult(command, structured, options);
     return;
   }
 
   const viewModel = getObjectResult(response);
   if (viewModel) {
-    displayStructuredResult(command, viewModel, fields);
+    displayStructuredResult(command, viewModel, options);
     return;
   }
 

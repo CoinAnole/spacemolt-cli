@@ -8,6 +8,8 @@ export let JSON_OUTPUT = process.env.SPACEMOLT_OUTPUT === 'json';
 export let DEBUG = process.env.DEBUG === 'true';
 export let PLAIN = false;
 export let QUIET = false;
+export let FORMAT: 'table' | 'json' | 'yaml' | 'text' = 'table';
+export let COMPACT = false;
 export const VERSION = '1.1.0';
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
@@ -165,9 +167,18 @@ export function printCompactTable(
   }
 }
 
-export function setOutputMode(options: { json?: boolean; quiet?: boolean; plain?: boolean; debug?: boolean }): void {
+export function setOutputMode(options: {
+  json?: boolean;
+  quiet?: boolean;
+  plain?: boolean;
+  debug?: boolean;
+  format?: 'table' | 'json' | 'yaml' | 'text';
+  compact?: boolean;
+}): void {
   if (options.json !== undefined) JSON_OUTPUT = options.json;
   if (options.quiet !== undefined) QUIET = options.quiet;
   if (options.plain !== undefined) PLAIN = options.plain;
   if (options.debug !== undefined) DEBUG = options.debug;
+  if (options.format !== undefined) FORMAT = options.format;
+  if (options.compact !== undefined) COMPACT = options.compact;
 }

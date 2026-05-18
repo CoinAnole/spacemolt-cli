@@ -3,7 +3,7 @@ import { COMMANDS, SINGLE_ENDPOINT_TOOLS } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { c, QUIET, setOutputMode, VERSION } from './runtime.ts';
 import { setActiveProfile, validateProfileName } from './session.ts';
-import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions } from './types.ts';
+import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions, OutputFormat } from './types.ts';
 
 const COMMAND_GROUPS: CommandGroup[] = [
   { key: 'auth', label: 'Authentication', aliases: ['authentication', 'login'], categories: ['Authentication'] },
@@ -72,6 +72,8 @@ const ERROR_HELP: Record<string, string> = Object.fromEntries(
   Object.entries(ERROR_REGISTRY).map(([code, entry]) => [code, entry.suggestion]),
 );
 
+const VALID_FORMATS = new Set(['table', 'json', 'yaml', 'text']);
+
 export function parseGlobalOptions(args: string[]): GlobalOptions {
   const result: Omit<GlobalOptions, 'args'> = {
     json: false,
@@ -79,6 +81,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptions {
     plain: false,
     dryRun: false,
     fields: undefined,
+    noTimestamp: false,
+    compact: false,
   };
   const filteredArgs: string[] = [];
 
@@ -100,6 +104,70 @@ export function parseGlobalOptions(args: string[]): GlobalOptions {
     } else if (arg.startsWith('--dry-run=') || arg.startsWith('--preview=')) {
       const value = arg.substring(arg.indexOf('=') + 1).toLowerCase();
       result.dryRun = value !== 'false' && value !== '0';
+    } else if (arg === '--no-timestamp') {
+      result.noTimestamp = true;
+    } else if (arg === '--compact') {
+      result.compact = true;
+    } else if (arg === '--watch' || arg === '-w') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        const parsed = Number(nextArg);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          console.error(`${c.red}Error:${c.reset} --watch requires a positive number (seconds).`);
+          process.exit(1);
+        }
+        result.watch = parsed;
+        i++;
+      } else {
+        result.watch = 10;
+      }
+    } else if (arg.startsWith('--watch=')) {
+      const value = Number(arg.slice('--watch='.length));
+      if (!Number.isFinite(value) || value <= 0) {
+        console.error(`${c.red}Error:${c.reset} --watch requires a positive number (seconds).`);
+        process.exit(1);
+      }
+      result.watch = value;
+    } else if (arg === '--format' || arg === '-fmt') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        if (!VALID_FORMATS.has(nextArg)) {
+          console.error(
+            `${c.red}Error:${c.reset} Invalid format "${nextArg}". Expected one of: table, json, yaml, text.`,
+          );
+          process.exit(1);
+        }
+        result.format = nextArg as OutputFormat;
+        i++;
+      } else {
+        console.error(`${c.red}Error:${c.reset} --format requires a value: table, json, yaml, text.`);
+        process.exit(1);
+      }
+    } else if (arg.startsWith('--format=')) {
+      const value = arg.slice('--format='.length);
+      if (!VALID_FORMATS.has(value)) {
+        console.error(`${c.red}Error:${c.reset} Invalid format "${value}". Expected one of: table, json, yaml, text.`);
+        process.exit(1);
+      }
+      result.format = value as OutputFormat;
+    } else if (arg.startsWith('-fmt=')) {
+      const value = arg.slice(5);
+      if (!VALID_FORMATS.has(value)) {
+        console.error(`${c.red}Error:${c.reset} Invalid format "${value}". Expected one of: table, json, yaml, text.`);
+        process.exit(1);
+      }
+      result.format = value as OutputFormat;
+    } else if (arg === '--jq') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        result.jq = nextArg;
+        i++;
+      } else {
+        console.error(`${c.red}Error:${c.reset} --jq requires a jq-like expression.`);
+        process.exit(1);
+      }
+    } else if (arg.startsWith('--jq=')) {
+      result.jq = arg.slice('--jq='.length);
     } else if (arg === '--profile') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
@@ -151,10 +219,13 @@ export function parseGlobalOptions(args: string[]): GlobalOptions {
   }
 
   // Set global mode flags
-  if (result.json) {
-    setOutputMode({ json: true, debug: false });
+  if (result.format) {
+    setOutputMode({ format: result.format });
+    if (result.format === 'json') setOutputMode({ json: true });
+  } else if (result.json) {
+    setOutputMode({ json: true, format: 'json' });
   }
-  setOutputMode({ quiet: result.quiet, plain: result.plain });
+  setOutputMode({ quiet: result.quiet, plain: result.plain, compact: result.compact });
   setActiveProfile(result.profile);
 
   return {
@@ -490,6 +561,11 @@ ${c.bright}Global Flags:${c.reset}
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI formatting
   --fields, -f      Extract response fields
+  --format, -fmt    Output format: table, json, yaml, text
+  --compact         Compact single-line output
+  --no-timestamp    Suppress timestamps on output
+  --watch, -w       Re-run command on interval (seconds, default 10)
+  --jq              Apply jq-like expression to response
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
 `);
@@ -531,13 +607,18 @@ ${c.bright}Usage:${c.reset}
      spacemolt travel target_poi=sol_asteroid_belt
      spacemolt travel --target-poi sol_asteroid_belt
 
-   Output modes:
-     --json          Raw JSON response (implies quiet)
-     --quiet, -q     Suppress notifications and info messages
-     --plain, -p     No ANSI colors or formatting
-     --fields, -f    Extract specific fields from response
-     --profile       Use ~/.hermes/spacemolt/sessions/<name>.json and matching credentials profile
-     --dry-run       Preview supported mutations without executing them
+    Output modes:
+      --json, -j          Raw JSON response (implies quiet)
+      --quiet, -q         Suppress notifications and info messages
+      --plain, -p         No ANSI colors or formatting
+      --fields, -f        Extract specific fields from response
+      --format, -fmt <f>  Output format: table (default), json, yaml, text
+      --compact           Compact single-line JSON output
+      --no-timestamp      Suppress timestamps on output
+      --watch, -w <secs>  Re-run command on interval (default 10s)
+      --jq <expr>         Apply jq-like path expression (.key, .key[], .key[].field)
+      --profile           Use named session profile
+      --dry-run           Preview supported mutations without executing them
 
     Local command discovery:
      spacemolt profile list
@@ -742,7 +823,10 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Auto-dock/undock handles dock state automatically
    - Your session auto-renews; credentials saved in session file
    - Speak English in all chat and forum messages
-   - Use '--fields key1,key2' to extract specific values from structured responses
+    - Use '--fields key1,key2' to extract specific values from structured responses
+    - Use '--format yaml|text' for alternative output formats
+    - Use '--jq .key.path' or '--jq .array[].field' for nested field extraction
+    - Use '--watch 10' for live-refresh status monitoring
 
 ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
@@ -768,8 +852,9 @@ ${c.bright}Documentation:${c.reset}
 export function displayError(
   command: string,
   error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
+  options?: { noTimestamp?: boolean },
 ): void {
-  if (!QUIET) {
+  if (!QUIET && !options?.noTimestamp) {
     console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
   }
   console.error(`${c.red}Error [${error.code}]:${c.reset} ${error.message}`);

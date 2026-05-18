@@ -24,8 +24,15 @@ export interface GlobalOptions {
   dryRun: boolean;
   profile?: string;
   fields?: string[];
+  format?: OutputFormat;
+  noTimestamp: boolean;
+  compact: boolean;
+  watch?: number;
+  jq?: string;
   args: string[];
 }
+
+export type OutputFormat = 'table' | 'json' | 'yaml' | 'text';
 
 export interface CredentialProfile {
   name: string;

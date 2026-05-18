@@ -67,7 +67,8 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
   not_docked: {
     code: 'not_docked',
     message: 'Ship is not docked.',
-    suggestion: 'You must be docked. Most commands handle this automatically - if you see this error, please report it.',
+    suggestion:
+      'You must be docked. Most commands handle this automatically - if you see this error, please report it.',
     retryable: false,
     auth: false,
     relatedCommands: ['dock', 'get_status'],
