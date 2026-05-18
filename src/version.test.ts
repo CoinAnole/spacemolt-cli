@@ -9,6 +9,7 @@ import {
   getPayloadConversionSchema,
   normalizeParsedPayload,
   parseArgs,
+  parseGlobalOptions,
   validateRequiredArgs,
 } from './client';
 import { COMMANDS } from './commands';
@@ -943,6 +944,31 @@ describe('CLI local usability behavior', () => {
 // =============================================================================
 
 describe('CLI output modes', () => {
+  test('global option parser returns structured errors without exiting', () => {
+    const result = parseGlobalOptions(['--watch=0', 'get_status']);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toEqual({
+        code: 'invalid_global_option',
+        option: '--watch',
+        message: '--watch requires a positive number (seconds).',
+      });
+    }
+  });
+
+  test('global option parser returns structured options', () => {
+    const result = parseGlobalOptions(['--json', '--fields=player.name, ship.fuel', '--profile=pilot', 'get_status']);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.options).toMatchObject({
+        json: true,
+        fields: ['player.name', 'ship.fuel'],
+        profile: 'pilot',
+        args: ['get_status'],
+      });
+    }
+  });
+
   test('--quiet suppresses notification-like output in help', () => {
     const normal = runClient(['--help', 'travel']);
     const quiet = runClient(['--quiet', '--help', 'travel']);

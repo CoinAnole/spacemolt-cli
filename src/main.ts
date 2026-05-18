@@ -11,12 +11,13 @@ import { COMMANDS } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import { displayResult } from './display/index.ts';
 import { printDoctorResult, runDoctor } from './doctor.ts';
+import type { GlobalOptionParseError } from './global-options.ts';
+import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import {
   displayError,
   displayMissingArgument,
   displayUnknownCommand,
   parseCommandSearchQuery,
-  parseGlobalOptions,
   printJsonError,
   printJsonResponse,
   showCommandExplanation,
@@ -48,15 +49,20 @@ export interface Invocation {
   args: string[];
 }
 
+export type InvocationParseResult = { ok: true; invocation: Invocation } | { ok: false; error: GlobalOptionParseError };
+
 export interface CommandRun {
   command: string;
   displayCommand: string;
   response: APIResponse;
 }
 
-export function parseInvocation(argv: string[]): Invocation {
-  const options = parseGlobalOptions(argv);
-  return { options, args: options.args };
+export function parseInvocation(argv: string[]): InvocationParseResult {
+  const parsed = parseGlobalOptions(argv);
+  if (!parsed.ok) return parsed;
+
+  applyGlobalOptions(parsed.options);
+  return { ok: true, invocation: { options: parsed.options, args: parsed.options.args } };
 }
 
 export function resolveCommand(invocation: Invocation): ResolvedCommand {
@@ -272,7 +278,12 @@ export async function renderResponse(commandRun: CommandRun, options: GlobalOpti
 }
 
 export async function runInvocation(argv: string[]): Promise<number> {
-  const invocation = parseInvocation(argv);
+  const parsedInvocation = parseInvocation(argv);
+  if (!parsedInvocation.ok) {
+    console.error(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
+    return 1;
+  }
+  const { invocation } = parsedInvocation;
 
   if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
     checkForUpdates();

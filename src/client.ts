@@ -19,6 +19,7 @@ export {
   isKnownErrorCode,
   isRetryableError,
 } from './errors.ts';
+export { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 export { main } from './main.ts';
 export { compareVersions } from './update.ts';
 
