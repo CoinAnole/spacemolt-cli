@@ -173,6 +173,17 @@ describe('structuredContent output mode precedence', () => {
     expect(stderr).toBe('');
     expect(JSON.parse(stdout)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
   });
+
+  test('--jq evaluation errors exit with non-zero code', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: outputModeFixture },
+      { jq: '.non_existent_key[]' },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain('Error: Expected array at "non_existent_key"');
+    expect(stdout).toBe('');
+  });
 });
 
 describe('structuredContent formatters', () => {

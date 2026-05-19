@@ -366,8 +366,8 @@ export async function renderResponse(
     return response.error ? 1 : 0;
   }
 
-  displayResult(displayCommand, response, hasProjection ? { ...options, noTimestamp: true } : options);
-  return 0;
+  const success = displayResult(displayCommand, response, hasProjection ? { ...options, noTimestamp: true } : options);
+  return success === false ? 1 : 0;
 }
 
 export interface CommandError {

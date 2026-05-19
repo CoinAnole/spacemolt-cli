@@ -38,8 +38,8 @@ export function displayStructuredResult(
   command: string,
   result: Record<string, unknown>,
   options?: GlobalOptions,
-): void {
-  if (!result) return;
+): boolean {
+  if (!result) return true;
 
   const fields = options?.fields;
   const format = getOutputFormat(options);
@@ -50,36 +50,37 @@ export function displayStructuredResult(
     try {
       const jqResult = evaluateJq(result, jqExpr);
       console.log(formatProjection(jqResult, format, compact, 'jq'));
+      return true;
     } catch (err) {
       console.error(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
+      return false;
     }
-    return;
   }
 
   if (hasFields(fields)) {
     const extracted = extractFields(result, fields);
     console.log(formatProjection(extracted, format, compact, 'fields'));
-    return;
+    return true;
   }
 
   if (format === 'json') {
     console.log(stringifyJson(result, compact));
-    return;
+    return true;
   }
 
   if (format === 'yaml') {
     console.log(toYaml(result));
-    return;
+    return true;
   }
 
   if (format === 'text') {
     console.log(JSON.stringify(result, null, 2));
-    return;
+    return true;
   }
 
   if (compact) {
     console.log(JSON.stringify(result));
-    return;
+    return true;
   }
 
   const viewModel = normalizeStructuredResultForDisplay(result);
@@ -92,11 +93,11 @@ export function displayStructuredResult(
   }
 
   for (const formatter of commandScopedFormatters(resultFormatters, command)) {
-    if (formatter(viewModel, command)) return;
+    if (formatter(viewModel, command)) return true;
   }
 
   for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
-    if (formatter(viewModel, command)) return;
+    if (formatter(viewModel, command)) return true;
   }
 
   const resultKeys = Object.keys(viewModel);
@@ -115,29 +116,29 @@ export function displayStructuredResult(
 
   console.log(`\n${c.bright}=== Response ===${c.reset}`);
   console.log(JSON.stringify(viewModel, null, 2));
+  return true;
 }
 
-export function displayResult(command: string, response: APIResponse, options?: GlobalOptions): void {
+export function displayResult(command: string, response: APIResponse, options?: GlobalOptions): boolean {
   const noTimestamp = options?.noTimestamp ?? false;
   if (!QUIET && !noTimestamp) {
     console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
   }
   const structured = getStructuredResult(response);
   if (structured) {
-    displayStructuredResult(command, structured, options);
-    return;
+    return displayStructuredResult(command, structured, options);
   }
 
   const viewModel = getObjectResult(response);
   if (viewModel) {
-    displayStructuredResult(command, viewModel, options);
-    return;
+    return displayStructuredResult(command, viewModel, options);
   }
 
   if (typeof response.result === 'string' && response.result.trim()) {
     console.log(response.result);
-    return;
+    return true;
   }
 
-  if (command === 'session') return;
+  if (command === 'session') return true;
+  return true;
 }
