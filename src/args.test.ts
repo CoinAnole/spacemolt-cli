@@ -105,6 +105,19 @@ describe('convertPayloadTypes', () => {
     });
   });
 
+  test('payload transforms do not mutate the original payload', () => {
+    const original = { types: 'chat, combat', limit: 10, clear: false };
+    const result = applyPayloadTransforms('get_notifications', original);
+
+    expect(result).toEqual({
+      types: ['chat', 'combat'],
+      limit: 10,
+      clear: false,
+    });
+    expect(original).toEqual({ types: 'chat, combat', limit: 10, clear: false });
+    expect(result).not.toBe(original);
+  });
+
   test('leaves non-numeric string in numeric field as string', () => {
     const result = convertPayloadTypes({ quantity: 'abc' }, 'sell');
     expect(result.quantity).toBe('abc');

@@ -8,11 +8,12 @@
   "scripts": {
     "start": "bun run src/client.ts",
     "dev": "DEBUG=true bun run src/client.ts",
-    "generate:api": "/home/hermes/.bun/bin/bun run scripts/generate-api-metadata.ts && /home/hermes/.bun/bin/bunx biome format --write src/generated/api-commands.ts",
+    "generate:api": "bun run scripts/generate-api-metadata.ts && bunx biome format --write src/generated/api-commands.ts",
     "build": "bun build src/client.ts --compile --outfile spacemolt",
     "typecheck": "bun x tsc --noEmit",
     "lint": "bunx biome check src/",
-    "test": "bun test"
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
   },
   "bin": {
     "spacemolt": "./src/client.ts"

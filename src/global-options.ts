@@ -175,12 +175,13 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
 }
 
 export function applyGlobalOptions(options: GlobalOptions): void {
-  if (options.format) {
-    setOutputMode({ format: options.format });
-    if (options.format === 'json') setOutputMode({ json: true });
-  } else if (options.json) {
-    setOutputMode({ json: true, format: 'json' });
-  }
-  setOutputMode({ quiet: options.quiet, plain: options.plain, compact: options.compact });
+  const format = options.format ?? (options.json ? 'json' : 'table');
+  setOutputMode({
+    json: options.json || format === 'json' || process.env.SPACEMOLT_OUTPUT === 'json',
+    format,
+    quiet: options.quiet,
+    plain: options.plain,
+    compact: options.compact,
+  });
   setActiveProfile(options.profile);
 }

@@ -488,13 +488,14 @@ export function convertPayloadTypes(payload: Record<string, unknown>, command?: 
 
 export function applyPayloadTransforms(command: string, payload: Record<string, unknown>): Record<string, unknown> {
   const config = COMMANDS[command];
+  const transformed = { ...payload };
 
   // Apply array field splitting from metadata
   if (config?.arrayFields) {
     for (const field of config.arrayFields) {
-      const val = payload[field];
+      const val = transformed[field];
       if (typeof val === 'string') {
-        payload[field] = val
+        transformed[field] = val
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean);
@@ -502,5 +503,5 @@ export function applyPayloadTransforms(command: string, payload: Record<string, 
     }
   }
 
-  return payload;
+  return transformed;
 }

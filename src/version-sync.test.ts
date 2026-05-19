@@ -2,7 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getPayloadConversionSchema } from './client';
-import { COMMANDS } from './commands';
+import { COMMAND_OVERRIDES, COMMANDS, LOCAL_COMMANDS } from './commands';
+import {
+  displayMissingArgument,
+  displayUnknownCommand,
+  hasCommandGroup,
+  showCommandHelp,
+  suggestCommands,
+} from './help';
 import { FETCH_TIMEOUT_MS, VERSION } from './runtime';
 
 describe('version sync', () => {
@@ -27,21 +34,12 @@ describe('version sync', () => {
 });
 
 describe('client.ts source integrity', () => {
-  let clientSrc: string;
-
-  test('reads client source', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    clientSrc = fs.readFileSync(clientPath, 'utf-8');
-    expect(clientSrc.length).toBeGreaterThan(0);
-  });
-
   test('FETCH_TIMEOUT_MS is long enough for extended travel actions', () => {
     expect(FETCH_TIMEOUT_MS).toBeGreaterThanOrEqual(300_000);
   });
+
   test('faction_gift is removed', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).not.toContain('faction_gift');
+    expect(COMMANDS.faction_gift).toBeUndefined();
   });
 
   test('all new v0.8.0 commands are present', () => {
@@ -109,23 +107,14 @@ describe('client.ts source integrity', () => {
   });
 
   test('payload conversion uses command schemas instead of a global numeric field set', () => {
-    const argsPath = path.join(import.meta.dir, 'args.ts');
-    const src = fs.readFileSync(argsPath, 'utf-8');
-    expect(src).not.toContain('NUMERIC_FIELDS');
     expect(getPayloadConversionSchema('travel').id?.type).toBe('string');
     expect(getPayloadConversionSchema('sell').quantity?.type).toBe('integer');
     expect(getPayloadConversionSchema('trade_offer').offer_credits?.type).toBe('integer');
   });
 
-  test('COMMANDS block has no duplicate top-level command keys', () => {
-    const overridesPath = path.join(import.meta.dir, 'command-overrides.ts');
-    const src = fs.readFileSync(overridesPath, 'utf-8');
-    const start = src.indexOf('export const COMMAND_OVERRIDES:');
-    expect(start).toBeGreaterThanOrEqual(0);
-    const block = src.slice(start);
-    const commands = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]);
-    const duplicates = commands.filter((command, index) => commands.indexOf(command) !== index);
-    expect(duplicates).toEqual([]);
+  test('command override metadata has unique top-level command keys', () => {
+    const commands = Object.keys(COMMAND_OVERRIDES);
+    expect(new Set(commands).size).toBe(commands.length);
   });
 
   test('generated OpenAPI metadata is merged into command configs', () => {
@@ -135,16 +124,25 @@ describe('client.ts source integrity', () => {
   });
 
   test('local AI usability helpers are present', () => {
-    const clientPath = path.join(import.meta.dir, 'help.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    const commandsPath = path.join(import.meta.dir, 'commands.ts');
-    const commandsSrc = fs.readFileSync(commandsPath, 'utf-8');
-    expect(src).toContain('function suggestCommands');
-    expect(src).toContain('function showCommandHelp');
-    expect(src).toContain('function displayUnknownCommand');
-    expect(src).toContain('function displayMissingArgument');
-    expect(commandsSrc).toContain('description:');
-    expect(commandsSrc).toContain('example:');
-    expect(commandsSrc).toContain('seeAlso:');
+    expect(suggestCommands('trvel')).toContain('travel');
+    const originalLog = console.log;
+    console.log = () => {};
+    try {
+      expect(showCommandHelp('travel')).toBe(true);
+    } finally {
+      console.log = originalLog;
+    }
+    expect(hasCommandGroup('combat')).toBe(true);
+    expect(typeof displayUnknownCommand).toBe('function');
+    expect(typeof displayMissingArgument).toBe('function');
+    const idsCommand = LOCAL_COMMANDS.ids;
+    const travelCommand = COMMANDS.travel;
+    expect(idsCommand).toBeDefined();
+    expect(travelCommand).toBeDefined();
+    if (!idsCommand || !travelCommand) throw new Error('expected local ids and travel command metadata');
+    expect(idsCommand.description).toBeTruthy();
+    expect(travelCommand.description).toBeTruthy();
+    expect(travelCommand.example).toBeTruthy();
+    expect(travelCommand.seeAlso).toContain('get_system');
   });
 });

@@ -3,7 +3,14 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { cargoFixture, nearbyFixture, systemInfoFixture, viewMarketFixture } from './display/formatter-fixtures';
-import { cacheIdsFromResponse, extractIdHints, hintsForKind, resolveCachedId, searchItemHints } from './id-cache';
+import {
+  cacheIdsFromResponse,
+  extractIdHints,
+  getIdCachePath,
+  hintsForKind,
+  resolveCachedId,
+  searchItemHints,
+} from './id-cache';
 
 const originalSession = process.env.SPACEMOLT_SESSION;
 
@@ -42,6 +49,40 @@ describe('id cache', () => {
 
     expect(hintsForKind('item')).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
     expect(searchItemHints('iron')).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
+  });
+
+  test('cache writes preserve existing valid cache contents', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
+    process.env.SPACEMOLT_SESSION = path.join(tempDir, 'session.json');
+    const cachePath = getIdCachePath();
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(
+      cachePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'system',
+              id: 'alpha_centauri',
+              name: 'Alpha Centauri',
+              sourceCommand: 'get_system',
+              seenAt: '2026-05-18T00:00:00.000Z',
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture });
+
+    const cache = JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as {
+      hints: Array<{ kind: string; id: string }>;
+    };
+    expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'system', id: 'alpha_centauri' }));
+    expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'ore_iron' }));
   });
 
   test('resolves exact, prefix, and substring matches conservatively', () => {
