@@ -69,11 +69,11 @@ export function getRuntimeConfig(options: GlobalOptions): SpaceMoltConfig {
 }
 
 type CommandStatus = { type: 'exit'; exitCode: number };
-type ParsedCommand = { type: 'command'; command: string; rawPayload: Record<string, string> };
+type ParsedCommand = { type: 'command'; command: string; rawPayload: Record<string, any> };
 type ResolvedCommand = CommandStatus | ParsedCommand;
 type PreparedPayload = CommandStatus | { type: 'payload'; payload: Record<string, unknown> };
 type PayloadResolveResult =
-  | { type: 'payload'; payload: Record<string, string> }
+  | { type: 'payload'; payload: Record<string, any> }
   | { type: 'ambiguous'; field: string; result: Extract<CachedIdResolveResult, { type: 'ambiguous' }> };
 
 export interface Invocation {
@@ -215,7 +215,7 @@ export function resolveCommand(invocation: Invocation): ResolvedCommand {
 
 export function preparePayload(
   command: string,
-  rawPayload: Record<string, string>,
+  rawPayload: Record<string, any>,
   options: GlobalOptions,
   sessionPath?: string,
 ): PreparedPayload {
@@ -263,19 +263,34 @@ export function preparePayload(
 
 function resolveCachedIdsForPayload(
   command: string,
-  payload: Record<string, string>,
+  payload: Record<string, any>,
   sessionPath?: string,
 ): PayloadResolveResult {
-  const resolvedPayload: Record<string, string> = { ...payload };
+  const resolvedPayload: Record<string, any> = { ...payload };
   const hints = loadIdCacheSync(sessionPath);
 
   for (const [field, value] of Object.entries(payload)) {
     const kind = idKindForCommandField(command, field);
     if (!kind) continue;
 
-    const resolved = resolveCachedId(kind, value, hints);
-    if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
-    if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
+    if (Array.isArray(value)) {
+      const resolvedArray: string[] = [];
+      for (const item of value) {
+        if (typeof item === 'string') {
+          const resolved = resolveCachedId(kind, item, hints);
+          if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
+          if (resolved.type === 'resolved') resolvedArray.push(resolved.value);
+          else resolvedArray.push(item);
+        } else {
+          resolvedArray.push(String(item));
+        }
+      }
+      resolvedPayload[field] = resolvedArray;
+    } else if (typeof value === 'string') {
+      const resolved = resolveCachedId(kind, value, hints);
+      if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
+      if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
+    }
   }
 
   return { type: 'payload', payload: resolvedPayload };

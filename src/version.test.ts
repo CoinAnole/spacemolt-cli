@@ -407,6 +407,95 @@ describe('parseArgs - rest args', () => {
   });
 });
 
+describe('parseArgs - tightened semantics', () => {
+  test('-- terminator stops flag parsing and treats remaining as positional', () => {
+    const { command, payload } = parseOk(['chat', 'local', '--', '--flag-like-message', 'hello']);
+    expect(command).toBe('chat');
+    expect(payload.channel).toBe('local');
+    expect(payload.content).toBe('--flag-like-message hello');
+  });
+
+  test('-- terminator handles empty after it', () => {
+    const { command, payload } = parseOk(['mine', '--']);
+    expect(command).toBe('mine');
+    expect(payload).toEqual({});
+  });
+
+  test('repeated flags aggregate into arrays', () => {
+    const { payload } = parseOk(['buy', '--item-id', 'ore_iron', '--item-id', 'ore_copper'], { allowUnknown: true });
+    expect(payload.item_id).toEqual(['ore_iron', 'ore_copper']);
+  });
+
+  test('repeated flags with values and mixed formats', () => {
+    const { payload } = parseOk(['buy', '--item-id=ore_iron', '--item-id=ore_copper'], { allowUnknown: true });
+    expect(payload.item_id).toEqual(['ore_iron', 'ore_copper']);
+  });
+
+  test('@file resolves to file contents', () => {
+    const tmpFile = path.join(os.tmpdir(), `spacemolt_test_${Date.now()}.txt`);
+    fs.writeFileSync(tmpFile, 'hello from file payload', 'utf-8');
+    try {
+      const { payload } = parseOk(['chat', 'local', `@${tmpFile}`]);
+      expect(payload.content).toBe('hello from file payload');
+    } finally {
+      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+    }
+  });
+
+  test('@file missing file returns validation error', () => {
+    const missingFile = path.join(os.tmpdir(), `spacemolt_missing_${Date.now()}.txt`);
+    const result = parseArgs(['chat', 'local', `@${missingFile}`]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors?.[0]?.code).toBe('file_read_error');
+      expect(result.errors?.[0]?.message).toContain('Could not read file');
+    }
+  });
+
+  test('--payload-json parses and merges JSON object', () => {
+    const { payload } = parseOk(['buy', '--payload-json', '{"item_id": "ore_iron", "quantity": 10}']);
+    expect(payload.item_id).toBe('ore_iron');
+    expect(payload.quantity).toBe(10);
+  });
+
+  test('--payload-json over-writes other flags', () => {
+    const { payload } = parseOk(['buy', '--item-id', 'ore_copper', '--payload-json', '{"item_id": "ore_iron"}']);
+    expect(payload.item_id).toBe('ore_iron');
+  });
+
+  test('--payload-json parses JSON from @file', () => {
+    const tmpFile = path.join(os.tmpdir(), `spacemolt_json_${Date.now()}.json`);
+    fs.writeFileSync(tmpFile, '{"item_id": "ore_gold", "quantity": 100}', 'utf-8');
+    try {
+      const { payload } = parseOk(['buy', '--payload-json', `@${tmpFile}`]);
+      expect(payload.item_id).toBe('ore_gold');
+      expect(payload.quantity).toBe(100);
+    } finally {
+      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+    }
+  });
+
+  test('--payload-json invalid JSON returns validation error', () => {
+    const result = parseArgs(['buy', '--payload-json', '{invalid_json}']);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors?.[0]?.field).toBe('payload_json');
+      expect(result.errors?.[0]?.code).toBe('invalid_field_type');
+      expect(result.errors?.[0]?.message).toContain('Failed to parse --payload-json');
+    }
+  });
+
+  test('--payload-json non-object JSON returns validation error', () => {
+    const result = parseArgs(['buy', '--payload-json', '"just a string"']);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors?.[0]?.field).toBe('payload_json');
+      expect(result.errors?.[0]?.code).toBe('invalid_field_type');
+      expect(result.errors?.[0]?.message).toContain('value must be a JSON object');
+    }
+  });
+});
+
 describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   test('trade_offer uses credits not offer_credits', () => {
     const { payload } = parseOk(['trade_offer', 'player123', '500']);

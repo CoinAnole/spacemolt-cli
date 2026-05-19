@@ -1,7 +1,8 @@
+import * as fs from 'node:fs';
 import { COMMANDS, type CommandConfig } from './commands.ts';
 
-export function normalizeParsedPayload(command: string, payload: Record<string, string>): Record<string, string> {
-  const normalized: Record<string, string> = { ...payload };
+export function normalizeParsedPayload(command: string, payload: Record<string, any>): Record<string, any> {
+  const normalized: Record<string, any> = { ...payload };
   const config = COMMANDS[command];
 
   // Apply fieldRenames first (deprecated field names -> current names)
@@ -49,7 +50,7 @@ export function getValidArgNames(command: string): Set<string> {
 
 export interface ParsedArgs {
   command: string;
-  payload: Record<string, string>;
+  payload: Record<string, any>;
 }
 
 export interface ParseArgsOptions {
@@ -59,46 +60,65 @@ export interface ParseArgsOptions {
 export type CommandParseError = ValidationError;
 
 export type CommandParseResult =
-  | { ok: true; command: string; payload: Record<string, string> }
+  | { ok: true; command: string; payload: Record<string, any> }
   | { ok: false; errors: CommandParseError[] };
 
 function parseRawArgs(args: string[]): ParsedArgs {
   const command = args[0] || '';
-  const payload: Record<string, string> = {};
+  const payload: Record<string, any> = {};
   const config = COMMANDS[command];
   const argDefs = config?.args || [];
   let positionalIndex = 0;
+  let inPositionalOnlyMode = false;
+
+  const setPayloadField = (key: string, val: string) => {
+    const existing = payload[key];
+    if (existing !== undefined) {
+      if (Array.isArray(existing)) {
+        existing.push(val);
+      } else {
+        payload[key] = [existing, val];
+      }
+    } else {
+      payload[key] = val;
+    }
+  };
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
     if (!arg) continue;
 
-    const flag = parseCliFlag(arg);
+    if (arg === '--' && !inPositionalOnlyMode) {
+      inPositionalOnlyMode = true;
+      continue;
+    }
+
+    const flag = !inPositionalOnlyMode ? parseCliFlag(arg) : null;
     if (flag) {
       if (flag.value !== undefined) {
-        payload[flag.key] = flag.value;
+        setPayloadField(flag.key, flag.value);
         continue;
       }
 
       const nextArg = args[i + 1];
       const fieldType = getCommandFieldType(command, flag.key);
       if (fieldType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
-        payload[flag.key] = nextArg;
+        setPayloadField(flag.key, nextArg);
         i++;
       } else {
-        payload[flag.key] = 'true';
+        setPayloadField(flag.key, 'true');
       }
       continue;
     }
 
-    const keyValue = parseKeyValue(arg);
+    const keyValue = !inPositionalOnlyMode ? parseKeyValue(arg) : null;
     if (keyValue) {
-      payload[keyValue.key] = keyValue.value;
+      setPayloadField(keyValue.key, keyValue.value);
     } else {
       const argDef = argDefs[positionalIndex];
       if (argDef) {
         if (typeof argDef === 'string') {
-          payload[argDef] = arg;
+          setPayloadField(argDef, arg);
         } else if (argDef.rest) {
           payload[argDef.rest] = args.slice(i).join(' ');
           break;
@@ -113,14 +133,126 @@ function parseRawArgs(args: string[]): ParsedArgs {
   return { command, payload };
 }
 
+function resolveValue(val: string): { ok: true; value: string } | { ok: false; error: string } {
+  if (val.startsWith('@')) {
+    const filePath = val.slice(1);
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return { ok: true, value: content };
+    } catch (e: any) {
+      return { ok: false, error: `Could not read file "${filePath}": ${e.message}` };
+    }
+  }
+  return { ok: true, value: val };
+}
+
+function resolvePayloadFiles(
+  payload: Record<string, any>,
+): { ok: true; payload: Record<string, any> } | { ok: false; field: string; error: string } {
+  const resolved: Record<string, any> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (Array.isArray(value)) {
+      const resolvedArray: any[] = [];
+      for (const item of value) {
+        if (typeof item === 'string') {
+          const res = resolveValue(item);
+          if (!res.ok) {
+            return { ok: false, field: key, error: res.error };
+          }
+          resolvedArray.push(res.value);
+        } else {
+          resolvedArray.push(item);
+        }
+      }
+      resolved[key] = resolvedArray;
+    } else if (typeof value === 'string') {
+      const res = resolveValue(value);
+      if (!res.ok) {
+        return { ok: false, field: key, error: res.error };
+      }
+      resolved[key] = res.value;
+    } else {
+      resolved[key] = value;
+    }
+  }
+  return { ok: true, payload: resolved };
+}
+
 export function parseArgs(args: string[], options: ParseArgsOptions = {}): CommandParseResult {
   const parsed = parseRawArgs(args);
+
+  const resolved = resolvePayloadFiles(parsed.payload);
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      errors: [
+        {
+          field: resolved.field,
+          message: resolved.error,
+          code: 'file_read_error',
+        },
+      ],
+    };
+  }
+
+  const payload = resolved.payload;
+
+  if (payload.payload_json !== undefined) {
+    const payloadJsonVal = payload.payload_json;
+    delete payload.payload_json;
+
+    const jsonStrings = Array.isArray(payloadJsonVal) ? payloadJsonVal : [payloadJsonVal];
+    for (const jsonStr of jsonStrings) {
+      if (typeof jsonStr !== 'string') {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: 'payload_json',
+              message: 'Invalid --payload-json: value must be a JSON object.',
+              code: 'invalid_field_type',
+            },
+          ],
+        };
+      }
+      try {
+        const parsedJson = JSON.parse(jsonStr);
+        if (parsedJson === null || typeof parsedJson !== 'object' || Array.isArray(parsedJson)) {
+          return {
+            ok: false,
+            errors: [
+              {
+                field: 'payload_json',
+                message: 'Invalid --payload-json: value must be a JSON object.',
+                code: 'invalid_field_type',
+              },
+            ],
+          };
+        }
+        for (const [k, v] of Object.entries(parsedJson)) {
+          payload[k] = v;
+        }
+      } catch (e: any) {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: 'payload_json',
+              message: `Failed to parse --payload-json: ${e.message}`,
+              code: 'invalid_field_type',
+            },
+          ],
+        };
+      }
+    }
+  }
+
   const errors = [
-    ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, parsed.payload)),
-    ...validatePayloadAgainstSchema(parsed.command, parsed.payload),
+    ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, payload)),
+    ...validatePayloadAgainstSchema(parsed.command, payload),
   ];
   if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, command: parsed.command, payload: parsed.payload };
+  return { ok: true, command: parsed.command, payload };
 }
 
 function normalizeCliKey(key: string): string {
@@ -140,7 +272,7 @@ function parseKeyValue(arg: string): { key: string; value: string } | null {
   return { key: normalizeCliKey(arg.substring(0, eqIndex)), value: arg.substring(eqIndex + 1) };
 }
 
-export function validateRequiredArgs(command: string, payload: Record<string, string>): string | null {
+export function validateRequiredArgs(command: string, payload: Record<string, any>): string | null {
   const required = COMMANDS[command]?.required;
   if (!required) return null;
   const normalized = normalizeParsedPayload(command, payload);
@@ -163,10 +295,11 @@ export interface ValidationError {
     | 'invalid_integer'
     | 'invalid_number'
     | 'invalid_boolean'
-    | 'invalid_field_type';
+    | 'invalid_field_type'
+    | 'file_read_error';
 }
 
-export function validateKnownPayloadFields(command: string, payload: Record<string, string>): ValidationError[] {
+export function validateKnownPayloadFields(command: string, payload: Record<string, any>): ValidationError[] {
   const config = COMMANDS[command];
   if (!config) return [];
   const validArgNames = getValidArgNames(command);
@@ -186,7 +319,7 @@ export function validateKnownPayloadFields(command: string, payload: Record<stri
   return errors;
 }
 
-export function validatePayloadAgainstSchema(command: string, payload: Record<string, string>): ValidationError[] {
+export function validatePayloadAgainstSchema(command: string, payload: Record<string, any>): ValidationError[] {
   const errors: ValidationError[] = [];
   const config = COMMANDS[command];
   const schema = config?.schema;
@@ -198,14 +331,16 @@ export function validatePayloadAgainstSchema(command: string, payload: Record<st
 
     if (fieldSchema.enum && fieldSchema.enum.length > 0) {
       const values =
-        config.arrayFields?.includes(key) && typeof value === 'string'
+        Array.isArray(value)
+          ? value
+          : config.arrayFields?.includes(key) && typeof value === 'string'
           ? value
               .split(',')
               .map((s) => s.trim())
               .filter(Boolean)
           : [value];
-      const invalidValue = values.find((v) => !fieldSchema.enum?.includes(v));
-      if (invalidValue) {
+      const invalidValue = values.find((v) => !fieldSchema.enum?.includes(String(v)));
+      if (invalidValue !== undefined) {
         errors.push({
           field: key,
           message: `Invalid value "${invalidValue}" for "${key}". Expected one of: ${fieldSchema.enum.join(', ')}`,
@@ -215,25 +350,42 @@ export function validatePayloadAgainstSchema(command: string, payload: Record<st
     }
 
     if (fieldSchema.type === 'integer' || fieldSchema.type === 'number') {
-      const num = parseTypedNumber(value, fieldSchema.type);
-      if (num === undefined) {
-        errors.push({
-          field: key,
-          message: `Invalid ${fieldSchema.type} "${value}" for "${key}".`,
-          code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
-        });
+      const values = Array.isArray(value) ? value : [value];
+      for (const val of values) {
+        if (typeof val === 'number') {
+          if (fieldSchema.type === 'integer' && !Number.isInteger(val)) {
+            errors.push({
+              field: key,
+              message: `Invalid integer "${val}" for "${key}".`,
+              code: 'invalid_integer',
+            });
+          }
+          continue;
+        }
+        const num = parseTypedNumber(String(val), fieldSchema.type);
+        if (num === undefined) {
+          errors.push({
+            field: key,
+            message: `Invalid ${fieldSchema.type} "${val}" for "${key}".`,
+            code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
+          });
+        }
       }
     }
 
     if (fieldSchema.type === 'boolean') {
-      if (value !== 'true' && value !== 'false') {
-        const suggestion = suggestBooleanCorrection(value);
-        const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
-        errors.push({
-          field: key,
-          message: `Invalid boolean "${value}" for "${key}". Use true/false.${hint}`,
-          code: 'invalid_boolean',
-        });
+      const values = Array.isArray(value) ? value : [value];
+      for (const val of values) {
+        if (typeof val === 'boolean') continue;
+        if (val !== 'true' && val !== 'false') {
+          const suggestion = suggestBooleanCorrection(String(val));
+          const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
+          errors.push({
+            field: key,
+            message: `Invalid boolean "${val}" for "${key}". Use true/false.${hint}`,
+            code: 'invalid_boolean',
+          });
+        }
       }
     }
   }
@@ -306,36 +458,31 @@ function parseTypedNumber(value: string, fieldType: string): number | undefined 
   return num;
 }
 
-export function convertPayloadTypes(payload: Record<string, string>, command?: string): Record<string, unknown> {
+export function convertPayloadTypes(payload: Record<string, any>, command?: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
     const fieldType = getCommandFieldType(command, key);
-    if (fieldType === 'integer' || fieldType === 'number') {
-      const num = parseTypedNumber(value, fieldType);
-      if (num !== undefined) {
-        result[key] = num;
-        continue;
+
+    const convertSingle = (val: any): unknown => {
+      if (typeof val !== 'string') return val;
+      if (fieldType === 'integer' || fieldType === 'number') {
+        const num = parseTypedNumber(val, fieldType);
+        if (num !== undefined) return num;
       }
-    }
-    if (fieldType === 'boolean') {
-      if (value === 'true') {
-        result[key] = true;
-        continue;
+      if (fieldType === 'boolean') {
+        if (val === 'true') return true;
+        if (val === 'false') return false;
       }
-      if (value === 'false') {
-        result[key] = false;
-        continue;
-      }
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    };
+
+    if (Array.isArray(value)) {
+      result[key] = value.map(convertSingle);
+    } else {
+      result[key] = convertSingle(value);
     }
-    if (value === 'true') {
-      result[key] = true;
-      continue;
-    }
-    if (value === 'false') {
-      result[key] = false;
-      continue;
-    }
-    result[key] = value;
   }
   return result;
 }
