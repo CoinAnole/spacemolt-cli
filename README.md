@@ -46,12 +46,46 @@ The server returns a password. Save it somewhere safe. Returning players can log
 bun run src/client.ts login myname mypassword
 ```
 
-Session state and saved login credentials are stored under `~/.hermes/spacemolt/session.json` by default. The session file contains secrets, so keep it out of version control.
+### Session & Credentials Storage
+
+By default all session state and saved login credentials are stored under `~/.hermes/spacemolt/`.
+
+| File | Purpose |
+| --- | --- |
+| `~/.hermes/spacemolt/session.json` | Default session file (API session ID, player ID, expiry) |
+| `~/.hermes/spacemolt/sessions/<profile>.json` | Named profile session files |
+| `~/.hermes/spacemolt/spacemolt_credentials.yaml` | Saved credential profiles for auto-login |
+
+#### Credential Profiles (`spacemolt_credentials.yaml`)
+
+The optional `spacemolt_credentials.yaml` file lets you store named login profiles so you don't have to pass credentials on the command line. The CLI looks for this file in the following locations, in order:
+
+1. `~/.hermes/spacemolt/spacemolt_credentials.yaml` (default)
+2. `~/.hermes/spacemolt_credentials.yaml` (legacy)
+3. `./spacemolt_credentials.yaml` (current working directory)
+
+Example `spacemolt_credentials.yaml`:
+
+```yaml
+credentials:
+  main:
+    username: myname
+    password: mypassword
+    empire: outerrim
+  alt:
+    username: othername
+    password: otherpassword
+```
+
+Profiles are used automatically when you select a profile with `--profile`. You can also list stored profiles:
+
+```bash
+bun run src/client.ts profile list
+```
 
 Named profiles keep player sessions isolated:
 
 ```bash
-bun run src/client.ts profile list
 bun run src/client.ts --profile marlowe get_status
 ```
 
