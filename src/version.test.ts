@@ -229,6 +229,8 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeParsedPayload('battle_target', { target_id: 'player_1' })).toEqual({ id: 'player_1' });
     expect(normalizeParsedPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
+    expect(normalizeParsedPayload('faction_set_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeParsedPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('scrap_ship', { ship_id: 'ship_1' })).toEqual({ id: 'ship_1' });
     expect(normalizeParsedPayload('get_empire_info', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
@@ -545,6 +547,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       types: 'chat,combat',
     });
     expect(parseArgs(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
+    expect(parseArgs(['faction_set_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
+    expect(parseArgs(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
   });
 
   test('citizenship commands parse positional payloads', () => {

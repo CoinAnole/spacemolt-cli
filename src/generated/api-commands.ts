@@ -2228,6 +2228,15 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       method: 'POST',
     },
     schema: {
+      ally_fuel_access: {
+        type: 'boolean',
+        description:
+          "True to let allied faction members refuel for free from your faction's bunker reserves (default false → opt-in).",
+      },
+      ally_intel_opt_out: {
+        type: 'boolean',
+        description: 'True to withhold your intel pool from allied factions (default false → sharing on).',
+      },
       charter: {
         type: 'string',
         description: "Faction's founding document (max 4000 chars)",
@@ -2445,6 +2454,23 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       method: 'GET',
     },
   },
+  'POST /api/v2/spacemolt_faction/accept_ally': {
+    operationId: 'spacemolt_faction_accept_ally',
+    summary: 'accept_ally',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'accept_ally',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
   'POST /api/v2/spacemolt_faction/accept_peace': {
     operationId: 'spacemolt_faction_accept_peace',
     summary: 'accept_peace',
@@ -2457,7 +2483,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Faction ID of peace proposer',
+        description: 'Faction ID or 4-character tag of peace proposer',
         positionalIndex: 0,
       },
     },
@@ -2513,7 +2539,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Target faction ID',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
         positionalIndex: 0,
       },
       text: {
@@ -2707,6 +2733,23 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     },
     schema: {},
   },
+  'POST /api/v2/spacemolt_faction/propose_ally': {
+    operationId: 'spacemolt_faction_propose_ally',
+    summary: 'propose_ally',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'propose_ally',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
   'POST /api/v2/spacemolt_faction/propose_peace': {
     operationId: 'spacemolt_faction_propose_peace',
     summary: 'propose_peace',
@@ -2719,7 +2762,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Target faction ID (must be at war)',
+        description: 'Target faction ID or 4-character faction tag (must be at war)',
         positionalIndex: 0,
       },
       text: {
@@ -2741,7 +2784,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Target faction ID',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
         positionalIndex: 0,
       },
     },
@@ -2758,7 +2801,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Target faction ID',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
         positionalIndex: 0,
       },
     },
@@ -2773,23 +2816,6 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     },
     schema: {},
   },
-  'POST /api/v2/spacemolt_faction/set_ally': {
-    operationId: 'spacemolt_faction_set_ally',
-    summary: 'set_ally',
-    route: {
-      tool: 'spacemolt_faction',
-      action: 'set_ally',
-      method: 'POST',
-    },
-    required: ['id'],
-    schema: {
-      id: {
-        type: 'string',
-        description: 'Target faction ID',
-        positionalIndex: 0,
-      },
-    },
-  },
   'POST /api/v2/spacemolt_faction/set_enemy': {
     operationId: 'spacemolt_faction_set_enemy',
     summary: 'set_enemy',
@@ -2802,7 +2828,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Target faction ID',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
         positionalIndex: 0,
       },
     },
@@ -3014,6 +3040,11 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
         type: 'string',
         description: 'Filter by resource type (requires L2 Intel Center)',
       },
+      source_faction_id: {
+        type: 'string',
+        description:
+          'Optional ally faction whose intel pool to read (defaults to own faction). Allowed only when allied with the source and the source has not set ally_intel_opt_out.',
+      },
       system_id: {
         type: 'string',
         description: 'Filter by system ID',
@@ -3050,6 +3081,11 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       offset: {
         type: 'integer',
         description: 'Pagination offset',
+      },
+      source_faction_id: {
+        type: 'string',
+        description:
+          'Optional ally faction whose trade intel pool to read (defaults to own faction). Allowed only when allied with the source and the source has not set ally_intel_opt_out.',
       },
       station_name: {
         type: 'string',

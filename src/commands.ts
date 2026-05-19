@@ -423,8 +423,20 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['faction_id'],
   },
   faction_set_ally: {
+    usage: '<faction_id_or_tag>',
+    description: 'Propose an alliance with another faction.',
     category: 'Factions',
-    apiRoute: 'POST /api/v2/spacemolt_faction/set_ally',
+    apiRoute: 'POST /api/v2/spacemolt_faction/propose_ally',
+    positionals: ['target_faction_id'],
+    aliases: {
+      target_faction_id: 'id',
+    },
+  },
+  faction_accept_ally: {
+    usage: '<faction_id_or_tag>',
+    description: 'Accept a pending alliance proposal from another faction.',
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_faction/accept_ally',
     positionals: ['target_faction_id'],
     aliases: {
       target_faction_id: 'id',
