@@ -69,10 +69,12 @@ export function getRuntimeConfig(options: GlobalOptions): SpaceMoltConfig {
 }
 
 type CommandStatus = { type: 'exit'; exitCode: number };
+// biome-ignore lint/suspicious/noExplicitAny: generic parsed payload
 type ParsedCommand = { type: 'command'; command: string; rawPayload: Record<string, any> };
 type ResolvedCommand = CommandStatus | ParsedCommand;
 type PreparedPayload = CommandStatus | { type: 'payload'; payload: Record<string, unknown> };
 type PayloadResolveResult =
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   | { type: 'payload'; payload: Record<string, any> }
   | { type: 'ambiguous'; field: string; result: Extract<CachedIdResolveResult, { type: 'ambiguous' }> };
 
@@ -216,6 +218,7 @@ export function resolveCommand(invocation: Invocation): ResolvedCommand {
 
 export function preparePayload(
   command: string,
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   rawPayload: Record<string, any>,
   options: GlobalOptions,
   sessionPath?: string,
@@ -264,9 +267,11 @@ export function preparePayload(
 
 function resolveCachedIdsForPayload(
   command: string,
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   payload: Record<string, any>,
   sessionPath?: string,
 ): PayloadResolveResult {
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   const resolvedPayload: Record<string, any> = { ...payload };
   const hints = loadIdCacheSync(sessionPath);
 
@@ -372,7 +377,7 @@ export interface CommandError {
   code: string;
   message: string;
   customStderr?: string;
-  errors?: any[];
+  errors?: CommandParseError[];
   exitCode?: number;
 }
 
@@ -380,15 +385,18 @@ export interface CommandHandler {
   name: string;
   aliases?: string[];
   requiresNetwork: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   parse(argv: string[], options: GlobalOptions): { ok: true; payload: any } | { ok: false; error: CommandError };
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   run(payload: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<any> | any;
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   render(runResult: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<number> | number;
 }
 
 const profileHandler: CommandHandler = {
   name: 'profile',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     const action = argv[1] || 'list';
     if (action !== 'list') {
       return {
@@ -403,11 +411,11 @@ const profileHandler: CommandHandler = {
     }
     return { ok: true, payload: { action } };
   },
-  run(payload, options) {
+  run(payload, _options) {
     showProfiles();
     return { action: payload.action };
   },
-  render(result, options) {
+  render(_result, _options) {
     return 0;
   },
 };
@@ -415,13 +423,13 @@ const profileHandler: CommandHandler = {
 const commandsHandler: CommandHandler = {
   name: 'commands',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     return { ok: true, payload: { args: argv.slice(1) } };
   },
-  run(payload, options) {
+  run(payload, _options) {
     return { query: parseCommandSearchQuery(payload.args) };
   },
-  render(result, options) {
+  render(result, _options) {
     showCommandSearch(result.query);
     return 0;
   },
@@ -430,7 +438,7 @@ const commandsHandler: CommandHandler = {
 const explainHandler: CommandHandler = {
   name: 'explain',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     const explainCommand = argv[1];
     if (!explainCommand) {
       return {
@@ -445,7 +453,7 @@ const explainHandler: CommandHandler = {
     }
     return { ok: true, payload: { command: explainCommand } };
   },
-  run(payload, options) {
+  run(payload, _options) {
     const found = showCommandExplanation(payload.command);
     return { found, command: payload.command };
   },
@@ -465,7 +473,7 @@ const explainHandler: CommandHandler = {
 const completionHandler: CommandHandler = {
   name: 'completion',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     const shell = argv[1] || 'bash';
     if (!['bash', 'zsh', 'fish'].includes(shell)) {
       return {
@@ -480,10 +488,10 @@ const completionHandler: CommandHandler = {
     }
     return { ok: true, payload: { shell } };
   },
-  run(payload, options) {
+  run(payload, _options) {
     return { completion: generateCompletion(payload.shell) };
   },
-  render(result, options) {
+  render(result, _options) {
     console.log(result.completion);
     return 0;
   },
@@ -492,14 +500,14 @@ const completionHandler: CommandHandler = {
 const doctorHandler: CommandHandler = {
   name: 'doctor',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(_argv, _options) {
     return { ok: true, payload: {} };
   },
-  async run(payload, options, client) {
+  async run(_payload, _options, client) {
     const doctorResult = await runDoctor(client?.config);
     return { doctorResult };
   },
-  render(result, options, client) {
+  render(result, options, _client) {
     const { doctorResult } = result;
     if (options.json) {
       console.log(JSON.stringify({ structuredContent: doctorResult }, null, 2));
@@ -513,7 +521,7 @@ const doctorHandler: CommandHandler = {
 const idsHandler: CommandHandler = {
   name: 'ids',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     const kind = argv[1];
     if (!kind || !isIdKind(kind)) {
       return {
@@ -528,7 +536,7 @@ const idsHandler: CommandHandler = {
     }
     return { ok: true, payload: { kind } };
   },
-  run(payload, options, client) {
+  run(payload, _options, client) {
     const sessionPath = client ? getSessionPath(client.config) : undefined;
     const hints = loadIdCacheSync(sessionPath);
     return { kind: payload.kind, hints: hintsForKind(payload.kind, hints) };
@@ -547,7 +555,7 @@ const idsHandler: CommandHandler = {
 const whereCanIHandler: CommandHandler = {
   name: 'where-can-i',
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     const query = argv.slice(1).join(' ').trim();
     if (!query) {
       return {
@@ -562,7 +570,7 @@ const whereCanIHandler: CommandHandler = {
     }
     return { ok: true, payload: { query } };
   },
-  run(payload, options, client) {
+  run(payload, _options, client) {
     const sessionPath = client ? getSessionPath(client.config) : undefined;
     const hints = loadIdCacheSync(sessionPath);
     return { query: payload.query, matches: searchItemHints(payload.query, hints) };
@@ -582,13 +590,13 @@ const versionHandler: CommandHandler = {
   name: 'version',
   aliases: ['--version', '-v'],
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(_argv, _options) {
     return { ok: true, payload: {} };
   },
-  run(payload, options) {
+  run(_payload, _options) {
     return {};
   },
-  render(result, options) {
+  render(_result, _options) {
     console.log(`SpaceMolt Client v${VERSION}`);
     console.log(`API: ${API_BASE}`);
     return 0;
@@ -599,7 +607,7 @@ const localHelpHandler: CommandHandler = {
   name: 'help',
   aliases: ['--help', '-h'],
   requiresNetwork: false,
-  parse(argv, options) {
+  parse(argv, _options) {
     const commandName = argv[0];
     const subArgs = argv.slice(1);
 
@@ -630,7 +638,7 @@ const localHelpHandler: CommandHandler = {
 
     return { ok: true, payload: { type: 'showHelp' } };
   },
-  async run(payload, options) {
+  async run(payload, _options) {
     return payload;
   },
   async render(result, options) {
@@ -679,6 +687,7 @@ class ApiCommandHandler implements CommandHandler {
   constructor(public name: string) {}
   requiresNetwork = true;
 
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   parse(argv: string[], options: GlobalOptions): { ok: true; payload: any } | { ok: false; error: CommandError } {
     const parsedArgs = parseArgs(argv, { allowUnknown: options.allowUnknown });
     if (!parsedArgs.ok) {
@@ -711,10 +720,12 @@ class ApiCommandHandler implements CommandHandler {
     return { ok: true, payload: prepared.payload };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   async run(payload: any, options: GlobalOptions, client?: SpaceMoltClient) {
     return runCommand(this.name, payload, options, client);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: generic payload
   async render(runResult: any, options: GlobalOptions, client?: SpaceMoltClient) {
     return renderResponse(runResult, options, client);
   }
@@ -747,7 +758,7 @@ registry.register(idsHandler);
 registry.register(whereCanIHandler);
 registry.register(versionHandler);
 
-function resolveHandler(argv: string[], options: GlobalOptions): CommandHandler | undefined {
+function resolveHandler(argv: string[], _options: GlobalOptions): CommandHandler | undefined {
   const commandName = argv[0];
 
   if (
