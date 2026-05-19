@@ -52,6 +52,7 @@ export type CommandOverride = {
   category?: string;
   aliases?: Record<string, string>;
   defaults?: Record<string, string>;
+  schemaExtensions?: Record<string, CommandFieldSchema>;
   arrayFields?: string[];
   fieldRenames?: Record<string, string>;
 };
@@ -67,6 +68,7 @@ export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
   'category',
   'aliases',
   'defaults',
+  'schemaExtensions',
   'arrayFields',
   'fieldRenames',
 ] as const;
@@ -838,6 +840,15 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
     positionals: ['item_id', 'quantity'],
+    // Workaround for an OpenAPI schema gap: the server accepts `source`
+    // for direct personal/faction storage transfers, but the generated
+    // schema currently omits it and local validation would reject it.
+    schemaExtensions: {
+      source: {
+        type: 'string',
+        description: "Source: 'cargo', 'storage', or 'faction'",
+      },
+    },
   },
   withdraw_items: {
     usage: '<item_id> <quantity>  (use view_storage to see stored items)',
@@ -848,6 +859,15 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
     positionals: ['item_id', 'quantity'],
+    // Workaround for an OpenAPI schema gap: the server accepts `source`
+    // for direct personal/faction storage transfers, but the generated
+    // schema currently omits it and local validation would reject it.
+    schemaExtensions: {
+      source: {
+        type: 'string',
+        description: "Source: 'storage' or 'faction'",
+      },
+    },
   },
   send_gift: {
     usage:
@@ -1639,7 +1659,14 @@ function mergeCommandConfig(config: CommandOverride): CommandConfig {
   const generated = getGeneratedRoute(config.apiRoute);
   const generatedAliases = generatedArgAliases(config.positionals, generated);
   const aliases = { ...generatedAliases, ...config.aliases };
-  const { apiRoute: _apiRoute, defaults, positionals: _positionals, aliases: _aliases, ...uxConfig } = config;
+  const {
+    apiRoute: _apiRoute,
+    defaults,
+    positionals: _positionals,
+    aliases: _aliases,
+    schemaExtensions,
+    ...uxConfig
+  } = config;
   return {
     ...uxConfig,
     args: config.positionals ?? generatedArgs(generated),
@@ -1651,7 +1678,7 @@ function mergeCommandConfig(config: CommandOverride): CommandConfig {
       ...generated.route,
       defaults,
     },
-    schema: generated.schema,
+    schema: { ...generated.schema, ...schemaExtensions },
   };
 }
 

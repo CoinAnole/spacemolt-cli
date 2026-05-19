@@ -941,6 +941,32 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('"experimental_mode": true');
   });
 
+  test('storage direct transfer source is accepted without raw mode', () => {
+    const deposit = runClient([
+      '--dry-run',
+      'deposit_items',
+      'item_id=ore_iron',
+      'quantity=1',
+      'source=faction',
+      'target=self',
+    ]);
+    expect(deposit.exitCode).toBe(0);
+    expect(deposit.stdout).toContain('"source": "faction"');
+    expect(deposit.stdout).toContain('"target": "self"');
+
+    const withdraw = runClient([
+      '--dry-run',
+      'withdraw_items',
+      'item_id=ore_iron',
+      'quantity=1',
+      'source=faction',
+      'target=self',
+    ]);
+    expect(withdraw.exitCode).toBe(0);
+    expect(withdraw.stdout).toContain('"source": "faction"');
+    expect(withdraw.stdout).toContain('"target": "self"');
+  });
+
   test('profile list reads local credential profile names without secrets', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
     const hermesDir = path.join(home, '.hermes', 'spacemolt');
