@@ -325,6 +325,403 @@ export async function renderResponse(commandRun: CommandRun, options: GlobalOpti
   return 0;
 }
 
+export interface CommandError {
+  code: string;
+  message: string;
+  customStderr?: string;
+  errors?: any[];
+  exitCode?: number;
+}
+
+export interface CommandHandler {
+  name: string;
+  aliases?: string[];
+  requiresNetwork: boolean;
+  parse(
+    argv: string[],
+    options: GlobalOptions,
+  ): { ok: true; payload: any } | { ok: false; error: CommandError };
+  run(payload: any, options: GlobalOptions): Promise<any> | any;
+  render(runResult: any, options: GlobalOptions): Promise<number> | number;
+}
+
+const profileHandler: CommandHandler = {
+  name: 'profile',
+  requiresNetwork: false,
+  parse(argv, options) {
+    const action = argv[1] || 'list';
+    if (action !== 'list') {
+      return {
+        ok: false,
+        error: {
+          code: 'unknown_command',
+          message: `Unknown profile command: ${action}`,
+          customStderr: `${c.red}Error:${c.reset} Unknown profile command "${action}"\nUsage: spacemolt profile list`,
+          exitCode: 1,
+        },
+      };
+    }
+    return { ok: true, payload: { action } };
+  },
+  run(payload, options) {
+    showProfiles();
+    return { action: payload.action };
+  },
+  render(result, options) {
+    return 0;
+  },
+};
+
+const commandsHandler: CommandHandler = {
+  name: 'commands',
+  requiresNetwork: false,
+  parse(argv, options) {
+    return { ok: true, payload: { args: argv.slice(1) } };
+  },
+  run(payload, options) {
+    return { query: parseCommandSearchQuery(payload.args) };
+  },
+  render(result, options) {
+    showCommandSearch(result.query);
+    return 0;
+  },
+};
+
+const explainHandler: CommandHandler = {
+  name: 'explain',
+  requiresNetwork: false,
+  parse(argv, options) {
+    const explainCommand = argv[1];
+    if (!explainCommand) {
+      return {
+        ok: false,
+        error: {
+          code: 'missing_argument',
+          message: 'Missing command name.',
+          customStderr: `${c.red}Error:${c.reset} Missing command name.\nUsage: spacemolt explain <command>`,
+          exitCode: 1,
+        },
+      };
+    }
+    return { ok: true, payload: { command: explainCommand } };
+  },
+  run(payload, options) {
+    const found = showCommandExplanation(payload.command);
+    return { found, command: payload.command };
+  },
+  render(result, options) {
+    if (!result.found) {
+      if (options.json) {
+        printJsonError('unknown_command', `Unknown command: ${result.command}`);
+        return 1;
+      }
+      displayUnknownCommand(result.command);
+      return 1;
+    }
+    return 0;
+  },
+};
+
+const completionHandler: CommandHandler = {
+  name: 'completion',
+  requiresNetwork: false,
+  parse(argv, options) {
+    const shell = argv[1] || 'bash';
+    if (!['bash', 'zsh', 'fish'].includes(shell)) {
+      return {
+        ok: false,
+        error: {
+          code: 'validation_error',
+          message: `Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
+          customStderr: `${c.red}Error:${c.reset} Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
+          exitCode: 1,
+        },
+      };
+    }
+    return { ok: true, payload: { shell } };
+  },
+  run(payload, options) {
+    return { completion: generateCompletion(payload.shell) };
+  },
+  render(result, options) {
+    console.log(result.completion);
+    return 0;
+  },
+};
+
+const doctorHandler: CommandHandler = {
+  name: 'doctor',
+  requiresNetwork: false,
+  parse(argv, options) {
+    return { ok: true, payload: {} };
+  },
+  async run(payload, options) {
+    const doctorResult = await runDoctor();
+    return { doctorResult };
+  },
+  render(result, options) {
+    const { doctorResult } = result;
+    if (options.json) {
+      console.log(JSON.stringify({ structuredContent: doctorResult }, null, 2));
+    } else {
+      printDoctorResult(doctorResult);
+    }
+    return doctorResult.ok ? 0 : 1;
+  },
+};
+
+const idsHandler: CommandHandler = {
+  name: 'ids',
+  requiresNetwork: false,
+  parse(argv, options) {
+    const kind = argv[1];
+    if (!kind || !isIdKind(kind)) {
+      return {
+        ok: false,
+        error: {
+          code: 'validation_error',
+          message: 'Usage: spacemolt ids <poi|system|item|player>',
+          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player>`,
+          exitCode: 1,
+        },
+      };
+    }
+    return { ok: true, payload: { kind } };
+  },
+  run(payload, options) {
+    return { kind: payload.kind, hints: hintsForKind(payload.kind) };
+  },
+  render(result, options) {
+    if (options.json) {
+      console.log(JSON.stringify({ structuredContent: { kind: result.kind, ids: result.hints } }, null, 2));
+    } else {
+      printIds(result.kind);
+    }
+    return 0;
+  },
+};
+
+const whereCanIHandler: CommandHandler = {
+  name: 'where-can-i',
+  requiresNetwork: false,
+  parse(argv, options) {
+    const query = argv.slice(1).join(' ').trim();
+    if (!query) {
+      return {
+        ok: false,
+        error: {
+          code: 'missing_required_argument',
+          message: 'Missing required argument: item',
+          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt where-can-i <item>`,
+          exitCode: 1,
+        },
+      };
+    }
+    return { ok: true, payload: { query } };
+  },
+  run(payload, options) {
+    return { query: payload.query, matches: searchItemHints(payload.query) };
+  },
+  render(result, options) {
+    if (options.json) {
+      console.log(JSON.stringify({ structuredContent: { query: result.query, matches: result.matches } }, null, 2));
+    } else {
+      printWhereCanI(result.query);
+    }
+    return 0;
+  },
+};
+
+const versionHandler: CommandHandler = {
+  name: 'version',
+  aliases: ['--version', '-v'],
+  requiresNetwork: false,
+  parse(argv, options) {
+    return { ok: true, payload: {} };
+  },
+  run(payload, options) {
+    return {};
+  },
+  render(result, options) {
+    console.log(`SpaceMolt Client v${VERSION}`);
+    console.log(`API: ${API_BASE}`);
+    return 0;
+  },
+};
+
+const localHelpHandler: CommandHandler = {
+  name: 'help',
+  aliases: ['--help', '-h'],
+  requiresNetwork: false,
+  parse(argv, options) {
+    const commandName = argv[0];
+    const subArgs = argv.slice(1);
+
+    if (argv.length === 0) {
+      return { ok: true, payload: { type: 'showHelp' } };
+    }
+
+    if (commandName === '--help' || commandName === '-h') {
+      const helpCommand = subArgs[0];
+      if (helpCommand) {
+        return { ok: true, payload: { type: 'helpCommand', target: helpCommand } };
+      }
+      return { ok: true, payload: { type: 'showHelpAndGroups' } };
+    }
+
+    const target = subArgs[0];
+    if (!target) {
+      return { ok: true, payload: { type: 'progressiveOrHelp' } };
+    }
+
+    if (target === 'all') {
+      return { ok: true, payload: { type: 'helpAll' } };
+    }
+
+    if (showCommandGroup(target)) {
+      return { ok: true, payload: { type: 'helpGroup', target } };
+    }
+
+    return { ok: true, payload: { type: 'showHelp' } };
+  },
+  async run(payload, options) {
+    return payload;
+  },
+  async render(result, options) {
+    const { type, target } = result;
+    if (type === 'showHelp') {
+      showHelp();
+      return 0;
+    }
+    if (type === 'showHelpAndGroups') {
+      showHelp();
+      showCommandGroups();
+      return 0;
+    }
+    if (type === 'helpAll') {
+      showFullHelp();
+      return 0;
+    }
+    if (type === 'helpGroup' && target) {
+      showCommandGroup(target);
+      return 0;
+    }
+    if (type === 'progressiveOrHelp') {
+      if (options.watch) {
+        showHelp();
+      } else {
+        await showProgressiveHelp();
+      }
+      return 0;
+    }
+    if (type === 'helpCommand' && target) {
+      if (showCommandHelp(target) || showCommandGroup(target)) {
+        return 0;
+      }
+      if (options.json) {
+        printJsonError('unknown_command', `Unknown command: ${target}`);
+        return 1;
+      }
+      displayUnknownCommand(target);
+      return 1;
+    }
+    return 0;
+  },
+};
+
+class ApiCommandHandler implements CommandHandler {
+  constructor(public name: string) {}
+  requiresNetwork = true;
+
+  parse(argv: string[], options: GlobalOptions): { ok: true; payload: any } | { ok: false; error: CommandError } {
+    const parsedArgs = parseArgs(argv, { allowUnknown: options.allowUnknown });
+    if (!parsedArgs.ok) {
+      return {
+        ok: false,
+        error: {
+          code: 'validation_error',
+          message: parsedArgs.errors.map((e) => e.message).join('; '),
+          errors: parsedArgs.errors,
+          exitCode: 1,
+        },
+      };
+    }
+
+    const prepared = preparePayload(this.name, parsedArgs.payload, options);
+    if (prepared.type === 'exit') {
+      return {
+        ok: false,
+        error: {
+          code: 'exit',
+          message: '',
+          exitCode: prepared.exitCode,
+        },
+      };
+    }
+
+    return { ok: true, payload: prepared.payload };
+  }
+
+  async run(payload: any, options: GlobalOptions) {
+    return runCommand(this.name, payload, options);
+  }
+
+  async render(runResult: any, options: GlobalOptions) {
+    return renderResponse(runResult, options);
+  }
+}
+
+class CommandRegistry {
+  private handlers = new Map<string, CommandHandler>();
+
+  register(handler: CommandHandler) {
+    this.handlers.set(handler.name, handler);
+    if (handler.aliases) {
+      for (const alias of handler.aliases) {
+        this.handlers.set(alias, handler);
+      }
+    }
+  }
+
+  get(name: string): CommandHandler | undefined {
+    return this.handlers.get(name);
+  }
+}
+
+const registry = new CommandRegistry();
+registry.register(profileHandler);
+registry.register(commandsHandler);
+registry.register(explainHandler);
+registry.register(completionHandler);
+registry.register(doctorHandler);
+registry.register(idsHandler);
+registry.register(whereCanIHandler);
+registry.register(versionHandler);
+
+function resolveHandler(argv: string[], options: GlobalOptions): CommandHandler | undefined {
+  const commandName = argv[0];
+
+  if (
+    argv.length === 0 ||
+    commandName === '--help' ||
+    commandName === '-h' ||
+    (commandName === 'help' && (!argv[1] || argv[1] === 'all' || showCommandGroup(argv[1])))
+  ) {
+    return localHelpHandler;
+  }
+
+  if (commandName) {
+    const handler = registry.get(commandName);
+    if (handler) return handler;
+  }
+
+  if (commandName && COMMANDS[commandName]) {
+    return new ApiCommandHandler(commandName);
+  }
+
+  return undefined;
+}
+
 export async function runInvocation(argv: string[]): Promise<number> {
   const parsedInvocation = parseInvocation(argv);
   if (!parsedInvocation.ok) {
@@ -337,81 +734,53 @@ export async function runInvocation(argv: string[]): Promise<number> {
     checkForUpdates();
   }
 
+  const handler = resolveHandler(invocation.args, invocation.options);
+
   if (invocation.options.watch) {
-    return runWatchLoop(invocation);
-  }
-
-  if (invocation.args[0] === 'help' && !invocation.args[1]) {
-    await showProgressiveHelp();
-    return 0;
-  }
-
-  if (invocation.args[0] === 'doctor') {
-    const doctorResult = await runDoctor();
-    if (invocation.options.json) {
-      console.log(JSON.stringify({ structuredContent: doctorResult }, null, 2));
-    } else {
-      printDoctorResult(doctorResult);
+    if (!handler) {
+      const commandName = invocation.args[0] || 'help';
+      if (invocation.options.json) {
+        printJsonError('unknown_command', `Unknown command: ${commandName}`);
+      } else {
+        displayUnknownCommand(commandName);
+      }
+      return 1;
     }
-    return doctorResult.ok ? 0 : 1;
+    return runWatchLoop(invocation, handler);
   }
 
-  const localExit = runLocalHelperCommand(invocation);
-  if (localExit !== null) return localExit;
-
-  const resolved = resolveCommand(invocation);
-  if (resolved.type === 'exit') return resolved.exitCode;
+  if (!handler) {
+    const commandName = invocation.args[0] || 'help';
+    if (invocation.options.json) {
+      printJsonError('unknown_command', `Unknown command: ${commandName}`);
+    } else {
+      displayUnknownCommand(commandName);
+    }
+    return 1;
+  }
 
   try {
-    const prepared = preparePayload(resolved.command, resolved.rawPayload, invocation.options);
-    if (prepared.type === 'exit') return prepared.exitCode;
+    const parsed = handler.parse(invocation.args, invocation.options);
+    if (!parsed.ok) {
+      if (parsed.error.code === 'validation_error' && parsed.error.errors) {
+        displayCommandParseErrors(parsed.error.errors, invocation.options);
+      } else if (parsed.error.code !== 'exit') {
+        if (invocation.options.json) {
+          printJsonError(parsed.error.code, parsed.error.message);
+        } else if (parsed.error.customStderr) {
+          console.error(parsed.error.customStderr);
+        } else {
+          console.error(`${c.red}Error:${c.reset} ${parsed.error.message}`);
+        }
+      }
+      return parsed.error.exitCode ?? 1;
+    }
 
-    const commandRun = await runCommand(resolved.command, prepared.payload, invocation.options);
-    return await renderResponse(commandRun, invocation.options);
+    const runResult = await handler.run(parsed.payload, invocation.options);
+    return await handler.render(runResult, invocation.options);
   } catch (error) {
     return renderConnectionError(error, invocation.options);
   }
-}
-
-function runLocalHelperCommand(invocation: Invocation): number | null {
-  const command = invocation.args[0];
-  if (command === 'ids') {
-    const kind = invocation.args[1];
-    if (!kind || !isIdKind(kind)) {
-      if (invocation.options.json) {
-        printJsonError('validation_error', 'Usage: spacemolt ids <poi|system|item|player>');
-      } else {
-        console.error(`${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player>`);
-      }
-      return 1;
-    }
-    if (invocation.options.json) {
-      console.log(JSON.stringify({ structuredContent: { kind, ids: hintsForKind(kind) } }, null, 2));
-      return 0;
-    }
-    printIds(kind);
-    return 0;
-  }
-
-  if (command === 'where-can-i') {
-    const query = invocation.args.slice(1).join(' ').trim();
-    if (!query) {
-      if (invocation.options.json) {
-        printJsonError('missing_required_argument', 'Missing required argument: item');
-      } else {
-        console.error(`${c.red}Error:${c.reset} Usage: spacemolt where-can-i <item>`);
-      }
-      return 1;
-    }
-    if (invocation.options.json) {
-      console.log(JSON.stringify({ structuredContent: { query, matches: searchItemHints(query) } }, null, 2));
-      return 0;
-    }
-    printWhereCanI(query);
-    return 0;
-  }
-
-  return null;
 }
 
 function shouldShowCachedIdSuggestions(command: string, error: { code: string; message: string }): boolean {
@@ -420,7 +789,7 @@ function shouldShowCachedIdSuggestions(command: string, error: { code: string; m
   return /invalid|unknown|not_found|not found|missing/.test(text);
 }
 
-async function runWatchLoop(invocation: Invocation): Promise<number> {
+async function runWatchLoop(invocation: Invocation, handler: CommandHandler): Promise<number> {
   const interval = invocation.options.watch;
   if (!interval) return 0;
 
@@ -431,14 +800,24 @@ async function runWatchLoop(invocation: Invocation): Promise<number> {
   process.on('SIGINT', stop);
 
   while (running) {
-    const resolved = resolveCommand(invocation);
-    if (resolved.type === 'exit') return resolved.exitCode;
-
     try {
-      const prepared = preparePayload(resolved.command, resolved.rawPayload, invocation.options);
-      if (prepared.type === 'exit') return prepared.exitCode;
+      const parsed = handler.parse(invocation.args, invocation.options);
+      if (!parsed.ok) {
+        if (parsed.error.code === 'validation_error' && parsed.error.errors) {
+          displayCommandParseErrors(parsed.error.errors, invocation.options);
+        } else if (parsed.error.code !== 'exit') {
+          if (invocation.options.json) {
+            printJsonError(parsed.error.code, parsed.error.message);
+          } else if (parsed.error.customStderr) {
+            console.error(parsed.error.customStderr);
+          } else {
+            console.error(`${c.red}Error:${c.reset} ${parsed.error.message}`);
+          }
+        }
+        return parsed.error.exitCode ?? 1;
+      }
 
-      const commandRun = await runCommand(resolved.command, prepared.payload, invocation.options);
+      const runResult = await handler.run(parsed.payload, invocation.options);
 
       process.stdout.write('\x1b[2J\x1b[H');
 
@@ -446,7 +825,7 @@ async function runWatchLoop(invocation: Invocation): Promise<number> {
         ...invocation.options,
         noTimestamp: true,
       };
-      await renderResponse(commandRun, watchOptions);
+      await handler.render(runResult, watchOptions);
 
       if (running) {
         console.log(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
