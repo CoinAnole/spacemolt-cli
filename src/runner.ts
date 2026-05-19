@@ -1,5 +1,12 @@
 import { SpaceMoltClient } from './api.ts';
 import {
+  type CliRuntimeContext,
+  createDefaultCliRuntimeContext,
+  withCliWriter,
+  withResolvedConfig,
+} from './cli-context.ts';
+import {
+  type CommandError,
   type CommandHandler,
   displayCommandParseErrors,
   getRuntimeConfig,
@@ -19,79 +26,75 @@ export interface Invocation {
 
 export type InvocationParseResult = { ok: true; invocation: Invocation } | { ok: false; error: GlobalOptionParseError };
 
-export function parseInvocation(argv: string[]): InvocationParseResult {
+export function parseInvocation(argv: string[], context?: CliRuntimeContext): InvocationParseResult {
   const parsed = parseGlobalOptions(argv);
   if (!parsed.ok) return parsed;
 
-  applyGlobalOptions(parsed.options);
+  applyGlobalOptions(parsed.options, context?.env);
   return { ok: true, invocation: { options: parsed.options, args: parsed.options.args } };
 }
 
-export async function runInvocation(argv: string[], client?: SpaceMoltClient): Promise<number> {
-  const parsedInvocation = parseInvocation(argv);
+export async function runInvocation(
+  argv: string[],
+  client?: SpaceMoltClient,
+  context: CliRuntimeContext = createDefaultCliRuntimeContext(),
+): Promise<number> {
+  return withCliWriter(context.writer, () => runInvocationWithContext(argv, client, context));
+}
+
+async function runInvocationWithContext(
+  argv: string[],
+  client: SpaceMoltClient | undefined,
+  context: CliRuntimeContext,
+): Promise<number> {
+  const parsedInvocation = parseInvocation(argv, context);
   if (!parsedInvocation.ok) {
-    console.error(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
+    context.writer.err(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
     return 1;
   }
-  const { invocation } = parsedInvocation;
+  const config = getRuntimeConfig(parsedInvocation.invocation.options, context.env);
+  const invocation: Invocation = {
+    ...parsedInvocation.invocation,
+    options: {
+      ...parsedInvocation.invocation.options,
+      json: config.jsonOutput,
+      format: config.format,
+      profile: config.profile,
+    },
+  };
+  const resolvedContext = withResolvedConfig(context, config);
 
   if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
     checkForUpdates();
   }
 
   const handler = resolveHandler(invocation.args, invocation.options);
-
-  const config = getRuntimeConfig(invocation.options);
   const activeClient = client ?? new SpaceMoltClient({ config });
 
   if (invocation.options.watch) {
-    if (!handler) {
-      const commandName = invocation.args[0] || 'help';
-      if (invocation.options.json) {
-        printJsonError('unknown_command', `Unknown command: ${commandName}`);
-      } else {
-        displayUnknownCommand(commandName);
-      }
-      return 1;
-    }
-    return runWatchLoop(invocation, handler, activeClient);
+    if (!handler) return renderUnknownCommand(invocation);
+    return runWatchLoop(invocation, handler, activeClient, resolvedContext);
   }
 
-  if (!handler) {
-    const commandName = invocation.args[0] || 'help';
-    if (invocation.options.json) {
-      printJsonError('unknown_command', `Unknown command: ${commandName}`);
-    } else {
-      displayUnknownCommand(commandName);
-    }
-    return 1;
-  }
+  if (!handler) return renderUnknownCommand(invocation);
 
   try {
-    const parsed = handler.parse(invocation.args, invocation.options);
-    if (!parsed.ok) {
-      if (parsed.error.code === 'validation_error' && parsed.error.errors) {
-        displayCommandParseErrors(parsed.error.errors, invocation.options);
-      } else if (parsed.error.code !== 'exit') {
-        if (invocation.options.json) {
-          printJsonError(parsed.error.code, parsed.error.message);
-        } else if (parsed.error.customStderr) {
-          console.error(parsed.error.customStderr);
-        } else {
-          console.error(`${c.red}Error:${c.reset} ${parsed.error.message}`);
-        }
-      }
-      return parsed.error.exitCode ?? 1;
-    }
+    const parsed = handler.parse(invocation.args, invocation.options, resolvedContext);
+    if (!parsed.ok) return renderCommandError(parsed.error, invocation.options);
 
-    const runResult = await handler.run(parsed.payload, invocation.options, activeClient);
-    return await handler.render(runResult, invocation.options, activeClient);
+    const runResult = await handler.run(parsed.payload, invocation.options, activeClient, resolvedContext);
+    return await handler.render(runResult, invocation.options, activeClient, resolvedContext);
   } catch (error) {
     return renderConnectionError(error, invocation.options);
   }
 }
 
-async function runWatchLoop(invocation: Invocation, handler: CommandHandler, client: SpaceMoltClient): Promise<number> {
+async function runWatchLoop(
+  invocation: Invocation,
+  handler: CommandHandler,
+  client: SpaceMoltClient,
+  context: CliRuntimeContext,
+): Promise<number> {
   const interval = invocation.options.watch;
   if (!interval) return 0;
 
@@ -103,35 +106,23 @@ async function runWatchLoop(invocation: Invocation, handler: CommandHandler, cli
 
   while (running) {
     try {
-      const parsed = handler.parse(invocation.args, invocation.options);
-      if (!parsed.ok) {
-        if (parsed.error.code === 'validation_error' && parsed.error.errors) {
-          displayCommandParseErrors(parsed.error.errors, invocation.options);
-        } else if (parsed.error.code !== 'exit') {
-          if (invocation.options.json) {
-            printJsonError(parsed.error.code, parsed.error.message);
-          } else if (parsed.error.customStderr) {
-            console.error(parsed.error.customStderr);
-          } else {
-            console.error(`${c.red}Error:${c.reset} ${parsed.error.message}`);
-          }
-        }
-        return parsed.error.exitCode ?? 1;
-      }
+      const parsed = handler.parse(invocation.args, invocation.options, context);
+      if (!parsed.ok) return renderCommandError(parsed.error, invocation.options);
 
-      const runResult = await handler.run(parsed.payload, invocation.options, client);
+      const runResult = await handler.run(parsed.payload, invocation.options, client, context);
 
-      process.stdout.write('\x1b[2J\x1b[H');
+      if (context.writer.writeOut) context.writer.writeOut('\x1b[2J\x1b[H');
+      else context.writer.out('\x1b[2J\x1b[H');
 
       const watchOptions: GlobalOptions = {
         ...invocation.options,
         noTimestamp: true,
       };
-      await handler.render(runResult, watchOptions, client);
+      await handler.render(runResult, watchOptions, client, context);
 
       if (running) {
         console.log(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
-        await sleep(interval * 1000);
+        await context.sleep(interval * 1000);
       }
     } catch (error) {
       return renderConnectionError(error, invocation.options);
@@ -142,8 +133,29 @@ async function runWatchLoop(invocation: Invocation, handler: CommandHandler, cli
   return 0;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function renderUnknownCommand(invocation: Invocation): number {
+  const commandName = invocation.args[0] || 'help';
+  if (invocation.options.json) {
+    printJsonError('unknown_command', `Unknown command: ${commandName}`);
+  } else {
+    displayUnknownCommand(commandName);
+  }
+  return 1;
+}
+
+function renderCommandError(error: CommandError, options: GlobalOptions): number {
+  if (error.code === 'validation_error' && error.errors) {
+    displayCommandParseErrors(error.errors, options);
+  } else if (error.code !== 'exit') {
+    if (options.json) {
+      printJsonError(error.code, error.message);
+    } else if (error.customStderr) {
+      console.error(error.customStderr);
+    } else {
+      console.error(`${c.red}Error:${c.reset} ${error.message}`);
+    }
+  }
+  return error.exitCode ?? 1;
 }
 
 function renderConnectionError(error: unknown, options: GlobalOptions): number {

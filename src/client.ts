@@ -11,6 +11,8 @@ export {
   validatePayloadAgainstSchema,
   validateRequiredArgs,
 } from './args.ts';
+export type { CliClock, CliEnv, CliRuntimeContext, CliWriter } from './cli-context.ts';
+export { createDefaultCliRuntimeContext } from './cli-context.ts';
 export { COMMANDS, V2_TOOL_MAP } from './commands.ts';
 export { displayStructuredResult } from './display/index.ts';
 export {

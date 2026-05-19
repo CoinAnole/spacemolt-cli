@@ -6,6 +6,7 @@ import {
   parseArgs,
   validateRequiredArgs,
 } from './args.ts';
+import type { CliEnv, CliRuntimeContext } from './cli-context.ts';
 import { COMMANDS } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import { displayResult } from './display/index.ts';
@@ -48,17 +49,17 @@ import { API_BASE, c, DEFAULT_V2_API_BASE, type SpaceMoltConfig, VERSION } from 
 import { getSessionPath, showProfiles } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 
-export function getRuntimeConfig(options: GlobalOptions): SpaceMoltConfig {
+export function getRuntimeConfig(options: GlobalOptions, env: CliEnv = process.env): SpaceMoltConfig {
   return {
-    apiBase: process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE,
-    jsonOutput: options.json || options.format === 'json' || process.env.SPACEMOLT_OUTPUT === 'json',
-    debug: process.env.DEBUG === 'true',
+    apiBase: env.SPACEMOLT_URL || DEFAULT_V2_API_BASE,
+    jsonOutput: options.json || options.format === 'json' || env.SPACEMOLT_OUTPUT === 'json',
+    debug: env.DEBUG === 'true',
     plain: options.plain,
     quiet: options.quiet,
     format: options.format || 'table',
     compact: options.compact,
     profile: options.profile,
-    sessionPath: process.env.SPACEMOLT_SESSION,
+    sessionPath: env.SPACEMOLT_SESSION,
   };
 }
 
@@ -78,16 +79,30 @@ export interface CommandError {
   exitCode?: number;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: command handlers carry command-specific payload and result shapes.
+type CommandHandlerValue = any;
+
 export interface CommandHandler {
   name: string;
   aliases?: string[];
   requiresNetwork: boolean;
-  // biome-ignore lint/suspicious/noExplicitAny: generic payload
-  parse(argv: string[], options: GlobalOptions): { ok: true; payload: any } | { ok: false; error: CommandError };
-  // biome-ignore lint/suspicious/noExplicitAny: generic payload
-  run(payload: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<any> | any;
-  // biome-ignore lint/suspicious/noExplicitAny: generic payload
-  render(runResult: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<number> | number;
+  parse(
+    argv: string[],
+    options: GlobalOptions,
+    context?: CliRuntimeContext,
+  ): { ok: true; payload: unknown } | { ok: false; error: CommandError };
+  run(
+    payload: CommandHandlerValue,
+    options: GlobalOptions,
+    client?: SpaceMoltClient,
+    context?: CliRuntimeContext,
+  ): Promise<CommandHandlerValue> | CommandHandlerValue;
+  render(
+    runResult: CommandHandlerValue,
+    options: GlobalOptions,
+    client?: SpaceMoltClient,
+    context?: CliRuntimeContext,
+  ): Promise<number> | number;
 }
 
 const profileHandler: CommandHandler = {
@@ -384,8 +399,11 @@ export class ApiCommandHandler implements CommandHandler {
   constructor(public name: string) {}
   requiresNetwork = true;
 
-  // biome-ignore lint/suspicious/noExplicitAny: generic payload
-  parse(argv: string[], options: GlobalOptions): { ok: true; payload: any } | { ok: false; error: CommandError } {
+  parse(
+    argv: string[],
+    options: GlobalOptions,
+    context?: CliRuntimeContext,
+  ): { ok: true; payload: unknown } | { ok: false; error: CommandError } {
     const parsedArgs = parseArgs(argv, { allowUnknown: options.allowUnknown });
     if (!parsedArgs.ok) {
       return {
@@ -399,7 +417,7 @@ export class ApiCommandHandler implements CommandHandler {
       };
     }
 
-    const config = getRuntimeConfig(options);
+    const config = context?.config ?? getRuntimeConfig(options, context?.env);
     const sessionPath = getSessionPath(config);
 
     const prepared = preparePayload(this.name, parsedArgs.payload, options, sessionPath);

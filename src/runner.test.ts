@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import type { SpaceMoltClient } from './api';
+import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { runInvocation } from './main';
 import { COMPACT, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
@@ -6,27 +11,38 @@ import { ACTIVE_PROFILE, setActiveProfile } from './session';
 async function captureInvocation(argv: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   const stdout: string[] = [];
   const stderr: string[] = [];
-  const originalLog = console.log;
-  const originalError = console.error;
-
-  console.log = (...args: unknown[]) => {
-    stdout.push(args.map(String).join(' '));
+  const context = fakeContext(stdout, stderr);
+  const exitCode = await runInvocation(argv, undefined, context);
+  return {
+    exitCode,
+    stdout: stdout.join('\n'),
+    stderr: stderr.join('\n'),
   };
-  console.error = (...args: unknown[]) => {
-    stderr.push(args.map(String).join(' '));
-  };
+}
 
-  try {
-    const exitCode = await runInvocation(argv);
-    return {
-      exitCode,
-      stdout: stdout.join('\n'),
-      stderr: stderr.join('\n'),
-    };
-  } finally {
-    console.log = originalLog;
-    console.error = originalError;
-  }
+function fakeContext(stdout: string[], stderr: string[], env: CliEnv = process.env): CliRuntimeContext {
+  return {
+    env,
+    writer: {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut(chunk) {
+        stdout.push(chunk);
+      },
+    },
+    clock: {
+      now() {
+        return new Date('2026-01-01T00:00:00.000Z');
+      },
+    },
+    sleep() {
+      return Promise.resolve();
+    },
+  };
 }
 
 afterEach(() => {
@@ -72,5 +88,76 @@ describe('runInvocation option isolation', () => {
 
     await captureInvocation(['--help', 'travel']);
     expect(ACTIVE_PROFILE).toBeUndefined();
+  });
+
+  test('direct invocation writes through CliWriter without console monkeypatching', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    const exitCode = await runInvocation(['--json', 'trvel'], undefined, fakeContext(stdout, stderr));
+
+    expect(exitCode).toBe(1);
+    expect(stdout.join('\n')).toContain('"unknown_command"');
+    expect(stderr).toEqual([]);
+    expect(console.log).toBe(originalLog);
+    expect(console.error).toBe(originalError);
+  });
+
+  test('context env resolves output mode and session config', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const env = {
+      SPACEMOLT_OUTPUT: 'json',
+      SPACEMOLT_SESSION: '/tmp/spacemolt-context-session.json',
+      SPACEMOLT_URL: 'https://context.example/api/v2',
+    };
+
+    const exitCode = await runInvocation(['trvel'], undefined, fakeContext(stdout, stderr, env));
+
+    expect(exitCode).toBe(1);
+    expect(stdout.join('\n')).toContain('"unknown_command"');
+    expect(stderr).toEqual([]);
+    expect(JSON_OUTPUT).toBe(true);
+  });
+
+  test('context session path is used for API payload preparation', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-context-'));
+    const sessionPath = path.join(tempDir, 'pilot.json');
+    fs.writeFileSync(
+      path.join(tempDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'sol_earth',
+            name: 'Earth',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { sessionPath },
+      async execute(command: string, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(
+      ['--quiet', 'travel', 'earth'],
+      client,
+      fakeContext(stdout, stderr, { SPACEMOLT_SESSION: sessionPath }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(calls).toEqual([{ command: 'travel', payload: { id: 'sol_earth' } }]);
   });
 });
