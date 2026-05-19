@@ -1,19 +1,22 @@
+import type { CliWriter } from './cli-context.ts';
 import { c, QUIET } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
 type NotificationData = Record<string, unknown>;
 type NotificationHandler = (data: NotificationData, time: string) => void;
 
+let writeLine = (message?: string) => console.log(message);
+
 const notificationHandlers: Record<string, NotificationHandler> = {
   chat_message: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.cyan}[CHAT:${d.channel || 'local'}]${c.reset} ${c.bright}${d.sender || 'Unknown'}${c.reset}: ${d.content || ''}`,
     );
   },
 
   combat_update: (d, t) => {
     const destroyed = d.destroyed ? ' - DESTROYED!' : '';
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[COMBAT]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} ${d.damage_type || 'unknown'} damage (shield: ${d.shield_hit || 0}, hull: ${d.hull_hit || 0})${destroyed}`,
     );
   },
@@ -21,66 +24,66 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   player_died: (d, t) => {
     const cause = d.cause || 'combat';
     if (cause === 'self_destruct') {
-      console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Self-destructed!`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Self-destructed!`);
     } else if (cause === 'police') {
-      console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by system police!`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by system police!`);
     } else {
-      console.log(
+      writeLine(
         `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Destroyed by ${d.killer_name || 'unknown'}!`,
       );
     }
     if (d.combat_log) {
       const log = d.combat_log as Record<string, unknown>;
-      if (log.message) console.log(`  ${log.message}`);
-      if (log.attacker_ship) console.log(`  Attacker ship: ${log.attacker_ship}`);
+      if (log.message) writeLine(`  ${log.message}`);
+      if (log.attacker_ship) writeLine(`  Attacker ship: ${log.attacker_ship}`);
       if (log.weapons_used && Object.keys(log.weapons_used).length > 0) {
         const weapons = Object.entries(log.weapons_used)
           .map(([w, n]) => `${w} (x${n})`)
           .join(', ');
-        console.log(`  Weapons: ${weapons}`);
+        writeLine(`  Weapons: ${weapons}`);
       }
       if ((log.total_damage as number) > 0) {
-        console.log(
+        writeLine(
           `  Damage taken: ${log.total_damage} total (${log.shield_damage || 0} shield, ${log.hull_damage || 0} hull) over ${log.combat_rounds || 0} round${log.combat_rounds !== 1 ? 's' : ''}`,
         );
       }
-      if (log.death_location) console.log(`  Location: ${log.death_location} in ${log.death_system || 'unknown'}`);
+      if (log.death_location) writeLine(`  Location: ${log.death_location} in ${log.death_system || 'unknown'}`);
     }
-    if (d.ship_lost) console.log(`  Ship lost: ${d.ship_lost}`);
-    if ((d.clone_cost as number) > 0) console.log(`  Clone cost: ${d.clone_cost} credits`);
-    if ((d.insurance_payout as number) > 0) console.log(`  Insurance payout: ${d.insurance_payout} credits`);
-    console.log(`  Respawned at: ${d.respawn_base || 'home'} with ship fully repaired`);
+    if (d.ship_lost) writeLine(`  Ship lost: ${d.ship_lost}`);
+    if ((d.clone_cost as number) > 0) writeLine(`  Clone cost: ${d.clone_cost} credits`);
+    if ((d.insurance_payout as number) > 0) writeLine(`  Insurance payout: ${d.insurance_payout} credits`);
+    writeLine(`  Respawned at: ${d.respawn_base || 'home'} with ship fully repaired`);
   },
 
   mining_yield: (d, t) => {
     const remainingMsg = d.remaining !== undefined ? ` (${d.remaining} remaining at POI)` : '';
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[MINED]${c.reset} +${d.quantity || 0}x ${d.resource_id || 'ore'}${remainingMsg}`,
     );
   },
 
   trade_offer_received: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Offer from ${d.from_name || 'Someone'} (ID: ${d.trade_id || ''})`,
     );
-    if ((d.offer_credits as number) > 0) console.log(`  Offering: ${d.offer_credits} credits`);
-    if ((d.request_credits as number) > 0) console.log(`  Requesting: ${d.request_credits} credits`);
-    console.log(`  Use: trade_accept trade_id=${d.trade_id} or trade_decline trade_id=${d.trade_id}`);
+    if ((d.offer_credits as number) > 0) writeLine(`  Offering: ${d.offer_credits} credits`);
+    if ((d.request_credits as number) > 0) writeLine(`  Requesting: ${d.request_credits} credits`);
+    writeLine(`  Use: trade_accept trade_id=${d.trade_id} or trade_decline trade_id=${d.trade_id}`);
   },
 
   scan_result: (d, t) => {
     const target = d.username || d.target_id || 'unknown';
     if (d.success) {
       const revealed = (d.revealed_info as string[]) || [];
-      console.log(
+      writeLine(
         `${c.dim}[${t}]${c.reset} ${c.cyan}[SCAN]${c.reset} Scan of ${target} revealed: ${revealed.join(', ')}`,
       );
-      if (d.ship_class) console.log(`  Ship: ${d.ship_class}`);
-      if (d.hull !== undefined) console.log(`  Hull: ${d.hull}`);
-      if (d.shield !== undefined) console.log(`  Shield: ${d.shield}`);
-      if (d.cloaked !== undefined) console.log(`  Cloaked: ${d.cloaked}`);
+      if (d.ship_class) writeLine(`  Ship: ${d.ship_class}`);
+      if (d.hull !== undefined) writeLine(`  Hull: ${d.hull}`);
+      if (d.shield !== undefined) writeLine(`  Shield: ${d.shield}`);
+      if (d.cloaked !== undefined) writeLine(`  Cloaked: ${d.cloaked}`);
     } else {
-      console.log(
+      writeLine(
         `${c.dim}[${t}]${c.reset} ${c.cyan}[SCAN]${c.reset} Scan of ${target} failed - insufficient scan power`,
       );
     }
@@ -88,209 +91,205 @@ const notificationHandlers: Record<string, NotificationHandler> = {
 
   scan_detected: (d, t) => {
     const revealed = (d.revealed_info as string[]) || [];
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[SCANNED]${c.reset} You were scanned by ${d.scanner_username || 'Unknown'} (${d.scanner_ship_class || 'unknown'})`,
     );
-    console.log(`  They learned: ${revealed.join(', ')}`);
+    writeLine(`  They learned: ${revealed.join(', ')}`);
   },
 
   police_warning: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.message}`);
-    console.log(`  Security level: ${d.police_level || 0}, Response in: ${d.response_ticks || 0} tick(s)`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.message}`);
+    writeLine(`  Security level: ${d.police_level || 0}, Response in: ${d.response_ticks || 0} tick(s)`);
   },
 
   police_spawn: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.num_drones || 0} police drone(s) arrived!`,
     );
   },
 
   police_combat: (d, t) => {
     const destroyed = d.destroyed ? ' - YOU WERE DESTROYED!' : '';
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[POLICE]${c.reset} Police drone dealt ${d.damage || 0} damage${destroyed}`,
     );
   },
 
   skill_level_up: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[LEVEL UP]${c.reset} ${d.skill_id || 'unknown'} is now level ${d.new_level || 0}! (+${d.xp_gained || 0} XP)`,
     );
   },
 
   drone_update: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.blue}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone dealt ${d.damage || 0} damage to ${d.target_id || 'target'}`,
     );
   },
 
   drone_destroyed: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone was destroyed! (ID: ${d.drone_id || ''})`,
     );
   },
 
   pilotless_ship: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[PILOTLESS]${c.reset} ${d.player_username || 'unknown'}'s ${d.ship_class || 'ship'} is now pilotless!`,
     );
-    console.log(`  Vulnerable for ${d.ticks_remaining || 0} ticks - can be attacked without resistance`);
+    writeLine(`  Vulnerable for ${d.ticks_remaining || 0} ticks - can be attacked without resistance`);
   },
 
   reconnected: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[RECONNECTED]${c.reset} ${d.message}`);
-    if (d.was_pilotless) console.log(`  Ship was pilotless - recovered with ${d.ticks_remaining || 0} ticks to spare`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[RECONNECTED]${c.reset} ${d.message}`);
+    if (d.was_pilotless) writeLine(`  Ship was pilotless - recovered with ${d.ticks_remaining || 0} ticks to spare`);
   },
 
   faction_invite: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.magenta}[FACTION]${c.reset} You've been invited to join ${d.faction_name || 'a faction'}`,
     );
-    console.log(
+    writeLine(
       `  Use: join_faction faction_id=${d.faction_id || ''} or faction_decline_invite faction_id=${d.faction_id || ''}`,
     );
   },
 
   faction_war_declared: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[WAR]${c.reset} ${d.attacker_name || 'a faction'} has declared war on your faction!`,
     );
-    console.log(`  Reason: ${d.reason || 'no reason given'}`);
+    writeLine(`  Reason: ${d.reason || 'no reason given'}`);
   },
 
   faction_peace_proposed: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[PEACE]${c.reset} ${d.proposer_name || 'a faction'} has proposed peace!`,
     );
-    console.log(`  Terms: ${d.terms || 'unconditional'}`);
-    console.log(`  Use: faction_accept_peace target_faction_id=${d.faction_id || ''}`);
+    writeLine(`  Terms: ${d.terms || 'unconditional'}`);
+    writeLine(`  Use: faction_accept_peace target_faction_id=${d.faction_id || ''}`);
   },
 
   base_raid_update: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[RAID]${c.reset} ${d.base_name || 'base'}: ${d.current_health || 0}/${d.max_health || 0} HP (-${d.damage_per_tick || 0}/tick)`,
     );
   },
 
   base_destroyed: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BASE DESTROYED]${c.reset} ${d.base_name || 'base'} has been destroyed!`,
     );
-    if (d.wreck_id) console.log(`  Wreck ID for looting: ${d.wreck_id}`);
+    if (d.wreck_id) writeLine(`  Wreck ID for looting: ${d.wreck_id}`);
   },
 
   player_kill: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[KILL]${c.reset} You destroyed ${d.victim_name || d.target_name || 'unknown'}!`,
     );
-    if (d.bounty) console.log(`  Bounty: ${d.bounty} credits`);
-    if (d.wreck_id) console.log(`  Wreck: ${d.wreck_id}`);
+    if (d.bounty) writeLine(`  Bounty: ${d.bounty} credits`);
+    if (d.wreck_id) writeLine(`  Wreck: ${d.wreck_id}`);
   },
 
   pirate_warning: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.message || 'Pirates detected nearby!'}`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.message || 'Pirates detected nearby!'}`);
   },
 
   pirate_spawn: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.num_pirates || 1} pirate(s) appeared!`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.num_pirates || 1} pirate(s) appeared!`);
   },
 
   pirate_combat: (d, t) => {
     const destroyed = d.destroyed ? ' - YOU WERE DESTROYED!' : '';
-    console.log(
-      `${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} Pirate dealt ${d.damage || 0} damage${destroyed}`,
-    );
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} Pirate dealt ${d.damage || 0} damage${destroyed}`);
   },
 
   pirate_destroyed: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[PIRATES]${c.reset} Pirate destroyed!`);
-    if (d.loot) console.log(`  Loot: ${JSON.stringify(d.loot)}`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[PIRATES]${c.reset} Pirate destroyed!`);
+    if (d.loot) writeLine(`  Loot: ${JSON.stringify(d.loot)}`);
   },
 
   battle_started: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BATTLE]${c.reset} Battle started! ID: ${d.battle_id || 'unknown'}`,
     );
   },
 
   battle_update: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[BATTLE]${c.reset} Battle tick ${d.tick || '?'} - ${d.message || 'combat continues'}`,
     );
   },
 
   battle_damage: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[BATTLE]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} damage`,
     );
   },
 
   battle_joined: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} joined the battle`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} joined the battle`);
   },
 
   battle_left: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} left the battle`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} left the battle`);
   },
 
   battle_ended: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[BATTLE]${c.reset} Battle ended! ${d.message || ''}`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[BATTLE]${c.reset} Battle ended! ${d.message || ''}`);
   },
 
   skill_xp_gain: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.cyan}[XP]${c.reset} +${d.xp_gained || d.xp || 0} XP in ${d.skill_id || 'unknown'} (${d.current_xp || '?'}/${d.next_level_xp || '?'})`,
     );
   },
 
   trade_complete: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[TRADE]${c.reset} Trade completed with ${d.partner_name || d.with || 'someone'}!`,
     );
   },
 
   trade_declined: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade declined by ${d.from_name || 'someone'}`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade declined by ${d.from_name || 'someone'}`);
   },
 
   trade_cancelled: (d, t) => {
-    console.log(
-      `${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade cancelled (ID: ${d.trade_id || 'unknown'})`,
-    );
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade cancelled (ID: ${d.trade_id || 'unknown'})`);
   },
 
   friend_request_accepted: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.from_name || d.username || 'Someone'} accepted your friend request!`,
     );
   },
 
   friend_removed: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[FRIEND]${c.reset} ${d.from_name || d.username || 'Someone'} removed you as a friend`,
     );
   },
 
   friend_online: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.username || 'A friend'} is now online`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.username || 'A friend'} is now online`);
   },
 
   friend_offline: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.dim}[FRIEND]${c.reset} ${d.username || 'A friend'} went offline`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.dim}[FRIEND]${c.reset} ${d.username || 'A friend'} went offline`);
   },
 
   version_info: (d, t) => {
-    console.log(`${c.dim}[${t}]${c.reset} ${c.cyan}[VERSION]${c.reset} Server version: ${d.version || 'unknown'}`);
+    writeLine(`${c.dim}[${t}]${c.reset} ${c.cyan}[VERSION]${c.reset} Server version: ${d.version || 'unknown'}`);
   },
 
   queue_cleared: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[QUEUE]${c.reset} Action queue cleared${d.reason ? `: ${d.reason}` : ''}`,
     );
   },
 
   friend_request: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.cyan}[FRIEND]${c.reset} ${d.from_name || 'Someone'} sent you a friend request`,
     );
   },
@@ -298,72 +297,79 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   system: (d, t) => {
     // Handle different system notification types
     if (d.type === 'gameplay_tip') {
-      console.log(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${d.message}`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${d.message}`);
     } else {
       // Generic system message
-      console.log(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${d.message || JSON.stringify(d)}`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${d.message || JSON.stringify(d)}`);
     }
   },
 
   action_result: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`,
     );
     if (d.result && typeof d.result === 'object') {
       const result = d.result as Record<string, unknown>;
       if (result.message) {
-        console.log(`  ${result.message}`);
+        writeLine(`  ${result.message}`);
       } else {
         for (const [key, value] of Object.entries(result)) {
-          console.log(`  ${key}: ${JSON.stringify(value)}`);
+          writeLine(`  ${key}: ${JSON.stringify(value)}`);
         }
       }
     }
   },
 
   action_error: (d, t) => {
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[ACTION FAILED]${c.reset} ${c.bright}${d.command}${c.reset} failed (tick ${d.tick || '?'}): ${d.message || d.code || 'unknown error'}`,
     );
   },
 
   poi_arrival: (d, t) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[ARRIVAL]${c.reset} ${tag}${d.username || 'Someone'} has arrived at ${d.poi_name || 'this POI'}`,
     );
   },
 
   poi_departure: (d, t) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
-    console.log(
+    writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[DEPARTURE]${c.reset} ${tag}${d.username || 'Someone'} has departed from ${d.poi_name || 'this POI'}`,
     );
   },
 };
 
-export function displayNotifications(notifications?: APIResponse['notifications']): void {
+export function displayNotifications(notifications?: APIResponse['notifications'], writer?: CliWriter): void {
   if (!notifications?.length) return;
   if (QUIET) return;
 
-  for (const n of notifications) {
-    const data = n.data as NotificationData;
-    const time = new Date(n.timestamp).toLocaleTimeString();
-    const handler = notificationHandlers[n.msg_type || n.type];
+  const previousWriteLine = writeLine;
+  writeLine = writer?.out.bind(writer) ?? previousWriteLine;
 
-    if (handler) {
-      handler(data, time);
-    } else {
-      // Default handler for unknown types
-      const message = data.message;
-      if (message) {
-        console.log(`${c.dim}[${time}]${c.reset} ${c.magenta}[${n.type.toUpperCase()}]${c.reset} ${message}`);
+  try {
+    for (const n of notifications) {
+      const data = n.data as NotificationData;
+      const time = new Date(n.timestamp).toLocaleTimeString();
+      const handler = notificationHandlers[n.msg_type || n.type];
+
+      if (handler) {
+        handler(data, time);
       } else {
-        console.log(`${c.dim}[${time}]${c.reset} ${c.magenta}[${n.type.toUpperCase()}]${c.reset}`);
-        for (const [key, value] of Object.entries(data)) {
-          console.log(`  ${key}: ${JSON.stringify(value)}`);
+        // Default handler for unknown types
+        const message = data.message;
+        if (message) {
+          writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${n.type.toUpperCase()}]${c.reset} ${message}`);
+        } else {
+          writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${n.type.toUpperCase()}]${c.reset}`);
+          for (const [key, value] of Object.entries(data)) {
+            writeLine(`  ${key}: ${JSON.stringify(value)}`);
+          }
         }
       }
     }
+  } finally {
+    writeLine = previousWriteLine;
   }
 }
