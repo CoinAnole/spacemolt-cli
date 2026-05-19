@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { SpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
+import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
 import { COMPACT, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
@@ -159,5 +160,68 @@ describe('runInvocation option isolation', () => {
 
     expect(exitCode).toBe(0);
     expect(calls).toEqual([{ command: 'travel', payload: { id: 'sol_earth' } }]);
+  });
+});
+
+describe('runInvocation watch cleanup', () => {
+  test('removes SIGINT listener on normal stop', async () => {
+    const before = process.listenerCount('SIGINT');
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-watch-normal-'));
+    const client = {
+      config: { sessionPath: path.join(tempDir, 'session.json') },
+      async execute() {
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const context = fakeContext(stdout, stderr);
+    context.sleep = async () => {
+      process.emit('SIGINT');
+    };
+
+    const exitCode = await runInvocation(['--watch=1', '--quiet', 'get_status'], client, context);
+
+    expect(exitCode).toBe(0);
+    expect(process.listenerCount('SIGINT')).toBe(before);
+  });
+
+  test('removes SIGINT listener after watch parse failure', async () => {
+    const before = process.listenerCount('SIGINT');
+    const exitCode = await runInvocation(['--watch=1', 'travel'], undefined, fakeContext([], []));
+
+    expect(exitCode).toBe(1);
+    expect(process.listenerCount('SIGINT')).toBe(before);
+  });
+
+  test('removes SIGINT listener after watch connection error', async () => {
+    const before = process.listenerCount('SIGINT');
+    const client = {
+      config: {},
+      async execute() {
+        throw new Error('network down');
+      },
+    } as unknown as SpaceMoltClient;
+    const exitCode = await runInvocation(['--watch=1', '--quiet', 'get_status'], client, fakeContext([], []));
+
+    expect(exitCode).toBe(1);
+    expect(process.listenerCount('SIGINT')).toBe(before);
+  });
+
+  test('removes SIGINT listener after watch render error', async () => {
+    const before = process.listenerCount('SIGINT');
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-watch-render-'));
+    const fileAsParent = path.join(tempDir, 'not-a-directory');
+    fs.writeFileSync(fileAsParent, '');
+    const client = {
+      config: { sessionPath: path.join(fileAsParent, 'session.json') },
+      async execute() {
+        return { structuredContent: cargoFixture };
+      },
+    } as unknown as SpaceMoltClient;
+    const exitCode = await runInvocation(['--watch=1', '--quiet', 'get_cargo'], client, fakeContext([], []));
+
+    expect(exitCode).toBe(1);
+    expect(process.listenerCount('SIGINT')).toBe(before);
   });
 });

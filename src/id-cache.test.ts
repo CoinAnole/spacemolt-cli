@@ -9,6 +9,7 @@ import {
   getIdCachePath,
   hintsForKind,
   resolveCachedId,
+  saveIdCache,
   searchItemHints,
 } from './id-cache';
 
@@ -83,6 +84,36 @@ describe('id cache', () => {
     };
     expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'system', id: 'alpha_centauri' }));
     expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'ore_iron' }));
+  });
+
+  test('saveIdCache writes through a cleaned-up 0600 cache file', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
+    const sessionPath = path.join(tempDir, 'session.json');
+
+    await saveIdCache(
+      [
+        {
+          kind: 'item',
+          id: 'ore_iron',
+          name: 'Iron Ore',
+          sourceCommand: 'get_cargo',
+          seenAt: '2026-05-18T00:00:00.000Z',
+        },
+      ],
+      sessionPath,
+    );
+
+    const cachePath = getIdCachePath(sessionPath);
+    const cache = JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as {
+      version: number;
+      hints: Array<{ id: string }>;
+    };
+    expect(cache.version).toBe(1);
+    expect(cache.hints).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(cachePath).mode & 0o777).toBe(0o600);
+    }
+    expect(fs.readdirSync(tempDir).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
   });
 
   test('resolves exact, prefix, and substring matches conservatively', () => {

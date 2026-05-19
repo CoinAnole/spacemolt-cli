@@ -60,8 +60,31 @@ export async function saveIdCache(hints: IdHint[], sessionPath?: string): Promis
   const parentDir = path.dirname(cachePath);
   if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: CACHE_DIR_MODE });
   hardenPermissions(parentDir, CACHE_DIR_MODE);
-  await Bun.write(cachePath, `${JSON.stringify({ version: 1, hints: hints.slice(0, MAX_HINTS) }, null, 2)}\n`);
-  hardenPermissions(cachePath, CACHE_FILE_MODE);
+
+  const tmpPath = path.join(
+    parentDir,
+    `.${path.basename(cachePath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+  );
+  const contents = `${JSON.stringify({ version: 1, hints: hints.slice(0, MAX_HINTS) }, null, 2)}\n`;
+
+  try {
+    const handle = await fs.promises.open(tmpPath, 'wx', CACHE_FILE_MODE);
+    try {
+      await handle.writeFile(contents, 'utf-8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await fs.promises.rename(tmpPath, cachePath);
+    hardenPermissions(cachePath, CACHE_FILE_MODE);
+  } catch (err) {
+    try {
+      await fs.promises.unlink(tmpPath);
+    } catch {
+      /* best effort */
+    }
+    throw err;
+  }
 }
 
 export async function cacheIdsFromResponse(

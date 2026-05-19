@@ -1,7 +1,41 @@
 import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { CliRuntimeContext } from './cli-context';
 import { runDoctor } from './doctor';
+import { runInvocation } from './main';
+
+function fakeContext(stdout: string[], stderr: string[]): CliRuntimeContext {
+  return {
+    env: { ...process.env, SPACEMOLT_NO_UPDATE_CHECK: 'true' },
+    writer: {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut(chunk) {
+        stdout.push(chunk);
+      },
+    },
+    clock: {
+      now() {
+        return new Date('2026-01-01T00:00:00.000Z');
+      },
+    },
+    sleep() {
+      return Promise.resolve();
+    },
+  };
+}
+
+async function runDirect(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const exitCode = await runInvocation(args, undefined, fakeContext(stdout, stderr));
+  return { stdout: stdout.join('\n'), stderr: stderr.join('\n'), exitCode };
+}
 
 function runClient(
   args: string[],
@@ -64,25 +98,28 @@ describe('doctor', () => {
     }
   });
 
-  test('CLI doctor command runs and produces output', () => {
-    const result = runClient(['doctor'], { SPACEMOLT_NO_UPDATE_CHECK: 'true' });
-    expect(result.exitCode).not.toBeNull();
+  test('CLI doctor command runs and produces output', async () => {
+    const result = await runDirect(['doctor']);
     expect(result.stdout).toContain('SpaceMolt Doctor');
   });
 
-  test('CLI doctor --json produces valid JSON', () => {
-    const result = runClient(['--json', 'doctor'], { SPACEMOLT_NO_UPDATE_CHECK: 'true' });
-    expect(result.exitCode).not.toBeNull();
+  test('CLI doctor --json produces valid JSON', async () => {
+    const result = await runDirect(['--json', 'doctor']);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.structuredContent).toBeDefined();
     expect(parsed.structuredContent.checks).toBeArray();
     expect(parsed.structuredContent.checks.length).toBe(6);
   });
 
-  test('CLI doctor exit code reflects check results', () => {
-    const result = runClient(['doctor'], { SPACEMOLT_NO_UPDATE_CHECK: 'true' });
-    expect(result.exitCode).not.toBeNull();
+  test('CLI doctor exit code reflects check results', async () => {
+    const result = await runDirect(['doctor']);
     expect(result.exitCode).toBeGreaterThanOrEqual(0);
     expect(result.exitCode).toBeLessThanOrEqual(1);
+  });
+
+  test('doctor subprocess smoke exercises real process exit behavior', () => {
+    const result = runClient(['doctor'], { SPACEMOLT_NO_UPDATE_CHECK: 'true' });
+    expect(result.exitCode).not.toBeNull();
+    expect(result.stdout).toContain('SpaceMolt Doctor');
   });
 });

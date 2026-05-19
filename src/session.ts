@@ -10,17 +10,17 @@ export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
 const SESSION_DIR_MODE = 0o700;
 
-export function getSpacemoltHome(): string {
-  return path.join(os.homedir(), '.hermes', 'spacemolt');
+export function getSpacemoltHome(homeDir = os.homedir()): string {
+  return path.join(homeDir, '.hermes', 'spacemolt');
 }
 export function getDefaultSessionPath(): string {
   return path.join(getSpacemoltHome(), 'session.json');
 }
-export function getDefaultCredentialsPath(): string {
-  return path.join(getSpacemoltHome(), 'spacemolt_credentials.yaml');
+export function getDefaultCredentialsPath(homeDir?: string): string {
+  return path.join(getSpacemoltHome(homeDir), 'spacemolt_credentials.yaml');
 }
-export function getLegacyCredentialsPath(): string {
-  return path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml');
+export function getLegacyCredentialsPath(homeDir = os.homedir()): string {
+  return path.join(homeDir, '.hermes', 'spacemolt_credentials.yaml');
 }
 
 export function validateProfileName(profile: string): string {
@@ -30,10 +30,10 @@ export function validateProfileName(profile: string): string {
   return profile;
 }
 
-export function getCredentialsPath(): string {
-  const defCred = getDefaultCredentialsPath();
+export function getCredentialsPath(homeDir?: string): string {
+  const defCred = getDefaultCredentialsPath(homeDir);
   if (fs.existsSync(defCred)) return defCred;
-  const legacyCred = getLegacyCredentialsPath();
+  const legacyCred = getLegacyCredentialsPath(homeDir);
   if (fs.existsSync(legacyCred)) return legacyCred;
   return path.join(process.cwd(), 'spacemolt_credentials.yaml');
 }
@@ -70,9 +70,9 @@ export function parseCredentialProfiles(contents: string): CredentialProfile[] {
   return profiles;
 }
 
-export function loadCredentialProfiles(): CredentialProfile[] {
+export function loadCredentialProfiles(homeDir?: string): CredentialProfile[] {
   try {
-    return parseCredentialProfiles(fs.readFileSync(getCredentialsPath(), 'utf-8'));
+    return parseCredentialProfiles(fs.readFileSync(getCredentialsPath(homeDir), 'utf-8'));
   } catch {
     return [];
   }
@@ -82,10 +82,10 @@ export function findCredentialProfile(name: string): CredentialProfile | undefin
   return loadCredentialProfiles().find((profile) => profile.name === name);
 }
 
-export function showProfiles(): void {
-  const profiles = loadCredentialProfiles();
+export function showProfiles(homeDir?: string): void {
+  const profiles = loadCredentialProfiles(homeDir);
   if (!profiles.length) {
-    console.log(`No profiles found in ${getCredentialsPath()}.`);
+    console.log(`No profiles found in ${getCredentialsPath(homeDir)}.`);
     return;
   }
 

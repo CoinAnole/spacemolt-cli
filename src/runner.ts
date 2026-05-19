@@ -104,8 +104,8 @@ async function runWatchLoop(
   };
   process.on('SIGINT', stop);
 
-  while (running) {
-    try {
+  try {
+    while (running) {
       const parsed = handler.parse(invocation.args, invocation.options, context);
       if (!parsed.ok) return renderCommandError(parsed.error, invocation.options);
 
@@ -124,12 +124,13 @@ async function runWatchLoop(
         console.log(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
         await context.sleep(interval * 1000);
       }
-    } catch (error) {
-      return renderConnectionError(error, invocation.options);
     }
+  } catch (error) {
+    return renderConnectionError(error, invocation.options);
+  } finally {
+    process.removeListener('SIGINT', stop);
   }
 
-  process.removeListener('SIGINT', stop);
   return 0;
 }
 
