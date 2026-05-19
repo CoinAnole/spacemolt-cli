@@ -5,10 +5,34 @@ import {
   getStructuredResult,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
-import { COMPACT, c, FORMAT, PLAIN, QUIET } from '../runtime.ts';
-import type { APIResponse, GlobalOptions } from '../types.ts';
+import { COMPACT, c, FORMAT, QUIET } from '../runtime.ts';
+import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
 import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
+
+function hasFields(fields: string[] | undefined): fields is string[] {
+  return Boolean(fields && fields.length > 0);
+}
+
+function getOutputFormat(options?: GlobalOptions): OutputFormat {
+  return options?.format ?? (options?.json ? 'json' : FORMAT);
+}
+
+function stringifyJson(value: unknown, compact: boolean): string {
+  return JSON.stringify(value, null, compact ? 0 : 2);
+}
+
+function formatProjection(value: unknown, format: OutputFormat, compact: boolean, projection: 'jq' | 'fields'): string {
+  if (format === 'yaml') return toYaml(value);
+  if (format === 'text') {
+    if (typeof value === 'string') return value;
+    if (value === undefined) return 'null';
+    return stringifyJson(value, compact);
+  }
+  if (format === 'json') return stringifyJson(value, compact);
+  if (projection === 'jq') return formatJqResult(value, compact);
+  return JSON.stringify(value);
+}
 
 export function displayStructuredResult(
   command: string,
@@ -18,34 +42,28 @@ export function displayStructuredResult(
   if (!result) return;
 
   const fields = options?.fields;
-  const format = options?.format ?? FORMAT;
+  const format = getOutputFormat(options);
   const compact = options?.compact ?? COMPACT;
   const jqExpr = options?.jq;
-
-  if (fields && fields.length > 0) {
-    const extracted = extractFields(result, fields);
-    if (PLAIN) {
-      for (const [key, value] of Object.entries(extracted)) {
-        console.log(`${key}=${JSON.stringify(value)}`);
-      }
-    } else {
-      console.log(JSON.stringify(extracted));
-    }
-    return;
-  }
 
   if (jqExpr) {
     try {
       const jqResult = evaluateJq(result, jqExpr);
-      console.log(formatJqResult(jqResult));
+      console.log(formatProjection(jqResult, format, compact, 'jq'));
     } catch (err) {
       console.error(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
     }
     return;
   }
 
+  if (hasFields(fields)) {
+    const extracted = extractFields(result, fields);
+    console.log(formatProjection(extracted, format, compact, 'fields'));
+    return;
+  }
+
   if (format === 'json') {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(stringifyJson(result, compact));
     return;
   }
 

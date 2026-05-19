@@ -274,13 +274,14 @@ export async function runCommand(
 export async function renderResponse(commandRun: CommandRun, options: GlobalOptions): Promise<number> {
   const { command, displayCommand, response } = commandRun;
   const isJson = options.json || options.format === 'json';
+  const hasProjection = Boolean(options.jq || (options.fields && options.fields.length > 0));
 
   if (isJson && response.error) {
     printJsonResponse(response);
     return 1;
   }
 
-  if (!isJson && response.notifications?.length && !options.quiet) {
+  if (!isJson && !hasProjection && response.notifications?.length && !options.quiet) {
     console.log(`${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`);
     displayNotifications(response.notifications);
     console.log('');
@@ -295,12 +296,12 @@ export async function renderResponse(commandRun: CommandRun, options: GlobalOpti
   await persistResponseCredentials(command, response);
   if (!options.dryRun) await cacheIdsFromResponse(command, response);
 
-  if (isJson) {
-    printJsonResponse(response);
+  if (isJson && !hasProjection) {
+    printJsonResponse(response, options.compact);
     return response.error ? 1 : 0;
   }
 
-  displayResult(displayCommand, response, options);
+  displayResult(displayCommand, response, hasProjection ? { ...options, noTimestamp: true } : options);
   return 0;
 }
 

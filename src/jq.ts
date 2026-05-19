@@ -39,10 +39,10 @@ function evalPath(data: unknown, expr: string): unknown {
   throw new Error(`Unsupported bracket content: "[${bracketContent}]"`);
 }
 
-export function formatJqResult(value: unknown): string {
+export function formatJqResult(value: unknown, compact = false): string {
   if (value === undefined) return 'null';
   if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(value, null, compact ? 0 : 2);
   }
   return String(value);
 }

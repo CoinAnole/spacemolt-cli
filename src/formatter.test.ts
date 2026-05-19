@@ -11,6 +11,8 @@ import {
   viewMarketFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
+import { renderResponse } from './main';
+import type { GlobalOptions } from './types';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
@@ -25,19 +27,153 @@ afterEach(() => {
 function captureStructuredOutput(
   command: string,
   fixture: Record<string, unknown>,
+  options?: Partial<GlobalOptions>,
 ): { stdout: string; stderr: string } {
   const stdout: string[] = [];
   const stderr: string[] = [];
   console.log = (...args: unknown[]) => stdout.push(args.map(String).join(' '));
   console.error = (...args: unknown[]) => stderr.push(args.map(String).join(' '));
 
-  displayStructuredResult(command, structuredClone(fixture));
+  displayStructuredResult(command, structuredClone(fixture), options ? globalOptions(options) : undefined);
 
   return {
     stdout: stdout.join('\n').replace(ANSI_PATTERN, ''),
     stderr: stderr.join('\n').replace(ANSI_PATTERN, ''),
   };
 }
+
+function globalOptions(overrides: Partial<GlobalOptions> = {}): GlobalOptions {
+  return {
+    json: false,
+    quiet: false,
+    plain: false,
+    allowUnknown: false,
+    dryRun: false,
+    noTimestamp: false,
+    compact: false,
+    args: [],
+    ...overrides,
+  };
+}
+
+const outputModeFixture = {
+  player: { name: 'Marlowe' },
+  ship: { fuel: 42 },
+  items: [{ id: 'ore_iron', quantity: 5 }],
+};
+
+async function captureRenderedOutput(
+  response: Parameters<typeof renderResponse>[0]['response'],
+  options: Partial<GlobalOptions>,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  console.log = (...args: unknown[]) => stdout.push(args.map(String).join(' '));
+  console.error = (...args: unknown[]) => stderr.push(args.map(String).join(' '));
+
+  const exitCode = await renderResponse(
+    {
+      command: 'get_status',
+      displayCommand: 'get_status',
+      response,
+    },
+    globalOptions({ dryRun: true, ...options }),
+  );
+
+  return {
+    stdout: stdout.join('\n').replace(ANSI_PATTERN, ''),
+    stderr: stderr.join('\n').replace(ANSI_PATTERN, ''),
+    exitCode,
+  };
+}
+
+describe('structuredContent output mode precedence', () => {
+  test('--jq wins over --fields', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      jq: '.ship.fuel',
+      fields: ['player.name'],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('42');
+  });
+
+  test('--fields overrides --json for successful structured output', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      json: true,
+      fields: ['player.name'],
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ 'player.name': 'Marlowe' });
+  });
+
+  test('--fields overrides --format=json for successful structured output', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      format: 'json',
+      fields: ['ship.fuel'],
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ 'ship.fuel': 42 });
+  });
+
+  test('--jq overrides --json for successful structured output', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      json: true,
+      jq: '.ship',
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ fuel: 42 });
+  });
+
+  test('--compact compacts projected JSON', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      json: true,
+      compact: true,
+      fields: ['player.name', 'ship.fuel'],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('{"player.name":"Marlowe","ship.fuel":42}');
+  });
+
+  test('--plain does not change --fields structure', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      plain: true,
+      fields: ['player.name'],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('{"player.name":"Marlowe"}');
+    expect(stdout).not.toContain('player.name=');
+  });
+
+  test('--compact compacts successful full-response JSON', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: outputModeFixture },
+      { json: true, compact: true },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toBe(
+      '{"structuredContent":{"player":{"name":"Marlowe"},"ship":{"fuel":42},"items":[{"id":"ore_iron","quantity":5}]}}',
+    );
+  });
+
+  test('--json errors remain full response envelopes', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { error: { code: 'validation_error', message: 'Bad field' } },
+      { json: true, fields: ['player.name'] },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
+  });
+});
 
 describe('structuredContent formatters', () => {
   test('formats get_location before the simple message formatter', () => {
