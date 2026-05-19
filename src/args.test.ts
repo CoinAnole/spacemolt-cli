@@ -4,9 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   applyPayloadTransforms,
-  compareVersions,
   convertPayloadTypes,
-  getPayloadConversionSchema,
   normalizeParsedPayload,
   parseArgs,
   parseGlobalOptions,
@@ -14,7 +12,6 @@ import {
 } from './client';
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
-import { FETCH_TIMEOUT_MS, VERSION } from './runtime';
 
 function parseOk(
   args: string[],
@@ -25,56 +22,6 @@ function parseOk(
   if (!result.ok) throw new Error(result.errors.map((error) => error.message).join('; '));
   return result;
 }
-
-// =============================================================================
-// compareVersions
-// =============================================================================
-
-describe('compareVersions', () => {
-  test('returns 0 for equal versions', () => {
-    expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
-    expect(compareVersions('0.6.5', '0.6.5')).toBe(0);
-    expect(compareVersions('v1.0.0', '1.0.0')).toBe(0);
-  });
-
-  test('returns 1 when latest is newer (major)', () => {
-    expect(compareVersions('1.0.0', '2.0.0')).toBe(1);
-    expect(compareVersions('0.6.5', '1.0.0')).toBe(1);
-  });
-
-  test('returns 1 when latest is newer (minor)', () => {
-    expect(compareVersions('1.0.0', '1.1.0')).toBe(1);
-    expect(compareVersions('0.6.5', '0.7.0')).toBe(1);
-  });
-
-  test('returns 1 when latest is newer (patch)', () => {
-    expect(compareVersions('1.0.0', '1.0.1')).toBe(1);
-    expect(compareVersions('0.6.5', '0.6.6')).toBe(1);
-  });
-
-  test('returns -1 when current is newer', () => {
-    expect(compareVersions('2.0.0', '1.0.0')).toBe(-1);
-    expect(compareVersions('1.1.0', '1.0.0')).toBe(-1);
-    expect(compareVersions('1.0.1', '1.0.0')).toBe(-1);
-  });
-
-  test('handles versions with different segment counts', () => {
-    expect(compareVersions('1.0', '1.0.0')).toBe(0);
-    expect(compareVersions('1.0.0', '1.0')).toBe(0);
-    expect(compareVersions('1.0', '1.0.1')).toBe(1);
-    expect(compareVersions('1.0.1', '1.0')).toBe(-1);
-  });
-
-  test('handles v prefix', () => {
-    expect(compareVersions('v0.6.5', 'v0.6.6')).toBe(1);
-    expect(compareVersions('0.6.5', 'v0.6.6')).toBe(1);
-    expect(compareVersions('v0.6.5', '0.6.6')).toBe(1);
-  });
-});
-
-// =============================================================================
-// convertPayloadTypes
-// =============================================================================
 
 describe('convertPayloadTypes', () => {
   test('converts numeric fields using the command schema', () => {
@@ -776,117 +723,11 @@ describe('validateRequiredArgs', () => {
   });
 });
 
-// =============================================================================
-// version sync
-// =============================================================================
-
-describe('version sync', () => {
-  test('package.json and client.ts VERSION match', () => {
-    const pkgPath = path.join(import.meta.dir, '..', 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-
-    expect(VERSION).toBe(pkg.version);
-  });
-
-  test('README current client version matches package.json', () => {
-    const pkgPath = path.join(import.meta.dir, '..', 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-
-    const readmePath = path.join(import.meta.dir, '..', 'README.md');
-    const readme = fs.readFileSync(readmePath, 'utf-8');
-    const match = readme.match(/Current client version: `([^`]+)`\./);
-    expect(match).not.toBeNull();
-
-    expect(match?.[1]).toBe(pkg.version);
-  });
-});
-
-// =============================================================================
-// client.ts source checks
-// =============================================================================
-
-describe('client.ts source integrity', () => {
-  let clientSrc: string;
-
-  test('reads client source', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    clientSrc = fs.readFileSync(clientPath, 'utf-8');
-    expect(clientSrc.length).toBeGreaterThan(0);
-  });
-
-  test('FETCH_TIMEOUT_MS is long enough for extended travel actions', () => {
-    expect(FETCH_TIMEOUT_MS).toBeGreaterThanOrEqual(300_000);
-  });
-
-  test('session writes are atomic and owner-only where possible', () => {
-    const clientPath = path.join(import.meta.dir, 'session.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt')");
-    expect(src).toContain("path.join(SPACEMOLT_HOME, 'spacemolt_credentials.yaml')");
-    expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml')");
-    expect(src).toContain('SESSION_FILE_MODE = 0o600');
-    expect(src).toContain("fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE)");
-    expect(src).toContain('fs.promises.rename(tmpPath, sessionPath)');
-    expect(src).toContain('hardenPermissions(sessionPath, SESSION_FILE_MODE)');
-  });
-
-  test('faction_gift is removed', () => {
-    const clientPath = path.join(import.meta.dir, 'client.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).not.toContain('faction_gift');
-  });
-
-  test('all new v0.8.0 commands are present', () => {
-    const newCommands = [
-      'agentlogs',
-      'completed_missions',
-      'distress_signal',
-      'get_action_log',
-      'repair_module',
-      'session',
-      'supply_commission',
-      'view_completed_mission',
-    ];
-    for (const cmd of newCommands) {
-      expect(COMMANDS[cmd]).toBeDefined();
-    }
-  });
-
-  test('deprecated commands are removed', () => {
-    const removedCommands = [
-      // Friends system
-      'inspect_cargo',
-      'add_friend',
-      'remove_friend',
-      'get_friends',
-      'get_friend_requests',
-      'accept_friend_request',
-      'decline_friend_request',
-      // Base raiding system
-      'build_base',
-      'get_base_cost',
-      'attack_base',
-      'raid_status',
-      'get_base_wrecks',
-      'loot_base_wreck',
-      'salvage_base_wreck',
-      // Other deprecated commands
-      'get_drones',
-      'search_changelog',
-      'buy_ship',
-      'get_recipes',
-      'shipyard_showroom',
-      'set_anonymous',
-    ];
-    for (const cmd of removedCommands) {
-      expect(COMMANDS[cmd]).toBeUndefined();
-    }
-  });
-
+describe('parseArgs fixtures', () => {
   test('parseArgs fixtures use registered commands', () => {
     const registeredCommands = new Set(Object.keys(COMMANDS));
 
-    const testPath = path.join(import.meta.dir, 'version.test.ts');
+    const testPath = path.join(import.meta.dir, 'args.test.ts');
     const testSrc = fs.readFileSync(testPath, 'utf-8');
     const fixtureCommands = [...testSrc.matchAll(/parseArgs\(\[['"]([a-z][a-z0-9_]*)['"]/g)]
       .map((match) => match[1])
@@ -895,208 +736,7 @@ describe('client.ts source integrity', () => {
 
     expect(unknownFixtures).toEqual([]);
   });
-
-  test('trade_offer uses credits not offer_credits/request_credits', () => {
-    const args = COMMANDS.trade_offer?.args;
-    expect(args).toContain('credits');
-    expect(args).not.toContain('offer_credits');
-    expect(args).not.toContain('request_credits');
-  });
-
-  test('craft uses quantity not count', () => {
-    const args = COMMANDS.craft?.args;
-    expect(args).toContain('quantity');
-    expect(args).not.toContain('count');
-  });
-
-  test('help uses category and command, not topic', () => {
-    const args = COMMANDS.help?.args;
-    expect(args).toContain('category');
-    expect(args).toContain('command');
-    expect(args).not.toContain('topic');
-  });
-
-  test('payload conversion uses command schemas instead of a global numeric field set', () => {
-    const argsPath = path.join(import.meta.dir, 'args.ts');
-    const src = fs.readFileSync(argsPath, 'utf-8');
-    expect(src).not.toContain('NUMERIC_FIELDS');
-    expect(getPayloadConversionSchema('travel').id?.type).toBe('string');
-    expect(getPayloadConversionSchema('sell').quantity?.type).toBe('integer');
-    expect(getPayloadConversionSchema('trade_offer').offer_credits?.type).toBe('integer');
-  });
-
-  test('COMMANDS block has no duplicate top-level command keys', () => {
-    const commandsPath = path.join(import.meta.dir, 'commands.ts');
-    const src = fs.readFileSync(commandsPath, 'utf-8');
-    const start = src.indexOf('const COMMAND_OVERRIDES:');
-    const end = src.indexOf('\n\nexport function routeToPath');
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    const block = src.slice(start, end);
-    const commands = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]);
-    const duplicates = commands.filter((command, index) => commands.indexOf(command) !== index);
-    expect(duplicates).toEqual([]);
-  });
-
-  test('generated OpenAPI metadata is merged into command configs', () => {
-    expect(COMMANDS.travel?.schema?.id?.type).toBe('string');
-    expect(COMMANDS.travel?.required).toContain('target_poi');
-    expect(COMMANDS.catalog?.schema?.type?.enum).toContain('items');
-  });
-
-  test('local AI usability helpers are present', () => {
-    const clientPath = path.join(import.meta.dir, 'help.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    const commandsPath = path.join(import.meta.dir, 'commands.ts');
-    const commandsSrc = fs.readFileSync(commandsPath, 'utf-8');
-    expect(src).toContain('function suggestCommands');
-    expect(src).toContain('function showCommandHelp');
-    expect(src).toContain('function displayUnknownCommand');
-    expect(src).toContain('function displayMissingArgument');
-    expect(commandsSrc).toContain('description:');
-    expect(commandsSrc).toContain('example:');
-    expect(commandsSrc).toContain('seeAlso:');
-  });
 });
-
-// =============================================================================
-// CLI local usability behavior
-// =============================================================================
-
-function runClient(
-  args: string[],
-  env: Record<string, string> = {},
-): { stdout: string; stderr: string; exitCode: number | null } {
-  const result = Bun.spawnSync({
-    cmd: [process.execPath, 'run', 'src/client.ts', ...args],
-    cwd: path.join(import.meta.dir, '..'),
-    env: { ...process.env, ...env, SPACEMOLT_NO_UPDATE_CHECK: 'true' },
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-
-  return {
-    stdout: new TextDecoder().decode(result.stdout),
-    stderr: new TextDecoder().decode(result.stderr),
-    exitCode: result.exitCode,
-  };
-}
-
-describe('CLI local usability behavior', () => {
-  test('unknown command fails locally with a suggestion', () => {
-    const result = runClient(['trvel', 'sol_earth']);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('Unknown command "trvel"');
-    expect(result.stderr).toContain('Did you mean: travel');
-    expect(result.stderr).not.toContain('Connection Error');
-  });
-
-  test('missing required argument shows usage and next discovery command', () => {
-    const result = runClient(['travel']);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('Missing required argument');
-    expect(result.stderr).toContain('Usage:');
-    expect(result.stderr).toContain('spacemolt travel <poi_id_or_cached_name>');
-    expect(result.stderr).toContain('spacemolt get_system');
-  });
-
-  test('--help command renders local command help without network', () => {
-    const result = runClient(['--help', 'travel']);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('travel');
-    expect(result.stdout).toContain('Usage:');
-    expect(result.stdout).toContain('spacemolt travel earth');
-    expect(result.stderr).not.toContain('Connection Error');
-  });
-
-  test('help group renders once', () => {
-    const result = runClient(['help', 'combat']);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout.match(/Combat \/ Battle Commands/g) ?? []).toHaveLength(1);
-  });
-
-  test('--json unknown command keeps compatible error shape', () => {
-    const result = runClient(['--json', 'trvel']);
-    expect(result.exitCode).toBe(1);
-    const parsed = JSON.parse(result.stdout);
-    expect(parsed).toEqual({ error: { code: 'unknown_command', message: 'Unknown command: trvel' } });
-  });
-
-  test('unknown command fields fail locally with a suggestion', () => {
-    const result = runClient(['sell', 'ore_iron', 'quanity=50']);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('Unknown field "quanity" for "sell"');
-    expect(result.stderr).toContain('Did you mean "quantity"?');
-    expect(result.stderr).toContain('--allow-unknown');
-    expect(result.stderr).not.toContain('Connection Error');
-  });
-
-  test('--raw allows unknown command fields through', () => {
-    const result = runClient(['--raw', '--dry-run', 'sell', 'ore_iron', '50', 'experimental_mode=true']);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"experimental_mode": true');
-  });
-
-  test('storage direct transfer source is accepted without raw mode', () => {
-    const deposit = runClient([
-      '--dry-run',
-      'deposit_items',
-      'item_id=ore_iron',
-      'quantity=1',
-      'source=faction',
-      'target=self',
-    ]);
-    expect(deposit.exitCode).toBe(0);
-    expect(deposit.stdout).toContain('"source": "faction"');
-    expect(deposit.stdout).toContain('"target": "self"');
-
-    const withdraw = runClient([
-      '--dry-run',
-      'withdraw_items',
-      'item_id=ore_iron',
-      'quantity=1',
-      'source=faction',
-      'target=self',
-    ]);
-    expect(withdraw.exitCode).toBe(0);
-    expect(withdraw.stdout).toContain('"source": "faction"');
-    expect(withdraw.stdout).toContain('"target": "self"');
-  });
-
-  test('profile list reads local credential profile names without secrets', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
-    const hermesDir = path.join(home, '.hermes', 'spacemolt');
-    fs.mkdirSync(hermesDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(hermesDir, 'spacemolt_credentials.yaml'),
-      [
-        'credentials:',
-        '  marlowe:',
-        '    username: "Marlowe"',
-        '    password: "REDACTED"',
-        '  rescue:',
-        '    username: "FuelRescue"',
-        '    password: "secret"',
-        '',
-      ].join('\n'),
-    );
-    const result = runClient(['profile', 'list'], { HOME: home });
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('marlowe');
-    expect(result.stdout).toContain('FuelRescue');
-    expect(result.stdout).not.toContain('REDACTED');
-  });
-
-  test('--profile validates path-safe profile names before network work', () => {
-    const result = runClient(['--profile', '../bad', 'get_status']);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('Profile names may only contain');
-  });
-});
-
-// =============================================================================
-// Output modes (CLI behavior tests)
-// =============================================================================
 
 describe('CLI output modes', () => {
   test('global option parser returns structured errors without exiting', () => {
@@ -1129,56 +769,5 @@ describe('CLI output modes', () => {
         args: ['get_status'],
       });
     }
-  });
-
-  test('--quiet suppresses notification-like output in help', () => {
-    const normal = runClient(['--help', 'travel']);
-    const quiet = runClient(['--quiet', '--help', 'travel']);
-    expect(normal.exitCode).toBe(0);
-    expect(quiet.exitCode).toBe(0);
-    // Both should show help content
-    expect(normal.stdout).toContain('travel');
-    expect(quiet.stdout).toContain('travel');
-  });
-
-  test('--plain removes ANSI codes from error output', () => {
-    const resultPlain = runClient(['--plain', 'travel']);
-    const resultColor = runClient(['travel']);
-    // Both should have same exit code for missing arg
-    expect(resultPlain.exitCode).toBe(1);
-    expect(resultColor.exitCode).toBe(1);
-    // Plain should not contain ANSI escape sequences for colors
-    // ESC character (code 27) followed by [ and numbers
-    const hasAnsi = resultPlain.stderr.split('').some((char, i, arr) => {
-      return char.charCodeAt(0) === 27 && arr[i + 1] === '[';
-    });
-    expect(hasAnsi).toBe(false);
-  });
-
-  test('--plain removes ANSI codes from --quiet error output', () => {
-    const result = runClient(['--quiet', '--plain', 'travel']);
-    expect(result.exitCode).toBe(1);
-    // Should not contain ANSI codes
-    const hasAnsi = result.stderr.split('').some((char, i, arr) => {
-      return char.charCodeAt(0) === 27 && arr[i + 1] === '[';
-    });
-    expect(hasAnsi).toBe(false);
-  });
-
-  test('--fields requires a value', () => {
-    const result = runClient(['--fields']);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('--fields requires a value');
-  });
-
-  test('--fields=value syntax works', () => {
-    const result = runClient(['--fields=player.name', '--help', 'travel']);
-    // Help should still display (fields only affects API command output)
-    expect(result.exitCode).toBe(0);
-  });
-
-  test('-f=value shorthand works', () => {
-    const result = runClient(['-f=ship.fuel', '--help', 'travel']);
-    expect(result.exitCode).toBe(0);
   });
 });
