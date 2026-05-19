@@ -9,10 +9,19 @@ import type { APIResponse, CredentialProfile, Session } from './types.ts';
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
 const SESSION_DIR_MODE = 0o700;
-const SPACEMOLT_HOME = path.join(os.homedir(), '.hermes', 'spacemolt');
-const DEFAULT_SESSION_PATH = path.join(SPACEMOLT_HOME, 'session.json');
-const DEFAULT_CREDENTIALS_PATH = path.join(SPACEMOLT_HOME, 'spacemolt_credentials.yaml');
-const LEGACY_CREDENTIALS_PATH = path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml');
+
+export function getSpacemoltHome(): string {
+  return path.join(os.homedir(), '.hermes', 'spacemolt');
+}
+export function getDefaultSessionPath(): string {
+  return path.join(getSpacemoltHome(), 'session.json');
+}
+export function getDefaultCredentialsPath(): string {
+  return path.join(getSpacemoltHome(), 'spacemolt_credentials.yaml');
+}
+export function getLegacyCredentialsPath(): string {
+  return path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml');
+}
 
 export function validateProfileName(profile: string): string {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) {
@@ -22,8 +31,10 @@ export function validateProfileName(profile: string): string {
 }
 
 export function getCredentialsPath(): string {
-  if (fs.existsSync(DEFAULT_CREDENTIALS_PATH)) return DEFAULT_CREDENTIALS_PATH;
-  if (fs.existsSync(LEGACY_CREDENTIALS_PATH)) return LEGACY_CREDENTIALS_PATH;
+  const defCred = getDefaultCredentialsPath();
+  if (fs.existsSync(defCred)) return defCred;
+  const legacyCred = getLegacyCredentialsPath();
+  if (fs.existsSync(legacyCred)) return legacyCred;
   return path.join(process.cwd(), 'spacemolt_credentials.yaml');
 }
 
@@ -145,9 +156,9 @@ export class SessionManager {
   getSessionPath(): string {
     if (this.sessionPath) return this.sessionPath;
     if (this.profile) {
-      return path.join(SPACEMOLT_HOME, 'sessions', `${this.profile}.json`);
+      return path.join(getSpacemoltHome(), 'sessions', `${this.profile}.json`);
     }
-    return DEFAULT_SESSION_PATH;
+    return getDefaultSessionPath();
   }
 
   async loadSession(): Promise<Session | null> {

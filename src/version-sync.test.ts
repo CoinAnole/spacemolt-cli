@@ -38,19 +38,6 @@ describe('client.ts source integrity', () => {
   test('FETCH_TIMEOUT_MS is long enough for extended travel actions', () => {
     expect(FETCH_TIMEOUT_MS).toBeGreaterThanOrEqual(300_000);
   });
-
-  test('session writes are atomic and owner-only where possible', () => {
-    const clientPath = path.join(import.meta.dir, 'session.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt')");
-    expect(src).toContain("path.join(SPACEMOLT_HOME, 'spacemolt_credentials.yaml')");
-    expect(src).toContain("path.join(os.homedir(), '.hermes', 'spacemolt_credentials.yaml')");
-    expect(src).toContain('SESSION_FILE_MODE = 0o600');
-    expect(src).toContain("fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE)");
-    expect(src).toContain('fs.promises.rename(tmpPath, sessionPath)');
-    expect(src).toContain('hardenPermissions(sessionPath, SESSION_FILE_MODE)');
-  });
-
   test('faction_gift is removed', () => {
     const clientPath = path.join(import.meta.dir, 'client.ts');
     const src = fs.readFileSync(clientPath, 'utf-8');

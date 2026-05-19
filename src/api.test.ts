@@ -208,4 +208,102 @@ describe('SpaceMoltClient', () => {
     expect(store.current?.password).toBe('generated');
     expect(store.current?.player_id).toBe('player_register');
   });
+
+  test('rate-limit retry cap limits the number of retries', async () => {
+    const { client, calls, sleeps } = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 1 } }),
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 1 } }),
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 1 } }),
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 1 } }),
+      response({ structuredContent: { ok: true } }),
+    ]);
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('rate_limited');
+    expect(calls).toHaveLength(4);
+    expect(sleeps).toEqual([1000, 1000, 1000]);
+  });
+
+  test('retries rate-limited responses using wait_seconds', async () => {
+    const { client, calls, sleeps } = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', wait_seconds: 3.5 } }),
+      response({ structuredContent: { ok: true } }),
+    ]);
+
+    const result = await client.execute('mine');
+
+    expect(result.error).toBeUndefined();
+    expect(calls).toHaveLength(2);
+    expect(sleeps).toEqual([4000]);
+  });
+
+  test('login skips profile auto-auth', async () => {
+    const store = createStore();
+    store.authError = response({ error: { code: 'invalid_credentials', message: 'bad profile' } });
+
+    const { client, calls } = createClient(
+      [
+        response({
+          structuredContent: { player: { id: 'player_login' } },
+          session: { id: 'sess_old', created_at: '2026-01-01T00:00:00.000Z', expires_at: '2099-01-01T00:00:00.000Z' },
+        }),
+      ],
+      store,
+    );
+
+    const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+    expect(result.error).toBeUndefined();
+    expect(calls).toHaveLength(1);
+  });
+
+  test('register skips profile auto-auth', async () => {
+    const store = createStore();
+    store.authError = response({ error: { code: 'invalid_credentials', message: 'bad profile' } });
+
+    const { client, calls } = createClient(
+      [
+        response({
+          structuredContent: { password: 'generated', player_id: 'player_register' },
+        }),
+      ],
+      store,
+    );
+
+    const result = await client.execute('register', {
+      username: 'NewPilot',
+      empire: 'solarian',
+      registration_code: 'code',
+    });
+    expect(result.error).toBeUndefined();
+    expect(calls).toHaveLength(1);
+  });
+
+  test('session recovery stops after the configured attempt limit', async () => {
+    const store = createStore(session({ username: 'Pilot', password: 'secret' }));
+    const { client, calls } = createClient(
+      [
+        response({ error: { code: 'session_expired', message: 'expired' } }),
+        response({
+          session: {
+            id: 'sess_new',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+            player_id: 'player_1',
+          },
+        }),
+        response({ error: { code: 'session_expired', message: 'expired again' } }),
+      ],
+      store,
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.message).toBe('expired again');
+    expect(calls.map((call) => call.url)).toEqual([
+      'https://game.test/api/v2/spacemolt/mine',
+      'https://game.test/api/v2/spacemolt_auth/login',
+      'https://game.test/api/v2/spacemolt/mine',
+    ]);
+  });
 });
