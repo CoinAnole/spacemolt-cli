@@ -47,19 +47,26 @@ export function getValidArgNames(command: string): Set<string> {
   return validArgNames;
 }
 
-interface ParsedArgs {
+export interface ParsedArgs {
   command: string;
   payload: Record<string, string>;
-  warnings: string[];
 }
 
-export function parseArgs(args: string[]): ParsedArgs {
+export interface ParseArgsOptions {
+  allowUnknown?: boolean;
+}
+
+export type CommandParseError = ValidationError;
+
+export type CommandParseResult =
+  | { ok: true; command: string; payload: Record<string, string> }
+  | { ok: false; errors: CommandParseError[] };
+
+function parseRawArgs(args: string[]): ParsedArgs {
   const command = args[0] || '';
   const payload: Record<string, string> = {};
-  const warnings: string[] = [];
   const config = COMMANDS[command];
   const argDefs = config?.args || [];
-  const validArgNames = getValidArgNames(command);
   let positionalIndex = 0;
 
   for (let i = 1; i < args.length; i++) {
@@ -68,9 +75,6 @@ export function parseArgs(args: string[]): ParsedArgs {
 
     const flag = parseCliFlag(arg);
     if (flag) {
-      if (!validArgNames.has(flag.key)) {
-        warnings.push(`Unknown flag "${arg}" — passed through as "${flag.key}". Use "spacemolt ${command}" for usage.`);
-      }
       if (flag.value !== undefined) {
         payload[flag.key] = flag.value;
         continue;
@@ -106,7 +110,17 @@ export function parseArgs(args: string[]): ParsedArgs {
     }
   }
 
-  return { command, payload, warnings };
+  return { command, payload };
+}
+
+export function parseArgs(args: string[], options: ParseArgsOptions = {}): CommandParseResult {
+  const parsed = parseRawArgs(args);
+  const errors = [
+    ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, parsed.payload)),
+    ...validatePayloadAgainstSchema(parsed.command, parsed.payload),
+  ];
+  if (errors.length > 0) return { ok: false, errors };
+  return { ok: true, command: parsed.command, payload: parsed.payload };
 }
 
 function normalizeCliKey(key: string): string {
@@ -183,10 +197,18 @@ export function validatePayloadAgainstSchema(command: string, payload: Record<st
     if (!fieldSchema) continue;
 
     if (fieldSchema.enum && fieldSchema.enum.length > 0) {
-      if (!fieldSchema.enum.includes(value)) {
+      const values =
+        config.arrayFields?.includes(key) && typeof value === 'string'
+          ? value
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [value];
+      const invalidValue = values.find((v) => !fieldSchema.enum?.includes(v));
+      if (invalidValue) {
         errors.push({
           field: key,
-          message: `Invalid value "${value}" for "${key}". Expected one of: ${fieldSchema.enum.join(', ')}`,
+          message: `Invalid value "${invalidValue}" for "${key}". Expected one of: ${fieldSchema.enum.join(', ')}`,
           code: 'invalid_enum',
         });
       }

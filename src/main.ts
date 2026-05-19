@@ -1,11 +1,10 @@
 #!/usr/bin/env bun
 import { execute } from './api.ts';
 import {
+  type CommandParseError,
   convertPayloadTypes,
   normalizeParsedPayload,
   parseArgs,
-  validateKnownPayloadFields,
-  validatePayloadAgainstSchema,
   validateRequiredArgs,
 } from './args.ts';
 import { COMMANDS } from './commands.ts';
@@ -170,15 +169,17 @@ export function resolveCommand(invocation: Invocation): ResolvedCommand {
     return { type: 'exit', exitCode: 0 };
   }
 
-  const { command, payload, warnings } = parseArgs(args);
+  const parsedArgs = parseArgs(args, { allowUnknown: options.allowUnknown });
+  if (!parsedArgs.ok) {
+    displayCommandParseErrors(parsedArgs.errors, options);
+    return { type: 'exit', exitCode: 1 };
+  }
+
+  const { command, payload } = parsedArgs;
 
   if (!command) {
     showHelp();
     return { type: 'exit', exitCode: 0 };
-  }
-
-  if (warnings.length > 0 && !options.allowUnknown && !options.quiet) {
-    for (const w of warnings) console.error(`${c.yellow}Warning:${c.reset} ${w}`);
   }
 
   if (DEBUG) {
@@ -209,20 +210,6 @@ export function preparePayload(
     return { type: 'exit', exitCode: 0 };
   }
 
-  if (!options.allowUnknown) {
-    const unknownFieldErrors = validateKnownPayloadFields(command, rawPayload);
-    if (unknownFieldErrors.length > 0) {
-      if (options.json) {
-        printJsonError('validation_error', unknownFieldErrors.map((e) => e.message).join('; '));
-        return { type: 'exit', exitCode: 1 };
-      }
-      for (const err of unknownFieldErrors) {
-        console.error(`${c.red}Error:${c.reset} ${err.message}`);
-      }
-      return { type: 'exit', exitCode: 1 };
-    }
-  }
-
   const missingArg = validateRequiredArgs(command, rawPayload);
   if (missingArg) {
     if (options.json) {
@@ -233,21 +220,19 @@ export function preparePayload(
     return { type: 'exit', exitCode: 1 };
   }
 
-  const schemaErrors = validatePayloadAgainstSchema(command, rawPayload);
-  if (schemaErrors.length > 0) {
-    if (options.json) {
-      printJsonError('validation_error', schemaErrors.map((e) => e.message).join('; '));
-      return { type: 'exit', exitCode: 1 };
-    }
-    for (const err of schemaErrors) {
-      console.error(`${c.red}Error:${c.reset} ${err.message}`);
-    }
-    return { type: 'exit', exitCode: 1 };
-  }
-
   const requestPayload = normalizeParsedPayload(command, rawPayload);
   const payload = Object.keys(requestPayload).length > 0 ? convertPayloadTypes(requestPayload, command) : {};
   return { type: 'payload', payload };
+}
+
+function displayCommandParseErrors(errors: CommandParseError[], options: GlobalOptions): void {
+  if (options.json) {
+    printJsonError('validation_error', errors.map((e) => e.message).join('; '));
+    return;
+  }
+  for (const err of errors) {
+    console.error(`${c.red}Error:${c.reset} ${err.message}`);
+  }
 }
 
 export async function runCommand(

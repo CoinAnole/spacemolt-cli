@@ -10,11 +10,20 @@ import {
   normalizeParsedPayload,
   parseArgs,
   parseGlobalOptions,
-  validateKnownPayloadFields,
   validateRequiredArgs,
 } from './client';
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
+
+function parseOk(
+  args: string[],
+  options?: Parameters<typeof parseArgs>[1],
+): Extract<ReturnType<typeof parseArgs>, { ok: true }> {
+  const result = parseArgs(args, options);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(result.errors.map((error) => error.message).join('; '));
+  return result;
+}
 
 // =============================================================================
 // compareVersions
@@ -258,80 +267,108 @@ describe('normalizeParsedPayload', () => {
 
 describe('parseArgs - basic', () => {
   test('no-arg command', () => {
-    const { command, payload } = parseArgs(['mine']);
+    const { command, payload } = parseOk(['mine']);
     expect(command).toBe('mine');
     expect(payload).toEqual({});
   });
 
   test('single positional arg', () => {
-    const { command, payload } = parseArgs(['travel', 'sol_asteroid_belt']);
+    const { command, payload } = parseOk(['travel', 'sol_asteroid_belt']);
     expect(command).toBe('travel');
     expect(payload.target_poi).toBe('sol_asteroid_belt');
   });
 
   test('key=value arg', () => {
-    const { command, payload } = parseArgs(['travel', 'target_poi=sol_earth']);
+    const { command, payload } = parseOk(['travel', 'target_poi=sol_earth']);
     expect(command).toBe('travel');
     expect(payload.target_poi).toBe('sol_earth');
   });
 
   test('multiple positional args', () => {
-    const { command, payload } = parseArgs(['sell', 'ore_iron', '50']);
+    const { command, payload } = parseOk(['sell', 'ore_iron', '50']);
     expect(command).toBe('sell');
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.quantity).toBe('50');
   });
 
   test('mixed positional and key=value args', () => {
-    const { payload } = parseArgs(['sell', 'ore_iron', '50', 'auto_list=true']);
+    const { payload } = parseOk(['sell', 'ore_iron', '50', 'auto_list=true']);
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.quantity).toBe('50');
     expect(payload.auto_list).toBe('true');
   });
 
-  test('extra key=value not in arg list is parsed for raw-mode pass-through', () => {
-    const { payload } = parseArgs(['buy', 'ore_iron', 'deliver_to=my_base']);
+  test('extra key=value not in arg list is parsed when present in command schema', () => {
+    const { payload } = parseOk(['buy', 'ore_iron', 'deliver_to=cargo']);
     expect(payload.item_id).toBe('ore_iron');
-    expect(payload.deliver_to).toBe('my_base');
+    expect(payload.deliver_to).toBe('cargo');
   });
 
   test('--flag value args use command field names', () => {
-    const { payload, warnings } = parseArgs(['sell', '--item-id', 'ore_iron', '--quantity', '50']);
-    expect(warnings).toEqual([]);
+    const { payload } = parseOk(['sell', '--item-id', 'ore_iron', '--quantity', '50']);
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.quantity).toBe('50');
   });
 
   test('--flag=value args normalize dashes to underscores', () => {
-    const { payload, warnings } = parseArgs(['travel', '--target-poi=sol_earth']);
-    expect(warnings).toEqual([]);
+    const { payload } = parseOk(['travel', '--target-poi=sol_earth']);
     expect(payload.target_poi).toBe('sol_earth');
   });
 
   test('boolean CLI flags default to true without consuming the next positional arg', () => {
-    const { payload } = parseArgs(['sell', '--auto-list', 'ore_iron', '50']);
+    const { payload } = parseOk(['sell', '--auto-list', 'ore_iron', '50']);
     expect(payload.auto_list).toBe('true');
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.quantity).toBe('50');
   });
 
-  test('unknown CLI flags parse as payload with a warning before validation', () => {
-    const { payload, warnings } = parseArgs(['buy', '--delivery-mode', 'fast']);
-    expect(payload.delivery_mode).toBe('fast');
-    expect(warnings[0]).toContain('Unknown flag');
+  test('unknown CLI flags are structured parser errors with suggestions', () => {
+    const result = parseArgs(['sell', '--quanity', '50']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'quanity',
+          message:
+            'Unknown field "quanity" for "sell". Did you mean "quantity"? Use --allow-unknown or --raw to pass it through.',
+          code: 'unknown_field',
+        },
+      ],
+    });
   });
 
-  test('unknown fields are validation errors with suggestions', () => {
-    const { payload } = parseArgs(['sell', 'ore_iron', 'quanity=50']);
-    const errors = validateKnownPayloadFields('sell', payload);
-    expect(errors).toEqual([
-      {
-        field: 'quanity',
-        message:
-          'Unknown field "quanity" for "sell". Did you mean "quantity"? Use --allow-unknown or --raw to pass it through.',
-        code: 'unknown_field',
-      },
-    ]);
+  test('allowUnknown passes unknown CLI flags through', () => {
+    const { payload } = parseOk(['buy', '--delivery-mode', 'fast'], { allowUnknown: true });
+    expect(payload.delivery_mode).toBe('fast');
+  });
+
+  test('unknown fields are structured parser errors with suggestions', () => {
+    const result = parseArgs(['sell', 'ore_iron', 'quanity=50']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'quanity',
+          message:
+            'Unknown field "quanity" for "sell". Did you mean "quantity"? Use --allow-unknown or --raw to pass it through.',
+          code: 'unknown_field',
+        },
+      ],
+    });
+  });
+
+  test('schema validation errors are structured parser errors', () => {
+    const result = parseArgs(['cloak', 'flase']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'enable',
+          message: 'Invalid boolean "flase" for "enable". Use true/false. Did you mean "false"?',
+          code: 'invalid_boolean',
+        },
+      ],
+    });
   });
 });
 
@@ -351,20 +388,20 @@ describe('dry-run previews', () => {
 
 describe('parseArgs - rest args', () => {
   test('rest arg captures all remaining tokens', () => {
-    const { command, payload } = parseArgs(['chat', 'local', 'hello', 'world', 'how', 'are', 'you']);
+    const { command, payload } = parseOk(['chat', 'local', 'hello', 'world', 'how', 'are', 'you']);
     expect(command).toBe('chat');
     expect(payload.channel).toBe('local');
     expect(payload.content).toBe('hello world how are you');
   });
 
   test('rest arg with single word', () => {
-    const { payload } = parseArgs(['chat', 'faction', 'hello']);
+    const { payload } = parseOk(['chat', 'faction', 'hello']);
     expect(payload.channel).toBe('faction');
     expect(payload.content).toBe('hello');
   });
 
   test('rest arg via all key=value', () => {
-    const { payload } = parseArgs(['chat', 'channel=system', 'content=this is a message']);
+    const { payload } = parseOk(['chat', 'channel=system', 'content=this is a message']);
     expect(payload.channel).toBe('system');
     expect(payload.content).toBe('this is a message');
   });
@@ -372,7 +409,7 @@ describe('parseArgs - rest args', () => {
 
 describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   test('trade_offer uses credits not offer_credits', () => {
-    const { payload } = parseArgs(['trade_offer', 'player123', '500']);
+    const { payload } = parseOk(['trade_offer', 'player123', '500']);
     expect(payload.target_id).toBe('player123');
     expect(payload.credits).toBe('500');
     expect(payload.offer_credits).toBeUndefined();
@@ -380,115 +417,115 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('craft uses quantity not count', () => {
-    const { payload } = parseArgs(['craft', 'refine_steel', '5']);
+    const { payload } = parseOk(['craft', 'refine_steel', '5']);
     expect(payload.recipe_id).toBe('refine_steel');
     expect(payload.quantity).toBe('5');
     expect(payload.count).toBeUndefined();
   });
 
   test('help uses category and command args', () => {
-    const { payload } = parseArgs(['help', 'combat', 'attack']);
+    const { payload } = parseOk(['help', 'combat', 'attack']);
     expect(payload.category).toBe('combat');
     expect(payload.command).toBe('attack');
     expect(payload.topic).toBeUndefined();
   });
 
   test('distress_signal - no args', () => {
-    const { command, payload } = parseArgs(['distress_signal']);
+    const { command, payload } = parseOk(['distress_signal']);
     expect(command).toBe('distress_signal');
     expect(payload).toEqual({});
   });
 
   test('get_cargo - no args', () => {
-    const { command, payload } = parseArgs(['get_cargo']);
+    const { command, payload } = parseOk(['get_cargo']);
     expect(command).toBe('get_cargo');
     expect(payload).toEqual({});
   });
 
   test('completed_missions - no args', () => {
-    const { command, payload } = parseArgs(['completed_missions']);
+    const { command, payload } = parseOk(['completed_missions']);
     expect(command).toBe('completed_missions');
     expect(payload).toEqual({});
   });
 
   test('session - no args', () => {
-    const { command, payload } = parseArgs(['session']);
+    const { command, payload } = parseOk(['session']);
     expect(command).toBe('session');
     expect(payload).toEqual({});
   });
 
   test('repair_module - positional', () => {
-    const { payload } = parseArgs(['repair_module', 'mod_uuid_123']);
+    const { payload } = parseOk(['repair_module', 'mod_uuid_123']);
     expect(payload.module_id).toBe('mod_uuid_123');
   });
 
   test('supply_commission - three positional args', () => {
-    const { payload } = parseArgs(['supply_commission', 'comm_123', 'steel_plate', '10']);
+    const { payload } = parseOk(['supply_commission', 'comm_123', 'steel_plate', '10']);
     expect(payload.commission_id).toBe('comm_123');
     expect(payload.item_id).toBe('steel_plate');
     expect(payload.quantity).toBe('10');
   });
 
   test('view_completed_mission - positional', () => {
-    const { payload } = parseArgs(['view_completed_mission', 'tmpl_456']);
+    const { payload } = parseOk(['view_completed_mission', 'tmpl_456']);
     expect(payload.template_id).toBe('tmpl_456');
   });
 
   test('get_action_log - all optional positional', () => {
-    const { payload } = parseArgs(['get_action_log', 'combat', 'faction_1', '2']);
+    const { payload } = parseOk(['get_action_log', 'combat', 'faction_1', '2']);
     expect(payload.category).toBe('combat');
     expect(payload.faction_id).toBe('faction_1');
     expect(payload.page).toBe('2');
   });
 
   test('agentlogs - category and message required', () => {
-    const { payload } = parseArgs(['agentlogs', 'navigation', 'jumped to new system']);
+    const { payload } = parseOk(['agentlogs', 'navigation', 'jumped to new system']);
     expect(payload.category).toBe('navigation');
     expect(payload.message).toBe('jumped to new system');
   });
 
   test('get_map with system_id', () => {
-    const { payload } = parseArgs(['get_map', 'sol']);
+    const { payload } = parseOk(['get_map', 'sol']);
     expect(payload.system_id).toBe('sol');
   });
 
   test('view_market with category filter', () => {
-    const { payload } = parseArgs(['view_market', 'ore_iron', 'ore']);
+    const { payload } = parseOk(['view_market', 'ore_iron', 'ore']);
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.category).toBe('ore');
   });
 
   test('view_orders with station_id', () => {
-    const { payload } = parseArgs(['view_orders', 'sol_central']);
+    const { payload } = parseOk(['view_orders', 'sol_central']);
     expect(payload.station_id).toBe('sol_central');
   });
 
   test('view_storage with station_id', () => {
-    const { payload } = parseArgs(['view_storage', 'nexus_base']);
+    const { payload } = parseOk(['view_storage', 'nexus_base']);
     expect(payload.station_id).toBe('nexus_base');
   });
 
   test('send_gift with ship_id', () => {
-    const { payload } = parseArgs(['send_gift', 'PlayerName', 'ship_id=ship_456']);
+    const { payload } = parseOk(['send_gift', 'PlayerName', 'ship_id=ship_456']);
     expect(payload.recipient).toBe('PlayerName');
     expect(payload.ship_id).toBe('ship_456');
   });
 
   test('faction_declare_war with reason', () => {
-    const { payload } = parseArgs(['faction_declare_war', 'faction_xyz', 'territorial dispute']);
+    const { payload } = parseOk(['faction_declare_war', 'faction_xyz', 'territorial dispute']);
     expect(payload.target_faction_id).toBe('faction_xyz');
     expect(payload.reason).toBe('territorial dispute');
   });
 
   test('faction_create_role with permissions', () => {
-    const { payload } = parseArgs(['faction_create_role', 'Officer', '2', 'recruit,kick']);
+    const { payload } = parseOk(['faction_create_role', 'Officer', '2', 'recruit,kick']);
     expect(payload.name).toBe('Officer');
     expect(payload.priority).toBe('2');
     expect(payload.permissions).toBe('recruit,kick');
   });
 
   test('faction_query_intel with all filters', () => {
-    const { payload } = parseArgs(['faction_query_intel', 'sol', 'sys_123', 'asteroid', 'iron']);
+    const { payload } = parseOk(['faction_query_intel', 'sol', 'sys_123', 'asteroid', 'iron']);
     expect(payload.system_name).toBe('sol');
     expect(payload.system_id).toBe('sys_123');
     expect(payload.poi_type).toBe('asteroid');
@@ -496,12 +533,12 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('captains_log_list with index', () => {
-    const { payload } = parseArgs(['captains_log_list', '5']);
+    const { payload } = parseOk(['captains_log_list', '5']);
     expect(payload.index).toBe('5');
   });
 
   test('faction_post_mission with required positional args', () => {
-    const { payload } = parseArgs(['faction_post_mission', 'Defend Our Home', 'defense', 'Protect the base']);
+    const { payload } = parseOk(['faction_post_mission', 'Defend Our Home', 'defense', 'Protect the base']);
     expect(payload.title).toBe('Defend Our Home');
     expect(payload.type).toBe('defense');
     expect(payload.description).toBe('Protect the base');
@@ -514,68 +551,68 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('new explicit drone commands parse positional payloads', () => {
-    expect(parseArgs(['list_drones']).payload).toEqual({});
-    expect(parseArgs(['get_drone', 'drone_1']).payload.drone_id).toBe('drone_1');
-    expect(parseArgs(['upload_drone', 'drone_1', 'scan', 'asteroids']).payload).toEqual({
+    expect(parseOk(['list_drones']).payload).toEqual({});
+    expect(parseOk(['get_drone', 'drone_1']).payload.drone_id).toBe('drone_1');
+    expect(parseOk(['upload_drone', 'drone_1', 'scan', 'asteroids']).payload).toEqual({
       drone_id: 'drone_1',
       script: 'scan asteroids',
     });
   });
 
   test('new explicit battle commands parse positional payloads', () => {
-    expect(parseArgs(['battle_stance', 'brace']).payload.stance).toBe('brace');
-    expect(parseArgs(['battle_target', 'player_1']).payload.target_id).toBe('player_1');
-    expect(parseArgs(['reload', 'weapon_1', 'ammo_light']).payload).toEqual({
+    expect(parseOk(['battle_stance', 'brace']).payload.stance).toBe('brace');
+    expect(parseOk(['battle_target', 'player_1']).payload.target_id).toBe('player_1');
+    expect(parseOk(['reload', 'weapon_1', 'ammo_light']).payload).toEqual({
       weapon_instance_id: 'weapon_1',
       ammo_item_id: 'ammo_light',
     });
   });
 
   test('new explicit fleet and facility commands parse positional payloads', () => {
-    expect(parseArgs(['fleet_status']).payload).toEqual({});
-    expect(parseArgs(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
-    expect(parseArgs(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
-    expect(parseArgs(['facility_toggle', 'fac_1']).payload.facility_id).toBe('fac_1');
+    expect(parseOk(['fleet_status']).payload).toEqual({});
+    expect(parseOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
+    expect(parseOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
+    expect(parseOk(['facility_toggle', 'fac_1']).payload.facility_id).toBe('fac_1');
   });
 
   test('new coverage commands parse positional payloads', () => {
-    expect(parseArgs(['get_empire_info', 'solarian']).payload.empire_id).toBe('solarian');
-    expect(parseArgs(['get_tax_estimate']).payload).toEqual({});
-    expect(parseArgs(['get_notifications', 'clear=false', 'limit=10', 'types=chat,combat']).payload).toEqual({
+    expect(parseOk(['get_empire_info', 'solarian']).payload.empire_id).toBe('solarian');
+    expect(parseOk(['get_tax_estimate']).payload).toEqual({});
+    expect(parseOk(['get_notifications', 'clear=false', 'limit=10', 'types=chat,combat']).payload).toEqual({
       clear: 'false',
       limit: '10',
       types: 'chat,combat',
     });
-    expect(parseArgs(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
-    expect(parseArgs(['faction_set_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
-    expect(parseArgs(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
+    expect(parseOk(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
+    expect(parseOk(['faction_set_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
+    expect(parseOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
   });
 
   test('citizenship commands parse positional payloads', () => {
-    expect(parseArgs(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
-    expect(parseArgs(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
-    expect(parseArgs(['citizenship_renounce', 'voidborn']).payload.empire).toBe('voidborn');
-    expect(parseArgs(['citizenship_withdraw', 'crimson']).payload.empire).toBe('crimson');
+    expect(parseOk(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
+    expect(parseOk(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
+    expect(parseOk(['citizenship_renounce', 'voidborn']).payload.empire).toBe('voidborn');
+    expect(parseOk(['citizenship_withdraw', 'crimson']).payload.empire).toBe('crimson');
   });
 
   test('facility sale commands parse positional payloads', () => {
-    expect(parseArgs(['facility_list_for_sale', 'facility_1', '5000']).payload).toEqual({
+    expect(parseOk(['facility_list_for_sale', 'facility_1', '5000']).payload).toEqual({
       facility_id: 'facility_1',
       price: '5000',
     });
-    expect(parseArgs(['facility_browse_for_sale', 'ore_refinery', '10000', '2', '25']).payload).toEqual({
+    expect(parseOk(['facility_browse_for_sale', 'ore_refinery', '10000', '2', '25']).payload).toEqual({
       facility_type: 'ore_refinery',
       max_price: '10000',
       page: '2',
       per_page: '25',
     });
-    expect(parseArgs(['facility_buy_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
-    expect(parseArgs(['facility_cancel_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
+    expect(parseOk(['facility_buy_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
+    expect(parseOk(['facility_cancel_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
   });
 
   test('new note and captains log delete commands parse positional payloads', () => {
-    expect(parseArgs(['delete_note', 'note_1']).payload.note_id).toBe('note_1');
-    expect(parseArgs(['captains_log_delete', '3']).payload.index).toBe('3');
+    expect(parseOk(['delete_note', 'note_1']).payload.note_id).toBe('note_1');
+    expect(parseOk(['captains_log_delete', '3']).payload.index).toBe('3');
   });
 });
 
