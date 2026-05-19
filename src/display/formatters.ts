@@ -333,11 +333,12 @@ export const resultFormatters: ResultFormatter[] = [
     'cargo',
     ['cargo'],
     (r, command) => {
-      if (r.cargo === undefined) return false;
-      if (command !== 'get_cargo' && command !== 'v2_get_cargo' && r.used === undefined && r.cargo_used === undefined) {
+      const isCargoCommand = command === 'get_cargo' || command === 'v2_get_cargo';
+      if (r.cargo === undefined && !isCargoCommand) return false;
+      if (!isCargoCommand && r.used === undefined && r.cargo_used === undefined) {
         return false;
       }
-      const cargo = (r.cargo as Array<Record<string, unknown>>) || [];
+      const cargo = Array.isArray(r.cargo) ? (r.cargo as Array<Record<string, unknown>>) : [];
       console.log(`\n${c.bright}=== Cargo ===${c.reset}`);
       const used = r.used ?? r.cargo_used ?? (r.ship as Record<string, unknown> | undefined)?.cargo_used;
       const capacity =
@@ -979,6 +980,23 @@ export const resultFormatters: ResultFormatter[] = [
       return true;
     },
     { commands: ['view_orders'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      const commissions = firstArray(r, ['commissions']);
+      if (!commissions) return false;
+      printCompactTable('Ship Commissions', commissions, [
+        ['Ship', ['ship_name', 'ship_class_id']],
+        ['Status', ['status']],
+        ['Base', ['base_name', 'base_id']],
+        ['Ticks', ['ticks_remaining']],
+        ['ID', ['commission_id']],
+      ]);
+      if (r.count !== undefined && commissions.length !== r.count) console.log(`${c.dim}count ${r.count}${c.reset}`);
+      return true;
+    },
+    { commands: ['commission_status'] },
   ),
 
   namedFormatter(

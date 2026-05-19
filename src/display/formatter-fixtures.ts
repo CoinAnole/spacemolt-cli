@@ -144,6 +144,14 @@ export const cargoFixture = {
   available: 50,
 };
 
+export const emptyCargoFixture = {
+  message: 'Cargo contents',
+  ship: {
+    cargo_capacity: 385,
+    cargo_used: 0,
+  },
+};
+
 export const shipFixture = {
   message: 'Ship status',
   modules: [
@@ -368,6 +376,25 @@ export const marketOrdersFixture = {
   ],
 };
 
+export const commissionStatusFixture = {
+  commissions: [
+    {
+      commission_id: 'commission-1',
+      ship_class_id: 'prospector',
+      ship_name: 'Lucky Strike',
+      status: 'building',
+      base_name: 'Earth Station',
+      ticks_remaining: 12,
+    },
+  ],
+  count: 1,
+};
+
+export const emptyCommissionStatusFixture = {
+  commissions: [],
+  count: 0,
+};
+
 export const intelFixture = {
   intel: [
     {
@@ -536,6 +563,7 @@ export const highValueCommandFixtures: Record<string, { command: string; fixture
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
+  get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
@@ -556,6 +584,8 @@ export const highValueCommandFixtures: Record<string, { command: string; fixture
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
+  commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
+  commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   view_storage: { command: 'view_storage', fixture: storageFixture },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   get_trades: { command: 'get_trades', fixture: marketListingsFixture },
