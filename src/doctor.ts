@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
-import { API_BASE, c, VERSION, type SpaceMoltConfig } from './runtime.ts';
+import { API_BASE, c, type SpaceMoltConfig, VERSION } from './runtime.ts';
 import { ACTIVE_PROFILE, getSessionPath, SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { execute, SpaceMoltClient, defaultClient } from './api.ts';
+import { defaultClient, execute, SpaceMoltClient } from './api.ts';
 import {
   type CommandParseError,
   convertPayloadTypes,
@@ -37,18 +37,18 @@ import {
   hintsForKind,
   idKindForCommandField,
   isIdKind,
+  loadIdCacheSync,
   printCachedIdSuggestions,
   printIds,
   printWhereCanI,
   resolveCachedId,
   searchItemHints,
-  loadIdCacheSync,
 } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
-import { API_BASE, c, DEBUG, VERSION, type SpaceMoltConfig, DEFAULT_V2_API_BASE } from './runtime.ts';
-import { getSession, loadSession, saveSession, showProfiles, getSessionPath, SessionManager } from './session.ts';
+import { API_BASE, c, DEBUG, DEFAULT_V2_API_BASE, type SpaceMoltConfig, VERSION } from './runtime.ts';
+import { getSession, getSessionPath, loadSession, SessionManager, saveSession, showProfiles } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -382,10 +382,7 @@ export interface CommandHandler {
   name: string;
   aliases?: string[];
   requiresNetwork: boolean;
-  parse(
-    argv: string[],
-    options: GlobalOptions,
-  ): { ok: true; payload: any } | { ok: false; error: CommandError };
+  parse(argv: string[], options: GlobalOptions): { ok: true; payload: any } | { ok: false; error: CommandError };
   run(payload: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<any> | any;
   render(runResult: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<number> | number;
 }

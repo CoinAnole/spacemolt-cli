@@ -64,7 +64,11 @@ export async function saveIdCache(hints: IdHint[], sessionPath?: string): Promis
   hardenPermissions(cachePath, CACHE_FILE_MODE);
 }
 
-export async function cacheIdsFromResponse(command: string, response: APIResponse, sessionPath?: string): Promise<void> {
+export async function cacheIdsFromResponse(
+  command: string,
+  response: APIResponse,
+  sessionPath?: string,
+): Promise<void> {
   if (response.error) return;
   const result = getStructuredResult(response) || getObjectResult(response);
   if (!result) return;

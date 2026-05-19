@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+export type { SpaceMoltClientOptions } from './api.ts';
+export { execute, SpaceMoltClient } from './api.ts';
 export {
   applyPayloadTransforms,
   convertPayloadTypes,
@@ -21,14 +23,11 @@ export {
   isRetryableError,
 } from './errors.ts';
 export { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
-export { main, runInvocation, getRuntimeConfig } from './main.ts';
-export { compareVersions } from './update.ts';
-export { SpaceMoltClient, execute } from './api.ts';
-export type { SpaceMoltClientOptions } from './api.ts';
-export { createDefaultConfig, LegacySpaceMoltConfig } from './runtime.ts';
+export { getRuntimeConfig, main, runInvocation } from './main.ts';
 export type { SpaceMoltConfig } from './runtime.ts';
-export { SessionManager, getSessionPath } from './session.ts';
-
+export { createDefaultConfig, LegacySpaceMoltConfig } from './runtime.ts';
+export { getSessionPath, SessionManager } from './session.ts';
+export { compareVersions } from './update.ts';
 
 import { main } from './main.ts';
 

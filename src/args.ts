@@ -330,10 +330,9 @@ export function validatePayloadAgainstSchema(command: string, payload: Record<st
     if (!fieldSchema) continue;
 
     if (fieldSchema.enum && fieldSchema.enum.length > 0) {
-      const values =
-        Array.isArray(value)
-          ? value
-          : config.arrayFields?.includes(key) && typeof value === 'string'
+      const values = Array.isArray(value)
+        ? value
+        : config.arrayFields?.includes(key) && typeof value === 'string'
           ? value
               .split(',')
               .map((s) => s.trim())

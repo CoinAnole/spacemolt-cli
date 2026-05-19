@@ -2,7 +2,12 @@ import { applyPayloadTransforms } from './args.ts';
 import { routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { ERROR_REGISTRY } from './errors.ts';
 import { trimTrailingSlash } from './response.ts';
-import { MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS, SpaceMoltConfig, createDefaultConfig } from './runtime.ts';
+import {
+  createDefaultConfig,
+  MAX_RATE_LIMIT_RETRIES,
+  MAX_SESSION_RECOVERY_ATTEMPTS,
+  type SpaceMoltConfig,
+} from './runtime.ts';
 import { SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
@@ -49,12 +54,14 @@ export class SpaceMoltClient {
   constructor(options: SpaceMoltClientOptions = {}) {
     this.config = options.config ?? createDefaultConfig();
     this.transport = options.transport ?? { requestJson };
-    this.sessionStore = options.sessionStore ?? new SessionManager({
-      apiBase: this.config.apiBase,
-      profile: this.config.profile,
-      sessionPath: this.config.sessionPath,
-      debug: this.config.debug,
-    });
+    this.sessionStore =
+      options.sessionStore ??
+      new SessionManager({
+        apiBase: this.config.apiBase,
+        profile: this.config.profile,
+        sessionPath: this.config.sessionPath,
+        debug: this.config.debug,
+      });
     this.clock = options.clock ?? { now: Date.now };
     this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
     this.logger = options.logger ?? {

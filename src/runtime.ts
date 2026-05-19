@@ -60,15 +60,33 @@ export function createDefaultConfig(overrides?: Partial<SpaceMoltConfig>): Space
   const base = new LegacySpaceMoltConfig();
   if (!overrides) return base;
   return {
-    get apiBase() { return overrides.apiBase !== undefined ? overrides.apiBase : base.apiBase; },
-    get jsonOutput() { return overrides.jsonOutput !== undefined ? overrides.jsonOutput : base.jsonOutput; },
-    get debug() { return overrides.debug !== undefined ? overrides.debug : base.debug; },
-    get plain() { return overrides.plain !== undefined ? overrides.plain : base.plain; },
-    get quiet() { return overrides.quiet !== undefined ? overrides.quiet : base.quiet; },
-    get format() { return overrides.format !== undefined ? overrides.format : base.format; },
-    get compact() { return overrides.compact !== undefined ? overrides.compact : base.compact; },
-    get profile() { return overrides.profile !== undefined ? overrides.profile : base.profile; },
-    get sessionPath() { return overrides.sessionPath !== undefined ? overrides.sessionPath : base.sessionPath; },
+    get apiBase() {
+      return overrides.apiBase !== undefined ? overrides.apiBase : base.apiBase;
+    },
+    get jsonOutput() {
+      return overrides.jsonOutput !== undefined ? overrides.jsonOutput : base.jsonOutput;
+    },
+    get debug() {
+      return overrides.debug !== undefined ? overrides.debug : base.debug;
+    },
+    get plain() {
+      return overrides.plain !== undefined ? overrides.plain : base.plain;
+    },
+    get quiet() {
+      return overrides.quiet !== undefined ? overrides.quiet : base.quiet;
+    },
+    get format() {
+      return overrides.format !== undefined ? overrides.format : base.format;
+    },
+    get compact() {
+      return overrides.compact !== undefined ? overrides.compact : base.compact;
+    },
+    get profile() {
+      return overrides.profile !== undefined ? overrides.profile : base.profile;
+    },
+    get sessionPath() {
+      return overrides.sessionPath !== undefined ? overrides.sessionPath : base.sessionPath;
+    },
   };
 }
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
