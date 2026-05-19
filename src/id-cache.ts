@@ -17,6 +17,11 @@ export interface IdHint {
   context?: Record<string, string | number | boolean>;
 }
 
+export type CachedIdResolveResult =
+  | { type: 'resolved'; value: string; hint: IdHint; match: 'exact' | 'prefix' | 'substring' }
+  | { type: 'ambiguous'; kind: IdKind; query: string; matches: IdHint[] }
+  | { type: 'unresolved'; value: string };
+
 interface IdCacheFile {
   version: 1;
   hints: IdHint[];
@@ -168,11 +173,35 @@ export function searchItemHints(query: string, hints = loadIdCacheSync()): IdHin
   );
 }
 
+export function resolveCachedId(kind: IdKind, query: string, hints = loadIdCacheSync()): CachedIdResolveResult {
+  const trimmed = query.trim();
+  if (!trimmed) return { type: 'unresolved', value: query };
+
+  const candidates = dedupeHintsById(hintsForKind(kind, hints));
+  const exact = findMatches(candidates, trimmed, 'exact');
+  if (exact.length > 0) return resolveMatches(kind, trimmed, exact, 'exact');
+
+  const prefix = findMatches(candidates, trimmed, 'prefix');
+  if (prefix.length > 0) return resolveMatches(kind, trimmed, prefix, 'prefix');
+
+  const substring = findMatches(candidates, trimmed, 'substring');
+  if (substring.length > 0) return resolveMatches(kind, trimmed, substring, 'substring');
+
+  return { type: 'unresolved', value: query };
+}
+
 export function idKindForCommandField(command: string, field?: string): IdKind | undefined {
   const normalizedField = normalizeField(field || '');
-  if (['travel'].includes(command)) return 'poi';
-  if (['jump', 'find_route'].includes(command)) return 'system';
-  if (['attack', 'scan', 'fleet_invite', 'fleet_kick'].includes(command)) return 'player';
+  if (command === 'travel' && isResolverField(normalizedField, ['target_poi', 'id'])) return 'poi';
+  if (['jump', 'find_route'].includes(command) && isResolverField(normalizedField, ['target_system', 'id'])) {
+    return 'system';
+  }
+  if (
+    ['attack', 'scan', 'fleet_invite', 'fleet_kick'].includes(command) &&
+    isResolverField(normalizedField, ['target_id', 'player_id', 'id'])
+  ) {
+    return 'player';
+  }
   if (
     [
       'sell',
@@ -185,13 +214,37 @@ export function idKindForCommandField(command: string, field?: string): IdKind |
       'create_buy_order',
     ].includes(command)
   ) {
-    return 'item';
+    if (isResolverField(normalizedField, ['item_id', 'id'])) return 'item';
+    return undefined;
   }
   if (normalizedField.includes('poi')) return 'poi';
   if (normalizedField.includes('system')) return 'system';
   if (normalizedField.includes('player') || normalizedField.includes('target')) return 'player';
   if (normalizedField.includes('item')) return 'item';
   return undefined;
+}
+
+export function formatCachedIdAmbiguity(
+  command: string,
+  field: string,
+  result: Extract<CachedIdResolveResult, { type: 'ambiguous' }>,
+): string[] {
+  const lines = [
+    `${c.red}Error:${c.reset} Ambiguous cached ${result.kind} match for "${result.query}" in ${command}.${field}.`,
+  ];
+  for (const hint of result.matches.slice(0, 8)) lines.push(`  ${formatHint(hint)}`);
+  if (result.matches.length > 8) lines.push(`  ${c.dim}...and ${result.matches.length - 8} more${c.reset}`);
+  lines.push(`Use the exact ID, or run a discovery command to refresh cached IDs.`);
+  return lines;
+}
+
+export function cachedIdAmbiguityMessage(result: Extract<CachedIdResolveResult, { type: 'ambiguous' }>): string {
+  const candidates = result.matches
+    .slice(0, 8)
+    .map((hint) => (hint.name && hint.name !== hint.id ? `${hint.id} (${hint.name})` : hint.id))
+    .join(', ');
+  const suffix = result.matches.length > 8 ? `, and ${result.matches.length - 8} more` : '';
+  return `Ambiguous cached ${result.kind} match for "${result.query}". Use the exact ID. Matches: ${candidates}${suffix}`;
 }
 
 export function printCachedIdSuggestions(command: string, field?: string): void {
@@ -248,8 +301,42 @@ function dedupeHints(hints: IdHint[]): IdHint[] {
   return result;
 }
 
+function dedupeHintsById(hints: IdHint[]): IdHint[] {
+  const seen = new Set<string>();
+  const result: IdHint[] = [];
+  for (const hint of hints) {
+    const key = `${hint.kind}:${hint.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(hint);
+  }
+  return result;
+}
+
 function sortNewest(hints: IdHint[]): IdHint[] {
   return [...hints].sort((a, b) => b.seenAt.localeCompare(a.seenAt) || a.id.localeCompare(b.id));
+}
+
+function findMatches(hints: IdHint[], query: string, match: 'exact' | 'prefix' | 'substring'): IdHint[] {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return [];
+  return hints.filter((hint) => {
+    const values = [hint.id, hint.name || ''].map(normalizeSearchText).filter(Boolean);
+    if (match === 'exact') return values.some((value) => value === normalizedQuery);
+    if (match === 'prefix') return values.some((value) => value.startsWith(normalizedQuery));
+    return values.some((value) => value.includes(normalizedQuery));
+  });
+}
+
+function resolveMatches(
+  kind: IdKind,
+  query: string,
+  matches: IdHint[],
+  match: 'exact' | 'prefix' | 'substring',
+): CachedIdResolveResult {
+  const hint = matches[0];
+  if (matches.length === 1 && hint) return { type: 'resolved', value: hint.id, hint, match };
+  return { type: 'ambiguous', kind, query, matches };
 }
 
 function formatHint(hint: IdHint): string {
@@ -329,6 +416,14 @@ function stringValue(value: unknown): string {
 
 function normalizeField(field: string): string {
   return field.toLowerCase().replace(/-/g, '_');
+}
+
+function normalizeSearchText(value: string): string {
+  return value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+}
+
+function isResolverField(normalizedField: string, fields: string[]): boolean {
+  return !normalizedField || fields.includes(normalizedField);
 }
 
 function isHint(value: unknown): value is IdHint {

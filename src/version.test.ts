@@ -943,7 +943,7 @@ describe('CLI local usability behavior', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Missing required argument');
     expect(result.stderr).toContain('Usage:');
-    expect(result.stderr).toContain('spacemolt travel <poi_id>');
+    expect(result.stderr).toContain('spacemolt travel <poi_id_or_cached_name>');
     expect(result.stderr).toContain('spacemolt get_system');
   });
 
@@ -952,7 +952,7 @@ describe('CLI local usability behavior', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('travel');
     expect(result.stdout).toContain('Usage:');
-    expect(result.stdout).toContain('spacemolt travel sol_asteroid_belt');
+    expect(result.stdout).toContain('spacemolt travel earth');
     expect(result.stderr).not.toContain('Connection Error');
   });
 

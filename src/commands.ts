@@ -109,9 +109,9 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['registration_code'],
   },
   travel: {
-    usage: '<poi_id>  (use get_system to see POIs)',
-    description: 'Move to a POI in the current system. Use get_system first to find valid POI IDs.',
-    example: 'spacemolt travel sol_asteroid_belt',
+    usage: '<poi_id_or_cached_name>  (use get_system to cache POIs)',
+    description: 'Move to a POI in the current system. Use get_system first to cache valid POI IDs and names.',
+    example: 'spacemolt travel earth',
     discoverWith: ['get_system', 'get_status'],
     seeAlso: ['get_system', 'get_poi', 'jump'],
     category: 'Navigation',
@@ -205,9 +205,9 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt/self_destruct',
   },
   sell: {
-    usage: '<item_id> <quantity> [auto_list=true]  (use get_cargo to see items)',
-    description: 'Sell cargo items. Use get_cargo first for item IDs and available quantities.',
-    example: 'spacemolt sell ore_iron 50',
+    usage: '<item_id_or_cached_name> <quantity> [auto_list=true]  (use get_cargo to cache items)',
+    description: 'Sell cargo items. Use get_cargo first for item IDs, cached names, and available quantities.',
+    example: 'spacemolt sell iron 50',
     discoverWith: ['get_cargo', 'view_market'],
     seeAlso: ['get_cargo', 'view_market'],
     category: 'Trading',
@@ -215,8 +215,9 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['item_id', 'quantity', 'auto_list'],
   },
   buy: {
-    usage: '<item_id> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to see order book)',
-    description: 'Buy an item from the current market. Use view_market to inspect available listings.',
+    usage:
+      '<item_id_or_cached_name> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to cache items)',
+    description: 'Buy an item from the current market. Use view_market to inspect and cache available listings.',
     example: 'spacemolt buy fuel 10',
     discoverWith: ['view_market', 'get_status'],
     seeAlso: ['view_market', 'get_cargo'],
@@ -832,7 +833,7 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   deposit_items: {
-    usage: '<item_id> <quantity>  (use get_ship to see cargo)',
+    usage: '<item_id_or_cached_name> <quantity>  (use get_ship or get_cargo to cache cargo)',
     description: 'Move cargo into station storage.',
     example: 'spacemolt deposit_items ore_iron 50',
     discoverWith: ['get_cargo', 'view_storage'],
@@ -851,7 +852,7 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   withdraw_items: {
-    usage: '<item_id> <quantity>  (use view_storage to see stored items)',
+    usage: '<item_id_or_cached_name> <quantity>  (use view_storage to cache stored items)',
     description: 'Move station storage items into cargo.',
     example: 'spacemolt withdraw_items ore_iron 50',
     discoverWith: ['view_storage', 'get_cargo'],
@@ -881,12 +882,12 @@ export const COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   create_sell_order: {
-    usage: '<item_id> <quantity> <price_each>  (list items for sale)',
+    usage: '<item_id_or_cached_name> <quantity> <price_each>  (list items for sale)',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/create_sell_order',
   },
   create_buy_order: {
-    usage: '<item_id> <quantity> <price_each> [deliver_to=base_id]  (place a buy offer)',
+    usage: '<item_id_or_cached_name> <quantity> <price_each> [deliver_to=base_id]  (place a buy offer)',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
   },

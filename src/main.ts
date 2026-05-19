@@ -30,13 +30,17 @@ import {
   showProgressiveHelp,
 } from './help.ts';
 import {
+  type CachedIdResolveResult,
+  cachedIdAmbiguityMessage,
   cacheIdsFromResponse,
+  formatCachedIdAmbiguity,
   hintsForKind,
   idKindForCommandField,
   isIdKind,
   printCachedIdSuggestions,
   printIds,
   printWhereCanI,
+  resolveCachedId,
   searchItemHints,
 } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
@@ -53,6 +57,9 @@ type CommandStatus = { type: 'exit'; exitCode: number };
 type ParsedCommand = { type: 'command'; command: string; rawPayload: Record<string, string> };
 type ResolvedCommand = CommandStatus | ParsedCommand;
 type PreparedPayload = CommandStatus | { type: 'payload'; payload: Record<string, unknown> };
+type PayloadResolveResult =
+  | { type: 'payload'; payload: Record<string, string> }
+  | { type: 'ambiguous'; field: string; result: Extract<CachedIdResolveResult, { type: 'ambiguous' }> };
 
 export interface Invocation {
   options: GlobalOptions;
@@ -221,8 +228,36 @@ export function preparePayload(
   }
 
   const requestPayload = normalizeParsedPayload(command, rawPayload);
-  const payload = Object.keys(requestPayload).length > 0 ? convertPayloadTypes(requestPayload, command) : {};
+  const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload);
+  if (resolvedPayload.type === 'ambiguous') {
+    if (options.json) {
+      printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result));
+      return { type: 'exit', exitCode: 1 };
+    }
+    for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result)) {
+      console.error(line);
+    }
+    return { type: 'exit', exitCode: 1 };
+  }
+
+  const payload =
+    Object.keys(resolvedPayload.payload).length > 0 ? convertPayloadTypes(resolvedPayload.payload, command) : {};
   return { type: 'payload', payload };
+}
+
+function resolveCachedIdsForPayload(command: string, payload: Record<string, string>): PayloadResolveResult {
+  const resolvedPayload: Record<string, string> = { ...payload };
+
+  for (const [field, value] of Object.entries(payload)) {
+    const kind = idKindForCommandField(command, field);
+    if (!kind) continue;
+
+    const resolved = resolveCachedId(kind, value);
+    if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
+    if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
+  }
+
+  return { type: 'payload', payload: resolvedPayload };
 }
 
 function displayCommandParseErrors(errors: CommandParseError[], options: GlobalOptions): void {
