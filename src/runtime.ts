@@ -17,7 +17,7 @@ export const VERSION = '2.0.0';
 export const FETCH_TIMEOUT_MS = 600_000;
 export const MAX_SESSION_RECOVERY_ATTEMPTS = 1;
 export const MAX_RATE_LIMIT_RETRIES = 3;
-export const GITHUB_REPO = 'SpaceMolt/client';
+export const GITHUB_REPO = 'CoinAnole/spacemolt-cli';
 export const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // ANSI colors

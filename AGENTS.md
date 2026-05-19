@@ -58,14 +58,14 @@ Session files contain credentials. Do not commit them.
 | `SPACEMOLT_URL` | Override the API base URL. Defaults to `https://game.spacemolt.com/api/v2`. |
 | `SPACEMOLT_SESSION` | Override the session file path. |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses. |
-| `SPACEMOLT_NO_UPDATE_CHECK=true` | Disable GitHub release update checks. |
+| `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks (disabled by default). |
 | `DEBUG=true` | Print verbose request and response diagnostics. |
 
 ## Release Notes
 
 Keep `package.json` version and `VERSION` in `src/runtime.ts` in sync.
 
-The startup update check queries GitHub releases for `SpaceMolt/client`, caches results in `~/.config/spacemolt/update-check.json`, and fails silently unless `DEBUG=true`.
+The startup update check queries GitHub releases for `CoinAnole/spacemolt-cli` (if enabled via `SPACEMOLT_UPDATE_CHECK=true`), caches results in `~/.config/spacemolt/update-check.json`, and fails silently unless `DEBUG=true`.
 
 ## Reference Docs
 

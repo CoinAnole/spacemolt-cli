@@ -51,8 +51,8 @@ export function compareVersions(current: string, latest: string): number {
 }
 
 export async function checkForUpdates(): Promise<void> {
-  // Skip update check if disabled via env var
-  if (process.env.SPACEMOLT_NO_UPDATE_CHECK === 'true') return;
+  // Skip update check by default unless explicitly enabled
+  if (process.env.SPACEMOLT_UPDATE_CHECK !== 'true') return;
 
   try {
     // Check cache to avoid spamming GitHub API

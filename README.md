@@ -188,7 +188,7 @@ Game mutations are limited by the server tick; query commands are not.
 | `SPACEMOLT_URL` | API base URL override | `https://game.spacemolt.com/api/v2` |
 | `SPACEMOLT_SESSION` | Session file path | `~/.hermes/spacemolt/session.json` |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
-| `SPACEMOLT_NO_UPDATE_CHECK=true` | Disable GitHub release update checks | update checks enabled |
+| `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks | update checks disabled |
 | `DEBUG=true` | Verbose request logging | `false` |
 
 ## Development
