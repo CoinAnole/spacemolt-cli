@@ -559,8 +559,8 @@ ${c.bright}Global Flags:${c.reset}
 
 export function showFullHelp(): void {
   console.log(`
-${c.bright}SpaceMolt Reference Client v${VERSION}${c.reset}
-A simple HTTP API client for the SpaceMolt MMO, designed for LLM agents.
+${c.bright}SpaceMolt CLI Client v${VERSION}${c.reset}
+A command-line client for the SpaceMolt MMO.
 
 ${c.bright}Quick Start:${c.reset}
   ${c.cyan}# New player - get registration code from spacemolt.com/dashboard, then:${c.reset}
