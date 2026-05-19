@@ -13,7 +13,9 @@
 import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { generate, type OpenApiSpec } from '../scripts/generate-api-metadata';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands';
+import { GENERATED_API_ROUTES } from './generated/api-commands';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
@@ -95,5 +97,20 @@ describe('api sync', () => {
       ).toEqual([]);
     },
     15_000,
+  );
+
+  test.skipIf(skip)(
+    'generated OpenAPI metadata is deterministic and matches cached spec',
+    async () => {
+      const spec = await loadOpenApiSpec();
+      if (Object.keys(spec.paths).length === 0) return;
+
+      const generated = generate(spec as unknown as OpenApiSpec);
+      expect(
+        GENERATED_API_ROUTES,
+        'Generated metadata in src/generated/api-commands.ts does not match the cached spec. Run `bun run generate:api`.',
+      ).toEqual(generated as unknown as typeof GENERATED_API_ROUTES);
+    },
+    5_000,
   );
 });

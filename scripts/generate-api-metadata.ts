@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-interface OpenApiSpec {
+export interface OpenApiSpec {
   paths: Record<string, Record<string, Operation>>;
 }
 
@@ -34,7 +34,7 @@ interface GeneratedField {
   positionalIndex?: number;
 }
 
-interface GeneratedRoute {
+export interface GeneratedRoute {
   operationId?: string;
   summary?: string;
   route: {
@@ -84,7 +84,7 @@ function requestSchema(operation: Operation): Pick<GeneratedRoute, 'required' | 
   };
 }
 
-function generate(spec: OpenApiSpec): Record<string, GeneratedRoute> {
+export function generate(spec: OpenApiSpec): Record<string, GeneratedRoute> {
   const routes: Record<string, GeneratedRoute> = {};
 
   for (const [apiPath, methods] of Object.entries(spec.paths).sort(([a], [b]) => a.localeCompare(b))) {
@@ -135,6 +135,8 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = ${JSON.st
 `;
 }
 
-const spec = JSON.parse(fs.readFileSync(openApiPath, 'utf-8')) as OpenApiSpec;
-fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-fs.writeFileSync(outputPath, render(generate(spec)));
+if (import.meta.main) {
+  const spec = JSON.parse(fs.readFileSync(openApiPath, 'utf-8')) as OpenApiSpec;
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, render(generate(spec)));
+}

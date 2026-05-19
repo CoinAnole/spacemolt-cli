@@ -118,13 +118,11 @@ describe('client.ts source integrity', () => {
   });
 
   test('COMMANDS block has no duplicate top-level command keys', () => {
-    const commandsPath = path.join(import.meta.dir, 'commands.ts');
-    const src = fs.readFileSync(commandsPath, 'utf-8');
-    const start = src.indexOf('const COMMAND_OVERRIDES:');
-    const end = src.indexOf('\n\nexport function routeToPath');
+    const overridesPath = path.join(import.meta.dir, 'command-overrides.ts');
+    const src = fs.readFileSync(overridesPath, 'utf-8');
+    const start = src.indexOf('export const COMMAND_OVERRIDES:');
     expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    const block = src.slice(start, end);
+    const block = src.slice(start);
     const commands = [...block.matchAll(/^\s{2}([a-z][a-z0-9_]+):\s*[{(]/gm)].map((match) => match[1]);
     const duplicates = commands.filter((command, index) => commands.indexOf(command) !== index);
     expect(duplicates).toEqual([]);
