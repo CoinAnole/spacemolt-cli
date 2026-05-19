@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { defaultClient, execute, SpaceMoltClient } from './api.ts';
+import { defaultClient, SpaceMoltClient } from './api.ts';
 import {
   type CommandParseError,
   convertPayloadTypes,
@@ -17,6 +17,7 @@ import {
   displayError,
   displayMissingArgument,
   displayUnknownCommand,
+  hasCommandGroup,
   parseCommandSearchQuery,
   printJsonError,
   printJsonResponse,
@@ -46,9 +47,8 @@ import {
 } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
-import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
 import { API_BASE, c, DEBUG, DEFAULT_V2_API_BASE, type SpaceMoltConfig, VERSION } from './runtime.ts';
-import { getSession, getSessionPath, loadSession, SessionManager, saveSession, showProfiles } from './session.ts';
+import { getSessionPath, showProfiles } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -163,14 +163,15 @@ export function resolveCommand(invocation: Invocation): ResolvedCommand {
     return { type: 'exit', exitCode: 0 };
   }
 
-  if (args[0] === 'help' && args[1] && showCommandGroup(args[1])) {
+  if (args[0] === 'help' && args[1] && hasCommandGroup(args[1])) {
+    showCommandGroup(args[1]);
     return { type: 'exit', exitCode: 0 };
   }
 
   if (args[0] === '--help' || args[0] === '-h') {
     const helpCommand = args[1];
     if (helpCommand) {
-      if (showCommandHelp(helpCommand) || showCommandGroup(helpCommand)) {
+      if (showCommandHelp(helpCommand) || (hasCommandGroup(helpCommand) && showCommandGroup(helpCommand))) {
         return { type: 'exit', exitCode: 0 };
       }
       if (options.json) {
@@ -312,8 +313,6 @@ export async function runCommand(
   options: GlobalOptions,
   client: SpaceMoltClient = defaultClient,
 ): Promise<CommandRun> {
-  await persistSubmittedCredentials(command, payload, client);
-
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, payload) : null;
   const response = options.dryRun
     ? serverPreviewCommand
@@ -357,7 +356,6 @@ export async function renderResponse(
     return 1;
   }
 
-  await persistResponseCredentials(command, response, client);
   const sessionPath = getSessionPath(client.config);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
@@ -626,7 +624,7 @@ const localHelpHandler: CommandHandler = {
       return { ok: true, payload: { type: 'helpAll' } };
     }
 
-    if (showCommandGroup(target)) {
+    if (hasCommandGroup(target)) {
       return { ok: true, payload: { type: 'helpGroup', target } };
     }
 
@@ -663,7 +661,7 @@ const localHelpHandler: CommandHandler = {
       return 0;
     }
     if (type === 'helpCommand' && target) {
-      if (showCommandHelp(target) || showCommandGroup(target)) {
+      if (showCommandHelp(target) || (hasCommandGroup(target) && showCommandGroup(target))) {
         return 0;
       }
       if (options.json) {
@@ -756,7 +754,7 @@ function resolveHandler(argv: string[], options: GlobalOptions): CommandHandler 
     argv.length === 0 ||
     commandName === '--help' ||
     commandName === '-h' ||
-    (commandName === 'help' && (!argv[1] || argv[1] === 'all' || showCommandGroup(argv[1])))
+    (commandName === 'help' && (!argv[1] || argv[1] === 'all' || hasCommandGroup(argv[1])))
   ) {
     return localHelpHandler;
   }
@@ -896,74 +894,6 @@ async function runWatchLoop(invocation: Invocation, handler: CommandHandler, cli
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function persistSubmittedCredentials(
-  command: string,
-  payload: Record<string, unknown>,
-  client: SpaceMoltClient,
-): Promise<void> {
-  if (command === 'login' && typeof payload.username === 'string' && typeof payload.password === 'string') {
-    const session = await client.sessionStore.getSession();
-    session.username = payload.username;
-    session.password = payload.password;
-    await client.sessionStore.saveSession(session);
-    if (client.debug) console.log(`${c.dim}[DEBUG] Saved credentials to session${c.reset}`);
-  }
-
-  if (command === 'register' && typeof payload.username === 'string') {
-    const session = await client.sessionStore.getSession();
-    session.username = payload.username;
-    await client.sessionStore.saveSession(session);
-  }
-}
-
-async function persistResponseCredentials(
-  command: string,
-  response: APIResponse,
-  client: SpaceMoltClient,
-): Promise<void> {
-  const structuredResult = getStructuredResult(response);
-  const resultRecord = structuredResult || getObjectResult(response);
-
-  if (command === 'register') {
-    const password = typeof resultRecord?.password === 'string' ? resultRecord.password : undefined;
-    const player = isRecord(resultRecord?.player) ? resultRecord.player : undefined;
-    const playerId =
-      typeof resultRecord?.player_id === 'string'
-        ? resultRecord.player_id
-        : typeof player?.id === 'string'
-          ? player.id
-          : response.session?.player_id;
-
-    if (password) {
-      const session = await client.sessionStore.loadSession();
-      if (session) {
-        session.password = password;
-        if (playerId) session.player_id = playerId;
-        await client.sessionStore.saveSession(session);
-        if (client.debug) console.log(`${c.dim}[DEBUG] Saved password to session${c.reset}`);
-      }
-    }
-  }
-
-  if (command === 'login') {
-    const player = isRecord(resultRecord?.player) ? resultRecord.player : undefined;
-    const playerId =
-      typeof player?.id === 'string'
-        ? player.id
-        : typeof resultRecord?.player_id === 'string'
-          ? resultRecord.player_id
-          : response.session?.player_id;
-
-    if (playerId) {
-      const session = await client.sessionStore.loadSession();
-      if (session) {
-        session.player_id = playerId;
-        await client.sessionStore.saveSession(session);
-      }
-    }
-  }
 }
 
 function renderConnectionError(error: unknown, options: GlobalOptions): number {

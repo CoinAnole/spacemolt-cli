@@ -141,6 +141,10 @@ function findCommandGroup(topic: string): CommandGroup | undefined {
   );
 }
 
+export function hasCommandGroup(topic: string): boolean {
+  return Boolean(findCommandGroup(topic));
+}
+
 function formatCommandSummary(command: string): string {
   const usage = getUsageHint(command);
   const description = ALL_COMMANDS[command]?.description;

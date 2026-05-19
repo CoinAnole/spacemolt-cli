@@ -9,6 +9,9 @@ export interface Session {
   player_id?: string;
 }
 
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+export type CliPayload = Record<string, JsonValue>;
+
 export interface APIResponse {
   result?: string | Record<string, unknown>;
   structuredContent?: Record<string, unknown>;

@@ -1,7 +1,7 @@
 import { applyPayloadTransforms } from './args.ts';
 import { routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { ERROR_REGISTRY } from './errors.ts';
-import { trimTrailingSlash } from './response.ts';
+import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import {
   createDefaultConfig,
   MAX_RATE_LIMIT_RETRIES,
@@ -137,6 +137,10 @@ export class SpaceMoltClient {
         continue;
       }
 
+      if (command === 'login' || command === 'register') {
+        await this.persistSuccessfulCredentials(command, payload, data);
+      }
+
       return data;
     }
   }
@@ -189,6 +193,65 @@ export class SpaceMoltClient {
     const loginPayload = applyPayloadTransforms('login', { username, password });
     const loginUrl = `${this.baseUrl}/${routeToPath(loginMapping)}`;
     return this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
+  }
+
+  private async persistSuccessfulCredentials(
+    command: string,
+    payload: Record<string, unknown>,
+    response: APIResponse,
+  ): Promise<void> {
+    if (response.error) return;
+
+    const session = await this.sessionStore.loadSession();
+    if (!session) return;
+
+    let changed = false;
+
+    if (command === 'login') {
+      if (typeof payload.username === 'string' && typeof payload.password === 'string') {
+        session.username = payload.username;
+        session.password = payload.password;
+        changed = true;
+      }
+      const playerId = this.extractPlayerId(response);
+      if (playerId) {
+        session.player_id = playerId;
+        changed = true;
+      }
+    }
+
+    if (command === 'register') {
+      if (typeof payload.username === 'string') {
+        session.username = payload.username;
+        changed = true;
+      }
+      const resultRecord = getStructuredResult(response) || getObjectResult(response);
+      const password = typeof resultRecord?.password === 'string' ? resultRecord.password : undefined;
+      if (password) {
+        session.password = password;
+        changed = true;
+      }
+      const playerId = this.extractPlayerId(response);
+      if (playerId) {
+        session.player_id = playerId;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await this.sessionStore.saveSession(session);
+      if (this.debug) this.logger.debug(`Saved ${command} credentials to session`);
+    }
+  }
+
+  private extractPlayerId(response: APIResponse): string | undefined {
+    const resultRecord = getStructuredResult(response) || getObjectResult(response);
+    const player = isRecord(resultRecord?.player) ? resultRecord.player : undefined;
+    return typeof player?.id === 'string'
+      ? player.id
+      : typeof resultRecord?.player_id === 'string'
+        ? resultRecord.player_id
+        : response.session?.player_id;
   }
 
   private async recoverSession(): Promise<Session | null> {

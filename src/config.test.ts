@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { SpaceMoltClient } from './api.ts';
 import { getRuntimeConfig } from './main.ts';
 import { createDefaultConfig, LegacySpaceMoltConfig } from './runtime.ts';
-import { getSessionPath, SessionManager } from './session.ts';
+import { SessionManager } from './session.ts';
 
 describe('Explicit Runtime Configuration', () => {
   test('LegacySpaceMoltConfig resolves globals dynamically', () => {

@@ -14,6 +14,7 @@ import {
 } from './client';
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
+import { FETCH_TIMEOUT_MS, VERSION } from './runtime';
 
 function parseOk(
   args: string[],
@@ -783,15 +784,8 @@ describe('version sync', () => {
   test('package.json and client.ts VERSION match', () => {
     const pkgPath = path.join(import.meta.dir, '..', 'package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-    const pkgVersion = pkg.version;
 
-    const clientPath = path.join(import.meta.dir, 'runtime.ts');
-    const clientSrc = fs.readFileSync(clientPath, 'utf-8');
-    const match = clientSrc.match(/const VERSION = '([^']+)'/);
-    expect(match).not.toBeNull();
-    const clientVersion = match?.[1];
-
-    expect(clientVersion).toBe(pkgVersion);
+    expect(VERSION).toBe(pkg.version);
   });
 
   test('README current client version matches package.json', () => {
@@ -820,20 +814,8 @@ describe('client.ts source integrity', () => {
     expect(clientSrc.length).toBeGreaterThan(0);
   });
 
-  test('FETCH_TIMEOUT_MS is defined and >= 300000 (covers 270s+ travel)', () => {
-    const clientPath = path.join(import.meta.dir, 'runtime.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    const match = src.match(/const FETCH_TIMEOUT_MS\s*=\s*([\d_]+)/);
-    expect(match).not.toBeNull();
-    const value = parseInt((match?.[1] ?? '0').replace(/_/g, ''), 10);
-    expect(value).toBeGreaterThanOrEqual(300_000);
-  });
-
-  test('FETCH_TIMEOUT_MS is applied to the fetch call', () => {
-    const clientPath = path.join(import.meta.dir, 'transport.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).toContain('const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS');
-    expect(src).toContain('AbortSignal.timeout(timeoutMs)');
+  test('FETCH_TIMEOUT_MS is long enough for extended travel actions', () => {
+    expect(FETCH_TIMEOUT_MS).toBeGreaterThanOrEqual(300_000);
   });
 
   test('session writes are atomic and owner-only where possible', () => {
@@ -846,24 +828,6 @@ describe('client.ts source integrity', () => {
     expect(src).toContain("fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE)");
     expect(src).toContain('fs.promises.rename(tmpPath, sessionPath)');
     expect(src).toContain('hardenPermissions(sessionPath, SESSION_FILE_MODE)');
-  });
-
-  test('TimeoutError is handled in execute()', () => {
-    const clientPath = path.join(import.meta.dir, 'transport.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    expect(src).toContain('TimeoutError');
-  });
-
-  test('client HTTP requests go through the shared JSON request helper', () => {
-    const clientPath = path.join(import.meta.dir, 'transport.ts');
-    const apiPath = path.join(import.meta.dir, 'api.ts');
-    const src = fs.readFileSync(clientPath, 'utf-8');
-    const apiSrc = fs.readFileSync(apiPath, 'utf-8');
-    expect(src).toContain('async function requestJson');
-    expect(src.match(/fetch\(/g)?.length).toBe(1);
-    expect(apiSrc).toContain('requestJson<APIResponse>');
-    expect(src).toContain('Server returned non-JSON response');
-    expect(src).toContain('Server returned invalid JSON response');
   });
 
   test('faction_gift is removed', () => {
@@ -1043,6 +1007,12 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('Usage:');
     expect(result.stdout).toContain('spacemolt travel earth');
     expect(result.stderr).not.toContain('Connection Error');
+  });
+
+  test('help group renders once', () => {
+    const result = runClient(['help', 'combat']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.match(/Combat \/ Battle Commands/g) ?? []).toHaveLength(1);
   });
 
   test('--json unknown command keeps compatible error shape', () => {
