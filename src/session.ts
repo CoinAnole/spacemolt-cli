@@ -122,6 +122,8 @@ export interface SessionManagerOptions {
   profile?: string;
   sessionPath?: string;
   debug?: boolean;
+  transport?: typeof requestJson;
+  clock?: () => number;
 }
 
 export class SessionManager {
@@ -129,12 +131,16 @@ export class SessionManager {
   private readonly _profile?: string;
   private readonly _sessionPath?: string;
   private readonly _debug?: boolean;
+  private readonly _transport: typeof requestJson;
+  private readonly _clock: () => number;
 
   constructor(options: SessionManagerOptions = {}) {
     this._apiBase = options.apiBase;
     this._profile = options.profile;
     this._sessionPath = options.sessionPath;
     this._debug = options.debug;
+    this._transport = options.transport ?? requestJson;
+    this._clock = options.clock ?? Date.now;
   }
 
   get apiBase(): string {
@@ -208,7 +214,7 @@ export class SessionManager {
 
   async createSession(): Promise<Session> {
     if (this.debug) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
-    const response = await requestJson<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
+    const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
     });
@@ -229,7 +235,7 @@ export class SessionManager {
   }
 
   isSessionExpired(session: Session): boolean {
-    return Date.now() > new Date(session.expires_at).getTime() - 60000;
+    return this._clock() > new Date(session.expires_at).getTime() - 60000;
   }
 
   async getSession(): Promise<Session> {
@@ -243,7 +249,7 @@ export class SessionManager {
 
     if (this.debug)
       console.log(`${c.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${c.reset}`);
-    const response = await requestJson<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
+    const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
       method: 'POST',
       sessionId: session.id,
       payload: { username: session.username, password: session.password },
