@@ -86,12 +86,15 @@ export function showProfiles(): void {
   }
 }
 
-export function getSessionPath(): string {
-  if (process.env.SPACEMOLT_SESSION) return process.env.SPACEMOLT_SESSION;
-  if (ACTIVE_PROFILE) {
-    return path.join(SPACEMOLT_HOME, 'sessions', `${ACTIVE_PROFILE}.json`);
+export function getSessionPath(config?: { profile?: string; sessionPath?: string }): string {
+  if (config) {
+    const manager = new SessionManager({
+      profile: config.profile,
+      sessionPath: config.sessionPath,
+    });
+    return manager.getSessionPath();
   }
-  return DEFAULT_SESSION_PATH;
+  return legacySessionManager.getSessionPath();
 }
 
 export function hardenPermissions(targetPath: string, mode: number): void {
@@ -103,79 +106,171 @@ export function hardenPermissions(targetPath: string, mode: number): void {
   }
 }
 
-export async function loadSession(): Promise<Session | null> {
-  try {
-    const sessionPath = getSessionPath();
-    const file = Bun.file(sessionPath);
-    if (await file.exists()) hardenPermissions(sessionPath, SESSION_FILE_MODE);
-    if (await file.exists()) return await file.json();
-  } catch {
-    /* no session */
+export interface SessionManagerOptions {
+  apiBase?: string;
+  profile?: string;
+  sessionPath?: string;
+  debug?: boolean;
+}
+
+export class SessionManager {
+  private readonly _apiBase?: string;
+  private readonly _profile?: string;
+  private readonly _sessionPath?: string;
+  private readonly _debug?: boolean;
+
+  constructor(options: SessionManagerOptions = {}) {
+    this._apiBase = options.apiBase;
+    this._profile = options.profile;
+    this._sessionPath = options.sessionPath;
+    this._debug = options.debug;
   }
-  return null;
+
+  get apiBase(): string {
+    return this._apiBase ?? API_BASE;
+  }
+
+  get profile(): string | undefined {
+    return this._profile ?? ACTIVE_PROFILE;
+  }
+
+  get sessionPath(): string | undefined {
+    return this._sessionPath ?? process.env.SPACEMOLT_SESSION;
+  }
+
+  get debug(): boolean {
+    return this._debug ?? DEBUG;
+  }
+
+  getSessionPath(): string {
+    if (this.sessionPath) return this.sessionPath;
+    if (this.profile) {
+      return path.join(SPACEMOLT_HOME, 'sessions', `${this.profile}.json`);
+    }
+    return DEFAULT_SESSION_PATH;
+  }
+
+  async loadSession(): Promise<Session | null> {
+    try {
+      const sessionPath = this.getSessionPath();
+      const file = Bun.file(sessionPath);
+      if (await file.exists()) hardenPermissions(sessionPath, SESSION_FILE_MODE);
+      if (await file.exists()) return await file.json();
+    } catch {
+      /* no session */
+    }
+    return null;
+  }
+
+  async saveSession(session: Session): Promise<void> {
+    const sessionPath = this.getSessionPath();
+    const parentDir = path.dirname(sessionPath);
+    if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
+    hardenPermissions(parentDir, SESSION_DIR_MODE);
+
+    const tmpPath = path.join(
+      parentDir,
+      `.${path.basename(sessionPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+    );
+    const contents = `${JSON.stringify(session, null, 2)}\n`;
+
+    try {
+      const handle = await fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE);
+      try {
+        await handle.writeFile(contents, 'utf-8');
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      hardenPermissions(tmpPath, SESSION_FILE_MODE);
+      await fs.promises.rename(tmpPath, sessionPath);
+      hardenPermissions(sessionPath, SESSION_FILE_MODE);
+    } catch (err) {
+      try {
+        await fs.promises.unlink(tmpPath);
+      } catch {
+        /* best effort */
+      }
+      throw err;
+    }
+  }
+
+  async createSession(): Promise<Session> {
+    if (this.debug) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
+    const response = await requestJson<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
+    });
+    const data = response.data;
+    if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
+    if (!data.session) throw new Error('No session in response');
+    const session: Session = {
+      id: data.session.id,
+      created_at: data.session.created_at,
+      expires_at: data.session.expires_at,
+    };
+    const profName = this.profile;
+    const profile = profName ? findCredentialProfile(profName) : undefined;
+    if (profile?.username) session.username = profile.username;
+    if (profile?.password) session.password = profile.password;
+    await this.saveSession(session);
+    return session;
+  }
+
+  isSessionExpired(session: Session): boolean {
+    return Date.now() > new Date(session.expires_at).getTime() - 60000;
+  }
+
+  async getSession(): Promise<Session> {
+    const session = await this.loadSession();
+    return !session || this.isSessionExpired(session) ? this.createSession() : session;
+  }
+
+  async authenticateProfileSession(session: Session): Promise<APIResponse | null> {
+    const profName = this.profile;
+    if (!profName || !session.username || !session.password || session.player_id) return null;
+
+    if (this.debug)
+      console.log(`${c.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${c.reset}`);
+    const response = await requestJson<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
+      method: 'POST',
+      sessionId: session.id,
+      payload: { username: session.username, password: session.password },
+    });
+    const data = response.data;
+    if (data.error) return data;
+
+    if (data.session) {
+      session.expires_at = data.session.expires_at;
+      if (data.session.player_id) session.player_id = data.session.player_id;
+    }
+    const playerId = extractPlayerId(data);
+    if (playerId) session.player_id = playerId;
+    await this.saveSession(session);
+    return null;
+  }
+}
+
+const legacySessionManager = new SessionManager();
+
+export async function loadSession(): Promise<Session | null> {
+  return legacySessionManager.loadSession();
 }
 
 export async function saveSession(session: Session): Promise<void> {
-  const sessionPath = getSessionPath();
-  const parentDir = path.dirname(sessionPath);
-  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
-  hardenPermissions(parentDir, SESSION_DIR_MODE);
-
-  const tmpPath = path.join(
-    parentDir,
-    `.${path.basename(sessionPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
-  );
-  const contents = `${JSON.stringify(session, null, 2)}\n`;
-
-  try {
-    const handle = await fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE);
-    try {
-      await handle.writeFile(contents, 'utf-8');
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    hardenPermissions(tmpPath, SESSION_FILE_MODE);
-    await fs.promises.rename(tmpPath, sessionPath);
-    hardenPermissions(sessionPath, SESSION_FILE_MODE);
-  } catch (err) {
-    try {
-      await fs.promises.unlink(tmpPath);
-    } catch {
-      /* best effort */
-    }
-    throw err;
-  }
+  return legacySessionManager.saveSession(session);
 }
 
 export async function createSession(): Promise<Session> {
-  if (DEBUG) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
-  const response = await requestJson<APIResponse>(`${trimTrailingSlash(API_BASE)}/session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
-  });
-  const data = response.data;
-  if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
-  if (!data.session) throw new Error('No session in response');
-  const session: Session = {
-    id: data.session.id,
-    created_at: data.session.created_at,
-    expires_at: data.session.expires_at,
-  };
-  const profile = ACTIVE_PROFILE ? findCredentialProfile(ACTIVE_PROFILE) : undefined;
-  if (profile?.username) session.username = profile.username;
-  if (profile?.password) session.password = profile.password;
-  await saveSession(session);
-  return session;
+  return legacySessionManager.createSession();
 }
 
 export function isSessionExpired(session: Session): boolean {
-  return Date.now() > new Date(session.expires_at).getTime() - 60000;
+  return legacySessionManager.isSessionExpired(session);
 }
 
 export async function getSession(): Promise<Session> {
-  const session = await loadSession();
-  return !session || isSessionExpired(session) ? createSession() : session;
+  return legacySessionManager.getSession();
 }
 
 export function extractPlayerId(response: APIResponse): string | undefined {
@@ -191,26 +286,7 @@ export function extractPlayerId(response: APIResponse): string | undefined {
 }
 
 export async function authenticateProfileSession(session: Session): Promise<APIResponse | null> {
-  if (!ACTIVE_PROFILE || !session.username || !session.password || session.player_id) return null;
-
-  if (DEBUG)
-    console.log(`${c.dim}[DEBUG] Authenticating profile ${ACTIVE_PROFILE} as ${session.username}...${c.reset}`);
-  const response = await requestJson<APIResponse>(`${trimTrailingSlash(API_BASE)}/spacemolt_auth/login`, {
-    method: 'POST',
-    sessionId: session.id,
-    payload: { username: session.username, password: session.password },
-  });
-  const data = response.data;
-  if (data.error) return data;
-
-  if (data.session) {
-    session.expires_at = data.session.expires_at;
-    if (data.session.player_id) session.player_id = data.session.player_id;
-  }
-  const playerId = extractPlayerId(data);
-  if (playerId) session.player_id = playerId;
-  await saveSession(session);
-  return null;
+  return legacySessionManager.authenticateProfileSession(session);
 }
 
 export function setActiveProfile(profile: string | undefined): void {

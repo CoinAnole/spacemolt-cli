@@ -2,8 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
-import { API_BASE, c, VERSION } from './runtime.ts';
-import { ACTIVE_PROFILE, getSessionPath, loadSession } from './session.ts';
+import { API_BASE, c, VERSION, type SpaceMoltConfig } from './runtime.ts';
+import { ACTIVE_PROFILE, getSessionPath, SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 
 export interface DoctorCheck {
@@ -26,11 +26,22 @@ function fail(name: string, message: string, detail?: string): DoctorCheck {
   return { name, ok: false, message, detail };
 }
 
-export async function runDoctor(): Promise<DoctorResult> {
+export async function runDoctor(config?: SpaceMoltConfig): Promise<DoctorResult> {
   const checks: DoctorCheck[] = [];
 
+  const apiBase = config?.apiBase || API_BASE;
+  const profile = config?.profile !== undefined ? config.profile : ACTIVE_PROFILE;
+  const sessionPath = getSessionPath(config);
+
+  const sessionStore = new SessionManager({
+    apiBase,
+    profile,
+    sessionPath,
+    debug: config?.debug,
+  });
+
   try {
-    const resp = await requestJson(`${trimTrailingSlash(API_BASE)}/session`, {
+    const resp = await requestJson(`${trimTrailingSlash(apiBase)}/session`, {
       method: 'GET',
       timeoutMs: 5000,
     });
@@ -41,7 +52,6 @@ export async function runDoctor(): Promise<DoctorResult> {
   }
 
   try {
-    const sessionPath = getSessionPath();
     const exists = fs.existsSync(sessionPath);
     checks.push(exists ? pass('session', sessionPath) : pass('session', sessionPath, 'file does not exist yet'));
   } catch (err) {
@@ -49,10 +59,10 @@ export async function runDoctor(): Promise<DoctorResult> {
     checks.push(fail('session', 'error resolving path', msg));
   }
 
-  checks.push(pass('profile', ACTIVE_PROFILE || 'default'));
+  checks.push(pass('profile', profile || 'default'));
 
   try {
-    const session = await loadSession();
+    const session = await sessionStore.loadSession();
     if (!session) {
       checks.push(pass('auth', 'no session (run login or register)'));
     } else if (session.player_id) {

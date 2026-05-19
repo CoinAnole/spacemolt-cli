@@ -11,6 +11,66 @@ export let QUIET = false;
 export let FORMAT: 'table' | 'json' | 'yaml' | 'text' = 'table';
 export let COMPACT = false;
 export const VERSION = '2.0.0';
+
+import { ACTIVE_PROFILE } from './session.ts';
+
+export interface SpaceMoltConfig {
+  apiBase: string;
+  jsonOutput: boolean;
+  debug: boolean;
+  plain: boolean;
+  quiet: boolean;
+  format: 'table' | 'json' | 'yaml' | 'text';
+  compact: boolean;
+  profile?: string;
+  sessionPath?: string;
+}
+
+export class LegacySpaceMoltConfig implements SpaceMoltConfig {
+  get apiBase(): string {
+    return API_BASE;
+  }
+  get jsonOutput(): boolean {
+    return JSON_OUTPUT;
+  }
+  get debug(): boolean {
+    return DEBUG;
+  }
+  get plain(): boolean {
+    return PLAIN;
+  }
+  get quiet(): boolean {
+    return QUIET;
+  }
+  get format(): 'table' | 'json' | 'yaml' | 'text' {
+    return FORMAT;
+  }
+  get compact(): boolean {
+    return COMPACT;
+  }
+  get profile(): string | undefined {
+    return ACTIVE_PROFILE;
+  }
+  get sessionPath(): string | undefined {
+    return process.env.SPACEMOLT_SESSION;
+  }
+}
+
+export function createDefaultConfig(overrides?: Partial<SpaceMoltConfig>): SpaceMoltConfig {
+  const base = new LegacySpaceMoltConfig();
+  if (!overrides) return base;
+  return {
+    get apiBase() { return overrides.apiBase !== undefined ? overrides.apiBase : base.apiBase; },
+    get jsonOutput() { return overrides.jsonOutput !== undefined ? overrides.jsonOutput : base.jsonOutput; },
+    get debug() { return overrides.debug !== undefined ? overrides.debug : base.debug; },
+    get plain() { return overrides.plain !== undefined ? overrides.plain : base.plain; },
+    get quiet() { return overrides.quiet !== undefined ? overrides.quiet : base.quiet; },
+    get format() { return overrides.format !== undefined ? overrides.format : base.format; },
+    get compact() { return overrides.compact !== undefined ? overrides.compact : base.compact; },
+    get profile() { return overrides.profile !== undefined ? overrides.profile : base.profile; },
+    get sessionPath() { return overrides.sessionPath !== undefined ? overrides.sessionPath : base.sessionPath; },
+  };
+}
 // Mutations block until the server tick resolves. Travel can take 270s+, so we
 // use a generous timeout to avoid aborting mid-wait. 600s covers the longest
 // known travel times with plenty of headroom.

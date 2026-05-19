@@ -36,15 +36,15 @@ export function isIdKind(value: string): value is IdKind {
   return ID_KINDS.has(value as IdKind);
 }
 
-export function getIdCachePath(): string {
-  const sessionPath = getSessionPath();
-  const parsed = path.parse(sessionPath);
+export function getIdCachePath(sessionPath?: string): string {
+  const resolvedPath = sessionPath || getSessionPath();
+  const parsed = path.parse(resolvedPath);
   return path.join(parsed.dir, `${parsed.name}.ids.json`);
 }
 
-export function loadIdCacheSync(): IdHint[] {
+export function loadIdCacheSync(sessionPath?: string): IdHint[] {
   try {
-    const cachePath = getIdCachePath();
+    const cachePath = getIdCachePath(sessionPath);
     if (!fs.existsSync(cachePath)) return [];
     hardenPermissions(cachePath, CACHE_FILE_MODE);
     const parsed = JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as Partial<IdCacheFile>;
@@ -55,8 +55,8 @@ export function loadIdCacheSync(): IdHint[] {
   }
 }
 
-async function saveIdCache(hints: IdHint[]): Promise<void> {
-  const cachePath = getIdCachePath();
+export async function saveIdCache(hints: IdHint[], sessionPath?: string): Promise<void> {
+  const cachePath = getIdCachePath(sessionPath);
   const parentDir = path.dirname(cachePath);
   if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: CACHE_DIR_MODE });
   hardenPermissions(parentDir, CACHE_DIR_MODE);
@@ -64,7 +64,7 @@ async function saveIdCache(hints: IdHint[]): Promise<void> {
   hardenPermissions(cachePath, CACHE_FILE_MODE);
 }
 
-export async function cacheIdsFromResponse(command: string, response: APIResponse): Promise<void> {
+export async function cacheIdsFromResponse(command: string, response: APIResponse, sessionPath?: string): Promise<void> {
   if (response.error) return;
   const result = getStructuredResult(response) || getObjectResult(response);
   if (!result) return;
@@ -72,9 +72,9 @@ export async function cacheIdsFromResponse(command: string, response: APIRespons
   const extracted = extractIdHints(command, result, new Date().toISOString());
   if (extracted.length === 0) return;
 
-  const existing = loadIdCacheSync();
+  const existing = loadIdCacheSync(sessionPath);
   const merged = mergeHints(extracted, existing);
-  await saveIdCache(merged);
+  await saveIdCache(merged, sessionPath);
 }
 
 export function extractIdHints(command: string, result: Record<string, unknown>, seenAt: string): IdHint[] {
@@ -247,31 +247,34 @@ export function cachedIdAmbiguityMessage(result: Extract<CachedIdResolveResult, 
   return `Ambiguous cached ${result.kind} match for "${result.query}". Use the exact ID. Matches: ${candidates}${suffix}`;
 }
 
-export function printCachedIdSuggestions(command: string, field?: string): void {
+export function printCachedIdSuggestions(command: string, field?: string, sessionPath?: string): void {
   if (QUIET) return;
   const kind = idKindForCommandField(command, field);
   if (!kind) return;
-  const suggestions = hintsForKind(kind).slice(0, 8);
+  const hints = loadIdCacheSync(sessionPath);
+  const suggestions = hintsForKind(kind, hints).slice(0, 8);
   if (suggestions.length === 0) return;
 
   console.error(`\n${c.cyan}Cached ${kind} IDs:${c.reset}`);
   for (const hint of suggestions) console.error(`  ${formatHint(hint)}`);
 }
 
-export function printIds(kind: IdKind): void {
-  const hints = hintsForKind(kind);
-  if (hints.length === 0) {
+export function printIds(kind: IdKind, sessionPath?: string): void {
+  const hints = loadIdCacheSync(sessionPath);
+  const filtered = hintsForKind(kind, hints);
+  if (filtered.length === 0) {
     console.log(`No cached ${kind} IDs yet.`);
     printDiscoveryCommands(kind);
     return;
   }
 
   console.log(`${c.bright}${kind} IDs${c.reset}`);
-  for (const hint of hints) console.log(`  ${formatHint(hint)}`);
+  for (const hint of filtered) console.log(`  ${formatHint(hint)}`);
 }
 
-export function printWhereCanI(query: string): void {
-  const matches = searchItemHints(query);
+export function printWhereCanI(query: string, sessionPath?: string): void {
+  const hints = loadIdCacheSync(sessionPath);
+  const matches = searchItemHints(query, hints);
   if (matches.length === 0) {
     console.log(`No cached item matches for "${query}".`);
     console.log(`Try: spacemolt catalog type=items search=${query}`);

@@ -2,8 +2,8 @@ import { applyPayloadTransforms } from './args.ts';
 import { routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { ERROR_REGISTRY } from './errors.ts';
 import { trimTrailingSlash } from './response.ts';
-import { API_BASE, DEBUG, JSON_OUTPUT, MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS } from './runtime.ts';
-import { authenticateProfileSession, createSession, getSession, loadSession, saveSession } from './session.ts';
+import { MAX_RATE_LIMIT_RETRIES, MAX_SESSION_RECOVERY_ATTEMPTS, SpaceMoltConfig, createDefaultConfig } from './runtime.ts';
+import { SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
 
@@ -14,21 +14,22 @@ const SESSION_ERROR_CODES = new Set(
 );
 
 export interface SpaceMoltClientOptions {
-  transport: {
+  config?: SpaceMoltConfig;
+  transport?: {
     requestJson<T>(url: string, options?: JsonRequestOptions): Promise<{ status: number; data: T }>;
   };
-  sessionStore: {
+  sessionStore?: {
     getSession(): Promise<Session>;
     loadSession(): Promise<Session | null>;
     saveSession(session: Session): Promise<void>;
     createSession(): Promise<Session>;
     authenticateProfileSession(session: Session): Promise<APIResponse | null>;
   };
-  clock: {
+  clock?: {
     now(): number;
   };
-  sleep: (ms: number) => Promise<void>;
-  logger: {
+  sleep?: (ms: number) => Promise<void>;
+  logger?: {
     debug(message: string): void;
     error(message: string): void;
     warn(message: string): void;
@@ -36,26 +37,45 @@ export interface SpaceMoltClientOptions {
 }
 
 export class SpaceMoltClient {
-  private readonly transport: SpaceMoltClientOptions['transport'];
-  private readonly sessionStore: SpaceMoltClientOptions['sessionStore'];
-  private readonly clock: SpaceMoltClientOptions['clock'];
-  private readonly sleep: SpaceMoltClientOptions['sleep'];
-  private readonly logger: SpaceMoltClientOptions['logger'];
-  private readonly baseUrl: string;
+  public readonly config: SpaceMoltConfig;
+  private readonly transport: NonNullable<SpaceMoltClientOptions['transport']>;
+  private readonly sessionStore: NonNullable<SpaceMoltClientOptions['sessionStore']>;
+  private readonly clock: NonNullable<SpaceMoltClientOptions['clock']>;
+  private readonly sleep: NonNullable<SpaceMoltClientOptions['sleep']>;
+  private readonly logger: NonNullable<SpaceMoltClientOptions['logger']>;
   private readonly maxSessionRecoveryAttempts: number;
   private readonly maxRateLimitRetries: number;
-  private readonly jsonOutput: boolean;
 
-  constructor(options: SpaceMoltClientOptions) {
-    this.transport = options.transport;
-    this.sessionStore = options.sessionStore;
-    this.clock = options.clock;
-    this.sleep = options.sleep;
-    this.logger = options.logger;
-    this.baseUrl = trimTrailingSlash(API_BASE);
+  constructor(options: SpaceMoltClientOptions = {}) {
+    this.config = options.config ?? createDefaultConfig();
+    this.transport = options.transport ?? { requestJson };
+    this.sessionStore = options.sessionStore ?? new SessionManager({
+      apiBase: this.config.apiBase,
+      profile: this.config.profile,
+      sessionPath: this.config.sessionPath,
+      debug: this.config.debug,
+    });
+    this.clock = options.clock ?? { now: Date.now };
+    this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
+    this.logger = options.logger ?? {
+      debug: (msg) => console.log(`[DEBUG] ${msg}`),
+      error: (msg) => console.error(msg),
+      warn: (msg) => console.log(msg),
+    };
     this.maxSessionRecoveryAttempts = MAX_SESSION_RECOVERY_ATTEMPTS;
     this.maxRateLimitRetries = MAX_RATE_LIMIT_RETRIES;
-    this.jsonOutput = JSON_OUTPUT;
+  }
+
+  get baseUrl(): string {
+    return trimTrailingSlash(this.config.apiBase);
+  }
+
+  get jsonOutput(): boolean {
+    return this.config.jsonOutput;
+  }
+
+  get debug(): boolean {
+    return this.config.debug;
   }
 
   async execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
@@ -120,7 +140,7 @@ export class SpaceMoltClient {
     requestMethod: string,
     requestPayload?: Record<string, unknown>,
   ): Promise<APIResponse> {
-    if (DEBUG) {
+    if (this.debug) {
       this.logger.debug(`Request: ${requestMethod} ${requestUrl}`);
       this.logger.debug(`Route: v2`);
       this.logger.debug(`Session: ${currentSession.id.substring(0, 8)}...`);
@@ -141,7 +161,7 @@ export class SpaceMoltClient {
 
     const data = response.data;
 
-    if (DEBUG) {
+    if (this.debug) {
       this.logger.debug(`Response: ${response.status} (${elapsed}ms)`);
       if (data.error) this.logger.debug(`Error: ${data.error.code} - ${data.error.message}`);
       if (data.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
@@ -165,14 +185,14 @@ export class SpaceMoltClient {
   }
 
   private async recoverSession(): Promise<Session | null> {
-    if (DEBUG) this.logger.debug(`Session expired, creating new session...`);
+    if (this.debug) this.logger.debug(`Session expired, creating new session...`);
     const oldSession = await this.sessionStore.loadSession();
     const newSession = await this.sessionStore.createSession();
     if (oldSession?.username && oldSession?.password) {
       newSession.username = oldSession.username;
       newSession.password = oldSession.password;
       await this.sessionStore.saveSession(newSession);
-      if (DEBUG) this.logger.debug(`Re-authenticating as ${oldSession.username}...`);
+      if (this.debug) this.logger.debug(`Re-authenticating as ${oldSession.username}...`);
       const loginResp = await this.loginWithSession(newSession, oldSession.username, oldSession.password);
       if (loginResp.error) {
         if (!this.jsonOutput) {
@@ -189,17 +209,7 @@ export class SpaceMoltClient {
   }
 }
 
-const defaultClient = new SpaceMoltClient({
-  transport: { requestJson },
-  sessionStore: { getSession, loadSession, saveSession, createSession, authenticateProfileSession },
-  clock: { now: Date.now },
-  sleep: (ms) => Bun.sleep(ms),
-  logger: {
-    debug: (msg) => console.log(`[DEBUG] ${msg}`),
-    error: (msg) => console.error(msg),
-    warn: (msg) => console.log(msg),
-  },
-});
+export const defaultClient = new SpaceMoltClient();
 
 export async function execute(command: string, payload?: Record<string, unknown>): Promise<APIResponse> {
   return defaultClient.execute(command, payload);

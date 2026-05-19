@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { execute } from './api.ts';
+import { execute, SpaceMoltClient, defaultClient } from './api.ts';
 import {
   type CommandParseError,
   convertPayloadTypes,
@@ -42,16 +42,31 @@ import {
   printWhereCanI,
   resolveCachedId,
   searchItemHints,
+  loadIdCacheSync,
 } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
-import { API_BASE, c, DEBUG, VERSION } from './runtime.ts';
-import { getSession, loadSession, saveSession, showProfiles } from './session.ts';
+import { API_BASE, c, DEBUG, VERSION, type SpaceMoltConfig, DEFAULT_V2_API_BASE } from './runtime.ts';
+import { getSession, loadSession, saveSession, showProfiles, getSessionPath, SessionManager } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
 export type CliResult = { exitCode: number; stdout?: string; stderr?: string };
+
+export function getRuntimeConfig(options: GlobalOptions): SpaceMoltConfig {
+  return {
+    apiBase: process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE,
+    jsonOutput: options.json || options.format === 'json' || process.env.SPACEMOLT_OUTPUT === 'json',
+    debug: process.env.DEBUG === 'true',
+    plain: options.plain,
+    quiet: options.quiet,
+    format: options.format || 'table',
+    compact: options.compact,
+    profile: options.profile,
+    sessionPath: process.env.SPACEMOLT_SESSION,
+  };
+}
 
 type CommandStatus = { type: 'exit'; exitCode: number };
 type ParsedCommand = { type: 'command'; command: string; rawPayload: Record<string, string> };
@@ -202,6 +217,7 @@ export function preparePayload(
   command: string,
   rawPayload: Record<string, string>,
   options: GlobalOptions,
+  sessionPath?: string,
 ): PreparedPayload {
   if (!COMMANDS[command]) {
     if (options.json) {
@@ -228,7 +244,7 @@ export function preparePayload(
   }
 
   const requestPayload = normalizeParsedPayload(command, rawPayload);
-  const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload);
+  const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath);
   if (resolvedPayload.type === 'ambiguous') {
     if (options.json) {
       printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result));
@@ -245,14 +261,19 @@ export function preparePayload(
   return { type: 'payload', payload };
 }
 
-function resolveCachedIdsForPayload(command: string, payload: Record<string, string>): PayloadResolveResult {
+function resolveCachedIdsForPayload(
+  command: string,
+  payload: Record<string, string>,
+  sessionPath?: string,
+): PayloadResolveResult {
   const resolvedPayload: Record<string, string> = { ...payload };
+  const hints = loadIdCacheSync(sessionPath);
 
   for (const [field, value] of Object.entries(payload)) {
     const kind = idKindForCommandField(command, field);
     if (!kind) continue;
 
-    const resolved = resolveCachedId(kind, value);
+    const resolved = resolveCachedId(kind, value, hints);
     if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
     if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
   }
@@ -274,15 +295,16 @@ export async function runCommand(
   command: string,
   payload: Record<string, unknown>,
   options: GlobalOptions,
+  client: SpaceMoltClient = defaultClient,
 ): Promise<CommandRun> {
-  await persistSubmittedCredentials(command, payload);
+  await persistSubmittedCredentials(command, payload, client);
 
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, payload) : null;
   const response = options.dryRun
     ? serverPreviewCommand
-      ? await execute(serverPreviewCommand, payload)
+      ? await client.execute(serverPreviewCommand, payload)
       : createDryRunResponse(command, payload)
-    : await execute(command, payload);
+    : await client.execute(command, payload);
 
   return {
     command,
@@ -291,7 +313,11 @@ export async function runCommand(
   };
 }
 
-export async function renderResponse(commandRun: CommandRun, options: GlobalOptions): Promise<number> {
+export async function renderResponse(
+  commandRun: CommandRun,
+  options: GlobalOptions,
+  client: SpaceMoltClient = defaultClient,
+): Promise<number> {
   const { command, displayCommand, response } = commandRun;
   const isJson = options.json || options.format === 'json';
   const hasProjection = Boolean(options.jq || (options.fields && options.fields.length > 0));
@@ -309,12 +335,16 @@ export async function renderResponse(commandRun: CommandRun, options: GlobalOpti
 
   if (!isJson && response.error) {
     displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp });
-    if (shouldShowCachedIdSuggestions(command, response.error)) printCachedIdSuggestions(command);
+    const sessionPath = getSessionPath(client.config);
+    if (shouldShowCachedIdSuggestions(command, response.error)) {
+      printCachedIdSuggestions(command, undefined, sessionPath);
+    }
     return 1;
   }
 
-  await persistResponseCredentials(command, response);
-  if (!options.dryRun) await cacheIdsFromResponse(command, response);
+  await persistResponseCredentials(command, response, client);
+  const sessionPath = getSessionPath(client.config);
+  if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
   if (isJson && !hasProjection) {
     printJsonResponse(response, options.compact);
@@ -341,8 +371,8 @@ export interface CommandHandler {
     argv: string[],
     options: GlobalOptions,
   ): { ok: true; payload: any } | { ok: false; error: CommandError };
-  run(payload: any, options: GlobalOptions): Promise<any> | any;
-  render(runResult: any, options: GlobalOptions): Promise<number> | number;
+  run(payload: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<any> | any;
+  render(runResult: any, options: GlobalOptions, client?: SpaceMoltClient): Promise<number> | number;
 }
 
 const profileHandler: CommandHandler = {
@@ -455,11 +485,11 @@ const doctorHandler: CommandHandler = {
   parse(argv, options) {
     return { ok: true, payload: {} };
   },
-  async run(payload, options) {
-    const doctorResult = await runDoctor();
+  async run(payload, options, client) {
+    const doctorResult = await runDoctor(client?.config);
     return { doctorResult };
   },
-  render(result, options) {
+  render(result, options, client) {
     const { doctorResult } = result;
     if (options.json) {
       console.log(JSON.stringify({ structuredContent: doctorResult }, null, 2));
@@ -488,14 +518,17 @@ const idsHandler: CommandHandler = {
     }
     return { ok: true, payload: { kind } };
   },
-  run(payload, options) {
-    return { kind: payload.kind, hints: hintsForKind(payload.kind) };
+  run(payload, options, client) {
+    const sessionPath = client ? getSessionPath(client.config) : undefined;
+    const hints = loadIdCacheSync(sessionPath);
+    return { kind: payload.kind, hints: hintsForKind(payload.kind, hints) };
   },
-  render(result, options) {
+  render(result, options, client) {
     if (options.json) {
       console.log(JSON.stringify({ structuredContent: { kind: result.kind, ids: result.hints } }, null, 2));
     } else {
-      printIds(result.kind);
+      const sessionPath = client ? getSessionPath(client.config) : undefined;
+      printIds(result.kind, sessionPath);
     }
     return 0;
   },
@@ -519,14 +552,17 @@ const whereCanIHandler: CommandHandler = {
     }
     return { ok: true, payload: { query } };
   },
-  run(payload, options) {
-    return { query: payload.query, matches: searchItemHints(payload.query) };
+  run(payload, options, client) {
+    const sessionPath = client ? getSessionPath(client.config) : undefined;
+    const hints = loadIdCacheSync(sessionPath);
+    return { query: payload.query, matches: searchItemHints(payload.query, hints) };
   },
-  render(result, options) {
+  render(result, options, client) {
     if (options.json) {
       console.log(JSON.stringify({ structuredContent: { query: result.query, matches: result.matches } }, null, 2));
     } else {
-      printWhereCanI(result.query);
+      const sessionPath = client ? getSessionPath(client.config) : undefined;
+      printWhereCanI(result.query, sessionPath);
     }
     return 0;
   },
@@ -647,7 +683,10 @@ class ApiCommandHandler implements CommandHandler {
       };
     }
 
-    const prepared = preparePayload(this.name, parsedArgs.payload, options);
+    const config = getRuntimeConfig(options);
+    const sessionPath = getSessionPath(config);
+
+    const prepared = preparePayload(this.name, parsedArgs.payload, options, sessionPath);
     if (prepared.type === 'exit') {
       return {
         ok: false,
@@ -662,12 +701,12 @@ class ApiCommandHandler implements CommandHandler {
     return { ok: true, payload: prepared.payload };
   }
 
-  async run(payload: any, options: GlobalOptions) {
-    return runCommand(this.name, payload, options);
+  async run(payload: any, options: GlobalOptions, client?: SpaceMoltClient) {
+    return runCommand(this.name, payload, options, client);
   }
 
-  async render(runResult: any, options: GlobalOptions) {
-    return renderResponse(runResult, options);
+  async render(runResult: any, options: GlobalOptions, client?: SpaceMoltClient) {
+    return renderResponse(runResult, options, client);
   }
 }
 
@@ -722,7 +761,7 @@ function resolveHandler(argv: string[], options: GlobalOptions): CommandHandler 
   return undefined;
 }
 
-export async function runInvocation(argv: string[]): Promise<number> {
+export async function runInvocation(argv: string[], client?: SpaceMoltClient): Promise<number> {
   const parsedInvocation = parseInvocation(argv);
   if (!parsedInvocation.ok) {
     console.error(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
@@ -736,6 +775,9 @@ export async function runInvocation(argv: string[]): Promise<number> {
 
   const handler = resolveHandler(invocation.args, invocation.options);
 
+  const config = getRuntimeConfig(invocation.options);
+  const activeClient = client ?? new SpaceMoltClient({ config });
+
   if (invocation.options.watch) {
     if (!handler) {
       const commandName = invocation.args[0] || 'help';
@@ -746,7 +788,7 @@ export async function runInvocation(argv: string[]): Promise<number> {
       }
       return 1;
     }
-    return runWatchLoop(invocation, handler);
+    return runWatchLoop(invocation, handler, activeClient);
   }
 
   if (!handler) {
@@ -776,8 +818,8 @@ export async function runInvocation(argv: string[]): Promise<number> {
       return parsed.error.exitCode ?? 1;
     }
 
-    const runResult = await handler.run(parsed.payload, invocation.options);
-    return await handler.render(runResult, invocation.options);
+    const runResult = await handler.run(parsed.payload, invocation.options, activeClient);
+    return await handler.render(runResult, invocation.options, activeClient);
   } catch (error) {
     return renderConnectionError(error, invocation.options);
   }
@@ -789,7 +831,7 @@ function shouldShowCachedIdSuggestions(command: string, error: { code: string; m
   return /invalid|unknown|not_found|not found|missing/.test(text);
 }
 
-async function runWatchLoop(invocation: Invocation, handler: CommandHandler): Promise<number> {
+async function runWatchLoop(invocation: Invocation, handler: CommandHandler, client: SpaceMoltClient): Promise<number> {
   const interval = invocation.options.watch;
   if (!interval) return 0;
 
@@ -817,7 +859,7 @@ async function runWatchLoop(invocation: Invocation, handler: CommandHandler): Pr
         return parsed.error.exitCode ?? 1;
       }
 
-      const runResult = await handler.run(parsed.payload, invocation.options);
+      const runResult = await handler.run(parsed.payload, invocation.options, client);
 
       process.stdout.write('\x1b[2J\x1b[H');
 
@@ -825,7 +867,7 @@ async function runWatchLoop(invocation: Invocation, handler: CommandHandler): Pr
         ...invocation.options,
         noTimestamp: true,
       };
-      await handler.render(runResult, watchOptions);
+      await handler.render(runResult, watchOptions, client);
 
       if (running) {
         console.log(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
@@ -844,23 +886,31 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function persistSubmittedCredentials(command: string, payload: Record<string, unknown>): Promise<void> {
+async function persistSubmittedCredentials(
+  command: string,
+  payload: Record<string, unknown>,
+  client: SpaceMoltClient,
+): Promise<void> {
   if (command === 'login' && typeof payload.username === 'string' && typeof payload.password === 'string') {
-    const session = await getSession();
+    const session = await client.sessionStore.getSession();
     session.username = payload.username;
     session.password = payload.password;
-    await saveSession(session);
-    if (DEBUG) console.log(`${c.dim}[DEBUG] Saved credentials to session${c.reset}`);
+    await client.sessionStore.saveSession(session);
+    if (client.debug) console.log(`${c.dim}[DEBUG] Saved credentials to session${c.reset}`);
   }
 
   if (command === 'register' && typeof payload.username === 'string') {
-    const session = await getSession();
+    const session = await client.sessionStore.getSession();
     session.username = payload.username;
-    await saveSession(session);
+    await client.sessionStore.saveSession(session);
   }
 }
 
-async function persistResponseCredentials(command: string, response: APIResponse): Promise<void> {
+async function persistResponseCredentials(
+  command: string,
+  response: APIResponse,
+  client: SpaceMoltClient,
+): Promise<void> {
   const structuredResult = getStructuredResult(response);
   const resultRecord = structuredResult || getObjectResult(response);
 
@@ -875,12 +925,12 @@ async function persistResponseCredentials(command: string, response: APIResponse
           : response.session?.player_id;
 
     if (password) {
-      const session = await loadSession();
+      const session = await client.sessionStore.loadSession();
       if (session) {
         session.password = password;
         if (playerId) session.player_id = playerId;
-        await saveSession(session);
-        if (DEBUG) console.log(`${c.dim}[DEBUG] Saved password to session${c.reset}`);
+        await client.sessionStore.saveSession(session);
+        if (client.debug) console.log(`${c.dim}[DEBUG] Saved password to session${c.reset}`);
       }
     }
   }
@@ -895,10 +945,10 @@ async function persistResponseCredentials(command: string, response: APIResponse
           : response.session?.player_id;
 
     if (playerId) {
-      const session = await loadSession();
+      const session = await client.sessionStore.loadSession();
       if (session) {
         session.player_id = playerId;
-        await saveSession(session);
+        await client.sessionStore.saveSession(session);
       }
     }
   }
