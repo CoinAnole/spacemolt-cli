@@ -144,6 +144,84 @@ export const cargoFixture = {
   available: 50,
 };
 
+export const shipFixture = {
+  message: 'Ship status',
+  modules: [
+    {
+      cpu_usage: 2,
+      module_id: 'module-1',
+      name: 'Cargo Expander III',
+      power_usage: 2,
+      size: 10,
+      slot: 'utility',
+      type: 'utility',
+      type_id: 'cargo_expander_iii',
+      wear: 0,
+      wear_status: 'Pristine',
+    },
+    {
+      cpu_usage: 3,
+      module_id: 'module-2',
+      name: 'Pulse Laser III',
+      power_usage: 8,
+      size: 10,
+      slot: 'weapon',
+      type: 'weapon',
+      type_id: 'pulse_laser_iii',
+      wear: 2,
+      wear_status: 'Scuffed',
+    },
+  ],
+  ship: {
+    armor: 18,
+    cargo_capacity: 1250,
+    cargo_used: 0,
+    class_id: 'deep_survey',
+    class_name: 'Deep Survey',
+    cpu_capacity: 34,
+    cpu_used: 16,
+    custom_name: 'Asteroid Accessory',
+    defense_slots: 1,
+    fuel: 240,
+    hull: 420,
+    id: 'ship-1',
+    max_fuel: 240,
+    max_hull: 420,
+    max_shield: 300,
+    name: 'Deep Survey',
+    power_capacity: 75,
+    power_used: 23,
+    shield: 300,
+    shield_recharge: 4,
+    utility_slots: 5,
+    weapon_slots: 1,
+  },
+};
+
+export const baseFixture = {
+  base: {
+    defense_level: 55,
+    description: 'A busy trade station.',
+    empire: 'solarian',
+    facilities: ['fuel_grid', 'trade_nexus', 'fleet_yards'],
+    fuel: 290750,
+    id: 'nova_terra_central',
+    max_fuel: 0,
+    name: 'Nova Terra Central',
+    poi_id: 'nova_terra_central',
+    public_access: true,
+  },
+  condition: {
+    condition: 'critical',
+    condition_text: 'Critical infrastructure failure.',
+    satisfaction_pct: 16,
+    satisfied_count: 2,
+    total_service_infra: 12,
+  },
+  fuel_price: 6,
+  services: ['crafting', 'market', 'missions', 'refuel'],
+};
+
 export const nearbyFixture = {
   nearby: [{ username: 'Marlowe', faction_tag: 'SMC', ship_class: 'prospector' }],
   count: 1,
@@ -212,6 +290,27 @@ export const facilitiesFixture = {
       owner_name: 'Marlowe',
     },
   ],
+};
+
+export const facilityTypesFixture = {
+  categories: {
+    infrastructure: {
+      count: 55,
+      description: 'Power and life support systems',
+    },
+    personal: {
+      buildable: 4,
+      count: 13,
+      description: 'Personal facilities',
+    },
+    production: {
+      buildable: 427,
+      count: 1589,
+      description: 'Manufacturing facilities',
+    },
+  },
+  hint: 'Use filters to browse.',
+  total: 1753,
 };
 
 export const facilityFixture = {
@@ -333,20 +432,99 @@ export const marketListingsFixture = {
   ],
 };
 
+export const catalogItemsFixture = {
+  items: [
+    {
+      base_value: 500,
+      category: 'ammo',
+      description: 'The most destructive single projectile in known space.',
+      id: 'antimatter_torpedoes',
+      name: 'Antimatter Torpedoes',
+      rarity: 'exotic',
+      size: 1,
+      stackable: true,
+      tradeable: true,
+    },
+    {
+      base_value: 15,
+      category: 'ammo',
+      description: 'Hardened penetrator tips packed in a sealed magazine.',
+      id: 'armor_piercing_rounds_box',
+      name: 'Armor Piercing Rounds Box',
+      rarity: 'uncommon',
+      size: 1,
+      stackable: true,
+      tradeable: true,
+    },
+  ],
+  message: 'Items: showing 2 of 537',
+  page: 1,
+  page_size: 20,
+  total: 537,
+  total_pages: 27,
+  type: 'items',
+};
+
+export const missionsFixture = {
+  base_id: 'nova_terra_central',
+  base_name: 'Nova Terra Central',
+  missions: [
+    {
+      difficulty: 3,
+      mission_id: 'pirate_sweep',
+      title: 'Pirate Sweep',
+      type: 'combat',
+    },
+    {
+      difficulty: 5,
+      mission_id: 'deep_core_prospecting',
+      title: 'Deep Core Prospecting',
+      type: 'mining',
+    },
+  ],
+};
+
+export const factionsFixture = {
+  factions: [
+    {
+      id: 'faction-1',
+      leader_username: 'DriftMiner-7',
+      member_count: 20,
+      name: 'Drift Matrix',
+      owned_bases: 0,
+      tag: 'DMX7',
+    },
+    {
+      id: 'faction-2',
+      leader_username: 'Mercator',
+      member_count: 1,
+      name: 'Mercs United',
+      owned_bases: 0,
+      tag: 'MERC',
+    },
+  ],
+  limit: 50,
+  offset: 0,
+  total_count: 129,
+};
+
 export const formatterFixtureCases = {
   arrival: { command: 'travel', fixture: arrivalFixture },
+  base: { command: 'get_base', fixture: baseFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   chat_sent: { command: 'chat', fixture: chatSentFixture },
   drone: { command: 'get_drone', fixture: droneFixture },
   drones: { command: 'list_drones', fixture: dronesFixture },
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
+  facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility: { command: 'facility_get', fixture: facilityFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },
   intel: { command: 'faction_trade_intel', fixture: intelFixture },
   market_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   nearby: { command: 'get_nearby', fixture: nearbyFixture },
   poi_info: { command: 'get_poi', fixture: poiInfoFixture },
+  ship: { command: 'get_ship', fixture: shipFixture },
   storage: { command: 'storage', fixture: storageFixture },
   system_info: { command: 'get_system', fixture: systemInfoFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
@@ -358,9 +536,15 @@ export const highValueCommandFixtures: Record<string, { command: string; fixture
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
+  get_ship: { command: 'get_ship', fixture: shipFixture },
+  get_base: { command: 'get_base', fixture: baseFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   get_skills: { command: 'get_skills', fixture: skillsV2Fixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
+  catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
+  get_missions: { command: 'get_missions', fixture: missionsFixture },
+  faction_list: { command: 'faction_list', fixture: factionsFixture },
+  facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   travel: { command: 'travel', fixture: arrivalFixture },

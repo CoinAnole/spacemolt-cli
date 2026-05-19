@@ -49,6 +49,105 @@ export function shapeFallbackFormatters(formatters: readonly ResultFormatter[], 
   return formatters.filter((formatter) => formatter.shapeFallback && !formatterMatchesCommand(formatter, command));
 }
 
+const GENERIC_LIST_KEYS = [
+  'items',
+  'missions',
+  'factions',
+  'facilities',
+  'facility_types',
+  'types',
+  'ships',
+  'orders',
+  'notes',
+  'threads',
+  'results',
+] as const;
+
+const GENERIC_LIST_COLUMNS: Array<[string, string[]]> = [
+  ['Name', ['name', 'title', 'item_name', 'ship_name', 'class_name', 'type_name', 'leader_username']],
+  [
+    'ID',
+    [
+      'id',
+      'item_id',
+      'mission_id',
+      'faction_id',
+      'facility_id',
+      'type_id',
+      'ship_id',
+      'order_id',
+      'note_id',
+      'thread_id',
+    ],
+  ],
+  ['Type', ['type', 'category', 'class_id', 'rarity', 'side', 'status']],
+  ['Qty', ['quantity', 'remaining', 'count', 'member_count']],
+  ['Value', ['price_each', 'price', 'base_value', 'difficulty', 'level', 'tier', 'size']],
+  ['Owner', ['owner_name', 'seller_name', 'leader_username', 'empire', 'faction_tag']],
+];
+
+const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
+  factions: [
+    ['Name', ['name']],
+    ['Tag', ['tag', 'faction_tag']],
+    ['Members', ['member_count']],
+    ['Leader', ['leader_username']],
+    ['Bases', ['owned_bases']],
+    ['ID', ['id', 'faction_id']],
+  ],
+  items: [
+    ['Name', ['name', 'item_name']],
+    ['ID', ['id', 'item_id']],
+    ['Category', ['category', 'type']],
+    ['Rarity', ['rarity']],
+    ['Value', ['base_value', 'price_each', 'price']],
+    ['Size', ['size']],
+  ],
+  missions: [
+    ['Title', ['title', 'name']],
+    ['ID', ['mission_id', 'id']],
+    ['Type', ['type']],
+    ['Difficulty', ['difficulty']],
+  ],
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasScalarValue(row: Record<string, unknown>, keys: string[]): boolean {
+  return keys.some((key) => {
+    const value = row[key];
+    return value !== undefined && value !== null && value !== '' && !isRecord(value) && !Array.isArray(value);
+  });
+}
+
+function scalarColumns(
+  rows: Array<Record<string, unknown>>,
+  candidates: Array<[string, string[]]>,
+): Array<[string, string[]]> {
+  return candidates.filter(([, keys]) => rows.some((row) => hasScalarValue(row, keys)));
+}
+
+function printMetadata(result: Record<string, unknown>): void {
+  const parts: string[] = [];
+  if (result.page !== undefined && result.total_pages !== undefined)
+    parts.push(`page ${result.page}/${result.total_pages}`);
+  if (result.page_size !== undefined) parts.push(`page size ${result.page_size}`);
+  if (result.limit !== undefined) parts.push(`limit ${result.limit}`);
+  if (result.offset !== undefined) parts.push(`offset ${result.offset}`);
+  const total = result.total ?? result.total_count;
+  if (total !== undefined) parts.push(`total ${total}`);
+  if (parts.length) console.log(`${c.dim}${parts.join(' | ')}${c.reset}`);
+}
+
+function titleForListKey(key: string): string {
+  return key
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 export const resultFormatters: ResultFormatter[] = [
   // Player status
   formatter(
@@ -252,6 +351,92 @@ export const resultFormatters: ResultFormatter[] = [
       return true;
     },
     { commands: ['get_cargo'], shapeFallback: true },
+  ),
+
+  // Ship status
+  namedFormatter(
+    'ship',
+    ['ship', 'modules'],
+    (r) => {
+      const ship = r.ship as Record<string, unknown> | undefined;
+      if (!ship || !isRecord(ship)) return false;
+
+      console.log(
+        `\n${c.bright}=== Ship: ${ship.name || ship.custom_name || ship.class_name || ship.id} ===${c.reset}`,
+      );
+      console.log(`ID: ${ship.id || ship.ship_id || 'unknown'}`);
+      console.log(`Class: ${ship.class_name || ship.class_id || 'unknown'}`);
+      if (ship.custom_name) console.log(`Custom Name: ${ship.custom_name}`);
+      console.log(`Hull: ${ship.hull ?? '?'}/${ship.max_hull ?? '?'}`);
+      console.log(`Shield: ${ship.shield ?? '?'}/${ship.max_shield ?? '?'} (+${ship.shield_recharge ?? 0}/tick)`);
+      console.log(`Armor: ${ship.armor ?? 0}`);
+      console.log(`Fuel: ${ship.fuel ?? '?'}/${ship.max_fuel ?? '?'}`);
+      console.log(`Cargo: ${ship.cargo_used ?? '?'}/${ship.cargo_capacity ?? '?'}`);
+      console.log(`CPU: ${ship.cpu_used ?? '?'}/${ship.cpu_capacity ?? '?'}`);
+      console.log(`Power: ${ship.power_used ?? '?'}/${ship.power_capacity ?? '?'}`);
+      console.log(
+        `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
+      );
+
+      const modules = firstArray(r, ['modules']);
+      if (modules) {
+        printCompactTable('Modules', modules, [
+          ['Slot', ['slot']],
+          ['Name', ['name', 'type_name']],
+          ['Type', ['type', 'type_id']],
+          ['Wear', ['wear_status', 'wear']],
+          ['CPU', ['cpu_usage', 'cpu']],
+          ['Power', ['power_usage', 'power']],
+          ['Size', ['size']],
+          ['ID', ['module_id', 'id']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['get_ship'], shapeFallback: true },
+  ),
+
+  // Base info
+  namedFormatter(
+    'base',
+    ['base', 'services'],
+    (r) => {
+      const base = r.base as Record<string, unknown> | undefined;
+      if (!base || !isRecord(base)) return false;
+
+      console.log(`\n${c.bright}=== Base: ${base.name || base.id} ===${c.reset}`);
+      console.log(`ID: ${base.id || base.base_id || 'unknown'}`);
+      if (base.poi_id) console.log(`POI: ${base.poi_id}`);
+      console.log(`Empire: ${base.empire || 'None'}`);
+      console.log(`Defense: ${base.defense_level ?? '?'}`);
+      if (base.fuel !== undefined || base.max_fuel !== undefined)
+        console.log(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
+      if (r.fuel_price !== undefined) console.log(`Fuel Price: ${r.fuel_price} credits`);
+
+      const condition = r.condition as Record<string, unknown> | undefined;
+      if (condition && isRecord(condition)) {
+        console.log(
+          `Condition: ${condition.condition_text || condition.condition || 'unknown'} (${condition.satisfaction_pct ?? '?'}% satisfaction)`,
+        );
+      }
+
+      const services = r.services as unknown;
+      if (Array.isArray(services) && services.length) console.log(`Services: ${services.join(', ')}`);
+
+      const facilities = base.facilities as unknown;
+      if (Array.isArray(facilities)) {
+        console.log(`Facilities: ${facilities.length}`);
+        const preview = facilities.slice(0, 12).join(', ');
+        if (preview) {
+          const suffix = facilities.length > 12 ? `, ... and ${facilities.length - 12} more` : '';
+          console.log(`  ${preview}${suffix}`);
+        }
+      }
+
+      if (base.description) console.log(`\n${base.description}`);
+      return true;
+    },
+    { commands: ['get_base'], shapeFallback: true },
   ),
 
   // Nearby players, pirates, and empire NPCs
@@ -686,6 +871,28 @@ export const resultFormatters: ResultFormatter[] = [
   ),
 
   namedFormatter(
+    'facility_types',
+    ['categories', 'total'],
+    (r) => {
+      if (!r.categories || !isRecord(r.categories)) return false;
+      const categories = Object.entries(r.categories).map(([category, raw]) => ({
+        category,
+        ...(isRecord(raw) ? raw : { description: String(raw) }),
+      }));
+      printCompactTable('Facility Type Categories', categories, [
+        ['Category', ['category']],
+        ['Count', ['count']],
+        ['Buildable', ['buildable']],
+        ['Description', ['description']],
+      ]);
+      if (r.total !== undefined) console.log(`\nTotal facility types: ${r.total}`);
+      if (r.hint) console.log(`\n${r.hint}`);
+      return true;
+    },
+    { commands: ['facility_types'], shapeFallback: true },
+  ),
+
+  namedFormatter(
     'facility',
     ['facility'],
     (r) => {
@@ -790,6 +997,30 @@ export const resultFormatters: ResultFormatter[] = [
       return true;
     },
     { commands: ['faction_query_trade_intel', 'faction_trade_intel'], shapeFallback: true },
+  ),
+
+  // Generic table fallback for common list-shaped responses.
+  formatter(
+    (r) => {
+      const matches = GENERIC_LIST_KEYS.filter((key) => Array.isArray(r[key]));
+      if (matches.length !== 1) return false;
+
+      const key = matches[0];
+      if (!key) return false;
+      const rows = r[key] as unknown[];
+      if (!rows.every(isRecord)) return false;
+      const recordRows = rows as Array<Record<string, unknown>>;
+      const columnCandidates = GENERIC_LIST_COLUMNS_BY_KEY[key] ?? GENERIC_LIST_COLUMNS;
+      const columns = scalarColumns(recordRows, columnCandidates);
+      if (recordRows.length > 0 && columns.length < 2) return false;
+
+      const title = typeof r.type === 'string' && key === 'items' ? titleForListKey(r.type) : titleForListKey(key);
+      printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]]);
+      printMetadata(r);
+      if (r.message) console.log(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { shapeFallback: true },
   ),
 
   // Simple message

@@ -2,10 +2,12 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { displayStructuredResult } from './client';
 import {
   browseShipsFixture,
+  catalogItemsFixture,
   formatterFixtureCases,
   getLocationFixture,
   getStatusFixture,
   highValueCommandFixtures,
+  missionsFixture,
   viewMarketFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
@@ -117,6 +119,24 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Ships for Sale');
   });
 
+  test('generic list fallback formats list-shaped responses', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', missionsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Missions ===');
+    expect(stdout).toContain('Pirate Sweep');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('catalog list responses do not drift against market formatter', () => {
+    const { stdout, stderr } = captureStructuredOutput('catalog', catalogItemsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Items ===');
+    expect(stdout).toContain('Antimatter Torpedoes');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('normalizes get_status location data before player status formatting', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', getStatusFixture);
 
@@ -175,6 +195,22 @@ describe('structuredContent formatters', () => {
 
       Players here (1):
         Ibis (hauler)"
+      ,
+        "base": 
+      "
+      === Base: Nova Terra Central ===
+      ID: nova_terra_central
+      POI: nova_terra_central
+      Empire: solarian
+      Defense: 55
+      Fuel: 290750/0
+      Fuel Price: 6 credits
+      Condition: Critical infrastructure failure. (16% satisfaction)
+      Services: crafting, market, missions, refuel
+      Facilities: 3
+        fuel_grid, trade_nexus, fleet_yards
+
+      A busy trade station."
       ,
         "battle_status": 
       "
@@ -236,6 +272,20 @@ describe('structuredContent formatters', () => {
         ------------+------------+-------+--------+--------
         Fuel Bunker | facility-1 | 2     | true   | Marlowe"
       ,
+        "facility_types": 
+      "
+      === Facility Type Categories ===
+
+        Category       | Count | Buildable | Description                   
+        ---------------+-------+-----------+-------------------------------
+        infrastructure | 55    |           | Power and life support systems
+        personal       | 13    | 4         | Personal facilities           
+        production     | 1589  | 427       | Manufacturing facilities      
+
+      Total facility types: 1753
+
+      Use filters to browse."
+      ,
         "fleet": 
       "
       === Fleet ===
@@ -288,6 +338,28 @@ describe('structuredContent formatters', () => {
 
       Resources:
         - Iron Ore: richness 3, 750/1000 (75.00% remaining)"
+      ,
+        "ship": 
+      "
+      === Ship: Deep Survey ===
+      ID: ship-1
+      Class: Deep Survey
+      Custom Name: Asteroid Accessory
+      Hull: 420/420
+      Shield: 300/300 (+4/tick)
+      Armor: 18
+      Fuel: 240/240
+      Cargo: 0/1250
+      CPU: 16/34
+      Power: 23/75
+      Slots: 1 weapon, 1 defense, 5 utility
+
+      === Modules ===
+
+        Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID      
+        --------+--------------------+---------+----------+-----+-------+------+---------
+        utility | Cargo Expander III | utility | Pristine | 2   | 2     | 10   | module-1
+        weapon  | Pulse Laser III    | weapon  | Scuffed  | 3   | 8     | 10   | module-2"
       ,
         "storage": 
       "
