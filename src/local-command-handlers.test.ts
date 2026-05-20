@@ -1,4 +1,7 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { ApiCommandHandler } from './api-command-handler';
 import type { CliRuntimeContext } from './cli-context';
 import type { CommandRegistrySnapshot } from './command-registry';
@@ -17,6 +20,18 @@ const options: GlobalOptions = {
   noTimestamp: false,
   args: [],
 };
+
+const tempDirs: string[] = [];
+
+function tempDir(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-sync-api-'));
+  tempDirs.push(dir);
+  return dir;
+}
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 function localHandler(args: string[]): CommandHandler {
   const handler = resolveHandler(args, options);
@@ -263,5 +278,133 @@ describe('local command handlers', () => {
     expect(parsed.error.code).toBe('exit');
     expect(parsed.error.exitCode).toBe(0);
     expect(stdout.join('\n')).toContain('Dynamic command for inline help tests');
+  });
+
+  test('sync-api refreshes cached OpenAPI routes and renders a text summary', async () => {
+    const configHome = tempDir();
+    const fetches: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      fetches.push(String(input));
+      return new Response(
+        JSON.stringify({
+          openapi: '3.0.3',
+          paths: {
+            '/api/v2/spacemolt_shipyard/repair': {
+              post: {
+                summary: 'repair',
+                requestBody: {
+                  content: {
+                    'application/json': {
+                      schema: {
+                        properties: { ship_id: { type: 'string' } },
+                        required: ['ship_id'],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      );
+    }) as typeof fetch;
+    try {
+      const handler = localHandler(['sync-api']);
+      expect(handler.requiresNetwork).toBe(true);
+      const parsed = handler.parse(['sync-api'], options);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) return;
+      const { context, stdout } = captureContext();
+      context.env.XDG_CONFIG_HOME = configHome;
+      context.config = {
+        apiBase: 'https://example.test/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: false,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      };
+
+      const result = await handler.run(parsed.payload, options, undefined, context);
+      const exitCode = await handler.render(result, options, undefined, context);
+
+      expect(exitCode).toBe(0);
+      expect(fetches).toEqual(['https://example.test/api/v2/openapi.json']);
+      expect(stdout).toEqual(['Synced 1 OpenAPI routes.']);
+      expect(fs.existsSync(path.join(configHome, 'spacemolt', 'openapi-cache.json'))).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('sync-api renders a JSON summary for json mode', async () => {
+    const configHome = tempDir();
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          openapi: '3.0.3',
+          paths: {
+            '/api/v2/spacemolt_shipyard/repair': { post: { summary: 'repair' } },
+            '/api/v2/status': { get: { summary: 'status' } },
+          },
+        }),
+      )) as unknown as typeof fetch;
+    try {
+      const handler = localHandler(['sync-api']);
+      const parsed = handler.parse(['sync-api'], { ...options, json: true });
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) return;
+      const { context, stdout } = captureContext();
+      context.env.XDG_CONFIG_HOME = configHome;
+      context.config = {
+        apiBase: 'https://example.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: false,
+        format: 'json',
+        compact: false,
+      };
+
+      const result = await handler.run(parsed.payload, { ...options, json: true }, undefined, context);
+      const exitCode = await handler.render(result, { ...options, json: true }, undefined, context);
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(stdout.join('\n'))).toEqual({
+        routeCount: 2,
+        fetchedAt: expect.any(String),
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('sync-api is discoverable through local help and command search', async () => {
+    const helpHandler = localHandler(['help', 'sync-api']);
+    const parsedHelp = helpHandler.parse(['help', 'sync-api'], options);
+    expect(parsedHelp.ok).toBe(true);
+    if (!parsedHelp.ok) return;
+    const helpResult = await helpHandler.run(parsedHelp.payload, options);
+    const helpCapture = captureContext();
+
+    const helpExitCode = await helpHandler.render(helpResult, options, undefined, helpCapture.context);
+
+    expect(helpExitCode).toBe(0);
+    expect(helpCapture.stdout.join('\n')).toContain('Refresh the cached OpenAPI command metadata.');
+
+    const commandsHandler = localHandler(['commands', 'sync-api']);
+    const parsedCommands = commandsHandler.parse(['commands', 'sync-api'], options);
+    expect(parsedCommands.ok).toBe(true);
+    if (!parsedCommands.ok) return;
+    const commandsResult = await commandsHandler.run(parsedCommands.payload, options);
+    const commandsCapture = captureContext();
+
+    const commandsExitCode = await commandsHandler.render(commandsResult, options, undefined, commandsCapture.context);
+
+    expect(commandsExitCode).toBe(0);
+    expect(commandsCapture.stdout.join('\n')).toContain('sync-api');
   });
 });

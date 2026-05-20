@@ -1,15 +1,15 @@
+import {
+  buildCuratedCommands,
+  COMMAND_OVERRIDES,
+  type CommandConfig,
+  LOCAL_COMMANDS,
+  type LocalCommandConfig,
+  routeSignature,
+  type V2Route,
+} from './commands.ts';
 import { buildDynamicCommands } from './dynamic-commands.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GeneratedApiRoute } from './openapi-metadata.ts';
-import {
-  COMMAND_OVERRIDES,
-  LOCAL_COMMANDS,
-  buildCuratedCommands,
-  routeSignature,
-  type CommandConfig,
-  type LocalCommandConfig,
-  type V2Route,
-} from './commands.ts';
 
 export interface CommandRegistrySnapshot {
   commands: Record<string, CommandConfig>;

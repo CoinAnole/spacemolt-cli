@@ -27,7 +27,9 @@ import {
   printWhereCanI,
   searchItemHints,
 } from './id-cache.ts';
+import { defaultOpenApiCacheDir, type OpenApiCacheFile, refreshOpenApiCache } from './openapi-cache.ts';
 import { API_BASE, c, VERSION } from './runtime.ts';
+import { getRuntimeConfig } from './runtime-config.ts';
 import { getSessionPath, showProfiles } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
@@ -249,6 +251,32 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
   },
 };
 
+const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCacheFile }> = {
+  name: 'sync-api',
+  requiresNetwork: true,
+  parse() {
+    return { ok: true, payload: {} };
+  },
+  async run(_payload, options, _client, context) {
+    const config = context?.config || getRuntimeConfig(options, context?.env);
+    const cache = await refreshOpenApiCache({
+      apiBase: config.apiBase,
+      cacheDir: defaultOpenApiCacheDir(context?.env),
+    });
+    return { cache };
+  },
+  render(result, options, _client, context) {
+    const routeCount = Object.keys(result.cache.routes).length;
+    const out = context?.writer.out.bind(context.writer) ?? console.log;
+    if (options.json) {
+      out(JSON.stringify({ fetchedAt: result.cache.fetchedAt, routeCount }));
+    } else {
+      out(`Synced ${routeCount} OpenAPI routes.`);
+    }
+    return 0;
+  },
+};
+
 const versionHandler: CommandHandler<Record<string, never>, Record<string, never>> = {
   name: 'version',
   aliases: ['--version', '-v'],
@@ -392,6 +420,7 @@ registry.register(completionHandler);
 registry.register(doctorHandler);
 registry.register(idsHandler);
 registry.register(whereCanIHandler);
+registry.register(syncApiHandler);
 registry.register(versionHandler);
 
 export function resolveHandler(

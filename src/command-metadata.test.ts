@@ -5,6 +5,7 @@ import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerc
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
 import { QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
+import { buildCommandRegistrySnapshot } from './command-registry';
 import {
   ALLOWED_COMMAND_OVERRIDE_FIELDS,
   COMMAND_OVERRIDES,
@@ -12,7 +13,6 @@ import {
   type CommandArg,
   LOCAL_COMMANDS,
 } from './commands';
-import { buildCommandRegistrySnapshot } from './command-registry';
 import { generateCompletion } from './completion';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp } from './help';

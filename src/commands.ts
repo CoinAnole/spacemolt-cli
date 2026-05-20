@@ -94,6 +94,13 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     required: ['item'],
     seeAlso: ['ids', 'catalog', 'view_market'],
   },
+  'sync-api': {
+    usage: '[no args]',
+    description: 'Refresh the cached OpenAPI command metadata.',
+    example: 'spacemolt sync-api',
+    category: 'Reference & Help',
+    seeAlso: ['doctor', 'commands', 'help'],
+  },
 };
 
 export function routeToPath(route: Pick<V2Route, 'tool' | 'action'>, options?: { includeApiPrefix?: boolean }): string {
@@ -170,10 +177,7 @@ function buildUsageFromSchema(config: CommandOverride, generated: GeneratedApiRo
   return parts.join(' ');
 }
 
-function getGeneratedRoute(
-  apiRoute: string,
-  generatedRoutes: Record<string, GeneratedApiRoute>,
-): GeneratedApiRoute {
+function getGeneratedRoute(apiRoute: string, generatedRoutes: Record<string, GeneratedApiRoute>): GeneratedApiRoute {
   const generated = generatedRoutes[apiRoute];
   if (!generated) {
     throw new Error(
