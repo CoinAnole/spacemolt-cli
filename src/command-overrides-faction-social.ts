@@ -3,6 +3,9 @@ import type { CommandOverride } from './commands';
 export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   chat: {
     usage: '<channel> <message>  (channels: local, system, faction, private)',
+    description: 'Send a chat message to a local, system, faction, or private channel.',
+    example: 'spacemolt chat local "Hello from orbit"',
+    seeAlso: ['get_chat_history'],
     category: 'Chat - rest captures remaining args as content',
     apiRoute: 'POST /api/v2/spacemolt_social/chat',
     positionals: [
@@ -17,6 +20,9 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   get_chat_history: {
     usage: '<channel> [limit] [before] [target_id=...]  (channels: local, system, faction, private)',
+    description: 'Read recent chat messages from a local, system, faction, or private channel.',
+    example: 'spacemolt get_chat_history local 20',
+    seeAlso: ['chat'],
     category: 'Chat - rest captures remaining args as content',
     apiRoute: 'POST /api/v2/spacemolt_social/get_chat_history',
     positionals: ['channel', 'limit', 'before'],

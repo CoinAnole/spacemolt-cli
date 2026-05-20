@@ -11,7 +11,7 @@ import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerc
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
 import { QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
-import { buildCommandRegistrySnapshot } from './command-registry';
+import { BUNDLED_COMMAND_REGISTRY, buildCommandRegistrySnapshot } from './command-registry';
 import {
   ALLOWED_COMMAND_OVERRIDE_FIELDS,
   COMMAND_OVERRIDES,
@@ -95,6 +95,70 @@ function sampleValueForField(command: string, field: string): string {
 }
 
 describe('command metadata', () => {
+  test('top-level command metadata has human descriptions', () => {
+    const priorityCommands = [
+      'register',
+      'login',
+      'logout',
+      'dock',
+      'undock',
+      'travel',
+      'jump',
+      'get_status',
+      'get_system',
+      'get_cargo',
+      'view_market',
+      'buy',
+      'sell',
+      'refuel',
+      'repair',
+      'catalog',
+      'chat',
+      'get_chat_history',
+      'profile',
+      'ids',
+      'where-can-i',
+    ];
+
+    for (const command of priorityCommands) {
+      const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
+      expect(config, `${command} should exist`).toBeDefined();
+      expect(config.description, `${command} should have a description`).toBeTruthy();
+      expect(config.description, `${command} description should not repeat command name`).not.toBe(command);
+    }
+  });
+
+  test('top-level mutating commands include examples', () => {
+    const commandsWithExamples = ['register', 'login', 'travel', 'jump', 'buy', 'sell', 'refuel', 'repair', 'chat'];
+
+    for (const command of commandsWithExamples) {
+      const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
+      expect(config?.example, `${command} should have an example`).toMatch(/^spacemolt /);
+    }
+  });
+
+  test('repair help does not advertise unsupported target positional syntax', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.repair;
+    expect(config?.description).toBe('Repair hull damage using station services, repair kits, or repair equipment.');
+    expect(config?.example).toBe('spacemolt repair');
+    expect(config?.usage).not.toContain('target=');
+
+    const help = captureHelp('repair');
+    expect(help).not.toContain('[target=ship|modules]');
+    expect(help).not.toContain('spacemolt repair modules');
+  });
+
+  test('profile help does not advertise named action forms', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
+    expect(config?.usage).toBe('[list]');
+    expect(getArgNames(config)).toEqual([]);
+
+    const help = captureHelp('profile');
+    expect(help).toContain('spacemolt profile [list]');
+    expect(help).not.toContain('action=...');
+    expect(help).not.toContain('--action');
+  });
+
   test('command registry preserves curated commands and local commands', () => {
     const snapshot = buildCommandRegistrySnapshot();
     expect(snapshot.commands.travel).toBeDefined();

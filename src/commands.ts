@@ -90,6 +90,15 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     required: ['item'],
     seeAlso: ['ids', 'catalog', 'view_market'],
   },
+  profile: {
+    usage: '[list]',
+    description: 'List credential profiles available for named sessions.',
+    example: 'spacemolt profile list',
+    category: 'Session management',
+    args: [],
+    required: [],
+    seeAlso: ['login', 'session'],
+  },
   'sync-api': {
     usage: '[no args]',
     description: 'Refresh the cached OpenAPI command metadata.',
