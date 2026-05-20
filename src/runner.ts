@@ -12,9 +12,12 @@ import {
   getRuntimeConfig,
   resolveHandler,
 } from './command-handlers.ts';
+import { buildCommandRegistrySnapshot } from './command-registry.ts';
+import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
+import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { API_BASE, c, DEBUG } from './runtime.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
@@ -63,6 +66,14 @@ async function runInvocationWithContext(
     },
   };
   const resolvedContext = withResolvedConfig(context, config);
+  const cachedGeneratedRoutes = loadCachedGeneratedRoutes(
+    defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
+  );
+  const generatedRoutes = cachedGeneratedRoutes ? { ...GENERATED_API_ROUTES, ...cachedGeneratedRoutes } : undefined;
+  const commandRegistry = buildCommandRegistrySnapshot({
+    generatedRoutes,
+    includeDynamic: Boolean(cachedGeneratedRoutes),
+  });
 
   if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
     checkForUpdates({
@@ -72,7 +83,7 @@ async function runInvocationWithContext(
     });
   }
 
-  const handler = resolveHandler(invocation.args, invocation.options);
+  const handler = resolveHandler(invocation.args, invocation.options, commandRegistry);
   const activeClient = client ?? new SpaceMoltClient({ config });
 
   if (invocation.options.watch) {

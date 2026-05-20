@@ -58,6 +58,74 @@ afterEach(() => {
 });
 
 describe('runInvocation option isolation', () => {
+  test('loads cached OpenAPI routes when resolving dynamic commands', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-openapi-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt');
+    const sessionPath = path.join(tempDir, 'session.json');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      `${JSON.stringify({
+        fetchedAt: '2026-05-20T00:00:00.000Z',
+        routes: {
+          'POST /api/v2/runner_dynamic/invoke': {
+            operationId: 'runnerDynamicInvoke',
+            summary: 'Invoke runner dynamic command',
+            route: {
+              tool: 'runner_dynamic',
+              action: 'invoke',
+              method: 'POST',
+            },
+            required: ['target_id'],
+            schema: {
+              target_id: {
+                type: 'string',
+                positionalIndex: 0,
+              },
+            },
+            cli: {
+              command: 'runner_cached_dynamic',
+            },
+          },
+        },
+      })}\n`,
+    );
+    const calls: Array<{ command: string; route: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { sessionPath },
+      async executeCommandConfig(command: string, config: { route: unknown }, payload: Record<string, unknown>) {
+        calls.push({ command, route: config.route, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--json', 'runner_cached_dynamic', 'ship_123'],
+      client,
+      fakeContext(stdout, stderr, {
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_SESSION: sessionPath,
+      }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(calls).toEqual([
+      {
+        command: 'runner_cached_dynamic',
+        route: {
+          tool: 'runner_dynamic',
+          action: 'invoke',
+          method: 'POST',
+        },
+        payload: { target_id: 'ship_123' },
+      },
+    ]);
+  });
+
   test('repeated direct invocations do not leak --json', async () => {
     const jsonResult = await captureInvocation(['--json', 'trvel']);
     expect(jsonResult.exitCode).toBe(1);
