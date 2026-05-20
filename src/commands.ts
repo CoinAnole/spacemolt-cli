@@ -32,8 +32,6 @@ export interface CommandConfig {
   schema?: Record<string, CommandFieldSchema>;
   /** Fields whose string values should be split into arrays (e.g., "a,b,c" => ["a","b","c"]) */
   arrayFields?: string[];
-  /** Deprecated field names that should be renamed before sending */
-  fieldRenames?: Record<string, string>;
 }
 
 export type LocalCommandConfig = Omit<CommandConfig, 'route' | 'schema'>;
@@ -53,7 +51,6 @@ export type CommandOverride = {
   defaults?: Record<string, string>;
   schemaExtensions?: Record<string, CommandFieldSchema>;
   arrayFields?: string[];
-  fieldRenames?: Record<string, string>;
 };
 
 export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
@@ -69,7 +66,6 @@ export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
   'defaults',
   'schemaExtensions',
   'arrayFields',
-  'fieldRenames',
 ] as const;
 
 import { COMMAND_OVERRIDES } from './command-overrides.ts';
@@ -227,11 +223,6 @@ export function buildCuratedCommands(
 }
 
 export const COMMANDS: Record<string, CommandConfig> = buildCuratedCommands();
-
-export const ALL_COMMANDS: Record<string, CommandConfig | LocalCommandConfig> = {
-  ...COMMANDS,
-  ...LOCAL_COMMANDS,
-};
 
 export const V2_TOOL_MAP: Record<string, V2Route> = Object.fromEntries(
   Object.entries(COMMANDS).map(([command, config]) => [command, config.route]),

@@ -58,7 +58,7 @@ describe('convertPayloadTypes', () => {
     expect(result.search).toBe('mining');
   });
 
-  test('credits is numeric (trade_offer) after field rename', () => {
+  test('credits is numeric (trade_offer) after alias normalization', () => {
     const normalized = normalizeParsedPayload('trade_offer', { target_id: 'abc123', credits: '500' });
     const result = convertPayloadTypes(normalized, 'trade_offer');
     expect(result.target).toBe('abc123');

@@ -274,22 +274,6 @@ export async function loadSession(): Promise<Session | null> {
   return legacySessionManager.loadSession();
 }
 
-export async function saveSession(session: Session): Promise<void> {
-  return legacySessionManager.saveSession(session);
-}
-
-export async function createSession(): Promise<Session> {
-  return legacySessionManager.createSession();
-}
-
-export function isSessionExpired(session: Session): boolean {
-  return legacySessionManager.isSessionExpired(session);
-}
-
-export async function getSession(): Promise<Session> {
-  return legacySessionManager.getSession();
-}
-
 export function extractPlayerId(response: APIResponse): string | undefined {
   const structured = getStructuredResult(response);
   const result = getObjectResult(response);
@@ -300,10 +284,6 @@ export function extractPlayerId(response: APIResponse): string | undefined {
     : typeof resultRecord?.player_id === 'string'
       ? resultRecord.player_id
       : response.session?.player_id;
-}
-
-export async function authenticateProfileSession(session: Session): Promise<APIResponse | null> {
-  return legacySessionManager.authenticateProfileSession(session);
 }
 
 export function setActiveProfile(profile: string | undefined): void {

@@ -211,18 +211,12 @@ describe('command metadata', () => {
     expect(failures).toEqual([]);
   });
 
-  test('field renames and array transforms target known schema fields', () => {
+  test('array transforms target known schema fields', () => {
     const failures: string[] = [];
 
     for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
       const generated = GENERATED_API_ROUTES[override.apiRoute];
       const schemaFields = new Set(Object.keys(generated?.schema || {}));
-
-      for (const [from, to] of Object.entries(override.fieldRenames || {})) {
-        if (!schemaFields.has(to) && !override.schemaExtensions?.[to]) {
-          failures.push(`${command}: field rename "${from}" points to unknown canonical field "${to}"`);
-        }
-      }
 
       for (const field of override.arrayFields || []) {
         const canonical = override.aliases?.[field] || field;

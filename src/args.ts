@@ -17,15 +17,6 @@ export function normalizeParsedPayload(
   const normalized: Record<string, unknown> = { ...payload };
   const config = commandConfig(command, registry);
 
-  // Apply fieldRenames first (deprecated field names -> current names)
-  if (config?.fieldRenames) {
-    for (const [from, to] of Object.entries(config.fieldRenames)) {
-      if (normalized[from] !== undefined && normalized[to] === undefined) normalized[to] = normalized[from];
-      if (from !== to) delete normalized[from];
-    }
-  }
-
-  // Apply aliases
   const aliases = config?.aliases || {};
   for (const [from, to] of Object.entries(aliases)) {
     if (normalized[from] !== undefined && normalized[to] === undefined) normalized[to] = normalized[from];
@@ -54,12 +45,6 @@ export function getValidArgNames(
     }
   }
   if (config?.schema) for (const field of Object.keys(config.schema)) validArgNames.add(field);
-  if (config?.fieldRenames) {
-    for (const [from, to] of Object.entries(config.fieldRenames)) {
-      validArgNames.add(from);
-      validArgNames.add(to);
-    }
-  }
   return validArgNames;
 }
 

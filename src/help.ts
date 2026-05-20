@@ -3,7 +3,7 @@ import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
-import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
+import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { c, VERSION } from './runtime.ts';
@@ -72,10 +72,6 @@ const COMMAND_GROUPS: CommandGroup[] = [
     ],
   },
 ];
-
-const _ERROR_HELP: Record<string, string> = Object.fromEntries(
-  Object.entries(ERROR_REGISTRY).map(([code, entry]) => [code, entry.suggestion]),
-);
 
 export function printJsonResponse(response: APIResponse, compact = false, writer?: CliWriter): void {
   const out = writer?.out.bind(writer) ?? console.log;

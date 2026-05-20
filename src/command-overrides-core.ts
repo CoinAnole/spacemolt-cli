@@ -159,8 +159,6 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['target_id', 'credits'],
     aliases: {
       target_id: 'target',
-    },
-    fieldRenames: {
       credits: 'offer_credits',
     },
   },
