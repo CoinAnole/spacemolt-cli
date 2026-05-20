@@ -18,7 +18,7 @@ import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
-import { API_BASE, c, DEBUG } from './runtime.ts';
+import { API_BASE, c, DEBUG, setOutputMode } from './runtime.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -76,7 +76,21 @@ async function runInvocationWithContext(
 ): Promise<number> {
   const parsedInvocation = parseInvocation(argv, context);
   if (!parsedInvocation.ok) {
-    context.writer.err(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
+    const jsonOutput = Boolean(parsedInvocation.error.json || context.env.SPACEMOLT_OUTPUT === 'json');
+    const quiet = Boolean(parsedInvocation.error.quiet);
+    const plain = Boolean(parsedInvocation.error.plain);
+    setOutputMode({
+      json: jsonOutput,
+      quiet,
+      plain,
+      compact: false,
+      format: jsonOutput ? 'json' : 'table',
+    });
+    if (jsonOutput) {
+      printJsonError(parsedInvocation.error.code, parsedInvocation.error.message, context.writer);
+    } else {
+      context.writer.err(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
+    }
     return 1;
   }
   const config = getRuntimeConfig(parsedInvocation.invocation.options, context.env);

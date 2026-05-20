@@ -9,20 +9,34 @@ export interface GlobalOptionParseError {
   code: 'invalid_global_option';
   option: string;
   message: string;
+  plain?: boolean;
+  quiet?: boolean;
+  json?: boolean;
 }
 
 export type GlobalOptionParseResult =
   | { ok: true; options: GlobalOptions }
   | { ok: false; error: GlobalOptionParseError };
 
-function parseError(option: string, message: string): GlobalOptionParseResult {
+type PartialOutputState = Partial<Pick<GlobalOptions, 'plain' | 'quiet' | 'json' | 'format'>>;
+
+function parseError(option: string, message: string, state: PartialOutputState = {}): GlobalOptionParseResult {
   return {
     ok: false,
     error: {
       code: 'invalid_global_option',
       option,
       message,
+      ...state,
     },
+  };
+}
+
+function outputState(options: PartialOutputState): PartialOutputState {
+  return {
+    ...(options.plain ? { plain: true } : {}),
+    ...(options.quiet ? { quiet: true } : {}),
+    ...(options.json || options.format === 'json' ? { json: true } : {}),
   };
 }
 
@@ -33,26 +47,26 @@ function parseFields(value: string): string[] {
     .filter(Boolean);
 }
 
-function parseWatchValue(option: string, value: string): number | GlobalOptionParseResult {
+function parseWatchValue(option: string, value: string, state: PartialOutputState): number | GlobalOptionParseResult {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    return parseError(option, '--watch requires a positive number (seconds).');
+    return parseError(option, '--watch requires a positive number (seconds).', state);
   }
   return parsed;
 }
 
-function parseFormatValue(option: string, value: string): OutputFormat | GlobalOptionParseResult {
+function parseFormatValue(option: string, value: string, state: PartialOutputState): OutputFormat | GlobalOptionParseResult {
   if (!VALID_FORMATS.has(value)) {
-    return parseError(option, `Invalid format "${value}". Expected one of: table, json, yaml, text.`);
+    return parseError(option, `Invalid format "${value}". Expected one of: table, json, yaml, text.`, state);
   }
   return value as OutputFormat;
 }
 
-function parseProfileValue(option: string, value: string): string | GlobalOptionParseResult {
+function parseProfileValue(option: string, value: string, state: PartialOutputState): string | GlobalOptionParseResult {
   try {
     return validateProfileName(value);
   } catch (err) {
-    return parseError(option, err instanceof Error ? err.message : String(err));
+    return parseError(option, err instanceof Error ? err.message : String(err), state);
   }
 }
 
@@ -96,7 +110,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     } else if (arg === '--watch' || arg === '-w') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
-        const parsed = parseWatchValue(arg, nextArg);
+        const parsed = parseWatchValue(arg, nextArg, outputState(result));
         if (typeof parsed !== 'number') return parsed;
         result.watch = parsed;
         i++;
@@ -104,25 +118,25 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
         result.watch = 10;
       }
     } else if (arg.startsWith('--watch=')) {
-      const parsed = parseWatchValue('--watch', arg.slice('--watch='.length));
+      const parsed = parseWatchValue('--watch', arg.slice('--watch='.length), outputState(result));
       if (typeof parsed !== 'number') return parsed;
       result.watch = parsed;
     } else if (arg === '--format' || arg === '-fmt') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
-        const parsed = parseFormatValue(arg, nextArg);
+        const parsed = parseFormatValue(arg, nextArg, outputState(result));
         if (typeof parsed !== 'string') return parsed;
         result.format = parsed;
         i++;
       } else {
-        return parseError(arg, '--format requires a value: table, json, yaml, text.');
+        return parseError(arg, '--format requires a value: table, json, yaml, text.', outputState(result));
       }
     } else if (arg.startsWith('--format=')) {
-      const parsed = parseFormatValue('--format', arg.slice('--format='.length));
+      const parsed = parseFormatValue('--format', arg.slice('--format='.length), outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.format = parsed;
     } else if (arg.startsWith('-fmt=')) {
-      const parsed = parseFormatValue('-fmt', arg.slice(5));
+      const parsed = parseFormatValue('-fmt', arg.slice(5), outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.format = parsed;
     } else if (arg === '--jq') {
@@ -131,22 +145,22 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
         result.jq = nextArg;
         i++;
       } else {
-        return parseError(arg, '--jq requires a jq-like expression.');
+        return parseError(arg, '--jq requires a jq-like expression.', outputState(result));
       }
     } else if (arg.startsWith('--jq=')) {
       result.jq = arg.slice('--jq='.length);
     } else if (arg === '--profile') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
-        const parsed = parseProfileValue(arg, nextArg);
+        const parsed = parseProfileValue(arg, nextArg, outputState(result));
         if (typeof parsed !== 'string') return parsed;
         result.profile = parsed;
         i++;
       } else {
-        return parseError(arg, '--profile requires a profile name.');
+        return parseError(arg, '--profile requires a profile name.', outputState(result));
       }
     } else if (arg.startsWith('--profile=')) {
-      const parsed = parseProfileValue('--profile', arg.slice('--profile='.length));
+      const parsed = parseProfileValue('--profile', arg.slice('--profile='.length), outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.profile = parsed;
     } else if (arg === '--fields' || arg === '-f') {
@@ -155,7 +169,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
         result.fields = parseFields(nextArg);
         i++;
       } else {
-        return parseError(arg, '--fields requires a value: --fields key1,key2.key3');
+        return parseError(arg, '--fields requires a value: --fields key1,key2.key3', outputState(result));
       }
     } else if (arg.startsWith('--fields=')) {
       result.fields = parseFields(arg.slice('--fields='.length));

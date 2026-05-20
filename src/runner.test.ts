@@ -174,6 +174,51 @@ describe('runInvocation option isolation', () => {
     expect(console.error).toBe(originalError);
   });
 
+  test('--plain removes ANSI codes from global parse errors', async () => {
+    const result = await captureInvocation(['--plain', '--format', 'nope', 'get_status']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Invalid format "nope"');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('--format json preserves JSON output for later global parse errors', async () => {
+    const result = await captureInvocation(['--format', 'json', '--format', 'nope', 'get_status']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+  });
+
+  test('repeated global parse failures do not leak output mode', async () => {
+    const jsonResult = await captureInvocation(['--json', '--format', 'nope']);
+    expect(jsonResult.exitCode).toBe(1);
+    expect(JSON.parse(jsonResult.stdout).error.code).toBe('invalid_global_option');
+    expect(jsonResult.stderr).toBe('');
+
+    const textResult = await captureInvocation(['--format', 'nope']);
+    expect(textResult.exitCode).toBe(1);
+    expect(textResult.stdout).toBe('');
+    expect(textResult.stderr).toContain('Invalid format "nope"');
+    expect(JSON_OUTPUT).toBe(process.env.SPACEMOLT_OUTPUT === 'json');
+    expect(FORMAT).toBe('table');
+  });
+
+  test('env JSON output applies to global parse errors', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--format', 'nope'],
+      undefined,
+      fakeContext(stdout, stderr, { SPACEMOLT_OUTPUT: 'json' }),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toEqual([]);
+    expect(JSON.parse(stdout.join('\n')).error.code).toBe('invalid_global_option');
+  });
+
   test('context env resolves output mode and session config', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
