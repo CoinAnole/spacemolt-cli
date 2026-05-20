@@ -1,5 +1,4 @@
-import { c, printCompactTable } from '../runtime.ts';
-import { formatter, isRecord } from './helpers.ts';
+import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 const GENERIC_LIST_KEYS = [
   'items',
@@ -86,7 +85,7 @@ function printMetadata(result: Record<string, unknown>): void {
   if (result.offset !== undefined) parts.push(`offset ${result.offset}`);
   const total = result.total ?? result.total_count;
   if (total !== undefined) parts.push(`total ${total}`);
-  if (parts.length) console.log(`${c.dim}${parts.join(' | ')}${c.reset}`);
+  if (parts.length) emitLine(`${c.dim}${parts.join(' | ')}${c.reset}`);
 }
 
 function titleForListKey(key: string): string {
@@ -115,7 +114,7 @@ export const genericFormatters = [
       const title = typeof r.type === 'string' && key === 'items' ? titleForListKey(r.type) : titleForListKey(key);
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]]);
       printMetadata(r);
-      if (r.message) console.log(`${c.dim}${r.message}${c.reset}`);
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
     { shapeFallback: true },
@@ -125,7 +124,7 @@ export const genericFormatters = [
   formatter(
     (r) => {
       if (!r.message || Object.keys(r).length > 2) return false;
-      console.log(`${c.green}OK:${c.reset} ${r.message}`);
+      emitLine(`${c.green}OK:${c.reset} ${r.message}`);
       return true;
     },
     { shapeFallback: true },

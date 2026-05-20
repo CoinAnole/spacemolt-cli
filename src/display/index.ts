@@ -1,5 +1,4 @@
 import type { CliRuntimeContext } from '../cli-context.ts';
-import { withCliWriterSync } from '../cli-context.ts';
 import { evaluateJq, formatJqResult } from '../jq.ts';
 import {
   extractFields,
@@ -7,27 +6,41 @@ import {
   getStructuredResult,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
-import { COMPACT, c, FORMAT, QUIET } from '../runtime.ts';
+import { COMPACT, FORMAT, QUIET } from '../runtime.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
 import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
+import { c, type DisplayRenderBuffer, emitError, emitLine, withDisplayRenderBuffer } from './helpers.ts';
+
+export interface RenderedDisplay {
+  success: boolean;
+  stdout: string[];
+  stderr: string[];
+}
+
+type DisplayContext = Pick<CliRuntimeContext, 'clock'> &
+  Partial<Pick<CliRuntimeContext, 'config' | 'output' | 'writer'>>;
 
 function hasFields(fields: string[] | undefined): fields is string[] {
   return Boolean(fields && fields.length > 0);
 }
 
-function getOutputFormat(options?: GlobalOptions, context?: CliRuntimeContext): OutputFormat {
+function getOutputFormat(options?: GlobalOptions, context?: DisplayContext): OutputFormat {
   if (options?.format) return options.format;
   if (options?.json ?? context?.output?.json ?? context?.config?.jsonOutput) return 'json';
   return context?.output?.format ?? context?.config?.format ?? FORMAT;
 }
 
-function isQuiet(options?: GlobalOptions, context?: CliRuntimeContext): boolean {
+function isQuiet(options?: GlobalOptions, context?: DisplayContext): boolean {
   return options?.quiet ?? context?.output?.quiet ?? context?.config?.quiet ?? QUIET;
 }
 
-function isCompact(options?: GlobalOptions, context?: CliRuntimeContext): boolean {
+function isCompact(options?: GlobalOptions, context?: DisplayContext): boolean {
   return options?.compact ?? context?.output?.compact ?? context?.config?.compact ?? COMPACT;
+}
+
+function isPlain(options?: GlobalOptions, context?: DisplayContext): boolean {
+  return options?.plain ?? context?.output?.plain ?? context?.config?.plain ?? false;
 }
 
 function stringifyJson(value: unknown, compact: boolean): string {
@@ -52,17 +65,31 @@ export function displayStructuredResult(
   options?: GlobalOptions,
   context?: CliRuntimeContext,
 ): boolean {
-  if (context) {
-    return withCliWriterSync(context.writer, () => displayStructuredResultInternal(command, result, options, context));
-  }
-  return displayStructuredResultInternal(command, result, options, context);
+  const rendered = renderStructuredResult(command, result, options, context);
+  writeRendered(rendered, context);
+  return rendered.success;
+}
+
+export function renderStructuredResult(
+  command: string,
+  result: Record<string, unknown>,
+  options?: GlobalOptions,
+  context?: DisplayContext,
+): RenderedDisplay {
+  const buffer: DisplayRenderBuffer = { stdout: [], stderr: [] };
+  const success = withDisplayRenderBuffer(
+    buffer,
+    () => displayStructuredResultInternal(command, result, options, context),
+    { plain: isPlain(options, context) },
+  );
+  return { success, stdout: buffer.stdout, stderr: buffer.stderr };
 }
 
 function displayStructuredResultInternal(
   command: string,
   result: Record<string, unknown>,
   options?: GlobalOptions,
-  context?: CliRuntimeContext,
+  context?: DisplayContext,
 ): boolean {
   if (!result) return true;
 
@@ -74,37 +101,37 @@ function displayStructuredResultInternal(
   if (jqExpr) {
     try {
       const jqResult = evaluateJq(result, jqExpr);
-      console.log(formatProjection(jqResult, format, compact, 'jq'));
+      emitLine(formatProjection(jqResult, format, compact, 'jq'));
       return true;
     } catch (err) {
-      console.error(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
+      emitError(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   }
 
   if (hasFields(fields)) {
     const extracted = extractFields(result, fields);
-    console.log(formatProjection(extracted, format, compact, 'fields'));
+    emitLine(formatProjection(extracted, format, compact, 'fields'));
     return true;
   }
 
   if (format === 'json') {
-    console.log(stringifyJson(result, compact));
+    emitLine(stringifyJson(result, compact));
     return true;
   }
 
   if (format === 'yaml') {
-    console.log(toYaml(result));
+    emitLine(toYaml(result));
     return true;
   }
 
   if (format === 'text') {
-    console.log(JSON.stringify(result, null, 2));
+    emitLine(JSON.stringify(result, null, 2));
     return true;
   }
 
   if (compact) {
-    console.log(JSON.stringify(result));
+    emitLine(JSON.stringify(result));
     return true;
   }
 
@@ -112,9 +139,9 @@ function displayStructuredResultInternal(
 
   if (!isQuiet(options, context)) {
     if (viewModel.auto_docked)
-      console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
+      emitLine(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
     if (viewModel.auto_undocked)
-      console.log(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
+      emitLine(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
   }
 
   for (const formatter of commandScopedFormatters(resultFormatters, command)) {
@@ -134,13 +161,13 @@ function displayStructuredResultInternal(
       .map((formatter) => formatter.formatterName)
       .filter(Boolean)
       .join(', ');
-    console.error(
+    emitError(
       `${c.yellow}[DRIFT WARNING]${c.reset} '${command}' response has keys matching formatter(s) [${names}] but none matched. Response keys: [${resultKeys.join(', ')}]`,
     );
   }
 
-  console.log(`\n${c.bright}=== Response ===${c.reset}`);
-  console.log(JSON.stringify(viewModel, null, 2));
+  emitLine(`\n${c.bright}=== Response ===${c.reset}`);
+  emitLine(JSON.stringify(viewModel, null, 2));
   return true;
 }
 
@@ -150,37 +177,61 @@ export function displayResult(
   options?: GlobalOptions,
   context?: CliRuntimeContext,
 ): boolean {
-  if (context) {
-    return withCliWriterSync(context.writer, () => displayResultInternal(command, response, options, context));
-  }
-  return displayResultInternal(command, response, options, context);
+  const rendered = renderResult(command, response, options, context);
+  writeRendered(rendered, context);
+  return rendered.success;
+}
+
+export function renderResult(
+  command: string,
+  response: APIResponse,
+  options?: GlobalOptions,
+  context?: DisplayContext,
+): RenderedDisplay {
+  const buffer: DisplayRenderBuffer = { stdout: [], stderr: [] };
+  const success = withDisplayRenderBuffer(buffer, () => displayResultInternal(command, response, options, context), {
+    plain: isPlain(options, context),
+  });
+  return { success, stdout: buffer.stdout, stderr: buffer.stderr };
 }
 
 function displayResultInternal(
   command: string,
   response: APIResponse,
   options?: GlobalOptions,
-  context?: CliRuntimeContext,
+  context?: DisplayContext,
 ): boolean {
   const noTimestamp = options?.noTimestamp ?? false;
   if (!isQuiet(options, context) && !noTimestamp) {
-    console.log(`${c.dim}[${(context?.clock.now() ?? new Date()).toISOString()}]${c.reset}`);
+    emitLine(`${c.dim}[${(context?.clock.now() ?? new Date()).toISOString()}]${c.reset}`);
   }
   const structured = getStructuredResult(response);
   if (structured) {
-    return displayStructuredResult(command, structured, options, context);
+    return displayStructuredResultInternal(command, structured, options, context);
   }
 
   const viewModel = getObjectResult(response);
   if (viewModel) {
-    return displayStructuredResult(command, viewModel, options, context);
+    return displayStructuredResultInternal(command, viewModel, options, context);
   }
 
   if (typeof response.result === 'string' && response.result.trim()) {
-    console.log(response.result);
+    emitLine(response.result);
     return true;
   }
 
   if (command === 'session') return true;
   return true;
+}
+
+function writeRendered(rendered: RenderedDisplay, context?: CliRuntimeContext): void {
+  const writer = context?.writer;
+  for (const line of rendered.stdout) {
+    if (writer) writer.out(line);
+    else console.log(line);
+  }
+  for (const line of rendered.stderr) {
+    if (writer) writer.err(line);
+    else console.error(line);
+  }
 }

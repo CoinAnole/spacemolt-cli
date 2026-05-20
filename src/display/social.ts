@@ -1,5 +1,4 @@
-import { c, firstArray, printCompactTable } from '../runtime.ts';
-import { isRecord, namedFormatter } from './helpers.ts';
+import { c, emitLine, firstArray, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
 
 export const socialFormatters = [
   // Chat confirmation
@@ -13,11 +12,11 @@ export const socialFormatters = [
       if (r.message || r.content) {
         const timestamp = r.sent_at || r.timestamp;
         const time = timestamp ? `${c.dim}${new Date(timestamp as string).toLocaleTimeString()}${c.reset} ` : '';
-        console.log(`${c.green}[${channel}]${c.reset} ${time}${r.message || r.content}`);
+        emitLine(`${c.green}[${channel}]${c.reset} ${time}${r.message || r.content}`);
       } else {
-        console.log(`${c.green}Chat sent:${c.reset} ${channel}`);
+        emitLine(`${c.green}Chat sent:${c.reset} ${channel}`);
       }
-      if (r.warning) console.log(`${c.yellow}Warning:${c.reset} ${r.warning}`);
+      if (r.warning) emitLine(`${c.yellow}Warning:${c.reset} ${r.warning}`);
       return true;
     },
     { commands: ['chat'], shapeFallback: true },
@@ -58,8 +57,8 @@ export const socialFormatters = [
         ['Buildable', ['buildable']],
         ['Description', ['description']],
       ]);
-      if (r.total !== undefined) console.log(`\nTotal facility types: ${r.total}`);
-      if (r.hint) console.log(`\n${r.hint}`);
+      if (r.total !== undefined) emitLine(`\nTotal facility types: ${r.total}`);
+      if (r.hint) emitLine(`\n${r.hint}`);
       return true;
     },
     { commands: ['facility_types'], shapeFallback: true },
@@ -95,9 +94,9 @@ export const socialFormatters = [
     (r) => {
       const fleet = r.fleet as Record<string, unknown> | undefined;
       if (!fleet) return false;
-      console.log(`\n${c.bright}=== Fleet ===${c.reset}`);
-      console.log(`ID: ${fleet.fleet_id || fleet.id || 'unknown'}`);
-      if (fleet.leader_name || fleet.leader_id) console.log(`Leader: ${fleet.leader_name || fleet.leader_id}`);
+      emitLine(`\n${c.bright}=== Fleet ===${c.reset}`);
+      emitLine(`ID: ${fleet.fleet_id || fleet.id || 'unknown'}`);
+      if (fleet.leader_name || fleet.leader_id) emitLine(`Leader: ${fleet.leader_name || fleet.leader_id}`);
       const members = (fleet.members || r.members) as Array<Record<string, unknown>> | undefined;
       if (Array.isArray(members)) {
         printCompactTable('Fleet Members', members, [
@@ -120,10 +119,10 @@ export const socialFormatters = [
     (r) => {
       const battle = r.battle as Record<string, unknown> | undefined;
       if (!battle) return false;
-      console.log(`\n${c.bright}=== Battle ===${c.reset}`);
-      console.log(`ID: ${battle.battle_id || battle.id || 'unknown'}`);
-      if (battle.status || battle.phase) console.log(`Status: ${battle.status || battle.phase}`);
-      if (battle.range_band || battle.range) console.log(`Range: ${battle.range_band || battle.range}`);
+      emitLine(`\n${c.bright}=== Battle ===${c.reset}`);
+      emitLine(`ID: ${battle.battle_id || battle.id || 'unknown'}`);
+      if (battle.status || battle.phase) emitLine(`Status: ${battle.status || battle.phase}`);
+      if (battle.range_band || battle.range) emitLine(`Range: ${battle.range_band || battle.range}`);
       const participants = (battle.participants || r.participants) as Array<Record<string, unknown>> | undefined;
       if (Array.isArray(participants)) {
         printCompactTable('Participants', participants, [

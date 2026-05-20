@@ -1,3 +1,6 @@
+import { colorize, formatPlayer as formatPlayerValue, rawColors } from './ansi.ts';
+import { firstArray, formatCompactTable, formatItemTable, rowValue } from './tables.ts';
+
 export type ResultFormatter = ((result: Record<string, unknown>, command?: string) => boolean) & {
   formatterName?: string;
   hintKeys?: string[];
@@ -55,3 +58,103 @@ export interface FormatterFixture {
   command: string;
   fixture: Record<string, unknown>;
 }
+
+export interface DisplayRenderBuffer {
+  stdout: string[];
+  stderr: string[];
+}
+
+let activeBuffer: DisplayRenderBuffer | undefined;
+let activePlain = false;
+
+export function withDisplayRenderBuffer<T>(
+  buffer: DisplayRenderBuffer,
+  fn: () => T,
+  options: { plain?: boolean } = {},
+): T {
+  const previousBuffer = activeBuffer;
+  const previousPlain = activePlain;
+  activeBuffer = buffer;
+  activePlain = options.plain ?? false;
+  try {
+    return fn();
+  } finally {
+    activeBuffer = previousBuffer;
+    activePlain = previousPlain;
+  }
+}
+
+function requireBuffer(): DisplayRenderBuffer {
+  if (!activeBuffer) {
+    throw new Error('display formatter wrote output outside a render buffer');
+  }
+  return activeBuffer;
+}
+
+export const c = {
+  get reset() {
+    return colorize('', rawColors.reset, activePlain);
+  },
+  get bright() {
+    return colorize('', rawColors.bright, activePlain);
+  },
+  get dim() {
+    return colorize('', rawColors.dim, activePlain);
+  },
+  get red() {
+    return colorize('', rawColors.red, activePlain);
+  },
+  get green() {
+    return colorize('', rawColors.green, activePlain);
+  },
+  get yellow() {
+    return colorize('', rawColors.yellow, activePlain);
+  },
+  get blue() {
+    return colorize('', rawColors.blue, activePlain);
+  },
+  get magenta() {
+    return colorize('', rawColors.magenta, activePlain);
+  },
+  get cyan() {
+    return colorize('', rawColors.cyan, activePlain);
+  },
+};
+
+export function emitLine(message = ''): void {
+  requireBuffer().stdout.push(message);
+}
+
+export function emitError(message = ''): void {
+  requireBuffer().stderr.push(message);
+}
+
+export function emitLines(lines: string[]): void {
+  for (const line of lines) emitLine(line);
+}
+
+export function emitItemTable(items: Array<Record<string, unknown>>, indent = '  '): void {
+  const lines = formatItemTable(items, indent);
+  if (lines[0] !== undefined) lines[0] = `${c.bright}${lines[0]}${c.reset}`;
+  emitLines(lines);
+}
+
+export const printItemTable = emitItemTable;
+
+export function emitCompactTable(
+  title: string,
+  rows: Array<Record<string, unknown>>,
+  columns: Array<[string, string[]]>,
+): void {
+  const lines = formatCompactTable(title, rows, columns);
+  if (lines[0] !== undefined) lines[0] = lines[0].replace(`=== ${title} ===`, `${c.bright}=== ${title} ===${c.reset}`);
+  emitLines(lines);
+}
+
+export const printCompactTable = emitCompactTable;
+
+export function formatPlayer(player: Record<string, unknown>): string {
+  return formatPlayerValue(player, c, activePlain);
+}
+
+export { firstArray, rowValue };

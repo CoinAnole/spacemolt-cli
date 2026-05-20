@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CliRuntimeContext } from './cli-context';
 import { displayStructuredResult } from './client';
+import { renderResult, renderStructuredResult } from './display';
 import {
   browseShipsFixture,
   catalogItemsFixture,
@@ -227,6 +228,47 @@ describe('structuredContent output mode precedence', () => {
     expect(exitCode).toBe(1);
     expect(stderr).toContain('Error: Expected array at "non_existent_key"');
     expect(stdout).toBe('');
+  });
+
+  test('pure structured renderer formats yaml without writing', () => {
+    const rendered = renderStructuredResult('get_status', outputModeFixture, globalOptions({ format: 'yaml' }), {
+      clock: captureContext([], []).clock,
+    });
+
+    expect(rendered.success).toBe(true);
+    expect(rendered.stderr).toEqual([]);
+    expect(rendered.stdout.join('\n')).toBe(
+      '\nplayer:\n  name: Marlowe\nship:\n  fuel: 42\nitems:\n  - id: ore_iron\n    quantity: 5',
+    );
+  });
+
+  test('pure structured renderer formats text and compact output', () => {
+    const text = renderStructuredResult('get_status', outputModeFixture, globalOptions({ format: 'text' }));
+    const compact = renderStructuredResult('get_status', outputModeFixture, globalOptions({ compact: true }));
+
+    expect(text.stdout.join('\n')).toBe(JSON.stringify(outputModeFixture, null, 2));
+    expect(compact.stdout.join('\n')).toBe(
+      '{"player":{"name":"Marlowe"},"ship":{"fuel":42},"items":[{"id":"ore_iron","quantity":5}]}',
+    );
+  });
+
+  test('pure renderer respects projection, quiet, timestamp, and drift warning paths', () => {
+    const projected = renderStructuredResult('get_status', outputModeFixture, globalOptions({ fields: ['ship.fuel'] }));
+    const quiet = renderResult(
+      'get_status',
+      { structuredContent: { ...outputModeFixture, auto_docked: true } },
+      globalOptions({ quiet: true }),
+      { clock: captureContext([], []).clock },
+    );
+    const timed = renderResult('get_status', { result: 'OK' }, globalOptions({ plain: true }), {
+      clock: captureContext([], []).clock,
+    });
+    const drift = renderStructuredResult('unmatched_command', { items: 'not-an-array' }, globalOptions());
+
+    expect(projected.stdout).toEqual(['{"ship.fuel":42}']);
+    expect(quiet.stdout.join('\n')).not.toContain('[AUTO-DOCKED]');
+    expect(timed.stdout).toEqual(['[2026-05-19T12:34:56.000Z]', 'OK']);
+    expect(drift.stderr.join('\n')).toContain('[DRIFT WARNING]');
   });
 });
 

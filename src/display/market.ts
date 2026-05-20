@@ -1,5 +1,4 @@
-import { c, firstArray, printCompactTable, printItemTable } from '../runtime.ts';
-import { formatter, namedFormatter } from './helpers.ts';
+import { c, emitLine, firstArray, formatter, namedFormatter, printCompactTable, printItemTable } from './helpers.ts';
 
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
@@ -9,7 +8,7 @@ export const marketFormatters = [
       const listings = r.listings as Array<Record<string, unknown>>;
       const firstListing = listings[0];
       if (!firstListing?.ship_id) return false;
-      console.log(`\n${c.bright}=== Ships for Sale @ ${r.base_name || 'Station'} ===${c.reset}`);
+      emitLine(`\n${c.bright}=== Ships for Sale @ ${r.base_name || 'Station'} ===${c.reset}`);
       for (const listing of listings) {
         const shipClass = listing.class_id || 'Unknown';
         const shipName = listing.ship_name || shipClass;
@@ -23,12 +22,12 @@ export const marketFormatters = [
         const shield = listing.shield ? `Shield: ${listing.shield}` : '';
         const stats = [hull, shield].filter(Boolean).join(', ');
         const seller = listing.seller || listing.seller_name || listing.seller_id || 'Unknown';
-        console.log(`\n${c.cyan}${shipName}${c.reset} (${shipClass}) ${scale}`);
-        if (categoryTier) console.log(`  ${categoryTier}`);
-        console.log(`  Price: ${c.yellow}${formattedPrice} credits${c.reset}`);
-        if (stats) console.log(`  ${stats}`);
-        console.log(`  Seller: ${seller}`);
-        console.log(`  Listing ID: ${listing.listing_id}`);
+        emitLine(`\n${c.cyan}${shipName}${c.reset} (${shipClass}) ${scale}`);
+        if (categoryTier) emitLine(`  ${categoryTier}`);
+        emitLine(`  Price: ${c.yellow}${formattedPrice} credits${c.reset}`);
+        if (stats) emitLine(`  ${stats}`);
+        emitLine(`  Seller: ${seller}`);
+        emitLine(`  Listing ID: ${listing.listing_id}`);
       }
       return true;
     },
@@ -40,19 +39,19 @@ export const marketFormatters = [
     (r) => {
       if (!Array.isArray(r.listings)) return false;
       const listings = r.listings as Array<Record<string, unknown>>;
-      console.log(`\n${c.bright}=== Market Listings ===${c.reset}`);
+      emitLine(`\n${c.bright}=== Market Listings ===${c.reset}`);
       if (r.buy_price_modifier) {
-        console.log(`Buy price modifier: ${r.buy_price_modifier}x`);
-        console.log(`Sell price modifier: ${r.sell_price_modifier}x`);
+        emitLine(`Buy price modifier: ${r.buy_price_modifier}x`);
+        emitLine(`Sell price modifier: ${r.sell_price_modifier}x`);
       }
       if (!listings.length) {
-        console.log(`\n(No listings at this market)`);
+        emitLine(`\n(No listings at this market)`);
       } else {
         for (const listing of listings) {
           const seller = listing.seller_name || listing.seller || listing.seller_id || 'NPC';
-          console.log(`\n  ${listing.item_id}: ${listing.quantity} @ ${listing.price_each} each`);
-          console.log(`    Listing ID: ${listing.listing_id}`);
-          console.log(`    Seller: ${seller}`);
+          emitLine(`\n  ${listing.item_id}: ${listing.quantity} @ ${listing.price_each} each`);
+          emitLine(`    Listing ID: ${listing.listing_id}`);
+          emitLine(`    Seller: ${seller}`);
         }
       }
       return true;
@@ -68,36 +67,36 @@ export const marketFormatters = [
       if (r.action !== 'view_market' || !r.base_id) return false;
       const items = r.items as Array<Record<string, unknown>>;
       if (!items || items.length === 0) {
-        console.log(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n  (empty)`);
+        emitLine(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n  (empty)`);
         return true;
       }
-      console.log(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n`);
+      emitLine(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n`);
       for (const item of items) {
         const name = String(item.item_name || item.item_id || 'unknown');
         const buyOrders = item.buy_orders as Array<Record<string, unknown>> | undefined;
         const sellOrders = item.sell_orders as Array<Record<string, unknown>> | undefined;
-        console.log(`${c.bright}${name}${c.reset}`);
+        emitLine(`${c.bright}${name}${c.reset}`);
         if (buyOrders && buyOrders.length > 0) {
-          console.log(`  Buy orders (${buyOrders.length}):`);
+          emitLine(`  Buy orders (${buyOrders.length}):`);
           for (const o of buyOrders) {
             const price = Number(o.price_each).toLocaleString();
             const qty = Number(o.quantity).toLocaleString();
             const src = o.source && o.source !== 'station' && o.source !== 'player' ? ` [${o.source}]` : '';
-            console.log(`    ${c.green}${price} cr${c.reset} x ${qty}${src}`);
+            emitLine(`    ${c.green}${price} cr${c.reset} x ${qty}${src}`);
           }
         }
         if (sellOrders && sellOrders.length > 0) {
-          console.log(`  Sell orders (${sellOrders.length}):`);
+          emitLine(`  Sell orders (${sellOrders.length}):`);
           for (const o of sellOrders) {
             const price = Number(o.price_each).toLocaleString();
             const qty = Number(o.quantity).toLocaleString();
-            console.log(`    ${c.red}${price} cr${c.reset} x ${qty}`);
+            emitLine(`    ${c.red}${price} cr${c.reset} x ${qty}`);
           }
         }
         if (!buyOrders?.length && !sellOrders?.length) {
-          console.log('  (no orders)');
+          emitLine('  (no orders)');
         }
-        console.log('');
+        emitLine('');
       }
       return true;
     },
@@ -112,7 +111,7 @@ export const marketFormatters = [
       if (!r.base_id || !Array.isArray(r.items)) return false;
       const items = r.items as Array<Record<string, unknown>>;
       const ships = (r.ships as Array<Record<string, unknown>>) || [];
-      console.log(`\n${c.bright}=== Storage at ${r.base_id} ===${c.reset}\n`);
+      emitLine(`\n${c.bright}=== Storage at ${r.base_id} ===${c.reset}\n`);
       printItemTable(items);
       if (ships.length) {
         const nameW = Math.max(9, ...ships.map((s) => String(s.class_name || s.class_id || '').length));
@@ -120,11 +119,11 @@ export const marketFormatters = [
         const idW = Math.max(2, ...ships.map((s) => String(s.ship_id || '').length));
         const modsW = Math.max(4, ...ships.map((s) => String(s.modules ?? '').length));
         const cargoW = Math.max(5, ...ships.map((s) => String(s.cargo_used ?? '').length));
-        console.log(`\n${c.bright}Ships (${ships.length}):${c.reset}\n`);
-        console.log(
+        emitLine(`\n${c.bright}Ships (${ships.length}):${c.reset}\n`);
+        emitLine(
           `  ${'Ship Name'.padEnd(nameW)} | ${'Class'.padEnd(classW)} | ${'Mods'.padStart(modsW)} | ${'Cargo'.padStart(cargoW)} | ${'ID'.padEnd(idW)}`,
         );
-        console.log(
+        emitLine(
           `  ${'-'.repeat(nameW)}-+-${'-'.repeat(classW)}-+-${'-'.repeat(modsW)}-+-${'-'.repeat(cargoW)}-+-${'-'.repeat(idW)}`,
         );
         for (const s of ships) {
@@ -133,7 +132,7 @@ export const marketFormatters = [
           const mods = String(s.modules ?? '').padStart(modsW);
           const cargo = String(s.cargo_used ?? '').padStart(cargoW);
           const id = String(s.ship_id || '').padEnd(idW);
-          console.log(`  ${name} | ${cls} | ${mods} | ${cargo} | ${id}`);
+          emitLine(`  ${name} | ${cls} | ${mods} | ${cargo} | ${id}`);
         }
       }
       return true;
@@ -172,7 +171,7 @@ export const marketFormatters = [
         ['Ticks', ['ticks_remaining']],
         ['ID', ['commission_id']],
       ]);
-      if (r.count !== undefined && commissions.length !== r.count) console.log(`${c.dim}count ${r.count}${c.reset}`);
+      if (r.count !== undefined && commissions.length !== r.count) emitLine(`${c.dim}count ${r.count}${c.reset}`);
       return true;
     },
     { commands: ['commission_status'] },
