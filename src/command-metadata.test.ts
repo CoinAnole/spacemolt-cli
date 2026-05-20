@@ -123,6 +123,7 @@ describe('command metadata', () => {
     for (const command of priorityCommands) {
       const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
       expect(config, `${command} should exist`).toBeDefined();
+      if (!config) continue;
       expect(config.description, `${command} should have a description`).toBeTruthy();
       expect(config.description, `${command} description should not repeat command name`).not.toBe(command);
     }
@@ -150,6 +151,8 @@ describe('command metadata', () => {
 
   test('profile help does not advertise named action forms', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
+    expect(config).toBeDefined();
+    if (!config) return;
     expect(config?.usage).toBe('[list]');
     expect(getArgNames(config)).toEqual([]);
 
