@@ -1,13 +1,36 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { getArgNames, validatePayloadAgainstSchema } from './args';
-import { ALLOWED_COMMAND_OVERRIDE_FIELDS, COMMAND_OVERRIDES, COMMANDS } from './commands';
+import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
+import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
+import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
+import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
+import { QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
+import {
+  ALLOWED_COMMAND_OVERRIDE_FIELDS,
+  COMMAND_OVERRIDES,
+  COMMANDS,
+  type CommandArg,
+  LOCAL_COMMANDS,
+} from './commands';
 import { generateCompletion } from './completion';
-import { GENERATED_API_ROUTES } from './generated/api-commands';
+import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp } from './help';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
 const originalLog = console.log;
+
+const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
+  'trade_offer.credits',
+  'faction_create_buy_order.deliver_to',
+  'send_gift.credits',
+  'analyze_market.item_id',
+  'analyze_market.page',
+  'help.category',
+  'help.command',
+]);
+
+const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
 
 afterEach(() => {
   console.log = originalLog;
@@ -34,7 +57,36 @@ function getCompletionEnumCases(): Array<{ command: string; arg: string; values:
   return cases;
 }
 
+function commandArgName(arg: CommandArg): string {
+  return typeof arg === 'string' ? arg : arg.rest;
+}
+
+function generatedArgNames(generated?: GeneratedApiRoute): string[] {
+  if (!generated?.schema) return [];
+  const positional = Object.entries(generated.schema)
+    .filter(([, schema]) => schema.positionalIndex !== undefined)
+    .sort((a, b) => (a[1].positionalIndex ?? 0) - (b[1].positionalIndex ?? 0))
+    .map(([field]) => field);
+  return positional.length > 0 ? positional : Object.keys(generated.schema);
+}
+
 describe('command metadata', () => {
+  test('command overrides are assembled from domain modules without losing entries', () => {
+    const modules = [
+      CORE_COMMAND_OVERRIDES,
+      FACTION_SOCIAL_COMMAND_OVERRIDES,
+      COMMERCE_FACILITY_COMMAND_OVERRIDES,
+      BATTLE_SHIPYARD_COMMAND_OVERRIDES,
+      QUERY_REFERENCE_COMMAND_OVERRIDES,
+    ];
+    const moduleKeys = modules.flatMap((module) => Object.keys(module));
+
+    expect(new Set(moduleKeys).size, 'domain command override modules must not define duplicate commands').toBe(
+      moduleKeys.length,
+    );
+    expect(moduleKeys).toEqual(Object.keys(COMMAND_OVERRIDES));
+  });
+
   test('command overrides only contain curated UX fields and reference generated API routes', () => {
     const allowed = new Set<string>(ALLOWED_COMMAND_OVERRIDE_FIELDS);
     const failures: string[] = [];
@@ -46,6 +98,100 @@ describe('command metadata', () => {
 
       for (const field of Object.keys(override)) {
         if (!allowed.has(field)) failures.push(`${command}: override field "${field}" is not allowed`);
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('command override positionals and aliases map to generated schema fields', () => {
+    const failures: string[] = [];
+
+    for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      const generated = GENERATED_API_ROUTES[override.apiRoute];
+      const schemaFields = new Set(Object.keys(generated?.schema || {}));
+      const generatedPositionals = generatedArgNames(generated);
+
+      for (const [index, arg] of (override.positionals || []).entries()) {
+        const field = commandArgName(arg);
+        const canonical = override.aliases?.[field] || generatedPositionals[index];
+        if (
+          !schemaFields.has(field) &&
+          (!canonical || !schemaFields.has(canonical)) &&
+          !override.schemaExtensions?.[field] &&
+          !override.schemaExtensions?.[canonical || ''] &&
+          !POSITIONAL_SCHEMA_GAP_EXEMPTIONS.has(`${command}.${field}`)
+        ) {
+          failures.push(`${command}: positional "${field}" does not map to a generated schema field`);
+        }
+      }
+
+      for (const [alias, canonical] of Object.entries(override.aliases || {})) {
+        if (!schemaFields.has(canonical) && !override.schemaExtensions?.[canonical]) {
+          failures.push(`${command}: alias "${alias}" points to unknown canonical field "${canonical}"`);
+        }
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('command override defaults target generated schema fields or explicit exemptions', () => {
+    const failures: string[] = [];
+
+    for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      const generated = GENERATED_API_ROUTES[override.apiRoute];
+      const schemaFields = new Set(Object.keys(generated?.schema || {}));
+      for (const field of Object.keys(override.defaults || {})) {
+        if (
+          !schemaFields.has(field) &&
+          !override.schemaExtensions?.[field] &&
+          !DEFAULT_SCHEMA_GAP_EXEMPTIONS.has(`${command}.${field}`)
+        ) {
+          failures.push(`${command}: default "${field}" does not map to a generated schema field`);
+        }
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('local commands include complete help and required arg metadata', () => {
+    const failures: string[] = [];
+
+    for (const [command, config] of Object.entries(LOCAL_COMMANDS)) {
+      if (!config.usage) failures.push(`${command}: missing usage`);
+      if (!config.description) failures.push(`${command}: missing description`);
+      if (!config.category) failures.push(`${command}: missing category`);
+
+      const required = new Set(config.required || []);
+      for (const arg of config.args || []) {
+        const name = commandArgName(arg);
+        if (!required.has(name)) failures.push(`${command}: arg "${name}" is missing from required`);
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('field renames and array transforms target known schema fields', () => {
+    const failures: string[] = [];
+
+    for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      const generated = GENERATED_API_ROUTES[override.apiRoute];
+      const schemaFields = new Set(Object.keys(generated?.schema || {}));
+
+      for (const [from, to] of Object.entries(override.fieldRenames || {})) {
+        if (!schemaFields.has(to) && !override.schemaExtensions?.[to]) {
+          failures.push(`${command}: field rename "${from}" points to unknown canonical field "${to}"`);
+        }
+      }
+
+      for (const field of override.arrayFields || []) {
+        const canonical = override.aliases?.[field] || field;
+        if (!schemaFields.has(canonical) && !override.schemaExtensions?.[canonical]) {
+          failures.push(`${command}: array field "${field}" does not map to a known schema field`);
+        }
       }
     }
 

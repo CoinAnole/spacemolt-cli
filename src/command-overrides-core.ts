@@ -1,0 +1,301 @@
+import type { CommandOverride } from './commands';
+
+export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
+  register: {
+    usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)',
+    description: 'Create a player using a dashboard registration code.',
+    example: 'spacemolt register myname solarian YOUR_REGISTRATION_CODE',
+    seeAlso: ['login', 'get_status'],
+    category: 'Authentication',
+    apiRoute: 'POST /api/v2/spacemolt_auth/register',
+    positionals: ['username', 'empire', 'registration_code'],
+  },
+  login: {
+    usage: '<username> <password>',
+    description: 'Authenticate and save credentials in the local session file.',
+    example: 'spacemolt login myname <password>',
+    seeAlso: ['session', 'get_status'],
+    category: 'Authentication',
+    apiRoute: 'POST /api/v2/spacemolt_auth/login',
+    positionals: ['username', 'password'],
+  },
+  login_token: {
+    usage: '<token>',
+    category: 'Authentication',
+    apiRoute: 'POST /api/v2/spacemolt_auth/login_token',
+    positionals: ['token'],
+  },
+  logout: {
+    category: 'Authentication',
+    apiRoute: 'POST /api/v2/spacemolt_auth/logout',
+  },
+  claim: {
+    usage: '<registration_code>  (link existing player to your account)',
+    category: 'Authentication',
+    apiRoute: 'POST /api/v2/spacemolt_auth/claim',
+    positionals: ['registration_code'],
+  },
+  travel: {
+    usage: '<poi_id_or_cached_name>  (use get_system to cache POIs)',
+    description: 'Move to a POI in the current system. Use get_system first to cache valid POI IDs and names.',
+    example: 'spacemolt travel earth',
+    discoverWith: ['get_system', 'get_status'],
+    seeAlso: ['get_system', 'get_poi', 'jump'],
+    category: 'Navigation',
+    apiRoute: 'POST /api/v2/spacemolt/travel',
+    positionals: ['target_poi'],
+    aliases: {
+      target_poi: 'id',
+    },
+  },
+  jump: {
+    usage: '<system_id>  (use get_system to see connections)',
+    description: 'Move to a connected system. Use get_system first to find connected system IDs.',
+    example: 'spacemolt jump alpha_centauri',
+    discoverWith: ['get_system', 'find_route'],
+    seeAlso: ['get_system', 'travel', 'refuel'],
+    category: 'Navigation',
+    apiRoute: 'POST /api/v2/spacemolt/jump',
+    positionals: ['target_system'],
+    aliases: {
+      target_system: 'id',
+    },
+  },
+  dock: {
+    category: 'Navigation',
+    apiRoute: 'POST /api/v2/spacemolt/dock',
+  },
+  undock: {
+    category: 'Navigation',
+    apiRoute: 'POST /api/v2/spacemolt/undock',
+  },
+  search_systems: {
+    usage: '<query>  (case-insensitive partial match on system names)',
+    category: 'Navigation',
+    apiRoute: 'POST /api/v2/spacemolt/search_systems',
+    positionals: ['query'],
+    aliases: {
+      query: 'text',
+    },
+  },
+  find_route: {
+    usage: '<system_id>  (find shortest route from current system)',
+    category: 'Navigation',
+    apiRoute: 'POST /api/v2/spacemolt/find_route',
+    positionals: ['target_system'],
+    aliases: {
+      target_system: 'id',
+    },
+  },
+  mine: {
+    description: 'Mine resources at an asteroid POI. Use get_poi to confirm the current POI has resources.',
+    example: 'spacemolt mine',
+    discoverWith: ['get_status', 'get_poi'],
+    seeAlso: ['get_cargo', 'sell'],
+    category: 'Mining',
+    apiRoute: 'POST /api/v2/spacemolt/mine',
+  },
+  attack: {
+    usage: '<player_id>  (use get_nearby to see players)',
+    description: 'Attack a nearby target. Use get_nearby first for target IDs.',
+    example: 'spacemolt attack <player_id>',
+    discoverWith: ['get_nearby', 'get_status'],
+    seeAlso: ['scan', 'get_battle_status'],
+    category: 'Combat',
+    apiRoute: 'POST /api/v2/spacemolt/attack',
+    positionals: ['target_id'],
+    aliases: {
+      target_id: 'id',
+    },
+  },
+  scan: {
+    usage: '<player_id>',
+    description: 'Scan a nearby player for ship and combat details.',
+    example: 'spacemolt scan <player_id>',
+    discoverWith: ['get_nearby'],
+    seeAlso: ['attack', 'get_ship'],
+    category: 'Combat',
+    apiRoute: 'POST /api/v2/spacemolt/scan',
+    positionals: ['target_id'],
+    aliases: {
+      target_id: 'id',
+    },
+  },
+  cloak: {
+    category: 'Combat',
+    apiRoute: 'POST /api/v2/spacemolt/cloak',
+    positionals: ['enable'],
+  },
+  self_destruct: {
+    usage: '(destroy ship, create wreck, respawn at home base)',
+    category: 'Combat',
+    apiRoute: 'POST /api/v2/spacemolt/self_destruct',
+  },
+  sell: {
+    usage: '<item_id_or_cached_name> <quantity> [auto_list=true]  (use get_cargo to cache items)',
+    description: 'Sell cargo items. Use get_cargo first for item IDs, cached names, and available quantities.',
+    example: 'spacemolt sell iron 50',
+    discoverWith: ['get_cargo', 'view_market'],
+    seeAlso: ['get_cargo', 'view_market'],
+    category: 'Trading',
+    apiRoute: 'POST /api/v2/spacemolt/sell',
+    positionals: ['item_id', 'quantity', 'auto_list'],
+  },
+  buy: {
+    usage:
+      '<item_id_or_cached_name> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to cache items)',
+    description: 'Buy an item from the current market. Use view_market to inspect and cache available listings.',
+    example: 'spacemolt buy fuel 10',
+    discoverWith: ['view_market', 'get_status'],
+    seeAlso: ['view_market', 'get_cargo'],
+    category: 'Trading',
+    apiRoute: 'POST /api/v2/spacemolt/buy',
+    positionals: ['item_id', 'quantity', 'auto_list', 'deliver_to'],
+  },
+  trade_offer: {
+    usage: '<player_id> [credits=N] [items=...]  (use get_trades to see pending offers)',
+    category: 'P2P Trading',
+    apiRoute: 'POST /api/v2/spacemolt_transfer/trade_offer',
+    positionals: ['target_id', 'credits'],
+    aliases: {
+      target_id: 'target',
+    },
+    fieldRenames: {
+      credits: 'offer_credits',
+    },
+  },
+  trade_accept: {
+    usage: '<trade_id>  (use get_trades to see offers)',
+    category: 'P2P Trading',
+    apiRoute: 'POST /api/v2/spacemolt_transfer/trade_accept',
+    positionals: ['trade_id'],
+  },
+  trade_decline: {
+    usage: '<trade_id>',
+    category: 'P2P Trading',
+    apiRoute: 'POST /api/v2/spacemolt_transfer/trade_decline',
+    positionals: ['trade_id'],
+  },
+  trade_cancel: {
+    usage: '<trade_id>',
+    category: 'P2P Trading',
+    apiRoute: 'POST /api/v2/spacemolt_transfer/trade_cancel',
+    positionals: ['trade_id'],
+  },
+  loot_wreck: {
+    usage: '<wreck_id> <item_id> [quantity]  (use get_wrecks to see wrecks)',
+    category: 'Wrecks',
+    apiRoute: 'POST /api/v2/spacemolt_salvage/loot',
+    positionals: ['wreck_id', 'item_id', 'quantity'],
+  },
+  salvage_wreck: {
+    usage: '<wreck_id>',
+    category: 'Wrecks',
+    apiRoute: 'POST /api/v2/spacemolt_salvage/salvage',
+    positionals: ['wreck_id'],
+  },
+  name_ship: {
+    usage: '<name>  (set ship name, empty to clear)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/rename_ship',
+    positionals: ['name'],
+  },
+  sell_ship: {
+    usage: '<ship_id>  (sell stored ship at 50% base value)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/sell_ship',
+    positionals: ['ship_id'],
+    aliases: {
+      ship_id: 'id',
+    },
+  },
+  list_ships: {
+    usage: '(all owned ships with locations)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/list_ships',
+  },
+  switch_ship: {
+    usage: '<ship_id>  (swap active ship, cargo moved to station storage)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/switch_ship',
+    positionals: ['ship_id'],
+    aliases: {
+      ship_id: 'id',
+    },
+  },
+  install_mod: {
+    usage: '<module_id>  (module must be in cargo, use get_cargo to see)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt/install_mod',
+    positionals: ['module_id'],
+    aliases: {
+      module_id: 'id',
+    },
+  },
+  uninstall_mod: {
+    usage: '<module_id>  (use get_ship to see installed modules)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt/uninstall_mod',
+    positionals: ['module_id'],
+    aliases: {
+      module_id: 'id',
+    },
+  },
+  repair_module: {
+    usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt/repair_module',
+    positionals: ['module_id'],
+    aliases: {
+      module_id: 'id',
+    },
+  },
+  refit_ship: {
+    usage: '(reset ship to class specs, strips modules)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/refit_ship',
+  },
+  scrap_ship: {
+    usage: '<ship_id>  (permanently destroy a stored ship)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/scrap_ship',
+    positionals: ['ship_id'],
+    aliases: {
+      ship_id: 'id',
+    },
+  },
+  refuel: {
+    usage:
+      '[id] [quantity] [target=player|fleet]  (station fuel uses dynamic reserve pricing; fuel cells can be selected by id)',
+    description: 'Refuel from a station or fuel cell. Usually dock first, then run refuel.',
+    example: 'spacemolt refuel',
+    discoverWith: ['get_status', 'get_cargo'],
+    seeAlso: ['dock', 'get_status'],
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt/refuel',
+    positionals: ['id', 'quantity', 'target'],
+  },
+  repair: {
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt/repair',
+  },
+  use_item: {
+    usage: '<item_id> [quantity]  (consumables: repair_kit, shield_cell, emergency_warp, etc.)',
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt/use_item',
+    positionals: ['item_id', 'quantity'],
+  },
+  set_home_base: {
+    usage: '<base_id>  (set respawn point, requires cloning service)',
+    category: 'Insurance',
+    apiRoute: 'POST /api/v2/spacemolt_salvage/set_home',
+    positionals: ['base_id'],
+  },
+  craft: {
+    usage:
+      '<recipe_id> [quantity]  (1-10 for batch crafting, uses cargo + station storage, use catalog type=recipes to browse)',
+    category: 'Crafting',
+    apiRoute: 'POST /api/v2/spacemolt/craft',
+    positionals: ['recipe_id', 'quantity'],
+  },
+};

@@ -1,0 +1,379 @@
+import type { CommandOverride } from './commands';
+
+export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
+  get_missions: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/get_missions',
+  },
+  get_active_missions: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/get_active_missions',
+  },
+  accept_mission: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/accept_mission',
+    positionals: ['mission_id'],
+    aliases: {
+      mission_id: 'id',
+    },
+  },
+  complete_mission: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/complete_mission',
+    positionals: ['mission_id'],
+    aliases: {
+      mission_id: 'id',
+    },
+  },
+  decline_mission: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/decline_mission',
+    positionals: ['template_id'],
+    aliases: {
+      template_id: 'id',
+    },
+  },
+  abandon_mission: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/abandon_mission',
+    positionals: ['mission_id'],
+    aliases: {
+      mission_id: 'id',
+    },
+  },
+  completed_missions: {
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/completed_missions',
+  },
+  distress_signal: {
+    usage: '[fuel|repair|combat]  (broadcast emergency, 1hr cooldown)',
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/distress_signal',
+    positionals: ['type'],
+    aliases: {
+      type: 'distress_type',
+    },
+  },
+  view_completed_mission: {
+    usage: '<template_id>  (view full details of a completed mission)',
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/view_completed_mission',
+    positionals: ['template_id'],
+    aliases: {
+      template_id: 'id',
+    },
+  },
+  jettison: {
+    category: 'Cargo',
+    apiRoute: 'POST /api/v2/spacemolt/jettison',
+    positionals: ['item_id', 'quantity'],
+  },
+  view_storage: {
+    description: 'Show personal station storage. Omit station_id for the current station.',
+    example: 'spacemolt view_storage',
+    discoverWith: ['get_status'],
+    seeAlso: ['deposit_items', 'withdraw_items'],
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/view',
+    positionals: ['station_id'],
+  },
+  view_faction_storage: {
+    usage: '[station_id]  (view faction storage, omit for current station)',
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/view',
+    positionals: ['station_id'],
+    defaults: {
+      target: 'faction',
+    },
+  },
+  faction_deposit_credits: {
+    usage: '<amount>  (deposit credits to faction treasury)',
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
+    positionals: ['quantity'],
+    defaults: {
+      target: 'faction',
+      item_id: 'credits',
+    },
+  },
+  faction_withdraw_credits: {
+    usage: '<amount>  (withdraw credits from faction treasury, requires manage_treasury)',
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
+    positionals: ['quantity'],
+    defaults: {
+      source: 'faction',
+      item_id: 'credits',
+    },
+  },
+  deposit_items: {
+    usage: '<item_id_or_cached_name> <quantity>  (use get_ship or get_cargo to cache cargo)',
+    description: 'Move cargo into station storage.',
+    example: 'spacemolt deposit_items ore_iron 50',
+    discoverWith: ['get_cargo', 'view_storage'],
+    seeAlso: ['withdraw_items', 'view_storage'],
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
+    positionals: ['item_id', 'quantity'],
+    schemaExtensions: {
+      source: {
+        type: 'string',
+        description: "Source: 'cargo', 'storage', or 'faction'",
+      },
+    },
+  },
+  withdraw_items: {
+    usage: '<item_id_or_cached_name> <quantity>  (use view_storage to cache stored items)',
+    description: 'Move station storage items into cargo.',
+    example: 'spacemolt withdraw_items ore_iron 50',
+    discoverWith: ['view_storage', 'get_cargo'],
+    seeAlso: ['deposit_items', 'get_cargo'],
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
+    positionals: ['item_id', 'quantity'],
+    schemaExtensions: {
+      source: {
+        type: 'string',
+        description: "Source: 'storage' or 'faction'",
+      },
+    },
+  },
+  send_gift: {
+    usage:
+      '<recipient> [item_id=... quantity=...] [credits=...] [ship_id=...] [message="..."]  (async transfer to their storage here)',
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
+    positionals: ['recipient', 'item_id', 'quantity', 'credits', 'message', 'ship_id'],
+    aliases: {
+      recipient: 'target',
+      ship_id: 'item_id',
+    },
+  },
+  create_sell_order: {
+    usage: '<item_id_or_cached_name> <quantity> <price_each>  (list items for sale)',
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/create_sell_order',
+  },
+  create_buy_order: {
+    usage: '<item_id_or_cached_name> <quantity> <price_each> [deliver_to=base_id]  (place a buy offer)',
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
+  },
+  view_market: {
+    usage: '[item_id] [category]  (view order book, optionally filtered)',
+    description: 'Inspect the market or order book at the current station.',
+    example: 'spacemolt view_market ore_iron',
+    discoverWith: ['get_status'],
+    seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/view_market',
+    positionals: ['item_id', 'category'],
+  },
+  view_orders: {
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/view_orders',
+    positionals: ['station_id'],
+  },
+  cancel_order: {
+    usage: '[order_id]  (cancel and return escrow; or pass order_ids=... for batch cancel)',
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/cancel_order',
+    positionals: ['order_id'],
+  },
+  modify_order: {
+    usage: '<order_id> <new_price>  (change price on existing order)',
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/modify_order',
+    positionals: ['order_id', 'new_price'],
+  },
+  estimate_purchase: {
+    usage: '<item_id> <quantity>  (preview purchase cost)',
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/estimate_purchase',
+    positionals: ['item_id', 'quantity'],
+  },
+  analyze_market: {
+    usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item)',
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/analyze_market',
+    positionals: ['item_id', 'page'],
+  },
+  list_drones: {
+    description: 'List loaded and deployed drones.',
+    example: 'spacemolt list_drones',
+    seeAlso: ['get_drone', 'load_drone', 'deploy_drone'],
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/list',
+  },
+  get_drone: {
+    usage: '<drone_id>',
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/get',
+    positionals: ['drone_id'],
+    aliases: {
+      drone_id: 'id',
+    },
+  },
+  deploy_drone: {
+    usage: '<drone_id>',
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/deploy',
+    positionals: ['drone_id'],
+    aliases: {
+      drone_id: 'id',
+    },
+  },
+  load_drone: {
+    usage: '<drone_item_id>',
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/load',
+    positionals: ['drone_item_id'],
+    aliases: {
+      drone_item_id: 'id',
+    },
+  },
+  unload_drone: {
+    usage: '<drone_id>',
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/unload',
+    positionals: ['drone_id'],
+    aliases: {
+      drone_id: 'id',
+    },
+  },
+  recall_drone: {
+    usage: '[drone_id] [all=true]',
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/recall',
+    positionals: ['drone_id'],
+    aliases: {
+      drone_id: 'id',
+    },
+  },
+  upload_drone: {
+    usage: '<drone_id> <script>',
+    description: 'Upload a DroneLang script to a drone.',
+    example: 'spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"',
+    discoverWith: ['list_drones', 'get_drone'],
+    seeAlso: ['get_drone', 'deploy_drone'],
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/upload',
+    positionals: [
+      'drone_id',
+      {
+        rest: 'script',
+      },
+    ],
+    aliases: {
+      drone_id: 'id',
+      script: 'text',
+    },
+  },
+  facility_list: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/list',
+  },
+  facility_types: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/types',
+    positionals: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'],
+  },
+  facility_upgrades: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/upgrades',
+    positionals: ['facility_type', 'facility_id'],
+  },
+  facility_build: {
+    usage: '<facility_type>',
+    description: 'Build a player facility at the current base.',
+    example: 'spacemolt facility_build ore_refinery',
+    discoverWith: ['facility_types', 'facility_list'],
+    seeAlso: ['facility_types', 'facility_list'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/build',
+    positionals: ['facility_type'],
+  },
+  facility_upgrade: {
+    usage: '<facility_type> [facility_id]',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/upgrade',
+    positionals: ['facility_type', 'facility_id'],
+  },
+  facility_toggle: {
+    usage: '<facility_id>',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/toggle',
+    positionals: ['facility_id'],
+  },
+  facility_transfer: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/transfer',
+    positionals: ['facility_id', 'direction', 'player_id'],
+  },
+  personal_facility_build: {
+    usage: '<facility_type>',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/personal_build',
+    positionals: ['facility_type'],
+  },
+  personal_facility_decorate: {
+    usage: '<description> [access=private/public]',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/personal_decorate',
+    positionals: ['description', 'access'],
+  },
+  personal_facility_visit: {
+    usage: '[username]',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/personal_visit',
+    positionals: ['username'],
+  },
+  faction_facility_list: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_list',
+  },
+  faction_facility_build: {
+    usage: '<facility_type>',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
+    positionals: ['facility_type'],
+  },
+  faction_facility_upgrade: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_upgrade',
+    positionals: ['facility_type', 'facility_id'],
+  },
+  faction_facility_toggle: {
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_toggle',
+    positionals: ['facility_id'],
+  },
+  facility_list_for_sale: {
+    usage: '<facility_id> <price>  (list a facility for sale)',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/list_for_sale',
+    positionals: ['facility_id', 'price'],
+  },
+  facility_browse_for_sale: {
+    usage: '[facility_type] [max_price] [page] [per_page]  (browse listed facilities)',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/browse_for_sale',
+    positionals: ['facility_type', 'max_price', 'page', 'per_page'],
+  },
+  facility_buy_listing: {
+    usage: '<listing_id>',
+    description: 'Buy a player-listed facility.',
+    example: 'spacemolt facility_buy_listing <listing_id>',
+    discoverWith: ['facility_browse_for_sale'],
+    seeAlso: ['facility_browse_for_sale', 'facility_cancel_listing'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/buy_listing',
+    positionals: ['listing_id'],
+  },
+  facility_cancel_listing: {
+    usage: '<listing_id>',
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/cancel_listing',
+    positionals: ['listing_id'],
+  },
+};
