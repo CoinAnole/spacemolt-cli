@@ -54,7 +54,11 @@ function yamlObject(obj: Record<string, unknown>, level: number): string {
   const lines: string[] = [];
   for (const key of keys) {
     const val = obj[key];
-    if (typeof val === 'object' && val !== null) {
+    if (Array.isArray(val) && val.length === 0) {
+      lines.push(`${prefix}${key}: []`);
+    } else if (typeof val === 'object' && val !== null && Object.keys(val).length === 0) {
+      lines.push(`${prefix}${key}: {}`);
+    } else if (typeof val === 'object' && val !== null) {
       lines.push(`${prefix}${key}:${toYaml(val, level + 1)}`);
     } else {
       lines.push(`${prefix}${key}: ${inlineYaml(val)}`);

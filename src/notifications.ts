@@ -3,25 +3,24 @@ import { c, QUIET } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
 type NotificationData = Record<string, unknown>;
-type NotificationHandler = (data: NotificationData, time: string) => void;
-
-let writeLine = (message?: string) => console.log(message);
+type Notification = NonNullable<APIResponse['notifications']>[number];
+type NotificationHandler = (data: NotificationData, time: string, writeLine: (message?: string) => void) => void;
 
 const notificationHandlers: Record<string, NotificationHandler> = {
-  chat_message: (d, t) => {
+  chat_message: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.cyan}[CHAT:${d.channel || 'local'}]${c.reset} ${c.bright}${d.sender || 'Unknown'}${c.reset}: ${d.content || ''}`,
     );
   },
 
-  combat_update: (d, t) => {
+  combat_update: (d, t, writeLine) => {
     const destroyed = d.destroyed ? ' - DESTROYED!' : '';
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[COMBAT]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} ${d.damage_type || 'unknown'} damage (shield: ${d.shield_hit || 0}, hull: ${d.hull_hit || 0})${destroyed}`,
     );
   },
 
-  player_died: (d, t) => {
+  player_died: (d, t, writeLine) => {
     const cause = d.cause || 'combat';
     if (cause === 'self_destruct') {
       writeLine(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[DEATH]${c.reset} Self-destructed!`);
@@ -55,14 +54,14 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     writeLine(`  Respawned at: ${d.respawn_base || 'home'} with ship fully repaired`);
   },
 
-  mining_yield: (d, t) => {
+  mining_yield: (d, t, writeLine) => {
     const remainingMsg = d.remaining !== undefined ? ` (${d.remaining} remaining at POI)` : '';
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[MINED]${c.reset} +${d.quantity || 0}x ${d.resource_id || 'ore'}${remainingMsg}`,
     );
   },
 
-  trade_offer_received: (d, t) => {
+  trade_offer_received: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Offer from ${d.from_name || 'Someone'} (ID: ${d.trade_id || ''})`,
     );
@@ -71,7 +70,7 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     writeLine(`  Use: trade_accept trade_id=${d.trade_id} or trade_decline trade_id=${d.trade_id}`);
   },
 
-  scan_result: (d, t) => {
+  scan_result: (d, t, writeLine) => {
     const target = d.username || d.target_id || 'unknown';
     if (d.success) {
       const revealed = (d.revealed_info as string[]) || [];
@@ -89,7 +88,7 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     }
   },
 
-  scan_detected: (d, t) => {
+  scan_detected: (d, t, writeLine) => {
     const revealed = (d.revealed_info as string[]) || [];
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[SCANNED]${c.reset} You were scanned by ${d.scanner_username || 'Unknown'} (${d.scanner_ship_class || 'unknown'})`,
@@ -97,55 +96,55 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     writeLine(`  They learned: ${revealed.join(', ')}`);
   },
 
-  police_warning: (d, t) => {
+  police_warning: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.message}`);
     writeLine(`  Security level: ${d.police_level || 0}, Response in: ${d.response_ticks || 0} tick(s)`);
   },
 
-  police_spawn: (d, t) => {
+  police_spawn: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[POLICE]${c.reset} ${d.num_drones || 0} police drone(s) arrived!`,
     );
   },
 
-  police_combat: (d, t) => {
+  police_combat: (d, t, writeLine) => {
     const destroyed = d.destroyed ? ' - YOU WERE DESTROYED!' : '';
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[POLICE]${c.reset} Police drone dealt ${d.damage || 0} damage${destroyed}`,
     );
   },
 
-  skill_level_up: (d, t) => {
+  skill_level_up: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[LEVEL UP]${c.reset} ${d.skill_id || 'unknown'} is now level ${d.new_level || 0}! (+${d.xp_gained || 0} XP)`,
     );
   },
 
-  drone_update: (d, t) => {
+  drone_update: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.blue}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone dealt ${d.damage || 0} damage to ${d.target_id || 'target'}`,
     );
   },
 
-  drone_destroyed: (d, t) => {
+  drone_destroyed: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[DRONE]${c.reset} Your ${d.drone_type || 'drone'} drone was destroyed! (ID: ${d.drone_id || ''})`,
     );
   },
 
-  pilotless_ship: (d, t) => {
+  pilotless_ship: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[PILOTLESS]${c.reset} ${d.player_username || 'unknown'}'s ${d.ship_class || 'ship'} is now pilotless!`,
     );
     writeLine(`  Vulnerable for ${d.ticks_remaining || 0} ticks - can be attacked without resistance`);
   },
 
-  reconnected: (d, t) => {
+  reconnected: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[RECONNECTED]${c.reset} ${d.message}`);
     if (d.was_pilotless) writeLine(`  Ship was pilotless - recovered with ${d.ticks_remaining || 0} ticks to spare`);
   },
 
-  faction_invite: (d, t) => {
+  faction_invite: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.magenta}[FACTION]${c.reset} You've been invited to join ${d.faction_name || 'a faction'}`,
     );
@@ -154,14 +153,14 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     );
   },
 
-  faction_war_declared: (d, t) => {
+  faction_war_declared: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[WAR]${c.reset} ${d.attacker_name || 'a faction'} has declared war on your faction!`,
     );
     writeLine(`  Reason: ${d.reason || 'no reason given'}`);
   },
 
-  faction_peace_proposed: (d, t) => {
+  faction_peace_proposed: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[PEACE]${c.reset} ${d.proposer_name || 'a faction'} has proposed peace!`,
     );
@@ -169,20 +168,20 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     writeLine(`  Use: faction_accept_peace target_faction_id=${d.faction_id || ''}`);
   },
 
-  base_raid_update: (d, t) => {
+  base_raid_update: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[RAID]${c.reset} ${d.base_name || 'base'}: ${d.current_health || 0}/${d.max_health || 0} HP (-${d.damage_per_tick || 0}/tick)`,
     );
   },
 
-  base_destroyed: (d, t) => {
+  base_destroyed: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BASE DESTROYED]${c.reset} ${d.base_name || 'base'} has been destroyed!`,
     );
     if (d.wreck_id) writeLine(`  Wreck ID for looting: ${d.wreck_id}`);
   },
 
-  player_kill: (d, t) => {
+  player_kill: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}${c.bright}[KILL]${c.reset} You destroyed ${d.victim_name || d.target_name || 'unknown'}!`,
     );
@@ -190,111 +189,111 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     if (d.wreck_id) writeLine(`  Wreck: ${d.wreck_id}`);
   },
 
-  pirate_warning: (d, t) => {
+  pirate_warning: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.message || 'Pirates detected nearby!'}`);
   },
 
-  pirate_spawn: (d, t) => {
+  pirate_spawn: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} ${d.num_pirates || 1} pirate(s) appeared!`);
   },
 
-  pirate_combat: (d, t) => {
+  pirate_combat: (d, t, writeLine) => {
     const destroyed = d.destroyed ? ' - YOU WERE DESTROYED!' : '';
     writeLine(`${c.dim}[${t}]${c.reset} ${c.red}[PIRATES]${c.reset} Pirate dealt ${d.damage || 0} damage${destroyed}`);
   },
 
-  pirate_destroyed: (d, t) => {
+  pirate_destroyed: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[PIRATES]${c.reset} Pirate destroyed!`);
     if (d.loot) writeLine(`  Loot: ${JSON.stringify(d.loot)}`);
   },
 
-  battle_started: (d, t) => {
+  battle_started: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}${c.bright}[BATTLE]${c.reset} Battle started! ID: ${d.battle_id || 'unknown'}`,
     );
   },
 
-  battle_update: (d, t) => {
+  battle_update: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[BATTLE]${c.reset} Battle tick ${d.tick || '?'} - ${d.message || 'combat continues'}`,
     );
   },
 
-  battle_damage: (d, t) => {
+  battle_damage: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[BATTLE]${c.reset} ${d.attacker || 'unknown'} hit ${d.target || 'unknown'} for ${d.damage || 0} damage`,
     );
   },
 
-  battle_joined: (d, t) => {
+  battle_joined: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} joined the battle`);
   },
 
-  battle_left: (d, t) => {
+  battle_left: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[BATTLE]${c.reset} ${d.username || 'Someone'} left the battle`);
   },
 
-  battle_ended: (d, t) => {
+  battle_ended: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[BATTLE]${c.reset} Battle ended! ${d.message || ''}`);
   },
 
-  skill_xp_gain: (d, t) => {
+  skill_xp_gain: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.cyan}[XP]${c.reset} +${d.xp_gained || d.xp || 0} XP in ${d.skill_id || 'unknown'} (${d.current_xp || '?'}/${d.next_level_xp || '?'})`,
     );
   },
 
-  trade_complete: (d, t) => {
+  trade_complete: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[TRADE]${c.reset} Trade completed with ${d.partner_name || d.with || 'someone'}!`,
     );
   },
 
-  trade_declined: (d, t) => {
+  trade_declined: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade declined by ${d.from_name || 'someone'}`);
   },
 
-  trade_cancelled: (d, t) => {
+  trade_cancelled: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TRADE]${c.reset} Trade cancelled (ID: ${d.trade_id || 'unknown'})`);
   },
 
-  friend_request_accepted: (d, t) => {
+  friend_request_accepted: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.from_name || d.username || 'Someone'} accepted your friend request!`,
     );
   },
 
-  friend_removed: (d, t) => {
+  friend_removed: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[FRIEND]${c.reset} ${d.from_name || d.username || 'Someone'} removed you as a friend`,
     );
   },
 
-  friend_online: (d, t) => {
+  friend_online: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[FRIEND]${c.reset} ${d.username || 'A friend'} is now online`);
   },
 
-  friend_offline: (d, t) => {
+  friend_offline: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.dim}[FRIEND]${c.reset} ${d.username || 'A friend'} went offline`);
   },
 
-  version_info: (d, t) => {
+  version_info: (d, t, writeLine) => {
     writeLine(`${c.dim}[${t}]${c.reset} ${c.cyan}[VERSION]${c.reset} Server version: ${d.version || 'unknown'}`);
   },
 
-  queue_cleared: (d, t) => {
+  queue_cleared: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[QUEUE]${c.reset} Action queue cleared${d.reason ? `: ${d.reason}` : ''}`,
     );
   },
 
-  friend_request: (d, t) => {
+  friend_request: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.cyan}[FRIEND]${c.reset} ${d.from_name || 'Someone'} sent you a friend request`,
     );
   },
 
-  system: (d, t) => {
+  system: (d, t, writeLine) => {
     // Handle different system notification types
     if (d.type === 'gameplay_tip') {
       writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${d.message}`);
@@ -304,7 +303,7 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     }
   },
 
-  action_result: (d, t) => {
+  action_result: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`,
     );
@@ -320,26 +319,53 @@ const notificationHandlers: Record<string, NotificationHandler> = {
     }
   },
 
-  action_error: (d, t) => {
+  action_error: (d, t, writeLine) => {
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.red}[ACTION FAILED]${c.reset} ${c.bright}${d.command}${c.reset} failed (tick ${d.tick || '?'}): ${d.message || d.code || 'unknown error'}`,
     );
   },
 
-  poi_arrival: (d, t) => {
+  poi_arrival: (d, t, writeLine) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.green}[ARRIVAL]${c.reset} ${tag}${d.username || 'Someone'} has arrived at ${d.poi_name || 'this POI'}`,
     );
   },
 
-  poi_departure: (d, t) => {
+  poi_departure: (d, t, writeLine) => {
     const tag = d.clan_tag ? `[${d.clan_tag}] ` : '';
     writeLine(
       `${c.dim}[${t}]${c.reset} ${c.yellow}[DEPARTURE]${c.reset} ${tag}${d.username || 'Someone'} has departed from ${d.poi_name || 'this POI'}`,
     );
   },
 };
+
+export const NOTIFICATION_TYPES = Object.keys(notificationHandlers).sort();
+
+export function formatNotification(notification: Notification): string[] {
+  const lines: string[] = [];
+  const writeLine = (message = '') => lines.push(message);
+  const data = notification.data as NotificationData;
+  const time = new Date(notification.timestamp).toLocaleTimeString();
+  const type = notification.msg_type || notification.type;
+  const handler = notificationHandlers[type];
+
+  if (handler) {
+    handler(data, time, writeLine);
+    return lines;
+  }
+
+  const message = data.message;
+  if (message) {
+    writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset} ${message}`);
+  } else {
+    writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset}`);
+    for (const [key, value] of Object.entries(data)) {
+      writeLine(`  ${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  return lines;
+}
 
 export function displayNotifications(
   notifications?: APIResponse['notifications'],
@@ -349,31 +375,10 @@ export function displayNotifications(
   if (!notifications?.length) return;
   if (quiet) return;
 
-  const previousWriteLine = writeLine;
-  writeLine = writer?.out.bind(writer) ?? previousWriteLine;
-
-  try {
-    for (const n of notifications) {
-      const data = n.data as NotificationData;
-      const time = new Date(n.timestamp).toLocaleTimeString();
-      const handler = notificationHandlers[n.msg_type || n.type];
-
-      if (handler) {
-        handler(data, time);
-      } else {
-        // Default handler for unknown types
-        const message = data.message;
-        if (message) {
-          writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${n.type.toUpperCase()}]${c.reset} ${message}`);
-        } else {
-          writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${n.type.toUpperCase()}]${c.reset}`);
-          for (const [key, value] of Object.entries(data)) {
-            writeLine(`  ${key}: ${JSON.stringify(value)}`);
-          }
-        }
-      }
+  const out = writer?.out.bind(writer) ?? console.log;
+  for (const notification of notifications) {
+    for (const line of formatNotification(notification)) {
+      out(line);
     }
-  } finally {
-    writeLine = previousWriteLine;
   }
 }

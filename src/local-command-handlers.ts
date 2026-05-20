@@ -95,10 +95,16 @@ const explainHandler: CommandHandler<{ command: string }, { found: boolean; comm
     const found = showCommandExplanation(payload.command);
     return { found, command: payload.command };
   },
-  render(result, options) {
+  render(result, options, _client, context) {
     if (!result.found) {
       if (options.json) {
-        printJsonError('unknown_command', `Unknown command: ${result.command}`);
+        const json = JSON.stringify(
+          { error: { code: 'unknown_command', message: `Unknown command: ${result.command}` } },
+          null,
+          2,
+        );
+        if (context) context.writer.out(json);
+        else printJsonError('unknown_command', `Unknown command: ${result.command}`);
         return 1;
       }
       displayUnknownCommand(result.command);

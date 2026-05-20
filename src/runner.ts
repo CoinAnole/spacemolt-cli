@@ -65,7 +65,11 @@ async function runInvocationWithContext(
   const resolvedContext = withResolvedConfig(context, config);
 
   if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
-    checkForUpdates();
+    checkForUpdates({
+      env: resolvedContext.env,
+      clock: resolvedContext.clock,
+      writer: resolvedContext.writer,
+    });
   }
 
   const handler = resolveHandler(invocation.args, invocation.options);
