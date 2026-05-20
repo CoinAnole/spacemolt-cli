@@ -1,4 +1,5 @@
-import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands.ts';
+import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
+import type { GeneratedApiRoute } from './openapi-metadata.ts';
 
 export type CommandArg = string | { rest: string };
 
