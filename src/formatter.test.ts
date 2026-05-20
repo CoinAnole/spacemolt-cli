@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import type { CliRuntimeContext } from './cli-context';
 import { displayStructuredResult } from './client';
 import {
   browseShipsFixture,
@@ -16,14 +17,6 @@ import type { GlobalOptions } from './types';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
-const originalLog = console.log;
-const originalError = console.error;
-
-afterEach(() => {
-  console.log = originalLog;
-  console.error = originalError;
-});
-
 function captureStructuredOutput(
   command: string,
   fixture: Record<string, unknown>,
@@ -31,10 +24,9 @@ function captureStructuredOutput(
 ): { stdout: string; stderr: string } {
   const stdout: string[] = [];
   const stderr: string[] = [];
-  console.log = (...args: unknown[]) => stdout.push(args.map(String).join(' '));
-  console.error = (...args: unknown[]) => stderr.push(args.map(String).join(' '));
+  const context = captureContext(stdout, stderr, options ? globalOptions(options) : undefined);
 
-  displayStructuredResult(command, structuredClone(fixture), options ? globalOptions(options) : undefined);
+  displayStructuredResult(command, structuredClone(fixture), options ? globalOptions(options) : undefined, context);
 
   return {
     stdout: stdout.join('\n').replace(ANSI_PATTERN, ''),
@@ -68,8 +60,7 @@ async function captureRenderedOutput(
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const stdout: string[] = [];
   const stderr: string[] = [];
-  console.log = (...args: unknown[]) => stdout.push(args.map(String).join(' '));
-  console.error = (...args: unknown[]) => stderr.push(args.map(String).join(' '));
+  const context = captureContext(stdout, stderr, globalOptions({ dryRun: true, ...options }));
 
   const exitCode = await renderResponse(
     {
@@ -78,12 +69,44 @@ async function captureRenderedOutput(
       response,
     },
     globalOptions({ dryRun: true, ...options }),
+    undefined,
+    context,
   );
 
   return {
     stdout: stdout.join('\n').replace(ANSI_PATTERN, ''),
     stderr: stderr.join('\n').replace(ANSI_PATTERN, ''),
     exitCode,
+  };
+}
+
+function captureContext(
+  stdout: string[],
+  stderr: string[],
+  output: GlobalOptions = globalOptions(),
+): CliRuntimeContext {
+  return {
+    env: {},
+    writer: {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut(chunk) {
+        stdout.push(chunk);
+      },
+    },
+    clock: {
+      now() {
+        return new Date('2026-05-19T12:34:56.000Z');
+      },
+    },
+    sleep() {
+      return Promise.resolve();
+    },
+    output,
   };
 }
 
@@ -150,6 +173,19 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('player.name=');
   });
 
+  test('context output options apply when explicit options are omitted', () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const context = captureContext(stdout, stderr, globalOptions({ format: 'json', compact: true }));
+
+    displayStructuredResult('get_status', structuredClone(outputModeFixture), undefined, context);
+
+    expect(stderr.join('\n')).toBe('');
+    expect(stdout.join('\n')).toBe(
+      '{"player":{"name":"Marlowe"},"ship":{"fuel":42},"items":[{"id":"ore_iron","quantity":5}]}',
+    );
+  });
+
   test('--compact compacts successful full-response JSON', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       { structuredContent: outputModeFixture },
@@ -172,6 +208,14 @@ describe('structuredContent output mode precedence', () => {
     expect(exitCode).toBe(1);
     expect(stderr).toBe('');
     expect(JSON.parse(stdout)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
+  });
+
+  test('rendered text output uses context clock for timestamps', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput({ result: 'OK' }, {});
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toBe('[2026-05-19T12:34:56.000Z]\nOK');
   });
 
   test('--jq evaluation errors exit with non-zero code', async () => {

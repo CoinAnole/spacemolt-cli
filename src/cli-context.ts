@@ -1,4 +1,5 @@
 import type { SpaceMoltConfig } from './runtime.ts';
+import type { OutputFormat } from './types.ts';
 
 export type CliEnv = Record<string, string | undefined>;
 
@@ -12,12 +13,21 @@ export interface CliClock {
   now(): Date;
 }
 
+export interface CliOutputOptions {
+  json?: boolean;
+  quiet?: boolean;
+  plain?: boolean;
+  format?: OutputFormat;
+  compact?: boolean;
+}
+
 export interface CliRuntimeContext {
   env: CliEnv;
   writer: CliWriter;
   clock: CliClock;
   sleep(ms: number): Promise<void>;
   config?: SpaceMoltConfig;
+  output?: CliOutputOptions;
 }
 
 export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRuntimeContext {
@@ -46,6 +56,15 @@ export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRun
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
     config,
+    output: config
+      ? {
+          json: config.jsonOutput,
+          quiet: config.quiet,
+          plain: config.plain,
+          format: config.format,
+          compact: config.compact,
+        }
+      : undefined,
   };
 }
 
@@ -53,10 +72,36 @@ export function withResolvedConfig(context: CliRuntimeContext | undefined, confi
   return {
     ...(context ?? createDefaultCliRuntimeContext()),
     config,
+    output: {
+      ...(context?.output ?? {}),
+      json: config.jsonOutput,
+      quiet: config.quiet,
+      plain: config.plain,
+      format: config.format,
+      compact: config.compact,
+    },
   };
 }
 
 export async function withCliWriter<T>(writer: CliWriter, fn: () => Promise<T> | T): Promise<T> {
+  const restore = installCliWriter(writer);
+  try {
+    return await fn();
+  } finally {
+    restore();
+  }
+}
+
+export function withCliWriterSync<T>(writer: CliWriter, fn: () => T): T {
+  const restore = installCliWriter(writer);
+  try {
+    return fn();
+  } finally {
+    restore();
+  }
+}
+
+function installCliWriter(writer: CliWriter): () => void {
   const originalLog = console.log;
   const originalError = console.error;
   const originalWrite = process.stdout.write;
@@ -81,11 +126,9 @@ export async function withCliWriter<T>(writer: CliWriter, fn: () => Promise<T> |
     return true;
   }) as typeof process.stdout.write;
 
-  try {
-    return await fn();
-  } finally {
+  return () => {
     console.log = originalLog;
     console.error = originalError;
     process.stdout.write = originalWrite;
-  }
+  };
 }

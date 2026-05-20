@@ -341,9 +341,13 @@ const notificationHandlers: Record<string, NotificationHandler> = {
   },
 };
 
-export function displayNotifications(notifications?: APIResponse['notifications'], writer?: CliWriter): void {
+export function displayNotifications(
+  notifications?: APIResponse['notifications'],
+  writer?: CliWriter,
+  quiet = QUIET,
+): void {
   if (!notifications?.length) return;
-  if (QUIET) return;
+  if (quiet) return;
 
   const previousWriteLine = writeLine;
   writeLine = writer?.out.bind(writer) ?? previousWriteLine;

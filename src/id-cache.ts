@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { CliWriter } from './cli-context.ts';
 import { COMMANDS } from './commands.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
 import { c, QUIET } from './runtime.ts';
@@ -274,7 +275,12 @@ export function cachedIdAmbiguityMessage(result: Extract<CachedIdResolveResult, 
   return `Ambiguous cached ${result.kind} match for "${result.query}". Use the exact ID. Matches: ${candidates}${suffix}`;
 }
 
-export function printCachedIdSuggestions(command: string, field?: string, sessionPath?: string): void {
+export function printCachedIdSuggestions(
+  command: string,
+  field?: string,
+  sessionPath?: string,
+  writer?: CliWriter,
+): void {
   if (QUIET) return;
   const kind = idKindForCommandField(command, field);
   if (!kind) return;
@@ -282,8 +288,9 @@ export function printCachedIdSuggestions(command: string, field?: string, sessio
   const suggestions = hintsForKind(kind, hints).slice(0, 8);
   if (suggestions.length === 0) return;
 
-  console.error(`\n${c.cyan}Cached ${kind} IDs:${c.reset}`);
-  for (const hint of suggestions) console.error(`  ${formatHint(hint)}`);
+  const err = writer?.err.bind(writer) ?? console.error;
+  err(`\n${c.cyan}Cached ${kind} IDs:${c.reset}`);
+  for (const hint of suggestions) err(`  ${formatHint(hint)}`);
 }
 
 export function printIds(kind: IdKind, sessionPath?: string): void {

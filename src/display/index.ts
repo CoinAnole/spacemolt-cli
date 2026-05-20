@@ -1,3 +1,5 @@
+import type { CliRuntimeContext } from '../cli-context.ts';
+import { withCliWriterSync } from '../cli-context.ts';
 import { evaluateJq, formatJqResult } from '../jq.ts';
 import {
   extractFields,
@@ -14,8 +16,18 @@ function hasFields(fields: string[] | undefined): fields is string[] {
   return Boolean(fields && fields.length > 0);
 }
 
-function getOutputFormat(options?: GlobalOptions): OutputFormat {
-  return options?.format ?? (options?.json ? 'json' : FORMAT);
+function getOutputFormat(options?: GlobalOptions, context?: CliRuntimeContext): OutputFormat {
+  if (options?.format) return options.format;
+  if (options?.json ?? context?.output?.json ?? context?.config?.jsonOutput) return 'json';
+  return context?.output?.format ?? context?.config?.format ?? FORMAT;
+}
+
+function isQuiet(options?: GlobalOptions, context?: CliRuntimeContext): boolean {
+  return options?.quiet ?? context?.output?.quiet ?? context?.config?.quiet ?? QUIET;
+}
+
+function isCompact(options?: GlobalOptions, context?: CliRuntimeContext): boolean {
+  return options?.compact ?? context?.output?.compact ?? context?.config?.compact ?? COMPACT;
 }
 
 function stringifyJson(value: unknown, compact: boolean): string {
@@ -38,12 +50,25 @@ export function displayStructuredResult(
   command: string,
   result: Record<string, unknown>,
   options?: GlobalOptions,
+  context?: CliRuntimeContext,
+): boolean {
+  if (context) {
+    return withCliWriterSync(context.writer, () => displayStructuredResultInternal(command, result, options, context));
+  }
+  return displayStructuredResultInternal(command, result, options, context);
+}
+
+function displayStructuredResultInternal(
+  command: string,
+  result: Record<string, unknown>,
+  options?: GlobalOptions,
+  context?: CliRuntimeContext,
 ): boolean {
   if (!result) return true;
 
   const fields = options?.fields;
-  const format = getOutputFormat(options);
-  const compact = options?.compact ?? COMPACT;
+  const format = getOutputFormat(options, context);
+  const compact = isCompact(options, context);
   const jqExpr = options?.jq;
 
   if (jqExpr) {
@@ -85,7 +110,7 @@ export function displayStructuredResult(
 
   const viewModel = normalizeStructuredResultForDisplay(result);
 
-  if (!QUIET) {
+  if (!isQuiet(options, context)) {
     if (viewModel.auto_docked)
       console.log(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
     if (viewModel.auto_undocked)
@@ -119,19 +144,36 @@ export function displayStructuredResult(
   return true;
 }
 
-export function displayResult(command: string, response: APIResponse, options?: GlobalOptions): boolean {
+export function displayResult(
+  command: string,
+  response: APIResponse,
+  options?: GlobalOptions,
+  context?: CliRuntimeContext,
+): boolean {
+  if (context) {
+    return withCliWriterSync(context.writer, () => displayResultInternal(command, response, options, context));
+  }
+  return displayResultInternal(command, response, options, context);
+}
+
+function displayResultInternal(
+  command: string,
+  response: APIResponse,
+  options?: GlobalOptions,
+  context?: CliRuntimeContext,
+): boolean {
   const noTimestamp = options?.noTimestamp ?? false;
-  if (!QUIET && !noTimestamp) {
-    console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
+  if (!isQuiet(options, context) && !noTimestamp) {
+    console.log(`${c.dim}[${(context?.clock.now() ?? new Date()).toISOString()}]${c.reset}`);
   }
   const structured = getStructuredResult(response);
   if (structured) {
-    return displayStructuredResult(command, structured, options);
+    return displayStructuredResult(command, structured, options, context);
   }
 
   const viewModel = getObjectResult(response);
   if (viewModel) {
-    return displayStructuredResult(command, viewModel, options);
+    return displayStructuredResult(command, viewModel, options, context);
   }
 
   if (typeof response.result === 'string' && response.result.trim()) {

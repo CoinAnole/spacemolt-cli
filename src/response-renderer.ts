@@ -47,7 +47,7 @@ export async function renderResponse(
   const writer = context?.writer;
 
   if (isJson && response.error) {
-    printJsonResponse(response);
+    printJsonResponse(response, false, writer);
     return 1;
   }
 
@@ -55,16 +55,16 @@ export async function renderResponse(
     const header = `${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`;
     if (writer) writer.out(header);
     else console.log(header);
-    displayNotifications(response.notifications, writer);
+    displayNotifications(response.notifications, writer, options.quiet);
     if (writer) writer.out('');
     else console.log('');
   }
 
   if (!isJson && response.error) {
-    displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp });
+    displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp, context });
     const sessionPath = getSessionPath(client.config);
-    if (shouldShowCachedIdSuggestions(command, response.error)) {
-      printCachedIdSuggestions(command, undefined, sessionPath);
+    if (!options.quiet && shouldShowCachedIdSuggestions(command, response.error)) {
+      printCachedIdSuggestions(command, undefined, sessionPath, writer);
     }
     return 1;
   }
@@ -73,11 +73,16 @@ export async function renderResponse(
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
   if (isJson && !hasProjection) {
-    printJsonResponse(response, options.compact);
+    printJsonResponse(response, options.compact, writer);
     return response.error ? 1 : 0;
   }
 
-  const success = displayResult(displayCommand, response, hasProjection ? { ...options, noTimestamp: true } : options);
+  const success = displayResult(
+    displayCommand,
+    response,
+    hasProjection ? { ...options, noTimestamp: true } : options,
+    context,
+  );
   return success === false ? 1 : 0;
 }
 

@@ -1,5 +1,7 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
+import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
+import { withCliWriterSync } from './cli-context.ts';
 import { ALL_COMMANDS, routeToPath } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
@@ -75,8 +77,9 @@ const _ERROR_HELP: Record<string, string> = Object.fromEntries(
   Object.entries(ERROR_REGISTRY).map(([code, entry]) => [code, entry.suggestion]),
 );
 
-export function printJsonResponse(response: APIResponse, compact = false): void {
-  console.log(JSON.stringify(response, null, compact ? 0 : 2));
+export function printJsonResponse(response: APIResponse, compact = false, writer?: CliWriter): void {
+  const out = writer?.out.bind(writer) ?? console.log;
+  out(JSON.stringify(response, null, compact ? 0 : 2));
 }
 
 export function printJsonError(code: string, message: string): void {
@@ -854,25 +857,32 @@ ${c.bright}Documentation:${c.reset}
 export function displayError(
   command: string,
   error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
-  options?: { noTimestamp?: boolean },
+  options?: { noTimestamp?: boolean; context?: CliRuntimeContext },
 ): void {
-  if (!QUIET && !options?.noTimestamp) {
-    console.log(`${c.dim}[${new Date().toISOString()}]${c.reset}`);
+  const writer = options?.context?.writer;
+  const out = writer?.out.bind(writer) ?? console.log;
+  const err = writer?.err.bind(writer) ?? console.error;
+  const quiet = options?.context?.output?.quiet ?? options?.context?.config?.quiet ?? QUIET;
+  if (!quiet && !options?.noTimestamp) {
+    out(`${c.dim}[${(options?.context?.clock.now() ?? new Date()).toISOString()}]${c.reset}`);
   }
-  console.error(`${c.red}Error [${error.code}]:${c.reset} ${error.message}`);
+  err(`${c.red}Error [${error.code}]:${c.reset} ${error.message}`);
   const retryAfter = error.retry_after ?? error.wait_seconds;
   if (retryAfter !== undefined) {
-    console.error(`${c.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${c.reset}`);
+    err(`${c.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${c.reset}`);
   }
-  if (!QUIET) {
+  if (!quiet) {
     const help = getErrorSuggestion(error.code);
-    if (help) console.error(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
+    if (help) err(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
     if (isRetryableError(error.code) && retryAfter === undefined) {
-      console.error(`${c.dim}This error may be retryable.${c.reset}`);
+      err(`${c.dim}This error may be retryable.${c.reset}`);
     }
     if (isAuthError(error.code)) {
-      console.error(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
+      err(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
     }
-    if (ALL_COMMANDS[command]) printNextSteps(command);
+    if (ALL_COMMANDS[command]) {
+      if (writer) withCliWriterSync(writer, () => printNextSteps(command));
+      else printNextSteps(command);
+    }
   }
 }
