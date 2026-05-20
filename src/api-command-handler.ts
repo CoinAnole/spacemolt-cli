@@ -26,7 +26,7 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
     const config = context?.config ?? getRuntimeConfig(options, context?.env);
     const sessionPath = getSessionPath(config);
 
-    const prepared = preparePayload(this.name, parsedArgs.payload, options, sessionPath);
+    const prepared = preparePayload(this.name, parsedArgs.payload, options, sessionPath, context?.writer);
     if (prepared.type === 'exit') {
       return {
         ok: false,

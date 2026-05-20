@@ -1,5 +1,5 @@
 import type { CliWriter } from './cli-context.ts';
-import { c, QUIET } from './runtime.ts';
+import { c } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
 type NotificationData = Record<string, unknown>;
@@ -370,7 +370,7 @@ export function formatNotification(notification: Notification): string[] {
 export function displayNotifications(
   notifications?: APIResponse['notifications'],
   writer?: CliWriter,
-  quiet = QUIET,
+  quiet = false,
 ): void {
   if (!notifications?.length) return;
   if (quiet) return;

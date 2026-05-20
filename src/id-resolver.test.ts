@@ -8,14 +8,10 @@ import { preparePayload } from './main';
 import type { GlobalOptions } from './types';
 
 const originalSession = process.env.SPACEMOLT_SESSION;
-const originalLog = console.log;
-const originalError = console.error;
 
 afterEach(() => {
   if (originalSession === undefined) delete process.env.SPACEMOLT_SESSION;
   else process.env.SPACEMOLT_SESSION = originalSession;
-  console.log = originalLog;
-  console.error = originalError;
 });
 
 function options(overrides: Partial<GlobalOptions> = {}): GlobalOptions {
@@ -36,6 +32,17 @@ function options(overrides: Partial<GlobalOptions> = {}): GlobalOptions {
 function useTempSession(): void {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-resolver-'));
   process.env.SPACEMOLT_SESSION = path.join(tempDir, 'session.json');
+}
+
+function writer(stdout: string[] = [], stderr: string[] = []) {
+  return {
+    out(message = '') {
+      stdout.push(message);
+    },
+    err(message = '') {
+      stderr.push(message);
+    },
+  };
 }
 
 describe('cached ID payload resolver', () => {
@@ -86,9 +93,14 @@ describe('cached ID payload resolver', () => {
       )}\n`,
     );
     const stderr: string[] = [];
-    console.error = (...args: unknown[]) => stderr.push(args.map(String).join(' '));
 
-    const prepared = preparePayload('sell', { item_id: 'iron', quantity: '50' }, options());
+    const prepared = preparePayload(
+      'sell',
+      { item_id: 'iron', quantity: '50' },
+      options(),
+      undefined,
+      writer([], stderr),
+    );
 
     expect(prepared).toEqual({ type: 'exit', exitCode: 1 });
     expect(stderr.join('\n')).toContain('Ambiguous cached item match for "iron"');
@@ -121,9 +133,14 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
     const stdout: string[] = [];
-    console.log = (...args: unknown[]) => stdout.push(args.map(String).join(' '));
 
-    const prepared = preparePayload('sell', { item_id: 'iron', quantity: '50' }, options({ json: true }));
+    const prepared = preparePayload(
+      'sell',
+      { item_id: 'iron', quantity: '50' },
+      options({ json: true }),
+      undefined,
+      writer(stdout),
+    );
 
     expect(prepared).toEqual({ type: 'exit', exitCode: 1 });
     const parsed = JSON.parse(stdout.join('\n'));

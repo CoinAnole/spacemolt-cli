@@ -1,12 +1,11 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
-import { withCliWriterSync } from './cli-context.ts';
 import { ALL_COMMANDS, routeToPath } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { getStructuredResult, isRecord } from './response.ts';
-import { c, QUIET, VERSION } from './runtime.ts';
+import { c, VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
 import type { APIResponse, CommandGroup, CommandSearchMatch } from './types.ts';
 
@@ -82,8 +81,16 @@ export function printJsonResponse(response: APIResponse, compact = false, writer
   out(JSON.stringify(response, null, compact ? 0 : 2));
 }
 
-export function printJsonError(code: string, message: string): void {
-  printJsonResponse({ error: { code, message } });
+export function printJsonError(code: string, message: string, writer?: CliWriter): void {
+  printJsonResponse({ error: { code, message } }, false, writer);
+}
+
+function out(writer?: CliWriter): (message?: string) => void {
+  return writer?.out.bind(writer) ?? console.log;
+}
+
+function err(writer?: CliWriter): (message?: string) => void {
+  return writer?.err.bind(writer) ?? console.error;
 }
 
 export function getUsageHint(command: string): string {
@@ -155,20 +162,22 @@ function formatCommandSummary(command: string): string {
   return description ? `${command}${usageText} - ${description}` : `${command}${usageText}`;
 }
 
-export function showCommandGroups(): void {
-  console.log(`\n${c.bright}Command Groups${c.reset}`);
+export function showCommandGroups(writer?: CliWriter): void {
+  const write = out(writer);
+  write(`\n${c.bright}Command Groups${c.reset}`);
   for (const group of COMMAND_GROUPS) {
     const categories = new Set(group.categories);
     const count = Object.keys(ALL_COMMANDS).filter((command) => commandMatchesCategories(command, categories)).length;
-    console.log(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
+    write(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
   }
-  console.log(`\nRun "spacemolt help <group>" to list commands in a group.`);
-  console.log(`Run "spacemolt commands --search <query>" to search local command metadata.`);
+  write(`\nRun "spacemolt help <group>" to list commands in a group.`);
+  write(`Run "spacemolt commands --search <query>" to search local command metadata.`);
 }
 
-export function showCommandGroup(topic: string): boolean {
+export function showCommandGroup(topic: string, writer?: CliWriter): boolean {
   const group = findCommandGroup(topic);
   if (!group) return false;
+  const write = out(writer);
 
   const categories = new Set(group.categories);
   const commands = Object.keys(ALL_COMMANDS)
@@ -178,17 +187,17 @@ export function showCommandGroup(topic: string): boolean {
       return categoryCompare || a.localeCompare(b);
     });
 
-  console.log(`\n${c.bright}${group.label} Commands${c.reset}`);
+  write(`\n${c.bright}${group.label} Commands${c.reset}`);
   let lastCategory = '';
   for (const command of commands) {
     const category = ALL_COMMANDS[command]?.category || 'Other';
     if (category !== lastCategory) {
       lastCategory = category;
-      console.log(`\n${c.cyan}${category}:${c.reset}`);
+      write(`\n${c.cyan}${category}:${c.reset}`);
     }
-    console.log(`  ${formatCommandSummary(command)}`);
+    write(`  ${formatCommandSummary(command)}`);
   }
-  console.log(`\nRun "spacemolt explain <command>" for argument details and related commands.`);
+  write(`\nRun "spacemolt explain <command>" for argument details and related commands.`);
   return true;
 }
 
@@ -247,77 +256,80 @@ export function parseCommandSearchQuery(args: string[]): string {
   return args.join(' ').trim();
 }
 
-export function showCommandSearch(query: string): void {
+export function showCommandSearch(query: string, writer?: CliWriter): void {
   const results = searchLocalCommands(query);
   const title = query ? `Commands matching "${query}"` : 'All Commands';
-  console.log(`\n${c.bright}${title}${c.reset}`);
+  const write = out(writer);
+  write(`\n${c.bright}${title}${c.reset}`);
   if (!results.length) {
-    console.log('  (No local command matches)');
+    write('  (No local command matches)');
     const suggestions = suggestCommands(query, 5);
-    if (suggestions.length > 0) console.log(`\nDid you mean: ${suggestions.join(', ')}`);
+    if (suggestions.length > 0) write(`\nDid you mean: ${suggestions.join(', ')}`);
     return;
   }
-  for (const command of results) console.log(`  ${formatCommandSummary(command)}`);
-  if (results.length === 30) console.log(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
+  for (const command of results) write(`  ${formatCommandSummary(command)}`);
+  if (results.length === 30) write(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
 }
 
-export function showCommandExplanation(command: string): boolean {
+export function showCommandExplanation(command: string, writer?: CliWriter): boolean {
   const config = ALL_COMMANDS[command];
   if (!config) return false;
+  const write = out(writer);
 
-  showCommandHelp(command);
-  console.log(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
+  showCommandHelp(command, writer);
+  write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
     const routePath = routeToPath(config.route, { includeApiPrefix: true });
-    console.log(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
+    write(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
   } else {
-    console.log(`${c.bright}Type:${c.reset} local helper command`);
+    write(`${c.bright}Type:${c.reset} local helper command`);
   }
   if (config.aliases && Object.keys(config.aliases).length > 0) {
-    console.log(`${c.bright}CLI aliases:${c.reset}`);
-    for (const [from, to] of Object.entries(config.aliases)) console.log(`  ${from} -> ${to}`);
+    write(`${c.bright}CLI aliases:${c.reset}`);
+    for (const [from, to] of Object.entries(config.aliases)) write(`  ${from} -> ${to}`);
   }
   if ('route' in config && config.route.defaults && Object.keys(config.route.defaults).length > 0) {
-    console.log(`${c.bright}Default payload fields:${c.reset}`);
-    for (const [key, value] of Object.entries(config.route.defaults)) console.log(`  ${key}=${value}`);
+    write(`${c.bright}Default payload fields:${c.reset}`);
+    for (const [key, value] of Object.entries(config.route.defaults)) write(`  ${key}=${value}`);
   }
   return true;
 }
 
-export function showCommandHelp(command: string): boolean {
+export function showCommandHelp(command: string, writer?: CliWriter): boolean {
   const config = ALL_COMMANDS[command];
   if (!config) return false;
+  const write = out(writer);
 
-  console.log(`\n${c.bright}${command}${c.reset}`);
-  if (config.description) console.log(config.description);
-  console.log(`\n${c.bright}Usage:${c.reset}`);
-  console.log(`  ${getUsageLine(command)}`);
+  write(`\n${c.bright}${command}${c.reset}`);
+  if (config.description) write(config.description);
+  write(`\n${c.bright}Usage:${c.reset}`);
+  write(`  ${getUsageLine(command)}`);
 
   const argNames = getArgNames(config);
   if (argNames.length > 0) {
-    console.log(`\n${c.bright}Arguments:${c.reset}`);
-    console.log(`  ${argNames.join(', ')}`);
-    console.log(`\n${c.bright}Accepted forms:${c.reset}`);
-    console.log(`  ${getUsageLine(command)}`);
-    console.log(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
-    console.log(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
+    write(`\n${c.bright}Arguments:${c.reset}`);
+    write(`  ${argNames.join(', ')}`);
+    write(`\n${c.bright}Accepted forms:${c.reset}`);
+    write(`  ${getUsageLine(command)}`);
+    write(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
+    write(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
 
   if (config.example) {
-    console.log(`\n${c.bright}Example:${c.reset}`);
-    console.log(`  ${config.example}`);
+    write(`\n${c.bright}Example:${c.reset}`);
+    write(`  ${config.example}`);
   }
   if (config.discoverWith?.length) {
-    console.log(`\n${c.bright}Discover valid IDs/state with:${c.reset}`);
-    for (const related of config.discoverWith) console.log(`  spacemolt ${related}`);
+    write(`\n${c.bright}Discover valid IDs/state with:${c.reset}`);
+    for (const related of config.discoverWith) write(`  spacemolt ${related}`);
   }
   if (config.seeAlso?.length) {
-    console.log(`\n${c.bright}See also:${c.reset} ${config.seeAlso.join(', ')}`);
+    write(`\n${c.bright}See also:${c.reset} ${config.seeAlso.join(', ')}`);
   }
   return true;
 }
 
-function printNextSteps(command: string, missingArg?: string): void {
+function printNextSteps(command: string, missingArg?: string, writer?: CliWriter): void {
   const config = ALL_COMMANDS[command];
   const steps: string[] = [];
   for (const related of config?.discoverWith || []) steps.push(`spacemolt ${related}`);
@@ -325,7 +337,7 @@ function printNextSteps(command: string, missingArg?: string): void {
   if (command !== 'get_commands' && !steps.includes('spacemolt get_commands')) steps.push('spacemolt get_commands');
 
   const reason = missingArg && config?.discoverWith?.length ? ` to find a valid ${missingArg}` : '';
-  console.error(
+  err(writer)(
     `\n${c.cyan}Next:${c.reset} run ${steps
       .slice(0, 3)
       .map((step) => `"${step}"`)
@@ -333,32 +345,34 @@ function printNextSteps(command: string, missingArg?: string): void {
   );
 }
 
-export function displayUnknownCommand(command: string): void {
-  console.error(`${c.red}Error:${c.reset} Unknown command "${command}"`);
+export function displayUnknownCommand(command: string, writer?: CliWriter): void {
+  const writeErr = err(writer);
+  writeErr(`${c.red}Error:${c.reset} Unknown command "${command}"`);
   const suggestions = suggestCommands(command);
-  if (suggestions.length > 0) console.error(`Did you mean: ${suggestions.join(', ')}`);
-  console.error(`\nRun "spacemolt --help" for the local command overview.`);
-  console.error(`Run "spacemolt get_commands" for the server command list once connected.`);
+  if (suggestions.length > 0) writeErr(`Did you mean: ${suggestions.join(', ')}`);
+  writeErr(`\nRun "spacemolt --help" for the local command overview.`);
+  writeErr(`Run "spacemolt get_commands" for the server command list once connected.`);
 }
 
-export function displayMissingArgument(command: string, missingArg: string): void {
-  console.error(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
-  console.error(`\n${c.bright}Usage:${c.reset}`);
-  console.error(`  ${getUsageLine(command)}`);
+export function displayMissingArgument(command: string, missingArg: string, writer?: CliWriter): void {
+  const writeErr = err(writer);
+  writeErr(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
+  writeErr(`\n${c.bright}Usage:${c.reset}`);
+  writeErr(`  ${getUsageLine(command)}`);
 
   const config = ALL_COMMANDS[command];
   const argNames = config ? getArgNames(config) : [];
   if (argNames.length > 0) {
-    console.error(`\n${c.bright}Accepted forms:${c.reset}`);
-    console.error(`  ${getUsageLine(command)}`);
-    console.error(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
-    console.error(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
+    writeErr(`\n${c.bright}Accepted forms:${c.reset}`);
+    writeErr(`  ${getUsageLine(command)}`);
+    writeErr(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
+    writeErr(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
 
   const example = config?.example;
-  if (example) console.error(`\n${c.bright}Example:${c.reset}\n  ${example}`);
-  printCachedIdSuggestions(command, missingArg);
-  printNextSteps(command, missingArg);
+  if (example) writeErr(`\n${c.bright}Example:${c.reset}\n  ${example}`);
+  printCachedIdSuggestions(command, missingArg, undefined, writer);
+  printNextSteps(command, missingArg, writer);
 }
 
 // =============================================================================
@@ -402,80 +416,82 @@ async function getPlayerState(): Promise<PlayerState> {
   }
 }
 
-function printStateSection(state: PlayerState): void {
+function printStateSection(state: PlayerState, writer?: CliWriter): void {
+  const write = out(writer);
   if (!state.authenticated) {
-    console.log(`${c.bright}Start:${c.reset}`);
-    console.log(`  1. Get a registration code from https://spacemolt.com/dashboard`);
-    console.log(`  2. spacemolt register <username> <empire> <registration_code>`);
-    console.log(`  3. spacemolt login <username> <password>`);
+    write(`${c.bright}Start:${c.reset}`);
+    write(`  1. Get a registration code from https://spacemolt.com/dashboard`);
+    write(`  2. spacemolt register <username> <empire> <registration_code>`);
+    write(`  3. spacemolt login <username> <password>`);
     return;
   }
 
   if (state.escapePod) {
-    console.log(`${c.yellow}You are in an Escape Pod.${c.reset} Get to a station and acquire a ship.`);
+    write(`${c.yellow}You are in an Escape Pod.${c.reset} Get to a station and acquire a ship.`);
   }
 
-  console.log(`${c.bright}Suggested Next Steps:${c.reset}`);
+  write(`${c.bright}Suggested Next Steps:${c.reset}`);
 
   if (state.traveling) {
-    console.log(`  ${c.cyan}[TRAVELING]${c.reset}`);
-    console.log(`    spacemolt get_status          # Check travel progress`);
-    console.log(`    — Travel resolves on the next tick (~10s per tick)`);
-    console.log(`    — Long routes can take many ticks; get_status shows % complete`);
+    write(`  ${c.cyan}[TRAVELING]${c.reset}`);
+    write(`    spacemolt get_status          # Check travel progress`);
+    write(`    — Travel resolves on the next tick (~10s per tick)`);
+    write(`    — Long routes can take many ticks; get_status shows % complete`);
     return;
   }
 
   if (state.docked) {
-    console.log(`  ${c.cyan}[DOCKED]${c.reset}`);
-    console.log(`    spacemolt view_market         # Check market prices`);
-    console.log(`    spacemolt refuel              # Refuel ship`);
-    console.log(`    spacemolt repair              # Repair hull damage`);
-    console.log(`    spacemolt view_storage        # Access station storage`);
-    console.log(`    spacemolt sale_ship           # Buy ships`);
-    console.log(`    spacemolt facility_list       # Check base facilities`);
-    console.log(`    spacemolt undock              # Leave station when ready`);
+    write(`  ${c.cyan}[DOCKED]${c.reset}`);
+    write(`    spacemolt view_market         # Check market prices`);
+    write(`    spacemolt refuel              # Refuel ship`);
+    write(`    spacemolt repair              # Repair hull damage`);
+    write(`    spacemolt view_storage        # Access station storage`);
+    write(`    spacemolt sale_ship           # Buy ships`);
+    write(`    spacemolt facility_list       # Check base facilities`);
+    write(`    spacemolt undock              # Leave station when ready`);
     return;
   }
 
   if (state.atAsteroidBelt) {
-    console.log(`  ${c.cyan}[ASTEROID BELT]${c.reset}`);
-    console.log(`    spacemolt mine                # Mine resources`);
-    console.log(`    spacemolt get_poi             # See belt resources remaining`);
-    console.log(`    spacemolt get_cargo           # Check what you've mined`);
-    console.log(`    spacemolt travel <station>    # Return to station to sell`);
+    write(`  ${c.cyan}[ASTEROID BELT]${c.reset}`);
+    write(`    spacemolt mine                # Mine resources`);
+    write(`    spacemolt get_poi             # See belt resources remaining`);
+    write(`    spacemolt get_cargo           # Check what you've mined`);
+    write(`    spacemolt travel <station>    # Return to station to sell`);
     return;
   }
 
-  console.log(`  ${c.cyan}[IN SPACE]${c.reset}`);
-  console.log(`    spacemolt get_system          # See POIs and connections`);
-  console.log(`    spacemolt travel <poi_id>     # Move to a POI`);
-  console.log(`    spacemolt get_status          # Check ship and location`);
+  write(`  ${c.cyan}[IN SPACE]${c.reset}`);
+  write(`    spacemolt get_system          # See POIs and connections`);
+  write(`    spacemolt travel <poi_id>     # Move to a POI`);
+  write(`    spacemolt get_status          # Check ship and location`);
 }
 
-export async function showProgressiveHelp(): Promise<void> {
+export async function showProgressiveHelp(writer?: CliWriter): Promise<void> {
   const state = await getPlayerState();
+  const write = out(writer);
 
-  console.log(`
+  write(`
 ${c.bright}SpaceMolt CLI v${VERSION}${c.reset}
 HTTP client for the SpaceMolt MMO.`);
 
-  printStateSection(state);
+  printStateSection(state, writer);
 
   if (state.authenticated) {
-    console.log(`
+    write(`
 ${c.bright}Useful Commands:${c.reset}`);
   } else {
-    console.log(`
+    write(`
 ${c.bright}Once logged in, try:${c.reset}`);
   }
-  console.log(`  get_status       Ship, player, location`);
-  console.log(`  get_system       POIs and connected systems`);
-  console.log(`  get_cargo        Cargo contents`);
-  console.log(`  view_market      Market/order book`);
-  console.log(`  facility_list    Facilities at current base`);
-  console.log(`  catalog <type>   Browse ships/items/skills/recipes`);
+  write(`  get_status       Ship, player, location`);
+  write(`  get_system       POIs and connected systems`);
+  write(`  get_cargo        Cargo contents`);
+  write(`  view_market      Market/order book`);
+  write(`  facility_list    Facilities at current base`);
+  write(`  catalog <type>   Browse ships/items/skills/recipes`);
 
-  console.log(`
+  write(`
 ${c.bright}Command Discovery:${c.reset}
   spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
   spacemolt explain <command>     Local usage, args, route
@@ -511,8 +527,8 @@ ${c.bright}Output Precedence:${c.reset}
 // Help
 // =============================================================================
 
-export function showHelp(): void {
-  console.log(`
+export function showHelp(writer?: CliWriter): void {
+  out(writer)(`
 ${c.bright}SpaceMolt CLI v${VERSION}${c.reset}
 HTTP client for the SpaceMolt MMO.
 
@@ -570,8 +586,8 @@ ${c.bright}Output Precedence:${c.reset}
 `);
 }
 
-export function showFullHelp(): void {
-  console.log(`
+export function showFullHelp(writer?: CliWriter): void {
+  out(writer)(`
 ${c.bright}SpaceMolt CLI Client v${VERSION}${c.reset}
 A command-line client for the SpaceMolt MMO.
 
@@ -862,7 +878,7 @@ export function displayError(
   const writer = options?.context?.writer;
   const out = writer?.out.bind(writer) ?? console.log;
   const err = writer?.err.bind(writer) ?? console.error;
-  const quiet = options?.context?.output?.quiet ?? options?.context?.config?.quiet ?? QUIET;
+  const quiet = options?.context?.output?.quiet ?? options?.context?.config?.quiet ?? false;
   if (!quiet && !options?.noTimestamp) {
     out(`${c.dim}[${(options?.context?.clock.now() ?? new Date()).toISOString()}]${c.reset}`);
   }
@@ -881,8 +897,7 @@ export function displayError(
       err(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
     }
     if (ALL_COMMANDS[command]) {
-      if (writer) withCliWriterSync(writer, () => printNextSteps(command));
-      else printNextSteps(command);
+      printNextSteps(command, undefined, writer);
     }
   }
 }

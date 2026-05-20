@@ -67,8 +67,8 @@ const commandsHandler: CommandHandler<{ args: string[] }, { query: ReturnType<ty
   run(payload) {
     return { query: parseCommandSearchQuery(payload.args) };
   },
-  render(result) {
-    showCommandSearch(result.query);
+  render(result, _options, _client, context) {
+    showCommandSearch(result.query, context?.writer);
     return 0;
   },
 };
@@ -92,7 +92,7 @@ const explainHandler: CommandHandler<{ command: string }, { found: boolean; comm
     return { ok: true, payload: { command: explainCommand } };
   },
   run(payload) {
-    const found = showCommandExplanation(payload.command);
+    const found = Boolean(COMMANDS[payload.command]);
     return { found, command: payload.command };
   },
   render(result, options, _client, context) {
@@ -107,9 +107,10 @@ const explainHandler: CommandHandler<{ command: string }, { found: boolean; comm
         else printJsonError('unknown_command', `Unknown command: ${result.command}`);
         return 1;
       }
-      displayUnknownCommand(result.command);
+      displayUnknownCommand(result.command, context?.writer);
       return 1;
     }
+    showCommandExplanation(result.command, context?.writer);
     return 0;
   },
 };
@@ -159,7 +160,7 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
       if (context) context.writer.out(json);
       else console.log(json);
     } else {
-      printDoctorResult(doctorResult);
+      printDoctorResult(doctorResult, context?.writer);
     }
     return doctorResult.ok ? 0 : 1;
   },
@@ -195,7 +196,7 @@ const idsHandler: CommandHandler<{ kind: IdKind }, { kind: IdKind; hints: IdHint
       else console.log(json);
     } else {
       const sessionPath = client ? getSessionPath(client.config) : undefined;
-      printIds(result.kind, sessionPath);
+      printIds(result.kind, sessionPath, context?.writer);
     }
     return 0;
   },
@@ -231,7 +232,7 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
       else console.log(json);
     } else {
       const sessionPath = client ? getSessionPath(client.config) : undefined;
-      printWhereCanI(result.query, sessionPath);
+      printWhereCanI(result.query, sessionPath, context?.writer);
     }
     return 0;
   },
@@ -301,41 +302,44 @@ const localHelpHandler: CommandHandler<HelpPayload, HelpPayload> = {
   async run(payload) {
     return payload;
   },
-  async render(result, options) {
+  async render(result, options, _client, context) {
     if (result.type === 'showHelp') {
-      showHelp();
+      showHelp(context?.writer);
       return 0;
     }
     if (result.type === 'showHelpAndGroups') {
-      showHelp();
-      showCommandGroups();
+      showHelp(context?.writer);
+      showCommandGroups(context?.writer);
       return 0;
     }
     if (result.type === 'helpAll') {
-      showFullHelp();
+      showFullHelp(context?.writer);
       return 0;
     }
     if (result.type === 'helpGroup') {
-      showCommandGroup(result.target);
+      showCommandGroup(result.target, context?.writer);
       return 0;
     }
     if (result.type === 'progressiveOrHelp') {
       if (options.watch) {
-        showHelp();
+        showHelp(context?.writer);
       } else {
-        await showProgressiveHelp();
+        await showProgressiveHelp(context?.writer);
       }
       return 0;
     }
     if (result.type === 'helpCommand') {
-      if (showCommandHelp(result.target) || (hasCommandGroup(result.target) && showCommandGroup(result.target))) {
+      if (
+        showCommandHelp(result.target, context?.writer) ||
+        (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer))
+      ) {
         return 0;
       }
       if (options.json) {
-        printJsonError('unknown_command', `Unknown command: ${result.target}`);
+        printJsonError('unknown_command', `Unknown command: ${result.target}`, context?.writer);
         return 1;
       }
-      displayUnknownCommand(result.target);
+      displayUnknownCommand(result.target, context?.writer);
       return 1;
     }
     return 0;

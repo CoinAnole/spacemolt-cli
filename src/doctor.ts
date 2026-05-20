@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { CliWriter } from './cli-context.ts';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, c, type SpaceMoltConfig, VERSION } from './runtime.ts';
@@ -151,23 +152,24 @@ export async function runDoctor(config?: SpaceMoltConfig): Promise<DoctorResult>
   return { ok, checks };
 }
 
-export function printDoctorResult(result: DoctorResult): void {
-  console.log(`${c.bright}SpaceMolt Doctor${c.reset}\n`);
+export function printDoctorResult(result: DoctorResult, writer?: CliWriter): void {
+  const out = writer?.out.bind(writer) ?? console.log;
+  out(`${c.bright}SpaceMolt Doctor${c.reset}\n`);
   for (const check of result.checks) {
     const icon = check.ok ? `${c.green}✓${c.reset}` : `${c.red}✗${c.reset}`;
     const status = check.ok ? '' : ` ${c.dim}${check.message}${c.reset}`;
-    console.log(`  ${icon} ${check.name}${status}`);
+    out(`  ${icon} ${check.name}${status}`);
     if (check.detail && !check.ok) {
       for (const line of check.detail.split('\n')) {
-        console.log(`      ${c.dim}${line}${c.reset}`);
+        out(`      ${c.dim}${line}${c.reset}`);
       }
     }
   }
-  console.log('');
+  out('');
   if (result.ok) {
-    console.log(`${c.green}All checks passed.${c.reset}`);
+    out(`${c.green}All checks passed.${c.reset}`);
   } else {
     const failed = result.checks.filter((check) => !check.ok).length;
-    console.log(`${c.red}${failed} check(s) failed.${c.reset}`);
+    out(`${c.red}${failed} check(s) failed.${c.reset}`);
   }
 }

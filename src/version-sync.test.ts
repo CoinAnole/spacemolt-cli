@@ -125,13 +125,7 @@ describe('client.ts source integrity', () => {
 
   test('local AI usability helpers are present', () => {
     expect(suggestCommands('trvel')).toContain('travel');
-    const originalLog = console.log;
-    console.log = () => {};
-    try {
-      expect(showCommandHelp('travel')).toBe(true);
-    } finally {
-      console.log = originalLog;
-    }
+    expect(showCommandHelp('travel', { out() {}, err() {} })).toBe(true);
     expect(hasCommandGroup('combat')).toBe(true);
     expect(typeof displayUnknownCommand).toBe('function');
     expect(typeof displayMissingArgument).toBe('function');

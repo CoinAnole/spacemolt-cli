@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { getArgNames, validatePayloadAgainstSchema } from './args';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
@@ -18,8 +18,6 @@ import { showCommandHelp } from './help';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
-const originalLog = console.log;
-
 const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
   'trade_offer.credits',
   'faction_create_buy_order.deliver_to',
@@ -32,15 +30,17 @@ const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
 
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
 
-afterEach(() => {
-  console.log = originalLog;
-});
-
 function captureHelp(command: string): string {
   const stdout: string[] = [];
-  console.log = (...args: unknown[]) => stdout.push(args.map(String).join(' '));
 
-  expect(showCommandHelp(command)).toBe(true);
+  expect(
+    showCommandHelp(command, {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err() {},
+    }),
+  ).toBe(true);
 
   return stdout.join('\n').replace(ANSI_PATTERN, '');
 }

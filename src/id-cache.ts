@@ -293,31 +293,33 @@ export function printCachedIdSuggestions(
   for (const hint of suggestions) err(`  ${formatHint(hint)}`);
 }
 
-export function printIds(kind: IdKind, sessionPath?: string): void {
+export function printIds(kind: IdKind, sessionPath?: string, writer?: CliWriter): void {
   const hints = loadIdCacheSync(sessionPath);
   const filtered = hintsForKind(kind, hints);
+  const out = writer?.out.bind(writer) ?? console.log;
   if (filtered.length === 0) {
-    console.log(`No cached ${kind} IDs yet.`);
-    printDiscoveryCommands(kind);
+    out(`No cached ${kind} IDs yet.`);
+    printDiscoveryCommands(kind, writer);
     return;
   }
 
-  console.log(`${c.bright}${kind} IDs${c.reset}`);
-  for (const hint of filtered) console.log(`  ${formatHint(hint)}`);
+  out(`${c.bright}${kind} IDs${c.reset}`);
+  for (const hint of filtered) out(`  ${formatHint(hint)}`);
 }
 
-export function printWhereCanI(query: string, sessionPath?: string): void {
+export function printWhereCanI(query: string, sessionPath?: string, writer?: CliWriter): void {
   const hints = loadIdCacheSync(sessionPath);
   const matches = searchItemHints(query, hints);
+  const out = writer?.out.bind(writer) ?? console.log;
   if (matches.length === 0) {
-    console.log(`No cached item matches for "${query}".`);
-    console.log(`Try: spacemolt catalog type=items search=${query}`);
-    console.log(`Try: spacemolt view_market ${query}`);
+    out(`No cached item matches for "${query}".`);
+    out(`Try: spacemolt catalog type=items search=${query}`);
+    out(`Try: spacemolt view_market ${query}`);
     return;
   }
 
-  console.log(`${c.bright}Cached locations for "${query}"${c.reset}`);
-  for (const hint of matches) console.log(`  ${formatHint(hint)}`);
+  out(`${c.bright}Cached locations for "${query}"${c.reset}`);
+  for (const hint of matches) out(`  ${formatHint(hint)}`);
 }
 
 function mergeHints(newHints: IdHint[], existing: IdHint[]): IdHint[] {
@@ -388,15 +390,16 @@ function formatContext(context: Record<string, string | number | boolean>): stri
     .join(' ');
 }
 
-function printDiscoveryCommands(kind: IdKind): void {
+function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
+  const out = writer?.out.bind(writer) ?? console.log;
   const commandsByKind: Record<IdKind, string[]> = {
     poi: ['get_system', 'get_status'],
     system: ['get_system', 'get_map'],
     item: ['get_cargo', 'view_market', 'catalog type=items'],
     player: ['get_nearby', 'get_system_agents'],
   };
-  console.log(`Run one of these to populate it:`);
-  for (const command of commandsByKind[kind]) console.log(`  spacemolt ${command}`);
+  out(`Run one of these to populate it:`);
+  for (const command of commandsByKind[kind]) out(`  spacemolt ${command}`);
 }
 
 function pushItem(

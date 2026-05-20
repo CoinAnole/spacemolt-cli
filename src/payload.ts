@@ -1,4 +1,5 @@
 import { type CommandParseError, convertPayloadTypes, normalizeParsedPayload, validateRequiredArgs } from './args.ts';
+import type { CliWriter } from './cli-context.ts';
 import type { CommandError, PreparedPayload } from './command-types.ts';
 import { COMMANDS } from './commands.ts';
 import { displayMissingArgument, displayUnknownCommand, printJsonError, showCommandHelp } from './help.ts';
@@ -22,28 +23,29 @@ export function preparePayload(
   rawPayload: Record<string, unknown>,
   options: GlobalOptions,
   sessionPath?: string,
+  writer?: CliWriter,
 ): PreparedPayload {
   if (!COMMANDS[command]) {
     if (options.json) {
-      printJsonError('unknown_command', `Unknown command: ${command}`);
+      printJsonError('unknown_command', `Unknown command: ${command}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayUnknownCommand(command);
+    displayUnknownCommand(command, writer);
     return { type: 'exit', exitCode: 1 };
   }
 
   if (rawPayload.help === 'true' || rawPayload.help === '1') {
-    showCommandHelp(command);
+    showCommandHelp(command, writer);
     return { type: 'exit', exitCode: 0 };
   }
 
   const missingArg = validateRequiredArgs(command, rawPayload);
   if (missingArg) {
     if (options.json) {
-      printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`);
+      printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayMissingArgument(command, missingArg);
+    displayMissingArgument(command, missingArg, writer);
     return { type: 'exit', exitCode: 1 };
   }
 
@@ -51,11 +53,12 @@ export function preparePayload(
   const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath);
   if (resolvedPayload.type === 'ambiguous') {
     if (options.json) {
-      printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result));
+      printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result), writer);
       return { type: 'exit', exitCode: 1 };
     }
+    const writeErr = writer?.err.bind(writer) ?? console.error;
     for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result)) {
-      console.error(line);
+      writeErr(line);
     }
     return { type: 'exit', exitCode: 1 };
   }
@@ -100,13 +103,18 @@ function resolveCachedIdsForPayload(
   return { type: 'payload', payload: resolvedPayload };
 }
 
-export function displayCommandParseErrors(errors: CommandParseError[], options: GlobalOptions): void {
+export function displayCommandParseErrors(
+  errors: CommandParseError[],
+  options: GlobalOptions,
+  writer?: CliWriter,
+): void {
   if (options.json) {
-    printJsonError('validation_error', errors.map((e) => e.message).join('; '));
+    printJsonError('validation_error', errors.map((e) => e.message).join('; '), writer);
     return;
   }
+  const writeErr = writer?.err.bind(writer) ?? console.error;
   for (const err of errors) {
-    console.error(`${c.red}Error:${c.reset} ${err.message}`);
+    writeErr(`${c.red}Error:${c.reset} ${err.message}`);
   }
 }
 

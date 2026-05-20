@@ -6,7 +6,6 @@ import {
   getStructuredResult,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
-import { COMPACT, FORMAT, QUIET } from '../runtime.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
 import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
@@ -28,15 +27,15 @@ function hasFields(fields: string[] | undefined): fields is string[] {
 function getOutputFormat(options?: GlobalOptions, context?: DisplayContext): OutputFormat {
   if (options?.format) return options.format;
   if (options?.json ?? context?.output?.json ?? context?.config?.jsonOutput) return 'json';
-  return context?.output?.format ?? context?.config?.format ?? FORMAT;
+  return context?.output?.format ?? context?.config?.format ?? 'table';
 }
 
 function isQuiet(options?: GlobalOptions, context?: DisplayContext): boolean {
-  return options?.quiet ?? context?.output?.quiet ?? context?.config?.quiet ?? QUIET;
+  return options?.quiet ?? context?.output?.quiet ?? context?.config?.quiet ?? false;
 }
 
 function isCompact(options?: GlobalOptions, context?: DisplayContext): boolean {
-  return options?.compact ?? context?.output?.compact ?? context?.config?.compact ?? COMPACT;
+  return options?.compact ?? context?.output?.compact ?? context?.config?.compact ?? false;
 }
 
 function isPlain(options?: GlobalOptions, context?: DisplayContext): boolean {
