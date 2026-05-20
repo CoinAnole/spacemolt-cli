@@ -55,7 +55,11 @@ function parseWatchValue(option: string, value: string, state: PartialOutputStat
   return parsed;
 }
 
-function parseFormatValue(option: string, value: string, state: PartialOutputState): OutputFormat | GlobalOptionParseResult {
+function parseFormatValue(
+  option: string,
+  value: string,
+  state: PartialOutputState,
+): OutputFormat | GlobalOptionParseResult {
   if (!VALID_FORMATS.has(value)) {
     return parseError(option, `Invalid format "${value}". Expected one of: table, json, yaml, text.`, state);
   }

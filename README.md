@@ -107,14 +107,16 @@ bun run src/client.ts travel sol_asteroid_belt
 bun run src/client.ts sell ore_iron 50
 ```
 
-Local help is generated from the command metadata:
+Local help is generated from bundled and cached command metadata:
 
 ```bash
 bun run src/client.ts help
+bun run src/client.ts help travel
 bun run src/client.ts help market
 bun run src/client.ts commands --search fuel
-bun run src/client.ts explain refuel
 ```
+
+Use `help command=<name>` when you specifically want server-provided help for a command.
 
 Fetch the server-provided structured command list with:
 
