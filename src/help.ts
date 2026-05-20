@@ -373,17 +373,23 @@ export function displayUnknownCommand(command: string, writer?: CliWriter): void
   writeErr(`Run "spacemolt get_commands" for the server command list once connected.`);
 }
 
-export function displayMissingArgument(command: string, missingArg: string, writer?: CliWriter): void {
+export function displayMissingArgument(
+  command: string,
+  missingArg: string,
+  writer?: CliWriter,
+  commands?: CommandHelpSource,
+): void {
+  const allCommands = commandHelpMap(commands);
   const writeErr = err(writer);
   writeErr(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
   writeErr(`\n${c.bright}Usage:${c.reset}`);
-  writeErr(`  ${getUsageLine(command)}`);
+  writeErr(`  ${getUsageLine(command, allCommands)}`);
 
-  const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
+  const config = allCommands[command];
   const argNames = config ? getArgNames(config) : [];
   if (argNames.length > 0) {
     writeErr(`\n${c.bright}Accepted forms:${c.reset}`);
-    writeErr(`  ${getUsageLine(command)}`);
+    writeErr(`  ${getUsageLine(command, allCommands)}`);
     writeErr(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
     writeErr(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }

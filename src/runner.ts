@@ -72,6 +72,7 @@ async function runInvocationWithContext(
   const generatedRoutes = cachedGeneratedRoutes ? { ...GENERATED_API_ROUTES, ...cachedGeneratedRoutes } : undefined;
   const commandRegistry = buildCommandRegistrySnapshot({
     generatedRoutes,
+    dynamicGeneratedRoutes: cachedGeneratedRoutes,
     includeDynamic: Boolean(cachedGeneratedRoutes),
   });
 

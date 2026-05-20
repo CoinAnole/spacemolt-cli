@@ -21,16 +21,18 @@ export interface CommandRegistrySnapshot {
 
 export function buildCommandRegistrySnapshot(options?: {
   generatedRoutes?: Record<string, GeneratedApiRoute>;
+  dynamicGeneratedRoutes?: Record<string, GeneratedApiRoute>;
   includeDynamic?: boolean;
 }): CommandRegistrySnapshot {
   const generatedRoutes = options?.generatedRoutes || (GENERATED_API_ROUTES as Record<string, GeneratedApiRoute>);
+  const dynamicGeneratedRoutes = options?.dynamicGeneratedRoutes || generatedRoutes;
   const curated = buildCuratedCommands(COMMAND_OVERRIDES, generatedRoutes);
   const curatedCommandNames = new Set(Object.keys(curated));
   const curatedRouteSignatures = new Set(Object.values(curated).map((config) => routeSignature(config.route)));
   const dynamic =
     options?.includeDynamic === false
       ? {}
-      : buildDynamicCommands(generatedRoutes, curatedCommandNames, curatedRouteSignatures);
+      : buildDynamicCommands(dynamicGeneratedRoutes, curatedCommandNames, curatedRouteSignatures);
   const commands = {
     ...dynamic,
     ...curated,

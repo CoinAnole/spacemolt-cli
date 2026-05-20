@@ -82,6 +82,32 @@ describe('command metadata', () => {
     );
   });
 
+  test('command registry can limit fallback commands to dynamic generated routes', () => {
+    const bundledOnlyRoute: GeneratedApiRoute = {
+      summary: 'Bundled only route',
+      route: { tool: 'spacemolt_bundled_only', action: 'probe', method: 'POST' },
+    };
+    const cachedRoute: GeneratedApiRoute = {
+      summary: 'Cached route',
+      route: { tool: 'spacemolt_cached_only', action: 'probe', method: 'POST' },
+    };
+
+    const snapshot = buildCommandRegistrySnapshot({
+      generatedRoutes: {
+        ...GENERATED_API_ROUTES,
+        'POST /api/v2/spacemolt_bundled_only/probe': bundledOnlyRoute,
+        'POST /api/v2/spacemolt_cached_only/probe': cachedRoute,
+      },
+      dynamicGeneratedRoutes: {
+        'POST /api/v2/spacemolt_cached_only/probe': cachedRoute,
+      },
+      includeDynamic: true,
+    });
+
+    expect(snapshot.commands.cached_only_probe).toBeDefined();
+    expect(snapshot.commands.bundled_only_probe).toBeUndefined();
+  });
+
   test('command overrides are assembled from domain modules without losing entries', () => {
     const modules = [
       CORE_COMMAND_OVERRIDES,

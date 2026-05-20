@@ -93,6 +93,7 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
     if (cachedRoutes) {
       const registry = buildCommandRegistrySnapshot({
         generatedRoutes: { ...(GENERATED_API_ROUTES as typeof cachedRoutes), ...cachedRoutes },
+        dynamicGeneratedRoutes: cachedRoutes,
         includeDynamic: true,
       });
       const cachedRouteSignatures = new Set(Object.keys(cachedRoutes));

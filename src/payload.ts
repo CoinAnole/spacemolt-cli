@@ -46,7 +46,7 @@ export function preparePayload(
       printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayMissingArgument(command, missingArg, writer);
+    displayMissingArgument(command, missingArg, writer, registry.commands);
     return { type: 'exit', exitCode: 1 };
   }
 

@@ -105,6 +105,36 @@ describe('local command handlers', () => {
     expect(handler?.name).toBe(command);
   });
 
+  test('registry API handlers render missing argument help from registry metadata', () => {
+    const command = 'dynamic_missing_arg_snapshot_test';
+    const registry = {
+      commands: {
+        [command]: {
+          args: ['target_id'],
+          required: ['target_id'],
+          usage: '<target_id>',
+          description: 'Dynamic command with required args',
+          route: { tool: 'dynamic_missing_arg', action: 'snapshot_test' },
+          schema: {
+            target_id: { type: 'string', positionalIndex: 0 },
+          },
+        },
+      },
+    } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+    const handler = resolveHandler([command], options, registry);
+    expect(handler).toBeInstanceOf(ApiCommandHandler);
+    if (!handler) return;
+    const { context, stderr } = captureContext();
+
+    const parsed = handler.parse([command], options, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    expect(stderr.join('\n')).toContain(`spacemolt ${command} <target_id>`);
+    expect(stderr.join('\n')).toContain(`spacemolt ${command} target_id=...`);
+  });
+
   test('registry API handlers run with their registry command config', async () => {
     const command = 'dynamic_handler_run_snapshot_test';
     const registry = {
