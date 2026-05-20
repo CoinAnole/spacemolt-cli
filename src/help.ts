@@ -100,7 +100,9 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
 }
 
 export function getUsageHint(command: string, commands?: CommandHelpSource): string {
-  return commandHelpMap(commands)[command]?.usage || '<args...>';
+  const config = commandHelpMap(commands)[command];
+  if (config?.usage !== undefined) return config.usage;
+  return hasNoArgs(config) ? '' : '<args...>';
 }
 
 export function getUsageLine(command: string, commands?: CommandHelpSource): string {
@@ -148,6 +150,12 @@ function commandMatchesCategories(command: string, categories: Set<string>, comm
   return Boolean(category && categories.has(category));
 }
 
+function hasNoArgs(config: CommandConfig | LocalCommandConfig | undefined): boolean {
+  return Boolean(
+    config && (!config.args || config.args.length === 0) && (!config.required || config.required.length === 0),
+  );
+}
+
 function findCommandGroup(topic: string): CommandGroup | undefined {
   const normalized = normalizeHelpTopic(topic);
   return COMMAND_GROUPS.find(
@@ -165,8 +173,17 @@ export function hasCommandGroup(topic: string): boolean {
 function formatCommandSummary(command: string, commands: CommandHelpMap): string {
   const usage = getUsageHint(command, commands);
   const description = commands[command]?.description;
-  const usageText = usage === '<args...>' ? '' : ` ${usage}`;
-  return description ? `${command}${usageText} - ${description}` : `${command}${usageText}`;
+  const usageText = usage ? ` ${usage}` : '';
+  return isWeakDescription(command, description) ? `${command}${usageText}` : `${command}${usageText} - ${description}`;
+}
+
+function isWeakDescription(command: string, description: string | undefined): boolean {
+  if (!description) return true;
+  return normalizeCommandSummaryText(description) === normalizeCommandSummaryText(command);
+}
+
+function normalizeCommandSummaryText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
 export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSource): void {

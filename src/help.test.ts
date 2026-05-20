@@ -6,6 +6,7 @@ import {
   displayError,
   parseCommandSearchQuery,
   renderProgressiveHelp,
+  showCommandHelp,
   showCommandGroup,
   showCommandGroups,
   showCommandSearch,
@@ -110,6 +111,60 @@ describe('help output branches', () => {
     expect(navOutput).toContain('Navigation:');
     expect(navOutput).toContain('travel <poi_id> - Travel within the current system');
     expect(navOutput).toContain('dock - Dock at the current station');
+  });
+
+  test('showCommandHelp renders no-arg commands without args placeholder', () => {
+    const capture = captureWriter();
+    const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
+      allCommands: {
+        dock: {
+          description: 'Dock at the current station',
+          usage: '',
+          category: 'Navigation',
+          args: [],
+          required: [],
+          route: { tool: 'spacemolt_travel', action: 'dock', method: 'POST' },
+        },
+      },
+    };
+
+    expect(showCommandHelp('dock', capture.writer, registry)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt dock');
+    expect(output).not.toContain('spacemolt dock <args...>');
+  });
+
+  test('showCommandGroup omits duplicate command-name descriptions', () => {
+    const capture = captureWriter();
+    const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
+      allCommands: {
+        dock: {
+          description: 'dock',
+          usage: '',
+          category: 'Navigation',
+          args: [],
+          required: [],
+          route: { tool: 'spacemolt_travel', action: 'dock', method: 'POST' },
+        },
+        'Dock Now': {
+          description: 'dock now',
+          usage: '',
+          category: 'Navigation',
+          args: [],
+          required: [],
+          route: { tool: 'spacemolt_travel', action: 'dock_now', method: 'POST' },
+        },
+      },
+    };
+
+    expect(showCommandGroup('navigation', capture.writer, registry)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('dock');
+    expect(output).not.toContain('dock - dock');
+    expect(output).toContain('Dock Now');
+    expect(output).not.toContain('Dock Now - dock now');
   });
 
   test('showCommandSearch renders empty-state suggestions', () => {
