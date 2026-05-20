@@ -11,6 +11,7 @@ import {
   showCommandGroups,
   showCommandSearch,
   showFullHelp,
+  showHelp,
 } from './help';
 
 function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWriter } {
@@ -31,6 +32,21 @@ function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWrite
 }
 
 describe('help output branches', () => {
+  test('showHelp emphasizes local help command discovery before server help', () => {
+    const capture = captureWriter();
+    showHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt help <command>        Local usage, args, route');
+    expect(output).toContain(
+      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info',
+    );
+    expect(output).toContain('spacemolt commands --search fuel');
+    expect(output).toContain('spacemolt help all              Full local command reference');
+    expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
+    expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
+  });
+
   test('renderProgressiveHelp writes unauthenticated start steps', () => {
     const capture = captureWriter();
     renderProgressiveHelp({ authenticated: false }, capture.writer);
@@ -49,6 +65,21 @@ describe('help output branches', () => {
     expect(output).toContain('[TRAVELING]');
     expect(output).toContain('spacemolt get_status');
     expect(output).toContain('Travel resolves');
+  });
+
+  test('renderProgressiveHelp emphasizes local help command discovery before server help', () => {
+    const capture = captureWriter();
+    renderProgressiveHelp({ authenticated: true }, capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt help <command>        Local usage, args, route');
+    expect(output).toContain(
+      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info',
+    );
+    expect(output).toContain('spacemolt commands --search fuel');
+    expect(output).toContain('spacemolt help all              Full local command reference');
+    expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
+    expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
   });
 
   test('renderProgressiveHelp writes docked, asteroid, escape pod, and space states', () => {
@@ -213,6 +244,21 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('Generated API Commands');
     expect(output).toContain('generated_only <id> - Generated command');
+  });
+
+  test('showFullHelp emphasizes local help command discovery before server help', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt help <command>        Local usage, args, route');
+    expect(output).toContain(
+      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info',
+    );
+    expect(output).toContain('spacemolt commands --search fuel');
+    expect(output).toContain('spacemolt help all              Full local command reference');
+    expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
   });
 
   test('displayError renders retry, auth, and quiet branches', () => {

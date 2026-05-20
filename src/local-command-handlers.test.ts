@@ -391,6 +391,27 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('Dynamic command for help tests');
   });
 
+  test('help travel renders local command explanation with accepted forms and API route', async () => {
+    const handler = resolveHandler(['help', 'travel'], options);
+    expect(handler).toBeDefined();
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'travel'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout, stderr } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    const output = stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(output).toContain('spacemolt travel');
+    expect(output).toContain('Accepted forms:');
+    expect(output).toContain('API route:');
+  });
+
   test('full help includes commands supplied only by a registry snapshot', async () => {
     const registry = dynamicRegistry();
     const handler = resolveHandler(['help', 'all'], options, registry);

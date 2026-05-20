@@ -225,7 +225,7 @@ export function showCommandGroup(topic: string, writer?: CliWriter, commands?: C
     }
     write(`  ${formatCommandSummary(command, allCommands)}`);
   }
-  write(`\nRun "spacemolt explain <command>" for argument details and related commands.`);
+  write(`\nRun "spacemolt help <command>" for argument details and related commands.`);
   return true;
 }
 
@@ -534,8 +534,8 @@ ${c.bright}Once logged in, try:${c.reset}`);
 
   write(`
 ${c.bright}Command Discovery:${c.reset}
+  spacemolt help <command>        Local usage, args, route
   spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
-  spacemolt explain <command>     Local usage, args, route
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Server-provided command help
@@ -597,8 +597,8 @@ ${c.bright}Useful Commands:${c.reset}
   catalog <type>   Browse ships/items/skills/recipes
 
 ${c.bright}Command Discovery:${c.reset}
+  spacemolt help <command>        Local usage, args, route
   spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
-  spacemolt explain <command>     Local usage, args, route
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Server-provided command help
@@ -696,12 +696,11 @@ ${c.bright}Usage:${c.reset}
       JSON errors remain full response envelopes for compatibility.
 
     Local command discovery:
-     spacemolt profile list
-     spacemolt help nav
-     spacemolt help market
+     spacemolt help <command>        Local usage, args, route
+     spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
      spacemolt commands --search fuel
-     spacemolt explain travel
-     spacemolt completion bash|zsh|fish
+     spacemolt help all              Full local command reference
+     spacemolt help command=<name>   Server-provided command help
 
 ${c.bright}Information Commands (unlimited):${c.reset}
   get_status          Your player, ship, location
@@ -889,8 +888,8 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Always run 'get_status' first to understand your situation
    - Use 'get_system' to see where you can travel
    - Check 'get_cargo' before selling
-    - Use '--help <command>' for local CLI usage and examples
-    - Use 'help <group>', 'commands --search <query>', or 'explain <command>' for local command discovery
+    - Use 'help <command>' for local CLI usage, args, and route details
+    - Use 'help <group>' or 'commands --search <query>' for local command discovery
    - Use 'spacemolt completion bash' (or zsh/fish) to set up tab completion
    - Use '--profile <name>' to isolate named player sessions
    - Use 'help command=<command>' for server-provided command details

@@ -12,7 +12,6 @@ import {
   showCommandExplanation,
   showCommandGroup,
   showCommandGroups,
-  showCommandHelp,
   showCommandSearch,
   showFullHelp,
   showHelp,
@@ -354,12 +353,12 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'helpAll' } };
       }
 
-      if (hasCommandGroup(target)) {
-        return { ok: true, payload: { type: 'helpGroup', target } };
-      }
-
       if (allCommands[target]) {
         return { ok: true, payload: { type: 'helpCommand', target } };
+      }
+
+      if (hasCommandGroup(target)) {
+        return { ok: true, payload: { type: 'helpGroup', target } };
       }
 
       return { ok: true, payload: { type: 'showHelp' } };
@@ -395,7 +394,7 @@ function createLocalHelpHandler(
       }
       if (result.type === 'helpCommand') {
         if (
-          showCommandHelp(result.target, context?.writer, allCommands) ||
+          showCommandExplanation(result.target, context?.writer, allCommands) ||
           (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer, allCommands))
         ) {
           return 0;
@@ -455,7 +454,7 @@ export function resolveHandler(
     commandName === '--help' ||
     commandName === '-h' ||
     (commandName === 'help' &&
-      (!helpTarget || helpTarget === 'all' || hasCommandGroup(helpTarget) || Boolean(allCommands[helpTarget])))
+      (!helpTarget || helpTarget === 'all' || Boolean(allCommands[helpTarget]) || hasCommandGroup(helpTarget)))
   ) {
     return createLocalHelpHandler(registrySnapshot);
   }
