@@ -17,6 +17,17 @@ export function rowValue(row: Record<string, unknown>, keys: string[]): string {
   return '';
 }
 
+export interface CompactTableOptions {
+  maxCellWidth?: number;
+}
+
+export function truncateCell(value: string, maxCellWidth: number): string {
+  if (maxCellWidth <= 0) return '';
+  if (value.length <= maxCellWidth) return value;
+  if (maxCellWidth <= 3) return '.'.repeat(maxCellWidth);
+  return `${value.slice(0, maxCellWidth - 3)}...`;
+}
+
 export function formatItemTable(items: Array<Record<string, unknown>>, indent = '  '): string[] {
   const lines = [`Items (${items.length}):`];
   if (!items.length) {
@@ -48,21 +59,24 @@ export function formatCompactTable(
   title: string,
   rows: Array<Record<string, unknown>>,
   columns: Array<[string, string[]]>,
+  options: CompactTableOptions = {},
 ): string[] {
+  const maxCellWidth = options.maxCellWidth ?? 32;
   const lines = [`\n=== ${title} ===`];
   if (!rows.length) {
     lines.push('(None)');
     return lines;
   }
 
-  const widths = columns.map(([label, keys]) =>
-    Math.max(label.length, ...rows.map((row) => rowValue(row, keys).length)),
+  const tableRows = rows.map((row) => columns.map(([, keys]) => truncateCell(rowValue(row, keys), maxCellWidth)));
+  const widths = columns.map(([label], idx) =>
+    Math.max(label.length, ...tableRows.map((row) => row[idx]?.length ?? 0)),
   );
   lines.push('');
   lines.push(`  ${columns.map(([label], idx) => label.padEnd(widths[idx] || label.length)).join(' | ')}`);
   lines.push(`  ${widths.map((width) => '-'.repeat(width)).join('-+-')}`);
-  for (const row of rows) {
-    lines.push(`  ${columns.map(([, keys], idx) => rowValue(row, keys).padEnd(widths[idx] || 0)).join(' | ')}`);
+  for (const row of tableRows) {
+    lines.push(`  ${row.map((value, idx) => value.padEnd(widths[idx] || 0)).join(' | ')}`);
   }
   return lines;
 }
