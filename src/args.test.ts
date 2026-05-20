@@ -436,6 +436,63 @@ describe('parseArgs - tightened semantics', () => {
     }
   });
 
+  test('parseArgs resolves @file values through an injected resolver', () => {
+    const command = 'note_dynamic';
+    const seenFiles: string[] = [];
+    const registry = {
+      commands: {
+        [command]: {
+          args: ['body'],
+          required: ['body'],
+          route: { tool: 'notes', action: 'create' },
+          schema: {
+            body: { type: 'string', positionalIndex: 0 },
+          },
+        },
+      },
+    } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+
+    const { payload } = parseOk([command, '@note.txt'], {
+      registry,
+      resolveFile(filePath) {
+        seenFiles.push(filePath);
+        return { ok: true, value: 'from injected resolver' };
+      },
+    });
+
+    expect(seenFiles).toEqual(['note.txt']);
+    expect(payload.body).toBe('from injected resolver');
+  });
+
+  test('parseArgs reports injected file resolver failures as structured errors', () => {
+    const command = 'note_dynamic';
+    const registry = {
+      commands: {
+        [command]: {
+          args: ['body'],
+          required: ['body'],
+          route: { tool: 'notes', action: 'create' },
+          schema: {
+            body: { type: 'string', positionalIndex: 0 },
+          },
+        },
+      },
+    } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+    const args = [command, '@note.txt'];
+
+    const result = parseArgs(args, {
+      registry,
+      resolveFile() {
+        return { ok: false, error: 'synthetic missing file' };
+      },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      errors: [{ field: 'body', message: 'synthetic missing file', code: 'file_read_error' }],
+    });
+  });
+
   test('--payload-json parses and merges JSON object', () => {
     const { payload } = parseOk(['buy', '--payload-json', '{"item_id": "ore_iron", "quantity": 10}']);
     expect(payload.item_id).toBe('ore_iron');

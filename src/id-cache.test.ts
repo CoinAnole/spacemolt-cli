@@ -6,8 +6,11 @@ import { cargoFixture, nearbyFixture, systemInfoFixture, viewMarketFixture } fro
 import {
   cacheIdsFromResponse,
   extractIdHints,
+  formatCachedIdAmbiguity,
   getIdCachePath,
   hintsForKind,
+  idKindForCommandField,
+  loadIdCacheSync,
   resolveCachedId,
   saveIdCache,
   searchItemHints,
@@ -84,6 +87,19 @@ describe('id cache', () => {
     };
     expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'system', id: 'alpha_centauri' }));
     expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'ore_iron' }));
+  });
+
+  test('cacheIdsFromResponse accepts a deterministic clock for seenAt', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
+    const sessionPath = path.join(tempDir, 'session.json');
+
+    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath, {
+      now: () => new Date('2026-05-20T12:34:56.000Z'),
+    });
+
+    const hints = loadIdCacheSync(sessionPath);
+    expect(hints.length).toBeGreaterThan(0);
+    expect(hints.every((hint) => hint.seenAt === '2026-05-20T12:34:56.000Z')).toBe(true);
   });
 
   test('saveIdCache writes through a cleaned-up 0600 cache file', async () => {
@@ -169,6 +185,35 @@ describe('id cache', () => {
     expect(result.type).toBe('ambiguous');
     if (result.type !== 'ambiguous') throw new Error('expected ambiguity');
     expect(result.matches.map((hint) => hint.id)).toEqual(['iron_plate', 'ore_iron']);
+  });
+
+  test('formatCachedIdAmbiguity truncates long match lists', () => {
+    const matches = Array.from({ length: 10 }, (_, index) => ({
+      kind: 'item' as const,
+      id: `ore_${index + 1}`,
+      name: `Ore ${index + 1}`,
+      sourceCommand: 'catalog',
+      seenAt: `2026-05-18T00:0${index}:00.000Z`,
+    }));
+
+    const lines = formatCachedIdAmbiguity('sell', 'item_id', {
+      type: 'ambiguous',
+      kind: 'item',
+      query: 'ore',
+      matches,
+    });
+
+    expect(lines.filter((line) => line.includes('ore_'))).toHaveLength(8);
+    expect(lines.join('\n')).toContain('...and 2 more');
+  });
+
+  test('idKindForCommandField uses explicit command resolver rules before heuristics', () => {
+    expect(idKindForCommandField('travel', 'id')).toBe('poi');
+    expect(idKindForCommandField('jump', 'id')).toBe('system');
+    expect(idKindForCommandField('sell', 'id')).toBe('item');
+    expect(idKindForCommandField('fleet_invite', 'id')).toBe('player');
+    expect(idKindForCommandField('unknown_command', 'target_system_id')).toBe('system');
+    expect(idKindForCommandField('travel', 'target_system_id')).toBeUndefined();
   });
 
   test('does not treat duplicate sightings of the same ID as ambiguous', () => {

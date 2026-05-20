@@ -400,7 +400,7 @@ export function displayMissingArgument(
 // Progressive Help
 // =============================================================================
 
-interface PlayerState {
+export interface PlayerState {
   authenticated: boolean;
   docked?: boolean;
   traveling?: boolean;
@@ -489,7 +489,10 @@ function printStateSection(state: PlayerState, writer?: CliWriter): void {
 }
 
 export async function showProgressiveHelp(writer?: CliWriter): Promise<void> {
-  const state = await getPlayerState();
+  renderProgressiveHelp(await getPlayerState(), writer);
+}
+
+export function renderProgressiveHelp(state: PlayerState, writer?: CliWriter): void {
   const write = out(writer);
 
   write(`

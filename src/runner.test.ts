@@ -232,6 +232,68 @@ describe('runInvocation option isolation', () => {
 });
 
 describe('runInvocation watch cleanup', () => {
+  test('runner dependencies can disable update checks and inject cache routes', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const updates: string[] = [];
+    const client = {
+      config: { sessionPath: '/tmp/runner-deps-session.json' },
+      async executeCommandConfig(command: string, config: { route: unknown }, payload: Record<string, unknown>) {
+        return { structuredContent: { command, route: config.route, payload } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(['--json', 'deps_dynamic', 'target_1'], client, fakeContext(stdout, stderr), {
+      async checkForUpdates() {
+        updates.push('called');
+      },
+      loadCachedGeneratedRoutes() {
+        return {
+          'POST /api/v2/deps/probe': {
+            summary: 'Dependency route',
+            route: { tool: 'deps', action: 'probe', method: 'POST' },
+            required: ['id'],
+            schema: { id: { type: 'string', positionalIndex: 0 } },
+            cli: { command: 'deps_dynamic' },
+          },
+        };
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(updates).toEqual([]);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).toContain('deps_dynamic');
+  });
+
+  test('runner dependency signal hooks are cleaned up in watch mode', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const registered: Array<() => void> = [];
+    const removed: Array<() => void> = [];
+    const client = {
+      config: { sessionPath: '/tmp/runner-watch-deps-session.json' },
+      async execute() {
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const context = fakeContext(stdout, stderr);
+    context.sleep = async () => {
+      registered[0]?.();
+    };
+
+    const exitCode = await runInvocation(['--watch=1', '--quiet', 'get_status'], client, context, {
+      onSigint(listener) {
+        registered.push(listener);
+        return () => removed.push(listener);
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(registered).toHaveLength(1);
+    expect(removed).toEqual(registered);
+  });
+
   test('removes SIGINT listener on normal stop', async () => {
     const before = process.listenerCount('SIGINT');
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-watch-normal-'));

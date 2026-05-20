@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { SpaceMoltClient } from './api.ts';
 import { getRuntimeConfig } from './main.ts';
-import { createDefaultConfig, LegacySpaceMoltConfig } from './runtime.ts';
+import {
+  createDefaultConfig,
+  createRuntimeState,
+  LegacySpaceMoltConfig,
+  type SpaceMoltConfig,
+  setOutputMode,
+} from './runtime.ts';
 import { SessionManager } from './session.ts';
 
 describe('Explicit Runtime Configuration', () => {
@@ -70,5 +76,48 @@ describe('Explicit Runtime Configuration', () => {
     expect(config.quiet).toBe(true);
     expect(config.compact).toBe(true);
     expect(config.profile).toBe('my-custom-profile');
+  });
+
+  test('createRuntimeState maps config into output flags without reading globals', () => {
+    const config: SpaceMoltConfig = {
+      apiBase: 'https://example.test/api/v2',
+      jsonOutput: true,
+      debug: true,
+      plain: true,
+      quiet: true,
+      format: 'yaml',
+      compact: true,
+      profile: 'pilot',
+      sessionPath: '/tmp/pilot.json',
+    };
+
+    expect(createRuntimeState(config)).toEqual({
+      apiBase: 'https://example.test/api/v2',
+      jsonOutput: true,
+      debug: true,
+      plain: true,
+      quiet: true,
+      format: 'yaml',
+      compact: true,
+      profile: 'pilot',
+      sessionPath: '/tmp/pilot.json',
+    });
+  });
+
+  test('legacy output globals remain mutable for backwards compatibility', () => {
+    setOutputMode({ json: false, quiet: false, plain: false, debug: false, format: 'table', compact: false });
+    try {
+      setOutputMode({ json: true, quiet: true, plain: true, debug: true, format: 'text', compact: true });
+
+      const state = createRuntimeState();
+      expect(state.jsonOutput).toBe(true);
+      expect(state.quiet).toBe(true);
+      expect(state.plain).toBe(true);
+      expect(state.debug).toBe(true);
+      expect(state.format).toBe('text');
+      expect(state.compact).toBe(true);
+    } finally {
+      setOutputMode({ json: false, quiet: false, plain: false, debug: false, format: 'table', compact: false });
+    }
   });
 });

@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import type { CliRuntimeContext, CliWriter } from './cli-context';
 import type { CommandRegistrySnapshot } from './command-registry';
+import type { PlayerState } from './help';
 import {
   displayError,
   parseCommandSearchQuery,
+  renderProgressiveHelp,
   showCommandGroup,
   showCommandGroups,
   showCommandSearch,
@@ -28,6 +30,43 @@ function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWrite
 }
 
 describe('help output branches', () => {
+  test('renderProgressiveHelp writes unauthenticated start steps', () => {
+    const capture = captureWriter();
+    renderProgressiveHelp({ authenticated: false }, capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('SpaceMolt CLI');
+    expect(output).toContain('spacemolt register <username> <empire> <registration_code>');
+    expect(output).toContain('Once logged in, try:');
+  });
+
+  test('renderProgressiveHelp writes travel state without calling the API', () => {
+    const capture = captureWriter();
+    renderProgressiveHelp({ authenticated: true, traveling: true }, capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('[TRAVELING]');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toContain('Travel resolves');
+  });
+
+  test('renderProgressiveHelp writes docked, asteroid, escape pod, and space states', () => {
+    const cases: Array<{ state: PlayerState; expected: string[] }> = [
+      { state: { authenticated: true, docked: true }, expected: ['[DOCKED]', 'spacemolt view_market'] },
+      { state: { authenticated: true, atAsteroidBelt: true }, expected: ['[ASTEROID BELT]', 'spacemolt mine'] },
+      { state: { authenticated: true, escapePod: true }, expected: ['Escape Pod', '[IN SPACE]'] },
+      { state: { authenticated: true }, expected: ['[IN SPACE]', 'spacemolt travel <poi_id>'] },
+    ];
+
+    for (const { state, expected } of cases) {
+      const capture = captureWriter();
+      renderProgressiveHelp(state, capture.writer);
+
+      const output = capture.stdout.join('\n');
+      for (const text of expected) expect(output).toContain(text);
+    }
+  });
+
   test('showCommandGroups and showCommandGroup render local grouped commands', () => {
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
       allCommands: {

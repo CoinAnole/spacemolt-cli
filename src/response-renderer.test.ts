@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
 import { renderResponse, runCommand } from './response-renderer';
@@ -119,6 +122,48 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(1);
     expect(JSON.parse(capture.text())).toEqual({ error: { code: 'invalid_poi', message: 'Unknown POI' } });
+  });
+
+  test('renderResponse prints cached ID suggestions for ID-like errors', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-renderer-'));
+    try {
+      const sessionPath = path.join(tempDir, 'pilot.json');
+      fs.writeFileSync(
+        path.join(tempDir, 'pilot.ids.json'),
+        `${JSON.stringify({
+          version: 1,
+          hints: [
+            {
+              kind: 'poi',
+              id: 'earth',
+              name: 'Earth',
+              sourceCommand: 'get_system',
+              seenAt: '2026-05-20T00:00:00.000Z',
+            },
+          ],
+        })}\n`,
+      );
+      const capture = fakeContext();
+      const client = { config: { sessionPath } } as SpaceMoltClient;
+
+      const exitCode = await renderResponse(
+        {
+          command: 'travel',
+          displayCommand: 'travel',
+          response: { error: { code: 'not_found', message: 'unknown destination' } },
+        },
+        { ...baseOptions, noTimestamp: true, format: 'table' },
+        client,
+        capture.context,
+      );
+
+      const stderr = capture.stderr.join('\n').replace(ANSI_PATTERN, '');
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain('Cached poi IDs');
+      expect(stderr).toContain('earth (Earth)');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test('renderResponse suppresses timestamp for projected output', async () => {

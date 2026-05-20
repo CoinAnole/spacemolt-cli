@@ -53,9 +53,14 @@ export interface ParsedArgs {
   payload: Record<string, unknown>;
 }
 
+export type FileResolveResult = { ok: true; value: string } | { ok: false; error: string };
+
+export type FileResolver = (filePath: string) => FileResolveResult;
+
 export interface ParseArgsOptions {
   allowUnknown?: boolean;
   registry?: CommandRegistrySource;
+  resolveFile?: FileResolver;
 }
 
 export type CommandParseError = ValidationError;
@@ -134,21 +139,26 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
   return { command, payload };
 }
 
-function resolveValue(val: string): { ok: true; value: string } | { ok: false; error: string } {
+function defaultResolveFile(filePath: string): FileResolveResult {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return { ok: true, value: content };
+  } catch (e: unknown) {
+    return { ok: false, error: `Could not read file "${filePath}": ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+function resolveValue(val: string, resolveFile: FileResolver): FileResolveResult {
   if (val.startsWith('@')) {
     const filePath = val.slice(1);
-    try {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      return { ok: true, value: content };
-    } catch (e: unknown) {
-      return { ok: false, error: `Could not read file "${filePath}": ${e instanceof Error ? e.message : String(e)}` };
-    }
+    return resolveFile(filePath);
   }
   return { ok: true, value: val };
 }
 
 function resolvePayloadFiles(
   payload: Record<string, unknown>,
+  resolveFile: FileResolver,
 ): { ok: true; payload: Record<string, unknown> } | { ok: false; field: string; error: string } {
   const resolved: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
@@ -156,7 +166,7 @@ function resolvePayloadFiles(
       const resolvedArray: unknown[] = [];
       for (const item of value) {
         if (typeof item === 'string') {
-          const res = resolveValue(item);
+          const res = resolveValue(item, resolveFile);
           if (!res.ok) {
             return { ok: false, field: key, error: res.error };
           }
@@ -167,7 +177,7 @@ function resolvePayloadFiles(
       }
       resolved[key] = resolvedArray;
     } else if (typeof value === 'string') {
-      const res = resolveValue(value);
+      const res = resolveValue(value, resolveFile);
       if (!res.ok) {
         return { ok: false, field: key, error: res.error };
       }
@@ -183,7 +193,7 @@ export function parseArgs(args: string[], options: ParseArgsOptions = {}): Comma
   const registry = options.registry || BUNDLED_COMMAND_REGISTRY;
   const parsed = parseRawArgs(args, registry);
 
-  const resolved = resolvePayloadFiles(parsed.payload);
+  const resolved = resolvePayloadFiles(parsed.payload, options.resolveFile ?? defaultResolveFile);
   if (!resolved.ok) {
     return {
       ok: false,

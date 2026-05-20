@@ -32,6 +32,28 @@ const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player']);
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
+const DEFAULT_CLOCK = { now: () => new Date() };
+const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>>> = {
+  travel: { poi: ['target_poi', 'id'] },
+  jump: { system: ['target_system', 'id'] },
+  find_route: { system: ['target_system', 'id'] },
+  attack: { player: ['target_id', 'player_id', 'id'] },
+  scan: { player: ['target_id', 'player_id', 'id'] },
+  fleet_invite: { player: ['target_id', 'player_id', 'id'] },
+  fleet_kick: { player: ['target_id', 'player_id', 'id'] },
+  sell: { item: ['item_id', 'id'] },
+  buy: { item: ['item_id', 'id'] },
+  deposit_items: { item: ['item_id', 'id'] },
+  withdraw_items: { item: ['item_id', 'id'] },
+  jettison: { item: ['item_id', 'id'] },
+  use_item: { item: ['item_id', 'id'] },
+  create_sell_order: { item: ['item_id', 'id'] },
+  create_buy_order: { item: ['item_id', 'id'] },
+};
+
+interface Clock {
+  now(): Date;
+}
 
 export function isIdKind(value: string): value is IdKind {
   return ID_KINDS.has(value as IdKind);
@@ -92,12 +114,13 @@ export async function cacheIdsFromResponse(
   command: string,
   response: APIResponse,
   sessionPath?: string,
+  clock: Clock = DEFAULT_CLOCK,
 ): Promise<void> {
   if (response.error) return;
   const result = getStructuredResult(response) || getObjectResult(response);
   if (!result) return;
 
-  const extracted = extractIdHints(command, result, new Date().toISOString());
+  const extracted = extractIdHints(command, result, clock.now().toISOString());
   if (extracted.length === 0) return;
 
   const existing = loadIdCacheSync(sessionPath);
@@ -220,31 +243,15 @@ export function resolveCachedId(kind: IdKind, query: string, hints = loadIdCache
 
 export function idKindForCommandField(command: string, field?: string): IdKind | undefined {
   const normalizedField = normalizeField(field || '');
-  if (command === 'travel' && isResolverField(normalizedField, ['target_poi', 'id'])) return 'poi';
-  if (['jump', 'find_route'].includes(command) && isResolverField(normalizedField, ['target_system', 'id'])) {
-    return 'system';
-  }
-  if (
-    ['attack', 'scan', 'fleet_invite', 'fleet_kick'].includes(command) &&
-    isResolverField(normalizedField, ['target_id', 'player_id', 'id'])
-  ) {
-    return 'player';
-  }
-  if (
-    [
-      'sell',
-      'buy',
-      'deposit_items',
-      'withdraw_items',
-      'jettison',
-      'use_item',
-      'create_sell_order',
-      'create_buy_order',
-    ].includes(command)
-  ) {
-    if (isResolverField(normalizedField, ['item_id', 'id'])) return 'item';
+  const resolverRules = COMMAND_ID_RESOLVER_RULES[command];
+  if (resolverRules) {
+    for (const kind of ID_KINDS) {
+      const fields = resolverRules[kind];
+      if (fields && isResolverField(normalizedField, fields)) return kind;
+    }
     return undefined;
   }
+
   if (normalizedField.includes('poi')) return 'poi';
   if (normalizedField.includes('system')) return 'system';
   if (normalizedField.includes('player') || normalizedField.includes('target')) return 'player';

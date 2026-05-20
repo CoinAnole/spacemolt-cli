@@ -64,6 +64,23 @@ export class LegacySpaceMoltConfig implements SpaceMoltConfig {
   }
 }
 
+export type RuntimeState = Required<Omit<SpaceMoltConfig, 'profile' | 'sessionPath'>> &
+  Pick<SpaceMoltConfig, 'profile' | 'sessionPath'>;
+
+export function createRuntimeState(config: SpaceMoltConfig = new LegacySpaceMoltConfig()): RuntimeState {
+  return {
+    apiBase: config.apiBase,
+    jsonOutput: config.jsonOutput,
+    debug: config.debug,
+    plain: config.plain,
+    quiet: config.quiet,
+    format: config.format,
+    compact: config.compact,
+    profile: config.profile,
+    sessionPath: config.sessionPath,
+  };
+}
+
 export function createDefaultConfig(overrides?: Partial<SpaceMoltConfig>): SpaceMoltConfig {
   const base = new LegacySpaceMoltConfig();
   if (!overrides) return base;

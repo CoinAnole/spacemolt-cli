@@ -1,4 +1,5 @@
 import { ApiCommandHandler, hasApiCommand } from './api-command-handler.ts';
+import type { CliRuntimeContext } from './cli-context.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
 import { generateCompletion } from './completion.ts';
@@ -32,6 +33,12 @@ import { API_BASE, c, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import { getSessionPath, showProfiles } from './session.ts';
 import type { GlobalOptions } from './types.ts';
+
+function writeJson(context: CliRuntimeContext | undefined, value: unknown, space: number | undefined = 2): void {
+  const json = JSON.stringify(value, null, space);
+  if (context) context.writer.out(json);
+  else console.log(json);
+}
 
 const profileHandler: CommandHandler<{ action: 'list' }, { action: 'list' }> = {
   name: 'profile',
@@ -185,9 +192,7 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
   render(result, options, _client, context) {
     const { doctorResult } = result;
     if (options.json) {
-      const json = JSON.stringify({ structuredContent: doctorResult }, null, 2);
-      if (context) context.writer.out(json);
-      else console.log(json);
+      writeJson(context, { structuredContent: doctorResult });
     } else {
       printDoctorResult(doctorResult, context?.writer);
     }
@@ -220,9 +225,7 @@ const idsHandler: CommandHandler<{ kind: IdKind }, { kind: IdKind; hints: IdHint
   },
   render(result, options, client, context) {
     if (options.json) {
-      const json = JSON.stringify({ structuredContent: { kind: result.kind, ids: result.hints } }, null, 2);
-      if (context) context.writer.out(json);
-      else console.log(json);
+      writeJson(context, { structuredContent: { kind: result.kind, ids: result.hints } });
     } else {
       const sessionPath = client ? getSessionPath(client.config) : undefined;
       printIds(result.kind, sessionPath, context?.writer);
@@ -256,9 +259,7 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
   },
   render(result, options, client, context) {
     if (options.json) {
-      const json = JSON.stringify({ structuredContent: { query: result.query, matches: result.matches } }, null, 2);
-      if (context) context.writer.out(json);
-      else console.log(json);
+      writeJson(context, { structuredContent: { query: result.query, matches: result.matches } });
     } else {
       const sessionPath = client ? getSessionPath(client.config) : undefined;
       printWhereCanI(result.query, sessionPath, context?.writer);
@@ -285,7 +286,7 @@ const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCach
     const routeCount = Object.keys(result.cache.routes).length;
     const out = context?.writer.out.bind(context.writer) ?? console.log;
     if (options.json) {
-      out(JSON.stringify({ fetchedAt: result.cache.fetchedAt, routeCount }));
+      writeJson(context, { fetchedAt: result.cache.fetchedAt, routeCount }, undefined);
     } else {
       out(`Synced ${routeCount} OpenAPI routes.`);
     }

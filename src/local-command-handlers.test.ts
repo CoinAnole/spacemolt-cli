@@ -2,12 +2,14 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import type { SpaceMoltClient } from './api';
 import { ApiCommandHandler } from './api-command-handler';
-import type { CliRuntimeContext } from './cli-context';
+import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { buildCommandRegistrySnapshot, type CommandRegistrySnapshot } from './command-registry';
 import type { CommandHandler } from './command-types';
 import { GENERATED_API_ROUTES } from './generated/api-commands';
 import { resolveHandler } from './local-command-handlers';
+import { runInvocation } from './main';
 import type { GeneratedApiRoute } from './openapi-metadata';
 import type { GlobalOptions } from './types';
 
@@ -44,22 +46,30 @@ function localHandler(args: string[]): CommandHandler {
 function captureContext(): { context: CliRuntimeContext; stdout: string[]; stderr: string[] } {
   const stdout: string[] = [];
   const stderr: string[] = [];
+  const context = fakeContext(stdout, stderr, { HOME: '/tmp/spacemolt-test-home' });
   return {
     stdout,
     stderr,
-    context: {
-      env: { HOME: '/tmp/spacemolt-test-home' },
-      writer: {
-        out(message = '') {
-          stdout.push(message);
-        },
-        err(message = '') {
-          stderr.push(message);
-        },
+    context,
+  };
+}
+
+function fakeContext(stdout: string[], stderr: string[], env: CliEnv = process.env): CliRuntimeContext {
+  return {
+    env,
+    writer: {
+      out(message = '') {
+        stdout.push(message);
       },
-      clock: { now: () => new Date('2026-05-18T12:00:00.000Z') },
-      sleep: async () => {},
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut(chunk) {
+        stdout.push(chunk);
+      },
     },
+    clock: { now: () => new Date('2026-05-18T12:00:00.000Z') },
+    sleep: async () => {},
   };
 }
 
@@ -222,6 +232,51 @@ describe('local command handlers', () => {
 
     expect(result.completion).toContain('lab_calibrate');
     expect(result.completion).toContain('Generated API');
+  });
+
+  test('ids command renders JSON with cached hints', async () => {
+    const dir = tempDir();
+    const sessionPath = path.join(dir, 'pilot.json');
+    fs.writeFileSync(sessionPath, '{}\n');
+    fs.writeFileSync(
+      path.join(dir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'sol_earth',
+            name: 'Earth',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const client = { config: { sessionPath } } as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(['--json', 'ids', 'poi'], client, fakeContext(stdout, stderr));
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(JSON.parse(stdout.join('\n')).structuredContent.ids[0].id).toBe('sol_earth');
+  });
+
+  test('where-can-i requires a search query before reading cache', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const client = {
+      get config(): never {
+        throw new Error('cache should not be read for missing where-can-i query');
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(['where-can-i'], client, fakeContext(stdout, stderr));
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Usage: spacemolt where-can-i <item>');
   });
 
   test('version renders through CliRuntimeContext writer', async () => {

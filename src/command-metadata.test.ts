@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { getArgNames, validatePayloadAgainstSchema } from './args';
+import {
+  convertPayloadTypes,
+  getArgNames,
+  normalizeParsedPayload,
+  parseArgs,
+  validatePayloadAgainstSchema,
+} from './args';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
@@ -16,6 +22,7 @@ import {
 import { generateCompletion } from './completion';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp } from './help';
+import { createCommandConfigDryRunResponse } from './preview';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
@@ -69,6 +76,22 @@ function generatedArgNames(generated?: GeneratedApiRoute): string[] {
     .sort((a, b) => (a[1].positionalIndex ?? 0) - (b[1].positionalIndex ?? 0))
     .map(([field]) => field);
   return positional.length > 0 ? positional : Object.keys(generated.schema);
+}
+
+function sampleValueForField(command: string, field: string): string {
+  const config = COMMANDS[command];
+  if (!config) return `${field}_sample`;
+  const canonical = config.aliases?.[field] || field;
+  const schema = config.schema?.[canonical];
+  if (schema?.enum?.[0]) return String(schema.enum[0]);
+  if (schema?.type === 'integer' || schema?.type === 'number') return '1';
+  if (schema?.type === 'boolean') return 'true';
+  if (field.includes('quantity') || field.includes('amount') || field.includes('credits')) return '1';
+  if (field.includes('system')) return 'system_sample';
+  if (field.includes('poi') || field === 'id') return 'poi_sample';
+  if (field.includes('player') || field.includes('target')) return 'player_sample';
+  if (field.includes('item')) return 'item_sample';
+  return `${field}_sample`;
 }
 
 describe('command metadata', () => {
@@ -136,6 +159,37 @@ describe('command metadata', () => {
       for (const field of Object.keys(override)) {
         if (!allowed.has(field)) failures.push(`${command}: override field "${field}" is not allowed`);
       }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('all curated commands can parse minimal args and build dry-run route previews', () => {
+    const failures: string[] = [];
+
+    for (const [command, config] of Object.entries(COMMANDS)) {
+      const args = [command];
+      const required = new Set(config.required || []);
+
+      for (const arg of config.args || []) {
+        const field = commandArgName(arg);
+        if (typeof arg !== 'string' || required.has(field)) {
+          args.push(sampleValueForField(command, field));
+        }
+      }
+
+      const parsed = parseArgs(args);
+      if (!parsed.ok) {
+        failures.push(`${command}: parse failed: ${parsed.errors.map((error) => error.message).join('; ')}`);
+        continue;
+      }
+
+      const normalized = normalizeParsedPayload(command, parsed.payload);
+      const converted = convertPayloadTypes(normalized, command);
+      const dryRun = createCommandConfigDryRunResponse(command, config, converted);
+
+      if (!dryRun.structuredContent) failures.push(`${command}: dry run missing structuredContent`);
+      if (dryRun.error) failures.push(`${command}: dry run error: ${dryRun.error.message}`);
     }
 
     expect(failures).toEqual([]);

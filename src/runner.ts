@@ -27,6 +27,27 @@ export interface Invocation {
   args: string[];
 }
 
+export interface RunnerDependencies {
+  loadCachedGeneratedRoutes?: typeof loadCachedGeneratedRoutes;
+  defaultOpenApiCacheDir?: typeof defaultOpenApiCacheDir;
+  checkForUpdates?: typeof checkForUpdates;
+  createClient?: (config: SpaceMoltClient['config']) => SpaceMoltClient;
+  onSigint?: (listener: () => void) => () => void;
+}
+
+const defaultRunnerDependencies: Required<RunnerDependencies> = {
+  loadCachedGeneratedRoutes,
+  defaultOpenApiCacheDir,
+  checkForUpdates,
+  createClient(config) {
+    return new SpaceMoltClient({ config });
+  },
+  onSigint(listener) {
+    process.on('SIGINT', listener);
+    return () => process.removeListener('SIGINT', listener);
+  },
+};
+
 export type InvocationParseResult = { ok: true; invocation: Invocation } | { ok: false; error: GlobalOptionParseError };
 
 export function parseInvocation(argv: string[], context?: CliRuntimeContext): InvocationParseResult {
@@ -41,14 +62,17 @@ export async function runInvocation(
   argv: string[],
   client?: SpaceMoltClient,
   context: CliRuntimeContext = createDefaultCliRuntimeContext(),
+  dependencies: RunnerDependencies = {},
 ): Promise<number> {
-  return withCliWriter(context.writer, () => runInvocationWithContext(argv, client, context));
+  const deps = { ...defaultRunnerDependencies, ...dependencies };
+  return withCliWriter(context.writer, () => runInvocationWithContext(argv, client, context, deps));
 }
 
 async function runInvocationWithContext(
   argv: string[],
   client: SpaceMoltClient | undefined,
   context: CliRuntimeContext,
+  deps: Required<RunnerDependencies>,
 ): Promise<number> {
   const parsedInvocation = parseInvocation(argv, context);
   if (!parsedInvocation.ok) {
@@ -66,8 +90,8 @@ async function runInvocationWithContext(
     },
   };
   const resolvedContext = withResolvedConfig(context, config);
-  const cachedGeneratedRoutes = loadCachedGeneratedRoutes(
-    defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
+  const cachedGeneratedRoutes = deps.loadCachedGeneratedRoutes(
+    deps.defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
   );
   const generatedRoutes = cachedGeneratedRoutes ? { ...GENERATED_API_ROUTES, ...cachedGeneratedRoutes } : undefined;
   const commandRegistry = buildCommandRegistrySnapshot({
@@ -77,7 +101,7 @@ async function runInvocationWithContext(
   });
 
   if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
-    checkForUpdates({
+    deps.checkForUpdates({
       env: resolvedContext.env,
       clock: resolvedContext.clock,
       writer: resolvedContext.writer,
@@ -85,11 +109,11 @@ async function runInvocationWithContext(
   }
 
   const handler = resolveHandler(invocation.args, invocation.options, commandRegistry);
-  const activeClient = client ?? new SpaceMoltClient({ config });
+  const activeClient = client ?? deps.createClient(config);
 
   if (invocation.options.watch) {
     if (!handler) return renderUnknownCommand(invocation, resolvedContext);
-    return runWatchLoop(invocation, handler, activeClient, resolvedContext);
+    return runWatchLoop(invocation, handler, activeClient, resolvedContext, deps);
   }
 
   if (!handler) return renderUnknownCommand(invocation, resolvedContext);
@@ -110,6 +134,7 @@ async function runWatchLoop(
   handler: CommandHandler,
   client: SpaceMoltClient,
   context: CliRuntimeContext,
+  deps: Required<RunnerDependencies>,
 ): Promise<number> {
   const interval = invocation.options.watch;
   if (!interval) return 0;
@@ -118,7 +143,7 @@ async function runWatchLoop(
   const stop = () => {
     running = false;
   };
-  process.on('SIGINT', stop);
+  const removeSigintListener = deps.onSigint(stop);
 
   try {
     while (running) {
@@ -144,7 +169,7 @@ async function runWatchLoop(
   } catch (error) {
     return renderConnectionError(error, invocation.options, context);
   } finally {
-    process.removeListener('SIGINT', stop);
+    removeSigintListener();
   }
 
   return 0;
