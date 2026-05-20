@@ -12,6 +12,7 @@ import {
   type CommandArg,
   LOCAL_COMMANDS,
 } from './commands';
+import { buildCommandRegistrySnapshot } from './command-registry';
 import { generateCompletion } from './completion';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp } from './help';
@@ -71,6 +72,16 @@ function generatedArgNames(generated?: GeneratedApiRoute): string[] {
 }
 
 describe('command metadata', () => {
+  test('command registry preserves curated commands and local commands', () => {
+    const snapshot = buildCommandRegistrySnapshot();
+    expect(snapshot.commands.travel).toBeDefined();
+    expect(snapshot.localCommands.ids).toBe(LOCAL_COMMANDS.ids);
+    expect(snapshot.allCommands.ids).toBeDefined();
+    expect(snapshot.apiRoutes).toEqual(
+      Object.fromEntries(Object.entries(snapshot.commands).map(([command, config]) => [command, config.route])),
+    );
+  });
+
   test('command overrides are assembled from domain modules without losing entries', () => {
     const modules = [
       CORE_COMMAND_OVERRIDES,

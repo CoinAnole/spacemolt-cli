@@ -40,8 +40,6 @@ export type LocalCommandConfig = Omit<CommandConfig, 'route' | 'schema'>;
 
 export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
-const GENERATED_API_ROUTE_KEYS = Object.keys(GENERATED_API_ROUTES);
-
 export type CommandOverride = {
   apiRoute: string;
   positionals?: CommandArg[];
@@ -172,18 +170,24 @@ function buildUsageFromSchema(config: CommandOverride, generated: GeneratedApiRo
   return parts.join(' ');
 }
 
-function getGeneratedRoute(apiRoute: string): GeneratedApiRoute {
-  const generated = GENERATED_API_ROUTES[apiRoute];
+function getGeneratedRoute(
+  apiRoute: string,
+  generatedRoutes: Record<string, GeneratedApiRoute>,
+): GeneratedApiRoute {
+  const generated = generatedRoutes[apiRoute];
   if (!generated) {
     throw new Error(
-      `Command override references unknown generated API route "${apiRoute}". Known routes: ${GENERATED_API_ROUTE_KEYS.join(', ')}`,
+      `Command override references unknown generated API route "${apiRoute}". Known routes: ${Object.keys(generatedRoutes).join(', ')}`,
     );
   }
   return generated;
 }
 
-function mergeCommandConfig(config: CommandOverride): CommandConfig {
-  const generated = getGeneratedRoute(config.apiRoute);
+function mergeCommandConfig(
+  config: CommandOverride,
+  generatedRoutes: Record<string, GeneratedApiRoute>,
+): CommandConfig {
+  const generated = getGeneratedRoute(config.apiRoute, generatedRoutes);
   const generatedAliases = generatedArgAliases(config.positionals, generated);
   const aliases = { ...generatedAliases, ...config.aliases };
   const {
@@ -209,9 +213,16 @@ function mergeCommandConfig(config: CommandOverride): CommandConfig {
   };
 }
 
-export const COMMANDS: Record<string, CommandConfig> = Object.fromEntries(
-  Object.entries(COMMAND_OVERRIDES).map(([command, config]) => [command, mergeCommandConfig(config)]),
-);
+export function buildCuratedCommands(
+  overrides: Record<string, CommandOverride> = COMMAND_OVERRIDES,
+  generatedRoutes: Record<string, GeneratedApiRoute> = GENERATED_API_ROUTES as Record<string, GeneratedApiRoute>,
+): Record<string, CommandConfig> {
+  return Object.fromEntries(
+    Object.entries(overrides).map(([command, config]) => [command, mergeCommandConfig(config, generatedRoutes)]),
+  );
+}
+
+export const COMMANDS: Record<string, CommandConfig> = buildCuratedCommands();
 
 export const ALL_COMMANDS: Record<string, CommandConfig | LocalCommandConfig> = {
   ...COMMANDS,
