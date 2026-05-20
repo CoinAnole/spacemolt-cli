@@ -132,6 +132,7 @@ bun run src/client.ts --format yaml get_status
 bun run src/client.ts --fields player.name,ship.fuel get_status
 bun run src/client.ts --jq .player.name get_status
 bun run src/client.ts --plain --compact get_system
+bun run src/client.ts --debug get_status
 ```
 
 Watch mode reruns a command on an interval. Without a value, it refreshes every 10 seconds.
@@ -203,7 +204,7 @@ Game mutations are limited by the server tick; query commands are not.
 | `SPACEMOLT_SESSION` | Session file path | `~/.hermes/spacemolt/session.json` |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
 | `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks | update checks disabled |
-| `DEBUG=true` | Verbose request logging | `false` |
+| `DEBUG=true` | Verbose request logging; use `--debug` for one command | `false` |
 
 ## Development
 

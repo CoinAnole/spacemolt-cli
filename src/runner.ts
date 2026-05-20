@@ -79,10 +79,12 @@ async function runInvocationWithContext(
     const jsonOutput = Boolean(parsedInvocation.error.json || context.env.SPACEMOLT_OUTPUT === 'json');
     const quiet = Boolean(parsedInvocation.error.quiet);
     const plain = Boolean(parsedInvocation.error.plain);
+    const debug = Boolean(parsedInvocation.error.debug || context.env.DEBUG === 'true');
     setOutputMode({
       json: jsonOutput,
       quiet,
       plain,
+      debug,
       compact: false,
       format: jsonOutput ? 'json' : 'table',
     });

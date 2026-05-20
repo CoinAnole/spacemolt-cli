@@ -558,6 +558,7 @@ ${c.bright}Global Flags:${c.reset}
   --jq              Apply jq-like expression to response
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
+  --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
   --jq overrides --fields; projections run before --json/--format; --compact and --plain apply last.
@@ -621,6 +622,7 @@ ${c.bright}Global Flags:${c.reset}
   --jq              Apply jq-like expression to response
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
+  --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
   --jq overrides --fields; projections run before --json/--format; --compact and --plain apply last.
@@ -690,6 +692,7 @@ ${c.bright}Usage:${c.reset}
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them
       --allow-unknown     Allow unknown command fields to pass through
+      --debug             Print verbose diagnostics for this command
 
     Output precedence:
       --jq overrides --fields; projections run before --json/--format; --compact and --plain apply last.

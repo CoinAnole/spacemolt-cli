@@ -65,6 +65,7 @@ describe('Explicit Runtime Configuration', () => {
       dryRun: false,
       noTimestamp: false,
       compact: true,
+      debug: true,
       args: [],
       format: 'json' as const,
       profile: 'my-custom-profile',
@@ -75,6 +76,7 @@ describe('Explicit Runtime Configuration', () => {
     expect(config.plain).toBe(true);
     expect(config.quiet).toBe(true);
     expect(config.compact).toBe(true);
+    expect(config.debug).toBe(true);
     expect(config.profile).toBe('my-custom-profile');
   });
 

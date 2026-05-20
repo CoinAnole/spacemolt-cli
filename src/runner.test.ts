@@ -6,7 +6,7 @@ import type { SpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
-import { COMPACT, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
+import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
 
 async function captureInvocation(argv: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
@@ -149,6 +149,14 @@ describe('runInvocation option isolation', () => {
     await captureInvocation(['trvel']);
     expect(PLAIN).toBe(false);
     expect(COMPACT).toBe(false);
+  });
+
+  test('repeated direct invocations do not leak --debug', async () => {
+    await captureInvocation(['--debug', '--help']);
+    expect(DEBUG).toBe(true);
+
+    await captureInvocation(['--help']);
+    expect(DEBUG).toBe(process.env.DEBUG === 'true');
   });
 
   test('repeated direct invocations do not leak --profile', async () => {

@@ -6,7 +6,7 @@ export function getRuntimeConfig(options: GlobalOptions, env: CliEnv = process.e
   return {
     apiBase: env.SPACEMOLT_URL || DEFAULT_V2_API_BASE,
     jsonOutput: options.json || options.format === 'json' || env.SPACEMOLT_OUTPUT === 'json',
-    debug: env.DEBUG === 'true',
+    debug: options.debug || env.DEBUG === 'true',
     plain: options.plain,
     quiet: options.quiet,
     format: options.format || 'table',

@@ -868,6 +868,7 @@ describe('CLI output modes', () => {
     const result = parseGlobalOptions([
       '--watch',
       '2.5',
+      '--debug',
       '--format=yaml',
       '--jq=.items[].id',
       '--profile=pilot',
@@ -878,6 +879,7 @@ describe('CLI output modes', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.error.message);
     expect(result.options.watch).toBe(2.5);
+    expect(result.options.debug).toBe(true);
     expect(result.options.format).toBe('yaml');
     expect(result.options.jq).toBe('.items[].id');
     expect(result.options.profile).toBe('pilot');

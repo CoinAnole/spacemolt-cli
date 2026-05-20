@@ -24,6 +24,7 @@ export interface GlobalOptions {
   json: boolean;
   quiet: boolean;
   plain: boolean;
+  debug?: boolean;
   allowUnknown: boolean;
   dryRun: boolean;
   profile?: string;

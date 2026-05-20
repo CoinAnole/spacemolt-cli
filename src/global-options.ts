@@ -12,13 +12,14 @@ export interface GlobalOptionParseError {
   plain?: boolean;
   quiet?: boolean;
   json?: boolean;
+  debug?: boolean;
 }
 
 export type GlobalOptionParseResult =
   | { ok: true; options: GlobalOptions }
   | { ok: false; error: GlobalOptionParseError };
 
-type PartialOutputState = Partial<Pick<GlobalOptions, 'plain' | 'quiet' | 'json' | 'format'>>;
+type PartialOutputState = Partial<Pick<GlobalOptions, 'plain' | 'quiet' | 'json' | 'format' | 'debug'>>;
 
 function parseError(option: string, message: string, state: PartialOutputState = {}): GlobalOptionParseResult {
   return {
@@ -37,6 +38,7 @@ function outputState(options: PartialOutputState): PartialOutputState {
     ...(options.plain ? { plain: true } : {}),
     ...(options.quiet ? { quiet: true } : {}),
     ...(options.json || options.format === 'json' ? { json: true } : {}),
+    ...(options.debug ? { debug: true } : {}),
   };
 }
 
@@ -79,6 +81,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     json: false,
     quiet: false,
     plain: false,
+    debug: false,
     allowUnknown: false,
     dryRun: false,
     fields: undefined,
@@ -100,6 +103,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       result.quiet = true;
     } else if (arg === '--plain' || arg === '-p') {
       result.plain = true;
+    } else if (arg === '--debug') {
+      result.debug = true;
     } else if (arg === '--raw' || arg === '--allow-unknown' || arg === '-allow-unknown') {
       result.allowUnknown = true;
     } else if (arg === '--dry-run' || arg === '--preview') {
@@ -200,6 +205,7 @@ export function applyGlobalOptions(options: GlobalOptions, env: CliEnv = process
     format,
     quiet: options.quiet,
     plain: options.plain,
+    debug: options.debug || env.DEBUG === 'true',
     compact: options.compact,
   });
   setActiveProfile(options.profile);
