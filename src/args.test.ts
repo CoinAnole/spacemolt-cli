@@ -806,4 +806,64 @@ describe('CLI output modes', () => {
       });
     }
   });
+
+  test('global option parser handles watch, format, jq, profile, and dry-run values', () => {
+    const result = parseGlobalOptions([
+      '--watch',
+      '2.5',
+      '--format=yaml',
+      '--jq=.items[].id',
+      '--profile=pilot',
+      '--dry-run=false',
+      'get_status',
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.options.watch).toBe(2.5);
+    expect(result.options.format).toBe('yaml');
+    expect(result.options.jq).toBe('.items[].id');
+    expect(result.options.profile).toBe('pilot');
+    expect(result.options.dryRun).toBe(false);
+    expect(result.options.args).toEqual(['get_status']);
+  });
+
+  test('global option parser handles equals shorthands and default watch interval', () => {
+    const result = parseGlobalOptions(['--watch', '-fmt=text', '-f=id,name', '--preview=1', 'get_status']);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.options.watch).toBe(10);
+    expect(result.options.format).toBe('text');
+    expect(result.options.fields).toEqual(['id', 'name']);
+    expect(result.options.dryRun).toBe(true);
+    expect(result.options.args).toEqual(['get_status']);
+  });
+
+  test('global option parser rejects invalid option values', () => {
+    expect(parseGlobalOptions(['--watch=0'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--watch',
+        message: '--watch requires a positive number (seconds).',
+      },
+    });
+    expect(parseGlobalOptions(['--format=xml'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--format',
+        message: 'Invalid format "xml". Expected one of: table, json, yaml, text.',
+      },
+    });
+    expect(parseGlobalOptions(['--jq'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--jq',
+        message: '--jq requires a jq-like expression.',
+      },
+    });
+  });
 });

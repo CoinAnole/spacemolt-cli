@@ -1,0 +1,168 @@
+import { describe, expect, test } from 'bun:test';
+import type { CliRuntimeContext, CliWriter } from './cli-context';
+import type { CommandRegistrySnapshot } from './command-registry';
+import {
+  displayError,
+  parseCommandSearchQuery,
+  showCommandGroup,
+  showCommandGroups,
+  showCommandSearch,
+  showFullHelp,
+} from './help';
+
+function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWriter } {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  return {
+    stdout,
+    stderr,
+    writer: {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err(message = '') {
+        stderr.push(message);
+      },
+    },
+  };
+}
+
+describe('help output branches', () => {
+  test('showCommandGroups and showCommandGroup render local grouped commands', () => {
+    const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
+      allCommands: {
+        travel: {
+          description: 'Travel within the current system',
+          usage: '<poi_id>',
+          category: 'Navigation',
+          args: ['poi_id'],
+          required: ['poi_id'],
+          route: { tool: 'spacemolt_travel', action: 'travel', method: 'POST' },
+        },
+        dock: {
+          description: 'Dock at the current station',
+          usage: '',
+          category: 'Navigation',
+          args: [],
+          route: { tool: 'spacemolt_travel', action: 'dock', method: 'POST' },
+        },
+        login: {
+          description: 'Start a session',
+          usage: '<username> <password>',
+          category: 'Authentication',
+          args: ['username', 'password'],
+          required: ['username', 'password'],
+          route: { tool: 'spacemolt_auth', action: 'login', method: 'POST' },
+        },
+      },
+    };
+
+    const groups = captureWriter();
+    showCommandGroups(groups.writer, registry);
+    const groupOutput = groups.stdout.join('\n');
+    expect(groupOutput).toContain('Command Groups');
+    expect(groupOutput).toContain('nav        Navigation (2)');
+    expect(groupOutput).toContain('auth       Authentication (1)');
+
+    const nav = captureWriter();
+    expect(showCommandGroup('navigation', nav.writer, registry)).toBe(true);
+    const navOutput = nav.stdout.join('\n');
+    expect(navOutput).toContain('Navigation Commands');
+    expect(navOutput).toContain('Navigation:');
+    expect(navOutput).toContain('travel <poi_id> - Travel within the current system');
+    expect(navOutput).toContain('dock - Dock at the current station');
+  });
+
+  test('showCommandSearch renders empty-state suggestions', () => {
+    const capture = captureWriter();
+    showCommandSearch('trvel', capture.writer, {
+      travel: {
+        description: 'Travel within the current system',
+        usage: '<poi_id>',
+        category: 'Navigation',
+        args: ['poi_id'],
+        required: ['poi_id'],
+        route: { tool: 'spacemolt_travel', action: 'travel', method: 'POST' },
+      },
+    });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Commands matching "trvel"');
+    expect(output).toContain('(No local command matches)');
+    expect(output).toContain('Did you mean: travel');
+  });
+
+  test('parseCommandSearchQuery supports search forms', () => {
+    expect(parseCommandSearchQuery(['--search', 'fuel', 'cell'])).toBe('fuel cell');
+    expect(parseCommandSearchQuery(['--search=fuel'])).toBe('fuel');
+    expect(parseCommandSearchQuery(['search=fuel'])).toBe('fuel');
+    expect(parseCommandSearchQuery(['fuel', 'cell'])).toBe('fuel cell');
+  });
+
+  test('showFullHelp includes generated commands supplied by a registry snapshot', () => {
+    const capture = captureWriter();
+    const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
+      allCommands: {
+        generated_only: {
+          description: 'Generated command',
+          usage: '<id>',
+          category: 'Generated API',
+          args: ['id'],
+          required: ['id'],
+          route: { tool: 'generated', action: 'only', method: 'POST' },
+        },
+      },
+    };
+
+    showFullHelp(capture.writer, registry);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Generated API Commands');
+    expect(output).toContain('generated_only <id> - Generated command');
+  });
+
+  test('displayError renders retry, auth, and quiet branches', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('travel', { code: 'rate_limited', message: 'Slow down', retry_after: 2 }, { context });
+    expect(capture.stdout.join('\n')).toContain('2026-05-20T00:00:00.000Z');
+    expect(capture.stderr.join('\n')).toContain('Wait 2.0 seconds before retrying.');
+    expect(capture.stderr.join('\n')).toContain('Suggestion:');
+
+    const retryable = captureWriter();
+    displayError(
+      'travel',
+      { code: 'no_fuel', message: 'No fuel' },
+      { context: { ...context, writer: retryable.writer } },
+    );
+    expect(retryable.stderr.join('\n')).toContain('This error may be retryable.');
+
+    const auth = captureWriter();
+    displayError(
+      'travel',
+      { code: 'not_authenticated', message: 'Login required' },
+      { context: { ...context, writer: auth.writer } },
+    );
+    expect(auth.stderr.join('\n')).toContain('This is an authentication error.');
+
+    const quiet = captureWriter();
+    displayError(
+      'travel',
+      { code: 'not_authenticated', message: 'Login required' },
+      {
+        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
+      },
+    );
+    expect(quiet.stdout).toEqual([]);
+    expect(quiet.stderr.join('\n')).toContain('Login required');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This is an authentication error.');
+  });
+});
