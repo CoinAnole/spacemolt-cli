@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { SpaceMoltClient, type SpaceMoltClientOptions } from './api.ts';
+import type { CommandConfig } from './commands.ts';
+import { runCommand } from './response-renderer.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
 
 function session(overrides: Partial<Session> = {}): Session {
@@ -100,6 +102,67 @@ describe('SpaceMoltClient', () => {
       target: 'faction',
       item_id: 'credits',
       quantity: 500,
+    });
+  });
+
+  test('executes a registry command config without static route metadata', async () => {
+    const { client, calls } = createClient([response()]);
+    const config: CommandConfig = {
+      route: {
+        tool: 'spacemolt_shipyard',
+        action: 'repair',
+        method: 'POST',
+        defaults: { mode: 'standard' },
+      },
+      arrayFields: ['ship_ids'],
+    };
+
+    await client.executeCommandConfig('shipyard_repair_dynamic', config, { ship_ids: 'ship_1, ship_2' });
+
+    expect(calls[0]?.url).toBe('https://game.test/api/v2/spacemolt_shipyard/repair');
+    expect(calls[0]?.options?.payload).toEqual({
+      mode: 'standard',
+      ship_ids: ['ship_1', 'ship_2'],
+    });
+  });
+
+  test('dry-runs a registry command config without static route metadata', async () => {
+    const config: CommandConfig = {
+      route: {
+        tool: 'spacemolt_shipyard',
+        action: 'repair',
+        method: 'POST',
+        defaults: { mode: 'standard' },
+      },
+      arrayFields: ['ship_ids'],
+    };
+
+    const result = await runCommand(
+      'shipyard_repair_dynamic',
+      { ship_ids: 'ship_1, ship_2' },
+      {
+        json: false,
+        dryRun: true,
+        allowUnknown: false,
+        plain: false,
+        compact: false,
+        quiet: false,
+        format: 'table',
+        noTimestamp: false,
+        args: [],
+      },
+      undefined,
+      config,
+    );
+
+    expect(result.response.structuredContent).toMatchObject({
+      dry_run: true,
+      command: 'shipyard_repair_dynamic',
+      method: 'POST',
+      payload: {
+        mode: 'standard',
+        ship_ids: ['ship_1', 'ship_2'],
+      },
     });
   });
 

@@ -1,7 +1,7 @@
 import { type CommandParseError, convertPayloadTypes, normalizeParsedPayload, validateRequiredArgs } from './args.ts';
 import type { CliWriter } from './cli-context.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandError, PreparedPayload } from './command-types.ts';
-import { COMMANDS } from './commands.ts';
 import { displayMissingArgument, displayUnknownCommand, printJsonError, showCommandHelp } from './help.ts';
 import {
   type CachedIdResolveResult,
@@ -24,8 +24,9 @@ export function preparePayload(
   options: GlobalOptions,
   sessionPath?: string,
   writer?: CliWriter,
+  registry: Pick<CommandRegistrySnapshot, 'commands'> = BUNDLED_COMMAND_REGISTRY,
 ): PreparedPayload {
-  if (!COMMANDS[command]) {
+  if (!registry.commands[command]) {
     if (options.json) {
       printJsonError('unknown_command', `Unknown command: ${command}`, writer);
       return { type: 'exit', exitCode: 1 };
@@ -35,11 +36,11 @@ export function preparePayload(
   }
 
   if (rawPayload.help === 'true' || rawPayload.help === '1') {
-    showCommandHelp(command, writer);
+    showCommandHelp(command, writer, registry.commands);
     return { type: 'exit', exitCode: 0 };
   }
 
-  const missingArg = validateRequiredArgs(command, rawPayload);
+  const missingArg = validateRequiredArgs(command, rawPayload, registry);
   if (missingArg) {
     if (options.json) {
       printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
@@ -49,7 +50,7 @@ export function preparePayload(
     return { type: 'exit', exitCode: 1 };
   }
 
-  const requestPayload = normalizeParsedPayload(command, rawPayload);
+  const requestPayload = normalizeParsedPayload(command, rawPayload, registry);
   const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath);
   if (resolvedPayload.type === 'ambiguous') {
     if (options.json) {
@@ -64,7 +65,9 @@ export function preparePayload(
   }
 
   const payload =
-    Object.keys(resolvedPayload.payload).length > 0 ? convertPayloadTypes(resolvedPayload.payload, command) : {};
+    Object.keys(resolvedPayload.payload).length > 0
+      ? convertPayloadTypes(resolvedPayload.payload, command, registry)
+      : {};
   return { type: 'payload', payload };
 }
 

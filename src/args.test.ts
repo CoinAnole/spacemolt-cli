@@ -10,6 +10,7 @@ import {
   parseGlobalOptions,
   validateRequiredArgs,
 } from './client';
+import type { CommandRegistrySnapshot } from './command-registry';
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
 
@@ -227,6 +228,28 @@ describe('normalizeParsedPayload', () => {
 // =============================================================================
 
 describe('parseArgs - basic', () => {
+  test('parses positional args for a command supplied by a registry snapshot', () => {
+    const command = 'dynamic_parser_snapshot_test';
+    expect(COMMANDS[command]).toBeUndefined();
+    const registry = {
+      commands: {
+        [command]: {
+          args: ['target_id', 'quantity'],
+          required: ['target_id', 'quantity'],
+          route: { tool: 'dynamic_parser', action: 'snapshot_test' },
+          schema: {
+            target_id: { type: 'string', positionalIndex: 0 },
+            quantity: { type: 'integer', positionalIndex: 1 },
+          },
+        },
+      },
+    } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+
+    const { payload } = parseOk([command, 'ship_123', '7'], { registry });
+
+    expect(payload).toEqual({ target_id: 'ship_123', quantity: '7' });
+  });
+
   test('no-arg command', () => {
     const { command, payload } = parseOk(['mine']);
     expect(command).toBe('mine');

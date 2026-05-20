@@ -1,5 +1,5 @@
-import { applyPayloadTransforms } from './args.ts';
-import { routeToPath, V2_TOOL_MAP } from './commands.ts';
+import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
+import { type CommandConfig, routeToPath, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { ERROR_REGISTRY } from './errors.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import {
@@ -91,6 +91,23 @@ export class SpaceMoltClient {
 
     payload = applyPayloadTransforms(command, payload ?? {});
 
+    return this.executeRoute(command, mapping, payload);
+  }
+
+  async executeCommandConfig(
+    command: string,
+    commandConfig: Pick<CommandConfig, 'arrayFields' | 'route'>,
+    payload?: Record<string, unknown>,
+  ): Promise<APIResponse> {
+    const transformedPayload = applyCommandPayloadTransforms(commandConfig, payload ?? {});
+    return this.executeRoute(command, commandConfig.route, transformedPayload);
+  }
+
+  private async executeRoute(
+    command: string,
+    mapping: V2Route,
+    payload: Record<string, unknown>,
+  ): Promise<APIResponse> {
     if (mapping.defaults) {
       payload = { ...mapping.defaults, ...payload };
     }

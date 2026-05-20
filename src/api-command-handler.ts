@@ -1,8 +1,8 @@
 import type { SpaceMoltClient } from './api.ts';
 import { parseArgs } from './args.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
-import { COMMANDS } from './commands.ts';
 import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
@@ -10,7 +10,10 @@ import { getSessionPath } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
 export class ApiCommandHandler implements CommandHandler<Record<string, unknown>, CommandRunResult> {
-  constructor(public name: string) {}
+  constructor(
+    public name: string,
+    private registry: Pick<CommandRegistrySnapshot, 'commands'> = BUNDLED_COMMAND_REGISTRY,
+  ) {}
   requiresNetwork = true;
 
   parse(
@@ -18,7 +21,7 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
     options: GlobalOptions,
     context?: CliRuntimeContext,
   ): CommandParseResult<Record<string, unknown>> {
-    const parsedArgs = parseArgs(argv, { allowUnknown: options.allowUnknown });
+    const parsedArgs = parseArgs(argv, { allowUnknown: options.allowUnknown, registry: this.registry });
     if (!parsedArgs.ok) {
       return { ok: false, error: validationErrorFromParseErrors(parsedArgs.errors) };
     }
@@ -26,7 +29,14 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
     const config = context?.config ?? getRuntimeConfig(options, context?.env);
     const sessionPath = getSessionPath(config);
 
-    const prepared = preparePayload(this.name, parsedArgs.payload, options, sessionPath, context?.writer);
+    const prepared = preparePayload(
+      this.name,
+      parsedArgs.payload,
+      options,
+      sessionPath,
+      context?.writer,
+      this.registry,
+    );
     if (prepared.type === 'exit') {
       return {
         ok: false,
@@ -42,7 +52,7 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
   }
 
   async run(payload: Record<string, unknown>, options: GlobalOptions, client?: SpaceMoltClient) {
-    return runCommand(this.name, payload, options, client);
+    return runCommand(this.name, payload, options, client, this.registry.commands[this.name]);
   }
 
   async render(
@@ -55,6 +65,9 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
   }
 }
 
-export function hasApiCommand(commandName: string | undefined): commandName is keyof typeof COMMANDS & string {
-  return Boolean(commandName && COMMANDS[commandName]);
+export function hasApiCommand(
+  commandName: string | undefined,
+  registry: Pick<CommandRegistrySnapshot, 'commands'> = BUNDLED_COMMAND_REGISTRY,
+): commandName is string {
+  return Boolean(commandName && registry.commands[commandName]);
 }

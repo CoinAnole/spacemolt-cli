@@ -1,5 +1,5 @@
-import { applyPayloadTransforms } from './args.ts';
-import { routeToPath, V2_TOOL_MAP } from './commands.ts';
+import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
+import { type CommandConfig, routeToPath, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
@@ -33,7 +33,24 @@ export function getRoutePreview(command: string, payload: Record<string, unknown
   if (!mapping) throw new Error(`Command "${command}" has no v2 route mapping.`);
 
   const normalizedPayload = applyPayloadTransforms(command, { ...payload });
-  const requestPayload = mapping.defaults ? { ...mapping.defaults, ...normalizedPayload } : normalizedPayload;
+  return buildRoutePreview(command, mapping, normalizedPayload);
+}
+
+export function getCommandConfigRoutePreview(
+  command: string,
+  commandConfig: Pick<CommandConfig, 'arrayFields' | 'route'>,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalizedPayload = applyCommandPayloadTransforms(commandConfig, { ...payload });
+  return buildRoutePreview(command, commandConfig.route, normalizedPayload);
+}
+
+function buildRoutePreview(
+  command: string,
+  mapping: V2Route,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const requestPayload = mapping.defaults ? { ...mapping.defaults, ...payload } : payload;
 
   return {
     dry_run: true,
@@ -48,6 +65,19 @@ export function getRoutePreview(command: string, payload: Record<string, unknown
 
 export function createDryRunResponse(command: string, payload: Record<string, unknown>): APIResponse {
   const preview = getRoutePreview(command, payload);
+  return createDryRunResponseFromPreview(command, preview);
+}
+
+export function createCommandConfigDryRunResponse(
+  command: string,
+  commandConfig: Pick<CommandConfig, 'arrayFields' | 'route'>,
+  payload: Record<string, unknown>,
+): APIResponse {
+  const preview = getCommandConfigRoutePreview(command, commandConfig, payload);
+  return createDryRunResponseFromPreview(command, preview);
+}
+
+function createDryRunResponseFromPreview(command: string, preview: Record<string, unknown>): APIResponse {
   return {
     structuredContent: preview,
     result: [

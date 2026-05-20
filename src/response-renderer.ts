@@ -1,10 +1,11 @@
 import { defaultClient, type SpaceMoltClient } from './api.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
+import type { CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
-import { createDryRunResponse, getServerPreviewCommand } from './preview.ts';
+import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { c } from './runtime.ts';
 import { getSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
@@ -20,13 +21,18 @@ export async function runCommand(
   payload: Record<string, unknown>,
   options: GlobalOptions,
   client: SpaceMoltClient = defaultClient,
+  commandConfig?: CommandConfig,
 ): Promise<CommandRunResult> {
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, payload) : null;
   const response = options.dryRun
     ? serverPreviewCommand
       ? await client.execute(serverPreviewCommand, payload)
-      : createDryRunResponse(command, payload)
-    : await client.execute(command, payload);
+      : commandConfig
+        ? createCommandConfigDryRunResponse(command, commandConfig, payload)
+        : createDryRunResponse(command, payload)
+    : commandConfig && typeof client.executeCommandConfig === 'function'
+      ? await client.executeCommandConfig(command, commandConfig, payload)
+      : await client.execute(command, payload);
 
   return {
     command,

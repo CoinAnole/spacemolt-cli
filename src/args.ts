@@ -1,9 +1,21 @@
 import * as fs from 'node:fs';
-import { COMMANDS, type CommandConfig } from './commands.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import type { CommandConfig } from './commands.ts';
 
-export function normalizeParsedPayload(command: string, payload: Record<string, unknown>): Record<string, unknown> {
+type CommandRegistrySource = Pick<CommandRegistrySnapshot, 'commands'>;
+
+function commandConfig(command: string | undefined, registry: CommandRegistrySource): CommandConfig | undefined {
+  if (!command) return undefined;
+  return registry.commands[command];
+}
+
+export function normalizeParsedPayload(
+  command: string,
+  payload: Record<string, unknown>,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): Record<string, unknown> {
   const normalized: Record<string, unknown> = { ...payload };
-  const config = COMMANDS[command];
+  const config = commandConfig(command, registry);
 
   // Apply fieldRenames first (deprecated field names -> current names)
   if (config?.fieldRenames) {
@@ -23,8 +35,11 @@ export function normalizeParsedPayload(command: string, payload: Record<string, 
   return normalized;
 }
 
-export function getValidArgNames(command: string): Set<string> {
-  const config = COMMANDS[command];
+export function getValidArgNames(
+  command: string,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): Set<string> {
+  const config = commandConfig(command, registry);
   const argDefs = config?.args || [];
   const validArgNames = new Set<string>(['help']);
   for (const def of argDefs) {
@@ -55,6 +70,7 @@ export interface ParsedArgs {
 
 export interface ParseArgsOptions {
   allowUnknown?: boolean;
+  registry?: CommandRegistrySource;
 }
 
 export type CommandParseError = ValidationError;
@@ -63,10 +79,10 @@ export type CommandParseResult =
   | { ok: true; command: string; payload: Record<string, unknown> }
   | { ok: false; errors: CommandParseError[] };
 
-function parseRawArgs(args: string[]): ParsedArgs {
+function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedArgs {
   const command = args[0] || '';
   const payload: Record<string, unknown> = {};
-  const config = COMMANDS[command];
+  const config = commandConfig(command, registry);
   const argDefs = config?.args || [];
   let positionalIndex = 0;
   let inPositionalOnlyMode = false;
@@ -101,7 +117,7 @@ function parseRawArgs(args: string[]): ParsedArgs {
       }
 
       const nextArg = args[i + 1];
-      const fieldType = getCommandFieldType(command, flag.key);
+      const fieldType = getCommandFieldType(command, flag.key, registry);
       if (fieldType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
         setPayloadField(flag.key, nextArg);
         i++;
@@ -179,7 +195,8 @@ function resolvePayloadFiles(
 }
 
 export function parseArgs(args: string[], options: ParseArgsOptions = {}): CommandParseResult {
-  const parsed = parseRawArgs(args);
+  const registry = options.registry || BUNDLED_COMMAND_REGISTRY;
+  const parsed = parseRawArgs(args, registry);
 
   const resolved = resolvePayloadFiles(parsed.payload);
   if (!resolved.ok) {
@@ -248,8 +265,8 @@ export function parseArgs(args: string[], options: ParseArgsOptions = {}): Comma
   }
 
   const errors = [
-    ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, payload)),
-    ...validatePayloadAgainstSchema(parsed.command, payload),
+    ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, payload, registry)),
+    ...validatePayloadAgainstSchema(parsed.command, payload, registry),
   ];
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, command: parsed.command, payload };
@@ -272,13 +289,17 @@ function parseKeyValue(arg: string): { key: string; value: string } | null {
   return { key: normalizeCliKey(arg.substring(0, eqIndex)), value: arg.substring(eqIndex + 1) };
 }
 
-export function validateRequiredArgs(command: string, payload: Record<string, unknown>): string | null {
-  const required = COMMANDS[command]?.required;
+export function validateRequiredArgs(
+  command: string,
+  payload: Record<string, unknown>,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): string | null {
+  const required = commandConfig(command, registry)?.required;
   if (!required) return null;
-  const normalized = normalizeParsedPayload(command, payload);
+  const normalized = normalizeParsedPayload(command, payload, registry);
   for (const arg of required) {
     if (payload[arg]) continue;
-    const canonicalRequired = normalizeParsedPayload(command, { [arg]: '__required__' });
+    const canonicalRequired = normalizeParsedPayload(command, { [arg]: '__required__' }, registry);
     const canonicalKeys = Object.keys(canonicalRequired);
     if (canonicalKeys.some((key) => normalized[key])) continue;
     return arg;
@@ -299,10 +320,14 @@ export interface ValidationError {
     | 'file_read_error';
 }
 
-export function validateKnownPayloadFields(command: string, payload: Record<string, unknown>): ValidationError[] {
-  const config = COMMANDS[command];
+export function validateKnownPayloadFields(
+  command: string,
+  payload: Record<string, unknown>,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): ValidationError[] {
+  const config = commandConfig(command, registry);
   if (!config) return [];
-  const validArgNames = getValidArgNames(command);
+  const validArgNames = getValidArgNames(command, registry);
   const errors: ValidationError[] = [];
 
   for (const key of Object.keys(payload)) {
@@ -319,9 +344,13 @@ export function validateKnownPayloadFields(command: string, payload: Record<stri
   return errors;
 }
 
-export function validatePayloadAgainstSchema(command: string, payload: Record<string, unknown>): ValidationError[] {
+export function validatePayloadAgainstSchema(
+  command: string,
+  payload: Record<string, unknown>,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): ValidationError[] {
   const errors: ValidationError[] = [];
-  const config = COMMANDS[command];
+  const config = commandConfig(command, registry);
   const schema = config?.schema;
   if (!schema) return errors;
 
@@ -439,14 +468,20 @@ export function getArgNames(config: Pick<CommandConfig, 'args' | 'required'>): s
 
 type PayloadConversionSchema = Record<string, { type?: string; enum?: string[] }>;
 
-export function getPayloadConversionSchema(command: string | undefined): PayloadConversionSchema {
-  if (!command) return {};
-  return COMMANDS[command]?.schema || {};
+export function getPayloadConversionSchema(
+  command: string | undefined,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): PayloadConversionSchema {
+  return commandConfig(command, registry)?.schema || {};
 }
 
-function getCommandFieldType(command: string | undefined, key: string): string | undefined {
+function getCommandFieldType(
+  command: string | undefined,
+  key: string,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): string | undefined {
   if (!command) return undefined;
-  return getPayloadConversionSchema(command)[key]?.type;
+  return getPayloadConversionSchema(command, registry)[key]?.type;
 }
 
 function parseTypedNumber(value: string, fieldType: string): number | undefined {
@@ -457,10 +492,14 @@ function parseTypedNumber(value: string, fieldType: string): number | undefined 
   return num;
 }
 
-export function convertPayloadTypes(payload: Record<string, unknown>, command?: string): Record<string, unknown> {
+export function convertPayloadTypes(
+  payload: Record<string, unknown>,
+  command?: string,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(payload)) {
-    const fieldType = getCommandFieldType(command, key);
+    const fieldType = getCommandFieldType(command, key, registry);
 
     const convertSingle = (val: unknown): unknown => {
       if (typeof val !== 'string') return val;
@@ -486,8 +525,19 @@ export function convertPayloadTypes(payload: Record<string, unknown>, command?: 
   return result;
 }
 
-export function applyPayloadTransforms(command: string, payload: Record<string, unknown>): Record<string, unknown> {
-  const config = COMMANDS[command];
+export function applyPayloadTransforms(
+  command: string,
+  payload: Record<string, unknown>,
+  registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
+): Record<string, unknown> {
+  const config = commandConfig(command, registry);
+  return applyCommandPayloadTransforms(config, payload);
+}
+
+export function applyCommandPayloadTransforms(
+  config: Pick<CommandConfig, 'arrayFields'> | undefined,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
   const transformed = { ...payload };
 
   // Apply array field splitting from metadata

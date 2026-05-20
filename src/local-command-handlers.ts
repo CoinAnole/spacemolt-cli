@@ -1,6 +1,6 @@
 import { ApiCommandHandler, hasApiCommand } from './api-command-handler.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
-import { COMMANDS } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import { type DoctorResult, printDoctorResult, runDoctor } from './doctor.ts';
 import {
@@ -73,47 +73,58 @@ const commandsHandler: CommandHandler<{ args: string[] }, { query: ReturnType<ty
   },
 };
 
-const explainHandler: CommandHandler<{ command: string }, { found: boolean; command: string }> = {
-  name: 'explain',
-  requiresNetwork: false,
-  parse(argv) {
-    const explainCommand = argv[1];
-    if (!explainCommand) {
-      return {
-        ok: false,
-        error: {
-          code: 'missing_argument',
-          message: 'Missing command name.',
-          customStderr: `${c.red}Error:${c.reset} Missing command name.\nUsage: spacemolt explain <command>`,
-          exitCode: 1,
-        },
-      };
-    }
-    return { ok: true, payload: { command: explainCommand } };
-  },
-  run(payload) {
-    const found = Boolean(COMMANDS[payload.command]);
-    return { found, command: payload.command };
-  },
-  render(result, options, _client, context) {
-    if (!result.found) {
-      if (options.json) {
-        const json = JSON.stringify(
-          { error: { code: 'unknown_command', message: `Unknown command: ${result.command}` } },
-          null,
-          2,
-        );
-        if (context) context.writer.out(json);
-        else printJsonError('unknown_command', `Unknown command: ${result.command}`);
+function createExplainHandler(
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler<{ command: string }, { found: boolean; command: string }> {
+  return {
+    name: 'explain',
+    requiresNetwork: false,
+    parse(argv) {
+      const explainCommand = argv[1];
+      if (!explainCommand) {
+        return {
+          ok: false,
+          error: {
+            code: 'missing_argument',
+            message: 'Missing command name.',
+            customStderr: `${c.red}Error:${c.reset} Missing command name.\nUsage: spacemolt explain <command>`,
+            exitCode: 1,
+          },
+        };
+      }
+      return { ok: true, payload: { command: explainCommand } };
+    },
+    run(payload) {
+      const found = Boolean(registrySnapshot.commands[payload.command]);
+      return { found, command: payload.command };
+    },
+    render(result, options, _client, context) {
+      if (!result.found) {
+        if (options.json) {
+          const json = JSON.stringify(
+            { error: { code: 'unknown_command', message: `Unknown command: ${result.command}` } },
+            null,
+            2,
+          );
+          if (context) context.writer.out(json);
+          else printJsonError('unknown_command', `Unknown command: ${result.command}`);
+          return 1;
+        }
+        displayUnknownCommand(result.command, context?.writer);
         return 1;
       }
-      displayUnknownCommand(result.command, context?.writer);
-      return 1;
-    }
-    showCommandExplanation(result.command, context?.writer);
-    return 0;
-  },
-};
+      showCommandExplanation(
+        result.command,
+        context?.writer,
+        registrySnapshot.allCommands ?? registrySnapshot.commands,
+      );
+      return 0;
+    },
+  };
+}
+
+const explainHandler = createExplainHandler();
 
 const completionHandler: CommandHandler<{ shell: string }, { completion: string }> = {
   name: 'completion',
@@ -264,87 +275,97 @@ type HelpPayload =
   | { type: 'helpGroup'; target: string }
   | { type: 'helpCommand'; target: string };
 
-const localHelpHandler: CommandHandler<HelpPayload, HelpPayload> = {
-  name: 'help',
-  aliases: ['--help', '-h'],
-  requiresNetwork: false,
-  parse(argv) {
-    const commandName = argv[0];
-    const subArgs = argv.slice(1);
+function createLocalHelpHandler(
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler<HelpPayload, HelpPayload> {
+  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  return {
+    name: 'help',
+    aliases: ['--help', '-h'],
+    requiresNetwork: false,
+    parse(argv) {
+      const commandName = argv[0];
+      const subArgs = argv.slice(1);
 
-    if (argv.length === 0) {
+      if (argv.length === 0) {
+        return { ok: true, payload: { type: 'showHelp' } };
+      }
+
+      if (commandName === '--help' || commandName === '-h') {
+        const helpCommand = subArgs[0];
+        if (helpCommand) {
+          return { ok: true, payload: { type: 'helpCommand', target: helpCommand } };
+        }
+        return { ok: true, payload: { type: 'showHelpAndGroups' } };
+      }
+
+      const target = subArgs[0];
+      if (!target) {
+        return { ok: true, payload: { type: 'progressiveOrHelp' } };
+      }
+
+      if (target === 'all') {
+        return { ok: true, payload: { type: 'helpAll' } };
+      }
+
+      if (hasCommandGroup(target)) {
+        return { ok: true, payload: { type: 'helpGroup', target } };
+      }
+
+      if (allCommands[target]) {
+        return { ok: true, payload: { type: 'helpCommand', target } };
+      }
+
       return { ok: true, payload: { type: 'showHelp' } };
-    }
-
-    if (commandName === '--help' || commandName === '-h') {
-      const helpCommand = subArgs[0];
-      if (helpCommand) {
-        return { ok: true, payload: { type: 'helpCommand', target: helpCommand } };
-      }
-      return { ok: true, payload: { type: 'showHelpAndGroups' } };
-    }
-
-    const target = subArgs[0];
-    if (!target) {
-      return { ok: true, payload: { type: 'progressiveOrHelp' } };
-    }
-
-    if (target === 'all') {
-      return { ok: true, payload: { type: 'helpAll' } };
-    }
-
-    if (hasCommandGroup(target)) {
-      return { ok: true, payload: { type: 'helpGroup', target } };
-    }
-
-    return { ok: true, payload: { type: 'showHelp' } };
-  },
-  async run(payload) {
-    return payload;
-  },
-  async render(result, options, _client, context) {
-    if (result.type === 'showHelp') {
-      showHelp(context?.writer);
-      return 0;
-    }
-    if (result.type === 'showHelpAndGroups') {
-      showHelp(context?.writer);
-      showCommandGroups(context?.writer);
-      return 0;
-    }
-    if (result.type === 'helpAll') {
-      showFullHelp(context?.writer);
-      return 0;
-    }
-    if (result.type === 'helpGroup') {
-      showCommandGroup(result.target, context?.writer);
-      return 0;
-    }
-    if (result.type === 'progressiveOrHelp') {
-      if (options.watch) {
+    },
+    async run(payload) {
+      return payload;
+    },
+    async render(result, options, _client, context) {
+      if (result.type === 'showHelp') {
         showHelp(context?.writer);
-      } else {
-        await showProgressiveHelp(context?.writer);
-      }
-      return 0;
-    }
-    if (result.type === 'helpCommand') {
-      if (
-        showCommandHelp(result.target, context?.writer) ||
-        (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer))
-      ) {
         return 0;
       }
-      if (options.json) {
-        printJsonError('unknown_command', `Unknown command: ${result.target}`, context?.writer);
+      if (result.type === 'showHelpAndGroups') {
+        showHelp(context?.writer);
+        showCommandGroups(context?.writer);
+        return 0;
+      }
+      if (result.type === 'helpAll') {
+        showFullHelp(context?.writer);
+        return 0;
+      }
+      if (result.type === 'helpGroup') {
+        showCommandGroup(result.target, context?.writer);
+        return 0;
+      }
+      if (result.type === 'progressiveOrHelp') {
+        if (options.watch) {
+          showHelp(context?.writer);
+        } else {
+          await showProgressiveHelp(context?.writer);
+        }
+        return 0;
+      }
+      if (result.type === 'helpCommand') {
+        if (
+          showCommandHelp(result.target, context?.writer, allCommands) ||
+          (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer))
+        ) {
+          return 0;
+        }
+        if (options.json) {
+          printJsonError('unknown_command', `Unknown command: ${result.target}`, context?.writer);
+          return 1;
+        }
+        displayUnknownCommand(result.target, context?.writer);
         return 1;
       }
-      displayUnknownCommand(result.target, context?.writer);
-      return 1;
-    }
-    return 0;
-  },
-};
+      return 0;
+    },
+  };
+}
 
 class CommandRegistry {
   private handlers = new Map<string, CommandHandler>();
@@ -373,25 +394,34 @@ registry.register(idsHandler);
 registry.register(whereCanIHandler);
 registry.register(versionHandler);
 
-export function resolveHandler(argv: string[], _options: GlobalOptions): CommandHandler | undefined {
+export function resolveHandler(
+  argv: string[],
+  _options: GlobalOptions,
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler | undefined {
   const commandName = argv[0];
+  const helpTarget = commandName === 'help' ? argv[1] : undefined;
+  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
 
   if (
     argv.length === 0 ||
     commandName === '--help' ||
     commandName === '-h' ||
-    (commandName === 'help' && (!argv[1] || argv[1] === 'all' || hasCommandGroup(argv[1])))
+    (commandName === 'help' &&
+      (!helpTarget || helpTarget === 'all' || hasCommandGroup(helpTarget) || Boolean(allCommands[helpTarget])))
   ) {
-    return localHelpHandler;
+    return createLocalHelpHandler(registrySnapshot);
   }
 
   if (commandName) {
+    if (commandName === 'explain') return createExplainHandler(registrySnapshot);
     const handler = registry.get(commandName);
     if (handler) return handler;
   }
 
-  if (hasApiCommand(commandName) && COMMANDS[commandName]) {
-    return new ApiCommandHandler(commandName);
+  if (hasApiCommand(commandName, registrySnapshot)) {
+    return new ApiCommandHandler(commandName, registrySnapshot);
   }
 
   return undefined;

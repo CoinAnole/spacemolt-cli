@@ -1,7 +1,7 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
-import { ALL_COMMANDS, routeToPath } from './commands.ts';
+import { ALL_COMMANDS, type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { getStructuredResult, isRecord } from './response.ts';
@@ -93,12 +93,14 @@ function err(writer?: CliWriter): (message?: string) => void {
   return writer?.err.bind(writer) ?? console.error;
 }
 
-export function getUsageHint(command: string): string {
-  return ALL_COMMANDS[command]?.usage || '<args...>';
+type CommandHelpMap = Record<string, CommandConfig | LocalCommandConfig>;
+
+export function getUsageHint(command: string, commands: CommandHelpMap = ALL_COMMANDS): string {
+  return commands[command]?.usage || '<args...>';
 }
 
-export function getUsageLine(command: string): string {
-  return `spacemolt ${command} ${getUsageHint(command)}`.trimEnd();
+export function getUsageLine(command: string, commands: CommandHelpMap = ALL_COMMANDS): string {
+  return `spacemolt ${command} ${getUsageHint(command, commands)}`.trimEnd();
 }
 
 function levenshtein(a: string, b: string): number {
@@ -271,12 +273,16 @@ export function showCommandSearch(query: string, writer?: CliWriter): void {
   if (results.length === 30) write(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
 }
 
-export function showCommandExplanation(command: string, writer?: CliWriter): boolean {
-  const config = ALL_COMMANDS[command];
+export function showCommandExplanation(
+  command: string,
+  writer?: CliWriter,
+  commands: CommandHelpMap = ALL_COMMANDS,
+): boolean {
+  const config = commands[command];
   if (!config) return false;
   const write = out(writer);
 
-  showCommandHelp(command, writer);
+  showCommandHelp(command, writer, commands);
   write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
     const routePath = routeToPath(config.route, { includeApiPrefix: true });
@@ -295,22 +301,22 @@ export function showCommandExplanation(command: string, writer?: CliWriter): boo
   return true;
 }
 
-export function showCommandHelp(command: string, writer?: CliWriter): boolean {
-  const config = ALL_COMMANDS[command];
+export function showCommandHelp(command: string, writer?: CliWriter, commands: CommandHelpMap = ALL_COMMANDS): boolean {
+  const config = commands[command];
   if (!config) return false;
   const write = out(writer);
 
   write(`\n${c.bright}${command}${c.reset}`);
   if (config.description) write(config.description);
   write(`\n${c.bright}Usage:${c.reset}`);
-  write(`  ${getUsageLine(command)}`);
+  write(`  ${getUsageLine(command, commands)}`);
 
   const argNames = getArgNames(config);
   if (argNames.length > 0) {
     write(`\n${c.bright}Arguments:${c.reset}`);
     write(`  ${argNames.join(', ')}`);
     write(`\n${c.bright}Accepted forms:${c.reset}`);
-    write(`  ${getUsageLine(command)}`);
+    write(`  ${getUsageLine(command, commands)}`);
     write(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
     write(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
