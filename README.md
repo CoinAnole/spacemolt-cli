@@ -152,6 +152,18 @@ Generate shell completions with:
 bun run src/client.ts completion bash
 ```
 
+### Dynamic API Commands
+
+Curated commands are bundled with the CLI for friendly names, aliases, examples, and formatting. The CLI can also expose newly published v2 API routes from a cached OpenAPI spec as generated commands.
+
+Refresh the local OpenAPI command cache:
+
+```bash
+spacemolt sync-api
+```
+
+Generated commands use predictable names derived from the route, such as `shipyard_repair` for `POST /api/v2/spacemolt_shipyard/repair`. A later CLI release may promote generated commands to curated commands with better aliases and examples.
+
 ## ID Cache
 
 The CLI learns useful IDs from structured responses and stores them beside the active session file. After running discovery commands, ask the cache for recently seen IDs:
@@ -202,11 +214,13 @@ bun run build
 
 Command routing is v2-only. User-facing command metadata lives in `src/commands.ts`; generated route and schema metadata lives in `src/generated/api-commands.ts`.
 
-Regenerate API metadata after updating `spacemolt-docs/openapi.json`:
+Regenerate bundled API metadata after updating `spacemolt-docs/openapi.json`:
 
 ```bash
 bun run generate:api
 ```
+
+This only updates the bundled metadata committed with the CLI. It does not refresh a user's runtime OpenAPI cache; use `spacemolt sync-api` for that.
 
 Check command metadata against the cached spec:
 

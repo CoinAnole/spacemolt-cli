@@ -1,7 +1,8 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
-import { ALL_COMMANDS, type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { ERROR_REGISTRY, getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { getStructuredResult, isRecord } from './response.ts';
@@ -94,12 +95,19 @@ function err(writer?: CliWriter): (message?: string) => void {
 }
 
 type CommandHelpMap = Record<string, CommandConfig | LocalCommandConfig>;
+type CommandHelpSource = CommandHelpMap | Pick<CommandRegistrySnapshot, 'allCommands'>;
 
-export function getUsageHint(command: string, commands: CommandHelpMap = ALL_COMMANDS): string {
-  return commands[command]?.usage || '<args...>';
+function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
+  if (!source) return BUNDLED_COMMAND_REGISTRY.allCommands;
+  const registry = source as Partial<Pick<CommandRegistrySnapshot, 'allCommands'>>;
+  return registry.allCommands ?? (source as CommandHelpMap);
 }
 
-export function getUsageLine(command: string, commands: CommandHelpMap = ALL_COMMANDS): string {
+export function getUsageHint(command: string, commands?: CommandHelpSource): string {
+  return commandHelpMap(commands)[command]?.usage || '<args...>';
+}
+
+export function getUsageLine(command: string, commands?: CommandHelpSource): string {
   return `spacemolt ${command} ${getUsageHint(command, commands)}`.trimEnd();
 }
 
@@ -119,10 +127,11 @@ function levenshtein(a: string, b: string): number {
   return previous[b.length] ?? 0;
 }
 
-export function suggestCommands(command: string, limit = 3): string[] {
+export function suggestCommands(command: string, limit = 3, commands?: CommandHelpSource): string[] {
   if (!command) return [];
   const normalized = command.toLowerCase();
-  return Object.keys(ALL_COMMANDS)
+  const allCommands = commandHelpMap(commands);
+  return Object.keys(allCommands)
     .map((candidate) => {
       const distance = levenshtein(normalized, candidate);
       const prefixScore = candidate.startsWith(normalized) || normalized.startsWith(candidate) ? -2 : 0;
@@ -138,8 +147,8 @@ function normalizeHelpTopic(topic: string): string {
   return topic.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function commandMatchesCategories(command: string, categories: Set<string>): boolean {
-  const category = ALL_COMMANDS[command]?.category;
+function commandMatchesCategories(command: string, categories: Set<string>, commands: CommandHelpMap): boolean {
+  const category = commands[command]?.category;
   return Boolean(category && categories.has(category));
 }
 
@@ -157,54 +166,58 @@ export function hasCommandGroup(topic: string): boolean {
   return Boolean(findCommandGroup(topic));
 }
 
-function formatCommandSummary(command: string): string {
-  const usage = getUsageHint(command);
-  const description = ALL_COMMANDS[command]?.description;
+function formatCommandSummary(command: string, commands: CommandHelpMap): string {
+  const usage = getUsageHint(command, commands);
+  const description = commands[command]?.description;
   const usageText = usage === '<args...>' ? '' : ` ${usage}`;
   return description ? `${command}${usageText} - ${description}` : `${command}${usageText}`;
 }
 
-export function showCommandGroups(writer?: CliWriter): void {
+export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSource): void {
+  const allCommands = commandHelpMap(commands);
   const write = out(writer);
   write(`\n${c.bright}Command Groups${c.reset}`);
   for (const group of COMMAND_GROUPS) {
     const categories = new Set(group.categories);
-    const count = Object.keys(ALL_COMMANDS).filter((command) => commandMatchesCategories(command, categories)).length;
+    const count = Object.keys(allCommands).filter((command) =>
+      commandMatchesCategories(command, categories, allCommands),
+    ).length;
     write(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
   }
   write(`\nRun "spacemolt help <group>" to list commands in a group.`);
   write(`Run "spacemolt commands --search <query>" to search local command metadata.`);
 }
 
-export function showCommandGroup(topic: string, writer?: CliWriter): boolean {
+export function showCommandGroup(topic: string, writer?: CliWriter, commands?: CommandHelpSource): boolean {
   const group = findCommandGroup(topic);
   if (!group) return false;
+  const allCommands = commandHelpMap(commands);
   const write = out(writer);
 
   const categories = new Set(group.categories);
-  const commands = Object.keys(ALL_COMMANDS)
-    .filter((command) => commandMatchesCategories(command, categories))
+  const matchingCommands = Object.keys(allCommands)
+    .filter((command) => commandMatchesCategories(command, categories, allCommands))
     .sort((a, b) => {
-      const categoryCompare = (ALL_COMMANDS[a]?.category || '').localeCompare(ALL_COMMANDS[b]?.category || '');
+      const categoryCompare = (allCommands[a]?.category || '').localeCompare(allCommands[b]?.category || '');
       return categoryCompare || a.localeCompare(b);
     });
 
   write(`\n${c.bright}${group.label} Commands${c.reset}`);
   let lastCategory = '';
-  for (const command of commands) {
-    const category = ALL_COMMANDS[command]?.category || 'Other';
+  for (const command of matchingCommands) {
+    const category = allCommands[command]?.category || 'Other';
     if (category !== lastCategory) {
       lastCategory = category;
       write(`\n${c.cyan}${category}:${c.reset}`);
     }
-    write(`  ${formatCommandSummary(command)}`);
+    write(`  ${formatCommandSummary(command, allCommands)}`);
   }
   write(`\nRun "spacemolt explain <command>" for argument details and related commands.`);
   return true;
 }
 
-function commandSearchText(command: string): string {
-  const config = ALL_COMMANDS[command];
+function commandSearchText(command: string, commands: CommandHelpMap): string {
+  const config = commands[command];
   if (!config) return command.toLowerCase();
   const argNames = getArgNames(config);
   const parts = [
@@ -220,14 +233,15 @@ function commandSearchText(command: string): string {
   return parts.filter(Boolean).join(' ').toLowerCase();
 }
 
-function searchLocalCommands(query: string, limit = 30): string[] {
+function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSource): string[] {
+  const allCommands = commandHelpMap(commands);
   const normalized = query.trim().toLowerCase();
-  if (!normalized) return Object.keys(ALL_COMMANDS).sort();
+  if (!normalized) return Object.keys(allCommands).sort();
 
   const terms = normalized.split(/\s+/).filter(Boolean);
   const matches: CommandSearchMatch[] = [];
-  for (const command of Object.keys(ALL_COMMANDS)) {
-    const haystack = commandSearchText(command);
+  for (const command of Object.keys(allCommands)) {
+    const haystack = commandSearchText(command, allCommands);
     let score = 0;
     for (const term of terms) {
       if (command === term) score += 100;
@@ -258,31 +272,29 @@ export function parseCommandSearchQuery(args: string[]): string {
   return args.join(' ').trim();
 }
 
-export function showCommandSearch(query: string, writer?: CliWriter): void {
-  const results = searchLocalCommands(query);
+export function showCommandSearch(query: string, writer?: CliWriter, commands?: CommandHelpSource): void {
+  const allCommands = commandHelpMap(commands);
+  const results = searchLocalCommands(query, 30, allCommands);
   const title = query ? `Commands matching "${query}"` : 'All Commands';
   const write = out(writer);
   write(`\n${c.bright}${title}${c.reset}`);
   if (!results.length) {
     write('  (No local command matches)');
-    const suggestions = suggestCommands(query, 5);
+    const suggestions = suggestCommands(query, 5, allCommands);
     if (suggestions.length > 0) write(`\nDid you mean: ${suggestions.join(', ')}`);
     return;
   }
-  for (const command of results) write(`  ${formatCommandSummary(command)}`);
+  for (const command of results) write(`  ${formatCommandSummary(command, allCommands)}`);
   if (results.length === 30) write(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
 }
 
-export function showCommandExplanation(
-  command: string,
-  writer?: CliWriter,
-  commands: CommandHelpMap = ALL_COMMANDS,
-): boolean {
-  const config = commands[command];
+export function showCommandExplanation(command: string, writer?: CliWriter, commands?: CommandHelpSource): boolean {
+  const allCommands = commandHelpMap(commands);
+  const config = allCommands[command];
   if (!config) return false;
   const write = out(writer);
 
-  showCommandHelp(command, writer, commands);
+  showCommandHelp(command, writer, allCommands);
   write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
     const routePath = routeToPath(config.route, { includeApiPrefix: true });
@@ -301,22 +313,23 @@ export function showCommandExplanation(
   return true;
 }
 
-export function showCommandHelp(command: string, writer?: CliWriter, commands: CommandHelpMap = ALL_COMMANDS): boolean {
-  const config = commands[command];
+export function showCommandHelp(command: string, writer?: CliWriter, commands?: CommandHelpSource): boolean {
+  const allCommands = commandHelpMap(commands);
+  const config = allCommands[command];
   if (!config) return false;
   const write = out(writer);
 
   write(`\n${c.bright}${command}${c.reset}`);
   if (config.description) write(config.description);
   write(`\n${c.bright}Usage:${c.reset}`);
-  write(`  ${getUsageLine(command, commands)}`);
+  write(`  ${getUsageLine(command, allCommands)}`);
 
   const argNames = getArgNames(config);
   if (argNames.length > 0) {
     write(`\n${c.bright}Arguments:${c.reset}`);
     write(`  ${argNames.join(', ')}`);
     write(`\n${c.bright}Accepted forms:${c.reset}`);
-    write(`  ${getUsageLine(command, commands)}`);
+    write(`  ${getUsageLine(command, allCommands)}`);
     write(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
     write(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
@@ -336,7 +349,7 @@ export function showCommandHelp(command: string, writer?: CliWriter, commands: C
 }
 
 function printNextSteps(command: string, missingArg?: string, writer?: CliWriter): void {
-  const config = ALL_COMMANDS[command];
+  const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
   const steps: string[] = [];
   for (const related of config?.discoverWith || []) steps.push(`spacemolt ${related}`);
   if (!steps.includes('spacemolt get_status')) steps.push('spacemolt get_status');
@@ -366,7 +379,7 @@ export function displayMissingArgument(command: string, missingArg: string, writ
   writeErr(`\n${c.bright}Usage:${c.reset}`);
   writeErr(`  ${getUsageLine(command)}`);
 
-  const config = ALL_COMMANDS[command];
+  const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
   const argNames = config ? getArgNames(config) : [];
   if (argNames.length > 0) {
     writeErr(`\n${c.bright}Accepted forms:${c.reset}`);
@@ -592,7 +605,20 @@ ${c.bright}Output Precedence:${c.reset}
 `);
 }
 
-export function showFullHelp(writer?: CliWriter): void {
+function showGeneratedCommandReference(commands: CommandHelpMap, writer?: CliWriter): void {
+  const bundledCommands = BUNDLED_COMMAND_REGISTRY.allCommands;
+  const generatedCommands = Object.entries(commands)
+    .filter(([command]) => !bundledCommands[command])
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (generatedCommands.length === 0) return;
+
+  const write = out(writer);
+  write(`\n${c.bright}Generated API Commands:${c.reset}`);
+  for (const [command] of generatedCommands) write(`  ${formatCommandSummary(command, commands)}`);
+}
+
+export function showFullHelp(writer?: CliWriter, commands?: CommandHelpSource): void {
+  const allCommands = commandHelpMap(commands);
   out(writer)(`
 ${c.bright}SpaceMolt CLI Client v${VERSION}${c.reset}
 A command-line client for the SpaceMolt MMO.
@@ -870,6 +896,7 @@ ${c.bright}Documentation:${c.reset}
   API Reference: https://game.spacemolt.com/api/v2/openapi.json
   Game Website:  https://www.spacemolt.com
 `);
+  showGeneratedCommandReference(allCommands, writer);
 }
 
 // =============================================================================
@@ -902,7 +929,7 @@ export function displayError(
     if (isAuthError(error.code)) {
       err(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
     }
-    if (ALL_COMMANDS[command]) {
+    if (BUNDLED_COMMAND_REGISTRY.allCommands[command]) {
       printNextSteps(command, undefined, writer);
     }
   }

@@ -60,20 +60,28 @@ const profileHandler: CommandHandler<{ action: 'list' }, { action: 'list' }> = {
   },
 };
 
-const commandsHandler: CommandHandler<{ args: string[] }, { query: ReturnType<typeof parseCommandSearchQuery> }> = {
-  name: 'commands',
-  requiresNetwork: false,
-  parse(argv) {
-    return { ok: true, payload: { args: argv.slice(1) } };
-  },
-  run(payload) {
-    return { query: parseCommandSearchQuery(payload.args) };
-  },
-  render(result, _options, _client, context) {
-    showCommandSearch(result.query, context?.writer);
-    return 0;
-  },
-};
+function createCommandsHandler(
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler<{ args: string[] }, { query: ReturnType<typeof parseCommandSearchQuery> }> {
+  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  return {
+    name: 'commands',
+    requiresNetwork: false,
+    parse(argv) {
+      return { ok: true, payload: { args: argv.slice(1) } };
+    },
+    run(payload) {
+      return { query: parseCommandSearchQuery(payload.args) };
+    },
+    render(result, _options, _client, context) {
+      showCommandSearch(result.query, context?.writer, allCommands);
+      return 0;
+    },
+  };
+}
+
+const commandsHandler = createCommandsHandler();
 
 function createExplainHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
@@ -128,33 +136,41 @@ function createExplainHandler(
 
 const explainHandler = createExplainHandler();
 
-const completionHandler: CommandHandler<{ shell: string }, { completion: string }> = {
-  name: 'completion',
-  requiresNetwork: false,
-  parse(argv) {
-    const shell = argv[1] || 'bash';
-    if (!['bash', 'zsh', 'fish'].includes(shell)) {
-      return {
-        ok: false,
-        error: {
-          code: 'validation_error',
-          message: `Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
-          customStderr: `${c.red}Error:${c.reset} Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
-          exitCode: 1,
-        },
-      };
-    }
-    return { ok: true, payload: { shell } };
-  },
-  run(payload) {
-    return { completion: generateCompletion(payload.shell) };
-  },
-  render(result, _options, _client, context) {
-    if (context) context.writer.out(result.completion);
-    else console.log(result.completion);
-    return 0;
-  },
-};
+function createCompletionHandler(
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler<{ shell: string }, { completion: string }> {
+  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  return {
+    name: 'completion',
+    requiresNetwork: false,
+    parse(argv) {
+      const shell = argv[1] || 'bash';
+      if (!['bash', 'zsh', 'fish'].includes(shell)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: `Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
+            customStderr: `${c.red}Error:${c.reset} Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
+            exitCode: 1,
+          },
+        };
+      }
+      return { ok: true, payload: { shell } };
+    },
+    run(payload) {
+      return { completion: generateCompletion(payload.shell, { allCommands }) };
+    },
+    render(result, _options, _client, context) {
+      if (context) context.writer.out(result.completion);
+      else console.log(result.completion);
+      return 0;
+    },
+  };
+}
+
+const completionHandler = createCompletionHandler();
 
 const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: DoctorResult }> = {
   name: 'doctor',
@@ -162,8 +178,8 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
   parse() {
     return { ok: true, payload: {} };
   },
-  async run(_payload, _options, client) {
-    const doctorResult = await runDoctor(client?.config);
+  async run(_payload, _options, client, context) {
+    const doctorResult = await runDoctor(client?.config, context?.env as NodeJS.ProcessEnv | undefined);
     return { doctorResult };
   },
   render(result, options, _client, context) {
@@ -357,15 +373,15 @@ function createLocalHelpHandler(
       }
       if (result.type === 'showHelpAndGroups') {
         showHelp(context?.writer);
-        showCommandGroups(context?.writer);
+        showCommandGroups(context?.writer, allCommands);
         return 0;
       }
       if (result.type === 'helpAll') {
-        showFullHelp(context?.writer);
+        showFullHelp(context?.writer, allCommands);
         return 0;
       }
       if (result.type === 'helpGroup') {
-        showCommandGroup(result.target, context?.writer);
+        showCommandGroup(result.target, context?.writer, allCommands);
         return 0;
       }
       if (result.type === 'progressiveOrHelp') {
@@ -379,7 +395,7 @@ function createLocalHelpHandler(
       if (result.type === 'helpCommand') {
         if (
           showCommandHelp(result.target, context?.writer, allCommands) ||
-          (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer))
+          (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer, allCommands))
         ) {
           return 0;
         }
@@ -445,6 +461,8 @@ export function resolveHandler(
 
   if (commandName) {
     if (commandName === 'explain') return createExplainHandler(registrySnapshot);
+    if (commandName === 'commands') return createCommandsHandler(registrySnapshot);
+    if (commandName === 'completion') return createCompletionHandler(registrySnapshot);
     const handler = registry.get(commandName);
     if (handler) return handler;
   }

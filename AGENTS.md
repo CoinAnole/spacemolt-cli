@@ -18,6 +18,7 @@ Use Bun from `PATH`, or `~/.bun/bin/bun` if needed.
 ```bash
 bun install
 bun run src/client.ts <command> [args...]
+bun run src/client.ts sync-api
 bun test
 bun run typecheck
 bun run lint
@@ -41,7 +42,14 @@ LIVE_API_SYNC=1 bun test src/api-sync.test.ts
 - Most commands map to `POST /api/v2/{tool}/{action}`.
 - Single-endpoint tools use `POST /api/v2/{tool}`; see `SINGLE_ENDPOINT_TOOLS` in `src/commands.ts`.
 - Update `src/commands.ts` for command names, positional arguments, aliases, examples, and route overrides.
-- Regenerate mechanical route/schema metadata with `bun run generate:api` after OpenAPI spec changes.
+- Regenerate bundled mechanical route/schema metadata with `bun run generate:api` after OpenAPI spec changes. This updates committed metadata only.
+- Runtime dynamic commands come from the user's cached OpenAPI metadata. Refresh that cache with `spacemolt sync-api`.
+
+## Dynamic API Commands
+
+Curated commands are bundled with friendly names, aliases, examples, and formatting. When a cached OpenAPI spec contains safe v2 routes not covered by curated overrides, the CLI exposes generated fallback commands through help, command search, completion, and dispatch.
+
+Generated command names are derived predictably from routes. For example, `POST /api/v2/spacemolt_shipyard/repair` becomes `shipyard_repair` unless the OpenAPI schema provides an `x-cli-command` override. Later CLI releases may promote generated commands to curated commands.
 
 Prefer `structuredContent` for formatting or automation, falling back to server-rendered `result` only when no structured formatter applies.
 

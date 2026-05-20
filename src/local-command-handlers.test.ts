@@ -4,9 +4,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { ApiCommandHandler } from './api-command-handler';
 import type { CliRuntimeContext } from './cli-context';
-import type { CommandRegistrySnapshot } from './command-registry';
+import { buildCommandRegistrySnapshot, type CommandRegistrySnapshot } from './command-registry';
 import type { CommandHandler } from './command-types';
+import { GENERATED_API_ROUTES } from './generated/api-commands';
 import { resolveHandler } from './local-command-handlers';
+import type { GeneratedApiRoute } from './openapi-metadata';
 import type { GlobalOptions } from './types';
 
 const options: GlobalOptions = {
@@ -59,6 +61,26 @@ function captureContext(): { context: CliRuntimeContext; stdout: string[]; stder
       sleep: async () => {},
     },
   };
+}
+
+function dynamicRegistry(): CommandRegistrySnapshot {
+  const route: GeneratedApiRoute = {
+    operationId: 'spacemolt_lab_calibrate',
+    summary: 'Generated API repair command from cached OpenAPI metadata',
+    route: { tool: 'spacemolt_lab', action: 'calibrate', method: 'POST' },
+    cli: { category: 'Shipyard' },
+    required: ['ship_id'],
+    schema: {
+      ship_id: { type: 'string', positionalIndex: 0, description: 'Ship to repair' },
+    },
+  };
+  return buildCommandRegistrySnapshot({
+    generatedRoutes: {
+      ...GENERATED_API_ROUTES,
+      'POST /api/v2/spacemolt_lab/calibrate': route,
+    },
+    includeDynamic: true,
+  });
 }
 
 describe('local command handlers', () => {
@@ -128,13 +150,48 @@ describe('local command handlers', () => {
     const parsed = handler.parse(['completion', 'fish'], options);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    const result = await handler.run(parsed.payload, options);
+    const result = (await handler.run(parsed.payload, options)) as { completion: string };
     const { context, stdout } = captureContext();
 
     const exitCode = await handler.render(result, options, undefined, context);
 
     expect(exitCode).toBe(0);
     expect(stdout.join('\n')).toContain('complete -c spacemolt');
+  });
+
+  test('commands search includes commands supplied only by a registry snapshot', async () => {
+    const registry = dynamicRegistry();
+    const handler = resolveHandler(['commands', '--search', 'shipyard'], options, registry);
+    expect(handler).toBeDefined();
+    expect(handler?.name).toBe('commands');
+    if (!handler) return;
+    const parsed = handler.parse(['commands', '--search', 'shipyard'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = (await handler.run(parsed.payload, options)) as { completion: string };
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('lab_calibrate');
+    expect(stdout.join('\n')).toContain('Generated API');
+  });
+
+  test('completion includes commands supplied only by a registry snapshot', async () => {
+    const registry = dynamicRegistry();
+    const handler = resolveHandler(['completion', 'fish'], options, registry);
+    expect(handler).toBeDefined();
+    expect(handler?.name).toBe('completion');
+    if (!handler) return;
+    const parsed = handler.parse(['completion', 'fish'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const result = (await handler.run(parsed.payload, options)) as { completion: string };
+
+    expect(result.completion).toContain('lab_calibrate');
+    expect(result.completion).toContain('Generated API');
   });
 
   test('version renders through CliRuntimeContext writer', async () => {
@@ -247,6 +304,25 @@ describe('local command handlers', () => {
 
     expect(exitCode).toBe(0);
     expect(stdout.join('\n')).toContain('Dynamic command for help tests');
+  });
+
+  test('full help includes commands supplied only by a registry snapshot', async () => {
+    const registry = dynamicRegistry();
+    const handler = resolveHandler(['help', 'all'], options, registry);
+    expect(handler).toBeDefined();
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'all'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('lab_calibrate');
+    expect(stdout.join('\n')).toContain('Generated API');
   });
 
   test('help command key-value form remains an API command', () => {

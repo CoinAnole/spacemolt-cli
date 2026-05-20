@@ -1,7 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
-import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands.ts';
+import { buildCommandRegistrySnapshot } from './command-registry.ts';
+import { COMMANDS, routeSignature, routeToPath, V2_TOOL_MAP } from './commands.ts';
+import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
+import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, c, type SpaceMoltConfig, VERSION } from './runtime.ts';
 import { ACTIVE_PROFILE, getSessionPath, SessionManager } from './session.ts';
@@ -17,6 +20,8 @@ export interface DoctorCheck {
 export interface DoctorResult {
   ok: boolean;
   checks: DoctorCheck[];
+  cachedOpenApiRoutes: number;
+  dynamicCommands: number;
 }
 
 function pass(name: string, message: string, detail?: string): DoctorCheck {
@@ -27,8 +32,10 @@ function fail(name: string, message: string, detail?: string): DoctorCheck {
   return { name, ok: false, message, detail };
 }
 
-export async function runDoctor(config?: SpaceMoltConfig): Promise<DoctorResult> {
+export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv = process.env): Promise<DoctorResult> {
   const checks: DoctorCheck[] = [];
+  let cachedOpenApiRoutes = 0;
+  let dynamicCommands = 0;
 
   const apiBase = config?.apiBase || API_BASE;
   const profile = config?.profile !== undefined ? config.profile : ACTIVE_PROFILE;
@@ -79,6 +86,34 @@ export async function runDoctor(config?: SpaceMoltConfig): Promise<DoctorResult>
   }
 
   checks.push(pass('version', `v${VERSION}`));
+
+  try {
+    const cachedRoutes = loadCachedGeneratedRoutes(defaultOpenApiCacheDir(env));
+    cachedOpenApiRoutes = cachedRoutes ? Object.keys(cachedRoutes).length : 0;
+    if (cachedRoutes) {
+      const registry = buildCommandRegistrySnapshot({
+        generatedRoutes: { ...(GENERATED_API_ROUTES as typeof cachedRoutes), ...cachedRoutes },
+        includeDynamic: true,
+      });
+      const cachedRouteSignatures = new Set(Object.keys(cachedRoutes));
+      const curatedRouteSignatures = new Set(Object.values(COMMANDS).map((command) => routeSignature(command.route)));
+      dynamicCommands = Object.values(registry.commands).filter((command) => {
+        const signature = routeSignature(command.route);
+        return cachedRouteSignatures.has(signature) && !curatedRouteSignatures.has(signature);
+      }).length;
+    }
+
+    checks.push(
+      pass(
+        'openapi-cache',
+        `${cachedOpenApiRoutes} cached OpenAPI ${cachedOpenApiRoutes === 1 ? 'route' : 'routes'}`,
+        `${dynamicCommands} dynamic ${dynamicCommands === 1 ? 'command' : 'commands'}`,
+      ),
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    checks.push(fail('openapi-cache', 'error reading cached OpenAPI metadata', msg));
+  }
 
   try {
     const specPath = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
@@ -149,7 +184,7 @@ export async function runDoctor(config?: SpaceMoltConfig): Promise<DoctorResult>
   }
 
   const ok = checks.every((check) => check.ok);
-  return { ok, checks };
+  return { ok, checks, cachedOpenApiRoutes, dynamicCommands };
 }
 
 export function printDoctorResult(result: DoctorResult, writer?: CliWriter): void {
@@ -157,9 +192,9 @@ export function printDoctorResult(result: DoctorResult, writer?: CliWriter): voi
   out(`${c.bright}SpaceMolt Doctor${c.reset}\n`);
   for (const check of result.checks) {
     const icon = check.ok ? `${c.green}✓${c.reset}` : `${c.red}✗${c.reset}`;
-    const status = check.ok ? '' : ` ${c.dim}${check.message}${c.reset}`;
+    const status = check.message ? ` ${c.dim}${check.message}${c.reset}` : '';
     out(`  ${icon} ${check.name}${status}`);
-    if (check.detail && !check.ok) {
+    if (check.detail) {
       for (const line of check.detail.split('\n')) {
         out(`      ${c.dim}${line}${c.reset}`);
       }

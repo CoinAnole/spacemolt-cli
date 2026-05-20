@@ -1,7 +1,9 @@
 import { getArgNames } from './args.ts';
-import { ALL_COMMANDS } from './commands.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 
-const COMMANDS_LIST = Object.keys(ALL_COMMANDS).sort();
+type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'>;
+type CompletionCommandMap = Record<string, CommandConfig | LocalCommandConfig>;
 
 const HINT_VALUES: Record<string, Record<string, string>> = {
   set_colors: {
@@ -10,21 +12,29 @@ const HINT_VALUES: Record<string, Record<string, string>> = {
   },
 };
 
-function getCommandArgNames(command: string): string[] {
-  const config = ALL_COMMANDS[command];
+function allCommands(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): CompletionCommandMap {
+  return registry.allCommands;
+}
+
+function commandsList(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
+  return Object.keys(registry.allCommands).sort();
+}
+
+function getCommandArgNames(command: string, registry: CompletionRegistry): string[] {
+  const config = allCommands(registry)[command];
   if (!config) return [];
   return getArgNames(config);
 }
 
-function getFieldSchema(command: string, arg: string) {
-  const config = ALL_COMMANDS[command];
+function getFieldSchema(command: string, arg: string, registry: CompletionRegistry) {
+  const config = allCommands(registry)[command];
   if (!config || !('schema' in config) || !config.schema) return undefined;
   const canonicalArg = config.aliases?.[arg] || arg;
   return config.schema[canonicalArg] || config.schema[arg];
 }
 
-function getEnumValues(command: string, arg: string): string[] | undefined {
-  const schema = getFieldSchema(command, arg);
+function getEnumValues(command: string, arg: string, registry: CompletionRegistry): string[] | undefined {
+  const schema = getFieldSchema(command, arg, registry);
   if (schema?.enum?.length) return schema.enum;
   if (schema?.type === 'boolean') return ['true', 'false'];
   return undefined;
@@ -34,8 +44,8 @@ function getHintValue(command: string, arg: string): string | undefined {
   return HINT_VALUES[command]?.[arg];
 }
 
-function getArgDescription(command: string, arg: string): string {
-  return getFieldSchema(command, arg)?.description || getHintValue(command, arg) || arg;
+function getArgDescription(command: string, arg: string, registry: CompletionRegistry): string {
+  return getFieldSchema(command, arg, registry)?.description || getHintValue(command, arg) || arg;
 }
 
 function escapeDoubleQuotedShell(value: string): string {
@@ -46,7 +56,8 @@ function escapeZshMessage(value: string): string {
   return escapeDoubleQuotedShell(value).replace(/:/g, '\\:');
 }
 
-function generateBashCompletion(): string {
+function generateBashCompletion(registry: CompletionRegistry): string {
+  const commandNames = commandsList(registry);
   const lines: string[] = [];
   lines.push('# Bash completion for spacemolt');
   lines.push('# Install: spacemolt completion bash > /etc/bash_completion.d/spacemolt');
@@ -62,7 +73,7 @@ function generateBashCompletion(): string {
   );
   lines.push('');
   lines.push('  # Top-level special commands');
-  lines.push(`  local commands="${COMMANDS_LIST.join(' ')} commands explain help completion"`);
+  lines.push(`  local commands="${commandNames.join(' ')} commands explain help completion"`);
   lines.push('');
   lines.push('  if [ $cword -eq 1 ]; then');
   // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
@@ -75,14 +86,14 @@ function generateBashCompletion(): string {
   lines.push('  local cmd="${words[1]}"');
   lines.push('  case "$cmd" in');
 
-  for (const cmd of COMMANDS_LIST) {
-    const args = getCommandArgNames(cmd);
+  for (const cmd of commandNames) {
+    const args = getCommandArgNames(cmd, registry);
     if (args.length === 0) continue;
 
     lines.push(`    ${cmd})`);
     const argParts: string[] = [];
     for (const arg of args) {
-      const enums = getEnumValues(cmd, arg);
+      const enums = getEnumValues(cmd, arg, registry);
       if (enums && enums.length > 0) {
         argParts.push(`\${${arg}_values}`);
       } else {
@@ -93,7 +104,7 @@ function generateBashCompletion(): string {
     const allParts = [...argParts, '${global_flags}'];
 
     for (const arg of args) {
-      const enums = getEnumValues(cmd, arg);
+      const enums = getEnumValues(cmd, arg, registry);
       if (enums && enums.length > 0) {
         lines.push(`      local ${arg}_values="${enums.join(' ')}"`);
       }
@@ -105,7 +116,7 @@ function generateBashCompletion(): string {
   lines.push('    commands)');
   lines.push('      ;;');
   lines.push('    explain)');
-  lines.push(`      COMPREPLY=( $(compgen -W "${COMMANDS_LIST.join(' ')}" -- "$cur") )`);
+  lines.push(`      COMPREPLY=( $(compgen -W "${commandNames.join(' ')}" -- "$cur") )`);
   lines.push('      ;;');
   lines.push('    help)');
   lines.push('      ;;');
@@ -124,7 +135,9 @@ function generateBashCompletion(): string {
   return `${lines.join('\n')}\n`;
 }
 
-function generateZshCompletion(): string {
+function generateZshCompletion(registry: CompletionRegistry): string {
+  const commandNames = commandsList(registry);
+  const commands = allCommands(registry);
   const lines: string[] = [];
   lines.push('#compdef spacemolt');
   lines.push('#');
@@ -155,17 +168,17 @@ function generateZshCompletion(): string {
   lines.push('    args)');
   lines.push('      case $line[1] in');
 
-  for (const cmd of COMMANDS_LIST) {
-    const args = getCommandArgNames(cmd);
+  for (const cmd of commandNames) {
+    const args = getCommandArgNames(cmd, registry);
     lines.push(`        ${cmd})`);
     if (args.length > 0) {
       lines.push('          _arguments \\');
       for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (!arg) continue;
-        const enums = getEnumValues(cmd, arg);
+        const enums = getEnumValues(cmd, arg, registry);
         const hint = getHintValue(cmd, arg);
-        const description = escapeZshMessage(getArgDescription(cmd, arg));
+        const description = escapeZshMessage(getArgDescription(cmd, arg, registry));
         const isLast = i === args.length - 1;
         const terminator = isLast ? '' : ' \\';
 
@@ -206,7 +219,7 @@ function generateZshCompletion(): string {
   lines.push('');
   lines.push('_spacemolt_commands() {');
   lines.push('  local commands');
-  lines.push(`  commands=(${COMMANDS_LIST.map((c) => `${c}[${ALL_COMMANDS[c]?.description || c}]`).join(' ')})`);
+  lines.push(`  commands=(${commandNames.map((c) => `${c}[${commands[c]?.description || c}]`).join(' ')})`);
   lines.push('  _describe -t commands "spacemolt commands" commands');
   lines.push('}');
   lines.push('');
@@ -215,7 +228,9 @@ function generateZshCompletion(): string {
   return `${lines.join('\n')}\n`;
 }
 
-function generateFishCompletion(): string {
+function generateFishCompletion(registry: CompletionRegistry): string {
+  const commandNames = commandsList(registry);
+  const commands = allCommands(registry);
   const lines: string[] = [];
   lines.push('# Fish completion for spacemolt');
   lines.push('# Install: spacemolt completion fish > ~/.config/fish/completions/spacemolt.fish');
@@ -231,8 +246,8 @@ function generateFishCompletion(): string {
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s v -l version -d "Show version"');
   lines.push('');
   lines.push('# Commands');
-  for (const cmd of COMMANDS_LIST) {
-    const desc = escapeDoubleQuotedShell(ALL_COMMANDS[cmd]?.description || cmd);
+  for (const cmd of commandNames) {
+    const desc = escapeDoubleQuotedShell(commands[cmd]?.description || cmd);
     lines.push(`complete -c spacemolt -n "__fish_use_subcommand" -a ${cmd} -d "${desc}"`);
   }
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a commands -d "Search local commands"');
@@ -241,14 +256,14 @@ function generateFishCompletion(): string {
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a completion -d "Generate shell completion"');
   lines.push('');
   lines.push('# Per-command arguments');
-  for (const cmd of COMMANDS_LIST) {
-    const args = getCommandArgNames(cmd);
+  for (const cmd of commandNames) {
+    const args = getCommandArgNames(cmd, registry);
     if (args.length === 0) continue;
 
     lines.push(`# ${cmd}`);
     for (const arg of args) {
-      const enums = getEnumValues(cmd, arg);
-      const description = getArgDescription(cmd, arg);
+      const enums = getEnumValues(cmd, arg, registry);
+      const description = getArgDescription(cmd, arg, registry);
       const desc = enums && enums.length > 0 ? `${description} (${enums.join('|')})` : description;
 
       if (enums && enums.length > 0) {
@@ -267,7 +282,7 @@ function generateFishCompletion(): string {
 
   lines.push('# explain command');
   lines.push(
-    `complete -c spacemolt -n "__fish_seen_subcommand_from explain" -a "${COMMANDS_LIST.join(' ')}" -d "command"`,
+    `complete -c spacemolt -n "__fish_seen_subcommand_from explain" -a "${commandNames.join(' ')}" -d "command"`,
   );
   lines.push('');
   lines.push('# completion shell');
@@ -276,14 +291,14 @@ function generateFishCompletion(): string {
   return `${lines.join('\n')}\n`;
 }
 
-export function generateCompletion(shell: string): string {
+export function generateCompletion(shell: string, registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string {
   switch (shell) {
     case 'bash':
-      return generateBashCompletion();
+      return generateBashCompletion(registry);
     case 'zsh':
-      return generateZshCompletion();
+      return generateZshCompletion(registry);
     case 'fish':
-      return generateFishCompletion();
+      return generateFishCompletion(registry);
     default:
       throw new Error(`Unsupported shell: ${shell}. Use bash, zsh, or fish.`);
   }
