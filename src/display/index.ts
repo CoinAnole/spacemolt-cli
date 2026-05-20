@@ -42,6 +42,10 @@ function isPlain(options?: GlobalOptions, context?: DisplayContext): boolean {
   return options?.plain ?? context?.output?.plain ?? context?.config?.plain ?? false;
 }
 
+function isDebug(context?: DisplayContext): boolean {
+  return context?.config?.debug ?? false;
+}
+
 function stringifyJson(value: unknown, compact: boolean): string {
   return JSON.stringify(value, null, compact ? 0 : 2);
 }
@@ -155,7 +159,7 @@ function displayStructuredResultInternal(
   const nearMisses = resultFormatters.filter(
     (formatter) => formatter.hintKeys?.length && formatter.hintKeys.every((key) => resultKeys.includes(key)),
   );
-  if (nearMisses.length > 0) {
+  if (isDebug(context) && nearMisses.length > 0) {
     const names = nearMisses
       .map((formatter) => formatter.formatterName)
       .filter(Boolean)

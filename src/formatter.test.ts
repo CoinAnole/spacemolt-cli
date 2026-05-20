@@ -268,6 +268,23 @@ describe('structuredContent output mode precedence', () => {
     expect(projected.stdout).toEqual(['{"ship.fuel":42}']);
     expect(quiet.stdout.join('\n')).not.toContain('[AUTO-DOCKED]');
     expect(timed.stdout).toEqual(['[2026-05-19T12:34:56.000Z]', 'OK']);
+    expect(drift.stderr.join('\n')).not.toContain('[DRIFT WARNING]');
+  });
+
+  test('pure structured renderer emits drift warnings when debug is enabled', () => {
+    const drift = renderStructuredResult('unmatched_command', { items: 'not-an-array' }, globalOptions(), {
+      clock: captureContext([], []).clock,
+      config: {
+        apiBase: 'https://example.test/api/v2',
+        jsonOutput: false,
+        debug: true,
+        plain: false,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+    });
+
     expect(drift.stderr.join('\n')).toContain('[DRIFT WARNING]');
   });
 });
