@@ -91,12 +91,12 @@ export async function renderResponse(
   const sessionPath = getSessionPath(client.config);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
-  const displayResponse = applyDisplayFilters(command, response, commandRun.payload);
-
   if (isJson && !hasProjection) {
-    printJsonResponse(displayResponse, options.compact, writer);
+    printJsonResponse(response, options.compact, writer);
     return response.error ? 1 : 0;
   }
+
+  const displayResponse = applyDisplayFilters(command, response, commandRun.payload);
 
   const success = displayResult(
     displayCommand,
@@ -108,6 +108,7 @@ export async function renderResponse(
 }
 
 function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {
+  if (command === 'get_cargo' || command === 'v2_get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
   if (!payload || !['view_storage', 'view_faction_storage'].includes(command)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const searchFilter = typeof payload.search === 'string' ? payload.search : undefined;
@@ -140,6 +141,45 @@ function storageItemMatches(item: Record<string, unknown>, itemFilter?: string, 
   }
 
   return true;
+}
+
+function applyCargoDisplayFilters(response: APIResponse, payload: Record<string, unknown>): APIResponse {
+  const structuredContent = response.structuredContent;
+  if (!structuredContent || !Array.isArray(structuredContent.cargo)) return response;
+
+  const showEmpty = parseBooleanFlag(payload.show_empty);
+  const top = parsePositiveInteger(payload.top);
+  const nextStructuredContent = structuredClone(structuredContent);
+  const cargo = nextStructuredContent.cargo as Array<Record<string, unknown>>;
+  const visibleCargo = showEmpty ? cargo : cargo.filter((item) => numericQuantity(item) > 0);
+  const sortedCargo = [...visibleCargo].sort((left, right) => numericQuantity(right) - numericQuantity(left));
+
+  nextStructuredContent.cargo = top === undefined ? sortedCargo : sortedCargo.slice(0, top);
+  return { ...response, structuredContent: nextStructuredContent };
+}
+
+function numericQuantity(item: Record<string, unknown>): number {
+  const value = item.quantity;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+function parseBooleanFlag(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return false;
+  const normalized = value.toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes';
+}
+
+function parsePositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return undefined;
+  return parsed;
 }
 
 function shouldShowCachedIdSuggestions(command: string, error: { code: string; message: string }): boolean {

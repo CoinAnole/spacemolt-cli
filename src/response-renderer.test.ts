@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
+import { BUNDLED_COMMAND_REGISTRY } from './command-registry';
 import { renderResponse, runCommand } from './response-renderer';
 import type { GlobalOptions } from './types';
 
@@ -57,6 +58,26 @@ function fakeContext() {
 }
 
 describe('response renderer', () => {
+  test('runCommand strips get_cargo display-only fields before API execution', async () => {
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return { structuredContent: { cargo: [] } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    await runCommand(
+      'get_cargo',
+      { top: '10', show_empty: 'true' },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.get_cargo,
+    );
+
+    expect(calls).toEqual([{ command: 'get_cargo', payload: {} }]);
+  });
+
   test('runCommand uses server preview command for supported dry-run previews', async () => {
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
     const client = {
@@ -183,5 +204,163 @@ describe('response renderer', () => {
     expect(exitCode).toBe(0);
     expect(output).toContain('coin');
     expect(output).not.toContain('2026-05-20T00:00:00.000Z');
+  });
+
+  test('renderResponse hides empty cargo stacks and sorts non-empty stacks by quantity descending', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: {},
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 0, size: 1 },
+            ],
+            used: 730,
+            capacity: 1000,
+            available: 270,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: {} } as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Items (2):');
+    expect(output).toContain('Iron Ore');
+    expect(output).toContain('Copper Ore');
+    expect(output).not.toContain('Fuel Cell');
+    expect(output.indexOf('Iron Ore')).toBeLessThan(output.indexOf('Copper Ore'));
+  });
+
+  test('renderResponse --show-empty includes zero quantity cargo stacks after non-empty stacks', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: { show_empty: 'true' },
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 0, size: 1 },
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            ],
+            used: 730,
+            capacity: 1000,
+            available: 270,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: {} } as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Items (3):');
+    expect(output).toContain('Fuel Cell');
+    expect(output.indexOf('Iron Ore')).toBeLessThan(output.indexOf('Copper Ore'));
+    expect(output.indexOf('Copper Ore')).toBeLessThan(output.indexOf('Fuel Cell'));
+  });
+
+  test('renderResponse limits get_cargo table output to the top stacks', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: { top: '2' },
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 5, size: 1 },
+            ],
+            used: 735,
+            capacity: 1000,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: {} } as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Items (2):');
+    expect(output).toContain('Iron Ore');
+    expect(output).toContain('Copper Ore');
+    expect(output).not.toContain('Fuel Cell');
+  });
+
+  test('renderResponse uses normalized limit payload as top', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: { top: '1' },
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            ],
+            used: 730,
+            capacity: 1000,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: {} } as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Items (1):');
+    expect(output).toContain('Iron Ore');
+    expect(output).not.toContain('Copper Ore');
+  });
+
+  test('renderResponse leaves get_cargo JSON output unfiltered', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: { top: '1' },
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            ],
+            used: 730,
+            capacity: 1000,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, json: true },
+      { config: {} } as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.structuredContent.cargo).toHaveLength(2);
+    expect(parsed.structuredContent.cargo[0].item_id).toBe('ore_copper');
   });
 });

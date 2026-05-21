@@ -10,7 +10,7 @@ import {
   parseGlobalOptions,
   validateRequiredArgs,
 } from './client';
-import type { CommandRegistrySnapshot } from './command-registry';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
 
@@ -166,6 +166,18 @@ describe('send_gift alias normalization', () => {
       target: 'PlayerName',
       credits: '1000',
     });
+  });
+});
+
+describe('command metadata', () => {
+  test('get_cargo display-only fields are stripped before API calls', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.get_cargo;
+    if (!config) {
+      throw new Error('get_cargo command metadata is missing');
+    }
+
+    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['top', 'show_empty']));
+    expect(config.aliases).toMatchObject({ limit: 'top' });
   });
 });
 
@@ -570,6 +582,22 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     const { command, payload } = parseOk(['get_cargo']);
     expect(command).toBe('get_cargo');
     expect(payload).toEqual({});
+  });
+
+  test('get_cargo accepts display-only top and show_empty flags', () => {
+    const { command, payload } = parseOk(['get_cargo', '--top', '3', '--show-empty']);
+
+    expect(command).toBe('get_cargo');
+    expect(normalizeParsedPayload('get_cargo', payload)).toMatchObject({
+      top: '3',
+      show_empty: 'true',
+    });
+  });
+
+  test('get_cargo accepts limit as an alias for top', () => {
+    const { payload } = parseOk(['get_cargo', '--limit=5']);
+
+    expect(normalizeParsedPayload('get_cargo', payload)).toMatchObject({ top: '5' });
   });
 
   test('completed_missions - no args', () => {

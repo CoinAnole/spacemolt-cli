@@ -31,11 +31,27 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_ship',
   },
   get_cargo: {
-    description: 'List cargo item IDs, quantities, and cargo capacity.',
-    example: 'spacemolt get_cargo',
+    usage: '[--top N|--limit N] [--show-empty]',
+    description:
+      'List cargo item IDs, quantities, and cargo capacity. Table output hides empty stacks and sorts by quantity.',
+    example: 'spacemolt get_cargo --top 10',
     seeAlso: ['sell', 'jettison', 'deposit_items'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_cargo',
+    aliases: {
+      limit: 'top',
+    },
+    schemaExtensions: {
+      top: {
+        type: 'integer',
+        description: 'Client-side display limit for the largest cargo stacks.',
+      },
+      show_empty: {
+        type: 'boolean',
+        description: 'Client-side display flag to include zero-quantity cargo stacks.',
+      },
+    },
+    clientOnlyFields: ['top', 'show_empty'],
   },
   get_nearby: {
     category: 'Query commands',
@@ -143,8 +159,23 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_ship',
   },
   v2_get_cargo: {
+    usage: '[--top N|--limit N] [--show-empty]',
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_cargo',
+    aliases: {
+      limit: 'top',
+    },
+    schemaExtensions: {
+      top: {
+        type: 'integer',
+        description: 'Client-side display limit for the largest cargo stacks.',
+      },
+      show_empty: {
+        type: 'boolean',
+        description: 'Client-side display flag to include zero-quantity cargo stacks.',
+      },
+    },
+    clientOnlyFields: ['top', 'show_empty'],
   },
   v2_get_missions: {
     category: 'V2 state commands',
