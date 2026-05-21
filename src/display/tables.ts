@@ -36,7 +36,7 @@ export function formatItemTable(items: Array<Record<string, unknown>>, indent = 
   }
 
   const idW = Math.max(2, ...items.map((i) => String(i.item_id || '').length));
-  const nameW = Math.max(4, ...items.map((i) => String(i.name || i.item_id || '').length));
+  const nameW = Math.max(4, ...items.map((i) => String(i.name || i.item_name || i.item_id || '').length));
   const qtyW = Math.max(3, ...items.map((i) => String(i.quantity ?? '').length));
   const sizeW = Math.max(9, ...items.map((i) => String(i.size ?? '').length));
 
@@ -46,7 +46,7 @@ export function formatItemTable(items: Array<Record<string, unknown>>, indent = 
   );
   lines.push(`${indent}${'-'.repeat(nameW)}-+-${'-'.repeat(idW)}-+-${'-'.repeat(qtyW)}-+-${'-'.repeat(sizeW)}`);
   for (const item of items) {
-    const name = String(item.name || item.item_id || '').padEnd(nameW);
+    const name = String(item.name || item.item_name || item.item_id || '').padEnd(nameW);
     const id = String(item.item_id || '').padEnd(idW);
     const qty = String(item.quantity ?? '').padStart(qtyW);
     const size = String(item.size ?? '').padStart(sizeW);

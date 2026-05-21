@@ -11,6 +11,8 @@ import {
   getStatusFixture,
   highValueCommandFixtures,
   missionsFixture,
+  poiInfoFixture,
+  storageFixture,
   viewMarketFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
@@ -59,6 +61,7 @@ const outputModeFixture = {
 async function captureRenderedOutput(
   response: Parameters<typeof renderResponse>[0]['response'],
   options: Partial<GlobalOptions>,
+  commandRunOverrides: Partial<Parameters<typeof renderResponse>[0]> = {},
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -69,6 +72,7 @@ async function captureRenderedOutput(
       command: 'get_status',
       displayCommand: 'get_status',
       response,
+      ...commandRunOverrides,
     },
     globalOptions({ dryRun: true, ...options }),
     undefined,
@@ -117,6 +121,25 @@ describe('structuredContent output mode precedence', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       jq: '.ship.fuel',
       fields: ['player.name'],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('42');
+  });
+
+  test('--field extracts one scalar without a JSON object wrapper', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      field: 'ship.fuel',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('42');
+  });
+
+  test('--field supports --format=json for scalar extraction', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      field: 'ship.fuel',
+      format: 'json',
     });
 
     expect(stderr).toBe('');
@@ -210,6 +233,50 @@ describe('structuredContent output mode precedence', () => {
     expect(exitCode).toBe(1);
     expect(stderr).toBe('');
     expect(JSON.parse(stdout)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
+  });
+
+  test('view_storage item filter narrows displayed rows without wrapping output', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageFixture,
+          items: [
+            { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 },
+          ],
+        },
+      },
+      {},
+      { command: 'view_storage', displayCommand: 'view_storage', payload: { item_id: 'iron_ore' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).toContain('iron_ore');
+    expect(stdout).toContain('718');
+    expect(stdout).not.toContain('Fuel Cell');
+  });
+
+  test('view_faction_storage search filter narrows displayed rows', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          base_id: 'earth_station',
+          items: [
+            { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            { item_id: 'copper_ore', item_name: 'Copper Ore', quantity: 12, size: 1 },
+          ],
+        },
+      },
+      {},
+      { command: 'view_faction_storage', displayCommand: 'view_faction_storage', payload: { search: 'iron' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).not.toContain('Copper Ore');
   });
 
   test('rendered text output uses context clock for timestamps', async () => {
@@ -414,6 +481,54 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('facility_list formats grouped facility responses', () => {
+    const { stdout, stderr } = captureStructuredOutput('facility_list', {
+      base_id: 'earth_station',
+      station_facilities: [
+        {
+          facility_id: 'station-fuel',
+          type: 'fuel_bunker',
+          name: 'Fuel Bunker',
+          category: 'service',
+          active: true,
+          maintenance_satisfied: true,
+        },
+      ],
+      player_facilities: [
+        {
+          facility_id: 'player-refinery',
+          type: 'ore_refinery',
+          name: 'Ore Refinery',
+          category: 'production',
+          active: false,
+          maintenance_satisfied: true,
+        },
+      ],
+      faction_facilities: [],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Station Facilities ===');
+    expect(stdout).toContain('Fuel Bunker');
+    expect(stdout).toContain('=== Player Facilities ===');
+    expect(stdout).toContain('Ore Refinery');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_poi includes faction fuel reserve when present', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_poi', {
+      ...poiInfoFixture,
+      poi: {
+        ...poiInfoFixture.poi,
+        faction_fuel_reserve: 320,
+        faction_fuel_capacity: 500,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Faction Fuel: 320/500');
+  });
+
   test('normalizes get_status location data before player status formatting', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', getStatusFixture);
 
@@ -511,7 +626,7 @@ describe('structuredContent formatters', () => {
 
         Name     | ID       | Qty | Unit Size
         ---------+----------+-----+----------
-        ore_iron | ore_iron |  50 |          "
+        Iron Ore | ore_iron |  50 |          "
       ,
         "chat_sent": "[local] Clear skies.",
         "drone": 
@@ -548,6 +663,25 @@ describe('structuredContent formatters', () => {
         Name        | ID         | Level | Status | Owner  
         ------------+------------+-------+--------+--------
         Fuel Bunker | facility-1 | 2     | true   | Marlowe"
+      ,
+        "facility_list": 
+      "
+      === Facilities at earth_station ===
+
+      === Station Facilities ===
+
+        Name        | ID           | Category | Active | Maint | Owner
+        ------------+--------------+----------+--------+-------+------
+        Fuel Bunker | station-fuel | service  | true   | true  |      
+
+      === Player Facilities ===
+
+        Name         | ID              | Category   | Active | Maint | Owner
+        -------------+-----------------+------------+--------+-------+------
+        Ore Refinery | player-refinery | production | false  | true  |      
+
+      === Faction Facilities ===
+      (None)"
       ,
         "facility_types": 
       "
@@ -646,7 +780,7 @@ describe('structuredContent formatters', () => {
 
         Name      | ID        | Qty | Unit Size
         ----------+-----------+-----+----------
-        fuel_cell | fuel_cell |  12 |          
+        Fuel Cell | fuel_cell |  12 |          
 
       Ships (1):
 

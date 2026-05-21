@@ -19,6 +19,7 @@ import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { API_BASE, c, DEBUG, setOutputMode } from './runtime.ts';
+import { validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -54,8 +55,25 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
   const parsed = parseGlobalOptions(argv);
   if (!parsed.ok) return parsed;
 
-  applyGlobalOptions(parsed.options, context?.env);
-  return { ok: true, invocation: { options: parsed.options, args: parsed.options.args } };
+  const envProfile = context?.env.SPACEMOLT_PROFILE;
+  const profile = parsed.options.profile ?? (envProfile ? validateEnvProfile(envProfile) : undefined);
+  if (typeof profile !== 'string' && profile) return { ok: false, error: profile };
+  const options = profile ? { ...parsed.options, profile } : parsed.options;
+
+  applyGlobalOptions(options, context?.env);
+  return { ok: true, invocation: { options, args: options.args } };
+}
+
+function validateEnvProfile(value: string): string | GlobalOptionParseError {
+  try {
+    return validateProfileName(value);
+  } catch (err) {
+    return {
+      code: 'invalid_global_option',
+      option: 'SPACEMOLT_PROFILE',
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 export async function runInvocation(

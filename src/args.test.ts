@@ -625,6 +625,11 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.category).toBe('ore');
   });
 
+  test('view_market accepts category as a named filter', () => {
+    const { payload } = parseOk(['view_market', '--category', 'ore']);
+    expect(payload.category).toBe('ore');
+  });
+
   test('view_orders with station_id', () => {
     const { payload } = parseOk(['view_orders', 'sol_central']);
     expect(payload.station_id).toBe('sol_central');
@@ -633,6 +638,22 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   test('view_storage with station_id', () => {
     const { payload } = parseOk(['view_storage', 'nexus_base']);
     expect(payload.station_id).toBe('nexus_base');
+  });
+
+  test('view_storage accepts item and search filters', () => {
+    const item = parseOk(['view_storage', '--item', 'iron_ore']);
+    expect(normalizeParsedPayload('view_storage', item.payload)).toMatchObject({ item_id: 'iron_ore' });
+
+    const search = parseOk(['view_storage', '--search', 'iron']);
+    expect(search.payload.search).toBe('iron');
+  });
+
+  test('view_faction_storage accepts item and search filters', () => {
+    const item = parseOk(['view_faction_storage', '--item', 'iron_ore']);
+    expect(normalizeParsedPayload('view_faction_storage', item.payload)).toMatchObject({ item_id: 'iron_ore' });
+
+    const search = parseOk(['view_faction_storage', '--search=iron']);
+    expect(search.payload.search).toBe('iron');
   });
 
   test('send_gift with ship_id', () => {
@@ -848,6 +869,7 @@ describe('CLI output modes', () => {
     const result = parseGlobalOptions([
       '--json',
       '--fields=player.name, ship.fuel',
+      '--field=ship.fuel',
       '--profile=pilot',
       '--allow-unknown',
       'get_status',
@@ -858,6 +880,7 @@ describe('CLI output modes', () => {
         json: true,
         allowUnknown: true,
         fields: ['player.name', 'ship.fuel'],
+        field: 'ship.fuel',
         profile: 'pilot',
         args: ['get_status'],
       });
@@ -871,6 +894,8 @@ describe('CLI output modes', () => {
       '--debug',
       '--format=yaml',
       '--jq=.items[].id',
+      '--extract',
+      'ship.fuel',
       '--profile=pilot',
       '--dry-run=false',
       'get_status',
@@ -882,6 +907,7 @@ describe('CLI output modes', () => {
     expect(result.options.debug).toBe(true);
     expect(result.options.format).toBe('yaml');
     expect(result.options.jq).toBe('.items[].id');
+    expect(result.options.field).toBe('ship.fuel');
     expect(result.options.profile).toBe('pilot');
     expect(result.options.dryRun).toBe(false);
     expect(result.options.args).toEqual(['get_status']);

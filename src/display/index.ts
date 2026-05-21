@@ -2,6 +2,7 @@ import type { CliRuntimeContext } from '../cli-context.ts';
 import { evaluateJq, formatJqResult } from '../jq.ts';
 import {
   extractFields,
+  getFieldValue,
   getObjectResult,
   getStructuredResult,
   normalizeStructuredResultForDisplay,
@@ -22,6 +23,10 @@ type DisplayContext = Pick<CliRuntimeContext, 'clock'> &
 
 function hasFields(fields: string[] | undefined): fields is string[] {
   return Boolean(fields && fields.length > 0);
+}
+
+function hasField(field: string | undefined): field is string {
+  return Boolean(field && field.length > 0);
 }
 
 function getOutputFormat(options?: GlobalOptions, context?: DisplayContext): OutputFormat {
@@ -50,7 +55,12 @@ function stringifyJson(value: unknown, compact: boolean): string {
   return JSON.stringify(value, null, compact ? 0 : 2);
 }
 
-function formatProjection(value: unknown, format: OutputFormat, compact: boolean, projection: 'jq' | 'fields'): string {
+function formatProjection(
+  value: unknown,
+  format: OutputFormat,
+  compact: boolean,
+  projection: 'jq' | 'fields' | 'field',
+): string {
   if (format === 'yaml') return toYaml(value);
   if (format === 'text') {
     if (typeof value === 'string') return value;
@@ -58,6 +68,12 @@ function formatProjection(value: unknown, format: OutputFormat, compact: boolean
     return stringifyJson(value, compact);
   }
   if (format === 'json') return stringifyJson(value, compact);
+  if (projection === 'field') {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (value === undefined) return 'null';
+    return stringifyJson(value, compact);
+  }
   if (projection === 'jq') return formatJqResult(value, compact);
   return JSON.stringify(value);
 }
@@ -97,6 +113,7 @@ function displayStructuredResultInternal(
   if (!result) return true;
 
   const fields = options?.fields;
+  const field = options?.field;
   const format = getOutputFormat(options, context);
   const compact = isCompact(options, context);
   const jqExpr = options?.jq;
@@ -110,6 +127,12 @@ function displayStructuredResultInternal(
       emitError(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
+  }
+
+  if (hasField(field)) {
+    const extracted = getFieldValue(result, field);
+    emitLine(formatProjection(extracted, format, compact, 'field'));
+    return true;
   }
 
   if (hasFields(fields)) {

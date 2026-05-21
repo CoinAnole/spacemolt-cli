@@ -41,6 +41,35 @@ export const socialFormatters = [
     { commands: ['facility_list'], shapeFallback: true },
   ),
 
+  // Facility List
+  namedFormatter(
+    'facility_list',
+    ['station_facilities', 'player_facilities', 'faction_facilities'],
+    (r) => {
+      const groups: Array<[string, Array<Record<string, unknown>> | undefined]> = [
+        ['Station Facilities', firstArray(r, ['station_facilities'])],
+        ['Player Facilities', firstArray(r, ['player_facilities'])],
+        ['Faction Facilities', firstArray(r, ['faction_facilities'])],
+      ];
+      if (!groups.some(([, rows]) => Array.isArray(rows))) return false;
+
+      if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
+      for (const [title, rows] of groups) {
+        if (!rows) continue;
+        printCompactTable(title, rows, [
+          ['Name', ['name', 'type_name', 'facility_type', 'type']],
+          ['ID', ['facility_id', 'id']],
+          ['Category', ['category']],
+          ['Active', ['active', 'enabled', 'status']],
+          ['Maint', ['maintenance_satisfied']],
+          ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['facility_list'], shapeFallback: true },
+  ),
+
   // Facility Types
   namedFormatter(
     'facility_types',

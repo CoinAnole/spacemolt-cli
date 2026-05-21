@@ -32,6 +32,8 @@ export interface CommandConfig {
   schema?: Record<string, CommandFieldSchema>;
   /** Fields whose string values should be split into arrays (e.g., "a,b,c" => ["a","b","c"]) */
   arrayFields?: string[];
+  /** Payload fields accepted by the CLI for local rendering/filtering but not sent to the API */
+  clientOnlyFields?: string[];
 }
 
 export type LocalCommandConfig = Omit<CommandConfig, 'route' | 'schema'>;
@@ -51,6 +53,7 @@ export type CommandOverride = {
   defaults?: Record<string, string>;
   schemaExtensions?: Record<string, CommandFieldSchema>;
   arrayFields?: string[];
+  clientOnlyFields?: string[];
 };
 
 export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
@@ -66,6 +69,7 @@ export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
   'defaults',
   'schemaExtensions',
   'arrayFields',
+  'clientOnlyFields',
 ] as const;
 
 import { COMMAND_OVERRIDES } from './command-overrides.ts';

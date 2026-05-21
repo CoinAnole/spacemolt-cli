@@ -69,7 +69,7 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('');
   lines.push('  # Global flags');
   lines.push(
-    '  local global_flags="--json -j --quiet -q --plain -p --fields -f --dry-run --preview --help -h --version -v"',
+    '  local global_flags="--json -j --quiet -q --plain -p --field --extract --fields -f --dry-run --preview --help -h --version -v"',
   );
   lines.push('');
   lines.push('  # Top-level special commands');
@@ -154,6 +154,8 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('    "(-j --json)"{-j,--json}"[Raw JSON response]" \\');
   lines.push('    "(-q --quiet)"{-q,--quiet}"[Suppress notifications]" \\');
   lines.push('    "(-p --plain)"{-p,--plain}"[No ANSI colors]" \\');
+  lines.push('    "--field[Extract one response field as a scalar]:field:" \\');
+  lines.push('    "--extract[Alias for --field]:field:" \\');
   lines.push(
     '    "(-f --fields)"{-f,--fields}"[Extract response fields]:fields:_values -s , fields key1 key2 key3" \\',
   );
@@ -239,6 +241,8 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s j -l json -d "Raw JSON response"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s q -l quiet -d "Suppress notifications"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s p -l plain -d "No ANSI colors"');
+  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l field -d "Extract one response field"');
+  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l extract -d "Alias for --field"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s f -l fields -d "Extract response fields"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l dry-run -d "Preview supported mutations"');
   lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l preview -d "Alias for --dry-run"');

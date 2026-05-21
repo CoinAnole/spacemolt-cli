@@ -172,6 +172,18 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       const parsed = parseProfileValue('--profile', arg.slice('--profile='.length), outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.profile = parsed;
+    } else if (arg === '--field' || arg === '--extract') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        result.field = nextArg.trim();
+        i++;
+      } else {
+        return parseError(arg, `${arg} requires a value: ${arg} key1.key2`, outputState(result));
+      }
+    } else if (arg.startsWith('--field=')) {
+      result.field = arg.slice('--field='.length).trim();
+    } else if (arg.startsWith('--extract=')) {
+      result.field = arg.slice('--extract='.length).trim();
     } else if (arg === '--fields' || arg === '-f') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
@@ -208,5 +220,5 @@ export function applyGlobalOptions(options: GlobalOptions, env: CliEnv = process
     debug: options.debug || env.DEBUG === 'true',
     compact: options.compact,
   });
-  setActiveProfile(options.profile);
+  setActiveProfile(options.profile || env.SPACEMOLT_PROFILE);
 }

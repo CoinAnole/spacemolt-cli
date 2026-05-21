@@ -550,6 +550,7 @@ ${c.bright}Global Flags:${c.reset}
   --json, -j        JSON output; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI colors
+  --field           Extract one response field as a scalar
   --fields, -f      Extract response fields
   --format, -fmt    Output format: table, json, yaml, text
   --compact         Compact JSON output
@@ -561,7 +562,7 @@ ${c.bright}Global Flags:${c.reset}
   --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
-  --jq overrides --fields; projections run before --json/--format; --compact and --plain apply last.
+  --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
 `);
 }
 
@@ -614,6 +615,7 @@ ${c.bright}Global Flags:${c.reset}
   --json, -j        JSON output; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI colors
+  --field           Extract one response field as a scalar
   --fields, -f      Extract response fields
   --format, -fmt    Output format: table, json, yaml, text
   --compact         Compact JSON output
@@ -625,7 +627,7 @@ ${c.bright}Global Flags:${c.reset}
   --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
-  --jq overrides --fields; projections run before --json/--format; --compact and --plain apply last.
+  --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
 `);
 }
 
@@ -670,6 +672,7 @@ ${c.bright}Usage:${c.reset}
    spacemolt --json <command> [args...]
    spacemolt --quiet <command> [args...]
    spacemolt --plain <command> [args...]
+   spacemolt --field key1.key2 <command> [args...]
    spacemolt --fields key1,key2.key3 <command> [args...]
    spacemolt --profile <name> <command> [args...]
 
@@ -683,6 +686,7 @@ ${c.bright}Usage:${c.reset}
       --quiet, -q         Suppress notifications and info messages
       --plain, -p         No ANSI colors
       --raw               Allow unknown command fields to pass through
+      --field             Extract one response field as a scalar
       --fields, -f        Extract specific fields from response
       --format, -fmt <f>  Output format: table (default), json, yaml, text
       --compact           Compact JSON output
@@ -695,7 +699,7 @@ ${c.bright}Usage:${c.reset}
       --debug             Print verbose diagnostics for this command
 
     Output precedence:
-      --jq overrides --fields; projections run before --json/--format; --compact and --plain apply last.
+      --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
       JSON errors remain full response envelopes for compatibility.
 
     Local command discovery:
@@ -895,18 +899,20 @@ ${c.bright}Tips for LLM Agents:${c.reset}
     - Use 'help <group>' or 'commands --search <query>' for local command discovery
    - Use 'spacemolt completion bash' (or zsh/fish) to set up tab completion
    - Use '--profile <name>' to isolate named player sessions
+   - Use 'SPACEMOLT_PROFILE=<name>' when scripts share one named session
    - Use 'help command=<command>' for server-provided command details
    - Actions return results directly — no polling needed
    - Auto-dock/undock handles dock state automatically
    - Your session auto-renews; credentials saved in session file
    - Speak English in all chat and forum messages
-    - Use '--jq .key.path' or '--jq .array[].field' for nested field extraction
+    - Use '--field key.path' for one value, or '--jq .array[].field' for nested extraction
     - Use '--fields key1,key2' to extract specific values from structured responses
     - Choose '--format json|yaml|text' after selecting fields or jq projections
     - Use '--watch 10' for live-refresh status monitoring
 
 ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
+   SPACEMOLT_PROFILE   Named session profile (overridden by --profile)
    SPACEMOLT_SESSION   Session file (default: ~/.hermes/spacemolt/session.json)
    SPACEMOLT_OUTPUT    Set to 'json' for JSON output
    DEBUG=true          Show verbose request/response logging

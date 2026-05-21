@@ -16,6 +16,31 @@ export const facilitiesFixture = {
   ],
 };
 
+export const facilityListFixture = {
+  base_id: 'earth_station',
+  station_facilities: [
+    {
+      facility_id: 'station-fuel',
+      type: 'fuel_bunker',
+      name: 'Fuel Bunker',
+      category: 'service',
+      active: true,
+      maintenance_satisfied: true,
+    },
+  ],
+  player_facilities: [
+    {
+      facility_id: 'player-refinery',
+      type: 'ore_refinery',
+      name: 'Ore Refinery',
+      category: 'production',
+      active: false,
+      maintenance_satisfied: true,
+    },
+  ],
+  faction_facilities: [],
+};
+
 export const facilityTypesFixture = {
   categories: {
     infrastructure: {
@@ -83,6 +108,7 @@ export const battleStatusFixture = {
 export const socialFixtureCases = {
   chat_sent: { command: 'chat', fixture: chatSentFixture },
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
+  facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility: { command: 'facility_get', fixture: facilityFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },

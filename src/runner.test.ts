@@ -167,6 +167,34 @@ describe('runInvocation option isolation', () => {
     expect(ACTIVE_PROFILE).toBeUndefined();
   });
 
+  test('SPACEMOLT_PROFILE supplies the active profile when --profile is omitted', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--help', 'travel'],
+      undefined,
+      fakeContext(stdout, stderr, { SPACEMOLT_PROFILE: 'marlowe' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(ACTIVE_PROFILE).toBe('marlowe');
+  });
+
+  test('--profile overrides SPACEMOLT_PROFILE', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--profile', 'pilot', '--help', 'travel'],
+      undefined,
+      fakeContext(stdout, stderr, { SPACEMOLT_PROFILE: 'marlowe' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(ACTIVE_PROFILE).toBe('pilot');
+  });
+
   test('direct invocation writes through CliWriter without console monkeypatching', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

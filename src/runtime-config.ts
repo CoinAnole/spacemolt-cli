@@ -11,7 +11,7 @@ export function getRuntimeConfig(options: GlobalOptions, env: CliEnv = process.e
     quiet: options.quiet,
     format: options.format || 'table',
     compact: options.compact,
-    profile: options.profile,
+    profile: options.profile || env.SPACEMOLT_PROFILE,
     sessionPath: env.SPACEMOLT_SESSION,
   };
 }

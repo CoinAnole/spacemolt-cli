@@ -69,19 +69,40 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['item_id', 'quantity'],
   },
   view_storage: {
+    usage: '[station_id] [--item item_id] [--search text]',
     description: 'Show personal station storage. Omit station_id for the current station.',
-    example: 'spacemolt view_storage',
+    example: 'spacemolt view_storage --item iron_ore',
     discoverWith: ['get_status'],
     seeAlso: ['deposit_items', 'withdraw_items'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
     positionals: ['station_id'],
+    aliases: {
+      item: 'item_id',
+    },
+    schemaExtensions: {
+      search: {
+        type: 'string',
+        description: 'Client-side search across item IDs and names in formatted output.',
+      },
+    },
+    clientOnlyFields: ['search'],
   },
   view_faction_storage: {
-    usage: '[station_id]  (view faction storage, omit for current station)',
+    usage: '[station_id] [--item item_id] [--search text]  (view faction storage, omit for current station)',
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
     positionals: ['station_id'],
+    aliases: {
+      item: 'item_id',
+    },
+    schemaExtensions: {
+      search: {
+        type: 'string',
+        description: 'Client-side search across item IDs and names in formatted output.',
+      },
+    },
+    clientOnlyFields: ['search'],
     defaults: {
       target: 'faction',
     },

@@ -28,6 +28,7 @@ export interface GlobalOptions {
   allowUnknown: boolean;
   dryRun: boolean;
   profile?: string;
+  field?: string;
   fields?: string[];
   format?: OutputFormat;
   noTimestamp: boolean;

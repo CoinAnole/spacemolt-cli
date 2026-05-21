@@ -137,6 +137,13 @@ export const statusFormatters = [
       emitLine(`System: ${poi.system_id}`);
       if (poi.description) emitLine(`Description: ${poi.description}`);
       if (poi.class) emitLine(`Class: ${poi.class}`);
+      const factionFuelReserve = poi.faction_fuel_reserve ?? r.faction_fuel_reserve;
+      const factionFuelCapacity = poi.faction_fuel_capacity ?? r.faction_fuel_capacity;
+      if (factionFuelReserve !== undefined || factionFuelCapacity !== undefined) {
+        const reserve = factionFuelReserve ?? '?';
+        const capacity = factionFuelCapacity ?? '?';
+        emitLine(`Faction Fuel: ${reserve}/${capacity}`);
+      }
 
       const resources = (r.resources || poi.resources) as Array<Record<string, unknown>> | undefined;
       if (resources?.length) {
