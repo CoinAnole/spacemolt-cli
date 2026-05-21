@@ -47,6 +47,21 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
   });
 
+  test('showHelp includes top-level cache sections', () => {
+    const capture = captureWriter();
+    showHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Dynamic API Cache:');
+    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
+    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).not.toContain('spacemolt commands --search api');
+    expect(output).not.toContain('spacemolt help <generated>');
+    expect(output).toContain('ID Cache:');
+    expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
+    expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
+  });
+
   test('renderProgressiveHelp writes unauthenticated start steps', () => {
     const capture = captureWriter();
     renderProgressiveHelp({ authenticated: false }, capture.writer);
@@ -80,6 +95,21 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt help all              Full local command reference');
     expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
     expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
+  });
+
+  test('renderProgressiveHelp includes top-level cache sections', () => {
+    const capture = captureWriter();
+    renderProgressiveHelp({ authenticated: true }, capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Dynamic API Cache:');
+    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
+    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).not.toContain('spacemolt commands --search api');
+    expect(output).not.toContain('spacemolt help <generated>');
+    expect(output).toContain('ID Cache:');
+    expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
+    expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
   });
 
   test('renderProgressiveHelp writes docked, asteroid, escape pod, and space states', () => {
@@ -259,6 +289,22 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
     expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
+  });
+
+  test('showFullHelp includes cache sections near command discovery', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Dynamic API Cache:');
+    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
+    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).not.toContain('spacemolt commands --search api');
+    expect(output).not.toContain('spacemolt help <generated>');
+    expect(output).toContain('ID Cache:');
+    expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
+    expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
   });
 
   test('displayError renders retry, auth, and quiet branches', () => {

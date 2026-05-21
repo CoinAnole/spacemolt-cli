@@ -539,6 +539,7 @@ ${c.bright}Command Discovery:${c.reset}
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Server-provided command help
+${cacheHelpSections()}
 
 ${c.bright}Arguments:${c.reset}
   Positional:       spacemolt travel sol_asteroid_belt
@@ -569,6 +570,18 @@ ${c.bright}Output Precedence:${c.reset}
 // =============================================================================
 // Help
 // =============================================================================
+
+function cacheHelpSections(): string {
+  return `
+${c.bright}Dynamic API Cache:${c.reset}
+  spacemolt sync-api              Refresh cached OpenAPI command metadata
+  Cached v2 routes appear in help, command search, completion, and dispatch.
+
+${c.bright}ID Cache:${c.reset}
+  Discovery commands like get_system, get_cargo, view_market, and get_nearby save useful IDs.
+  spacemolt ids <kind>            Show cached poi/system/item/player IDs
+  spacemolt where-can-i <item>    Search cached item sightings`;
+}
 
 export function showHelp(writer?: CliWriter): void {
   out(writer)(`
@@ -604,6 +617,7 @@ ${c.bright}Command Discovery:${c.reset}
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Server-provided command help
+${cacheHelpSections()}
 
 ${c.bright}Arguments:${c.reset}
   Positional:       spacemolt travel sol_asteroid_belt
@@ -708,6 +722,7 @@ ${c.bright}Usage:${c.reset}
      spacemolt commands --search fuel
      spacemolt help all              Full local command reference
      spacemolt help command=<name>   Server-provided command help
+${cacheHelpSections()}
 
 ${c.bright}Information Commands (unlimited):${c.reset}
   get_status          Your player, ship, location
