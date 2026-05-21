@@ -55,7 +55,7 @@ Prefer `structuredContent` for formatting or automation, falling back to server-
 
 ## Sessions
 
-Default session state is stored under `~/.hermes/spacemolt/session.json`. Named profiles use `~/.hermes/spacemolt/sessions/`, and `SPACEMOLT_SESSION` can override the session file for scripts.
+Default session state is stored under the platform config directory: `~/Library/Application Support/spacemolt-cli/session.json` on macOS and `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/session.json` on Linux. Named profiles use the sibling `sessions/` directory, and `SPACEMOLT_SESSION` can override the session file for scripts.
 
 Session files contain credentials. Do not commit them.
 

@@ -58,7 +58,7 @@ const profileHandler: CommandHandler<{ action: 'list' }, { action: 'list' }> = {
     return { ok: true, payload: { action } };
   },
   run(payload, _options, _client, context) {
-    showProfiles(context?.env.HOME);
+    showProfiles(context?.env.HOME, undefined, context?.env);
     return { action: payload.action };
   },
   render() {

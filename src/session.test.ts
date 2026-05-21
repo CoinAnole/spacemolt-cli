@@ -19,12 +19,12 @@ mock.module('node:os', () => {
   };
 });
 
-const { SessionManager } = await import('./session.ts');
+const { getCredentialsPath, getSpacemoltHome, SessionManager } = await import('./session.ts');
 
 import type { Session } from './types.ts';
 
 beforeAll(() => {
-  const credDir = path.join(tempDir, '.hermes', 'spacemolt');
+  const credDir = path.join(tempDir, '.config', 'spacemolt-cli');
   fs.mkdirSync(credDir, { recursive: true });
   fs.writeFileSync(
     path.join(credDir, 'spacemolt_credentials.yaml'),
@@ -45,11 +45,11 @@ afterAll(() => {
 describe('SessionManager', () => {
   test('save path and permission behavior', async () => {
     const manager = new SessionManager({ profile: 'test_profile' });
-    const expectedPath = path.join(tempDir, '.hermes', 'spacemolt', 'sessions', 'test_profile.json');
+    const expectedPath = path.join(tempDir, '.config', 'spacemolt-cli', 'sessions', 'test_profile.json');
     expect(manager.getSessionPath()).toBe(expectedPath);
 
     const defaultManager = new SessionManager();
-    expect(defaultManager.getSessionPath()).toBe(path.join(tempDir, '.hermes', 'spacemolt', 'session.json'));
+    expect(defaultManager.getSessionPath()).toBe(path.join(tempDir, '.config', 'spacemolt-cli', 'session.json'));
 
     const customPath = path.join(tempDir, 'custom.json');
     const customManager = new SessionManager({ sessionPath: customPath });
@@ -74,6 +74,30 @@ describe('SessionManager', () => {
 
     const loaded = await manager.loadSession();
     expect(loaded).toEqual(sessionObj);
+  });
+
+  test('default app directory follows Linux and macOS conventions', () => {
+    expect(getSpacemoltHome('/home/tester', 'linux', {})).toBe('/home/tester/.config/spacemolt-cli');
+    expect(getSpacemoltHome('/home/tester', 'linux', { XDG_CONFIG_HOME: '/tmp/config' })).toBe(
+      '/tmp/config/spacemolt-cli',
+    );
+    expect(getSpacemoltHome('/Users/tester', 'darwin', {})).toBe(
+      '/Users/tester/Library/Application Support/spacemolt-cli',
+    );
+  });
+
+  test('legacy hermes credential paths are ignored', () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-legacy-cred-test-'));
+    try {
+      const legacyDir = path.join(home, '.hermes', 'spacemolt');
+      fs.mkdirSync(legacyDir, { recursive: true });
+      fs.writeFileSync(path.join(legacyDir, 'spacemolt_credentials.yaml'), 'credentials:\n  legacy: {}\n');
+
+      expect(getCredentialsPath(home, 'linux', {})).not.toContain('.hermes');
+      expect(getCredentialsPath(home, 'linux', {})).toBe(path.join(process.cwd(), 'spacemolt_credentials.yaml'));
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 
   test('profile credentials loaded into new sessions', async () => {

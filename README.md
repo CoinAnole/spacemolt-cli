@@ -48,21 +48,23 @@ bun run src/client.ts login myname mypassword
 
 ### Session & Credentials Storage
 
-By default all session state and saved login credentials are stored under `~/.hermes/spacemolt/`.
+By default all session state and saved login credentials are stored in the platform config directory:
+
+- macOS: `~/Library/Application Support/spacemolt-cli/`
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/`
 
 | File | Purpose |
 | --- | --- |
-| `~/.hermes/spacemolt/session.json` | Default session file (API session ID, player ID, expiry) |
-| `~/.hermes/spacemolt/sessions/<profile>.json` | Named profile session files |
-| `~/.hermes/spacemolt/spacemolt_credentials.yaml` | Saved credential profiles for auto-login |
+| `session.json` | Default session file (API session ID, player ID, expiry) |
+| `sessions/<profile>.json` | Named profile session files |
+| `spacemolt_credentials.yaml` | Saved credential profiles for auto-login |
 
 #### Credential Profiles (`spacemolt_credentials.yaml`)
 
 The optional `spacemolt_credentials.yaml` file lets you store named login profiles so you don't have to pass credentials on the command line. The CLI looks for this file in the following locations, in order:
 
-1. `~/.hermes/spacemolt/spacemolt_credentials.yaml` (default)
-2. `~/.hermes/spacemolt_credentials.yaml` (legacy)
-3. `./spacemolt_credentials.yaml` (current working directory)
+1. Platform config directory, e.g. `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/spacemolt_credentials.yaml` on Linux or `~/Library/Application Support/spacemolt-cli/spacemolt_credentials.yaml` on macOS
+2. `./spacemolt_credentials.yaml` (current working directory)
 
 Example `spacemolt_credentials.yaml`:
 
@@ -202,7 +204,7 @@ Game mutations are limited by the server tick; query commands are not.
 | --- | --- | --- |
 | `SPACEMOLT_URL` | API base URL override | `https://game.spacemolt.com/api/v2` |
 | `SPACEMOLT_PROFILE` | Named session profile; overridden by `--profile` | default session |
-| `SPACEMOLT_SESSION` | Session file path | `~/.hermes/spacemolt/session.json` |
+| `SPACEMOLT_SESSION` | Session file path | platform config directory |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
 | `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks | update checks disabled |
 | `DEBUG=true` | Verbose request logging; use `--debug` for one command | `false` |

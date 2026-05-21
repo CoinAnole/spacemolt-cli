@@ -160,10 +160,10 @@ describe('CLI local usability behavior', () => {
   test('profile list reads local credential profile names without secrets', async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
     const originalHome = process.env.HOME;
-    const hermesDir = path.join(home, '.hermes', 'spacemolt');
-    fs.mkdirSync(hermesDir, { recursive: true });
+    const configDir = path.join(home, '.config', 'spacemolt-cli');
+    fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(
-      path.join(hermesDir, 'spacemolt_credentials.yaml'),
+      path.join(configDir, 'spacemolt_credentials.yaml'),
       [
         'credentials:',
         '  marlowe:',

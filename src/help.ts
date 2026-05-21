@@ -928,7 +928,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
 ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
    SPACEMOLT_PROFILE   Named session profile (overridden by --profile)
-   SPACEMOLT_SESSION   Session file (default: ~/.hermes/spacemolt/session.json)
+   SPACEMOLT_SESSION   Session file (default: platform config dir/spacemolt-cli/session.json)
    SPACEMOLT_OUTPUT    Set to 'json' for JSON output
    DEBUG=true          Show verbose request/response logging
 

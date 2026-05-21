@@ -9,18 +9,22 @@ import type { APIResponse, CredentialProfile, Session } from './types.ts';
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
 const SESSION_DIR_MODE = 0o700;
+type EnvLike = Record<string, string | undefined>;
 
-export function getSpacemoltHome(homeDir = os.homedir()): string {
-  return path.join(homeDir, '.hermes', 'spacemolt');
+export function getSpacemoltHome(
+  homeDir = os.homedir(),
+  platform: string = process.platform,
+  env: EnvLike = process.env,
+): string {
+  if (platform === 'darwin') return path.join(homeDir, 'Library', 'Application Support', 'spacemolt-cli');
+  const configHome = env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
+  return path.join(configHome, 'spacemolt-cli');
 }
 export function getDefaultSessionPath(): string {
   return path.join(getSpacemoltHome(), 'session.json');
 }
-export function getDefaultCredentialsPath(homeDir?: string): string {
-  return path.join(getSpacemoltHome(homeDir), 'spacemolt_credentials.yaml');
-}
-export function getLegacyCredentialsPath(homeDir = os.homedir()): string {
-  return path.join(homeDir, '.hermes', 'spacemolt_credentials.yaml');
+export function getDefaultCredentialsPath(homeDir?: string, platform?: string, env?: EnvLike): string {
+  return path.join(getSpacemoltHome(homeDir, platform, env), 'spacemolt_credentials.yaml');
 }
 
 export function validateProfileName(profile: string): string {
@@ -30,11 +34,9 @@ export function validateProfileName(profile: string): string {
   return profile;
 }
 
-export function getCredentialsPath(homeDir?: string): string {
-  const defCred = getDefaultCredentialsPath(homeDir);
+export function getCredentialsPath(homeDir?: string, platform?: string, env?: EnvLike): string {
+  const defCred = getDefaultCredentialsPath(homeDir, platform, env);
   if (fs.existsSync(defCred)) return defCred;
-  const legacyCred = getLegacyCredentialsPath(homeDir);
-  if (fs.existsSync(legacyCred)) return legacyCred;
   return path.join(process.cwd(), 'spacemolt_credentials.yaml');
 }
 
@@ -70,9 +72,9 @@ export function parseCredentialProfiles(contents: string): CredentialProfile[] {
   return profiles;
 }
 
-export function loadCredentialProfiles(homeDir?: string): CredentialProfile[] {
+export function loadCredentialProfiles(homeDir?: string, platform?: string, env?: EnvLike): CredentialProfile[] {
   try {
-    return parseCredentialProfiles(fs.readFileSync(getCredentialsPath(homeDir), 'utf-8'));
+    return parseCredentialProfiles(fs.readFileSync(getCredentialsPath(homeDir, platform, env), 'utf-8'));
   } catch {
     return [];
   }
@@ -82,10 +84,10 @@ export function findCredentialProfile(name: string): CredentialProfile | undefin
   return loadCredentialProfiles().find((profile) => profile.name === name);
 }
 
-export function showProfiles(homeDir?: string): void {
-  const profiles = loadCredentialProfiles(homeDir);
+export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike): void {
+  const profiles = loadCredentialProfiles(homeDir, platform, env);
   if (!profiles.length) {
-    console.log(`No profiles found in ${getCredentialsPath(homeDir)}.`);
+    console.log(`No profiles found in ${getCredentialsPath(homeDir, platform, env)}.`);
     return;
   }
 
