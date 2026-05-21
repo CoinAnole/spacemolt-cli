@@ -3,6 +3,7 @@ import type { CliRuntimeContext } from './cli-context';
 import { displayStructuredResult } from './client';
 import { renderResult, renderStructuredResult } from './display';
 import {
+  activeMissionsFixture,
   browseShipsFixture,
   catalogItemsFixture,
   formatterFixtureCases,
@@ -375,6 +376,20 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Missions ===');
     expect(stdout).toContain('Pirate Sweep');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions formats nested active mission state instead of generic OK', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', activeMissionsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout).toContain('Distress Call: CombatDummy6');
+    expect(stdout).toContain('mission-distress-wealthyminer2023');
+    expect(stdout).toContain('Rescue WealthyMiner2023 WealthyMiner2023 0/1');
+    expect(stdout).toContain('piloting XP +50');
+    expect(stdout).toContain('missions 2/5');
+    expect(stdout).not.toContain('OK: Active missions');
     expect(stdout).not.toContain('=== Response ===');
   });
 

@@ -1,5 +1,89 @@
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
+function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
+  return Object.entries(value)
+    .filter(([, entry]) => entry !== undefined && entry !== null && entry !== '' && entry !== 0)
+    .map(([key, entry]) => `${key}${suffix} +${entry}`)
+    .join(', ');
+}
+
+function summarizeProgress(objective: Record<string, unknown>): string {
+  const progress = objective.progress;
+  if (isRecord(progress)) {
+    const current = progress.current ?? progress.completed ?? progress.amount ?? progress.count ?? progress.progress;
+    const target = progress.required ?? progress.target ?? progress.total ?? progress.quantity;
+    if (current !== undefined && target !== undefined) return `${current}/${target}`;
+  }
+
+  const current =
+    objective.current ??
+    objective.completed ??
+    objective.amount ??
+    objective.count ??
+    objective.progress ??
+    objective.delivered;
+  const target =
+    objective.required ?? objective.target_quantity ?? objective.target_count ?? objective.total ?? objective.quantity;
+  if (current !== undefined && target !== undefined) return `${current}/${target}`;
+  if (typeof progress === 'string' || typeof progress === 'number' || typeof progress === 'boolean')
+    return String(progress);
+  return '';
+}
+
+function summarizeObjective(objective: unknown): string {
+  if (!isRecord(objective)) return String(objective);
+  const description = objective.description ?? objective.title ?? objective.type;
+  const target =
+    objective.target ??
+    objective.target_name ??
+    objective.target_username ??
+    objective.target_base_name ??
+    objective.system_name ??
+    objective.item_id;
+  const parts = [description, isRecord(target) ? (target.name ?? target.id) : target, summarizeProgress(objective)]
+    .filter((part) => part !== undefined && part !== null && part !== '')
+    .map(String);
+  return parts.join(' ');
+}
+
+function summarizeRewards(rewards: unknown): string {
+  if (!isRecord(rewards)) return '';
+  const parts: string[] = [];
+  if (rewards.credits !== undefined && rewards.credits !== null && rewards.credits !== 0)
+    parts.push(`${rewards.credits} cr`);
+  if (isRecord(rewards.skill_xp)) {
+    const xp = formatRecordEntries(rewards.skill_xp, ' XP');
+    if (xp) parts.push(xp);
+  }
+  if (isRecord(rewards.items)) {
+    const items = Object.entries(rewards.items)
+      .filter(([, quantity]) => quantity !== undefined && quantity !== null && quantity !== '' && quantity !== 0)
+      .map(([item, quantity]) => `${item} x${quantity}`)
+      .join(', ');
+    if (items) parts.push(items);
+  }
+  if (rewards.reputation !== undefined && rewards.reputation !== null && rewards.reputation !== 0)
+    parts.push(`rep +${rewards.reputation}`);
+  if (rewards.pirate_rep !== undefined && rewards.pirate_rep !== null && rewards.pirate_rep !== 0)
+    parts.push(`pirate rep +${rewards.pirate_rep}`);
+  return parts.join('; ');
+}
+
+function activeMissionRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  if (Array.isArray(result.active_missions)) return result.active_missions.filter(isRecord);
+  if (Array.isArray(result.active)) return result.active.filter(isRecord);
+  const missions = result.missions;
+  if (Array.isArray(missions)) return missions.filter(isRecord);
+  if (isRecord(missions) && Array.isArray(missions.active)) return missions.active.filter(isRecord);
+  return undefined;
+}
+
+function activeMissionCapacity(result: Record<string, unknown>, missionCount: number): string | undefined {
+  const missions = result.missions;
+  const maxMissions = isRecord(missions) ? missions.max_missions : result.max_missions;
+  return maxMissions === undefined ? undefined : `${missionCount}/${maxMissions}`;
+}
+
 const GENERIC_LIST_KEYS = [
   'items',
   'missions',
@@ -96,6 +180,41 @@ function titleForListKey(key: string): string {
 }
 
 export const genericFormatters = [
+  formatter(
+    (r) => {
+      const missions = activeMissionRows(r);
+      if (!missions) return false;
+
+      const rows = missions.map((mission) => ({
+        ...mission,
+        objectives_summary: Array.isArray(mission.objectives)
+          ? mission.objectives.map(summarizeObjective).filter(Boolean).join('; ')
+          : '',
+        rewards_summary: summarizeRewards(mission.rewards),
+      }));
+
+      printCompactTable(
+        'Active Missions',
+        rows,
+        [
+          ['Title', ['title', 'name']],
+          ['ID', ['mission_id', 'id']],
+          ['Type', ['type']],
+          ['Difficulty', ['difficulty']],
+          ['Objectives', ['objectives_summary']],
+          ['Rewards', ['rewards_summary']],
+          ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
+        ],
+        { maxCellWidth: 64 },
+      );
+
+      const capacity = activeMissionCapacity(r, missions.length);
+      if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);
+      return true;
+    },
+    { commands: ['get_active_missions'] },
+  ),
+
   // Generic table fallback for common list-shaped responses.
   formatter(
     (r) => {

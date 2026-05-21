@@ -1,5 +1,5 @@
 import { colorize, formatPlayer as formatPlayerValue, rawColors } from './ansi.ts';
-import { firstArray, formatCompactTable, formatItemTable, rowValue } from './tables.ts';
+import { type CompactTableOptions, firstArray, formatCompactTable, formatItemTable, rowValue } from './tables.ts';
 
 export type ResultFormatter = ((result: Record<string, unknown>, command?: string) => boolean) & {
   formatterName?: string;
@@ -145,8 +145,9 @@ export function emitCompactTable(
   title: string,
   rows: Array<Record<string, unknown>>,
   columns: Array<[string, string[]]>,
+  options?: CompactTableOptions,
 ): void {
-  const lines = formatCompactTable(title, rows, columns);
+  const lines = formatCompactTable(title, rows, columns, options);
   if (lines[0] !== undefined) lines[0] = lines[0].replace(`=== ${title} ===`, `${c.bright}=== ${title} ===${c.reset}`);
   emitLines(lines);
 }

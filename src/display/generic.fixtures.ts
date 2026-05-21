@@ -50,6 +50,52 @@ export const missionsFixture = {
   ],
 };
 
+export const activeMissionsFixture = {
+  message: 'Active missions',
+  missions: {
+    active: [
+      {
+        difficulty: 2,
+        expires_in_ticks: 17,
+        mission_id: 'mission-distress-combatdummy6',
+        objectives: [
+          {
+            description: 'Rescue CombatDummy6',
+            progress: { current: 0, required: 1 },
+            target: { name: 'CombatDummy6', system_id: 'markab' },
+            type: 'distress_rescue',
+          },
+        ],
+        rewards: {
+          credits: 0,
+          skill_xp: { piloting: 25 },
+        },
+        title: 'Distress Call: CombatDummy6',
+        type: 'distress',
+      },
+      {
+        difficulty: 3,
+        expires_in_ticks: 22,
+        mission_id: 'mission-distress-wealthyminer2023',
+        objectives: [
+          {
+            description: 'Rescue WealthyMiner2023',
+            progress: { current: 0, required: 1 },
+            target: { name: 'WealthyMiner2023', system_id: 'electra' },
+            type: 'distress_rescue',
+          },
+        ],
+        rewards: {
+          skill_xp: { piloting: 50 },
+        },
+        title: 'Distress Call: WealthyMiner2023',
+        type: 'distress',
+      },
+    ],
+    max_missions: 5,
+  },
+};
+
 export const factionsFixture = {
   factions: [
     {
@@ -77,6 +123,7 @@ export const factionsFixture = {
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures = {
+  get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
