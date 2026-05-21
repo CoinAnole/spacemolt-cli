@@ -393,6 +393,18 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('simple message formatter does not hide a rich two-key payload', () => {
+    const { stdout, stderr } = captureStructuredOutput('claim_insurance', {
+      message: 'Active policies',
+      policies: [{ policy_id: 'policy-1', coverage: 50000 }],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).toContain('policy-1');
+    expect(stdout).not.toContain('OK: Active policies');
+  });
+
   test('catalog list responses do not drift against market formatter', () => {
     const { stdout, stderr } = captureStructuredOutput('catalog', catalogItemsFixture);
 

@@ -242,7 +242,10 @@ export const genericFormatters = [
   // Simple message
   formatter(
     (r) => {
-      if (!r.message || Object.keys(r).length > 2) return false;
+      if (!r.message) return false;
+      const extraKeys = Object.keys(r).filter((key) => key !== 'message');
+      if (extraKeys.length > 1) return false;
+      if (extraKeys.some((key) => isRecord(r[key]) || Array.isArray(r[key]))) return false;
       emitLine(`${c.green}OK:${c.reset} ${r.message}`);
       return true;
     },
