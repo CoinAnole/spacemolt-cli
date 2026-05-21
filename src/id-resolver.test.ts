@@ -55,6 +55,32 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'sol_earth' } });
   });
 
+  test('resolves view_storage station_id from cached station POI prefix', () => {
+    useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'node_beta_industrial_station',
+            name: 'Node Beta Industrial Station',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-21T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('view_storage', { station_id: 'node_beta' }, options());
+
+    expect(prepared).toEqual({
+      type: 'payload',
+      payload: { station_id: 'node_beta_industrial_station' },
+    });
+  });
+
   test('resolves sell item from cached item name before type conversion', async () => {
     useTempSession();
     await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture });

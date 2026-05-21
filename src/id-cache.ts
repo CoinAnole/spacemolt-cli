@@ -49,6 +49,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   use_item: { item: ['item_id', 'id'] },
   create_sell_order: { item: ['item_id', 'id'] },
   create_buy_order: { item: ['item_id', 'id'] },
+  view_storage: { poi: ['station_id'] },
+  view_faction_storage: { poi: ['station_id'] },
 };
 
 interface Clock {
