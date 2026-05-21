@@ -57,35 +57,14 @@ By default all session state and saved login credentials are stored in the platf
 | --- | --- |
 | `session.json` | Default session file (API session ID, player ID, expiry) |
 | `sessions/<profile>.json` | Named profile session files |
-| `spacemolt_credentials.yaml` | Saved credential profiles for auto-login |
 
-#### Credential Profiles (`spacemolt_credentials.yaml`)
+#### Profile Sessions
 
-The optional `spacemolt_credentials.yaml` file lets you store named login profiles so you don't have to pass credentials on the command line. The CLI looks for this file in the following locations, in order:
-
-1. Platform config directory, e.g. `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/spacemolt_credentials.yaml` on Linux or `~/Library/Application Support/spacemolt-cli/spacemolt_credentials.yaml` on macOS
-2. `./spacemolt_credentials.yaml` (current working directory)
-
-Example `spacemolt_credentials.yaml`:
-
-```yaml
-credentials:
-  main:
-    username: myname
-    password: mypassword
-    empire: outerrim
-  alt:
-    username: othername
-    password: otherpassword
-```
-
-Profiles are used automatically when you select a profile with `--profile`. You can also list stored profiles:
+Named profiles keep player sessions isolated. Credentials are saved in that profile's session file after a successful `login` or `register`, so there is no separate credentials file to maintain. You can list stored profile session files:
 
 ```bash
 bun run src/client.ts profile list
 ```
-
-Named profiles keep player sessions isolated:
 
 ```bash
 bun run src/client.ts --profile marlowe get_status

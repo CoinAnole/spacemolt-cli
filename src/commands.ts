@@ -96,7 +96,7 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
   },
   profile: {
     usage: '[list]',
-    description: 'List credential profiles available for named sessions.',
+    description: 'List saved named profile sessions.',
     example: 'spacemolt profile list',
     category: 'Session management',
     args: [],

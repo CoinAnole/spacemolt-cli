@@ -40,14 +40,6 @@ export interface GlobalOptions {
 
 export type OutputFormat = 'table' | 'json' | 'yaml' | 'text';
 
-export interface CredentialProfile {
-  name: string;
-  username?: string;
-  password?: string;
-  empire?: string;
-  registration_code?: string;
-}
-
 export interface CommandGroup {
   key: string;
   label: string;

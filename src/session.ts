@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { API_BASE, c, DEBUG, VERSION } from './runtime.ts';
 import { requestJson } from './transport.ts';
-import type { APIResponse, CredentialProfile, Session } from './types.ts';
+import type { APIResponse, Session } from './types.ts';
 
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
@@ -23,9 +23,6 @@ export function getSpacemoltHome(
 export function getDefaultSessionPath(): string {
   return path.join(getSpacemoltHome(), 'session.json');
 }
-export function getDefaultCredentialsPath(homeDir?: string, platform?: string, env?: EnvLike): string {
-  return path.join(getSpacemoltHome(homeDir, platform, env), 'spacemolt_credentials.yaml');
-}
 
 export function validateProfileName(profile: string): string {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) {
@@ -34,68 +31,53 @@ export function validateProfileName(profile: string): string {
   return profile;
 }
 
-export function getCredentialsPath(homeDir?: string, platform?: string, env?: EnvLike): string {
-  const defCred = getDefaultCredentialsPath(homeDir, platform, env);
-  if (fs.existsSync(defCred)) return defCred;
-  return path.join(process.cwd(), 'spacemolt_credentials.yaml');
+interface ProfileSessionSummary {
+  name: string;
+  username?: string;
+  playerId?: string;
 }
 
-export function parseCredentialProfiles(contents: string): CredentialProfile[] {
-  const profiles: CredentialProfile[] = [];
-  let inCredentials = false;
-  let current: CredentialProfile | undefined;
-
-  for (const line of contents.split(/\r?\n/)) {
-    if (/^credentials:\s*$/.test(line)) {
-      inCredentials = true;
-      continue;
-    }
-    if (!inCredentials || line.trim() === '' || line.trimStart().startsWith('#')) continue;
-
-    const profileMatch = line.match(/^ {2}([A-Za-z0-9._-]+):\s*$/);
-    if (profileMatch?.[1]) {
-      current = { name: profileMatch[1] };
-      profiles.push(current);
-      continue;
-    }
-
-    const fieldMatch = line.match(/^ {4}([A-Za-z0-9_]+):\s*(.*)$/);
-    if (current && fieldMatch?.[1]) {
-      const rawValue = (fieldMatch[2] || '').trim();
-      const value = rawValue.replace(/^["']|["']$/g, '');
-      if (['username', 'password', 'empire', 'registration_code'].includes(fieldMatch[1])) {
-        current[fieldMatch[1] as keyof Omit<CredentialProfile, 'name'>] = value;
-      }
-    }
-  }
-
-  return profiles;
+export function getProfileSessionsDir(homeDir?: string, platform?: string, env?: EnvLike): string {
+  return path.join(getSpacemoltHome(homeDir, platform, env), 'sessions');
 }
 
-export function loadCredentialProfiles(homeDir?: string, platform?: string, env?: EnvLike): CredentialProfile[] {
+export function listProfileSessions(homeDir?: string, platform?: string, env?: EnvLike): ProfileSessionSummary[] {
+  const sessionsDir = getProfileSessionsDir(homeDir, platform, env);
   try {
-    return parseCredentialProfiles(fs.readFileSync(getCredentialsPath(homeDir, platform, env), 'utf-8'));
+    return fs
+      .readdirSync(sessionsDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => {
+        const name = path.basename(entry.name, '.json');
+        try {
+          const session = JSON.parse(fs.readFileSync(path.join(sessionsDir, entry.name), 'utf-8'));
+          return {
+            name,
+            username: typeof session.username === 'string' ? session.username : undefined,
+            playerId: typeof session.player_id === 'string' ? session.player_id : undefined,
+          };
+        } catch {
+          return { name };
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   } catch {
     return [];
   }
 }
 
-export function findCredentialProfile(name: string): CredentialProfile | undefined {
-  return loadCredentialProfiles().find((profile) => profile.name === name);
-}
-
 export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike): void {
-  const profiles = loadCredentialProfiles(homeDir, platform, env);
+  const profiles = listProfileSessions(homeDir, platform, env);
   if (!profiles.length) {
-    console.log(`No profiles found in ${getCredentialsPath(homeDir, platform, env)}.`);
+    console.log(`No profiles found in ${getProfileSessionsDir(homeDir, platform, env)}.`);
     return;
   }
 
   console.log(`${c.bright}Profiles${c.reset}`);
   for (const profile of profiles) {
     const user = profile.username ? ` username=${profile.username}` : '';
-    const empire = profile.empire ? ` empire=${profile.empire}` : '';
-    console.log(`  ${profile.name}${user}${empire}`);
+    const player = profile.playerId ? ` player_id=${profile.playerId}` : '';
+    console.log(`  ${profile.name}${user}${player}`);
   }
 }
 
@@ -228,10 +210,6 @@ export class SessionManager {
       created_at: data.session.created_at,
       expires_at: data.session.expires_at,
     };
-    const profName = this.profile;
-    const profile = profName ? findCredentialProfile(profName) : undefined;
-    if (profile?.username) session.username = profile.username;
-    if (profile?.password) session.password = profile.password;
     await this.saveSession(session);
     return session;
   }

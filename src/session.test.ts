@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { afterAll, describe, expect, mock, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -19,24 +19,9 @@ mock.module('node:os', () => {
   };
 });
 
-const { getCredentialsPath, getSpacemoltHome, SessionManager } = await import('./session.ts');
+const { getSpacemoltHome, SessionManager } = await import('./session.ts');
 
 import type { Session } from './types.ts';
-
-beforeAll(() => {
-  const credDir = path.join(tempDir, '.config', 'spacemolt-cli');
-  fs.mkdirSync(credDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(credDir, 'spacemolt_credentials.yaml'),
-    `
-credentials:
-  test_profile:
-    username: my_user
-    password: my_password
-`,
-    'utf-8',
-  );
-});
 
 afterAll(() => {
   fs.rmSync(tempDir, { recursive: true, force: true });
@@ -86,21 +71,42 @@ describe('SessionManager', () => {
     );
   });
 
-  test('legacy hermes credential paths are ignored', () => {
+  test('credential files are ignored', async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-legacy-cred-test-'));
     try {
-      const legacyDir = path.join(home, '.hermes', 'spacemolt');
-      fs.mkdirSync(legacyDir, { recursive: true });
-      fs.writeFileSync(path.join(legacyDir, 'spacemolt_credentials.yaml'), 'credentials:\n  legacy: {}\n');
+      const configDir = path.join(home, '.config', 'spacemolt-cli');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(configDir, 'spacemolt_credentials.yaml'),
+        'credentials:\n  test_profile:\n    username: ignored\n    password: ignored\n',
+      );
 
-      expect(getCredentialsPath(home, 'linux', {})).not.toContain('.hermes');
-      expect(getCredentialsPath(home, 'linux', {})).toBe(path.join(process.cwd(), 'spacemolt_credentials.yaml'));
+      const manager = new SessionManager({
+        profile: 'test_profile',
+        sessionPath: path.join(home, '.config', 'spacemolt-cli', 'sessions', 'test_profile.json'),
+        apiBase: 'https://api.spacemolt.test/api/v2',
+        transport: (async () => ({
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_created_without_credentials',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        })) as unknown as typeof requestJson,
+      });
+
+      const session = await manager.createSession();
+      expect(session.username).toBeUndefined();
+      expect(session.password).toBeUndefined();
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }
   });
 
-  test('profile credentials loaded into new sessions', async () => {
+  test('new profile sessions are created without separate credential seeding', async () => {
     let transportCalled = false;
     const mockTransport = async (url: string, options?: JsonRequestOptions): Promise<JsonResponse<APIResponse>> => {
       transportCalled = true;
@@ -128,13 +134,13 @@ describe('SessionManager', () => {
     const session = await manager.createSession();
     expect(transportCalled).toBe(true);
     expect(session.id).toBe('sess_created_123');
-    expect(session.username).toBe('my_user');
-    expect(session.password).toBe('my_password');
+    expect(session.username).toBeUndefined();
+    expect(session.password).toBeUndefined();
 
     const loaded = await manager.loadSession();
     expect(loaded?.id).toBe('sess_created_123');
-    expect(loaded?.username).toBe('my_user');
-    expect(loaded?.password).toBe('my_password');
+    expect(loaded?.username).toBeUndefined();
+    expect(loaded?.password).toBeUndefined();
   });
 
   test('profile auth success behavior', async () => {

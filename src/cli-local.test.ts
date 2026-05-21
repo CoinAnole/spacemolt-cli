@@ -157,23 +157,31 @@ describe('CLI local usability behavior', () => {
     expect(withdraw.stdout).toContain('"target": "self"');
   });
 
-  test('profile list reads local credential profile names without secrets', async () => {
+  test('profile list reads saved profile session names without secrets', async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
     const originalHome = process.env.HOME;
-    const configDir = path.join(home, '.config', 'spacemolt-cli');
-    fs.mkdirSync(configDir, { recursive: true });
+    const sessionDir = path.join(home, '.config', 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionDir, { recursive: true });
     fs.writeFileSync(
-      path.join(configDir, 'spacemolt_credentials.yaml'),
-      [
-        'credentials:',
-        '  marlowe:',
-        '    username: "Marlowe"',
-        '    password: "REDACTED"',
-        '  rescue:',
-        '    username: "FuelRescue"',
-        '    password: "secret"',
-        '',
-      ].join('\n'),
+      path.join(sessionDir, 'marlowe.json'),
+      `${JSON.stringify({
+        id: 'sess_marlowe',
+        username: 'Marlowe',
+        password: 'REDACTED',
+        player_id: 'player_marlowe',
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 3600000).toISOString(),
+      })}\n`,
+    );
+    fs.writeFileSync(
+      path.join(sessionDir, 'rescue.json'),
+      `${JSON.stringify({
+        id: 'sess_rescue',
+        username: 'FuelRescue',
+        password: 'secret',
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 3600000).toISOString(),
+      })}\n`,
     );
     try {
       process.env.HOME = home;
@@ -182,6 +190,7 @@ describe('CLI local usability behavior', () => {
       expect(result.stdout).toContain('marlowe');
       expect(result.stdout).toContain('FuelRescue');
       expect(result.stdout).not.toContain('REDACTED');
+      expect(result.stdout).not.toContain('secret');
     } finally {
       if (originalHome === undefined) delete process.env.HOME;
       else process.env.HOME = originalHome;
