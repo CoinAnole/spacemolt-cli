@@ -65,6 +65,10 @@ function runClient(
   };
 }
 
+function stripAnsi(value: string): string {
+  return value.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '');
+}
+
 afterEach(() => {
   setOutputMode({
     json: process.env.SPACEMOLT_OUTPUT === 'json',
@@ -184,12 +188,13 @@ describe('CLI local usability behavior', () => {
         expires_at: new Date(Date.now() + 3600000).toISOString(),
       })}\n`,
     );
+    fs.writeFileSync(path.join(sessionDir, 'marlowe_state.json'), '{"lastCommand":"status"}\n');
+    fs.writeFileSync(path.join(sessionDir, 'marlowe.ids.json'), '{"sol_earth":"Earth"}\n');
     try {
       process.env.HOME = home;
       const result = await runDirect(['profile', 'list'], { HOME: home });
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('* marlowe');
-      expect(result.stdout).toContain('FuelRescue');
+      expect(stripAnsi(result.stdout).split('\n')).toEqual(['Profiles', '* marlowe', '  rescue']);
       expect(result.stdout).not.toContain('REDACTED');
       expect(result.stdout).not.toContain('secret');
     } finally {

@@ -66,7 +66,13 @@ export function listProfileSessions(homeDir?: string, platform?: string, env?: E
   try {
     return fs
       .readdirSync(sessionsDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .filter(
+        (entry) =>
+          entry.isFile() &&
+          entry.name.endsWith('.json') &&
+          !entry.name.endsWith('_state.json') &&
+          !entry.name.endsWith('.ids.json'),
+      )
       .map((entry) => {
         const name = path.basename(entry.name, '.json');
         try {
@@ -97,9 +103,7 @@ export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike)
   console.log(`${c.bright}Profiles${c.reset}`);
   for (const profile of profiles) {
     const marker = profile.isDefault ? '* ' : '  ';
-    const user = profile.username ? ` username=${profile.username}` : '';
-    const player = profile.playerId ? ` player_id=${profile.playerId}` : '';
-    console.log(`${marker}${profile.name}${user}${player}`);
+    console.log(`${marker}${profile.name}`);
   }
 }
 
