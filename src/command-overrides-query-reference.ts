@@ -313,6 +313,11 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage: '<empire_id> <message>  (send message to empire leadership, max 1000 chars)',
     category: 'Petition (empire messages)',
     apiRoute: 'POST /api/v2/spacemolt_social/petition',
-    positionals: ['empire_id', 'message'],
+    positionals: [
+      'empire_id',
+      {
+        rest: 'message',
+      },
+    ],
   },
 };

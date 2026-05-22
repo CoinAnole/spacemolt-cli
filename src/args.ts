@@ -117,11 +117,16 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
       continue;
     }
 
+    const argDef = argDefs[positionalIndex];
     const keyValue = !inPositionalOnlyMode ? parseKeyValue(arg) : null;
+    if (argDef && typeof argDef === 'object' && argDef.rest && (!keyValue || keyValue.key !== argDef.rest)) {
+      payload[argDef.rest] = args.slice(i).join(' ');
+      break;
+    }
+
     if (keyValue) {
       setPayloadField(keyValue.key, keyValue.value);
     } else {
-      const argDef = argDefs[positionalIndex];
       if (argDef) {
         if (typeof argDef === 'string') {
           setPayloadField(argDef, arg);

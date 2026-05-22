@@ -401,6 +401,29 @@ describe('parseArgs - rest args', () => {
     expect(payload.channel).toBe('system');
     expect(payload.content).toBe('this is a message');
   });
+
+  test('rest arg captures free text containing equals signs', () => {
+    const { payload } = parseOk(['chat', 'local', 'test with key=value pair']);
+    expect(payload.channel).toBe('local');
+    expect(payload.content).toBe('test with key=value pair');
+  });
+
+  test('rest arg at first position captures free text containing equals signs', () => {
+    const { payload } = parseOk(['captains_log_add', 'test with key=value in text']);
+    expect(payload.entry).toBe('test with key=value in text');
+  });
+
+  test('rest arg after a positional captures free text containing equals signs', () => {
+    const { payload } = parseOk(['create_note', 'test-title', 'body with key=value text']);
+    expect(payload.title).toBe('test-title');
+    expect(payload.content).toBe('body with key=value text');
+  });
+
+  test('petition message captures free text containing equals signs', () => {
+    const { payload } = parseOk(['petition', 'solarian', 'message with key=value text']);
+    expect(payload.empire_id).toBe('solarian');
+    expect(payload.message).toBe('message with key=value text');
+  });
 });
 
 describe('parseArgs - tightened semantics', () => {
