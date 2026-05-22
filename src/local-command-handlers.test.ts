@@ -269,6 +269,99 @@ describe('local command handlers', () => {
     expect(JSON.parse(stdout.join('\n')).structuredContent.ids[0].id).toBe('sol_earth');
   });
 
+  test('ids command filters cached hints with search forms', async () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'fuel_cell',
+            name: 'Fuel Cell',
+            sourceCommand: 'view_market',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const client = { config: { profile: 'pilot' } } as unknown as SpaceMoltClient;
+
+    for (const args of [
+      ['--json', 'ids', 'item', '--search', 'fuel'],
+      ['--json', 'ids', 'item', '--search=fuel'],
+      ['--json', 'ids', 'item', 'search=fuel'],
+    ]) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+
+      const exitCode = await runInvocation(
+        args,
+        client,
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      const ids = JSON.parse(stdout.join('\n')).structuredContent.ids;
+      expect(ids.map((hint: { id: string }) => hint.id)).toEqual(['fuel_cell']);
+    }
+  });
+
+  test('ids command filters text output with search', async () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'nova_terra_central',
+            name: 'Central Station',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'poi',
+            id: 'nova_terra_industrial_belt',
+            name: 'Industrial Belt',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const client = { config: { profile: 'pilot' } } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['ids', 'poi', '--search', 'belt'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).toContain('nova_terra_industrial_belt');
+    expect(stdout.join('\n')).not.toContain('nova_terra_central');
+  });
+
   test('where-can-i requires a search query before reading cache', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

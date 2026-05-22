@@ -222,17 +222,22 @@ export function hintsForKind(kind: IdKind, hints = loadIdCacheSync()): IdHint[] 
   return sortNewest(dedupeHints(hints.filter((hint) => hint.kind === kind)));
 }
 
-export function searchItemHints(query: string, hints = loadIdCacheSync()): IdHint[] {
+export function searchIdHints(kind: IdKind, query: string, hints = loadIdCacheSync()): IdHint[] {
   const normalized = query.trim().toLowerCase();
-  if (!normalized) return [];
+  if (!normalized) return hintsForKind(kind, hints);
   return sortNewest(
     dedupeHints(
       hints.filter((hint) => {
-        if (hint.kind !== 'item') return false;
+        if (hint.kind !== kind) return false;
         return hint.id.toLowerCase().includes(normalized) || (hint.name || '').toLowerCase().includes(normalized);
       }),
     ),
   );
+}
+
+export function searchItemHints(query: string, hints = loadIdCacheSync()): IdHint[] {
+  if (!query.trim()) return [];
+  return searchIdHints('item', query, hints);
 }
 
 export function resolveCachedId(kind: IdKind, query: string, hints = loadIdCacheSync()): CachedIdResolveResult {
@@ -311,17 +316,21 @@ export function printCachedIdSuggestions(
   for (const hint of suggestions) err(`  ${formatHint(hint)}`);
 }
 
-export function printIds(kind: IdKind, sessionPath?: string, writer?: CliWriter): void {
+export function printIds(kind: IdKind, sessionPath?: string, writer?: CliWriter, query?: string): void {
   const hints = loadIdCacheSync(sessionPath);
-  const filtered = hintsForKind(kind, hints);
+  const filtered = query ? searchIdHints(kind, query, hints) : hintsForKind(kind, hints);
   const out = writer?.out.bind(writer) ?? console.log;
   if (filtered.length === 0) {
-    out(`No cached ${kind} IDs yet.`);
-    printDiscoveryCommands(kind, writer);
+    if (query) {
+      out(`No cached ${kind} matches for "${query}".`);
+    } else {
+      out(`No cached ${kind} IDs yet.`);
+      printDiscoveryCommands(kind, writer);
+    }
     return;
   }
 
-  out(`${c.bright}${kind} IDs${c.reset}`);
+  out(query ? `${c.bright}${kind} IDs matching "${query}"${c.reset}` : `${c.bright}${kind} IDs${c.reset}`);
   for (const hint of filtered) out(`  ${formatHint(hint)}`);
 }
 

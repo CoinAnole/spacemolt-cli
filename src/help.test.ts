@@ -98,8 +98,8 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
-    expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
-    expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
+    expect(output).toContain('spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player IDs');
+    expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });
 
   test('renderProgressiveHelp writes unauthenticated start steps', () => {
@@ -167,8 +167,8 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
-    expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
-    expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
+    expect(output).toContain('spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player IDs');
+    expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });
 
   test('renderProgressiveHelp writes docked, asteroid, escape pod, and space states', () => {
@@ -362,8 +362,8 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
-    expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
-    expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
+    expect(output).toContain('spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player IDs');
+    expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });
 
   test('showFullHelp documents named profile environment without session path override', () => {

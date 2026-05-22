@@ -77,9 +77,9 @@ export { COMMAND_OVERRIDES };
 
 export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
   ids: {
-    usage: '<poi|system|item|player>',
+    usage: '<poi|system|item|player> [--search text]',
     description: 'Show recently discovered IDs from cached command output.',
-    example: 'spacemolt ids poi',
+    example: 'spacemolt ids item --search fuel',
     category: 'Reference & Help',
     args: ['kind'],
     required: ['kind'],

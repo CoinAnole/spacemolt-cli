@@ -25,6 +25,7 @@ import {
   loadIdCacheSync,
   printIds,
   printWhereCanI,
+  searchIdHints,
   searchItemHints,
 } from './id-cache.ts';
 import { defaultOpenApiCacheDir, type OpenApiCacheFile, refreshOpenApiCache } from './openapi-cache.ts';
@@ -209,7 +210,27 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
   },
 };
 
-const idsHandler: CommandHandler<{ kind: IdKind }, { kind: IdKind; hints: IdHint[] }> = {
+function parseSearchArg(argv: string[], startIndex: number): string | undefined {
+  for (let i = startIndex; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (!arg) continue;
+    if (arg === '--search' || arg === '-s')
+      return (
+        argv
+          .slice(i + 1)
+          .join(' ')
+          .trim() || undefined
+      );
+    if (arg.startsWith('--search=')) return arg.slice('--search='.length).trim() || undefined;
+    if (arg.startsWith('search=')) return arg.slice('search='.length).trim() || undefined;
+  }
+  return undefined;
+}
+
+const idsHandler: CommandHandler<
+  { kind: IdKind; search?: string },
+  { kind: IdKind; hints: IdHint[]; search?: string }
+> = {
   name: 'ids',
   requiresNetwork: false,
   parse(argv) {
@@ -219,25 +240,29 @@ const idsHandler: CommandHandler<{ kind: IdKind }, { kind: IdKind; hints: IdHint
         ok: false,
         error: {
           code: 'validation_error',
-          message: 'Usage: spacemolt ids <poi|system|item|player>',
-          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player>`,
+          message: 'Usage: spacemolt ids <poi|system|item|player> [--search text]',
+          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player> [--search text]`,
           exitCode: 1,
         },
       };
     }
-    return { ok: true, payload: { kind } };
+    return { ok: true, payload: { kind, search: parseSearchArg(argv, 2) } };
   },
   run(payload, _options, client, context) {
     const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
     const hints = loadIdCacheSync(sessionPath);
-    return { kind: payload.kind, hints: hintsForKind(payload.kind, hints) };
+    return {
+      kind: payload.kind,
+      search: payload.search,
+      hints: payload.search ? searchIdHints(payload.kind, payload.search, hints) : hintsForKind(payload.kind, hints),
+    };
   },
   render(result, options, client, context) {
     if (options.json) {
-      writeJson(context, { structuredContent: { kind: result.kind, ids: result.hints } });
+      writeJson(context, { structuredContent: { kind: result.kind, search: result.search, ids: result.hints } });
     } else {
       const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
-      printIds(result.kind, sessionPath, context?.writer);
+      printIds(result.kind, sessionPath, context?.writer, result.search);
     }
     return 0;
   },
