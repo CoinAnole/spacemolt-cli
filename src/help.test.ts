@@ -111,6 +111,7 @@ describe('help output branches', () => {
     expect(output).toContain('--jq              Extract with path syntax');
     expect(output).toContain('.key[0].field');
     expect(output).toContain('Projections read from structuredContent when present.');
+    expect(output).toContain('--field/--fields output only the selected projection, even with --json/--format=json.');
   });
 
   test('renderProgressiveHelp writes unauthenticated start steps', () => {
@@ -403,6 +404,7 @@ describe('help output branches', () => {
     expect(output).toContain('--json, -j          Full API response as JSON');
     expect(output).toContain('--jq <expr>         Extract with path syntax');
     expect(output).toContain('.key[0].field');
+    expect(output).toContain('--field/--fields output only the selected projection, even with --json/--format=json.');
     expect(output).toContain('SPACEMOLT_OUTPUT    Set to json for full API response JSON');
   });
 

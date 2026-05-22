@@ -1,11 +1,17 @@
 import { getFieldValue } from './response.ts';
 
+type PathResolution = { found: true; value: unknown } | { found: false };
+
 export function evaluateJq(data: Record<string, unknown>, expr: string): unknown {
   const trimmed = expr.trim();
 
   if (trimmed === '.') return data;
 
-  if (trimmed.startsWith('.')) return evalPath(data, trimmed);
+  if (trimmed.includes(',')) {
+    throw new Error('--jq does not support multiple values (use separate calls)');
+  }
+
+  if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed);
 
   throw new Error(`Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field`);
 }
@@ -15,7 +21,9 @@ function evalPath(data: unknown, expr: string): unknown {
 
   const bracketIndex = withoutDot.indexOf('[');
   if (bracketIndex === -1) {
-    return getFieldValue(data, withoutDot);
+    const resolved = resolvePath(data, withoutDot);
+    if (!resolved.found) throw new Error(`Path not found: "${expr}"`);
+    return resolved.value;
   }
 
   const arrayKey = withoutDot.slice(0, bracketIndex);
@@ -49,10 +57,39 @@ function evalPath(data: unknown, expr: string): unknown {
     ]
       .filter(Boolean)
       .join('.');
-    return getFieldValue(data, indexedPath);
+    const resolved = resolvePath(data, indexedPath);
+    if (!resolved.found) throw new Error(`Path not found: "${expr}"`);
+    return resolved.value;
   }
 
   throw new Error(`Unsupported bracket content: "[${bracketContent}]"`);
+}
+
+function hasUnsupportedWhitespace(expr: string): boolean {
+  return /\s/.test(expr.replace(/\[[^\]]*\]/g, '[]'));
+}
+
+function resolvePath(obj: unknown, path: string): PathResolution {
+  if (!path || typeof obj !== 'object' || obj === null) return { found: false };
+
+  const parts = path.split('.');
+  let current: unknown = obj;
+
+  for (const part of parts) {
+    if (!part || current === null || current === undefined) return { found: false };
+    if (Array.isArray(current)) {
+      const index = Number.parseInt(part, 10);
+      if (Number.isNaN(index) || !Object.hasOwn(current, index)) return { found: false };
+      current = current[index];
+    } else if (typeof current === 'object') {
+      if (!Object.hasOwn(current, part)) return { found: false };
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return { found: false };
+    }
+  }
+
+  return { found: true, value: current };
 }
 
 export function formatJqResult(value: unknown, compact = false): string {

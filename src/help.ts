@@ -587,6 +587,7 @@ ${c.bright}Global Flags:${c.reset}
 ${c.bright}Output Precedence:${c.reset}
   --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
   Projections read from structuredContent when present.
+  --field/--fields output only the selected projection, even with --json/--format=json.
 `);
 }
 
@@ -667,6 +668,7 @@ ${c.bright}Global Flags:${c.reset}
 ${c.bright}Output Precedence:${c.reset}
   --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
   Projections read from structuredContent when present.
+  --field/--fields output only the selected projection, even with --json/--format=json.
 `);
 }
 
@@ -741,6 +743,7 @@ ${c.bright}Usage:${c.reset}
     Output precedence:
       --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
       Projections read from structuredContent when present.
+      --field/--fields output only the selected projection, even with --json/--format=json.
       JSON errors remain full response envelopes for compatibility.
 
     Local command discovery:

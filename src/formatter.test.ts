@@ -230,6 +230,52 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toBe('5');
   });
 
+  test('--jq rejects comma-separated expressions instead of silently returning null', () => {
+    const rendered = renderStructuredResult(
+      'get_status',
+      outputModeFixture,
+      globalOptions({ jq: '.ship.fuel, .ship.class_name' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain(
+      'Error: --jq does not support multiple values',
+    );
+  });
+
+  test('--jq rejects whitespace-separated expressions instead of silently returning null', () => {
+    const rendered = renderStructuredResult(
+      'get_status',
+      outputModeFixture,
+      globalOptions({ jq: '.ship.fuel .ship.class_name' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('Unsupported jq expression');
+  });
+
+  test('--jq reports missing paths while preserving existing null values', () => {
+    const missing = renderStructuredResult(
+      'get_status',
+      outputModeFixture,
+      globalOptions({ jq: '.ship.fuel_capacity' }),
+    );
+    const existingNull = renderStructuredResult(
+      'get_status',
+      { ...outputModeFixture, ship: { ...outputModeFixture.ship, fuel_capacity: null } },
+      globalOptions({ jq: '.ship.fuel_capacity' }),
+    );
+
+    expect(missing.success).toBe(false);
+    expect(missing.stdout).toEqual([]);
+    expect(missing.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('Path not found: ".ship.fuel_capacity"');
+    expect(existingNull.success).toBe(true);
+    expect(existingNull.stderr).toEqual([]);
+    expect(existingNull.stdout).toEqual(['null']);
+  });
+
   test('--compact compacts projected JSON', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       json: true,
