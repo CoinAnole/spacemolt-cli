@@ -117,7 +117,7 @@ describe('response renderer', () => {
         },
       },
       { ...baseOptions, dryRun: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -137,7 +137,7 @@ describe('response renderer', () => {
         response: { error: { code: 'invalid_poi', message: 'Unknown POI' } },
       },
       { ...baseOptions, json: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -148,9 +148,11 @@ describe('response renderer', () => {
   test('renderResponse prints cached ID suggestions for ID-like errors', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-renderer-'));
     try {
-      const sessionPath = path.join(tempDir, 'pilot.json');
+      const configHome = path.join(tempDir, 'config');
+      const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+      fs.mkdirSync(sessionsDir, { recursive: true });
       fs.writeFileSync(
-        path.join(tempDir, 'pilot.ids.json'),
+        path.join(sessionsDir, 'pilot.ids.json'),
         `${JSON.stringify({
           version: 1,
           hints: [
@@ -165,8 +167,9 @@ describe('response renderer', () => {
         })}\n`,
       );
       const capture = fakeContext();
-      const client = { config: { sessionPath } } as SpaceMoltClient;
+      const client = { config: { profile: 'pilot' } } as unknown as SpaceMoltClient;
 
+      capture.context.env.XDG_CONFIG_HOME = configHome;
       const exitCode = await renderResponse(
         {
           command: 'travel',
@@ -196,7 +199,7 @@ describe('response renderer', () => {
         response: { structuredContent: { player: { username: 'coin' } } },
       },
       { ...baseOptions, dryRun: true, fields: ['player.username'] },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -227,7 +230,7 @@ describe('response renderer', () => {
         },
       },
       { ...baseOptions, dryRun: true, noTimestamp: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -261,7 +264,7 @@ describe('response renderer', () => {
         },
       },
       { ...baseOptions, dryRun: true, noTimestamp: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -293,7 +296,7 @@ describe('response renderer', () => {
         },
       },
       { ...baseOptions, dryRun: true, noTimestamp: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -324,7 +327,7 @@ describe('response renderer', () => {
         },
       },
       { ...baseOptions, dryRun: true, noTimestamp: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 
@@ -354,7 +357,7 @@ describe('response renderer', () => {
         },
       },
       { ...baseOptions, dryRun: true, json: true },
-      { config: {} } as SpaceMoltClient,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
       capture.context,
     );
 

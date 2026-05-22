@@ -6,7 +6,7 @@ import type { CommandHandler, CommandParseResult } from './command-types.ts';
 import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
-import { getSessionPath } from './session.ts';
+import { tryGetSessionPath } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
 export class ApiCommandHandler implements CommandHandler<Record<string, unknown>, CommandRunResult> {
@@ -27,7 +27,7 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
     }
 
     const config = context?.config ?? getRuntimeConfig(options, context?.env);
-    const sessionPath = getSessionPath(config);
+    const sessionPath = tryGetSessionPath(config, context?.env);
 
     const prepared = preparePayload(
       this.name,

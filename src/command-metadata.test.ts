@@ -149,15 +149,15 @@ describe('command metadata', () => {
     expect(help).not.toContain('spacemolt repair modules');
   });
 
-  test('profile help does not advertise named action forms', () => {
+  test('profile help advertises local action forms without key-value action fields', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
     expect(config).toBeDefined();
     if (!config) return;
-    expect(config?.usage).toBe('[list]');
+    expect(config?.usage).toBe('[list|default [name]]');
     expect(getArgNames(config)).toEqual([]);
 
     const help = captureHelp('profile');
-    expect(help).toContain('spacemolt profile [list]');
+    expect(help).toContain('spacemolt profile [list|default [name]]');
     expect(help).not.toContain('action=...');
     expect(help).not.toContain('--action');
   });

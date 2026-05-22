@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import type { CliRuntimeContext } from './cli-context';
 import { runDoctor } from './doctor';
 import { runInvocation } from './main';
+import { createDefaultConfig } from './runtime';
 
 function fakeContext(stdout: string[], stderr: string[], env: Record<string, string> = {}): CliRuntimeContext {
   return {
@@ -101,20 +102,66 @@ describe('doctor', () => {
     expect(versionCheck?.message).toContain('v');
   });
 
-  test('session path check reports a valid path', async () => {
-    const result = await runDoctor();
+  test('session path check tolerates no default profile', async () => {
+    const configHome = tempDir();
+    let result: Awaited<ReturnType<typeof runDoctor>>;
+    try {
+      result = await runDoctor(undefined, { ...process.env, XDG_CONFIG_HOME: configHome });
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
     const sessionCheck = result.checks.find((c) => c.name === 'session');
     expect(sessionCheck).toBeDefined();
     expect(sessionCheck?.ok).toBe(true);
-    expect(sessionCheck?.message).toContain('spacemolt');
+    expect(sessionCheck?.message).toBe('not initialized');
+    expect(sessionCheck?.detail).toContain('No default profile set.');
   });
 
-  test('profile check reports default when no profile set', async () => {
-    const result = await runDoctor();
+  test('profile check reports no default profile when none is configured', async () => {
+    const configHome = tempDir();
+    let result: Awaited<ReturnType<typeof runDoctor>>;
+    try {
+      result = await runDoctor(undefined, { ...process.env, XDG_CONFIG_HOME: configHome });
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
     const profileCheck = result.checks.find((c) => c.name === 'profile');
     expect(profileCheck).toBeDefined();
     expect(profileCheck?.ok).toBe(true);
-    expect(profileCheck?.message).toBe('default');
+    expect(profileCheck?.message).toBe('No default profile set.');
+  });
+
+  test('profile check reports active profile before saved default profile', async () => {
+    const configHome = tempDir();
+    try {
+      fs.mkdirSync(path.join(configHome, 'spacemolt-cli'), { recursive: true });
+      fs.writeFileSync(path.join(configHome, 'spacemolt-cli', 'config.json'), '{"defaultProfile":"saved"}\n');
+
+      const result = await runDoctor(createDefaultConfig({ profile: 'active' }), {
+        ...process.env,
+        XDG_CONFIG_HOME: configHome,
+      });
+      const profileCheck = result.checks.find((c) => c.name === 'profile');
+
+      expect(profileCheck?.message).toBe('Active profile: active');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('profile check reports saved default profile when no active profile is selected', async () => {
+    const configHome = tempDir();
+    try {
+      fs.mkdirSync(path.join(configHome, 'spacemolt-cli'), { recursive: true });
+      fs.writeFileSync(path.join(configHome, 'spacemolt-cli', 'config.json'), '{"defaultProfile":"saved"}\n');
+
+      const result = await runDoctor(undefined, { ...process.env, XDG_CONFIG_HOME: configHome });
+      const profileCheck = result.checks.find((c) => c.name === 'profile');
+
+      expect(profileCheck?.message).toBe('Default profile: saved');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
   });
 
   test('drift check skipped when no local OpenAPI spec', async () => {
@@ -188,7 +235,10 @@ describe('doctor', () => {
   });
 
   test('doctor subprocess smoke exercises real process exit behavior', () => {
-    const result = runClient(['doctor'], { SPACEMOLT_NO_UPDATE_CHECK: 'true' });
+    const result = runClient(['doctor'], {
+      SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      SPACEMOLT_URL: 'http://127.0.0.1:9/api/v2',
+    });
     expect(result.exitCode).not.toBeNull();
     expect(result.stdout).toContain('SpaceMolt Doctor');
   });

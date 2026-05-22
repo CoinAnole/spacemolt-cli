@@ -7,7 +7,7 @@ import { cacheIdsFromResponse, idKindForCommandField, printCachedIdSuggestions }
 import { displayNotifications } from './notifications.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { c } from './runtime.ts';
-import { getSessionPath } from './session.ts';
+import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 
 export interface CommandRunResult {
@@ -81,14 +81,14 @@ export async function renderResponse(
 
   if (!isJson && response.error) {
     displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp, context });
-    const sessionPath = getSessionPath(client.config);
+    const sessionPath = tryGetSessionPath(client.config, context?.env);
     if (!options.quiet && shouldShowCachedIdSuggestions(command, response.error)) {
       printCachedIdSuggestions(command, undefined, sessionPath, writer);
     }
     return 1;
   }
 
-  const sessionPath = getSessionPath(client.config);
+  const sessionPath = tryGetSessionPath(client.config, context?.env);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
   if (isJson && !hasProjection) {

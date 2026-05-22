@@ -7,7 +7,7 @@ import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, c, type SpaceMoltConfig, VERSION } from './runtime.ts';
-import { ACTIVE_PROFILE, getSessionPath, SessionManager } from './session.ts';
+import { ACTIVE_PROFILE, getDefaultProfile, SessionManager, tryGetSessionPath } from './session.ts';
 import { requestJson } from './transport.ts';
 
 export interface DoctorCheck {
@@ -39,13 +39,14 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
 
   const apiBase = config?.apiBase || API_BASE;
   const profile = config?.profile !== undefined ? config.profile : ACTIVE_PROFILE;
-  const sessionPath = getSessionPath(config);
+  const defaultProfile = getDefaultProfile(undefined, undefined, env);
+  const sessionPath = tryGetSessionPath(config, env);
 
   const sessionStore = new SessionManager({
     apiBase,
     profile,
-    sessionPath,
     debug: config?.debug,
+    env,
   });
 
   try {
@@ -60,17 +61,32 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
   }
 
   try {
-    const exists = fs.existsSync(sessionPath);
-    checks.push(exists ? pass('session', sessionPath) : pass('session', sessionPath, 'file does not exist yet'));
+    if (!sessionPath) {
+      checks.push(
+        pass(
+          'session',
+          'not initialized',
+          'No default profile set. Run login, use --profile or SPACEMOLT_PROFILE, or run "spacemolt profile default <name>".',
+        ),
+      );
+    } else {
+      const exists = fs.existsSync(sessionPath);
+      checks.push(exists ? pass('session', sessionPath) : pass('session', sessionPath, 'file does not exist yet'));
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     checks.push(fail('session', 'error resolving path', msg));
   }
 
-  checks.push(pass('profile', profile || 'default'));
+  const profileMessage = profile
+    ? `Active profile: ${profile}`
+    : defaultProfile
+      ? `Default profile: ${defaultProfile}`
+      : 'No default profile set.';
+  checks.push(pass('profile', profileMessage));
 
   try {
-    const session = await sessionStore.loadSession();
+    const session = sessionPath ? await sessionStore.loadSession() : null;
     if (!session) {
       checks.push(pass('auth', 'no session (run login or register)'));
     } else if (session.player_id) {

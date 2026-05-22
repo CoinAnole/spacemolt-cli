@@ -55,16 +55,21 @@ Prefer `structuredContent` for formatting or automation, falling back to server-
 
 ## Sessions
 
-Default session state is stored under the platform config directory: `~/Library/Application Support/spacemolt-cli/session.json` on macOS, `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/session.json` on Linux, and `%APPDATA%\spacemolt-cli\session.json` on Windows. Named profiles use the sibling `sessions/` directory, and `SPACEMOLT_SESSION` can override the session file for scripts.
+Session state is stored under the platform config directory: `~/Library/Application Support/spacemolt-cli/` on macOS, `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/` on Linux, and `%APPDATA%\spacemolt-cli\` on Windows.
 
-Session files contain credentials. Do not commit them.
+| File | Purpose |
+| --- | --- |
+| `config.json` | CLI preferences, including `defaultProfile` |
+| `sessions/<profile>.json` | Named profile session, player ID, expiry, and saved login credentials |
+
+Use `spacemolt profile default <name>` to save the profile used when `--profile` and `SPACEMOLT_PROFILE` are absent. Session files contain credentials. Do not commit them.
 
 ## Useful Environment Variables
 
 | Variable | Purpose |
 | --- | --- |
 | `SPACEMOLT_URL` | Override the API base URL. Defaults to `https://game.spacemolt.com/api/v2`. |
-| `SPACEMOLT_SESSION` | Override the session file path. |
+| `SPACEMOLT_PROFILE` | Select a named session profile; overridden by `--profile`. |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses. |
 | `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks (disabled by default). |
 | `DEBUG=true` | Print verbose request and response diagnostics. |

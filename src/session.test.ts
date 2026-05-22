@@ -19,7 +19,18 @@ mock.module('node:os', () => {
   };
 });
 
-const { getSpacemoltHome, SessionManager } = await import('./session.ts');
+const {
+  getCliConfigPath,
+  getDefaultProfile,
+  getSpacemoltHome,
+  loadCliConfig,
+  saveCliConfig,
+  SessionManager,
+  setDefaultProfile,
+  showDefaultProfile,
+} = await import('./session.ts');
+
+const publicClient = await import('./client.ts');
 
 import type { Session } from './types.ts';
 
@@ -28,17 +39,16 @@ afterAll(() => {
 });
 
 describe('SessionManager', () => {
-  test('save path and permission behavior', async () => {
+  test('session paths always resolve to named profile files', async () => {
     const manager = new SessionManager({ profile: 'test_profile' });
     const expectedPath = path.join(tempDir, '.config', 'spacemolt-cli', 'sessions', 'test_profile.json');
     expect(manager.getSessionPath()).toBe(expectedPath);
 
+    setDefaultProfile('default_pilot');
     const defaultManager = new SessionManager();
-    expect(defaultManager.getSessionPath()).toBe(path.join(tempDir, '.config', 'spacemolt-cli', 'session.json'));
-
-    const customPath = path.join(tempDir, 'custom.json');
-    const customManager = new SessionManager({ sessionPath: customPath });
-    expect(customManager.getSessionPath()).toBe(customPath);
+    expect(defaultManager.getSessionPath()).toBe(
+      path.join(tempDir, '.config', 'spacemolt-cli', 'sessions', 'default_pilot.json'),
+    );
 
     const sessionObj: Session = {
       id: 'sess_test_perms',
@@ -48,17 +58,27 @@ describe('SessionManager', () => {
     await manager.saveSession(sessionObj);
 
     expect(fs.existsSync(expectedPath)).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, '.config', 'spacemolt-cli', 'session.json'))).toBe(false);
 
     if (process.platform !== 'win32') {
-      const fileStat = fs.statSync(expectedPath);
-      expect(fileStat.mode & 0o777).toBe(0o600);
-
-      const dirStat = fs.statSync(path.dirname(expectedPath));
-      expect(dirStat.mode & 0o777).toBe(0o700);
+      expect(fs.statSync(expectedPath).mode & 0o777).toBe(0o600);
+      expect(fs.statSync(path.dirname(expectedPath)).mode & 0o777).toBe(0o700);
     }
 
-    const loaded = await manager.loadSession();
-    expect(loaded).toEqual(sessionObj);
+    expect(await manager.loadSession()).toEqual(sessionObj);
+  });
+
+  test('missing active and default profile produces an actionable error', async () => {
+    const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
+    fs.rmSync(configPath, { force: true });
+
+    const manager = new SessionManager();
+    expect(() => new SessionManager().getSessionPath()).toThrow(
+      'No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".',
+    );
+    await expect(manager.loadSession()).rejects.toThrow(
+      'No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".',
+    );
   });
 
   test('default app directory follows Linux, macOS, and Windows conventions', () => {
@@ -79,39 +99,100 @@ describe('SessionManager', () => {
     );
   });
 
-  test('credential files are ignored', async () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-legacy-cred-test-'));
-    try {
-      const configDir = path.join(home, '.config', 'spacemolt-cli');
-      fs.mkdirSync(configDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(configDir, 'spacemolt_credentials.yaml'),
-        'credentials:\n  test_profile:\n    username: ignored\n    password: ignored\n',
-      );
+  test('CLI config stores the default profile in the config root', () => {
+    expect(getCliConfigPath()).toBe(path.join(tempDir, '.config', 'spacemolt-cli', 'config.json'));
+  });
 
-      const manager = new SessionManager({
-        profile: 'test_profile',
-        sessionPath: path.join(home, '.config', 'spacemolt-cli', 'sessions', 'test_profile.json'),
-        apiBase: 'https://api.spacemolt.test/api/v2',
-        transport: (async () => ({
-          status: 200,
-          ok: true,
-          data: {
-            session: {
-              id: 'sess_created_without_credentials',
-              created_at: new Date().toISOString(),
-              expires_at: new Date(Date.now() + 3600000).toISOString(),
-            },
-          },
-        })) as unknown as typeof requestJson,
-      });
+  test('default profile config is read and written with hardened permissions', () => {
+    const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
+    fs.rmSync(configPath, { force: true });
 
-      const session = await manager.createSession();
-      expect(session.username).toBeUndefined();
-      expect(session.password).toBeUndefined();
-    } finally {
-      fs.rmSync(home, { recursive: true, force: true });
+    expect(loadCliConfig()).toEqual({});
+    expect(getDefaultProfile()).toBeUndefined();
+
+    saveCliConfig({ defaultProfile: 'marlowe' });
+    expect(loadCliConfig()).toEqual({ defaultProfile: 'marlowe' });
+
+    setDefaultProfile('marlowe');
+
+    expect(getDefaultProfile()).toBe('marlowe');
+    expect(loadCliConfig()).toEqual({ defaultProfile: 'marlowe' });
+
+    expect(JSON.parse(fs.readFileSync(configPath, 'utf-8'))).toEqual({ defaultProfile: 'marlowe' });
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
+      expect(fs.statSync(path.dirname(configPath)).mode & 0o777).toBe(0o700);
     }
+  });
+
+  test('showDefaultProfile writes no-default and current-default messages', () => {
+    const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
+    fs.rmSync(configPath, { force: true });
+    const stdout: string[] = [];
+    const writer = { out: (message: string) => stdout.push(message) };
+
+    showDefaultProfile(writer);
+    setDefaultProfile('marlowe');
+    showDefaultProfile(writer);
+
+    expect(stdout).toEqual(['No default profile set.', 'Default profile: marlowe']);
+  });
+
+  test('public client exports default profile display helper', () => {
+    expect(publicClient.showDefaultProfile).toBe(showDefaultProfile);
+  });
+
+  test('ensureDefaultProfile initializes only when no default exists', () => {
+    const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
+    fs.rmSync(configPath, { force: true });
+
+    const manager = new SessionManager();
+    manager.ensureDefaultProfile();
+    expect(getDefaultProfile()).toBeUndefined();
+
+    manager.ensureDefaultProfile('first_pilot');
+    expect(getDefaultProfile()).toBe('first_pilot');
+
+    manager.ensureDefaultProfile('second_pilot');
+    expect(getDefaultProfile()).toBe('first_pilot');
+  });
+
+  test('invalid default profile config is ignored', () => {
+    const configDir = path.join(tempDir, '.config', 'spacemolt-cli');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, 'config.json'), '{"defaultProfile":"../bad"}\n');
+
+    expect(loadCliConfig()).toEqual({});
+    expect(getDefaultProfile()).toBeUndefined();
+  });
+
+  test('credential files are ignored', async () => {
+    const configDir = path.join(tempDir, '.config', 'spacemolt-cli');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(configDir, 'spacemolt_credentials.yaml'),
+      'credentials:\n  test_profile:\n    username: ignored\n    password: ignored\n',
+    );
+
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      transport: (async () => ({
+        status: 200,
+        ok: true,
+        data: {
+          session: {
+            id: 'sess_created_without_credentials',
+            created_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 3600000).toISOString(),
+          },
+        },
+      })) as unknown as typeof requestJson,
+    });
+
+    const session = await manager.createSession();
+    expect(session.username).toBeUndefined();
+    expect(session.password).toBeUndefined();
   });
 
   test('new profile sessions are created without separate credential seeding', async () => {
@@ -200,6 +281,50 @@ describe('SessionManager', () => {
 
     const loaded = await manager.loadSession();
     expect(loaded?.player_id).toBe('player_auth_success');
+  });
+
+  test('profile auth uses configured default profile when no active profile is set', async () => {
+    const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
+    fs.rmSync(configPath, { force: true });
+    setDefaultProfile('default_auth_profile');
+
+    let authCalled = false;
+    const mockTransport = async (_url: string, options?: JsonRequestOptions): Promise<JsonResponse<APIResponse>> => {
+      authCalled = true;
+      expect(options?.sessionId).toBe('sess_default_auth');
+      expect(options?.payload).toEqual({ username: 'default_user', password: 'default_password' });
+      return {
+        status: 200,
+        ok: true,
+        data: {
+          session: {
+            id: 'sess_default_auth',
+            created_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 7200000).toISOString(),
+            player_id: 'player_default_auth',
+          },
+        },
+      };
+    };
+
+    const manager = new SessionManager({
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      transport: mockTransport as unknown as typeof requestJson,
+    });
+    const sessionObj: Session = {
+      id: 'sess_default_auth',
+      username: 'default_user',
+      password: 'default_password',
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 3600000).toISOString(),
+    };
+
+    const result = await manager.authenticateProfileSession(sessionObj);
+
+    expect(authCalled).toBe(true);
+    expect(result).toBeNull();
+    expect(sessionObj.player_id).toBe('player_default_auth');
+    expect(await manager.loadSession()).toEqual(sessionObj);
   });
 
   test('profile auth failure behavior', async () => {

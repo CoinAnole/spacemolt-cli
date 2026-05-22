@@ -8,7 +8,7 @@ import {
   MAX_SESSION_RECOVERY_ATTEMPTS,
   type SpaceMoltConfig,
 } from './runtime.ts';
-import { SessionManager } from './session.ts';
+import { profileNameForUsername, SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
 
@@ -24,11 +24,12 @@ export interface SpaceMoltClientOptions {
     requestJson<T>(url: string, options?: JsonRequestOptions): Promise<{ status: number; data: T }>;
   };
   sessionStore?: {
-    getSession(): Promise<Session>;
-    loadSession(): Promise<Session | null>;
-    saveSession(session: Session): Promise<void>;
-    createSession(): Promise<Session>;
+    getSession(profile?: string): Promise<Session>;
+    loadSession(profile?: string): Promise<Session | null>;
+    saveSession(session: Session, profile?: string): Promise<void>;
+    createSession(profile?: string): Promise<Session>;
     authenticateProfileSession(session: Session): Promise<APIResponse | null>;
+    ensureDefaultProfile?(profile?: string): void;
   };
   clock?: {
     now(): number;
@@ -59,7 +60,7 @@ export class SpaceMoltClient {
       new SessionManager({
         apiBase: this.config.apiBase,
         profile: this.config.profile,
-        sessionPath: this.config.sessionPath,
+        profileIsExplicit: this.config.profileIsExplicit,
         debug: this.config.debug,
       });
     this.clock = options.clock ?? { now: Date.now };
@@ -115,7 +116,8 @@ export class SpaceMoltClient {
     const url = `${this.baseUrl}/${routeToPath(mapping)}`;
     const method = mapping.method || 'POST';
 
-    let session = await this.sessionStore.getSession();
+    const sessionProfile = this.sessionProfileForCommand(command, payload);
+    let session = await this.sessionStore.getSession(sessionProfile);
     let sessionRecoveryAttempts = 0;
     let rateLimitRetries = 0;
 
@@ -125,7 +127,7 @@ export class SpaceMoltClient {
         if (authError) return authError;
       }
 
-      const data = await this.sendRequest(session, url, method, payload);
+      const data = await this.sendRequest(session, url, method, payload, sessionProfile);
 
       if (data.error && SESSION_ERROR_CODES.has(data.error.code)) {
         if (
@@ -167,6 +169,7 @@ export class SpaceMoltClient {
     requestUrl: string,
     requestMethod: string,
     requestPayload?: Record<string, unknown>,
+    sessionProfile?: string,
   ): Promise<APIResponse> {
     if (this.debug) {
       this.logger.debug(`Request: ${requestMethod} ${requestUrl}`);
@@ -198,7 +201,7 @@ export class SpaceMoltClient {
     if (data.session) {
       currentSession.expires_at = data.session.expires_at;
       if (data.session.player_id) currentSession.player_id = data.session.player_id;
-      await this.sessionStore.saveSession(currentSession);
+      await this.sessionStore.saveSession(currentSession, sessionProfile);
     }
 
     return data;
@@ -212,6 +215,12 @@ export class SpaceMoltClient {
     return this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
   }
 
+  private sessionProfileForCommand(command: string, payload: Record<string, unknown>): string | undefined {
+    if (command !== 'login' && command !== 'register') return undefined;
+    if (this.config.profileIsExplicit) return undefined;
+    return typeof payload.username === 'string' ? profileNameForUsername(payload.username) : undefined;
+  }
+
   private async persistSuccessfulCredentials(
     command: string,
     payload: Record<string, unknown>,
@@ -219,7 +228,8 @@ export class SpaceMoltClient {
   ): Promise<void> {
     if (response.error) return;
 
-    const session = await this.sessionStore.loadSession();
+    const profileForDefault = this.sessionProfileForCommand(command, payload);
+    const session = await this.sessionStore.loadSession(profileForDefault);
     if (!session) return;
 
     let changed = false;
@@ -256,7 +266,8 @@ export class SpaceMoltClient {
     }
 
     if (changed) {
-      await this.sessionStore.saveSession(session);
+      this.sessionStore.ensureDefaultProfile?.(profileForDefault);
+      await this.sessionStore.saveSession(session, profileForDefault);
       if (this.debug) this.logger.debug(`Saved ${command} credentials to session`);
     }
   }

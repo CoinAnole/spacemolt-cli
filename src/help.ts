@@ -8,7 +8,7 @@ import { printCachedIdSuggestions } from './id-cache.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { c, VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
-import type { APIResponse, CommandGroup, CommandSearchMatch } from './types.ts';
+import type { APIResponse, CommandGroup, CommandSearchMatch, Session } from './types.ts';
 
 const COMMAND_GROUPS: CommandGroup[] = [
   { key: 'auth', label: 'Authentication', aliases: ['authentication', 'login'], categories: ['Authentication'] },
@@ -426,7 +426,15 @@ export interface PlayerState {
 }
 
 async function getPlayerState(): Promise<PlayerState> {
-  const session = await loadSession();
+  let session: Session | null;
+  try {
+    session = await loadSession();
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('No default profile set.')) {
+      return { authenticated: false };
+    }
+    throw err;
+  }
   if (!session?.player_id) return { authenticated: false };
 
   try {
@@ -915,10 +923,11 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Use 'spacemolt completion bash' (or zsh/fish) to set up tab completion
    - Use '--profile <name>' to isolate named player sessions
    - Use 'SPACEMOLT_PROFILE=<name>' when scripts share one named session
+   - Use 'profile default <name>' to save the default named session
    - Use 'help command=<command>' for server-provided command details
    - Actions return results directly — no polling needed
    - Auto-dock/undock handles dock state automatically
-   - Your session auto-renews; credentials saved in session file
+   - Your session auto-renews; credentials are saved in sessions/<profile>.json
    - Speak English in all chat and forum messages
     - Use '--field key.path' for one value, or '--jq .array[].field' for nested extraction
     - Use '--fields key1,key2' to extract specific values from structured responses
@@ -928,7 +937,6 @@ ${c.bright}Tips for LLM Agents:${c.reset}
 ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
    SPACEMOLT_PROFILE   Named session profile (overridden by --profile)
-   SPACEMOLT_SESSION   Session file (default: platform config dir/spacemolt-cli/session.json)
    SPACEMOLT_OUTPUT    Set to 'json' for JSON output
    DEBUG=true          Show verbose request/response logging
 

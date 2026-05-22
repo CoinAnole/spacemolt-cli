@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { CliRuntimeContext, CliWriter } from './cli-context';
 import type { CommandRegistrySnapshot } from './command-registry';
 import type { PlayerState } from './help';
@@ -13,6 +16,7 @@ import {
   showFullHelp,
   showHelp,
 } from './help';
+import { runInvocation } from './main';
 
 function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWriter } {
   const stdout: string[] = [];
@@ -29,6 +33,42 @@ function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWrite
       },
     },
   };
+}
+
+function fakeContext(stdout: string[], stderr: string[], env: Record<string, string>): CliRuntimeContext {
+  return {
+    env,
+    writer: {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut(chunk) {
+        stdout.push(chunk);
+      },
+    },
+    clock: {
+      now() {
+        return new Date('2026-01-01T00:00:00.000Z');
+      },
+    },
+    sleep() {
+      return Promise.resolve();
+    },
+  };
+}
+
+async function withConfigHome<T>(configHome: string, fn: () => Promise<T>): Promise<T> {
+  const originalConfigHome = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = configHome;
+  try {
+    return await fn();
+  } finally {
+    if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = originalConfigHome;
+  }
 }
 
 describe('help output branches', () => {
@@ -70,6 +110,25 @@ describe('help output branches', () => {
     expect(output).toContain('SpaceMolt CLI');
     expect(output).toContain('spacemolt register <username> <empire> <registration_code>');
     expect(output).toContain('Once logged in, try:');
+  });
+
+  test('help renders unauthenticated guidance with no default profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-help-empty-test-'));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    let exitCode: number;
+    try {
+      exitCode = await withConfigHome(configHome, () =>
+        runInvocation(['help'], undefined, fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome })),
+      );
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).toContain('spacemolt login <username> <password>');
   });
 
   test('renderProgressiveHelp writes travel state without calling the API', () => {
@@ -305,6 +364,19 @@ describe('help output branches', () => {
     expect(output).toContain('ID Cache:');
     expect(output).toContain('spacemolt ids <kind>            Show cached poi/system/item/player IDs');
     expect(output).toContain('spacemolt where-can-i <item>    Search cached item sightings');
+  });
+
+  test('showFullHelp documents named profile environment without session path override', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain("Use 'SPACEMOLT_PROFILE=<name>' when scripts share one named session");
+    expect(output).toContain("Use 'profile default <name>' to save the default named session");
+    expect(output).toContain('SPACEMOLT_PROFILE   Named session profile (overridden by --profile)');
+    expect(output).not.toContain('SPACEMOLT_SESSION');
+    expect(output).not.toContain('session.json');
   });
 
   test('displayError renders retry, auth, and quiet branches', () => {

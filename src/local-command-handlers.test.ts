@@ -136,7 +136,7 @@ describe('local command handlers', () => {
     if (!handler) return;
     const { context, stderr } = captureContext();
 
-    const parsed = handler.parse([command], options, context);
+    const parsed = handler.parse([command], { ...options, profile: 'pilot' }, context);
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
@@ -162,7 +162,7 @@ describe('local command handlers', () => {
     const handler = resolveHandler([command, 'ship_123'], options, registry);
     expect(handler).toBeInstanceOf(ApiCommandHandler);
     if (!handler) return;
-    const parsed = handler.parse([command, 'ship_123'], options);
+    const parsed = handler.parse([command, 'ship_123'], { ...options, profile: 'pilot' });
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     const calls: Array<{ command: string; config: unknown; payload: Record<string, unknown> }> = [];
@@ -236,10 +236,11 @@ describe('local command handlers', () => {
 
   test('ids command renders JSON with cached hints', async () => {
     const dir = tempDir();
-    const sessionPath = path.join(dir, 'pilot.json');
-    fs.writeFileSync(sessionPath, '{}\n');
+    const configHome = path.join(dir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
     fs.writeFileSync(
-      path.join(dir, 'pilot.ids.json'),
+      path.join(sessionsDir, 'pilot.ids.json'),
       `${JSON.stringify({
         version: 1,
         hints: [
@@ -253,11 +254,15 @@ describe('local command handlers', () => {
         ],
       })}\n`,
     );
-    const client = { config: { sessionPath } } as SpaceMoltClient;
+    const client = { config: { profile: 'pilot' } } as unknown as SpaceMoltClient;
     const stdout: string[] = [];
     const stderr: string[] = [];
 
-    const exitCode = await runInvocation(['--json', 'ids', 'poi'], client, fakeContext(stdout, stderr));
+    const exitCode = await runInvocation(
+      ['--json', 'ids', 'poi'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+    );
 
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
@@ -277,6 +282,50 @@ describe('local command handlers', () => {
 
     expect(exitCode).toBe(1);
     expect(stderr.join('\n')).toContain('Usage: spacemolt where-can-i <item>');
+  });
+
+  test('api command parsing resolves cached IDs from injected config home', () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'sol_earth',
+            name: 'Earth',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const handler = resolveHandler(['travel', 'earth'], options);
+    expect(handler).toBeInstanceOf(ApiCommandHandler);
+    if (!handler) return;
+
+    const parsed = handler.parse(
+      ['travel', 'earth'],
+      options,
+      fakeContext([], [], { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.payload).toEqual({ id: 'sol_earth' });
+  });
+
+  test('unknown profile action shows profile usage', () => {
+    const handler = localHandler(['profile']);
+    const parsed = handler.parse(['profile', 'remove'], options);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.customStderr).toContain('Usage: spacemolt profile [list|default [name]]');
   });
 
   test('version renders through CliRuntimeContext writer', async () => {
@@ -453,7 +502,7 @@ describe('local command handlers', () => {
     if (!handler) return;
     const { context, stdout } = captureContext();
 
-    const parsed = handler.parse([command, '--help'], options, context);
+    const parsed = handler.parse([command, '--help'], { ...options, profile: 'pilot' }, context);
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;

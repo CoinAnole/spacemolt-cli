@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -23,8 +24,14 @@ export function getSpacemoltHome(
   const configHome = env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
   return path.join(configHome, 'spacemolt-cli');
 }
-export function getDefaultSessionPath(): string {
-  return path.join(getSpacemoltHome(), 'session.json');
+
+export interface CliConfig {
+  defaultProfile?: string;
+  [key: string]: unknown;
+}
+
+export function getCliConfigPath(homeDir?: string, platform?: string, env?: EnvLike): string {
+  return path.join(getSpacemoltHome(homeDir, platform, env), 'config.json');
 }
 
 export function validateProfileName(profile: string): string {
@@ -34,10 +41,19 @@ export function validateProfileName(profile: string): string {
   return profile;
 }
 
+export function profileNameForUsername(username: string): string {
+  try {
+    return validateProfileName(username);
+  } catch {
+    return validateProfileName(`user_${Buffer.from(username, 'utf-8').toString('base64url')}`);
+  }
+}
+
 interface ProfileSessionSummary {
   name: string;
   username?: string;
   playerId?: string;
+  isDefault?: boolean;
 }
 
 export function getProfileSessionsDir(homeDir?: string, platform?: string, env?: EnvLike): string {
@@ -46,6 +62,7 @@ export function getProfileSessionsDir(homeDir?: string, platform?: string, env?:
 
 export function listProfileSessions(homeDir?: string, platform?: string, env?: EnvLike): ProfileSessionSummary[] {
   const sessionsDir = getProfileSessionsDir(homeDir, platform, env);
+  const defaultProfile = getDefaultProfile(homeDir, platform, env);
   try {
     return fs
       .readdirSync(sessionsDir, { withFileTypes: true })
@@ -58,9 +75,10 @@ export function listProfileSessions(homeDir?: string, platform?: string, env?: E
             name,
             username: typeof session.username === 'string' ? session.username : undefined,
             playerId: typeof session.player_id === 'string' ? session.player_id : undefined,
+            isDefault: name === defaultProfile,
           };
         } catch {
-          return { name };
+          return { name, isDefault: name === defaultProfile };
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -78,21 +96,31 @@ export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike)
 
   console.log(`${c.bright}Profiles${c.reset}`);
   for (const profile of profiles) {
+    const marker = profile.isDefault ? '* ' : '  ';
     const user = profile.username ? ` username=${profile.username}` : '';
     const player = profile.playerId ? ` player_id=${profile.playerId}` : '';
-    console.log(`  ${profile.name}${user}${player}`);
+    console.log(`${marker}${profile.name}${user}${player}`);
   }
 }
 
-export function getSessionPath(config?: { profile?: string; sessionPath?: string }): string {
+export function getSessionPath(config?: { profile?: string }, env?: EnvLike): string {
   if (config) {
     const manager = new SessionManager({
       profile: config.profile,
-      sessionPath: config.sessionPath,
+      env,
     });
     return manager.getSessionPath();
   }
-  return legacySessionManager.getSessionPath();
+  return new SessionManager({ env }).getSessionPath();
+}
+
+export function tryGetSessionPath(config?: { profile?: string }, env?: EnvLike): string | undefined {
+  try {
+    return getSessionPath(config, env);
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('No default profile set.')) return undefined;
+    throw err;
+  }
 }
 
 export function hardenPermissions(targetPath: string, mode: number): void {
@@ -104,30 +132,82 @@ export function hardenPermissions(targetPath: string, mode: number): void {
   }
 }
 
+export function loadCliConfig(homeDir?: string, platform?: string, env?: EnvLike): CliConfig {
+  try {
+    const config = JSON.parse(fs.readFileSync(getCliConfigPath(homeDir, platform, env), 'utf-8'));
+    if (!isRecord(config)) return {};
+    if (config.defaultProfile === undefined) return { ...config };
+    if (typeof config.defaultProfile !== 'string') return {};
+    return { ...config, defaultProfile: validateProfileName(config.defaultProfile) };
+  } catch {
+    return {};
+  }
+}
+
+export function saveCliConfig(config: CliConfig, homeDir?: string, platform?: string, env?: EnvLike): void {
+  const configPath = getCliConfigPath(homeDir, platform, env);
+  const parentDir = path.dirname(configPath);
+  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
+  hardenPermissions(parentDir, SESSION_DIR_MODE);
+  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, {
+    encoding: 'utf-8',
+    mode: SESSION_FILE_MODE,
+  });
+  hardenPermissions(configPath, SESSION_FILE_MODE);
+}
+
+export function getDefaultProfile(homeDir?: string, platform?: string, env?: EnvLike): string | undefined {
+  return loadCliConfig(homeDir, platform, env).defaultProfile;
+}
+
+export function setDefaultProfile(profile: string, homeDir?: string, platform?: string, env?: EnvLike): void {
+  saveCliConfig(
+    { ...loadCliConfig(homeDir, platform, env), defaultProfile: validateProfileName(profile) },
+    homeDir,
+    platform,
+    env,
+  );
+}
+
+export function showDefaultProfile(
+  writer?: { out(message: string): void },
+  homeDir?: string,
+  platform?: string,
+  env?: EnvLike,
+): void {
+  const defaultProfile = getDefaultProfile(homeDir, platform, env);
+  const message = defaultProfile ? `Default profile: ${defaultProfile}` : 'No default profile set.';
+  if (writer) writer.out(message);
+  else console.log(message);
+}
+
 export interface SessionManagerOptions {
   apiBase?: string;
   profile?: string;
-  sessionPath?: string;
+  profileIsExplicit?: boolean;
   debug?: boolean;
   transport?: typeof requestJson;
   clock?: () => number;
+  env?: EnvLike;
 }
 
 export class SessionManager {
   private readonly _apiBase?: string;
   private readonly _profile?: string;
-  private readonly _sessionPath?: string;
+  private readonly _profileIsExplicit: boolean;
   private readonly _debug?: boolean;
   private readonly _transport: typeof requestJson;
   private readonly _clock: () => number;
+  private readonly _env: EnvLike;
 
   constructor(options: SessionManagerOptions = {}) {
     this._apiBase = options.apiBase;
     this._profile = options.profile;
-    this._sessionPath = options.sessionPath;
+    this._profileIsExplicit = Boolean(options.profileIsExplicit);
     this._debug = options.debug;
     this._transport = options.transport ?? requestJson;
     this._clock = options.clock ?? Date.now;
+    this._env = options.env ?? process.env;
   }
 
   get apiBase(): string {
@@ -138,25 +218,32 @@ export class SessionManager {
     return this._profile ?? ACTIVE_PROFILE;
   }
 
-  get sessionPath(): string | undefined {
-    return this._sessionPath ?? process.env.SPACEMOLT_SESSION;
-  }
-
   get debug(): boolean {
     return this._debug ?? DEBUG;
   }
 
-  getSessionPath(): string {
-    if (this.sessionPath) return this.sessionPath;
-    if (this.profile) {
-      return path.join(getSpacemoltHome(), 'sessions', `${this.profile}.json`);
+  getSessionPath(profileOverride?: string): string {
+    const profile = this.effectiveProfile(profileOverride);
+    if (!profile) {
+      throw new Error('No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".');
     }
-    return getDefaultSessionPath();
+    return path.join(
+      getSpacemoltHome(undefined, undefined, this._env),
+      'sessions',
+      `${validateProfileName(profile)}.json`,
+    );
   }
 
-  async loadSession(): Promise<Session | null> {
+  private effectiveProfile(profileOverride?: string): string | undefined {
+    const selectedProfile = this.profile;
+    return this._profileIsExplicit
+      ? (selectedProfile ?? profileOverride ?? getDefaultProfile(undefined, undefined, this._env))
+      : (profileOverride ?? selectedProfile ?? getDefaultProfile(undefined, undefined, this._env));
+  }
+
+  async loadSession(profileOverride?: string): Promise<Session | null> {
+    const sessionPath = this.getSessionPath(profileOverride);
     try {
-      const sessionPath = this.getSessionPath();
       const file = Bun.file(sessionPath);
       if (await file.exists()) hardenPermissions(sessionPath, SESSION_FILE_MODE);
       if (await file.exists()) return await file.json();
@@ -166,8 +253,8 @@ export class SessionManager {
     return null;
   }
 
-  async saveSession(session: Session): Promise<void> {
-    const sessionPath = this.getSessionPath();
+  async saveSession(session: Session, profileOverride?: string): Promise<void> {
+    const sessionPath = this.getSessionPath(profileOverride);
     const parentDir = path.dirname(sessionPath);
     if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
     hardenPermissions(parentDir, SESSION_DIR_MODE);
@@ -199,7 +286,7 @@ export class SessionManager {
     }
   }
 
-  async createSession(): Promise<Session> {
+  async createSession(profileOverride?: string): Promise<Session> {
     if (this.debug) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
       method: 'POST',
@@ -213,7 +300,7 @@ export class SessionManager {
       created_at: data.session.created_at,
       expires_at: data.session.expires_at,
     };
-    await this.saveSession(session);
+    await this.saveSession(session, profileOverride);
     return session;
   }
 
@@ -221,13 +308,20 @@ export class SessionManager {
     return this._clock() > new Date(session.expires_at).getTime() - 60000;
   }
 
-  async getSession(): Promise<Session> {
-    const session = await this.loadSession();
-    return !session || this.isSessionExpired(session) ? this.createSession() : session;
+  async getSession(profileOverride?: string): Promise<Session> {
+    const session = await this.loadSession(profileOverride);
+    return !session || this.isSessionExpired(session) ? this.createSession(profileOverride) : session;
+  }
+
+  ensureDefaultProfile(profile?: string): void {
+    if (getDefaultProfile(undefined, undefined, this._env)) return;
+    const effectiveProfile = this.effectiveProfile(profile);
+    if (!effectiveProfile) return;
+    setDefaultProfile(effectiveProfile, undefined, undefined, this._env);
   }
 
   async authenticateProfileSession(session: Session): Promise<APIResponse | null> {
-    const profName = this.profile;
+    const profName = this.effectiveProfile();
     if (!profName || !session.username || !session.password || session.player_id) return null;
 
     if (this.debug)

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -6,13 +6,6 @@ import { cargoFixture, systemInfoFixture } from './display/formatter-fixtures';
 import { cacheIdsFromResponse, getIdCachePath } from './id-cache';
 import { preparePayload } from './main';
 import type { GlobalOptions } from './types';
-
-const originalSession = process.env.SPACEMOLT_SESSION;
-
-afterEach(() => {
-  if (originalSession === undefined) delete process.env.SPACEMOLT_SESSION;
-  else process.env.SPACEMOLT_SESSION = originalSession;
-});
 
 function options(overrides: Partial<GlobalOptions> = {}): GlobalOptions {
   return {
@@ -29,9 +22,11 @@ function options(overrides: Partial<GlobalOptions> = {}): GlobalOptions {
   };
 }
 
-function useTempSession(): void {
+function useTempSession(): string {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-resolver-'));
-  process.env.SPACEMOLT_SESSION = path.join(tempDir, 'session.json');
+  const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+  fs.mkdirSync(path.dirname(sessionPath), { recursive: true });
+  return sessionPath;
 }
 
 function writer(stdout: string[] = [], stderr: string[] = []) {
@@ -47,18 +42,18 @@ function writer(stdout: string[] = [], stderr: string[] = []) {
 
 describe('cached ID payload resolver', () => {
   test('resolves travel target from cached POI name', async () => {
-    useTempSession();
-    await cacheIdsFromResponse('get_system', { structuredContent: systemInfoFixture });
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse('get_system', { structuredContent: systemInfoFixture }, sessionPath);
 
-    const prepared = preparePayload('travel', { target_poi: 'earth' }, options());
+    const prepared = preparePayload('travel', { target_poi: 'earth' }, options(), sessionPath);
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'sol_earth' } });
   });
 
   test('resolves view_storage station_id from cached station POI prefix', () => {
-    useTempSession();
+    const sessionPath = useTempSession();
     fs.writeFileSync(
-      getIdCachePath(),
+      getIdCachePath(sessionPath),
       `${JSON.stringify({
         version: 1,
         hints: [
@@ -73,7 +68,7 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = preparePayload('view_storage', { station_id: 'node_beta' }, options());
+    const prepared = preparePayload('view_storage', { station_id: 'node_beta' }, options(), sessionPath);
 
     expect(prepared).toEqual({
       type: 'payload',
@@ -82,18 +77,18 @@ describe('cached ID payload resolver', () => {
   });
 
   test('resolves sell item from cached item name before type conversion', async () => {
-    useTempSession();
-    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture });
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath);
 
-    const prepared = preparePayload('sell', { item_id: 'iron', quantity: '50' }, options());
+    const prepared = preparePayload('sell', { item_id: 'iron', quantity: '50' }, options(), sessionPath);
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'ore_iron', quantity: 50 } });
   });
 
   test('stops before execution on ambiguous cached item matches', () => {
-    useTempSession();
+    const sessionPath = useTempSession();
     fs.writeFileSync(
-      getIdCachePath(),
+      getIdCachePath(sessionPath),
       `${JSON.stringify(
         {
           version: 1,
@@ -124,7 +119,7 @@ describe('cached ID payload resolver', () => {
       'sell',
       { item_id: 'iron', quantity: '50' },
       options(),
-      undefined,
+      sessionPath,
       writer([], stderr),
     );
 
@@ -135,9 +130,9 @@ describe('cached ID payload resolver', () => {
   });
 
   test('prints JSON error for ambiguous cached ID matches in JSON mode', () => {
-    useTempSession();
+    const sessionPath = useTempSession();
     fs.writeFileSync(
-      getIdCachePath(),
+      getIdCachePath(sessionPath),
       `${JSON.stringify({
         version: 1,
         hints: [
@@ -164,7 +159,7 @@ describe('cached ID payload resolver', () => {
       'sell',
       { item_id: 'iron', quantity: '50' },
       options({ json: true }),
-      undefined,
+      sessionPath,
       writer(stdout),
     );
 

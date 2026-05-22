@@ -31,7 +31,7 @@ export interface SpaceMoltConfig {
   format: 'table' | 'json' | 'yaml' | 'text';
   compact: boolean;
   profile?: string;
-  sessionPath?: string;
+  profileIsExplicit?: boolean;
 }
 
 export class LegacySpaceMoltConfig implements SpaceMoltConfig {
@@ -59,13 +59,13 @@ export class LegacySpaceMoltConfig implements SpaceMoltConfig {
   get profile(): string | undefined {
     return ACTIVE_PROFILE;
   }
-  get sessionPath(): string | undefined {
-    return process.env.SPACEMOLT_SESSION;
+  get profileIsExplicit(): boolean {
+    return false;
   }
 }
 
-export type RuntimeState = Required<Omit<SpaceMoltConfig, 'profile' | 'sessionPath'>> &
-  Pick<SpaceMoltConfig, 'profile' | 'sessionPath'>;
+export type RuntimeState = Required<Omit<SpaceMoltConfig, 'profile' | 'profileIsExplicit'>> &
+  Pick<SpaceMoltConfig, 'profile'> & { profileIsExplicit: boolean };
 
 export function createRuntimeState(config: SpaceMoltConfig = new LegacySpaceMoltConfig()): RuntimeState {
   return {
@@ -77,7 +77,7 @@ export function createRuntimeState(config: SpaceMoltConfig = new LegacySpaceMolt
     format: config.format,
     compact: config.compact,
     profile: config.profile,
-    sessionPath: config.sessionPath,
+    profileIsExplicit: Boolean(config.profileIsExplicit),
   };
 }
 
@@ -109,8 +109,8 @@ export function createDefaultConfig(overrides?: Partial<SpaceMoltConfig>): Space
     get profile() {
       return overrides.profile !== undefined ? overrides.profile : base.profile;
     },
-    get sessionPath() {
-      return overrides.sessionPath !== undefined ? overrides.sessionPath : base.sessionPath;
+    get profileIsExplicit() {
+      return overrides.profileIsExplicit !== undefined ? overrides.profileIsExplicit : base.profileIsExplicit;
     },
   };
 }

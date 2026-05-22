@@ -162,6 +162,7 @@ describe('CLI local usability behavior', () => {
     const originalHome = process.env.HOME;
     const sessionDir = path.join(home, '.config', 'spacemolt-cli', 'sessions');
     fs.mkdirSync(sessionDir, { recursive: true });
+    fs.writeFileSync(path.join(home, '.config', 'spacemolt-cli', 'config.json'), '{"defaultProfile":"marlowe"}\n');
     fs.writeFileSync(
       path.join(sessionDir, 'marlowe.json'),
       `${JSON.stringify({
@@ -187,13 +188,37 @@ describe('CLI local usability behavior', () => {
       process.env.HOME = home;
       const result = await runDirect(['profile', 'list'], { HOME: home });
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('marlowe');
+      expect(result.stdout).toContain('* marlowe');
       expect(result.stdout).toContain('FuelRescue');
       expect(result.stdout).not.toContain('REDACTED');
       expect(result.stdout).not.toContain('secret');
     } finally {
       if (originalHome === undefined) delete process.env.HOME;
       else process.env.HOME = originalHome;
+    }
+  });
+
+  test('profile default prints and changes the saved default profile', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-default-test-'));
+    try {
+      const configDir = path.join(home, '.config', 'spacemolt-cli');
+      fs.mkdirSync(path.join(configDir, 'sessions'), { recursive: true });
+      fs.writeFileSync(path.join(configDir, 'sessions', 'marlowe.json'), '{}\n');
+      fs.writeFileSync(path.join(configDir, 'sessions', 'pilot.json'), '{}\n');
+      fs.writeFileSync(path.join(configDir, 'config.json'), '{"defaultProfile":"marlowe"}\n');
+
+      const show = await runDirect(['profile', 'default'], { HOME: home });
+      expect(show.exitCode).toBe(0);
+      expect(show.stdout).toContain('Default profile: marlowe');
+
+      const set = await runDirect(['profile', 'default', 'pilot'], { HOME: home });
+      expect(set.exitCode).toBe(0);
+      expect(set.stdout).toContain('Default profile: pilot');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+      });
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
     }
   });
 

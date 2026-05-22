@@ -19,7 +19,7 @@ import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { API_BASE, c, DEBUG, setOutputMode } from './runtime.ts';
-import { validateProfileName } from './session.ts';
+import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -32,6 +32,7 @@ export interface RunnerDependencies {
   loadCachedGeneratedRoutes?: typeof loadCachedGeneratedRoutes;
   defaultOpenApiCacheDir?: typeof defaultOpenApiCacheDir;
   checkForUpdates?: typeof checkForUpdates;
+  getDefaultProfile?: typeof getDefaultProfile;
   createClient?: (config: SpaceMoltClient['config']) => SpaceMoltClient;
   onSigint?: (listener: () => void) => () => void;
 }
@@ -40,6 +41,7 @@ const defaultRunnerDependencies: Required<RunnerDependencies> = {
   loadCachedGeneratedRoutes,
   defaultOpenApiCacheDir,
   checkForUpdates,
+  getDefaultProfile,
   createClient(config) {
     return new SpaceMoltClient({ config });
   },
@@ -113,11 +115,20 @@ async function runInvocationWithContext(
     }
     return 1;
   }
-  const config = getRuntimeConfig(parsedInvocation.invocation.options, context.env);
+  const parsedOptions = parsedInvocation.invocation.options;
+  const savedDefaultProfile =
+    parsedOptions.profile || context.env.SPACEMOLT_PROFILE
+      ? undefined
+      : deps.getDefaultProfile(undefined, undefined, context.env);
+  const effectiveOptions = savedDefaultProfile ? { ...parsedOptions, profile: savedDefaultProfile } : parsedOptions;
+  setActiveProfile(effectiveOptions.profile);
+
+  const config = getRuntimeConfig(effectiveOptions, context.env);
+  config.profileIsExplicit = Boolean(parsedOptions.profile || context.env.SPACEMOLT_PROFILE);
   const invocation: Invocation = {
     ...parsedInvocation.invocation,
     options: {
-      ...parsedInvocation.invocation.options,
+      ...effectiveOptions,
       json: config.jsonOutput,
       format: config.format,
       profile: config.profile,

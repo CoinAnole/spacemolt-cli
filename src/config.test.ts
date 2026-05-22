@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { SpaceMoltClient } from './api.ts';
 import { getRuntimeConfig } from './main.ts';
 import {
@@ -8,7 +11,7 @@ import {
   type SpaceMoltConfig,
   setOutputMode,
 } from './runtime.ts';
-import { SessionManager } from './session.ts';
+import { SessionManager, setDefaultProfile } from './session.ts';
 
 describe('Explicit Runtime Configuration', () => {
   test('LegacySpaceMoltConfig resolves globals dynamically', () => {
@@ -27,20 +30,23 @@ describe('Explicit Runtime Configuration', () => {
     expect(configWithOverrides.jsonOutput).toBe(true);
   });
 
-  test('SessionManager isolates paths based on config', () => {
-    // Default session manager resolves default or global session
-    const defaultManager = new SessionManager();
-    const defaultPath = defaultManager.getSessionPath();
-    expect(defaultPath).toContain('session.json');
+  test('SessionManager isolates default and explicit profile paths', () => {
+    const originalConfigHome = process.env.XDG_CONFIG_HOME;
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-config-test-'));
+    process.env.XDG_CONFIG_HOME = configHome;
+    try {
+      setDefaultProfile('default-pilot');
 
-    // Custom sessionPath override
-    const customPath = '/tmp/custom-spacemolt-session-test.json';
-    const customManager = new SessionManager({ sessionPath: customPath });
-    expect(customManager.getSessionPath()).toBe(customPath);
+      const defaultManager = new SessionManager();
+      expect(defaultManager.getSessionPath()).toContain('sessions/default-pilot.json');
 
-    // Profile-based session override
-    const profileManager = new SessionManager({ profile: 'test-profile-123' });
-    expect(profileManager.getSessionPath()).toContain('sessions/test-profile-123.json');
+      const profileManager = new SessionManager({ profile: 'test-profile-123' });
+      expect(profileManager.getSessionPath()).toContain('sessions/test-profile-123.json');
+    } finally {
+      if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = originalConfigHome;
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
   });
 
   test('SpaceMoltClient respects config injected via constructor', () => {
@@ -90,7 +96,6 @@ describe('Explicit Runtime Configuration', () => {
       format: 'yaml',
       compact: true,
       profile: 'pilot',
-      sessionPath: '/tmp/pilot.json',
     };
 
     expect(createRuntimeState(config)).toEqual({
@@ -102,7 +107,7 @@ describe('Explicit Runtime Configuration', () => {
       format: 'yaml',
       compact: true,
       profile: 'pilot',
-      sessionPath: '/tmp/pilot.json',
+      profileIsExplicit: false,
     });
   });
 

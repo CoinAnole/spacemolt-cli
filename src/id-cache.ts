@@ -4,7 +4,7 @@ import type { CliWriter } from './cli-context.ts';
 import { COMMANDS } from './commands.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
 import { c, QUIET } from './runtime.ts';
-import { getSessionPath, hardenPermissions } from './session.ts';
+import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
 import type { APIResponse } from './types.ts';
 
 export type IdKind = 'poi' | 'system' | 'item' | 'player';
@@ -67,9 +67,17 @@ export function getIdCachePath(sessionPath?: string): string {
   return path.join(parsed.dir, `${parsed.name}.ids.json`);
 }
 
+export function tryGetIdCachePath(sessionPath?: string): string | undefined {
+  const resolvedPath = sessionPath || tryGetSessionPath();
+  if (!resolvedPath) return undefined;
+  const parsed = path.parse(resolvedPath);
+  return path.join(parsed.dir, `${parsed.name}.ids.json`);
+}
+
 export function loadIdCacheSync(sessionPath?: string): IdHint[] {
   try {
-    const cachePath = getIdCachePath(sessionPath);
+    const cachePath = tryGetIdCachePath(sessionPath);
+    if (!cachePath) return [];
     if (!fs.existsSync(cachePath)) return [];
     hardenPermissions(cachePath, CACHE_FILE_MODE);
     const parsed = JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as Partial<IdCacheFile>;
@@ -81,7 +89,8 @@ export function loadIdCacheSync(sessionPath?: string): IdHint[] {
 }
 
 export async function saveIdCache(hints: IdHint[], sessionPath?: string): Promise<void> {
-  const cachePath = getIdCachePath(sessionPath);
+  const cachePath = tryGetIdCachePath(sessionPath);
+  if (!cachePath) return;
   const parentDir = path.dirname(cachePath);
   if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: CACHE_DIR_MODE });
   hardenPermissions(parentDir, CACHE_DIR_MODE);

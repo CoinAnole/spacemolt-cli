@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -15,13 +15,6 @@ import {
   saveIdCache,
   searchItemHints,
 } from './id-cache';
-
-const originalSession = process.env.SPACEMOLT_SESSION;
-
-afterEach(() => {
-  if (originalSession === undefined) delete process.env.SPACEMOLT_SESSION;
-  else process.env.SPACEMOLT_SESSION = originalSession;
-});
 
 describe('id cache', () => {
   test('extracts POI and system IDs from get_system output', () => {
@@ -47,18 +40,19 @@ describe('id cache', () => {
 
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
-    process.env.SPACEMOLT_SESSION = path.join(tempDir, 'session.json');
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
 
-    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture });
+    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath);
 
-    expect(hintsForKind('item')).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
-    expect(searchItemHints('iron')).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
+    const hints = loadIdCacheSync(sessionPath);
+    expect(hintsForKind('item', hints)).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
+    expect(searchItemHints('iron', hints)).toContainEqual(expect.objectContaining({ id: 'ore_iron' }));
   });
 
   test('cache writes preserve existing valid cache contents', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
-    process.env.SPACEMOLT_SESSION = path.join(tempDir, 'session.json');
-    const cachePath = getIdCachePath();
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
     fs.mkdirSync(path.dirname(cachePath), { recursive: true });
     fs.writeFileSync(
       cachePath,
@@ -80,7 +74,7 @@ describe('id cache', () => {
       )}\n`,
     );
 
-    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture });
+    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath);
 
     const cache = JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as {
       hints: Array<{ kind: string; id: string }>;
@@ -91,7 +85,7 @@ describe('id cache', () => {
 
   test('cacheIdsFromResponse accepts a deterministic clock for seenAt', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
-    const sessionPath = path.join(tempDir, 'session.json');
+    const sessionPath = path.join(tempDir, 'pilot.json');
 
     await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath, {
       now: () => new Date('2026-05-20T12:34:56.000Z'),
@@ -104,7 +98,7 @@ describe('id cache', () => {
 
   test('saveIdCache writes through a cleaned-up 0600 cache file', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
-    const sessionPath = path.join(tempDir, 'session.json');
+    const sessionPath = path.join(tempDir, 'pilot.json');
 
     await saveIdCache(
       [

@@ -56,8 +56,8 @@ By default all session state and saved login credentials are stored in the platf
 
 | File | Purpose |
 | --- | --- |
-| `session.json` | Default session file (API session ID, player ID, expiry) |
-| `sessions/<profile>.json` | Named profile session files |
+| `config.json` | CLI preferences, including `defaultProfile` |
+| `sessions/<profile>.json` | Named profile session, player ID, expiry, and saved login credentials |
 
 #### Profile Sessions
 
@@ -67,11 +67,17 @@ Named profiles keep player sessions isolated. Credentials are saved in that prof
 bun run src/client.ts profile list
 ```
 
+Save the profile used when no `--profile` or `SPACEMOLT_PROFILE` is provided:
+
+```bash
+bun run src/client.ts profile default marlowe
+```
+
 ```bash
 bun run src/client.ts --profile marlowe get_status
 ```
 
-Use `SPACEMOLT_SESSION` when a script needs a specific session file.
+Use `SPACEMOLT_PROFILE=marlowe` when a script should reuse one named session without passing `--profile`.
 
 ## Usage
 
@@ -183,8 +189,7 @@ Game mutations are limited by the server tick; query commands are not.
 | Variable | Description | Default |
 | --- | --- | --- |
 | `SPACEMOLT_URL` | API base URL override | `https://game.spacemolt.com/api/v2` |
-| `SPACEMOLT_PROFILE` | Named session profile; overridden by `--profile` | default session |
-| `SPACEMOLT_SESSION` | Session file path | platform config directory |
+| `SPACEMOLT_PROFILE` | Named session profile; overridden by `--profile`; use `profile default` to save the fallback profile | saved `defaultProfile` |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
 | `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks | update checks disabled |
 | `DEBUG=true` | Verbose request logging; use `--debug` for one command | `false` |

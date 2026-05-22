@@ -1,8 +1,19 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { SpaceMoltClient, type SpaceMoltClientOptions } from './api.ts';
 import type { CommandConfig } from './commands.ts';
 import { runCommand } from './response-renderer.ts';
+import { getDefaultProfile, profileNameForUsername, SessionManager, setDefaultProfile } from './session.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
+
+const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
+
+afterEach(() => {
+  if (originalXdgConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+  else process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
+});
 
 function session(overrides: Partial<Session> = {}): Session {
   return {
@@ -24,11 +35,19 @@ function createStore(initial = session()): NonNullable<SpaceMoltClientOptions['s
   saved: Session[];
   current: Session | null;
   authError: APIResponse | null;
+  defaultProfile: string | undefined;
 } {
+  let defaultProfile: string | undefined;
   return {
     current: initial,
     saved: [],
     authError: null,
+    ensureDefaultProfile(profile?: string) {
+      if (!defaultProfile && profile) defaultProfile = profile;
+    },
+    get defaultProfile() {
+      return defaultProfile;
+    },
     async getSession() {
       if (!this.current) this.current = session();
       return this.current;
@@ -243,6 +262,278 @@ describe('SpaceMoltClient', () => {
     expect(store.current?.player_id).toBe('player_login');
   });
 
+  test('successful login initializes the default profile from username', async () => {
+    const store = createStore(session());
+    const { client } = createClient(
+      [
+        response({
+          structuredContent: { player: { id: 'player_login' } },
+        }),
+      ],
+      store,
+    );
+
+    await client.execute('login', { username: 'Pilot', password: 'secret' });
+
+    expect(store.defaultProfile).toBe('Pilot');
+  });
+
+  test('successful login with no default profile creates a username profile session', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-profile-test-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const apiBase = 'https://game.test/api/v2';
+    const manager = new SessionManager({
+      apiBase,
+      profile: 'DefaultPilot',
+      profileIsExplicit: false,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_bootstrap',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase,
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: manager,
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: response({
+              structuredContent: { player: { id: 'player_login' } },
+            }) as T,
+          };
+        },
+      },
+    });
+
+    try {
+      await client.execute('login', { username: 'Pilot', password: 'secret' });
+
+      expect(getDefaultProfile()).toBe('Pilot');
+      const sessionPath = path.join(configRoot, 'spacemolt-cli', 'sessions', 'Pilot.json');
+      expect(fs.existsSync(sessionPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(sessionPath, 'utf-8'))).toMatchObject({
+        id: 'sess_bootstrap',
+        username: 'Pilot',
+        password: 'secret',
+        player_id: 'player_login',
+      });
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('login with existing default profile writes the username profile session', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-profile-default-test-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const apiBase = 'https://game.test/api/v2';
+    const sessionsDir = path.join(configRoot, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    setDefaultProfile('DefaultPilot');
+    const defaultSession = {
+      id: 'sess_default',
+      username: 'DefaultPilot',
+      password: 'default-secret',
+      player_id: 'player_default',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2099-01-01T00:00:00.000Z',
+    };
+    const defaultSessionPath = path.join(sessionsDir, 'DefaultPilot.json');
+    fs.writeFileSync(defaultSessionPath, `${JSON.stringify(defaultSession, null, 2)}\n`);
+    const manager = new SessionManager({
+      apiBase,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_other_bootstrap',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase,
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: manager,
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: response({
+              structuredContent: { player: { id: 'player_other' } },
+            }) as T,
+          };
+        },
+      },
+    });
+
+    try {
+      await client.execute('login', { username: 'OtherUser', password: 'other-secret' });
+
+      expect(JSON.parse(fs.readFileSync(defaultSessionPath, 'utf-8'))).toEqual(defaultSession);
+      const otherSessionPath = path.join(sessionsDir, 'OtherUser.json');
+      expect(fs.existsSync(otherSessionPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(otherSessionPath, 'utf-8'))).toMatchObject({
+        id: 'sess_other_bootstrap',
+        username: 'OtherUser',
+        password: 'other-secret',
+        player_id: 'player_other',
+      });
+      expect(getDefaultProfile()).toBe('DefaultPilot');
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('login with explicit profile writes selected profile instead of username profile', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-profile-explicit-test-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const apiBase = 'https://game.test/api/v2';
+    const sessionsDir = path.join(configRoot, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    const manager = new SessionManager({
+      apiBase,
+      profile: 'pilot',
+      profileIsExplicit: true,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_pilot_bootstrap',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase,
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+        profile: 'pilot',
+        profileIsExplicit: true,
+      },
+      sessionStore: manager,
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: response({
+              structuredContent: { player: { id: 'player_other' } },
+            }) as T,
+          };
+        },
+      },
+    });
+
+    try {
+      await client.execute('login', { username: 'OtherUser', password: 'other-secret' });
+
+      expect(fs.existsSync(path.join(sessionsDir, 'OtherUser.json'))).toBe(false);
+      expect(JSON.parse(fs.readFileSync(path.join(sessionsDir, 'pilot.json'), 'utf-8'))).toMatchObject({
+        id: 'sess_pilot_bootstrap',
+        username: 'OtherUser',
+        password: 'other-secret',
+        player_id: 'player_other',
+      });
+      expect(getDefaultProfile()).toBe('pilot');
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('login without explicit profile derives a safe profile for API-valid usernames', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-profile-safe-test-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const apiBase = 'https://game.test/api/v2';
+    const username = "Nova Pilot's 🚀!";
+    const profile = profileNameForUsername(username);
+    const manager = new SessionManager({
+      apiBase,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_safe_bootstrap',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase,
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: manager,
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: response({
+              structuredContent: { player: { id: 'player_safe' } },
+            }) as T,
+          };
+        },
+      },
+    });
+
+    try {
+      await client.execute('login', { username, password: 'safe-secret' });
+
+      expect(getDefaultProfile()).toBe(profile);
+      expect(profile).not.toBe(username);
+      const sessionPath = path.join(configRoot, 'spacemolt-cli', 'sessions', `${profile}.json`);
+      expect(fs.existsSync(sessionPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(sessionPath, 'utf-8'))).toMatchObject({
+        id: 'sess_safe_bootstrap',
+        username,
+        password: 'safe-secret',
+        player_id: 'player_safe',
+      });
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
   test('does not persist failed login credentials', async () => {
     const { client, store } = createClient([
       response({ error: { code: 'invalid_credentials', message: 'bad login' } }),
@@ -270,6 +561,26 @@ describe('SpaceMoltClient', () => {
     expect(store.current?.username).toBe('NewPilot');
     expect(store.current?.password).toBe('generated');
     expect(store.current?.player_id).toBe('player_register');
+  });
+
+  test('successful register initializes the default profile from username', async () => {
+    const store = createStore(session());
+    const { client } = createClient(
+      [
+        response({
+          structuredContent: { password: 'generated', player_id: 'player_register' },
+        }),
+      ],
+      store,
+    );
+
+    await client.execute('register', {
+      username: 'NewPilot',
+      empire: 'solarian',
+      registration_code: 'code',
+    });
+
+    expect(store.defaultProfile).toBe('NewPilot');
   });
 
   test('rate-limit retry cap limits the number of retries', async () => {

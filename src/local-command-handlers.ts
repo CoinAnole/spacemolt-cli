@@ -30,7 +30,7 @@ import {
 import { defaultOpenApiCacheDir, type OpenApiCacheFile, refreshOpenApiCache } from './openapi-cache.ts';
 import { API_BASE, c, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
-import { getSessionPath, showProfiles } from './session.ts';
+import { setDefaultProfile, showDefaultProfile, showProfiles, tryGetSessionPath } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
 function writeJson(context: CliRuntimeContext | undefined, value: unknown, space: number | undefined = 2): void {
@@ -39,27 +39,37 @@ function writeJson(context: CliRuntimeContext | undefined, value: unknown, space
   else console.log(json);
 }
 
-const profileHandler: CommandHandler<{ action: 'list' }, { action: 'list' }> = {
+type ProfilePayload = { action: 'list' } | { action: 'default'; name?: string };
+
+const PROFILE_USAGE = 'spacemolt profile [list|default [name]]';
+
+const profileHandler: CommandHandler<ProfilePayload, ProfilePayload> = {
   name: 'profile',
   requiresNetwork: false,
   parse(argv) {
     const action = argv[1] || 'list';
-    if (action !== 'list') {
-      return {
-        ok: false,
-        error: {
-          code: 'unknown_command',
-          message: `Unknown profile command: ${action}`,
-          customStderr: `${c.red}Error:${c.reset} Unknown profile command "${action}"\nUsage: spacemolt profile list`,
-          exitCode: 1,
-        },
-      };
-    }
-    return { ok: true, payload: { action } };
+    if (action === 'list') return { ok: true, payload: { action } };
+    if (action === 'default') return { ok: true, payload: { action, name: argv[2] } };
+    return {
+      ok: false,
+      error: {
+        code: 'unknown_command',
+        message: `Unknown profile command: ${action}`,
+        customStderr: `${c.red}Error:${c.reset} Unknown profile command "${action}"\nUsage: ${PROFILE_USAGE}`,
+        exitCode: 1,
+      },
+    };
   },
   run(payload, _options, _client, context) {
-    showProfiles(context?.env.HOME, undefined, context?.env);
-    return { action: payload.action };
+    if (payload.action === 'list') {
+      showProfiles(context?.env.HOME, undefined, context?.env);
+      return payload;
+    }
+    if (payload.name) {
+      setDefaultProfile(payload.name, context?.env.HOME, undefined, context?.env);
+    }
+    showDefaultProfile(context?.writer, context?.env.HOME, undefined, context?.env);
+    return payload;
   },
   render() {
     return 0;
@@ -217,8 +227,8 @@ const idsHandler: CommandHandler<{ kind: IdKind }, { kind: IdKind; hints: IdHint
     }
     return { ok: true, payload: { kind } };
   },
-  run(payload, _options, client) {
-    const sessionPath = client ? getSessionPath(client.config) : undefined;
+  run(payload, _options, client, context) {
+    const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
     const hints = loadIdCacheSync(sessionPath);
     return { kind: payload.kind, hints: hintsForKind(payload.kind, hints) };
   },
@@ -226,7 +236,7 @@ const idsHandler: CommandHandler<{ kind: IdKind }, { kind: IdKind; hints: IdHint
     if (options.json) {
       writeJson(context, { structuredContent: { kind: result.kind, ids: result.hints } });
     } else {
-      const sessionPath = client ? getSessionPath(client.config) : undefined;
+      const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
       printIds(result.kind, sessionPath, context?.writer);
     }
     return 0;
@@ -251,8 +261,8 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
     }
     return { ok: true, payload: { query } };
   },
-  run(payload, _options, client) {
-    const sessionPath = client ? getSessionPath(client.config) : undefined;
+  run(payload, _options, client, context) {
+    const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
     const hints = loadIdCacheSync(sessionPath);
     return { query: payload.query, matches: searchItemHints(payload.query, hints) };
   },
@@ -260,7 +270,7 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
     if (options.json) {
       writeJson(context, { structuredContent: { query: result.query, matches: result.matches } });
     } else {
-      const sessionPath = client ? getSessionPath(client.config) : undefined;
+      const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
       printWhereCanI(result.query, sessionPath, context?.writer);
     }
     return 0;

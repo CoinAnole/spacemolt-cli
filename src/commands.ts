@@ -95,9 +95,9 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     seeAlso: ['ids', 'catalog', 'view_market'],
   },
   profile: {
-    usage: '[list]',
-    description: 'List saved named profile sessions.',
-    example: 'spacemolt profile list',
+    usage: '[list|default [name]]',
+    description: 'List saved named profile sessions or show/change the default profile.',
+    example: 'spacemolt profile default pilot',
     category: 'Session management',
     args: [],
     required: [],
