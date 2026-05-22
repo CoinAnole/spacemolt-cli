@@ -178,6 +178,15 @@ describe('structuredContent output mode precedence', () => {
     expect(JSON.parse(stdout)).toEqual({ fuel: 42 });
   });
 
+  test('--jq supports array index bracket notation', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_market', outputModeFixture, {
+      jq: '.items[0].quantity',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('5');
+  });
+
   test('--compact compacts projected JSON', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       json: true,

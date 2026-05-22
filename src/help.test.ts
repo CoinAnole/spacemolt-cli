@@ -102,6 +102,17 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });
 
+  test('showHelp documents automation output semantics', () => {
+    const capture = captureWriter();
+    showHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('--json, -j        Full API response as JSON');
+    expect(output).toContain('--jq              Extract with path syntax');
+    expect(output).toContain('.key[0].field');
+    expect(output).toContain('Projections read from structuredContent when present.');
+  });
+
   test('renderProgressiveHelp writes unauthenticated start steps', () => {
     const capture = captureWriter();
     renderProgressiveHelp({ authenticated: false }, capture.writer);
@@ -381,6 +392,18 @@ describe('help output branches', () => {
     expect(output).toContain('ID Cache:');
     expect(output).toContain('spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player IDs');
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
+  });
+
+  test('showFullHelp documents automation output semantics', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('--json, -j          Full API response as JSON');
+    expect(output).toContain('--jq <expr>         Extract with path syntax');
+    expect(output).toContain('.key[0].field');
+    expect(output).toContain('SPACEMOLT_OUTPUT    Set to json for full API response JSON');
   });
 
   test('showFullHelp documents named profile environment without session path override', () => {

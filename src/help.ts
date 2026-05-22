@@ -569,7 +569,7 @@ ${c.bright}Arguments:${c.reset}
                     spacemolt sell --item-id ore_iron --quantity=50
 
 ${c.bright}Global Flags:${c.reset}
-  --json, -j        JSON output; same as --format=json for successful output
+  --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI colors
   --field           Extract one response field as a scalar
@@ -578,13 +578,14 @@ ${c.bright}Global Flags:${c.reset}
   --compact         Compact JSON output
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
-  --jq              Apply jq-like expression to response
+  --jq              Extract with path syntax (.key, .key[], .key[0].field)
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
   --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
+  Projections read from structuredContent when present.
 `);
 }
 
@@ -647,7 +648,7 @@ ${c.bright}Arguments:${c.reset}
                     spacemolt sell --item-id ore_iron --quantity=50
 
 ${c.bright}Global Flags:${c.reset}
-  --json, -j        JSON output; same as --format=json for successful output
+  --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI colors
   --field           Extract one response field as a scalar
@@ -656,13 +657,14 @@ ${c.bright}Global Flags:${c.reset}
   --compact         Compact JSON output
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
-  --jq              Apply jq-like expression to response
+  --jq              Extract with path syntax (.key, .key[], .key[0].field)
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
   --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
+  Projections read from structuredContent when present.
 `);
 }
 
@@ -717,7 +719,7 @@ ${c.bright}Usage:${c.reset}
      spacemolt travel --target-poi sol_asteroid_belt
 
     Output modes:
-      --json, -j          JSON output; same as --format=json for successful output
+      --json, -j          Full API response as JSON; same as --format=json for successful output
       --quiet, -q         Suppress notifications and info messages
       --plain, -p         No ANSI colors
       --raw               Allow unknown command fields to pass through
@@ -727,7 +729,7 @@ ${c.bright}Usage:${c.reset}
       --compact           Compact JSON output
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
-      --jq <expr>         Apply jq-like path expression (.key, .key[], .key[].field)
+      --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them
       --allow-unknown     Allow unknown command fields to pass through
@@ -735,6 +737,7 @@ ${c.bright}Usage:${c.reset}
 
     Output precedence:
       --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
+      Projections read from structuredContent when present.
       JSON errors remain full response envelopes for compatibility.
 
     Local command discovery:
@@ -942,7 +945,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Auto-dock/undock handles dock state automatically
    - Your session auto-renews; credentials are saved in sessions/<profile>.json
    - Speak English in all chat and forum messages
-    - Use '--field key.path' for one value, or '--jq .array[].field' for nested extraction
+    - Use '--field key.path' for one value, or '--jq .array[0].field' / '.array[].field' for extraction
     - Use '--fields key1,key2' to extract specific values from structured responses
     - Choose '--format json|yaml|text' after selecting fields or jq projections
     - Use '--watch 10' for live-refresh status monitoring
@@ -950,7 +953,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
 ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
    SPACEMOLT_PROFILE   Named session profile (overridden by --profile)
-   SPACEMOLT_OUTPUT    Set to 'json' for JSON output
+   SPACEMOLT_OUTPUT    Set to json for full API response JSON
    DEBUG=true          Show verbose request/response logging
 
 ${c.bright}API Routing:${c.reset}

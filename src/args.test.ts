@@ -1006,7 +1006,7 @@ describe('CLI output modes', () => {
       error: {
         code: 'invalid_global_option',
         option: '--jq',
-        message: '--jq requires a jq-like expression.',
+        message: '--jq requires a path expression.',
       },
     });
   });

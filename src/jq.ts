@@ -7,7 +7,7 @@ export function evaluateJq(data: Record<string, unknown>, expr: string): unknown
 
   if (trimmed.startsWith('.')) return evalPath(data, trimmed);
 
-  throw new Error(`Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[].field`);
+  throw new Error(`Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field`);
 }
 
 function evalPath(data: unknown, expr: string): unknown {
@@ -34,6 +34,22 @@ function evalPath(data: unknown, expr: string): unknown {
     }
     if (afterBracket === '') return array;
     throw new Error(`Unsupported expression after []: "${afterBracket}"`);
+  }
+
+  const trimmedBracketContent = bracketContent.trim();
+  if (/^\d+$/.test(trimmedBracketContent)) {
+    const afterBracket = rest.slice(rest.indexOf(']') + 1);
+    if (afterBracket && !afterBracket.startsWith('.')) {
+      throw new Error(`Unsupported expression after [${trimmedBracketContent}]: "${afterBracket}"`);
+    }
+    const indexedPath = [
+      arrayKey,
+      trimmedBracketContent,
+      afterBracket.startsWith('.') ? afterBracket.slice(1) : afterBracket,
+    ]
+      .filter(Boolean)
+      .join('.');
+    return getFieldValue(data, indexedPath);
   }
 
   throw new Error(`Unsupported bracket content: "[${bracketContent}]"`);

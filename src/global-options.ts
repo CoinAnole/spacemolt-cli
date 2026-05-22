@@ -154,7 +154,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
         result.jq = nextArg;
         i++;
       } else {
-        return parseError(arg, '--jq requires a jq-like expression.', outputState(result));
+        return parseError(arg, '--jq requires a path expression.', outputState(result));
       }
     } else if (arg.startsWith('--jq=')) {
       result.jq = arg.slice('--jq='.length);
