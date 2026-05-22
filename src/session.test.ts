@@ -61,13 +61,21 @@ describe('SessionManager', () => {
     expect(loaded).toEqual(sessionObj);
   });
 
-  test('default app directory follows Linux and macOS conventions', () => {
+  test('default app directory follows Linux, macOS, and Windows conventions', () => {
     expect(getSpacemoltHome('/home/tester', 'linux', {})).toBe('/home/tester/.config/spacemolt-cli');
     expect(getSpacemoltHome('/home/tester', 'linux', { XDG_CONFIG_HOME: '/tmp/config' })).toBe(
       '/tmp/config/spacemolt-cli',
     );
     expect(getSpacemoltHome('/Users/tester', 'darwin', {})).toBe(
       '/Users/tester/Library/Application Support/spacemolt-cli',
+    );
+    expect(
+      getSpacemoltHome('C:\\Users\\tester', 'win32', {
+        APPDATA: 'C:\\Users\\tester\\AppData\\Roaming',
+      }),
+    ).toBe(path.win32.join('C:\\Users\\tester\\AppData\\Roaming', 'spacemolt-cli'));
+    expect(getSpacemoltHome('C:\\Users\\tester', 'win32', {})).toBe(
+      path.win32.join('C:\\Users\\tester', 'AppData', 'Roaming', 'spacemolt-cli'),
     );
   });
 

@@ -17,6 +17,9 @@ export function getSpacemoltHome(
   env: EnvLike = process.env,
 ): string {
   if (platform === 'darwin') return path.join(homeDir, 'Library', 'Application Support', 'spacemolt-cli');
+  if (platform === 'win32') {
+    return path.win32.join(env.APPDATA || path.win32.join(homeDir, 'AppData', 'Roaming'), 'spacemolt-cli');
+  }
   const configHome = env.XDG_CONFIG_HOME || path.join(homeDir, '.config');
   return path.join(configHome, 'spacemolt-cli');
 }

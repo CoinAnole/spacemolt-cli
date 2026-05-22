@@ -52,6 +52,7 @@ By default all session state and saved login credentials are stored in the platf
 
 - macOS: `~/Library/Application Support/spacemolt-cli/`
 - Linux: `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/`
+- Windows: `%APPDATA%\spacemolt-cli\`
 
 | File | Purpose |
 | --- | --- |
