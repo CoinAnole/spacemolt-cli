@@ -63,6 +63,18 @@ export const marketOrdersFixture = {
   ],
 };
 
+export const createSellOrderFixture = {
+  action: 'create_sell_order',
+  item: 'Iron Ore',
+  item_id: 'iron_ore',
+  quantity: 1,
+  price_each: 999999,
+  quantity_listed: 1,
+  listing_fee: 19999,
+  order_id: 'order-sell-1',
+  message: 'Created sell order for 1 Iron Ore at 999999 credits each.',
+};
+
 export const commissionStatusFixture = {
   commissions: [
     {
@@ -107,6 +119,7 @@ export const marketListingsFixture = {
 };
 
 export const marketFixtureCases = {
+  create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   storage: { command: 'storage', fixture: storageFixture },
   market_orders: { command: 'view_orders', fixture: marketOrdersFixture },
@@ -115,6 +128,7 @@ export const marketFixtureCases = {
 
 export const marketHighValueFixtures = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
+  create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },

@@ -6,6 +6,7 @@ import {
   activeMissionsFixture,
   browseShipsFixture,
   catalogItemsFixture,
+  createSellOrderFixture,
   formatterFixtureCases,
   getLocationFixture,
   getStatusFixture,
@@ -441,6 +442,18 @@ describe('structuredContent formatters', () => {
     `);
   });
 
+  test('formats created sell order with listing fee', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', createSellOrderFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Order Created ===');
+    expect(stdout).toContain('Item: Iron Ore (iron_ore)');
+    expect(stdout).toContain('Quantity listed: 1');
+    expect(stdout).toContain('Price each: 999,999 cr');
+    expect(stdout).toContain('Listing fee: 19,999 cr');
+    expect(stdout).toContain('Order ID: order-sell-1');
+  });
+
   test('prefers command-scoped formatters before shape fallbacks', () => {
     const { stdout, stderr } = captureStructuredOutput('get_trades', {
       listings: [
@@ -812,6 +825,15 @@ describe('structuredContent formatters', () => {
         Iron Ore | ore_iron |  50 |          "
       ,
         "chat_sent": "[local] Clear skies.",
+        "create_sell_order": 
+      "
+      === Sell Order Created ===
+      Item: Iron Ore (iron_ore)
+      Quantity listed: 1
+      Price each: 999,999 cr
+      Listing fee: 19,999 cr
+      Order ID: order-sell-1"
+      ,
         "drone": 
       "
       === Drone ===

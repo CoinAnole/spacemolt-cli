@@ -191,9 +191,17 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['item_id', 'category'],
   },
   view_orders: {
+    usage:
+      '[station_id] [--item item_id] [--search text] [order_type=buy|sell] [scope=personal|faction] [page=1] [page_size=20] [sort_by=newest|oldest|price_asc|price_desc]',
+    description:
+      'Show your market orders at the current or selected station, optionally filtered by item or search text.',
+    example: 'spacemolt view_orders --item iron_ore',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/view_orders',
     positionals: ['station_id'],
+    aliases: {
+      item: 'item_id',
+    },
   },
   cancel_order: {
     usage: '[order_id]  (cancel and return escrow; or pass order_ids=... for batch cancel)',

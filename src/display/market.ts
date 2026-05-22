@@ -103,6 +103,29 @@ export const marketFormatters = [
     { commands: ['view_market'], shapeFallback: true },
   ),
 
+  // Market order creation
+  namedFormatter(
+    'create_sell_order',
+    ['listing_fee', 'order_id'],
+    (r) => {
+      if (r.action !== 'create_sell_order' && r.order_id === undefined && r.listing_fee === undefined) return false;
+      const itemName = r.item || r.item_name || r.item_id || 'unknown';
+      const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
+      const quantity = r.quantity_listed ?? r.quantity;
+      const priceEach = Number(r.price_each);
+      const listingFee = Number(r.listing_fee);
+
+      emitLine(`\n${c.bright}=== Sell Order Created ===${c.reset}`);
+      emitLine(`Item: ${itemName}${itemId}`);
+      if (quantity !== undefined) emitLine(`Quantity listed: ${Number(quantity).toLocaleString()}`);
+      if (Number.isFinite(priceEach)) emitLine(`Price each: ${priceEach.toLocaleString()} cr`);
+      if (Number.isFinite(listingFee)) emitLine(`Listing fee: ${listingFee.toLocaleString()} cr`);
+      if (r.order_id) emitLine(`Order ID: ${r.order_id}`);
+      return true;
+    },
+    { commands: ['create_sell_order'], shapeFallback: true },
+  ),
+
   // Station storage
   namedFormatter(
     'storage',

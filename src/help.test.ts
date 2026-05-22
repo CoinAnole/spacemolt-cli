@@ -255,6 +255,23 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt dock <args...>');
   });
 
+  test('showCommandHelp documents view_orders filters', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('view_orders', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Show your market orders');
+    expect(output).toContain('spacemolt view_orders --item iron_ore');
+    expect(output).toContain('item -> item_id');
+    expect(output).toContain('item_id');
+    expect(output).toContain('order_type');
+    expect(output).toContain('page_size');
+    expect(output).toContain('sort_by');
+    expect(output).toContain('scope');
+    expect(output).toContain('search');
+  });
+
   test('showCommandGroup omits duplicate command-name descriptions', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {

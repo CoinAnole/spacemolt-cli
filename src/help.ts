@@ -347,6 +347,19 @@ export function showCommandHelp(command: string, writer?: CliWriter, commands?: 
     write(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
 
+  if (config.aliases && Object.keys(config.aliases).length > 0) {
+    write(`\n${c.bright}CLI aliases:${c.reset}`);
+    for (const [from, to] of Object.entries(config.aliases)) write(`  ${from} -> ${to}`);
+  }
+  if ('schema' in config && config.schema && Object.keys(config.schema).length > 0) {
+    write(`\n${c.bright}Fields:${c.reset}`);
+    for (const [field, schema] of Object.entries(config.schema)) {
+      const values = schema.enum?.length ? ` (${schema.enum.join('|')})` : '';
+      const description = schema.description ? ` - ${schema.description}` : '';
+      write(`  ${field}${values}${description}`);
+    }
+  }
+
   if (config.example) {
     write(`\n${c.bright}Example:${c.reset}`);
     write(`  ${config.example}`);

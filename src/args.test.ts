@@ -686,6 +686,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.station_id).toBe('sol_central');
   });
 
+  test('view_orders accepts item and search filters', () => {
+    const item = parseOk(['view_orders', '--item', 'iron_ore']);
+    expect(normalizeParsedPayload('view_orders', item.payload)).toMatchObject({ item_id: 'iron_ore' });
+
+    const search = parseOk(['view_orders', '--search', 'iron']);
+    expect(search.payload.search).toBe('iron');
+  });
+
   test('view_storage with station_id', () => {
     const { payload } = parseOk(['view_storage', 'nexus_base']);
     expect(payload.station_id).toBe('nexus_base');
