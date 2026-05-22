@@ -1,5 +1,62 @@
 import { c, emitLine, firstArray, formatter, namedFormatter, printCompactTable, printItemTable } from './helpers.ts';
 
+interface BestPriceDepth {
+  price: number;
+  quantity: number;
+  orders: number;
+}
+
+function orderPrice(order: Record<string, unknown>): number | undefined {
+  const price = Number(order.price_each);
+  return Number.isFinite(price) ? price : undefined;
+}
+
+function orderQuantity(order: Record<string, unknown>): number {
+  const quantity = Number(order.quantity);
+  return Number.isFinite(quantity) ? quantity : 0;
+}
+
+function bestPriceDepth(
+  orders: Array<Record<string, unknown>> | undefined,
+  side: 'buy' | 'sell',
+): BestPriceDepth | undefined {
+  if (!orders?.length) return undefined;
+  const prices = orders.map(orderPrice).filter((price): price is number => price !== undefined);
+  if (!prices.length) return undefined;
+  const bestPrice = side === 'buy' ? Math.max(...prices) : Math.min(...prices);
+  const ordersAtBest = orders.filter((order) => orderPrice(order) === bestPrice);
+  return {
+    price: bestPrice,
+    quantity: ordersAtBest.reduce((total, order) => total + orderQuantity(order), 0),
+    orders: ordersAtBest.length,
+  };
+}
+
+function formatPriceDepth(depth: BestPriceDepth | undefined): { price: string; depth: string } {
+  if (!depth) return { price: '', depth: '' };
+  return {
+    price: `${depth.price.toLocaleString()} cr`,
+    depth: `${depth.quantity.toLocaleString()} / ${depth.orders.toLocaleString()}`,
+  };
+}
+
+function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return items.map((item) => {
+    const buy = formatPriceDepth(bestPriceDepth(item.buy_orders as Array<Record<string, unknown>> | undefined, 'buy'));
+    const sell = formatPriceDepth(
+      bestPriceDepth(item.sell_orders as Array<Record<string, unknown>> | undefined, 'sell'),
+    );
+    return {
+      item_name: item.item_name || item.item_id || 'unknown',
+      item_id: item.item_id || '',
+      best_buy: buy.price,
+      buy_depth: buy.depth,
+      best_sell: sell.price,
+      sell_depth: sell.depth,
+    };
+  });
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -71,6 +128,20 @@ export const marketFormatters = [
         return true;
       }
       emitLine(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n`);
+      if (items.length > 1) {
+        printCompactTable('Market Summary', marketSummaryRows(items), [
+          ['Item', ['item_name']],
+          ['ID', ['item_id']],
+          ['Best Buy', ['best_buy']],
+          ['Buy Depth', ['buy_depth']],
+          ['Best Sell', ['best_sell']],
+          ['Sell Depth', ['sell_depth']],
+        ]);
+        emitLine('');
+        emitLine('Depth columns show quantity / orders at the best price.');
+        emitLine('Use spacemolt view_market <item_id> for full order depth.');
+        return true;
+      }
       for (const item of items) {
         const name = String(item.item_name || item.item_id || 'unknown');
         const buyOrders = item.buy_orders as Array<Record<string, unknown>> | undefined;

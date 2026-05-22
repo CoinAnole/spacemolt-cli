@@ -25,8 +25,16 @@ export const viewMarketFixture = {
     {
       item_id: 'ore_iron',
       item_name: 'Iron Ore',
-      buy_orders: [{ price_each: 15, quantity: 500, source: 'station' }],
-      sell_orders: [{ price_each: 18, quantity: 125 }],
+      buy_orders: [
+        { price_each: 15, quantity: 500, source: 'station' },
+        { price_each: 15, quantity: 75, source: 'player' },
+        { price_each: 12, quantity: 900, source: 'player' },
+      ],
+      sell_orders: [
+        { price_each: 18, quantity: 5 },
+        { price_each: 18, quantity: 10 },
+        { price_each: 75, quantity: 1000 },
+      ],
     },
     {
       item_id: 'fuel_cell',
@@ -35,6 +43,12 @@ export const viewMarketFixture = {
       sell_orders: [],
     },
   ],
+};
+
+export const viewMarketSingleItemFixture = {
+  action: 'view_market',
+  base_id: 'earth_station',
+  items: [viewMarketFixture.items[0]],
 };
 
 export const storageFixture = {

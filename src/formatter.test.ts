@@ -15,6 +15,7 @@ import {
   poiInfoFixture,
   storageFixture,
   viewMarketFixture,
+  viewMarketSingleItemFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
 import { renderResponse } from './main';
@@ -430,14 +431,36 @@ describe('structuredContent formatters', () => {
       "
       === Market at earth_station ===
 
-      Iron Ore
-        Buy orders (1):
-          15 cr x 500
-        Sell orders (1):
-          18 cr x 125
 
-      Fuel Cell
-        (no orders)
+      === Market Summary ===
+
+        Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
+        ----------+-----------+----------+-----------+-----------+-----------
+        Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
+        Fuel Cell | fuel_cell |          |           |           |           
+
+      Depth columns show quantity / orders at the best price.
+      Use spacemolt view_market <item_id> for full order depth."
+    `);
+  });
+
+  test('formats single-item market lookups with full order depth', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_market', viewMarketSingleItemFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toMatchInlineSnapshot(`
+      "
+      === Market at earth_station ===
+
+      Iron Ore
+        Buy orders (3):
+          15 cr x 500
+          15 cr x 75
+          12 cr x 900
+        Sell orders (3):
+          18 cr x 5
+          18 cr x 10
+          75 cr x 1,000
       "
     `);
   });
@@ -1013,15 +1036,16 @@ describe('structuredContent formatters', () => {
       "
       === Market at earth_station ===
 
-      Iron Ore
-        Buy orders (1):
-          15 cr x 500
-        Sell orders (1):
-          18 cr x 125
 
-      Fuel Cell
-        (no orders)
-      "
+      === Market Summary ===
+
+        Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
+        ----------+-----------+----------+-----------+-----------+-----------
+        Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
+        Fuel Cell | fuel_cell |          |           |           |           
+
+      Depth columns show quantity / orders at the best price.
+      Use spacemolt view_market <item_id> for full order depth."
       ,
       }
     `);
