@@ -10,6 +10,8 @@
     "dev": "DEBUG=true bun run src/client.ts",
     "generate:api": "bun run scripts/generate-api-metadata.ts && bunx biome format --write src/generated/api-commands.ts",
     "build": "bun build src/client.ts --compile --outfile spacemolt",
+    "install:local:unix": "bash scripts/install-local.sh",
+    "install:local:windows": "powershell -ExecutionPolicy Bypass -File scripts/install-local.ps1",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/",
     "test": "bun test",

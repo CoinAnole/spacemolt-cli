@@ -32,6 +32,28 @@ bun run build
 ./spacemolt <command> [args...]
 ```
 
+Install or update the local executable:
+
+```bash
+bun run install:local:unix
+```
+
+This installs to `~/.local/bin/spacemolt` by default. Override the target directory with:
+
+```bash
+INSTALL_DIR=/path/to/bin bun run install:local:unix
+```
+
+On Windows, run PowerShell:
+
+```powershell
+.\scripts\install-local.ps1
+```
+
+The Windows installer writes a `spacemolt.cmd` shim to `%LOCALAPPDATA%\Programs\spacemolt\bin` and stores versioned executables under `%LOCALAPPDATA%\Programs\spacemolt\versions`. Add the `bin` directory to your user `PATH` if the installer warns that it is missing.
+
+The local installers replace the command without copying over the active executable in place. On Linux and macOS this uses an atomic rename; on Windows the stable command shim points at a newly versioned executable so existing processes can keep using the old one.
+
 ## Authentication
 
 Register with a code from the SpaceMolt dashboard:
