@@ -290,7 +290,10 @@ export class SessionManager {
     }
   }
 
-  async createSession(profileOverride?: string): Promise<Session> {
+  async createSession(
+    profileOverride?: string,
+    savedCredentials?: Pick<Session, 'username' | 'password'>,
+  ): Promise<Session> {
     if (this.debug) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
       method: 'POST',
@@ -303,6 +306,7 @@ export class SessionManager {
       id: data.session.id,
       created_at: data.session.created_at,
       expires_at: data.session.expires_at,
+      ...savedCredentials,
     };
     await this.saveSession(session, profileOverride);
     return session;
@@ -314,7 +318,11 @@ export class SessionManager {
 
   async getSession(profileOverride?: string): Promise<Session> {
     const session = await this.loadSession(profileOverride);
-    return !session || this.isSessionExpired(session) ? this.createSession(profileOverride) : session;
+    if (!session) return this.createSession(profileOverride);
+    if (!this.isSessionExpired(session)) return session;
+    const savedCredentials =
+      session.username && session.password ? { username: session.username, password: session.password } : undefined;
+    return this.createSession(profileOverride, savedCredentials);
   }
 
   ensureDefaultProfile(profile?: string): void {

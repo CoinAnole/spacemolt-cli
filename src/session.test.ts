@@ -420,4 +420,47 @@ describe('SessionManager', () => {
     expect(transportCalled).toBe(true);
     expect(session2.id).toBe('sess_refreshed');
   });
+
+  test('expired session refresh preserves saved credentials without stale player id', async () => {
+    const fixedNow = Date.now();
+    const manager = new SessionManager({
+      profile: 'refresh_credentials_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      transport: (async (url: string): Promise<JsonResponse<APIResponse>> => {
+        expect(url).toBe('https://api.spacemolt.test/api/v2/session');
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_refreshed_with_credentials',
+              created_at: new Date(fixedNow).toISOString(),
+              expires_at: new Date(fixedNow + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+      clock: () => fixedNow,
+    });
+
+    await manager.saveSession({
+      id: 'sess_expired_with_credentials',
+      username: 'marlowe',
+      password: 'secret',
+      player_id: 'player_marlowe',
+      created_at: new Date(fixedNow).toISOString(),
+      expires_at: new Date(fixedNow - 5000).toISOString(),
+    });
+
+    const session = await manager.getSession();
+    expect(session).toMatchObject({
+      id: 'sess_refreshed_with_credentials',
+      username: 'marlowe',
+      password: 'secret',
+    });
+    expect(session.player_id).toBeUndefined();
+
+    const loaded = await manager.loadSession();
+    expect(loaded).toEqual(session);
+  });
 });
