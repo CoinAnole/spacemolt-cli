@@ -128,6 +128,27 @@ describe('response renderer', () => {
     expect(output.indexOf('Notifications (1)')).toBeLessThan(output.indexOf('Status ready'));
   });
 
+  test('renderResponse warns when server help filters are ignored by the API', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'help',
+        displayCommand: 'help',
+        payload: { category: 'Navigation' },
+        response: { result: 'All server commands' },
+      },
+      { ...baseOptions, noTimestamp: true, format: 'table' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const stderr = capture.stderr.join('\n').replace(ANSI_PATTERN, '');
+    expect(exitCode).toBe(0);
+    expect(capture.text()).toContain('All server commands');
+    expect(stderr).toContain('server help does not currently support category/command filtering');
+    expect(stderr).toContain('spacemolt help <command>');
+  });
+
   test('renderResponse prints JSON error envelopes and exits nonzero', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(

@@ -97,6 +97,7 @@ export async function renderResponse(
   }
 
   const displayResponse = applyDisplayFilters(command, response, commandRun.payload);
+  warnAboutUnsupportedServerHelpFilters(commandRun, { isJson, hasProjection, writer });
 
   const success = displayResult(
     displayCommand,
@@ -105,6 +106,20 @@ export async function renderResponse(
     context,
   );
   return success === false ? 1 : 0;
+}
+
+function warnAboutUnsupportedServerHelpFilters(
+  commandRun: CommandRunResult,
+  options: { isJson: boolean; hasProjection: boolean; writer?: CliRuntimeContext['writer'] },
+): void {
+  if (options.isJson || options.hasProjection || commandRun.command !== 'help') return;
+  const payload = commandRun.payload ?? {};
+  if (payload.category === undefined && payload.command === undefined) return;
+
+  const warn = options.writer?.err.bind(options.writer) ?? console.error;
+  warn(
+    `${c.yellow}Note:${c.reset} server help does not currently support category/command filtering; use spacemolt help <command> or spacemolt help <group> for local filtered help.`,
+  );
 }
 
 function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {
