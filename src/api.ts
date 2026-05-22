@@ -18,6 +18,21 @@ const SESSION_ERROR_CODES = new Set(
     .map(([code]) => code),
 );
 
+function appendQueryPayload(url: string, payload?: Record<string, unknown>): string {
+  if (!payload || Object.keys(payload).length === 0) return url;
+
+  const parsedUrl = new URL(url);
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) continue;
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) {
+      if (item === undefined) continue;
+      parsedUrl.searchParams.append(key, String(item));
+    }
+  }
+  return parsedUrl.toString();
+}
+
 export interface SpaceMoltClientOptions {
   config?: SpaceMoltConfig;
   transport?: {
@@ -171,19 +186,21 @@ export class SpaceMoltClient {
     requestPayload?: Record<string, unknown>,
     sessionProfile?: string,
   ): Promise<APIResponse> {
+    const finalRequestUrl = requestMethod === 'GET' ? appendQueryPayload(requestUrl, requestPayload) : requestUrl;
+
     if (this.debug) {
-      this.logger.debug(`Request: ${requestMethod} ${requestUrl}`);
+      this.logger.debug(`Request: ${requestMethod} ${finalRequestUrl}`);
       this.logger.debug(`Route: v2`);
       this.logger.debug(`Session: ${currentSession.id.substring(0, 8)}...`);
       if (requestPayload) {
         const safePayload = { ...requestPayload };
         if (safePayload.password) safePayload.password = '***';
-        this.logger.debug(`Payload: ${JSON.stringify(safePayload)}`);
+        this.logger.debug(`${requestMethod === 'GET' ? 'Query' : 'Payload'}: ${JSON.stringify(safePayload)}`);
       }
     }
 
     const startTime = this.clock.now();
-    const response = await this.transport.requestJson<APIResponse>(requestUrl, {
+    const response = await this.transport.requestJson<APIResponse>(finalRequestUrl, {
       method: requestMethod,
       sessionId: currentSession.id,
       payload: requestMethod === 'POST' && requestPayload ? requestPayload : undefined,

@@ -194,7 +194,7 @@ describe('runInvocation option isolation', () => {
     await captureInvocation(['--profile', 'pilot', '--help', 'travel']);
     expect(ACTIVE_PROFILE).toBe('pilot');
 
-    await captureInvocation(['--help', 'travel']);
+    await captureInvocation(['--help', 'travel'], {}, { getDefaultProfile: () => undefined });
     expect(ACTIVE_PROFILE).toBeUndefined();
   });
 
