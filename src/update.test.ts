@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { checkForUpdates, compareVersions, type UpdateCheckOptions } from './update';
+import { checkForUpdates, compareVersions, getUpdateCachePath, type UpdateCheckOptions } from './update';
 
 const NOW = new Date('2026-05-18T12:00:00.000Z');
 
@@ -78,6 +78,10 @@ describe('compareVersions', () => {
 });
 
 describe('checkForUpdates', () => {
+  test('defaults update cache to the CLI config directory', () => {
+    expect(getUpdateCachePath()).toEndWith(path.join('.config', 'spacemolt-cli', 'update-check.json'));
+  });
+
   test('skips unless update checks are explicitly enabled', async () => {
     let fetched = false;
     const options = updateOptions({

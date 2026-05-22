@@ -515,7 +515,7 @@ describe('local command handlers', () => {
       expect(exitCode).toBe(0);
       expect(fetches).toEqual(['https://example.test/api/v2/openapi.json']);
       expect(stdout).toEqual(['Synced 1 OpenAPI routes.']);
-      expect(fs.existsSync(path.join(configHome, 'spacemolt', 'openapi-cache.json'))).toBe(true);
+      expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'openapi-cache.json'))).toBe(true);
     } finally {
       globalThis.fetch = originalFetch;
     }

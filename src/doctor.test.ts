@@ -45,7 +45,7 @@ function tempDir(): string {
 }
 
 function writeOpenApiCache(configHome: string): void {
-  const cacheDir = path.join(configHome, 'spacemolt');
+  const cacheDir = path.join(configHome, 'spacemolt-cli');
   fs.mkdirSync(cacheDir, { recursive: true });
   fs.writeFileSync(
     path.join(cacheDir, 'openapi-cache.json'),

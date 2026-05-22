@@ -61,7 +61,7 @@ describe('runInvocation option isolation', () => {
   test('loads cached OpenAPI routes when resolving dynamic commands', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-openapi-cache-'));
     const configHome = path.join(tempDir, 'config');
-    const cacheDir = path.join(configHome, 'spacemolt');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
     const sessionPath = path.join(tempDir, 'session.json');
     fs.mkdirSync(cacheDir, { recursive: true });
     fs.writeFileSync(

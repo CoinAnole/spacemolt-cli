@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { type GeneratedApiRoute, generateApiRoutes, type OpenApiSpec } from './openapi-metadata.ts';
+import { getSpacemoltHome } from './session.ts';
 
 export interface OpenApiCacheFile {
   fetchedAt: string;
@@ -12,8 +12,7 @@ export interface OpenApiCacheFile {
 type OpenApiFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 export function defaultOpenApiCacheDir(env: NodeJS.ProcessEnv = process.env): string {
-  const configHome = env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-  return path.join(configHome, 'spacemolt');
+  return getSpacemoltHome(undefined, undefined, env);
 }
 
 export function openApiCachePath(cacheDir = defaultOpenApiCacheDir()): string {

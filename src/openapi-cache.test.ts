@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { loadCachedGeneratedRoutes, refreshOpenApiCache } from './openapi-cache';
+import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes, refreshOpenApiCache } from './openapi-cache';
 
 const tempDirs: string[] = [];
 
@@ -17,6 +17,12 @@ afterEach(() => {
 });
 
 describe('OpenAPI cache', () => {
+  test('defaults to the CLI config directory', () => {
+    expect(defaultOpenApiCacheDir({ XDG_CONFIG_HOME: '/tmp/spacemolt-config-test' })).toBe(
+      '/tmp/spacemolt-config-test/spacemolt-cli',
+    );
+  });
+
   test('refreshes OpenAPI cache, writes pretty JSON, and returns generated routes', async () => {
     const dir = tempDir();
     const requestedUrls: string[] = [];

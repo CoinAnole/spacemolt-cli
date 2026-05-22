@@ -1,9 +1,9 @@
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 
 import type { CliClock, CliEnv, CliWriter } from './cli-context.ts';
 import { c, DEBUG, GITHUB_REPO, UPDATE_CHECK_INTERVAL_MS, VERSION } from './runtime.ts';
+import { getSpacemoltHome } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { JsonResponse } from './types.ts';
 
@@ -33,7 +33,7 @@ export interface UpdateCheckOptions {
 }
 
 export function getUpdateCachePath(): string {
-  return path.join(os.homedir(), '.config', 'spacemolt', 'update-check.json');
+  return path.join(getSpacemoltHome(), 'update-check.json');
 }
 
 export async function loadUpdateCache(cachePath = getUpdateCachePath()): Promise<UpdateCheckCache | null> {
