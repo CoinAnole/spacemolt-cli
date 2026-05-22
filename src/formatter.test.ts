@@ -279,6 +279,29 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Copper Ore');
   });
 
+  test('view_faction_storage prints bunker fuel and storage hint', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          base_id: 'earth_station',
+          hint: 'Faction storage at Earth Station',
+          faction_fuel_reserve: 320,
+          faction_fuel_capacity: 500,
+          items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 }],
+          ships: [],
+        },
+      },
+      {},
+      { command: 'view_faction_storage', displayCommand: 'view_faction_storage' },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Storage at earth_station ===');
+    expect(stdout).toContain('Fuel bunker: 320 / 500 units');
+    expect(stdout).toContain('Faction storage at Earth Station');
+  });
+
   test('rendered text output uses context clock for timestamps', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput({ result: 'OK' }, {});
 
@@ -481,6 +504,98 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('catalog ship responses include passive recipe ids', () => {
+    const { stdout, stderr } = captureStructuredOutput('catalog', {
+      items: [
+        {
+          id: 't4_ore_refinery',
+          name: 'T4 Ore Refinery',
+          class: 'Industrial',
+          tier: 4,
+          empire: 'solarian',
+          shipyard_tier: 4,
+          passive_recipes: ['passive_refine_iron_ore', 'passive_refine_solar_crystal'],
+        },
+      ],
+      message: 'Ships: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'ships',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Ships ===');
+    expect(stdout).toContain('T4 Ore Refinery');
+    expect(stdout).toContain('passive_refine_iron_ore, passive_refine_solar_crystal');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('catalog recipe responses show inputs outputs and craftability markers', () => {
+    const { stdout, stderr } = captureStructuredOutput('catalog', {
+      recipes: [
+        {
+          id: 'passive_refine_iron_ore',
+          name: 'Passive Iron Refining',
+          category: 'refining',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          crafting_time: 0,
+          facility_only: true,
+        },
+      ],
+      message: 'Recipes: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'recipes',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Recipes ===');
+    expect(stdout).toContain('10x iron_ore');
+    expect(stdout).toContain('2x iron_ingot');
+    expect(stdout).toContain('facility only');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('catalog ship lookups show passive recipe details', () => {
+    const { stdout, stderr } = captureStructuredOutput('catalog', {
+      type: 'ships',
+      items: [
+        {
+          id: 't4_ore_refinery',
+          name: 'T4 Ore Refinery',
+          passive_recipes: ['passive_refine_iron_ore'],
+        },
+      ],
+      passive_recipe_details: [
+        {
+          id: 'passive_refine_iron_ore',
+          name: 'Passive Iron Refining',
+          category: 'refining',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          crafting_time: 0,
+        },
+      ],
+      message: 'Ship details',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Ships ===');
+    expect(stdout).toContain('=== Passive Recipes ===');
+    expect(stdout).toContain('Passive Iron Refining');
+    expect(stdout).toContain('ship passive');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('facility_list formats grouped facility responses', () => {
     const { stdout, stderr } = captureStructuredOutput('facility_list', {
       base_id: 'earth_station',
@@ -527,6 +642,74 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('Faction Fuel: 320/500');
+  });
+
+  test('faction_info lists faction facilities', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_info', {
+      id: 'faction-1',
+      name: 'Drift Matrix',
+      tag: 'DMX7',
+      leader_username: 'DriftMiner-7',
+      member_count: 20,
+      owned_bases: 2,
+      treasury: 12345,
+      is_member: true,
+      facilities: [
+        {
+          facility_id: 'facility-1',
+          base_id: 'earth_station',
+          name: 'Faction Fuel Bunker',
+          type: 'fuel_bunker',
+          active: true,
+          faction_service: 'fuel',
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction: Drift Matrix [DMX7] ===');
+    expect(stdout).toContain('Leader: DriftMiner-7');
+    expect(stdout).toContain('=== Faction Facilities ===');
+    expect(stdout).toContain('Faction Fuel Bunker');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship shows passive processing details', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ship: {
+        id: 'ship-1',
+        name: 'T4 Ore Refinery',
+        class_id: 't4_ore_refinery',
+        hull: 420,
+        max_hull: 420,
+        shield: 300,
+        max_shield: 300,
+        fuel: 240,
+        max_fuel: 240,
+        cargo_used: 30,
+        cargo_capacity: 1250,
+        cpu_used: 16,
+        cpu_capacity: 34,
+        power_used: 23,
+        power_capacity: 75,
+        last_process_tick: 15234,
+      },
+      modules: [],
+      passive_recipe_details: [
+        {
+          id: 'passive_refine_iron_ore',
+          name: 'Passive Iron Refining',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Passive Processing: last tick 15234');
+    expect(stdout).toContain('=== Passive Recipes ===');
+    expect(stdout).toContain('Passive Iron Refining');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('normalizes get_status location data before player status formatting', () => {

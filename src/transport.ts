@@ -8,6 +8,7 @@ export async function requestJson<T = APIResponse>(
   const method = options.method || 'GET';
   const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
   const headers: Record<string, string> = {
+    'Accept-Encoding': 'gzip',
     'User-Agent': `SpaceMolt-Client/${VERSION}`,
     ...options.headers,
   };

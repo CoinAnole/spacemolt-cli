@@ -107,11 +107,19 @@ export const marketFormatters = [
   namedFormatter(
     'storage',
     ['base_id', 'items'],
-    (r) => {
+    (r, command) => {
       if (!r.base_id || !Array.isArray(r.items)) return false;
       const items = r.items as Array<Record<string, unknown>>;
       const ships = (r.ships as Array<Record<string, unknown>>) || [];
-      emitLine(`\n${c.bright}=== Storage at ${r.base_id} ===${c.reset}\n`);
+      const isFactionStorage = command === 'view_faction_storage' || r.target === 'faction';
+      const title = isFactionStorage ? 'Faction Storage' : 'Storage';
+      emitLine(`\n${c.bright}=== ${title} at ${r.base_id} ===${c.reset}\n`);
+      const factionFuelReserve = r.faction_fuel_reserve;
+      const factionFuelCapacity = r.faction_fuel_capacity;
+      if (isFactionStorage && (factionFuelReserve !== undefined || factionFuelCapacity !== undefined)) {
+        emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
+      }
+      if (typeof r.hint === 'string' && r.hint) emitLine(`${c.dim}${r.hint}${c.reset}\n`);
       printItemTable(items);
       if (ships.length) {
         const nameW = Math.max(9, ...ships.map((s) => String(s.class_name || s.class_id || '').length));
@@ -137,7 +145,7 @@ export const marketFormatters = [
       }
       return true;
     },
-    { commands: ['storage', 'view_storage'], shapeFallback: true },
+    { commands: ['storage', 'view_storage', 'view_faction_storage'], shapeFallback: true },
   ),
 
   // Market orders

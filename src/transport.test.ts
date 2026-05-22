@@ -30,6 +30,7 @@ describe('requestJson', () => {
     expect(calls[0]?.init?.method).toBe('POST');
     expect(calls[0]?.init?.body).toBe(JSON.stringify({ item_id: 'ore_iron', quantity: 2 }));
     expect(calls[0]?.init?.headers).toMatchObject({
+      'Accept-Encoding': 'gzip',
       'Content-Type': 'application/json',
       'X-Session-Id': 'sess_123',
     });

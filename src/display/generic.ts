@@ -1,4 +1,4 @@
-import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { c, emitLine, firstArray, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
   return Object.entries(value)
@@ -179,6 +179,56 @@ function titleForListKey(key: string): string {
     .join(' ');
 }
 
+function summarizeItemQuantities(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value
+    .filter(isRecord)
+    .map((item) => {
+      const quantity = item.quantity ?? '?';
+      const id = item.item_id ?? item.id ?? item.name ?? '?';
+      return `${quantity}x ${id}`;
+    })
+    .join(', ');
+}
+
+function summarizePassiveRecipes(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value.filter((recipe) => typeof recipe === 'string').join(', ');
+}
+
+function recipeAvailability(recipe: Record<string, unknown>, passive = false): string {
+  if (passive) return 'ship passive';
+  if (recipe.ship_passive === true || recipe.passive === true) return 'ship passive';
+  if (recipe.facility_only === true) return 'facility only';
+  return 'craftable';
+}
+
+function printRecipeRows(
+  title: string,
+  recipes: Array<Record<string, unknown>>,
+  options: { passive?: boolean } = {},
+): void {
+  const rows = recipes.map((recipe) => ({
+    ...recipe,
+    inputs_summary: summarizeItemQuantities(recipe.inputs),
+    outputs_summary: summarizeItemQuantities(recipe.outputs),
+    availability: recipeAvailability(recipe, options.passive),
+  }));
+  printCompactTable(
+    title,
+    rows,
+    [
+      ['Name', ['name']],
+      ['ID', ['id', 'recipe_id']],
+      ['Category', ['category']],
+      ['Inputs', ['inputs_summary']],
+      ['Outputs', ['outputs_summary']],
+      ['Use', ['availability']],
+    ],
+    { maxCellWidth: 56 },
+  );
+}
+
 export const genericFormatters = [
   formatter(
     (r) => {
@@ -213,6 +263,49 @@ export const genericFormatters = [
       return true;
     },
     { commands: ['get_active_missions'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.type !== 'ships' || !Array.isArray(r.items) || !r.items.every(isRecord)) return false;
+      const rows = (r.items as Array<Record<string, unknown>>).map((ship) => ({
+        ...ship,
+        passive_recipes_summary: summarizePassiveRecipes(ship.passive_recipes),
+      }));
+      printCompactTable(
+        'Ships',
+        rows,
+        [
+          ['Name', ['name', 'class_name']],
+          ['ID', ['id', 'class_id']],
+          ['Class', ['class', 'category']],
+          ['Tier', ['tier']],
+          ['Empire', ['empire']],
+          ['Yard', ['shipyard_tier']],
+          ['Passive Recipes', ['passive_recipes_summary']],
+        ],
+        { maxCellWidth: 72 },
+      );
+
+      const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
+      if (passiveRecipeDetails) printRecipeRows('Passive Recipes', passiveRecipeDetails, { passive: true });
+      printMetadata(r);
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['catalog'] },
+  ),
+
+  formatter(
+    (r) => {
+      const recipes = firstArray(r, ['recipes']);
+      if (!recipes) return false;
+      printRecipeRows('Recipes', recipes);
+      printMetadata(r);
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['catalog'] },
   ),
 
   // Generic table fallback for common list-shaped responses.

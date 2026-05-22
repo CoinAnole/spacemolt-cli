@@ -1,4 +1,4 @@
-import { c, emitLine, firstArray, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
+import { c, emitLine, firstArray, formatter, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
 
 export const socialFormatters = [
   // Chat confirmation
@@ -20,6 +20,34 @@ export const socialFormatters = [
       return true;
     },
     { commands: ['chat'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      if (!r.id || !r.name || !r.tag || r.leader_username === undefined || r.member_count === undefined) return false;
+      const title = `${r.name} [${r.tag}]`;
+      emitLine(`\n${c.bright}=== Faction: ${title} ===${c.reset}`);
+      emitLine(`ID: ${r.id}`);
+      emitLine(`Leader: ${r.leader_username}`);
+      emitLine(`Members: ${r.member_count}`);
+      if (r.owned_bases !== undefined) emitLine(`Owned Bases: ${r.owned_bases}`);
+      if (r.treasury !== undefined) emitLine(`Treasury: ${r.treasury}`);
+      if (typeof r.description === 'string' && r.description) emitLine(`Description: ${r.description}`);
+      if (typeof r.charter === 'string' && r.charter) emitLine(`Charter: ${r.charter}`);
+
+      const facilities = firstArray(r, ['facilities']);
+      if (facilities) {
+        printCompactTable('Faction Facilities', facilities, [
+          ['Name', ['name', 'type_name', 'facility_type', 'type']],
+          ['ID', ['facility_id', 'id']],
+          ['Base', ['base_id', 'base_name']],
+          ['Service', ['faction_service']],
+          ['Active', ['active', 'enabled', 'status']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['faction_info'] },
   ),
 
   // Facilities

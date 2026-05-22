@@ -9,6 +9,38 @@ import {
   printItemTable,
 } from './helpers.ts';
 
+function summarizeItemQuantities(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value
+    .filter(isRecord)
+    .map((item) => `${item.quantity ?? '?'}x ${item.item_id ?? item.id ?? item.name ?? '?'}`)
+    .join(', ');
+}
+
+function summarizePassiveRecipes(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value.filter((recipe) => typeof recipe === 'string').join(', ');
+}
+
+function printPassiveRecipeTable(recipes: Array<Record<string, unknown>>): void {
+  const rows = recipes.map((recipe) => ({
+    ...recipe,
+    inputs_summary: summarizeItemQuantities(recipe.inputs),
+    outputs_summary: summarizeItemQuantities(recipe.outputs),
+  }));
+  printCompactTable(
+    'Passive Recipes',
+    rows,
+    [
+      ['Name', ['name']],
+      ['ID', ['id', 'recipe_id']],
+      ['Inputs', ['inputs_summary']],
+      ['Outputs', ['outputs_summary']],
+    ],
+    { maxCellWidth: 56 },
+  );
+}
+
 export const shipFormatters = [
   // Cargo
   namedFormatter(
@@ -58,6 +90,9 @@ export const shipFormatters = [
       emitLine(
         `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
       );
+      if (ship.last_process_tick !== undefined) emitLine(`Passive Processing: last tick ${ship.last_process_tick}`);
+      const passiveRecipes = summarizePassiveRecipes(ship.passive_recipes ?? r.passive_recipes);
+      if (passiveRecipes) emitLine(`Passive Recipes: ${passiveRecipes}`);
 
       const modules = firstArray(r, ['modules']);
       if (modules) {
@@ -72,6 +107,8 @@ export const shipFormatters = [
           ['ID', ['module_id', 'id']],
         ]);
       }
+      const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
+      if (passiveRecipeDetails) printPassiveRecipeTable(passiveRecipeDetails);
       return true;
     },
     { commands: ['get_ship'], shapeFallback: true },

@@ -4359,6 +4359,11 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
         description: 'Amount to transfer',
         positionalIndex: 2,
       },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
       station_id: {
         type: 'string',
         description:
@@ -4404,6 +4409,11 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
         description: 'Amount to transfer',
         positionalIndex: 2,
       },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
       station_id: {
         type: 'string',
         description:
@@ -4440,6 +4450,11 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
         description: 'Amount to transfer',
         positionalIndex: 2,
       },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
       station_id: {
         type: 'string',
         description:
@@ -4475,6 +4490,11 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
         type: 'integer',
         description: 'Amount to transfer',
         positionalIndex: 2,
+      },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
       },
       station_id: {
         type: 'string',
