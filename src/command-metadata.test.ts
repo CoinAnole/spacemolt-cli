@@ -94,6 +94,51 @@ function sampleValueForField(command: string, field: string): string {
   return `${field}_sample`;
 }
 
+function bashGlobalOptionWords(completion: string): string[] {
+  const match = completion.match(/^\s*local global_flags="([^"]*)"/m);
+  return match?.[1]?.split(/\s+/).filter(Boolean) || [];
+}
+
+function zshGlobalOptionWords(completion: string): string[] {
+  const block = completion.match(/_arguments -C \\\n(?<body>[\s\S]*?)\n\s*"1:command:_spacemolt_commands"/)?.groups
+    ?.body;
+  if (!block) return [];
+
+  const words: string[] = [];
+  for (const line of block.split('\n')) {
+    const spec = line.split('[')[0] || '';
+    const group = spec.match(/\{([^}]*)\}/)?.[1];
+    if (group) {
+      words.push(...group.split(',').filter((word) => /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/.test(word)));
+      continue;
+    }
+
+    const word = spec.replace(/\([^)]*\)/g, '').match(/"(-{1,2}[A-Za-z][A-Za-z0-9-]*)/)?.[1];
+    if (word) words.push(word);
+  }
+  return words;
+}
+
+function fishGlobalOptionWords(completion: string): string[] {
+  const words: string[] = [];
+  for (const line of completion.split('\n')) {
+    if (!line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"')) continue;
+    const short = line.match(/(?:^|\s)-s\s+(\S+)/)?.[1];
+    const oldStyle = line.match(/(?:^|\s)-o\s+(\S+)/)?.[1];
+    const long = line.match(/(?:^|\s)-l\s+(\S+)/)?.[1];
+    if (short) words.push(`-${short}`);
+    if (oldStyle) words.push(`-${oldStyle}`);
+    if (long) words.push(`--${long}`);
+  }
+  return words;
+}
+
+function fishGlobalOptionLine(completion: string, longOption: string): string | undefined {
+  return completion
+    .split('\n')
+    .find((line) => line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"') && line.includes(longOption));
+}
+
 describe('command metadata', () => {
   test('top-level command metadata has human descriptions', () => {
     const priorityCommands = [
@@ -382,6 +427,82 @@ describe('command metadata', () => {
 
       expect(missing).toEqual([]);
     }
+  });
+
+  test('shell completions include every parser-supported global option', () => {
+    const globalOptions = [
+      '--json',
+      '-j',
+      '--quiet',
+      '-q',
+      '--plain',
+      '-p',
+      '--debug',
+      '--raw',
+      '--allow-unknown',
+      '-allow-unknown',
+      '--dry-run',
+      '--preview',
+      '--no-timestamp',
+      '--compact',
+      '--structured',
+      '--watch',
+      '-w',
+      '--format',
+      '-fmt',
+      '--jq',
+      '--profile',
+      '--field',
+      '--extract',
+      '--fields',
+      '-f',
+      '--help',
+      '-h',
+      '--version',
+      '-v',
+    ];
+
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      const completion = generateCompletion(shell);
+      const actual =
+        shell === 'bash'
+          ? bashGlobalOptionWords(completion)
+          : shell === 'zsh'
+            ? zshGlobalOptionWords(completion)
+            : fishGlobalOptionWords(completion);
+      const missing = globalOptions.filter((option) => !actual.includes(option));
+
+      expect(missing, `${shell} completion is missing global options`).toEqual([]);
+    }
+  });
+
+  test('zsh completion does not require values for boolean global flag aliases', () => {
+    const completion = generateCompletion('zsh');
+
+    expect(completion).toContain('"--dry-run[Preview supported mutations without executing]"');
+    expect(completion).toContain('"--preview[Alias for --dry-run]"');
+    expect(completion).not.toContain('"--dry-run[Preview supported mutations without executing]:dry-run:');
+    expect(completion).not.toContain('"--preview[Alias for --dry-run]:preview:');
+    expect(completion).toContain('"(-fmt --format)"{-fmt,--format}"[Output format]:format:(table json yaml text)"');
+  });
+
+  test('zsh global option word extraction ignores option-like description text', () => {
+    const completion = `_spacemolt() {
+  _arguments -C \\
+    "--preview[Alias for --dry-run]" \\
+    "1:command:_spacemolt_commands" \\
+    "*::arg:->args"
+}`;
+
+    expect(zshGlobalOptionWords(completion)).toEqual(['--preview']);
+  });
+
+  test('fish completion only advertises separate values for value-taking global options', () => {
+    const completion = generateCompletion('fish');
+
+    expect(fishGlobalOptionLine(completion, '-l dry-run')).not.toContain(' -a ');
+    expect(fishGlobalOptionLine(completion, '-l preview')).not.toContain(' -a ');
+    expect(fishGlobalOptionLine(completion, '-l format')).toContain('-a "table json yaml text"');
   });
 
   test('every command has a description from override or generated summary', () => {

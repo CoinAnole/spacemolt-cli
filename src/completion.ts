@@ -1,5 +1,6 @@
 import { getArgNames } from './args.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import { GLOBAL_COMPLETION_OPTIONS, globalOptionWords, type CompletionOption } from './completion-metadata.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 
 type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'>;
@@ -56,8 +57,44 @@ function escapeZshMessage(value: string): string {
   return escapeDoubleQuotedShell(value).replace(/:/g, '\\:');
 }
 
+function generateZshGlobalOption(option: CompletionOption): string {
+  const words = [option.short, option.long].filter(Boolean) as string[];
+  const escapedDescription = escapeZshMessage(option.description);
+  const valueCompletion = option.takesValue && option.values?.length
+    ? `:${option.long?.replace(/^--/, '') || 'value'}:(${option.values.join(' ')})`
+    : option.takesValue
+      ? `:${option.long?.replace(/^--/, '') || 'value'}:`
+      : '';
+
+  if (option.short && option.long) {
+    return `    "(${words.join(' ')})"{${option.short},${option.long}}"[${escapedDescription}]${valueCompletion}" \\`;
+  }
+
+  const word = option.long || option.short;
+  return `    "${word}[${escapedDescription}]${valueCompletion}" \\`;
+}
+
+function generateFishGlobalOption(option: CompletionOption): string {
+  const parts = ['complete -c spacemolt -n "__fish_use_subcommand"'];
+  if (option.short) {
+    if (option.short.length === 2) {
+      parts.push(`-s ${option.short.slice(1)}`);
+    } else {
+      parts.push(`-o ${option.short.slice(1)}`);
+    }
+  }
+  if (option.long) parts.push(`-l ${option.long.slice(2)}`);
+  if (option.takesValue) parts.push('-r');
+  if (option.takesValue && option.values?.length) {
+    parts.push(`-a "${option.values.map(escapeDoubleQuotedShell).join(' ')}"`);
+  }
+  parts.push(`-d "${escapeDoubleQuotedShell(option.description)}"`);
+  return parts.join(' ');
+}
+
 function generateBashCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
+  const globalFlags = globalOptionWords().join(' ');
   const lines: string[] = [];
   lines.push('# Bash completion for spacemolt');
   lines.push('# Install: spacemolt completion bash > /etc/bash_completion.d/spacemolt');
@@ -68,9 +105,7 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('  _init_completion || return');
   lines.push('');
   lines.push('  # Global flags');
-  lines.push(
-    '  local global_flags="--json -j --quiet -q --plain -p --field --extract --fields -f --dry-run --preview --help -h --version -v"',
-  );
+  lines.push(`  local global_flags="${globalFlags}"`);
   lines.push('');
   lines.push('  # Top-level special commands');
   lines.push(`  local commands="${commandNames.join(' ')} commands explain help completion"`);
@@ -151,18 +186,9 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('  typeset -A opt_args');
   lines.push('');
   lines.push('  _arguments -C \\');
-  lines.push('    "(-j --json)"{-j,--json}"[Raw JSON response]" \\');
-  lines.push('    "(-q --quiet)"{-q,--quiet}"[Suppress notifications]" \\');
-  lines.push('    "(-p --plain)"{-p,--plain}"[No ANSI colors]" \\');
-  lines.push('    "--field[Extract one response field as a scalar]:field:" \\');
-  lines.push('    "--extract[Alias for --field]:field:" \\');
-  lines.push(
-    '    "(-f --fields)"{-f,--fields}"[Extract response fields]:fields:_values -s , fields key1 key2 key3" \\',
-  );
-  lines.push('    "--dry-run[Preview supported mutations without executing]" \\');
-  lines.push('    "--preview[Alias for --dry-run]" \\');
-  lines.push('    "(-h --help)"{-h,--help}"[Show help]" \\');
-  lines.push('    "(-v --version)"{-v,--version}"[Show version]" \\');
+  for (const option of GLOBAL_COMPLETION_OPTIONS) {
+    lines.push(generateZshGlobalOption(option));
+  }
   lines.push('    "1:command:_spacemolt_commands" \\');
   lines.push('    "*::arg:->args"');
   lines.push('');
@@ -238,16 +264,9 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('# Install: spacemolt completion fish > ~/.config/fish/completions/spacemolt.fish');
   lines.push('');
   lines.push('# Global flags');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s j -l json -d "Raw JSON response"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s q -l quiet -d "Suppress notifications"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s p -l plain -d "No ANSI colors"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l field -d "Extract one response field"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l extract -d "Alias for --field"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s f -l fields -d "Extract response fields"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l dry-run -d "Preview supported mutations"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -l preview -d "Alias for --dry-run"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s h -l help -d "Show help"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -s v -l version -d "Show version"');
+  for (const option of GLOBAL_COMPLETION_OPTIONS) {
+    lines.push(generateFishGlobalOption(option));
+  }
   lines.push('');
   lines.push('# Commands');
   for (const cmd of commandNames) {
