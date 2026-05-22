@@ -116,6 +116,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       result.noTimestamp = true;
     } else if (arg === '--compact') {
       result.compact = true;
+    } else if (arg === '--structured') {
+      result.structured = true;
     } else if (arg === '--watch' || arg === '-w') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {

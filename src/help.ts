@@ -574,8 +574,9 @@ ${c.bright}Global Flags:${c.reset}
   --plain, -p       No ANSI colors
   --field           Extract one response field as a scalar
   --fields, -f      Extract response fields
-  --format, -fmt    Output format: table, json, yaml, text
-  --compact         Compact JSON output
+  --format, -fmt    Output format: table (default), json, yaml, text (alias for table)
+  --compact         Compact JSON output (JSON only)
+  --structured      Output structuredContent only (for automation)
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
@@ -653,8 +654,9 @@ ${c.bright}Global Flags:${c.reset}
   --plain, -p       No ANSI colors
   --field           Extract one response field as a scalar
   --fields, -f      Extract response fields
-  --format, -fmt    Output format: table, json, yaml, text
-  --compact         Compact JSON output
+  --format, -fmt    Output format: table (default), json, yaml, text (alias for table)
+  --compact         Compact JSON output (JSON only)
+  --structured      Output structuredContent only (for automation)
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
@@ -725,8 +727,9 @@ ${c.bright}Usage:${c.reset}
       --raw               Allow unknown command fields to pass through
       --field             Extract one response field as a scalar
       --fields, -f        Extract specific fields from response
-      --format, -fmt <f>  Output format: table (default), json, yaml, text
-      --compact           Compact JSON output
+      --format, -fmt <f>  Output format: table (default), json, yaml, text (alias for table)
+      --compact           Compact JSON output (JSON only)
+      --structured        Output structuredContent only (for automation)
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
       --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)

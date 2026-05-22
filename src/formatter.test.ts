@@ -278,6 +278,59 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
+  test('--structured outputs only structuredContent as JSON', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        result: 'large rendered table',
+        structuredContent: outputModeFixture,
+        session: {
+          id: 'session-1',
+          player_id: 'player-1',
+          created_at: '2026-05-19T12:00:00.000Z',
+          expires_at: '2026-05-19T12:30:00.000Z',
+        },
+        notifications: [
+          {
+            type: 'info',
+            msg_type: 'notice',
+            data: { message: 'hello' },
+            timestamp: '2026-05-19T12:01:00.000Z',
+          },
+        ],
+      },
+      { structured: true },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual(outputModeFixture);
+    expect(stdout).not.toContain('large rendered table');
+    expect(stdout).not.toContain('session-1');
+    expect(stdout).not.toContain('notifications');
+  });
+
+  test('--structured --compact outputs compact structuredContent JSON', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { result: 'large rendered table', structuredContent: outputModeFixture },
+      { structured: true, compact: true },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toBe('{"player":{"name":"Marlowe"},"ship":{"fuel":42},"items":[{"id":"ore_iron","quantity":5}]}');
+  });
+
+  test('--structured --fields projects from structuredContent', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { result: 'large rendered table', structuredContent: outputModeFixture },
+      { structured: true, fields: ['player'] },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ player: { name: 'Marlowe' } });
+  });
+
   test('--json errors remain full response envelopes', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       { error: { code: 'validation_error', message: 'Bad field' } },
@@ -403,11 +456,12 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
-  test('pure structured renderer formats text and compact output', () => {
+  test('pure structured renderer formats text as table output and compact output', () => {
     const text = renderStructuredResult('get_status', outputModeFixture, globalOptions({ format: 'text' }));
+    const table = renderStructuredResult('get_status', outputModeFixture, globalOptions({ format: 'table' }));
     const compact = renderStructuredResult('get_status', outputModeFixture, globalOptions({ compact: true }));
 
-    expect(text.stdout.join('\n')).toBe(JSON.stringify(outputModeFixture, null, 2));
+    expect(text.stdout).toEqual(table.stdout);
     expect(compact.stdout.join('\n')).toBe(
       '{"player":{"name":"Marlowe"},"ship":{"fuel":42},"items":[{"id":"ore_iron","quantity":5}]}',
     );

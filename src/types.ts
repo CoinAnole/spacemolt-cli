@@ -33,6 +33,7 @@ export interface GlobalOptions {
   format?: OutputFormat;
   noTimestamp: boolean;
   compact: boolean;
+  structured?: boolean;
   watch?: number;
   jq?: string;
   args: string[];

@@ -33,6 +33,7 @@ function hasField(field: string | undefined): field is string {
 function getOutputFormat(options?: GlobalOptions, context?: DisplayContext): OutputFormat {
   if (options?.format) return options.format;
   if (options?.json ?? context?.output?.json ?? context?.config?.jsonOutput) return 'json';
+  if (options?.structured) return 'json';
   return context?.output?.format ?? context?.config?.format ?? 'table';
 }
 
@@ -178,11 +179,6 @@ function displayStructuredResultInternal(
 
   if (format === 'yaml') {
     emitLine(toYaml(result));
-    return true;
-  }
-
-  if (format === 'text') {
-    emitLine(JSON.stringify(result, null, 2));
     return true;
   }
 

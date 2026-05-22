@@ -70,7 +70,7 @@ export async function renderResponse(
     return 1;
   }
 
-  if (!isJson && !hasProjection && response.notifications?.length && !options.quiet) {
+  if (!isJson && !options.structured && !hasProjection && response.notifications?.length && !options.quiet) {
     const header = `${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`;
     if (writer) writer.out(header);
     else console.log(header);
@@ -91,7 +91,12 @@ export async function renderResponse(
   const sessionPath = tryGetSessionPath(client.config, context?.env);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
-  if (isJson && !hasProjection) {
+  if ((isJson || options.structured) && !hasProjection) {
+    if (options.structured && response.structuredContent) {
+      const out = writer?.out.bind(writer) ?? console.log;
+      out(JSON.stringify(response.structuredContent, null, options.compact ? 0 : 2));
+      return 0;
+    }
     printJsonResponse(response, options.compact, writer);
     return response.error ? 1 : 0;
   }
