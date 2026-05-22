@@ -5,6 +5,7 @@ import {
   getFieldValue,
   getObjectResult,
   getStructuredResult,
+  isRecord,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
@@ -78,6 +79,30 @@ function formatProjection(
   return JSON.stringify(value);
 }
 
+type FieldProjectionResult = { success: true; value: unknown } | { success: false; message: string };
+
+function resolveFieldProjection(result: Record<string, unknown>, field: string): FieldProjectionResult {
+  const exact = getFieldValue(result, field);
+  if (exact !== undefined || field.includes('.')) return { success: true, value: exact };
+
+  const matches = Object.entries(result)
+    .filter((entry): entry is [string, Record<string, unknown>] => isRecord(entry[1]))
+    .filter(([, value]) => Object.hasOwn(value, field))
+    .map(([key, value]) => ({ path: `${key}.${field}`, value: value[field] }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+
+  const singleMatch = matches[0];
+  if (matches.length === 1 && singleMatch) return { success: true, value: singleMatch.value };
+  if (matches.length > 1) {
+    return {
+      success: false,
+      message: `Ambiguous field "${field}". Use one of: ${matches.map((match) => match.path).join(', ')}`,
+    };
+  }
+
+  return { success: true, value: undefined };
+}
+
 export function displayStructuredResult(
   command: string,
   result: Record<string, unknown>,
@@ -130,7 +155,12 @@ function displayStructuredResultInternal(
   }
 
   if (hasField(field)) {
-    const extracted = getFieldValue(result, field);
+    const resolved = resolveFieldProjection(result, field);
+    if (!resolved.success) {
+      emitError(`${c.red}Error:${c.reset} ${resolved.message}`);
+      return false;
+    }
+    const extracted = resolved.value;
     emitLine(formatProjection(extracted, format, compact, 'field'));
     return true;
   }

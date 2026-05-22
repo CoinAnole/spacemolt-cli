@@ -148,6 +148,49 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toBe('42');
   });
 
+  test('--field resolves unique bare names one level under structured content', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_status',
+      { ...outputModeFixture, player: { name: 'Marlowe', credits: 4242 } },
+      {
+        field: 'credits',
+      },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('4242');
+  });
+
+  test('--field prefers exact top-level matches before bare-name fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_status',
+      { ...outputModeFixture, credits: 99 },
+      {
+        field: 'credits',
+      },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('99');
+  });
+
+  test('--field fails on ambiguous bare-name fallback matches', () => {
+    const rendered = renderStructuredResult(
+      'get_status',
+      {
+        player: { credits: 4242 },
+        faction: { credits: 9000 },
+      },
+      globalOptions({ field: 'credits' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain(
+      'Ambiguous field "credits". Use one of: faction.credits, player.credits',
+    );
+  });
+
   test('--fields overrides --json for successful structured output', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       json: true,
@@ -244,6 +287,22 @@ describe('structuredContent output mode precedence', () => {
     expect(exitCode).toBe(1);
     expect(stderr).toBe('');
     expect(JSON.parse(stdout)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
+  });
+
+  test('ambiguous --field projection exits nonzero without stdout', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          player: { credits: 4242 },
+          faction: { credits: 9000 },
+        },
+      },
+      { field: 'credits' },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toBe('');
+    expect(stderr).toContain('Ambiguous field "credits". Use one of: faction.credits, player.credits');
   });
 
   test('view_storage item filter narrows displayed rows without wrapping output', async () => {
