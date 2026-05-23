@@ -3,6 +3,12 @@ import type { CliRuntimeContext } from './cli-context.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
 import { generateCompletion } from './completion.ts';
+import {
+  type CompletionCandidate,
+  type CompletionRequest,
+  completeWords,
+  formatCompletionCandidates,
+} from './completion-runtime.ts';
 import { type DoctorResult, printDoctorResult, runDoctor } from './doctor.ts';
 import {
   displayUnknownCommand,
@@ -188,6 +194,45 @@ function createCompletionHandler(
 }
 
 const completionHandler = createCompletionHandler();
+
+function createDynamicCompletionHandler(
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler<CompletionRequest, { candidates: CompletionCandidate[] }> {
+  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  return {
+    name: '__complete',
+    requiresNetwork: false,
+    parse(argv) {
+      const shell = argv[1];
+      if (shell !== 'bash' && shell !== 'zsh' && shell !== 'fish') {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: `Unsupported shell: ${shell || ''}. Use bash, zsh, or fish.`,
+            customStderr: `${c.red}Error:${c.reset} Unsupported shell: ${shell || ''}. Use bash, zsh, or fish.`,
+            exitCode: 1,
+          },
+        };
+      }
+
+      const separatorIndex = argv.indexOf('--');
+      const words = separatorIndex >= 0 ? argv.slice(separatorIndex + 1) : argv.slice(2);
+      return { ok: true, payload: { shell, words, current: words.at(-1) || '' } };
+    },
+    run(payload) {
+      return { candidates: completeWords(payload, { registrySnapshot: { ...registrySnapshot, allCommands } }) };
+    },
+    render(result, _options, _client, context) {
+      const output = formatCompletionCandidates(result.candidates);
+      if (context?.writer.writeOut) context.writer.writeOut(output);
+      else if (context && output) context.writer.out(output.endsWith('\n') ? output.slice(0, -1) : output);
+      else process.stdout.write(output);
+      return 0;
+    },
+  };
+}
 
 const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: DoctorResult }> = {
   name: 'doctor',
@@ -468,6 +513,7 @@ registry.register(profileHandler);
 registry.register(commandsHandler);
 registry.register(explainHandler);
 registry.register(completionHandler);
+registry.register(createDynamicCompletionHandler());
 registry.register(doctorHandler);
 registry.register(idsHandler);
 registry.register(whereCanIHandler);
@@ -498,6 +544,7 @@ export function resolveHandler(
     if (commandName === 'explain') return createExplainHandler(registrySnapshot);
     if (commandName === 'commands') return createCommandsHandler(registrySnapshot);
     if (commandName === 'completion') return createCompletionHandler(registrySnapshot);
+    if (commandName === '__complete') return createDynamicCompletionHandler(registrySnapshot);
     const handler = registry.get(commandName);
     if (handler) return handler;
   }

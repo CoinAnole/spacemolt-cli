@@ -54,6 +54,31 @@ function captureContext(): { context: CliRuntimeContext; stdout: string[]; stder
   };
 }
 
+function captureDefaultLikeContext(): { context: CliRuntimeContext; stdout: string[]; stderr: string[] } {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  return {
+    stdout,
+    stderr,
+    context: {
+      env: { HOME: '/tmp/spacemolt-test-home', SPACEMOLT_UPDATE_CHECK: 'true' },
+      writer: {
+        out(message = '') {
+          stdout.push(`${message}\n`);
+        },
+        err(message = '') {
+          stderr.push(`${message}\n`);
+        },
+        writeOut(chunk) {
+          stdout.push(chunk);
+        },
+      },
+      clock: { now: () => new Date('2026-05-18T12:00:00.000Z') },
+      sleep: async () => {},
+    },
+  };
+}
+
 function fakeContext(stdout: string[], stderr: string[], env: CliEnv = process.env): CliRuntimeContext {
   return {
     env,
@@ -227,6 +252,139 @@ describe('local command handlers', () => {
 
     expect(exitCode).toBe(0);
     expect(stdout.join('\n')).toContain('complete -c spacemolt');
+  });
+
+  test('hidden __complete command routes and renders line protocol candidates', async () => {
+    const handler = resolveHandler(['__complete', 'fish', '--', 'spacemolt', 'sell', 'ir'], options);
+    expect(handler).toBeDefined();
+    expect(handler?.name).toBe('__complete');
+    expect(handler?.requiresNetwork).toBe(false);
+    if (!handler) return;
+
+    const parsed = handler.parse(['__complete', 'fish', '--', 'spacemolt', 'sell', 'ir'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout, stderr } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toBe('');
+
+    const optionParsed = handler.parse(['__complete', 'fish', '--', 'spacemolt', '--pl'], options);
+    expect(optionParsed.ok).toBe(true);
+    if (!optionParsed.ok) return;
+    const optionResult = await handler.run(optionParsed.payload, options);
+    const optionCapture = captureContext();
+
+    expect(await handler.render(optionResult, options, undefined, optionCapture.context)).toBe(0);
+    expect(optionCapture.stdout.join('')).toContain('--plain\tNo ANSI colors\n');
+  });
+
+  test('hidden __complete preserves global-looking completion words end to end', async () => {
+    const cases: Array<[string, string]> = [
+      ['--format', '--format\tOutput format\n'],
+      ['--profile', '--profile\tUse a named profile\n'],
+      ['-f', '-f\tExtract comma-separated response fields\n'],
+    ];
+    for (const [word, expected] of cases) {
+      const { context, stdout, stderr } = captureDefaultLikeContext();
+
+      const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', word], undefined, context, {
+        checkForUpdates() {
+          throw new Error('__complete should not check for updates');
+        },
+      });
+
+      expect(exitCode, word).toBe(0);
+      expect(stderr, word).toEqual([]);
+      expect(stdout.join(''), word).toContain(expected);
+    }
+  });
+
+  test('hidden __complete renders one exact protocol line for a single candidate', async () => {
+    const { context, stdout, stderr } = captureDefaultLikeContext();
+
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', '--plain'], undefined, context, {
+      checkForUpdates() {
+        throw new Error('__complete should not check for updates');
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toBe('--plain\tNo ANSI colors\n');
+  });
+
+  test('hidden __complete renders empty end-to-end output without a newline', async () => {
+    const { context, stdout, stderr } = captureDefaultLikeContext();
+
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', 'zzz'], undefined, context, {
+      checkForUpdates() {
+        throw new Error('__complete should not check for updates');
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toBe('');
+  });
+
+  test('hidden __complete renders no candidates after command or option value positions', async () => {
+    for (const words of [
+      ['spacemolt', 'sell', ''],
+      ['spacemolt', '--format', ''],
+    ]) {
+      const { context, stdout, stderr } = captureDefaultLikeContext();
+
+      const exitCode = await runInvocation(['__complete', 'fish', '--', ...words], undefined, context, {
+        checkForUpdates() {
+          throw new Error('__complete should not check for updates');
+        },
+      });
+
+      expect(exitCode, words.join(' ')).toBe(0);
+      expect(stderr, words.join(' ')).toEqual([]);
+      expect(stdout.join(''), words.join(' ')).toBe('');
+    }
+  });
+
+  test('hidden __complete keeps completing top-level after non-value global flags', async () => {
+    const { context, stdout, stderr } = captureDefaultLikeContext();
+
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', '--plain', ''], undefined, context, {
+      checkForUpdates() {
+        throw new Error('__complete should not check for updates');
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toContain('sell\tSell cargo items.');
+  });
+
+  test('hidden __complete command is not listed by commands or full help', async () => {
+    const commandsHandler = localHandler(['commands']);
+    const commandsParsed = commandsHandler.parse(['commands'], options);
+    expect(commandsParsed.ok).toBe(true);
+    if (!commandsParsed.ok) return;
+    const commandsResult = await commandsHandler.run(commandsParsed.payload, options);
+    const commandsCapture = captureContext();
+
+    expect(await commandsHandler.render(commandsResult, options, undefined, commandsCapture.context)).toBe(0);
+    expect(commandsCapture.stdout.join('\n')).not.toContain('__complete');
+
+    const helpHandler = localHandler(['help', 'all']);
+    const helpParsed = helpHandler.parse(['help', 'all'], options);
+    expect(helpParsed.ok).toBe(true);
+    if (!helpParsed.ok) return;
+    const helpResult = await helpHandler.run(helpParsed.payload, options);
+    const helpCapture = captureContext();
+
+    expect(await helpHandler.render(helpResult, options, undefined, helpCapture.context)).toBe(0);
+    expect(helpCapture.stdout.join('\n')).not.toContain('__complete');
   });
 
   test('commands search includes commands supplied only by a registry snapshot', async () => {

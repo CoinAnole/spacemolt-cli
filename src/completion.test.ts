@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { generateCompletion } from './completion';
+import { completeWords, formatCompletionCandidates } from './completion-runtime';
 
 function bashCommandCaseBody(completion: string, command: string): string {
   const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -13,6 +14,40 @@ function fishCommandLines(completion: string, command: string): string[] {
 }
 
 describe('shell completion generation', () => {
+  test('runtime completion suggests top-level commands and global options by prefix', () => {
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'rep'], current: 'rep' }).map((candidate) => candidate.value),
+    ).toContain('repair');
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--pl'], current: '--pl' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toContain('--plain');
+  });
+
+  test('runtime completion returns no candidates after a command or value-taking global option', () => {
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'sell', ''], current: '' })).toEqual([]);
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', '--format', ''], current: '' })).toEqual([]);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--plain', ''], current: '' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toContain('sell');
+  });
+
+  test('runtime completion formats candidates as sanitized line protocol', () => {
+    expect(formatCompletionCandidates([{ value: 'ore\tiron', description: 'Iron\nOre' }, { value: 'sell' }])).toBe(
+      'ore iron\tIron Ore\nsell\t\n',
+    );
+    expect(formatCompletionCandidates([])).toBe('');
+  });
+
+  test('static completion scripts do not expose hidden __complete command', () => {
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      expect(generateCompletion(shell)).not.toContain('__complete');
+    }
+  });
+
   test('bash and fish suggest key-value field inserts instead of bare placeholders', () => {
     const fish = generateCompletion('fish');
     const bash = generateCompletion('bash');

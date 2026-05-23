@@ -53,7 +53,28 @@ const defaultRunnerDependencies: Required<RunnerDependencies> = {
 
 export type InvocationParseResult = { ok: true; invocation: Invocation } | { ok: false; error: GlobalOptionParseError };
 
+function defaultGlobalOptions(args: string[]): GlobalOptions {
+  return {
+    json: false,
+    quiet: false,
+    plain: false,
+    debug: false,
+    allowUnknown: false,
+    dryRun: false,
+    fields: undefined,
+    noTimestamp: false,
+    compact: false,
+    args,
+  };
+}
+
 export function parseInvocation(argv: string[], context?: CliRuntimeContext): InvocationParseResult {
+  if (argv[0] === '__complete') {
+    const options = defaultGlobalOptions(argv);
+    applyGlobalOptions(options, context?.env);
+    return { ok: true, invocation: { options, args: argv } };
+  }
+
   const parsed = parseGlobalOptions(argv);
   if (!parsed.ok) return parsed;
 
@@ -144,8 +165,9 @@ async function runInvocationWithContext(
     dynamicGeneratedRoutes: cachedGeneratedRoutes,
     includeDynamic: Boolean(cachedGeneratedRoutes),
   });
+  const isDynamicCompletion = invocation.args[0] === '__complete';
 
-  if (!invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
+  if (!isDynamicCompletion && !invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
     deps.checkForUpdates({
       env: resolvedContext.env,
       clock: resolvedContext.clock,
