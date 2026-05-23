@@ -107,7 +107,7 @@ export function parseApiMdCommands(markdown: string): ApiMdCommandMap {
 
 function normalizeText(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
-  return String(value).trim().replace(/\s+/g, ' ');
+  return String(value).trim().replace(/[—–]/g, '-').replace(/→/g, '->').replace(/\s+/g, ' ');
 }
 
 function valuesMatch(left: unknown, right: unknown): boolean {

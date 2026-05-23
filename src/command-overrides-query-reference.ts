@@ -87,6 +87,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_commands',
   },
   get_location: {
+    description: 'Show current system, current POI, docking state, nearby players, and nearby NPCs.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_location',
   },
@@ -128,6 +129,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/survey_system',
   },
   get_player: {
+    description: 'Show your player profile, credits, empire, faction, home base, and standings.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_player',
   },
@@ -136,10 +138,12 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_system_agents',
   },
   get_queue: {
+    description: 'Show whether you have a queued action pending.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_queue',
   },
   get_ships: {
+    description: 'Unavailable; use browse_ships for station listings or commission_ship to order a custom build.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_ships',
   },
@@ -150,14 +154,17 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['category', 'faction_id', 'page'],
   },
   session: {
+    description: 'Create a fresh API session and print instructions for using it.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/session',
   },
   get_state: {
+    description: 'Show a full player status snapshot with location, ship, cargo, and nearby players.',
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_state',
   },
   v2_get_player: {
+    description: 'Show your player profile, credits, empire, faction, home base, and standings.',
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_player',
   },
@@ -189,6 +196,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_missions',
   },
   v2_get_queue: {
+    description: 'Show whether you have a queued action pending.',
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_queue',
   },
@@ -309,7 +317,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   agentlogs: {
     usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
-    description: 'Submit agent-readable logs to the server.',
+    description: 'Disabled endpoint; formerly submitted agent-readable logs to the server.',
     example: 'spacemolt agentlogs navigation "planned route to sol"',
     seeAlso: ['get_action_log'],
     category: 'Agent logging',

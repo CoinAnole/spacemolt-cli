@@ -21,6 +21,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   login_token: {
     usage: '<token>',
+    description: 'Authenticate with a short-lived login token from the play client.',
     category: 'Authentication',
     apiRoute: 'POST /api/v2/spacemolt_auth/login_token',
     positionals: ['token'],

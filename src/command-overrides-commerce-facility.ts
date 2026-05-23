@@ -1,5 +1,8 @@
 import type { CommandOverride } from './commands';
 
+const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
+  "Optional source for deposit/withdraw: 'cargo' (default - your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction->personal directly, requires manage_treasury).";
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -139,7 +142,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       source: {
         type: 'string',
-        description: "Source: 'cargo', 'storage', or 'faction'",
+        description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
       },
     },
   },
@@ -155,7 +158,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       source: {
         type: 'string',
-        description: "Source: 'storage' or 'faction'",
+        description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
       },
     },
   },

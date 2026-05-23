@@ -201,6 +201,32 @@ describe('command help report', () => {
     expect(report.differenceCount).toBe(2);
   });
 
+  test('records missing docs entries as review differences when OpenAPI command name matches', () => {
+    const report = buildCommandHelpReport({
+      commands: {
+        session: {
+          description: 'Create a new session.',
+          route: { tool: 'session', action: 'session', method: 'POST' },
+        },
+      },
+      generatedRoutes: {
+        'POST /api/v2/session': {
+          summary: 'Create a new session',
+          route: { tool: 'session', action: 'session', method: 'POST' },
+        },
+      },
+      apiMdCommands: {},
+    });
+
+    expect(report.commands[0]?.differences.find((difference) => difference.field === 'api.md command')).toEqual({
+      field: 'api.md command',
+      status: 'missing',
+      signal: 'review',
+      curated: 'session',
+    });
+    expect(report.differenceCount).toBe(1);
+  });
+
   test('parses report script flags', () => {
     expect(
       parseReportArgs(['--all', '--json', '--command', 'travel', '--include-intentional', '--fail-on-diff']),
@@ -238,5 +264,49 @@ describe('command help report', () => {
       .map((commandReport) => commandReport.command);
 
     expect(weakDescriptionCommands).toEqual([]);
+  });
+
+  test('live-verified commands do not use guessed action-token descriptions', () => {
+    expect(COMMANDS.get_ships?.description).toBe(
+      'Unavailable; use browse_ships for station listings or commission_ship to order a custom build.',
+    );
+    expect(COMMANDS.agentlogs?.description).toBe(
+      'Disabled endpoint; formerly submitted agent-readable logs to the server.',
+    );
+    expect(COMMANDS.get_location?.description).toContain('current system');
+    expect(COMMANDS.get_player?.description).toContain('standings');
+    expect(COMMANDS.get_queue?.description).toContain('queued action');
+  });
+
+  test('default report still surfaces missing read-only api.md command rows', () => {
+    const apiMdCommands = parseApiMdCommands(
+      fs.readFileSync(path.join(import.meta.dir, '..', 'spacemolt-docs', 'api.md'), 'utf-8'),
+    );
+    const report = buildCommandHelpReport({
+      commands: COMMANDS,
+      generatedRoutes: GENERATED_API_ROUTES,
+      apiMdCommands,
+    });
+    const missingApiMdCommands = report.commands
+      .filter((commandReport) =>
+        commandReport.differences.some(
+          (difference) =>
+            difference.field === 'api.md command' && difference.status === 'missing' && difference.signal === 'review',
+        ),
+      )
+      .map((commandReport) => commandReport.command);
+
+    expect(missingApiMdCommands).toEqual([
+      'agentlogs',
+      'get_location',
+      'get_player',
+      'get_queue',
+      'get_ships',
+      'get_state',
+      'login_token',
+      'notifications',
+      'session',
+    ]);
+    expect(report.differenceCount).toBe(9);
   });
 });
