@@ -1,10 +1,11 @@
-import { getArgNames } from './args.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import {
   type CompletionOption,
+  completionArgsForCommand,
   GLOBAL_COMPLETION_OPTIONS,
   globalOptionWords,
+  HINT_VALUES,
   LOCAL_COMPLETION_COMMANDS,
   SPECIAL_COMPLETIONS,
 } from './completion-metadata.ts';
@@ -12,13 +13,6 @@ import {
 type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'> &
   Partial<Pick<CommandRegistrySnapshot, 'commands'>>;
 type CompletionCommandMap = Record<string, CommandConfig | LocalCommandConfig>;
-
-const HINT_VALUES: Record<string, Record<string, string>> = {
-  set_colors: {
-    primary_color: '<#hex>',
-    secondary_color: '<#hex>',
-  },
-};
 
 function allCommands(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): CompletionCommandMap {
   return registry.allCommands;
@@ -67,9 +61,7 @@ function commandDescription(command: string, registry: CompletionRegistry): stri
 }
 
 function getCommandArgNames(command: string, registry: CompletionRegistry): string[] {
-  const config = allCommands(registry)[command];
-  if (!config) return [];
-  return getArgNames(config);
+  return completionArgsForCommand(command, allCommands(registry)[command]).map((arg) => arg.name);
 }
 
 function getFieldSchema(command: string, arg: string, registry: CompletionRegistry) {
@@ -170,26 +162,24 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('  case "$cmd" in');
 
   for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
-    const args = getCommandArgNames(cmd, registry);
+    const args = completionArgsForCommand(cmd, allCommands(registry)[cmd]);
     if (args.length === 0) continue;
 
     lines.push(`    ${cmd})`);
     const argParts: string[] = [];
     for (const arg of args) {
-      const enums = getEnumValues(cmd, arg, registry);
-      if (enums && enums.length > 0) {
-        argParts.push(`\${${arg}_values}`);
+      if (arg.kind === 'enum' && arg.values?.length) {
+        argParts.push(`\${${arg.name}_values}`);
       } else {
-        argParts.push(arg);
+        argParts.push(arg.insert);
       }
     }
     // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
     const allParts = [...argParts, '${global_flags}'];
 
     for (const arg of args) {
-      const enums = getEnumValues(cmd, arg, registry);
-      if (enums && enums.length > 0) {
-        lines.push(`      local ${arg}_values="${enums.join(' ')}"`);
+      if (arg.kind === 'enum' && arg.values?.length) {
+        lines.push(`      local ${arg.name}_values="${arg.values.join(' ')}"`);
       }
     }
     lines.push(`      COMPREPLY=( $(compgen -W "${allParts.join(' ')}" -- "$cur") )`);
@@ -342,23 +332,22 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('');
   lines.push('# Per-command arguments');
   for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
-    const args = getCommandArgNames(cmd, registry);
+    const args = completionArgsForCommand(cmd, allCommands(registry)[cmd]);
     if (args.length === 0) continue;
 
     lines.push(`# ${cmd}`);
     for (const arg of args) {
-      const enums = getEnumValues(cmd, arg, registry);
-      const description = getArgDescription(cmd, arg, registry);
-      const desc = enums && enums.length > 0 ? `${description} (${enums.join('|')})` : description;
+      const desc =
+        arg.kind === 'enum' && arg.values?.length ? `${arg.description} (${arg.values.join('|')})` : arg.description;
 
-      if (enums && enums.length > 0) {
-        for (const val of enums) {
-          const valueDesc = escapeDoubleQuotedShell(`${description}: ${val}`);
+      if (arg.kind === 'enum' && arg.values?.length) {
+        for (const val of arg.values) {
+          const valueDesc = escapeDoubleQuotedShell(`${arg.description}: ${val}`);
           lines.push(`complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${val} -d "${valueDesc}"`);
         }
       } else {
         lines.push(
-          `complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${arg} -d "${escapeDoubleQuotedShell(desc)}"`,
+          `complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${arg.insert} -d "${escapeDoubleQuotedShell(desc)}"`,
         );
       }
     }

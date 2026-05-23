@@ -20,6 +20,7 @@ import {
   LOCAL_COMMANDS,
 } from './commands';
 import { generateCompletion } from './completion';
+import { completionArgsForCommand } from './completion-metadata';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp } from './help';
 import { createCommandConfigDryRunResponse } from './preview';
@@ -492,6 +493,20 @@ describe('command metadata', () => {
 
       expect(missing).toEqual([]);
     }
+  });
+
+  test('completion argument metadata classifies static inserts by schema shape', () => {
+    const sellArgs = completionArgsForCommand('sell', BUNDLED_COMMAND_REGISTRY.allCommands.sell);
+    const buyArgs = completionArgsForCommand('buy', BUNDLED_COMMAND_REGISTRY.allCommands.buy);
+
+    expect(sellArgs.find((arg) => arg.name === 'item_id')).toMatchObject({
+      kind: 'id',
+      insert: 'item_id=',
+    });
+    expect(buyArgs.find((arg) => arg.name === 'deliver_to')).toMatchObject({
+      kind: 'enum',
+      values: ['cargo', 'storage'],
+    });
   });
 
   test('shell completions include local top-level commands', () => {

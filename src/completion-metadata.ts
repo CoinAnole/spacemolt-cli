@@ -1,3 +1,5 @@
+import type { CommandArg, CommandConfig, LocalCommandConfig } from './commands.ts';
+
 export interface CompletionOption {
   long?: string;
   short?: string;
@@ -5,6 +7,23 @@ export interface CompletionOption {
   values?: string[];
   takesValue?: boolean;
 }
+
+export type CompletionArgKind = 'enum' | 'boolean' | 'id' | 'field' | 'hint';
+
+export interface CompletionArg {
+  name: string;
+  description: string;
+  values?: string[];
+  insert: string;
+  kind: CompletionArgKind;
+}
+
+export const HINT_VALUES: Record<string, Record<string, string>> = {
+  set_colors: {
+    primary_color: '<#hex>',
+    secondary_color: '<#hex>',
+  },
+};
 
 export const GLOBAL_COMPLETION_OPTIONS: CompletionOption[] = [
   { long: '--json', short: '-j', description: 'Raw JSON response' },
@@ -49,4 +68,98 @@ export const SPECIAL_COMPLETIONS: Record<string, { values: string[]; description
 
 export function globalOptionWords(): string[] {
   return GLOBAL_COMPLETION_OPTIONS.flatMap((option) => [option.long, option.short].filter(Boolean) as string[]);
+}
+
+function commandArgName(arg: CommandArg): string {
+  return typeof arg === 'string' ? arg : arg.rest;
+}
+
+function isRestArg(arg: CommandArg): boolean {
+  return typeof arg === 'object' && Boolean(arg.rest);
+}
+
+function isIdLikeArg(name: string): boolean {
+  return name === 'id' || name.endsWith('_id') || name.endsWith('_ids') || name.startsWith('target_');
+}
+
+function fieldSchema(commandConfig: CommandConfig | LocalCommandConfig, arg: string) {
+  if (!('schema' in commandConfig) || !commandConfig.schema) return undefined;
+  const canonicalArg = commandConfig.aliases?.[arg] || arg;
+  return commandConfig.schema[canonicalArg] || commandConfig.schema[arg];
+}
+
+export function completionArgsForCommand(
+  command: string,
+  commandConfig: CommandConfig | LocalCommandConfig | undefined,
+): CompletionArg[] {
+  if (!commandConfig) return [];
+
+  return (commandConfig.args || []).map((argDef) => {
+    const name = commandArgName(argDef);
+    const schema = fieldSchema(commandConfig, name);
+    const description = schema?.description || HINT_VALUES[command]?.[name] || name;
+
+    if (schema?.enum?.length) {
+      return {
+        name,
+        description,
+        values: schema.enum,
+        insert: schema.enum[0] || name,
+        kind: 'enum',
+      };
+    }
+
+    if (schema?.type === 'boolean') {
+      return {
+        name,
+        description,
+        values: ['true', 'false'],
+        insert: `${name}=`,
+        kind: 'boolean',
+      };
+    }
+
+    if (schema && isIdLikeArg(name)) {
+      return {
+        name,
+        description,
+        insert: `${name}=`,
+        kind: 'id',
+      };
+    }
+
+    if (schema) {
+      return {
+        name,
+        description,
+        insert: `${name}=`,
+        kind: 'field',
+      };
+    }
+
+    if (!isRestArg(argDef) && isIdLikeArg(name)) {
+      return {
+        name,
+        description,
+        insert: `${name}=`,
+        kind: 'id',
+      };
+    }
+
+    if (!isRestArg(argDef)) {
+      return {
+        name,
+        description,
+        insert: `${name}=`,
+        kind: 'field',
+      };
+    }
+
+    return {
+      name,
+      description,
+      insert: HINT_VALUES[command]?.[name] || name,
+      kind: 'hint',
+    };
+  });
 }
