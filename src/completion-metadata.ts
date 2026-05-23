@@ -36,6 +36,17 @@ export const GLOBAL_COMPLETION_OPTIONS: CompletionOption[] = [
   { long: '--version', short: '-v', description: 'Show version' },
 ];
 
+export const LOCAL_COMPLETION_COMMANDS: Record<string, { description: string }> = {
+  doctor: { description: 'Diagnose local CLI configuration/session/API setup.' },
+  version: { description: 'Show CLI version and API base URL.' },
+};
+
+export const SPECIAL_COMPLETIONS: Record<string, { values: string[]; description: string }> = {
+  completion: { values: ['bash', 'zsh', 'fish'], description: 'Generate shell completion' },
+  ids: { values: ['poi', 'system', 'item', 'player'], description: 'Cached ID kind' },
+  profile: { values: ['list', 'default'], description: 'Profile action' },
+};
+
 export function globalOptionWords(): string[] {
   return GLOBAL_COMPLETION_OPTIONS.flatMap((option) => [option.long, option.short].filter(Boolean) as string[]);
 }

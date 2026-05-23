@@ -93,6 +93,36 @@ function dynamicRegistry(): CommandRegistrySnapshot {
   });
 }
 
+function specialCompletionWords(shell: string, completion: string, command: string): string[] {
+  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (shell === 'bash') {
+    const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
+    const body = match?.groups?.body;
+    return (
+      body
+        ?.match(/compgen -W "([^"]*)"/)?.[1]
+        ?.split(/\s+/)
+        .filter(Boolean) || []
+    );
+  }
+  if (shell === 'zsh') {
+    const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
+    const body = match?.groups?.body;
+    return (
+      body
+        ?.match(/_arguments "1:[^"]*:\(([^)]*)\)"/)?.[1]
+        ?.split(/\s+/)
+        .filter(Boolean) || []
+    );
+  }
+
+  return completion
+    .split('\n')
+    .filter((line) => line.includes(`__fish_seen_subcommand_from ${command}`))
+    .map((line) => line.match(/(?:^|\s)-a\s+(\S+)/)?.[1]?.replace(/^"|"$/g, ''))
+    .filter(Boolean) as string[];
+}
+
 describe('local command handlers', () => {
   test('resolveHandler creates an API handler for a command supplied by a registry snapshot', () => {
     const command = 'dynamic_handler_snapshot_test';
@@ -232,6 +262,31 @@ describe('local command handlers', () => {
 
     expect(result.completion).toContain('lab_calibrate');
     expect(result.completion).toContain('Generated API');
+  });
+
+  test('completion handler includes local command and subcommand completions for every shell', async () => {
+    const expectedCommands = ['doctor', 'version', 'profile', 'ids', 'where-can-i', 'sync-api'];
+    const expectedSubcommands = {
+      completion: ['bash', 'zsh', 'fish'],
+      ids: ['poi', 'system', 'item', 'player'],
+      profile: ['list', 'default'],
+    };
+
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      const handler = localHandler(['completion', shell]);
+      const parsed = handler.parse(['completion', shell], options);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) continue;
+
+      const result = (await handler.run(parsed.payload, options)) as { completion: string };
+
+      for (const command of expectedCommands) {
+        expect(result.completion, `${shell} completion should include ${command}`).toContain(command);
+      }
+      for (const [command, values] of Object.entries(expectedSubcommands)) {
+        expect(specialCompletionWords(shell, result.completion, command), `${shell} ${command} values`).toEqual(values);
+      }
+    }
   });
 
   test('ids command renders JSON with cached hints', async () => {

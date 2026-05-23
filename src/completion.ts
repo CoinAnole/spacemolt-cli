@@ -1,9 +1,16 @@
 import { getArgNames } from './args.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
-import { GLOBAL_COMPLETION_OPTIONS, globalOptionWords, type CompletionOption } from './completion-metadata.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
+import {
+  type CompletionOption,
+  GLOBAL_COMPLETION_OPTIONS,
+  globalOptionWords,
+  LOCAL_COMPLETION_COMMANDS,
+  SPECIAL_COMPLETIONS,
+} from './completion-metadata.ts';
 
-type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'>;
+type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'> &
+  Partial<Pick<CommandRegistrySnapshot, 'commands'>>;
 type CompletionCommandMap = Record<string, CommandConfig | LocalCommandConfig>;
 
 const HINT_VALUES: Record<string, Record<string, string>> = {
@@ -19,6 +26,44 @@ function allCommands(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): C
 
 function commandsList(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
   return Object.keys(registry.allCommands).sort();
+}
+
+function registryCommandNames(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
+  if (registry.commands) return Object.keys(registry.commands).sort();
+  return Object.entries(registry.allCommands)
+    .filter(([, config]) => 'route' in config)
+    .map(([command]) => command)
+    .sort();
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function topLevelCommandNames(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
+  return uniqueSorted([
+    ...commandsList(registry),
+    ...Object.keys(LOCAL_COMPLETION_COMMANDS),
+    ...Object.keys(SPECIAL_COMPLETIONS),
+    'commands',
+    'explain',
+    'help',
+  ]);
+}
+
+function commandDescription(command: string, registry: CompletionRegistry): string {
+  return (
+    allCommands(registry)[command]?.description ||
+    LOCAL_COMPLETION_COMMANDS[command]?.description ||
+    SPECIAL_COMPLETIONS[command]?.description ||
+    (command === 'commands'
+      ? 'Search local commands'
+      : command === 'explain'
+        ? 'Explain a command'
+        : command === 'help'
+          ? 'Show help for a group'
+          : command)
+  );
 }
 
 function getCommandArgNames(command: string, registry: CompletionRegistry): string[] {
@@ -60,11 +105,12 @@ function escapeZshMessage(value: string): string {
 function generateZshGlobalOption(option: CompletionOption): string {
   const words = [option.short, option.long].filter(Boolean) as string[];
   const escapedDescription = escapeZshMessage(option.description);
-  const valueCompletion = option.takesValue && option.values?.length
-    ? `:${option.long?.replace(/^--/, '') || 'value'}:(${option.values.join(' ')})`
-    : option.takesValue
-      ? `:${option.long?.replace(/^--/, '') || 'value'}:`
-      : '';
+  const valueCompletion =
+    option.takesValue && option.values?.length
+      ? `:${option.long?.replace(/^--/, '') || 'value'}:(${option.values.join(' ')})`
+      : option.takesValue
+        ? `:${option.long?.replace(/^--/, '') || 'value'}:`
+        : '';
 
   if (option.short && option.long) {
     return `    "(${words.join(' ')})"{${option.short},${option.long}}"[${escapedDescription}]${valueCompletion}" \\`;
@@ -94,6 +140,8 @@ function generateFishGlobalOption(option: CompletionOption): string {
 
 function generateBashCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
+  const explainCommandNames = registryCommandNames(registry);
+  const topCommands = topLevelCommandNames(registry);
   const globalFlags = globalOptionWords().join(' ');
   const lines: string[] = [];
   lines.push('# Bash completion for spacemolt');
@@ -108,7 +156,7 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push(`  local global_flags="${globalFlags}"`);
   lines.push('');
   lines.push('  # Top-level special commands');
-  lines.push(`  local commands="${commandNames.join(' ')} commands explain help completion"`);
+  lines.push(`  local commands="${topCommands.join(' ')}"`);
   lines.push('');
   lines.push('  if [ $cword -eq 1 ]; then');
   // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
@@ -121,7 +169,7 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('  local cmd="${words[1]}"');
   lines.push('  case "$cmd" in');
 
-  for (const cmd of commandNames) {
+  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
     const args = getCommandArgNames(cmd, registry);
     if (args.length === 0) continue;
 
@@ -148,15 +196,18 @@ function generateBashCompletion(registry: CompletionRegistry): string {
     lines.push('      ;;');
   }
 
+  for (const [cmd, completion] of Object.entries(SPECIAL_COMPLETIONS)) {
+    lines.push(`    ${cmd})`);
+    lines.push(`      COMPREPLY=( $(compgen -W "${completion.values.join(' ')}" -- "$cur") )`);
+    lines.push('      ;;');
+  }
+
   lines.push('    commands)');
   lines.push('      ;;');
   lines.push('    explain)');
-  lines.push(`      COMPREPLY=( $(compgen -W "${commandNames.join(' ')}" -- "$cur") )`);
+  lines.push(`      COMPREPLY=( $(compgen -W "${explainCommandNames.join(' ')}" -- "$cur") )`);
   lines.push('      ;;');
   lines.push('    help)');
-  lines.push('      ;;');
-  lines.push('    completion)');
-  lines.push('      COMPREPLY=( $(compgen -W "bash zsh fish" -- "$cur") )');
   lines.push('      ;;');
   lines.push('    *)');
   // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
@@ -172,7 +223,8 @@ function generateBashCompletion(registry: CompletionRegistry): string {
 
 function generateZshCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
-  const commands = allCommands(registry);
+  const explainCommandNames = registryCommandNames(registry);
+  const topCommands = topLevelCommandNames(registry);
   const lines: string[] = [];
   lines.push('#compdef spacemolt');
   lines.push('#');
@@ -196,7 +248,7 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('    args)');
   lines.push('      case $line[1] in');
 
-  for (const cmd of commandNames) {
+  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
     const args = getCommandArgNames(cmd, registry);
     lines.push(`        ${cmd})`);
     if (args.length > 0) {
@@ -225,11 +277,14 @@ function generateZshCompletion(registry: CompletionRegistry): string {
     lines.push('          ;;');
   }
 
+  for (const [cmd, completion] of Object.entries(SPECIAL_COMPLETIONS)) {
+    lines.push(`        ${cmd})`);
+    lines.push(`          _arguments "1:${escapeZshMessage(completion.description)}:(${completion.values.join(' ')})"`);
+    lines.push('          ;;');
+  }
+
   lines.push('        explain)');
-  lines.push('          _arguments "1:command:_spacemolt_commands"');
-  lines.push('          ;;');
-  lines.push('        completion)');
-  lines.push('          _arguments "1:shell:(bash zsh fish)"');
+  lines.push('          _arguments "1:command:_spacemolt_explain_commands"');
   lines.push('          ;;');
   lines.push('        help)');
   lines.push('          _message "help topic"');
@@ -247,7 +302,17 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('');
   lines.push('_spacemolt_commands() {');
   lines.push('  local commands');
-  lines.push(`  commands=(${commandNames.map((c) => `${c}[${commands[c]?.description || c}]`).join(' ')})`);
+  lines.push(
+    `  commands=(${topCommands.map((c) => `${c}[${escapeZshMessage(commandDescription(c, registry))}]`).join(' ')})`,
+  );
+  lines.push('  _describe -t commands "spacemolt commands" commands');
+  lines.push('}');
+  lines.push('');
+  lines.push('_spacemolt_explain_commands() {');
+  lines.push('  local commands');
+  lines.push(
+    `  commands=(${explainCommandNames.map((c) => `${c}[${escapeZshMessage(commandDescription(c, registry))}]`).join(' ')})`,
+  );
   lines.push('  _describe -t commands "spacemolt commands" commands');
   lines.push('}');
   lines.push('');
@@ -258,7 +323,8 @@ function generateZshCompletion(registry: CompletionRegistry): string {
 
 function generateFishCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
-  const commands = allCommands(registry);
+  const explainCommandNames = registryCommandNames(registry);
+  const topCommands = topLevelCommandNames(registry);
   const lines: string[] = [];
   lines.push('# Fish completion for spacemolt');
   lines.push('# Install: spacemolt completion fish > ~/.config/fish/completions/spacemolt.fish');
@@ -269,17 +335,13 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   }
   lines.push('');
   lines.push('# Commands');
-  for (const cmd of commandNames) {
-    const desc = escapeDoubleQuotedShell(commands[cmd]?.description || cmd);
+  for (const cmd of topCommands) {
+    const desc = escapeDoubleQuotedShell(commandDescription(cmd, registry));
     lines.push(`complete -c spacemolt -n "__fish_use_subcommand" -a ${cmd} -d "${desc}"`);
   }
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a commands -d "Search local commands"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a explain -d "Explain a command"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a help -d "Show help for a group"');
-  lines.push('complete -c spacemolt -n "__fish_use_subcommand" -a completion -d "Generate shell completion"');
   lines.push('');
   lines.push('# Per-command arguments');
-  for (const cmd of commandNames) {
+  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
     const args = getCommandArgNames(cmd, registry);
     if (args.length === 0) continue;
 
@@ -305,11 +367,18 @@ function generateFishCompletion(registry: CompletionRegistry): string {
 
   lines.push('# explain command');
   lines.push(
-    `complete -c spacemolt -n "__fish_seen_subcommand_from explain" -a "${commandNames.join(' ')}" -d "command"`,
+    `complete -c spacemolt -n "__fish_seen_subcommand_from explain" -a "${explainCommandNames.join(' ')}" -d "command"`,
   );
   lines.push('');
   lines.push('# completion shell');
-  lines.push('complete -c spacemolt -n "__fish_seen_subcommand_from completion" -a "bash zsh fish" -d "shell"');
+  for (const [cmd, completion] of Object.entries(SPECIAL_COMPLETIONS)) {
+    lines.push(`# ${cmd}`);
+    for (const value of completion.values) {
+      lines.push(
+        `complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${value} -d "${escapeDoubleQuotedShell(`${completion.description}: ${value}`)}"`,
+      );
+    }
+  }
 
   return `${lines.join('\n')}\n`;
 }

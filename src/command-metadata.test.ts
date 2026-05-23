@@ -139,6 +139,71 @@ function fishGlobalOptionLine(completion: string, longOption: string): string | 
     .find((line) => line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"') && line.includes(longOption));
 }
 
+function bashTopLevelCommandWords(completion: string): string[] {
+  const match = completion.match(/^\s*local commands="([^"]*)"/m);
+  return match?.[1]?.split(/\s+/).filter(Boolean) || [];
+}
+
+function zshTopLevelCommandWords(completion: string): string[] {
+  return zshFunctionCommandWords(completion, '_spacemolt_commands');
+}
+
+function zshFunctionCommandWords(completion: string, functionName: string): string[] {
+  const escapedFunctionName = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = completion.match(
+    new RegExp(`${escapedFunctionName}\\(\\) \\{[\\s\\S]*?^\\s*commands=\\(([^)]*)\\)`, 'm'),
+  );
+  return (
+    (match?.[1]
+      ?.split(/\s+/)
+      .map((word) => word.match(/^([^[]+)/)?.[1])
+      .filter(Boolean) as string[]) || []
+  );
+}
+
+function fishTopLevelCommandWords(completion: string): string[] {
+  const words: string[] = [];
+  for (const line of completion.split('\n')) {
+    if (!line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"')) continue;
+    if (/(?:^|\s)-(?:s|o|l)\s+/.test(line)) continue;
+    const word = line.match(/(?:^|\s)-a\s+(\S+)/)?.[1];
+    if (word) words.push(word.replace(/^"|"$/g, ''));
+  }
+  return words;
+}
+
+function bashCommandCompletionWords(completion: string, command: string): string[] {
+  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
+  const body = match?.groups?.body;
+  const words = body?.match(/compgen -W "([^"]*)"/)?.[1];
+  return words?.split(/\s+/).filter((word) => word && !word.includes('$')) || [];
+}
+
+function zshCommandCompletionWords(completion: string, command: string): string[] {
+  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
+  const body = match?.groups?.body;
+  const words = body?.match(/_arguments "1:[^"]*:\(([^)]*)\)"/)?.[1];
+  return words?.split(/\s+/).filter(Boolean) || [];
+}
+
+function fishCommandCompletionWords(completion: string, command: string): string[] {
+  const words: string[] = [];
+  for (const line of completion.split('\n')) {
+    if (!line.includes(`__fish_seen_subcommand_from ${command}`)) continue;
+    const word = line.match(/(?:^|\s)-a\s+(\S+)/)?.[1];
+    if (word) words.push(word.replace(/^"|"$/g, ''));
+  }
+  return words;
+}
+
+function commandCompletionWords(shell: string, completion: string, command: string): string[] {
+  if (shell === 'bash') return bashCommandCompletionWords(completion, command);
+  if (shell === 'zsh') return zshCommandCompletionWords(completion, command);
+  return fishCommandCompletionWords(completion, command);
+}
+
 describe('command metadata', () => {
   test('top-level command metadata has human descriptions', () => {
     const priorityCommands = [
@@ -427,6 +492,55 @@ describe('command metadata', () => {
 
       expect(missing).toEqual([]);
     }
+  });
+
+  test('shell completions include local top-level commands', () => {
+    const expectedCommands = ['doctor', 'version', 'profile', 'ids', 'where-can-i', 'sync-api'];
+
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      const completion = generateCompletion(shell);
+      const actual =
+        shell === 'bash'
+          ? bashTopLevelCommandWords(completion)
+          : shell === 'zsh'
+            ? zshTopLevelCommandWords(completion)
+            : fishTopLevelCommandWords(completion);
+      const missing = expectedCommands.filter((command) => !actual.includes(command));
+
+      expect(missing, `${shell} completion is missing local top-level commands`).toEqual([]);
+    }
+  });
+
+  test('shell completions include local subcommand values', () => {
+    const expectedValues = {
+      completion: ['bash', 'zsh', 'fish'],
+      ids: ['poi', 'system', 'item', 'player'],
+      profile: ['list', 'default'],
+    };
+
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      const completion = generateCompletion(shell);
+      for (const [command, values] of Object.entries(expectedValues)) {
+        expect(commandCompletionWords(shell, completion, command), `${shell} ${command} completion values`).toEqual(
+          values,
+        );
+      }
+    }
+  });
+
+  test('zsh explain completion only includes explainable registry commands', () => {
+    const completion = generateCompletion('zsh');
+    const topLevelCommands = zshFunctionCommandWords(completion, '_spacemolt_commands');
+    const explainCommands = zshFunctionCommandWords(completion, '_spacemolt_explain_commands');
+
+    expect(topLevelCommands).toContain('doctor');
+    expect(topLevelCommands).toContain('version');
+    expect(explainCommands).toContain('travel');
+    expect(explainCommands).toContain('get_status');
+    expect(explainCommands).not.toContain('doctor');
+    expect(explainCommands).not.toContain('version');
+    expect(explainCommands).not.toContain('completion');
+    expect(explainCommands).not.toContain('commands');
   });
 
   test('shell completions include every parser-supported global option', () => {
