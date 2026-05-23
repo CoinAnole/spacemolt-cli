@@ -284,6 +284,20 @@ describe('help output branches', () => {
     expect(output).toContain('search');
   });
 
+  test('showCommandHelp documents view_market filters', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('view_market', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('[--item item_id]');
+    expect(output).toContain('[--search text]');
+    expect(output).toContain('item -> item_id');
+    expect(output).toContain('item_id');
+    expect(output).toContain('category');
+    expect(output).toContain('search');
+  });
+
   test('showCommandGroup omits duplicate command-name descriptions', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {

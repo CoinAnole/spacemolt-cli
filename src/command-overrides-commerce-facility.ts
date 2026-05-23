@@ -181,14 +181,23 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
   },
   view_market: {
-    usage: '[item_id] [category]  (view order book, optionally filtered)',
+    usage: '[item_id] [category] [--item item_id] [--search text]  (view order book, optionally filtered)',
     description: 'Inspect the market or order book at the current station.',
-    example: 'spacemolt view_market ore_iron',
+    example: 'spacemolt view_market --item ore_iron',
     discoverWith: ['get_status'],
     seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/view_market',
     positionals: ['item_id', 'category'],
+    aliases: {
+      item: 'item_id',
+    },
+    schemaExtensions: {
+      search: {
+        type: 'string',
+        description: 'Filter by substring match on item names',
+      },
+    },
   },
   view_orders: {
     usage:
