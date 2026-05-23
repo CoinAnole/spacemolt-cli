@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import {
   type ApiMdCommandMap,
   buildCommandHelpReport,
@@ -7,6 +9,8 @@ import {
   parseReportArgs,
 } from './command-help-report';
 import type { CommandConfig } from './commands';
+import { COMMANDS } from './commands';
+import { GENERATED_API_ROUTES } from './generated/api-commands';
 import type { GeneratedApiRoute } from './openapi-metadata';
 
 describe('command help report', () => {
@@ -214,5 +218,25 @@ describe('command help report', () => {
       command: 'buy',
       failOnDiff: false,
     });
+  });
+
+  test('curated command descriptions do not fall back to weak action tokens when api.md has prose', () => {
+    const apiMdCommands = parseApiMdCommands(
+      fs.readFileSync(path.join(import.meta.dir, '..', 'spacemolt-docs', 'api.md'), 'utf-8'),
+    );
+    const report = buildCommandHelpReport({
+      commands: COMMANDS,
+      generatedRoutes: GENERATED_API_ROUTES,
+      apiMdCommands,
+    });
+    const weakDescriptionCommands = report.commands
+      .filter((commandReport) =>
+        commandReport.differences.some(
+          (difference) => difference.field === 'description' && difference.signal === 'review',
+        ),
+      )
+      .map((commandReport) => commandReport.command);
+
+    expect(weakDescriptionCommands).toEqual([]);
   });
 });

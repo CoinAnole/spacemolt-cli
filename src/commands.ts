@@ -1,3 +1,4 @@
+import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GeneratedApiRoute } from './openapi-metadata.ts';
 
@@ -197,6 +198,7 @@ function getGeneratedRoute(apiRoute: string, generatedRoutes: Record<string, Gen
 }
 
 function mergeCommandConfig(
+  command: string,
   config: CommandOverride,
   generatedRoutes: Record<string, GeneratedApiRoute>,
 ): CommandConfig {
@@ -215,7 +217,7 @@ function mergeCommandConfig(
     ...uxConfig,
     args: config.positionals ?? generatedArgs(generated),
     required: displayRequiredFields(generated.required, config.positionals, aliases),
-    description: config.description ?? generated.summary,
+    description: config.description ?? CURATED_COMMAND_DESCRIPTIONS[command] ?? generated.summary,
     usage: buildUsageFromSchema(config, generated),
     aliases,
     route: {
@@ -231,7 +233,10 @@ export function buildCuratedCommands(
   generatedRoutes: Record<string, GeneratedApiRoute> = GENERATED_API_ROUTES as Record<string, GeneratedApiRoute>,
 ): Record<string, CommandConfig> {
   return Object.fromEntries(
-    Object.entries(overrides).map(([command, config]) => [command, mergeCommandConfig(config, generatedRoutes)]),
+    Object.entries(overrides).map(([command, config]) => [
+      command,
+      mergeCommandConfig(command, config, generatedRoutes),
+    ]),
   );
 }
 
