@@ -1,5 +1,7 @@
 import { c, emitLine, formatPlayer, formatter, namedFormatter } from './helpers.ts';
 
+const NEARBY_TABLE_LIMIT = 10;
+
 export const statusFormatters = [
   // Player status
   formatter(
@@ -48,10 +50,10 @@ export const statusFormatters = [
       const nearby = r.nearby as Array<Record<string, unknown>> | undefined;
       if (nearby?.length) {
         emitLine(`\n${c.bright}Nearby Players:${c.reset} ${nearby.length}`);
-        for (const player of nearby.slice(0, 5)) {
+        for (const player of nearby.slice(0, NEARBY_TABLE_LIMIT)) {
           emitLine(`  - ${formatPlayer(player)}`);
         }
-        if (nearby.length > 5) emitLine(`  ... and ${nearby.length - 5} more`);
+        if (nearby.length > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${nearby.length - NEARBY_TABLE_LIMIT} more`);
       }
       return true;
     },
@@ -195,13 +197,21 @@ export const statusFormatters = [
       if (!Array.isArray(players)) return false;
       const pirates = (r.pirates as Array<Record<string, unknown>>) || [];
       const npcs = (r.empire_npcs as Array<Record<string, unknown>>) || [];
+      const playerCount =
+        typeof r.nearby_player_count === 'number'
+          ? r.nearby_player_count
+          : typeof r.count === 'number'
+            ? r.count
+            : players.length;
+      const empireNpcCount = typeof r.empire_npc_count === 'number' ? r.empire_npc_count : npcs.length;
 
       emitLine(`\n${c.bright}=== Nearby ===${c.reset}`);
-      emitLine(`\n${c.bright}Players (${(r.count as number) || players.length}):${c.reset}`);
+      emitLine(`\n${c.bright}Players (${playerCount}):${c.reset}`);
       if (!players.length) {
         emitLine(`  (No other players at this location)`);
       } else {
-        for (const p of players) emitLine(`  ${formatPlayer(p)}`);
+        for (const p of players.slice(0, NEARBY_TABLE_LIMIT)) emitLine(`  ${formatPlayer(p)}`);
+        if (playerCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${playerCount - NEARBY_TABLE_LIMIT} more`);
       }
 
       if ((r.pirate_count as number) > 0) {
@@ -214,13 +224,14 @@ export const statusFormatters = [
         }
       }
 
-      if ((r.empire_npc_count as number) > 0) {
-        emitLine(`\n${c.dim}Empire NPCs (${r.empire_npc_count}):${c.reset}`);
-        for (const n of npcs) {
+      if (empireNpcCount > 0) {
+        emitLine(`\n${c.dim}Empire NPCs (${empireNpcCount}):${c.reset}`);
+        for (const n of npcs.slice(0, NEARBY_TABLE_LIMIT)) {
           const name = n.name || n.npc_id || 'Unknown';
           const ship = n.ship_class ? ` (${n.ship_class})` : '';
           emitLine(`  ${name}${ship}`);
         }
+        if (empireNpcCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${empireNpcCount - NEARBY_TABLE_LIMIT} more`);
       }
       return true;
     },
@@ -334,11 +345,11 @@ export const statusFormatters = [
       }
       if (loc.nearby_player_count > 0) {
         emitLine(`\n${c.bright}Nearby Players (${loc.nearby_player_count}):${c.reset}`);
-        for (const player of loc.nearby_players.slice(0, 10)) {
+        for (const player of loc.nearby_players.slice(0, NEARBY_TABLE_LIMIT)) {
           emitLine(`  ${formatPlayer(player)}`);
         }
-        if (loc.nearby_player_count > 10) {
-          emitLine(`  ... and ${loc.nearby_player_count - 10} more`);
+        if (loc.nearby_player_count > NEARBY_TABLE_LIMIT) {
+          emitLine(`  ... and ${loc.nearby_player_count - NEARBY_TABLE_LIMIT} more`);
         }
       }
       if (loc.nearby_pirate_count > 0) {

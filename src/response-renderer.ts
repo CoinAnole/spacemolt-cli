@@ -6,6 +6,7 @@ import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
+import { limitStructuredNearbyForOutput } from './response.ts';
 import { c } from './runtime.ts';
 import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
@@ -94,7 +95,13 @@ export async function renderResponse(
   if ((isJson || options.structured) && !hasProjection) {
     if (options.structured && response.structuredContent) {
       const out = writer?.out.bind(writer) ?? console.log;
-      out(JSON.stringify(response.structuredContent, null, options.compact ? 0 : 2));
+      out(
+        JSON.stringify(
+          limitStructuredNearbyForOutput(displayCommand, response.structuredContent),
+          null,
+          options.compact ? 0 : 2,
+        ),
+      );
       return 0;
     }
     printJsonResponse(response, options.compact, writer);

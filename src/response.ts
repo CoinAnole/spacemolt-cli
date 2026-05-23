@@ -68,3 +68,52 @@ export function normalizeStructuredResultForDisplay(result: Record<string, unkno
   }
   return view;
 }
+
+const STRUCTURED_NEARBY_LIMIT = 10;
+const NEARBY_LIMITED_COMMANDS = new Set(['get_location', 'get_nearby', 'get_status']);
+
+export function limitStructuredNearbyForOutput(
+  command: string,
+  result: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!NEARBY_LIMITED_COMMANDS.has(command)) return result;
+
+  const view = structuredClone(result);
+  limitNearbyArrays(view);
+
+  const location = view.location;
+  if (isRecord(location)) limitNearbyArrays(location);
+
+  return view;
+}
+
+function limitNearbyArrays(container: Record<string, unknown>): void {
+  limitArray(container, 'nearby_players', 'nearby_player_count');
+  limitArray(container, 'nearby', 'nearby_player_count', ['count']);
+  limitArray(container, 'players', 'nearby_player_count', ['count']);
+  limitArray(container, 'nearby_empire_npcs', 'nearby_empire_npc_count');
+  limitArray(container, 'empire_npcs', 'nearby_empire_npc_count', ['empire_npc_count']);
+}
+
+function limitArray(
+  container: Record<string, unknown>,
+  arrayKey: string,
+  countKey: string,
+  countAliases: string[] = [],
+): void {
+  const value = container[arrayKey];
+  if (!Array.isArray(value) || value.length <= STRUCTURED_NEARBY_LIMIT) return;
+
+  if (container[countKey] === undefined) {
+    container[countKey] = findExistingCount(container, countAliases) ?? value.length;
+  }
+  container[arrayKey] = value.slice(0, STRUCTURED_NEARBY_LIMIT);
+}
+
+function findExistingCount(container: Record<string, unknown>, countAliases: string[]): number | undefined {
+  for (const key of countAliases) {
+    const value = container[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return undefined;
+}

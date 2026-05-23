@@ -57,6 +57,22 @@ function fakeContext() {
   };
 }
 
+function nearbyPlayers(count: number): Array<Record<string, unknown>> {
+  return Array.from({ length: count }, (_, index) => ({
+    username: `Pilot ${index + 1}`,
+    player_id: `player_${index + 1}`,
+    ship_class: 'prospector',
+  }));
+}
+
+function nearbyNpcs(count: number): Array<Record<string, unknown>> {
+  return Array.from({ length: count }, (_, index) => ({
+    name: `Patrol ${index + 1}`,
+    npc_id: `npc_${index + 1}`,
+    ship_class: 'interceptor',
+  }));
+}
+
 describe('response renderer', () => {
   test('runCommand strips get_cargo display-only fields before API execution', async () => {
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
@@ -228,6 +244,38 @@ describe('response renderer', () => {
     expect(exitCode).toBe(0);
     expect(output).toContain('coin');
     expect(output).not.toContain('2026-05-20T00:00:00.000Z');
+  });
+
+  test('renderResponse truncates nearby collections in --structured output without mutating the response', async () => {
+    const capture = fakeContext();
+    const structuredContent = {
+      nearby: nearbyPlayers(12),
+      count: 12,
+      empire_npcs: nearbyNpcs(13),
+      empire_npc_count: 13,
+    };
+
+    const exitCode = await renderResponse(
+      {
+        command: 'get_nearby',
+        displayCommand: 'get_nearby',
+        response: { structuredContent },
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.nearby).toHaveLength(10);
+    expect(parsed.empire_npcs).toHaveLength(10);
+    expect(parsed.nearby_player_count).toBe(12);
+    expect(parsed.nearby_empire_npc_count).toBe(13);
+    expect(parsed.nearby[9].username).toBe('Pilot 10');
+    expect(parsed.empire_npcs[9].name).toBe('Patrol 10');
+    expect(structuredContent.nearby).toHaveLength(12);
+    expect(structuredContent.empire_npcs).toHaveLength(13);
   });
 
   test('renderResponse hides empty cargo stacks and sorts non-empty stacks by quantity descending', async () => {

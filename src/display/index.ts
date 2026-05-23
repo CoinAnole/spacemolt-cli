@@ -6,6 +6,7 @@ import {
   getObjectResult,
   getStructuredResult,
   isRecord,
+  limitStructuredNearbyForOutput,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
@@ -143,10 +144,11 @@ function displayStructuredResultInternal(
   const format = getOutputFormat(options, context);
   const compact = isCompact(options, context);
   const jqExpr = options?.jq;
+  const structuredOutputResult = limitStructuredNearbyForOutput(command, result);
 
   if (jqExpr) {
     try {
-      const jqResult = evaluateJq(result, jqExpr);
+      const jqResult = evaluateJq(structuredOutputResult, jqExpr);
       emitLine(formatProjection(jqResult, format, compact, 'jq'));
       return true;
     } catch (err) {
@@ -156,7 +158,7 @@ function displayStructuredResultInternal(
   }
 
   if (hasField(field)) {
-    const resolved = resolveFieldProjection(result, field);
+    const resolved = resolveFieldProjection(structuredOutputResult, field);
     if (!resolved.success) {
       emitError(`${c.red}Error:${c.reset} ${resolved.message}`);
       return false;
@@ -167,23 +169,23 @@ function displayStructuredResultInternal(
   }
 
   if (hasFields(fields)) {
-    const extracted = extractFields(result, fields);
+    const extracted = extractFields(structuredOutputResult, fields);
     emitLine(formatProjection(extracted, format, compact, 'fields'));
     return true;
   }
 
   if (format === 'json') {
-    emitLine(stringifyJson(result, compact));
+    emitLine(stringifyJson(structuredOutputResult, compact));
     return true;
   }
 
   if (format === 'yaml') {
-    emitLine(toYaml(result));
+    emitLine(toYaml(structuredOutputResult));
     return true;
   }
 
   if (compact) {
-    emitLine(JSON.stringify(result));
+    emitLine(JSON.stringify(structuredOutputResult));
     return true;
   }
 
