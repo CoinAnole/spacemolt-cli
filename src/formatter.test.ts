@@ -120,6 +120,35 @@ const actionLogFixture = {
   ],
 };
 
+const emptyNotificationsFixture = {
+  count: 0,
+  current_tick: 900683,
+  notifications: null,
+  remaining: 0,
+  timestamp: 1779562779,
+};
+
+const notificationsFixture = {
+  count: 2,
+  current_tick: 900684,
+  notifications: [
+    {
+      type: 'system',
+      msg_type: 'system',
+      data: { message: 'Server maintenance scheduled.' },
+      timestamp: '2026-05-23T18:59:39.049Z',
+    },
+    {
+      type: 'chat',
+      msg_type: 'chat_message',
+      data: { channel: 'local', sender: 'Ibis', content: 'Clear skies over Sol today.' },
+      timestamp: '2026-05-23T19:01:02.000Z',
+    },
+  ],
+  remaining: 0,
+  timestamp: 1779562862,
+};
+
 function nearbyPlayers(count: number): Array<Record<string, unknown>> {
   return Array.from({ length: count }, (_, index) => ({
     username: `Pilot ${index + 1}`,
@@ -761,6 +790,32 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Destroyed pirate skiff near Earth.');
     expect(stdout).toContain('combat');
     expect(stdout).toContain('More entries available.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats empty notifications without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('notifications', emptyNotificationsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('No new notifications.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats notifications as text when --format=text is used', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { result: notificationsFixture },
+      { format: 'text' },
+      { command: 'notifications', displayCommand: 'notifications' },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Notifications (2) ===');
+    expect(stdout).toContain('2026-05-23 18:59:39');
+    expect(stdout).toContain('system');
+    expect(stdout).toContain('Server maintenance scheduled.');
+    expect(stdout).toContain('chat_message');
+    expect(stdout).toContain('Ibis: Clear skies over Sol today.');
     expect(stdout).not.toContain('=== Response ===');
   });
 
