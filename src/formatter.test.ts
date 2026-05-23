@@ -1093,6 +1093,33 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Faction Fuel: 320/500');
   });
 
+  test('get_poi includes station fuel and fuel price when present', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_poi', {
+      poi: {
+        id: 'grand_exchange',
+        name: 'Grand Exchange',
+        type: 'station',
+        system_id: 'haven',
+        description: 'The largest market in the known galaxy.',
+        base_id: 'grand_exchange_station',
+      },
+      base: {
+        id: 'grand_exchange_station',
+        name: 'Grand Exchange Station',
+        empire: 'nebula',
+        defense_level: 100,
+        fuel: 20920,
+        max_fuel: 0,
+      },
+      fuel_price: 20,
+      services: ['refuel'],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Fuel: 20920/0');
+    expect(stdout).toContain('Fuel Price: 20 credits');
+  });
+
   test('faction_info lists faction facilities', () => {
     const { stdout, stderr } = captureStructuredOutput('faction_info', {
       id: 'faction-1',

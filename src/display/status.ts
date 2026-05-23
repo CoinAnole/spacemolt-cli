@@ -283,6 +283,9 @@ export const statusFormatters = [
         if (base.description) emitLine(`  ${base.description}`);
         emitLine(`  Empire: ${base.empire || 'None'}`);
         emitLine(`  Defense: ${base.defense_level}`);
+        if (base.fuel !== undefined || base.max_fuel !== undefined)
+          emitLine(`  Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
+        if (r.fuel_price !== undefined) emitLine(`  Fuel Price: ${r.fuel_price} credits`);
       }
 
       const services = r.services as string[] | undefined;
