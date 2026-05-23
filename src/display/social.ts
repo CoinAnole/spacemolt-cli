@@ -1,5 +1,24 @@
 import { c, emitLine, firstArray, formatter, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
 
+function formatTimestampPreview(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '';
+  const text = String(value);
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
+  return match ? `${match[1]} ${match[2]}` : text;
+}
+
+function firstLinePreview(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  return String(value).split(/\r?\n/, 1)[0]?.trim() ?? '';
+}
+
+function captainLogRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  if (Array.isArray(result.entries)) return result.entries.filter(isRecord);
+  if (Array.isArray(result.logs)) return result.logs.filter(isRecord);
+  if (isRecord(result.entry)) return [result.entry];
+  return undefined;
+}
+
 export const socialFormatters = [
   // Chat confirmation
   namedFormatter(
@@ -20,6 +39,82 @@ export const socialFormatters = [
       return true;
     },
     { commands: ['chat'], shapeFallback: true },
+  ),
+
+  // Chat history
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.messages)) return false;
+      const rows = r.messages.filter(isRecord).map((message) => ({
+        ...message,
+        timestamp_preview: formatTimestampPreview(message.timestamp ?? message.created_at ?? message.sent_at),
+      }));
+      printCompactTable(
+        `Chat: ${r.channel || 'history'}`,
+        rows,
+        [
+          ['Timestamp', ['timestamp_preview', 'timestamp', 'created_at', 'sent_at']],
+          ['Sender', ['sender', 'username', 'sender_name']],
+          ['Message', ['content', 'message', 'text']],
+        ],
+        { maxCellWidth: 80 },
+      );
+      if (r.has_more) emitLine(`${c.dim}More messages available.${c.reset}`);
+      return true;
+    },
+    { commands: ['get_chat_history'] },
+  ),
+
+  // Captain's log list
+  formatter(
+    (r) => {
+      const entries = captainLogRows(r);
+      if (!entries) return false;
+      const rows = entries.map((entry) => ({
+        ...entry,
+        created_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp ?? entry.date),
+        entry_preview: firstLinePreview(entry.entry ?? entry.content ?? entry.text),
+      }));
+      printCompactTable(
+        "Captain's Log",
+        rows,
+        [
+          ['Index', ['index']],
+          ['Date', ['created_preview', 'created_at', 'timestamp', 'date']],
+          ['Entry', ['entry_preview', 'entry', 'content', 'text']],
+        ],
+        { maxCellWidth: 72 },
+      );
+      if (r.has_next || r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);
+      return true;
+    },
+    { commands: ['captains_log_list'] },
+  ),
+
+  // Action log
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.entries)) return false;
+      const category = r.category || 'all';
+      const rows = r.entries.filter(isRecord).map((entry) => ({
+        ...entry,
+        timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
+        category: entry.category ?? category,
+      }));
+      printCompactTable(
+        `Action Log: ${category}`,
+        rows,
+        [
+          ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
+          ['Summary', ['summary', 'message', 'description']],
+          ['Category', ['category']],
+        ],
+        { maxCellWidth: 80 },
+      );
+      if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);
+      return true;
+    },
+    { commands: ['get_action_log'] },
   ),
 
   formatter(

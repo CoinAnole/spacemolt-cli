@@ -60,6 +60,62 @@ const outputModeFixture = {
   items: [{ id: 'ore_iron', quantity: 5 }],
 };
 
+const queueFixture = {
+  queue: { has_pending: true },
+};
+
+const playerProfileFixture = {
+  player: {
+    username: 'Marlowe',
+    credits: 4242,
+    empire: 'Terran',
+    faction_id: 'smc',
+    clan_tag: 'SMC',
+    home_base: 'earth_station',
+    standings: { terran: 12, voidborn: -4 },
+    stats: {
+      piloting: { level: 5, xp: 1200 },
+      crafting: { level: 2, xp: 175 },
+    },
+  },
+};
+
+const chatHistoryFixture = {
+  channel: 'local',
+  has_more: true,
+  messages: [
+    {
+      id: 'chat-1',
+      sender: 'Ibis',
+      content: 'Clear skies over Sol today.',
+      timestamp: '2026-05-23T15:04:05.000Z',
+    },
+  ],
+};
+
+const captainsLogListFixture = {
+  entry: {
+    index: 0,
+    created_at: '2026-05-23T15:04:05.000Z',
+    entry: 'Found an old beacon.\nThe signal repeats every seven ticks.',
+  },
+  has_next: true,
+};
+
+const actionLogFixture = {
+  category: 'combat',
+  has_more: true,
+  entries: [
+    {
+      id: 'event-1',
+      created_at: '2026-05-23T15:04:05.000Z',
+      summary: 'Destroyed pirate skiff near Earth.',
+      category: 'combat',
+      event_type: 'pirate_destroyed',
+    },
+  ],
+};
+
 function nearbyPlayers(count: number): Array<Record<string, unknown>> {
   return Array.from({ length: count }, (_, index) => ({
     username: `Pilot ${index + 1}`,
@@ -632,6 +688,73 @@ describe('structuredContent formatters', () => {
 
       Nearby NPCs: 1"
     `);
+  });
+
+  test('formats queue state without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_queue', queueFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Queue ===');
+    expect(stdout).toContain('Queue: 1 action pending');
+    expect(stdout).not.toContain('=== Response ===');
+
+    const empty = captureStructuredOutput('get_queue', { queue: { has_pending: false } });
+    expect(empty.stderr).toBe('');
+    expect(empty.stdout).toContain('Queue: empty');
+    expect(empty.stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats player profile summary without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_player', playerProfileFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Player ===');
+    expect(stdout).toContain('Username: Marlowe');
+    expect(stdout).toContain('Credits: 4,242');
+    expect(stdout).toContain('Faction: smc [SMC]');
+    expect(stdout).toContain('Home Base: earth_station');
+    expect(stdout).toContain('Piloting: Level 5 (1200 XP)');
+    expect(stdout).toContain('Crafting: Level 2 (175 XP)');
+    expect(stdout).toContain('terran +12');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats chat history as a chat log without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_chat_history', chatHistoryFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Chat: local ===');
+    expect(stdout).toContain('Timestamp');
+    expect(stdout).toContain('2026-05-23 15:04:05');
+    expect(stdout).toContain('Ibis');
+    expect(stdout).toContain('Clear skies over Sol today.');
+    expect(stdout).toContain('More messages available.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats captain log list entries without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('captains_log_list', captainsLogListFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Captain');
+    expect(stdout).toContain('Index');
+    expect(stdout).toContain('2026-05-23 15:04:05');
+    expect(stdout).toContain('Found an old beacon.');
+    expect(stdout).toContain('More entries available.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats action log entries without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_action_log', actionLogFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Action Log: combat ===');
+    expect(stdout).toContain('Timestamp');
+    expect(stdout).toContain('2026-05-23 15:04:05');
+    expect(stdout).toContain('Destroyed pirate skiff near Earth.');
+    expect(stdout).toContain('combat');
+    expect(stdout).toContain('More entries available.');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('formats ship listings before generic market listings', () => {

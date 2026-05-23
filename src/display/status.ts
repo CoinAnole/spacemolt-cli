@@ -1,8 +1,105 @@
-import { c, emitLine, formatPlayer, formatter, namedFormatter } from './helpers.ts';
+import { c, emitLine, formatPlayer, formatter, isRecord, namedFormatter } from './helpers.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
 
+function formatNumber(value: unknown): string {
+  return typeof value === 'number' ? value.toLocaleString() : String(value);
+}
+
+function formatDisplayValue(value: unknown): string {
+  if (isRecord(value)) {
+    const name = value.name ?? value.base_name ?? value.username;
+    const id = value.id ?? value.base_id ?? value.player_id;
+    if (name && id && name !== id) return `${name} (${id})`;
+    if (name) return String(name);
+    if (id) return String(id);
+  }
+  return String(value);
+}
+
+function formatSkillSummary(stats: Record<string, unknown>, skillId: string, label: string): string | undefined {
+  const skill = stats[skillId];
+  const levelKey = `${skillId}_level`;
+  const xpKey = `${skillId}_xp`;
+
+  let level: unknown;
+  let xp: unknown;
+  if (isRecord(skill)) {
+    level = skill.level ?? skill.current_level;
+    xp = skill.xp ?? skill.current_xp;
+  } else {
+    level = stats[levelKey];
+    xp = stats[xpKey];
+  }
+
+  if (level === undefined && xp === undefined) return undefined;
+  if (level !== undefined && xp !== undefined) return `${label}: Level ${level} (${xp} XP)`;
+  if (level !== undefined) return `${label}: Level ${level}`;
+  return `${label}: ${xp} XP`;
+}
+
+function formatStandingValue(value: unknown): string {
+  if (typeof value === 'number' && value > 0) return `+${value}`;
+  return String(value);
+}
+
 export const statusFormatters = [
+  // Queue state
+  formatter(
+    (r) => {
+      if (!isRecord(r.queue) || r.queue.has_pending === undefined) return false;
+      const hasPending = r.queue.has_pending === true;
+      emitLine(`\n${c.bright}=== Queue ===${c.reset}`);
+      emitLine(`Queue: ${hasPending ? '1 action pending' : 'empty'}`);
+      return true;
+    },
+    { commands: ['get_queue'] },
+  ),
+
+  // Player profile
+  formatter(
+    (r) => {
+      if (!isRecord(r.player)) return false;
+      const player = r.player;
+
+      emitLine(`\n${c.bright}=== Player ===${c.reset}`);
+      if (player.username) emitLine(`Username: ${player.username}`);
+      if (player.credits !== undefined) emitLine(`Credits: ${formatNumber(player.credits)}`);
+      if (player.empire) emitLine(`Empire: ${formatDisplayValue(player.empire)}`);
+      if (player.faction_id || player.clan_tag || player.faction_rank) {
+        const faction = player.faction_id || 'None';
+        const clan = player.clan_tag ? ` [${player.clan_tag}]` : '';
+        const rank = player.faction_rank ? ` (${player.faction_rank})` : '';
+        emitLine(`Faction: ${faction}${clan}${rank}`);
+      }
+      if (player.home_base) emitLine(`Home Base: ${formatDisplayValue(player.home_base)}`);
+
+      const stats = isRecord(player.stats) ? player.stats : undefined;
+      if (stats) {
+        const skillLines = [
+          formatSkillSummary(stats, 'piloting', 'Piloting'),
+          formatSkillSummary(stats, 'crafting', 'Crafting'),
+        ].filter((line): line is string => Boolean(line));
+        if (skillLines.length) {
+          emitLine(`\n${c.bright}Stats:${c.reset}`);
+          for (const line of skillLines) emitLine(`  ${line}`);
+        }
+      }
+
+      if (isRecord(player.standings)) {
+        const standings = Object.entries(player.standings)
+          .filter(([, value]) => value !== undefined && value !== null && value !== '')
+          .map(([key, value]) => `${key} ${formatStandingValue(value)}`);
+        if (standings.length) {
+          emitLine(`\n${c.bright}Standings:${c.reset}`);
+          emitLine(`  ${standings.join(', ')}`);
+        }
+      }
+      return true;
+    },
+    { commands: ['get_player'] },
+  ),
+
   // Player status
   formatter(
     (r) => {
