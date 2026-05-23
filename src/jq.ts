@@ -31,7 +31,7 @@ function evalPath(data: unknown, expr: string): unknown {
 
   const array = getFieldValue(data, arrayKey);
   if (!Array.isArray(array)) {
-    throw new Error(`Expected array at "${arrayKey}", got ${typeof array}`);
+    throw new Error(formatExpectedArrayError(arrayKey, array));
   }
 
   const bracketContent = rest.slice(1, rest.indexOf(']'));
@@ -63,6 +63,16 @@ function evalPath(data: unknown, expr: string): unknown {
   }
 
   throw new Error(`Unsupported bracket content: "[${bracketContent}]"`);
+}
+
+function formatExpectedArrayError(path: string, value: unknown): string {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    const keys = Object.keys(value);
+    const keySummary = keys.length > 0 ? `with keys: ${keys.join(', ')}` : 'with no keys';
+    return `Expected array at path "${path}", got object ${keySummary}`;
+  }
+
+  return `Expected array at "${path}", got ${typeof value}`;
 }
 
 function hasUnsupportedWhitespace(expr: string): boolean {

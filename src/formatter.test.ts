@@ -60,6 +60,22 @@ const outputModeFixture = {
   items: [{ id: 'ore_iron', quantity: 5 }],
 };
 
+function nearbyPlayers(count: number): Array<Record<string, unknown>> {
+  return Array.from({ length: count }, (_, index) => ({
+    username: `Pilot ${index + 1}`,
+    player_id: `player_${index + 1}`,
+    ship_class: 'prospector',
+  }));
+}
+
+function nearbyNpcs(count: number): Array<Record<string, unknown>> {
+  return Array.from({ length: count }, (_, index) => ({
+    name: `Patrol ${index + 1}`,
+    npc_id: `npc_${index + 1}`,
+    ship_class: 'interceptor',
+  }));
+}
+
 async function captureRenderedOutput(
   response: Parameters<typeof renderResponse>[0]['response'],
   options: Partial<GlobalOptions>,
@@ -228,6 +244,26 @@ describe('structuredContent output mode precedence', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toBe('5');
+  });
+
+  test('--jq suggests object keys when bracket notation targets an object', () => {
+    const rendered = renderStructuredResult(
+      'get_skills',
+      {
+        skills: {
+          Combat: [{ name: 'Gunnery' }],
+          Commerce: [{ name: 'Trading' }],
+          Industry: [{ name: 'Mining' }],
+        },
+      },
+      globalOptions({ jq: '.skills[0]' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain(
+      'Error: Expected array at path "skills", got object with keys: Combat, Commerce, Industry',
+    );
   });
 
   test('--jq rejects comma-separated expressions instead of silently returning null', () => {
@@ -500,6 +536,30 @@ describe('structuredContent output mode precedence', () => {
     expect(rendered.stdout.join('\n')).toBe(
       '\nplayer:\n  name: Marlowe\nship:\n  fuel: 42\nitems:\n  - id: ore_iron\n    quantity: 5',
     );
+  });
+
+  test('yaml output truncates nearby player and NPC collections without losing totals', () => {
+    const result = {
+      ...getStatusFixture,
+      location: {
+        ...getStatusFixture.location,
+        nearby_players: nearbyPlayers(12),
+        nearby_empire_npcs: nearbyNpcs(13),
+      },
+    };
+
+    const rendered = renderStructuredResult('get_status', result, globalOptions({ format: 'yaml' }));
+    const yaml = rendered.stdout.join('\n');
+
+    expect(rendered.success).toBe(true);
+    expect(yaml).toContain('nearby_player_count: 12');
+    expect(yaml).toContain('nearby_empire_npc_count: 13');
+    expect(yaml).toContain('username: "Pilot 10"');
+    expect(yaml).not.toContain('username: "Pilot 11"');
+    expect(yaml).toContain('name: "Patrol 10"');
+    expect(yaml).not.toContain('name: "Patrol 11"');
+    expect(result.location.nearby_players).toHaveLength(12);
+    expect(result.location.nearby_empire_npcs).toHaveLength(13);
   });
 
   test('pure structured renderer formats text as table output and compact output', () => {
