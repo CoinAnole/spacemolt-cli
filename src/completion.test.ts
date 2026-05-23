@@ -343,10 +343,43 @@ describe('shell completion generation', () => {
     expect(formatCompletionCandidates([])).toBe('');
   });
 
-  test('static completion scripts do not expose hidden __complete command', () => {
-    for (const shell of ['bash', 'zsh', 'fish']) {
-      expect(generateCompletion(shell)).not.toContain('__complete');
-    }
+  test('generated completion scripts call hidden dynamic completion adapters', () => {
+    const bash = generateCompletion('bash');
+    const zsh = generateCompletion('zsh');
+    const fish = generateCompletion('fish');
+
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
+    expect(bash).toContain('spacemolt __complete bash -- "${words[@]}"');
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: zsh variable in generated script
+    expect(zsh).toContain('spacemolt __complete zsh -- "${words[@]}"');
+    expect(fish).toContain('spacemolt __complete fish -- $words');
+    expect(fish).toContain("if string match -qr '\\s$' -- (commandline)");
+    expect(fish).toContain('set words $words ""');
+  });
+
+  test('generated completion scripts keep static fallback command lists', () => {
+    const bash = generateCompletion('bash');
+    const zsh = generateCompletion('zsh');
+    const fish = generateCompletion('fish');
+
+    expect(bash).toContain('local commands=');
+    expect(bash).toContain('repair');
+    expect(zsh).toContain('_spacemolt_commands()');
+    expect(zsh).toContain('repair[');
+    expect(fish).toContain(
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand" -a repair',
+    );
+  });
+
+  test('fish static completions are gated behind dynamic fallback checks', () => {
+    const fish = generateCompletion('fish');
+
+    expect(fish).toContain('complete -c spacemolt -f -n "__spacemolt_has_dynamic_complete"');
+    expect(fish).toContain('function __spacemolt_no_dynamic_complete');
+    expect(fish).toContain(
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand" -a repair',
+    );
+    expect(fish).not.toContain('complete -c spacemolt -f -a "(__spacemolt_dynamic_complete)"');
   });
 
   test('bash and fish suggest key-value field inserts instead of bare placeholders', () => {
@@ -397,13 +430,13 @@ describe('shell completion generation', () => {
     expect(bashSellBody).toContain('auto_list=');
     expect(bashSellBody).not.toContain('true false');
     expect(fishSellLines).toContain(
-      'complete -c spacemolt -n "__fish_seen_subcommand_from sell" -a auto_list= -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies)."',
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a auto_list= -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies)."',
     );
     expect(fishSellLines).not.toContain(
-      'complete -c spacemolt -n "__fish_seen_subcommand_from sell" -a true -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).: true"',
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a true -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).: true"',
     );
     expect(fishSellLines).not.toContain(
-      'complete -c spacemolt -n "__fish_seen_subcommand_from sell" -a false -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).: false"',
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a false -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).: false"',
     );
   });
 

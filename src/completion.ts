@@ -112,8 +112,12 @@ function generateZshGlobalOption(option: CompletionOption): string {
   return `    "${word}[${escapedDescription}]${valueCompletion}" \\`;
 }
 
-function generateFishGlobalOption(option: CompletionOption): string {
-  const parts = ['complete -c spacemolt -n "__fish_use_subcommand"'];
+function fishStaticFallbackCondition(condition: string): string {
+  return `__spacemolt_no_dynamic_complete; and ${condition}`;
+}
+
+function generateFishGlobalOption(option: CompletionOption, condition = '__fish_use_subcommand'): string {
+  const parts = [`complete -c spacemolt -n "${fishStaticFallbackCondition(condition)}"`];
   if (option.short) {
     if (option.short.length === 2) {
       parts.push(`-s ${option.short.slice(1)}`);
@@ -143,6 +147,20 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('_spacemolt() {');
   lines.push('  local cur prev words cword');
   lines.push('  _init_completion || return');
+  lines.push('');
+  lines.push('  local dynamic_completions dynamic_value');
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
+  lines.push('  dynamic_completions="$(spacemolt __complete bash -- "${words[@]}" 2>/dev/null)"');
+  lines.push('  if [ -n "$dynamic_completions" ]; then');
+  lines.push('    COMPREPLY=()');
+  lines.push("    while IFS=$'\\t' read -r dynamic_value _; do");
+  lines.push('      [ -n "$dynamic_value" ] && COMPREPLY+=("$dynamic_value")');
+  lines.push('    done <<< "$dynamic_completions"');
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
+  lines.push('    if [ ${#COMPREPLY[@]} -gt 0 ]; then');
+  lines.push('      return');
+  lines.push('    fi');
+  lines.push('  fi');
   lines.push('');
   lines.push('  # Global flags');
   lines.push(`  local global_flags="${globalFlags}"`);
@@ -225,7 +243,24 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('');
   lines.push('_spacemolt() {');
   lines.push('  local curcontext="$curcontext" state line');
+  lines.push('  local dynamic_completions dynamic_value');
+  lines.push('  local -a dynamic_values');
   lines.push('  typeset -A opt_args');
+  lines.push('');
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: zsh variable in generated script
+  lines.push('  dynamic_completions="$(spacemolt __complete zsh -- "${words[@]}" 2>/dev/null)"');
+  lines.push('  if [[ -n "$dynamic_completions" ]]; then');
+  lines.push('    dynamic_values=()');
+  lines.push("    while IFS=$'\\t' read -r dynamic_value _; do");
+  lines.push('      [[ -n "$dynamic_value" ]] && dynamic_values+=("$dynamic_value")');
+  lines.push('    done <<< "$dynamic_completions"');
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: zsh variable in generated script
+  lines.push('    if (( ${#dynamic_values[@]} > 0 )); then');
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: zsh variable in generated script
+  lines.push('      compadd -- "${dynamic_values[@]}"');
+  lines.push('      return');
+  lines.push('    fi');
+  lines.push('  fi');
   lines.push('');
   lines.push('  _arguments -C \\');
   for (const option of GLOBAL_COMPLETION_OPTIONS) {
@@ -319,6 +354,27 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('# Fish completion for spacemolt');
   lines.push('# Install: spacemolt completion fish > ~/.config/fish/completions/spacemolt.fish');
   lines.push('');
+  lines.push('function __spacemolt_dynamic_complete');
+  lines.push('  set -l words (commandline -opc)');
+  lines.push('  set -l current (commandline -ct)');
+  lines.push("  if string match -qr '\\s$' -- (commandline)");
+  lines.push('    set words $words ""');
+  lines.push('  else if test -n "$current"');
+  lines.push('    set words $words $current');
+  lines.push('  end');
+  lines.push('  spacemolt __complete fish -- $words 2>/dev/null');
+  lines.push('end');
+  lines.push('');
+  lines.push('function __spacemolt_has_dynamic_complete');
+  lines.push('  test -n "(__spacemolt_dynamic_complete)"');
+  lines.push('end');
+  lines.push('');
+  lines.push('function __spacemolt_no_dynamic_complete');
+  lines.push('  not __spacemolt_has_dynamic_complete');
+  lines.push('end');
+  lines.push('');
+  lines.push('complete -c spacemolt -f -n "__spacemolt_has_dynamic_complete" -a "(__spacemolt_dynamic_complete)"');
+  lines.push('');
   lines.push('# Global flags');
   for (const option of GLOBAL_COMPLETION_OPTIONS) {
     lines.push(generateFishGlobalOption(option));
@@ -327,7 +383,9 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('# Commands');
   for (const cmd of topCommands) {
     const desc = escapeDoubleQuotedShell(commandDescription(cmd, registry));
-    lines.push(`complete -c spacemolt -n "__fish_use_subcommand" -a ${cmd} -d "${desc}"`);
+    lines.push(
+      `complete -c spacemolt -n "${fishStaticFallbackCondition('__fish_use_subcommand')}" -a ${cmd} -d "${desc}"`,
+    );
   }
   lines.push('');
   lines.push('# Per-command arguments');
@@ -343,11 +401,13 @@ function generateFishCompletion(registry: CompletionRegistry): string {
       if (arg.kind === 'enum' && arg.values?.length) {
         for (const val of arg.values) {
           const valueDesc = escapeDoubleQuotedShell(`${arg.description}: ${val}`);
-          lines.push(`complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${val} -d "${valueDesc}"`);
+          lines.push(
+            `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${cmd}`)}" -a ${val} -d "${valueDesc}"`,
+          );
         }
       } else {
         lines.push(
-          `complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${arg.insert} -d "${escapeDoubleQuotedShell(desc)}"`,
+          `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${cmd}`)}" -a ${arg.insert} -d "${escapeDoubleQuotedShell(desc)}"`,
         );
       }
     }
@@ -356,7 +416,7 @@ function generateFishCompletion(registry: CompletionRegistry): string {
 
   lines.push('# explain command');
   lines.push(
-    `complete -c spacemolt -n "__fish_seen_subcommand_from explain" -a "${explainCommandNames.join(' ')}" -d "command"`,
+    `complete -c spacemolt -n "${fishStaticFallbackCondition('__fish_seen_subcommand_from explain')}" -a "${explainCommandNames.join(' ')}" -d "command"`,
   );
   lines.push('');
   lines.push('# completion shell');
@@ -364,7 +424,7 @@ function generateFishCompletion(registry: CompletionRegistry): string {
     lines.push(`# ${cmd}`);
     for (const value of completion.values) {
       lines.push(
-        `complete -c spacemolt -n "__fish_seen_subcommand_from ${cmd}" -a ${value} -d "${escapeDoubleQuotedShell(`${completion.description}: ${value}`)}"`,
+        `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${cmd}`)}" -a ${value} -d "${escapeDoubleQuotedShell(`${completion.description}: ${value}`)}"`,
       );
     }
   }
