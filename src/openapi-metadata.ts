@@ -1,4 +1,8 @@
 export interface OpenApiSpec {
+  info: {
+    'x-gameserver-version': string;
+    [key: string]: unknown;
+  };
   paths: Record<string, Record<string, Operation>>;
 }
 
@@ -49,6 +53,14 @@ export interface GeneratedApiRoute {
     category?: string;
     hidden?: boolean;
   };
+}
+
+export function gameserverVersionFromSpec(spec: OpenApiSpec): string {
+  const version = spec.info?.['x-gameserver-version'];
+  if (typeof version !== 'string' || version.trim() === '') {
+    throw new Error('OpenAPI spec is missing info.x-gameserver-version');
+  }
+  return version;
 }
 
 function routeParts(apiPath: string): { tool: string; action: string } {

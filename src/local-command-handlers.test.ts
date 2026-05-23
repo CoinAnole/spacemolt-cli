@@ -7,7 +7,7 @@ import { ApiCommandHandler } from './api-command-handler';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { buildCommandRegistrySnapshot, type CommandRegistrySnapshot } from './command-registry';
 import type { CommandHandler } from './command-types';
-import { GENERATED_API_ROUTES } from './generated/api-commands';
+import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands';
 import { resolveHandler } from './local-command-handlers';
 import { runInvocation } from './main';
 import type { GeneratedApiRoute } from './openapi-metadata';
@@ -663,14 +663,93 @@ describe('local command handlers', () => {
     const parsed = handler.parse(['version'], options);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    const result = await handler.run(parsed.payload, options);
-    const { context, stdout } = captureContext();
+    const { context, stdout } = captureContext({
+      HOME: '/tmp/spacemolt-test-home',
+      XDG_CONFIG_HOME: tempDir(),
+    });
+    const result = await handler.run(parsed.payload, options, undefined, context);
 
     const exitCode = await handler.render(result, options, undefined, context);
 
     expect(exitCode).toBe(0);
     expect(stdout[0]).toMatch(/^SpaceMolt Client v/);
     expect(stdout[1]).toMatch(/^API: /);
+    expect(stdout[2]).toBe(`Bundled OpenAPI metadata: gameserver ${GENERATED_API_GAMESERVER_VERSION}`);
+    expect(stdout[3]).toBe('Cached OpenAPI metadata: not synced');
+  });
+
+  test('version renders cached OpenAPI metadata as current when versions match', async () => {
+    const configHome = tempDir();
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      JSON.stringify({
+        fetchedAt: '2026-05-23T12:00:00.000Z',
+        gameserverVersion: GENERATED_API_GAMESERVER_VERSION,
+        routes: {},
+      }),
+    );
+    const handler = localHandler(['version']);
+    const parsed = handler.parse(['version'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const { context, stdout } = captureContext({ HOME: '/tmp/spacemolt-test-home', XDG_CONFIG_HOME: configHome });
+
+    const result = await handler.run(parsed.payload, options, undefined, context);
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain(`Cached OpenAPI metadata: gameserver ${GENERATED_API_GAMESERVER_VERSION} (current)`);
+  });
+
+  test('version renders cached OpenAPI metadata as stale when versions differ', async () => {
+    const configHome = tempDir();
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      JSON.stringify({
+        fetchedAt: '2026-05-23T12:00:00.000Z',
+        gameserverVersion: 'v0.323.0',
+        routes: {},
+      }),
+    );
+    const handler = localHandler(['version']);
+    const parsed = handler.parse(['version'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const { context, stdout } = captureContext({ HOME: '/tmp/spacemolt-test-home', XDG_CONFIG_HOME: configHome });
+
+    const result = await handler.run(parsed.payload, options, undefined, context);
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Cached OpenAPI metadata: gameserver v0.323.0 (stale)');
+  });
+
+  test('version renders cached OpenAPI metadata as invalid when the cache lacks a version', async () => {
+    const configHome = tempDir();
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      JSON.stringify({
+        fetchedAt: '2026-05-23T12:00:00.000Z',
+        routes: {},
+      }),
+    );
+    const handler = localHandler(['version']);
+    const parsed = handler.parse(['version'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const { context, stdout } = captureContext({ HOME: '/tmp/spacemolt-test-home', XDG_CONFIG_HOME: configHome });
+
+    const result = await handler.run(parsed.payload, options, undefined, context);
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Cached OpenAPI metadata: invalid (run spacemolt sync-api)');
   });
 
   test('explain unknown command emits JSON error for json mode', async () => {
@@ -849,6 +928,7 @@ describe('local command handlers', () => {
       return new Response(
         JSON.stringify({
           openapi: '3.0.3',
+          info: { 'x-gameserver-version': 'v0.324.1' },
           paths: {
             '/api/v2/spacemolt_shipyard/repair': {
               post: {
@@ -892,7 +972,7 @@ describe('local command handlers', () => {
 
       expect(exitCode).toBe(0);
       expect(fetches).toEqual(['https://example.test/api/v2/openapi.json']);
-      expect(stdout).toEqual(['Synced 1 OpenAPI routes.']);
+      expect(stdout).toEqual(['Synced 1 OpenAPI routes for gameserver v0.324.1.']);
       expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'openapi-cache.json'))).toBe(true);
     } finally {
       globalThis.fetch = originalFetch;
@@ -906,6 +986,7 @@ describe('local command handlers', () => {
       new Response(
         JSON.stringify({
           openapi: '3.0.3',
+          info: { 'x-gameserver-version': 'v0.324.1' },
           paths: {
             '/api/v2/spacemolt_shipyard/repair': { post: { summary: 'repair' } },
             '/api/v2/status': { get: { summary: 'status' } },
@@ -936,6 +1017,7 @@ describe('local command handlers', () => {
       expect(JSON.parse(stdout.join('\n'))).toEqual({
         routeCount: 2,
         fetchedAt: expect.any(String),
+        gameserverVersion: 'v0.324.1',
       });
     } finally {
       globalThis.fetch = originalFetch;

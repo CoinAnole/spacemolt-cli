@@ -1,13 +1,24 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { type GeneratedApiRoute, generateApiRoutes, type OpenApiSpec } from './openapi-metadata.ts';
+import {
+  type GeneratedApiRoute,
+  gameserverVersionFromSpec,
+  generateApiRoutes,
+  type OpenApiSpec,
+} from './openapi-metadata.ts';
 import { getSpacemoltHome } from './session.ts';
 
 export interface OpenApiCacheFile {
   fetchedAt: string;
   etag?: string;
+  gameserverVersion: string;
   routes: Record<string, GeneratedApiRoute>;
 }
+
+export type OpenApiCacheVersionStatus =
+  | { status: 'not_synced' }
+  | { status: 'invalid' }
+  | { status: 'valid'; gameserverVersion: string; fetchedAt: string };
 
 type OpenApiFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
@@ -24,9 +35,27 @@ export function loadCachedGeneratedRoutes(
 ): Record<string, GeneratedApiRoute> | undefined {
   try {
     const parsed = JSON.parse(fs.readFileSync(openApiCachePath(cacheDir), 'utf-8')) as OpenApiCacheFile;
+    if (typeof parsed.gameserverVersion !== 'string' || parsed.gameserverVersion.trim() === '') return undefined;
     return parsed.routes && typeof parsed.routes === 'object' ? parsed.routes : undefined;
   } catch {
     return undefined;
+  }
+}
+
+export function loadOpenApiCacheVersion(cacheDir = defaultOpenApiCacheDir()): OpenApiCacheVersionStatus {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(openApiCachePath(cacheDir), 'utf-8')) as Partial<OpenApiCacheFile>;
+    if (typeof parsed.gameserverVersion !== 'string' || parsed.gameserverVersion.trim() === '') {
+      return { status: 'invalid' };
+    }
+    return {
+      status: 'valid',
+      gameserverVersion: parsed.gameserverVersion,
+      fetchedAt: typeof parsed.fetchedAt === 'string' ? parsed.fetchedAt : '',
+    };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { status: 'not_synced' };
+    return { status: 'invalid' };
   }
 }
 
@@ -44,6 +73,7 @@ export async function refreshOpenApiCache(options: {
   const cache: OpenApiCacheFile = {
     fetchedAt: new Date().toISOString(),
     etag: response.headers.get('etag') || undefined,
+    gameserverVersion: gameserverVersionFromSpec(spec),
     routes: generateApiRoutes(spec),
   };
 

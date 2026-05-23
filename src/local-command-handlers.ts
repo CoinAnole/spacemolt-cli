@@ -10,6 +10,7 @@ import {
   formatCompletionCandidates,
 } from './completion-runtime.ts';
 import { type DoctorResult, printDoctorResult, runDoctor } from './doctor.ts';
+import { GENERATED_API_GAMESERVER_VERSION } from './generated/api-commands.ts';
 import {
   displayUnknownCommand,
   hasCommandGroup,
@@ -34,7 +35,12 @@ import {
   searchIdHints,
   searchItemHints,
 } from './id-cache.ts';
-import { defaultOpenApiCacheDir, type OpenApiCacheFile, refreshOpenApiCache } from './openapi-cache.ts';
+import {
+  defaultOpenApiCacheDir,
+  loadOpenApiCacheVersion,
+  type OpenApiCacheFile,
+  refreshOpenApiCache,
+} from './openapi-cache.ts';
 import { API_BASE, c, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import {
@@ -410,9 +416,13 @@ const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCach
     const routeCount = Object.keys(result.cache.routes).length;
     const out = context?.writer.out.bind(context.writer) ?? console.log;
     if (options.json) {
-      writeJson(context, { fetchedAt: result.cache.fetchedAt, routeCount }, undefined);
+      writeJson(
+        context,
+        { fetchedAt: result.cache.fetchedAt, routeCount, gameserverVersion: result.cache.gameserverVersion },
+        undefined,
+      );
     } else {
-      out(`Synced ${routeCount} OpenAPI routes.`);
+      out(`Synced ${routeCount} OpenAPI routes for gameserver ${result.cache.gameserverVersion}.`);
     }
     return 0;
   },
@@ -430,8 +440,18 @@ const versionHandler: CommandHandler<Record<string, never>, Record<string, never
   },
   render(_result, _options, _client, context) {
     const out = context?.writer.out.bind(context.writer) ?? console.log;
+    const cachedVersion = loadOpenApiCacheVersion(defaultOpenApiCacheDir(context?.env));
     out(`SpaceMolt Client v${VERSION}`);
     out(`API: ${API_BASE}`);
+    out(`Bundled OpenAPI metadata: gameserver ${GENERATED_API_GAMESERVER_VERSION}`);
+    if (cachedVersion.status === 'not_synced') {
+      out('Cached OpenAPI metadata: not synced');
+    } else if (cachedVersion.status === 'invalid') {
+      out('Cached OpenAPI metadata: invalid (run spacemolt sync-api)');
+    } else {
+      const cacheState = cachedVersion.gameserverVersion === GENERATED_API_GAMESERVER_VERSION ? 'current' : 'stale';
+      out(`Cached OpenAPI metadata: gameserver ${cachedVersion.gameserverVersion} (${cacheState})`);
+    }
     return 0;
   },
 };

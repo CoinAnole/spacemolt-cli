@@ -15,7 +15,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generate, type OpenApiSpec } from '../scripts/generate-api-metadata';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands';
-import { GENERATED_API_ROUTES } from './generated/api-commands';
+import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
@@ -24,20 +24,18 @@ function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help');
 }
 
-async function loadOpenApiSpec(): Promise<{ paths: Record<string, { get?: unknown; post?: unknown }> }> {
+async function loadOpenApiSpec(): Promise<OpenApiSpec> {
   if (process.env.LIVE_API_SYNC === '1') {
     const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
     if (resp.status === 429) {
       console.log('[SKIP] OpenAPI spec rate-limited (429) — skipping API sync check');
-      return { paths: {} };
+      return { info: { 'x-gameserver-version': 'rate-limited' }, paths: {} };
     }
     expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
-    return (await resp.json()) as { paths: Record<string, { get?: unknown; post?: unknown }> };
+    return (await resp.json()) as OpenApiSpec;
   }
 
-  return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as {
-    paths: Record<string, { get?: unknown; post?: unknown }>;
-  };
+  return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as OpenApiSpec;
 }
 
 const skip = process.env.SKIP_API_SYNC === '1';
@@ -95,12 +93,26 @@ describe('api sync', () => {
   );
 
   test.skipIf(skip)(
+    'generated OpenAPI metadata version matches cached spec',
+    async () => {
+      const spec = await loadOpenApiSpec();
+      if (Object.keys(spec.paths).length === 0) return;
+
+      expect(
+        GENERATED_API_GAMESERVER_VERSION,
+        'Generated metadata in src/generated/api-commands.ts was built from a different gameserver version. Run `bun run generate:api`.',
+      ).toBe(spec.info['x-gameserver-version']);
+    },
+    5_000,
+  );
+
+  test.skipIf(skip)(
     'generated OpenAPI metadata is deterministic and matches cached spec',
     async () => {
       const spec = await loadOpenApiSpec();
       if (Object.keys(spec.paths).length === 0) return;
 
-      const generated = generate(spec as unknown as OpenApiSpec);
+      const generated = generate(spec);
       expect(
         GENERATED_API_ROUTES,
         'Generated metadata in src/generated/api-commands.ts does not match the cached spec. Run `bun run generate:api`.',

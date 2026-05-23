@@ -99,6 +99,7 @@ describe('runInvocation option isolation', () => {
       path.join(cacheDir, 'openapi-cache.json'),
       `${JSON.stringify({
         fetchedAt: '2026-05-20T00:00:00.000Z',
+        gameserverVersion: 'v0.324.1',
         routes: {
           'POST /api/v2/runner_dynamic/invoke': {
             operationId: 'runnerDynamicInvoke',

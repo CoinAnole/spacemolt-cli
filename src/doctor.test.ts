@@ -52,6 +52,7 @@ function writeOpenApiCache(configHome: string): void {
     path.join(cacheDir, 'openapi-cache.json'),
     JSON.stringify({
       fetchedAt: '2026-05-20T00:00:00.000Z',
+      gameserverVersion: 'v0.324.1',
       routes: {
         'POST /api/v2/spacemolt_shipyard/repair': {
           operationId: 'spacemolt_shipyard_repair',
