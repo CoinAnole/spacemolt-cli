@@ -72,7 +72,11 @@ const playerProfileFixture = {
     faction_id: 'smc',
     clan_tag: 'SMC',
     home_base: 'earth_station',
-    standings: { terran: 12, voidborn: -4 },
+    standings: {
+      crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
+      nebula: { baseline: 20, outstanding_bounty: 0, reputation: 20 },
+      pirates: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+    },
     stats: {
       piloting: { level: 5, xp: 1200 },
       crafting: { level: 2, xp: 175 },
@@ -715,7 +719,10 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Home Base: earth_station');
     expect(stdout).toContain('Piloting: Level 5 (1200 XP)');
     expect(stdout).toContain('Crafting: Level 2 (175 XP)');
-    expect(stdout).toContain('terran +12');
+    expect(stdout).toContain('crimson: 94');
+    expect(stdout).toContain('nebula: 20');
+    expect(stdout).toContain('pirates: -30');
+    expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('=== Response ===');
   });
 

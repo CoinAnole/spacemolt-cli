@@ -38,8 +38,12 @@ function formatSkillSummary(stats: Record<string, unknown>, skillId: string, lab
   return `${label}: ${xp} XP`;
 }
 
-function formatStandingValue(value: unknown): string {
-  if (typeof value === 'number' && value > 0) return `+${value}`;
+function formatStandingValue(value: unknown): string | undefined {
+  if (isRecord(value)) {
+    const reputation = value.reputation;
+    if (reputation === undefined || reputation === null || reputation === '') return undefined;
+    return String(reputation);
+  }
   return String(value);
 }
 
@@ -89,7 +93,11 @@ export const statusFormatters = [
       if (isRecord(player.standings)) {
         const standings = Object.entries(player.standings)
           .filter(([, value]) => value !== undefined && value !== null && value !== '')
-          .map(([key, value]) => `${key} ${formatStandingValue(value)}`);
+          .map(([key, value]) => {
+            const standing = formatStandingValue(value);
+            return standing === undefined ? undefined : `${key}: ${standing}`;
+          })
+          .filter((standing): standing is string => Boolean(standing));
         if (standings.length) {
           emitLine(`\n${c.bright}Standings:${c.reset}`);
           emitLine(`  ${standings.join(', ')}`);
