@@ -59,6 +59,30 @@ function writeJson(context: CliRuntimeContext | undefined, value: unknown, space
   else console.log(json);
 }
 
+function compareGameserverVersions(left: string, right: string): number | undefined {
+  const parse = (value: string): [number, number, number] | undefined => {
+    const match = value.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
+    if (!match) return undefined;
+    return [Number(match[1]), Number(match[2]), Number(match[3])];
+  };
+  const leftParts = parse(left);
+  const rightParts = parse(right);
+  if (!leftParts || !rightParts) return undefined;
+  const [leftMajor, leftMinor, leftPatch] = leftParts;
+  const [rightMajor, rightMinor, rightPatch] = rightParts;
+  if (leftMajor !== rightMajor) return leftMajor - rightMajor;
+  if (leftMinor !== rightMinor) return leftMinor - rightMinor;
+  if (leftPatch !== rightPatch) return leftPatch - rightPatch;
+  return 0;
+}
+
+function describeOpenApiCacheState(cachedVersion: string, bundledVersion: string): string {
+  const comparison = compareGameserverVersions(cachedVersion, bundledVersion);
+  if (comparison === 0) return 'current';
+  if (comparison === undefined) return cachedVersion === bundledVersion ? 'current' : 'different from bundled';
+  return comparison > 0 ? 'newer than bundled' : 'stale';
+}
+
 type ProfilePayload = { action: 'list' } | { action: 'default'; name?: string };
 
 const PROFILE_USAGE = 'spacemolt profile [list|default [name]]';
@@ -449,7 +473,7 @@ const versionHandler: CommandHandler<Record<string, never>, Record<string, never
     } else if (cachedVersion.status === 'invalid') {
       out('Cached OpenAPI metadata: invalid (run spacemolt sync-api)');
     } else {
-      const cacheState = cachedVersion.gameserverVersion === GENERATED_API_GAMESERVER_VERSION ? 'current' : 'stale';
+      const cacheState = describeOpenApiCacheState(cachedVersion.gameserverVersion, GENERATED_API_GAMESERVER_VERSION);
       out(`Cached OpenAPI metadata: gameserver ${cachedVersion.gameserverVersion} (${cacheState})`);
     }
     return 0;

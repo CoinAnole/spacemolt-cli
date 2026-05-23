@@ -728,6 +728,31 @@ describe('local command handlers', () => {
     expect(stdout).toContain('Cached OpenAPI metadata: gameserver v0.323.0 (stale)');
   });
 
+  test('version renders cached OpenAPI metadata as newer when it is ahead of bundled metadata', async () => {
+    const configHome = tempDir();
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      JSON.stringify({
+        fetchedAt: '2026-05-23T12:00:00.000Z',
+        gameserverVersion: 'v999.0.0',
+        routes: {},
+      }),
+    );
+    const handler = localHandler(['version']);
+    const parsed = handler.parse(['version'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const { context, stdout } = captureContext({ HOME: '/tmp/spacemolt-test-home', XDG_CONFIG_HOME: configHome });
+
+    const result = await handler.run(parsed.payload, options, undefined, context);
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Cached OpenAPI metadata: gameserver v999.0.0 (newer than bundled)');
+  });
+
   test('version renders cached OpenAPI metadata as invalid when the cache lacks a version', async () => {
     const configHome = tempDir();
     const cacheDir = path.join(configHome, 'spacemolt-cli');
