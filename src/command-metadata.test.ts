@@ -123,7 +123,9 @@ function zshGlobalOptionWords(completion: string): string[] {
 function fishGlobalOptionWords(completion: string): string[] {
   const words: string[] = [];
   for (const line of completion.split('\n')) {
-    if (!line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"')) continue;
+    if (!line.startsWith('complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand"')) {
+      continue;
+    }
     const short = line.match(/(?:^|\s)-s\s+(\S+)/)?.[1];
     const oldStyle = line.match(/(?:^|\s)-o\s+(\S+)/)?.[1];
     const long = line.match(/(?:^|\s)-l\s+(\S+)/)?.[1];
@@ -137,7 +139,11 @@ function fishGlobalOptionWords(completion: string): string[] {
 function fishGlobalOptionLine(completion: string, longOption: string): string | undefined {
   return completion
     .split('\n')
-    .find((line) => line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"') && line.includes(longOption));
+    .find(
+      (line) =>
+        line.startsWith('complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand"') &&
+        line.includes(longOption),
+    );
 }
 
 function bashTopLevelCommandWords(completion: string): string[] {
@@ -154,21 +160,24 @@ function zshFunctionCommandWords(completion: string, functionName: string): stri
   const match = completion.match(
     new RegExp(`${escapedFunctionName}\\(\\) \\{[\\s\\S]*?^\\s*commands=\\(([^)]*)\\)`, 'm'),
   );
-  return (
-    (match?.[1]
-      ?.split(/\s+/)
-      .map((word) => word.match(/^([^[]+)/)?.[1])
-      .filter(Boolean) as string[]) || []
-  );
+  const body = match?.[1] || '';
+  const words: string[] = [];
+  for (const quoted of body.matchAll(/'((?:[^'\\]|\\.)*)'/g)) {
+    const word = quoted[1]?.match(/^([^[]+)/)?.[1];
+    if (word) words.push(word);
+  }
+  return words;
 }
 
 function fishTopLevelCommandWords(completion: string): string[] {
   const words: string[] = [];
   for (const line of completion.split('\n')) {
-    if (!line.startsWith('complete -c spacemolt -n "__fish_use_subcommand"')) continue;
+    if (!line.startsWith('complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand"')) {
+      continue;
+    }
     if (/(?:^|\s)-(?:s|o|l)\s+/.test(line)) continue;
-    const word = line.match(/(?:^|\s)-a\s+(\S+)/)?.[1];
-    if (word) words.push(word.replace(/^"|"$/g, ''));
+    const word = line.match(/(?:^|\s)-a\s+('(?:\\.|[^'])*'|"(?:\\.|[^"])*"|\S+)/)?.[1];
+    if (word) words.push(word.replace(/^['"]|['"]$/g, ''));
   }
   return words;
 }
@@ -631,7 +640,7 @@ describe('command metadata', () => {
 
     expect(fishGlobalOptionLine(completion, '-l dry-run')).not.toContain(' -a ');
     expect(fishGlobalOptionLine(completion, '-l preview')).not.toContain(' -a ');
-    expect(fishGlobalOptionLine(completion, '-l format')).toContain('-a "table json yaml text"');
+    expect(fishGlobalOptionLine(completion, '-l format')).toContain("-a 'table json yaml text'");
   });
 
   test('every command has a description from override or generated summary', () => {

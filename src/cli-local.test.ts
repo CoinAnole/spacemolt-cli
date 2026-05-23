@@ -192,7 +192,7 @@ describe('CLI local usability behavior', () => {
     fs.writeFileSync(path.join(sessionDir, 'marlowe.ids.json'), '{"sol_earth":"Earth"}\n');
     try {
       process.env.HOME = home;
-      const result = await runDirect(['profile', 'list'], { HOME: home });
+      const result = await runDirect(['profile', 'list'], { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') });
       expect(result.exitCode).toBe(0);
       expect(stripAnsi(result.stdout).split('\n')).toEqual(['Profiles', '* marlowe', '  rescue']);
       expect(result.stdout).not.toContain('REDACTED');
@@ -212,11 +212,12 @@ describe('CLI local usability behavior', () => {
       fs.writeFileSync(path.join(configDir, 'sessions', 'pilot.json'), '{}\n');
       fs.writeFileSync(path.join(configDir, 'config.json'), '{"defaultProfile":"marlowe"}\n');
 
-      const show = await runDirect(['profile', 'default'], { HOME: home });
+      const testEnv = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+      const show = await runDirect(['profile', 'default'], testEnv);
       expect(show.exitCode).toBe(0);
       expect(show.stdout).toContain('Default profile: marlowe');
 
-      const set = await runDirect(['profile', 'default', 'pilot'], { HOME: home });
+      const set = await runDirect(['profile', 'default', 'pilot'], testEnv);
       expect(set.exitCode).toBe(0);
       expect(set.stdout).toContain('Default profile: pilot');
       expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
