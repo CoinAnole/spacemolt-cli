@@ -43,10 +43,14 @@ function localHandler(args: string[]): CommandHandler {
   return handler as CommandHandler;
 }
 
-function captureContext(): { context: CliRuntimeContext; stdout: string[]; stderr: string[] } {
+function captureContext(env: CliEnv = { HOME: '/tmp/spacemolt-test-home' }): {
+  context: CliRuntimeContext;
+  stdout: string[];
+  stderr: string[];
+} {
   const stdout: string[] = [];
   const stderr: string[] = [];
-  const context = fakeContext(stdout, stderr, { HOME: '/tmp/spacemolt-test-home' });
+  const context = fakeContext(stdout, stderr, env);
   return {
     stdout,
     stderr,
@@ -264,8 +268,13 @@ describe('local command handlers', () => {
     const parsed = handler.parse(['__complete', 'fish', '--', 'spacemolt', 'sell', 'ir'], options);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    const result = await handler.run(parsed.payload, options);
-    const { context, stdout, stderr } = captureContext();
+    const home = tempDir();
+    const { context, stdout, stderr } = captureContext({
+      HOME: home,
+      XDG_CONFIG_HOME: path.join(home, '.config'),
+      SPACEMOLT_PROFILE: 'isolated',
+    });
+    const result = await handler.run(parsed.payload, options, { config: { profile: 'isolated' } } as never, context);
 
     const exitCode = await handler.render(result, options, undefined, context);
 

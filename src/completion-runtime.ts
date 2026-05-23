@@ -1,5 +1,11 @@
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
-import { GLOBAL_COMPLETION_OPTIONS, LOCAL_COMPLETION_COMMANDS, SPECIAL_COMPLETIONS } from './completion-metadata.ts';
+import {
+  completionArgsForCommand,
+  GLOBAL_COMPLETION_OPTIONS,
+  LOCAL_COMPLETION_COMMANDS,
+  SPECIAL_COMPLETIONS,
+} from './completion-metadata.ts';
+import { hintsForKind, type IdHint, idKindForCommandField, loadIdCacheSync } from './id-cache.ts';
 
 export interface CompletionRequest {
   shell: 'bash' | 'zsh' | 'fish';
@@ -14,6 +20,8 @@ export interface CompletionCandidate {
 
 type CompletionRuntimeOptions = {
   registrySnapshot?: Pick<CommandRegistrySnapshot, 'allCommands'> & Partial<Pick<CommandRegistrySnapshot, 'commands'>>;
+  sessionPath?: string;
+  idHints?: IdHint[];
 };
 
 const GLOBAL_OPTION_WORDS = new Set(
@@ -102,10 +110,107 @@ function canCompleteTopLevel(input: CompletionRequest): boolean {
   return true;
 }
 
-export function completeWords(input: CompletionRequest, options: CompletionRuntimeOptions = {}): CompletionCandidate[] {
-  if (!canCompleteTopLevel(input)) return [];
+function commandContext(
+  input: CompletionRequest,
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'allCommands'> & Partial<Pick<CommandRegistrySnapshot, 'commands'>>,
+): { command: string; field?: string } | undefined {
+  const wordIndex = currentWordIndex(input);
+  const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
+  const allCommands = registrySnapshot.allCommands;
 
+  for (let i = firstArgIndex; i < wordIndex; i += 1) {
+    const word = input.words[i];
+    if (!word) continue;
+
+    if (VALUE_TAKING_GLOBAL_OPTIONS.has(word)) {
+      i += 1;
+      continue;
+    }
+
+    const optionName = word.split('=', 1)[0] || word;
+    if (VALUE_TAKING_GLOBAL_OPTIONS.has(optionName)) continue;
+    if (GLOBAL_OPTION_WORDS.has(word) || GLOBAL_OPTION_WORDS.has(optionName)) continue;
+    if (!allCommands[word]) return undefined;
+
+    const commandConfig = allCommands[word];
+    const args = completionArgsForCommand(word, commandConfig);
+    const currentWord = input.words[wordIndex] === input.current ? input.current : '';
+    if (isCurrentGlobalOptionValue(input.words.slice(i + 1, wordIndex))) return undefined;
+    const keyValueField = currentWord.includes('=') ? currentWord.split('=', 1)[0] : undefined;
+    const positionalIndex = countCommandPositionalsBeforeCurrent(input.words.slice(i + 1, wordIndex));
+    return { command: word, field: keyValueField || args[positionalIndex]?.name };
+  }
+
+  return undefined;
+}
+
+function isCurrentGlobalOptionValue(wordsBeforeCurrent: string[]): boolean {
+  const previousWord = wordsBeforeCurrent.at(-1);
+  return Boolean(previousWord && VALUE_TAKING_GLOBAL_OPTIONS.has(previousWord));
+}
+
+function countCommandPositionalsBeforeCurrent(words: string[]): number {
+  let count = 0;
+  for (let i = 0; i < words.length; i += 1) {
+    const word = words[i];
+    if (!word) continue;
+
+    if (VALUE_TAKING_GLOBAL_OPTIONS.has(word)) {
+      i += 1;
+      continue;
+    }
+
+    const optionName = word.split('=', 1)[0] || word;
+    if (VALUE_TAKING_GLOBAL_OPTIONS.has(optionName)) continue;
+    if (GLOBAL_OPTION_WORDS.has(word) || GLOBAL_OPTION_WORDS.has(optionName)) continue;
+    if (word.includes('=')) continue;
+
+    count += 1;
+  }
+  return count;
+}
+
+function normalizeSearchText(value: string): string {
+  return value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+}
+
+function cachedIdCandidates(input: CompletionRequest, options: CompletionRuntimeOptions): CompletionCandidate[] {
   const registrySnapshot = options.registrySnapshot || BUNDLED_COMMAND_REGISTRY;
+  const context = commandContext(input, registrySnapshot);
+  if (!context) return [];
+
+  const kind = idKindForCommandField(context.command, context.field);
+  if (!kind) return [];
+
+  const currentValue = input.current.includes('=')
+    ? input.current.slice(input.current.indexOf('=') + 1)
+    : input.current;
+  const normalizedPrefix = normalizeSearchText(currentValue);
+  if (!normalizedPrefix) return [];
+
+  const hints = hintsForKind(
+    kind,
+    options.idHints ?? (options.sessionPath ? loadIdCacheSync(options.sessionPath) : []),
+  );
+  const matches = hints.filter((hint) => {
+    const values = [hint.id, hint.name || ''].map(normalizeSearchText).filter(Boolean);
+    return values.some((value) => value.startsWith(normalizedPrefix) || value.includes(normalizedPrefix));
+  });
+
+  const seen = new Set<string>();
+  const candidates: CompletionCandidate[] = [];
+  for (const hint of matches) {
+    if (seen.has(hint.id)) continue;
+    seen.add(hint.id);
+    candidates.push({ value: hint.id, description: hint.name });
+  }
+  return candidates;
+}
+
+export function completeWords(input: CompletionRequest, options: CompletionRuntimeOptions = {}): CompletionCandidate[] {
+  const registrySnapshot = options.registrySnapshot || BUNDLED_COMMAND_REGISTRY;
+  if (!canCompleteTopLevel(input)) return cachedIdCandidates(input, { ...options, registrySnapshot });
+
   const prefix = input.current;
   const candidates = [...commandCandidates(registrySnapshot), ...globalOptionCandidates()];
 

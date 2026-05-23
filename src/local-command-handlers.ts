@@ -37,7 +37,7 @@ import {
 import { defaultOpenApiCacheDir, type OpenApiCacheFile, refreshOpenApiCache } from './openapi-cache.ts';
 import { API_BASE, c, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
-import { setDefaultProfile, showDefaultProfile, showProfiles, tryGetSessionPath } from './session.ts';
+import { getSessionPath, setDefaultProfile, showDefaultProfile, showProfiles, tryGetSessionPath } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
 function writeJson(context: CliRuntimeContext | undefined, value: unknown, space: number | undefined = 2): void {
@@ -195,6 +195,37 @@ function createCompletionHandler(
 
 const completionHandler = createCompletionHandler();
 
+function completionProfileFromWords(words: string[]): string | undefined {
+  const firstArgIndex = words[0] === 'spacemolt' ? 1 : 0;
+  const lastCompletedWordIndex = Math.max(firstArgIndex, words.length - 2);
+  for (let i = firstArgIndex; i <= lastCompletedWordIndex; i += 1) {
+    const word = words[i];
+    if (!word) continue;
+    if (word === '--profile') {
+      if (i + 1 <= lastCompletedWordIndex) return words[i + 1] || undefined;
+      continue;
+    }
+    if (word.startsWith('--profile=')) return word.slice('--profile='.length) || undefined;
+  }
+  return undefined;
+}
+
+function completionSessionPath(
+  payload: CompletionRequest,
+  client: Parameters<CommandHandler<CompletionRequest>['run']>[2],
+  context: Parameters<CommandHandler<CompletionRequest>['run']>[3],
+): string | undefined {
+  const typedProfile = completionProfileFromWords(payload.words);
+  if (typedProfile) {
+    try {
+      return getSessionPath({ profile: typedProfile }, context?.env);
+    } catch {
+      return undefined;
+    }
+  }
+  return client ? tryGetSessionPath(client.config, context?.env) : undefined;
+}
+
 function createDynamicCompletionHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
     Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
@@ -221,8 +252,11 @@ function createDynamicCompletionHandler(
       const words = separatorIndex >= 0 ? argv.slice(separatorIndex + 1) : argv.slice(2);
       return { ok: true, payload: { shell, words, current: words.at(-1) || '' } };
     },
-    run(payload) {
-      return { candidates: completeWords(payload, { registrySnapshot: { ...registrySnapshot, allCommands } }) };
+    run(payload, _options, client, context) {
+      const sessionPath = completionSessionPath(payload, client, context);
+      return {
+        candidates: completeWords(payload, { registrySnapshot: { ...registrySnapshot, allCommands }, sessionPath }),
+      };
     },
     render(result, _options, _client, context) {
       const output = formatCompletionCandidates(result.candidates);

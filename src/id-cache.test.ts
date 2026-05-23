@@ -210,6 +210,29 @@ describe('id cache', () => {
     expect(idKindForCommandField('travel', 'target_system_id')).toBeUndefined();
   });
 
+  test('hintsForKind returns only cached IDs for the inferred command field kind', () => {
+    const hints = [
+      {
+        kind: 'item' as const,
+        id: 'ore_iron',
+        name: 'Iron Ore',
+        sourceCommand: 'get_cargo',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+      {
+        kind: 'poi' as const,
+        id: 'sol_earth',
+        name: 'Earth',
+        sourceCommand: 'get_system',
+        seenAt: '2026-05-18T00:01:00.000Z',
+      },
+    ];
+    const kind = idKindForCommandField('sell', 'item_id');
+
+    expect(kind).toBe('item');
+    expect(kind ? hintsForKind(kind, hints).map((hint) => hint.id) : []).toEqual(['ore_iron']);
+  });
+
   test('does not treat duplicate sightings of the same ID as ambiguous', () => {
     const hints = [
       {
