@@ -100,6 +100,13 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['clear', 'limit', 'types'],
     arrayFields: ['types'],
   },
+  notifications: {
+    description: 'Poll pending notifications.',
+    example: 'spacemolt notifications',
+    seeAlso: ['get_notifications', 'get_status'],
+    category: 'Query commands',
+    apiRoute: 'GET /api/v2/notifications',
+  },
   get_empire_info: {
     usage: '[empire_id]  (omit for all empires)',
     description: 'View live policy information for one empire or all empires.',

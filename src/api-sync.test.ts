@@ -20,13 +20,8 @@ import { GENERATED_API_ROUTES } from './generated/api-commands';
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
 
-const SPEC_ROUTES_COVERED_BY_ALIASES = new Set([
-  // The CLI exposes notification polling through POST /api/v2/spacemolt/get_notifications.
-  'GET /api/v2/notifications',
-]);
-
 function isInfrastructureSpecRoute(route: string): boolean {
-  return route.endsWith('/help') || SPEC_ROUTES_COVERED_BY_ALIASES.has(route);
+  return route.endsWith('/help');
 }
 
 async function loadOpenApiSpec(): Promise<{ paths: Record<string, { get?: unknown; post?: unknown }> }> {

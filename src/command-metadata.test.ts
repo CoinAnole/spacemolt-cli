@@ -292,6 +292,25 @@ describe('command metadata', () => {
     );
   });
 
+  test('notifications is curated instead of exposed as a generated fallback', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.notifications;
+
+    expect(config).toMatchObject({
+      category: 'Query commands',
+      description: 'Poll pending notifications.',
+      example: 'spacemolt notifications',
+      route: { tool: 'notifications', action: 'notifications', method: 'GET' },
+    });
+
+    const snapshot = buildCommandRegistrySnapshot();
+    expect(snapshot.commands.notifications).toEqual(config);
+    expect(
+      Object.entries(snapshot.commands)
+        .filter(([, commandConfig]) => commandConfig.category === 'Generated API')
+        .map(([command]) => command),
+    ).toEqual([]);
+  });
+
   test('command registry can limit fallback commands to dynamic generated routes', () => {
     const bundledOnlyRoute: GeneratedApiRoute = {
       summary: 'Bundled only route',
