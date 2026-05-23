@@ -86,20 +86,76 @@ function getArgDescription(command: string, arg: string, registry: CompletionReg
   return getFieldSchema(command, arg, registry)?.description || getHintValue(command, arg) || arg;
 }
 
+function escapeSingleQuotedShell(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
 function escapeDoubleQuotedShell(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`');
 }
 
-function escapeZshMessage(value: string): string {
-  return escapeDoubleQuotedShell(value).replace(/:/g, '\\:');
+function escapeBashWord(value: string): string {
+  if (/^[A-Za-z0-9_./=:@%+-]+$/.test(value)) return value;
+  return escapeSingleQuotedShell(value);
+}
+
+function escapeBashWordList(values: string[]): string {
+  return escapeDoubleQuotedShell(values.map(escapeBashWord).join(' '));
+}
+
+function escapeZshCompletionText(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]').replace(/:/g, '\\:');
+}
+
+function escapeZshWord(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/\s/g, '\\$&').replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+}
+
+function escapeZshCaseLabel(value: string): string {
+  return escapeZshWord(value).replace(/\$/g, '\\$').replace(/`/g, '\\`').replace(/"/g, '\\"').replace(/'/g, "\\'");
+}
+
+function escapeZshDescription(value: string): string {
+  return escapeDoubleQuotedShell(escapeZshCompletionText(value));
+}
+
+function escapeZshDescribedWord(value: string, description: string): string {
+  const describedWord = `${escapeZshWord(value)}[${escapeZshCompletionText(description)}]`;
+  return escapeSingleQuotedShell(describedWord);
+}
+
+function escapeZshAlternative(value: string): string {
+  return `${escapeZshWord(value)}[${escapeZshCompletionText(value)}]`;
+}
+
+function escapeFishCompletionToken(value: string): string {
+  return value.replace(/([\\\s$"'`[\]():;{}*?<>|&])/g, '\\$1');
+}
+
+function escapeFishConditionWord(value: string): string {
+  return escapeDoubleQuotedShell(escapeFishCompletionToken(value));
+}
+
+function quoteFishSourceString(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
+function escapeFishArgument(value: string): string {
+  const payload = escapeFishCompletionToken(value);
+  if (payload === value && /^[A-Za-z0-9_./=-]+$/.test(value)) return value;
+  return quoteFishSourceString(payload);
+}
+
+function escapeFishArgumentList(values: string[]): string {
+  return quoteFishSourceString(values.map(escapeFishCompletionToken).join(' '));
 }
 
 function generateZshGlobalOption(option: CompletionOption): string {
   const words = [option.short, option.long].filter(Boolean) as string[];
-  const escapedDescription = escapeZshMessage(option.description);
+  const escapedDescription = escapeZshDescription(option.description);
   const valueCompletion =
     option.takesValue && option.values?.length
-      ? `:${option.long?.replace(/^--/, '') || 'value'}:(${option.values.join(' ')})`
+      ? `:${option.long?.replace(/^--/, '') || 'value'}:(${option.values.map(escapeZshWord).join(' ')})`
       : option.takesValue
         ? `:${option.long?.replace(/^--/, '') || 'value'}:`
         : '';
@@ -128,7 +184,7 @@ function generateFishGlobalOption(option: CompletionOption, condition = '__fish_
   if (option.long) parts.push(`-l ${option.long.slice(2)}`);
   if (option.takesValue) parts.push('-r');
   if (option.takesValue && option.values?.length) {
-    parts.push(`-a "${option.values.map(escapeDoubleQuotedShell).join(' ')}"`);
+    parts.push(`-a ${escapeFishArgumentList(option.values)}`);
   }
   parts.push(`-d "${escapeDoubleQuotedShell(option.description)}"`);
   return parts.join(' ');
@@ -138,7 +194,6 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
   const explainCommandNames = registryCommandNames(registry);
   const topCommands = topLevelCommandNames(registry);
-  const globalFlags = globalOptionWords().join(' ');
   const lines: string[] = [];
   lines.push('# Bash completion for spacemolt');
   lines.push('# Install: spacemolt completion bash > /etc/bash_completion.d/spacemolt');
@@ -163,10 +218,10 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('  fi');
   lines.push('');
   lines.push('  # Global flags');
-  lines.push(`  local global_flags="${globalFlags}"`);
+  lines.push(`  local global_flags="${escapeBashWordList(globalOptionWords())}"`);
   lines.push('');
   lines.push('  # Top-level special commands');
-  lines.push(`  local commands="${topCommands.join(' ')}"`);
+  lines.push(`  local commands="${escapeBashWordList(topCommands)}"`);
   lines.push('');
   lines.push('  if [ $cword -eq 1 ]; then');
   // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
@@ -183,37 +238,30 @@ function generateBashCompletion(registry: CompletionRegistry): string {
     const args = completionArgsForCommand(cmd, allCommands(registry)[cmd]);
     if (args.length === 0) continue;
 
-    lines.push(`    ${cmd})`);
+    lines.push(`    ${escapeBashWord(cmd)})`);
     const argParts: string[] = [];
     for (const arg of args) {
       if (arg.kind === 'enum' && arg.values?.length) {
-        argParts.push(`\${${arg.name}_values}`);
+        argParts.push(...arg.values);
       } else {
         argParts.push(arg.insert);
       }
     }
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
-    const allParts = [...argParts, '${global_flags}'];
-
-    for (const arg of args) {
-      if (arg.kind === 'enum' && arg.values?.length) {
-        lines.push(`      local ${arg.name}_values="${arg.values.join(' ')}"`);
-      }
-    }
-    lines.push(`      COMPREPLY=( $(compgen -W "${allParts.join(' ')}" -- "$cur") )`);
+    const allParts = `${escapeBashWordList(argParts)} \${global_flags}`;
+    lines.push(`      COMPREPLY=( $(compgen -W "${allParts}" -- "$cur") )`);
     lines.push('      ;;');
   }
 
   for (const [cmd, completion] of Object.entries(SPECIAL_COMPLETIONS)) {
-    lines.push(`    ${cmd})`);
-    lines.push(`      COMPREPLY=( $(compgen -W "${completion.values.join(' ')}" -- "$cur") )`);
+    lines.push(`    ${escapeBashWord(cmd)})`);
+    lines.push(`      COMPREPLY=( $(compgen -W "${escapeBashWordList(completion.values)}" -- "$cur") )`);
     lines.push('      ;;');
   }
 
   lines.push('    commands)');
   lines.push('      ;;');
   lines.push('    explain)');
-  lines.push(`      COMPREPLY=( $(compgen -W "${explainCommandNames.join(' ')}" -- "$cur") )`);
+  lines.push(`      COMPREPLY=( $(compgen -W "${escapeBashWordList(explainCommandNames)}" -- "$cur") )`);
   lines.push('      ;;');
   lines.push('    help)');
   lines.push('      ;;');
@@ -275,7 +323,7 @@ function generateZshCompletion(registry: CompletionRegistry): string {
 
   for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
     const args = getCommandArgNames(cmd, registry);
-    lines.push(`        ${cmd})`);
+    lines.push(`        ${escapeZshCaseLabel(cmd)})`);
     if (args.length > 0) {
       lines.push('          _arguments \\');
       for (let i = 0; i < args.length; i++) {
@@ -283,17 +331,21 @@ function generateZshCompletion(registry: CompletionRegistry): string {
         if (!arg) continue;
         const enums = getEnumValues(cmd, arg, registry);
         const hint = getHintValue(cmd, arg);
-        const description = escapeZshMessage(getArgDescription(cmd, arg, registry));
+        const description = escapeZshCompletionText(getArgDescription(cmd, arg, registry));
         const isLast = i === args.length - 1;
         const terminator = isLast ? '' : ' \\';
 
         if (enums && enums.length > 0) {
-          const valuesStr = enums.map((v) => `${v}[${v}]`).join(' ');
-          lines.push(`            "${i + 2}:${description}:(${valuesStr})"${terminator}`);
+          const valuesStr = enums.map(escapeZshAlternative).join(' ');
+          lines.push(`            ${escapeSingleQuotedShell(`${i + 2}:${description}:(${valuesStr})`)}${terminator}`);
         } else if (hint) {
-          lines.push(`            "${i + 2}:${description}:${hint}"${terminator}`);
+          lines.push(
+            `            ${escapeSingleQuotedShell(`${i + 2}:${description}:${escapeZshWord(hint)}`)}${terminator}`,
+          );
         } else {
-          lines.push(`            "${i + 2}:${description}:${arg}"${terminator}`);
+          lines.push(
+            `            ${escapeSingleQuotedShell(`${i + 2}:${description}:${escapeZshWord(arg)}`)}${terminator}`,
+          );
         }
       }
     } else {
@@ -303,8 +355,10 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   }
 
   for (const [cmd, completion] of Object.entries(SPECIAL_COMPLETIONS)) {
-    lines.push(`        ${cmd})`);
-    lines.push(`          _arguments "1:${escapeZshMessage(completion.description)}:(${completion.values.join(' ')})"`);
+    lines.push(`        ${escapeZshCaseLabel(cmd)})`);
+    lines.push(
+      `          _arguments "1:${escapeZshDescription(completion.description)}:(${completion.values.map(escapeZshWord).join(' ')})"`,
+    );
     lines.push('          ;;');
   }
 
@@ -328,7 +382,7 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('_spacemolt_commands() {');
   lines.push('  local commands');
   lines.push(
-    `  commands=(${topCommands.map((c) => `${c}[${escapeZshMessage(commandDescription(c, registry))}]`).join(' ')})`,
+    `  commands=(${topCommands.map((c) => escapeZshDescribedWord(c, commandDescription(c, registry))).join(' ')})`,
   );
   lines.push('  _describe -t commands "spacemolt commands" commands');
   lines.push('}');
@@ -336,7 +390,9 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('_spacemolt_explain_commands() {');
   lines.push('  local commands');
   lines.push(
-    `  commands=(${explainCommandNames.map((c) => `${c}[${escapeZshMessage(commandDescription(c, registry))}]`).join(' ')})`,
+    `  commands=(${explainCommandNames
+      .map((c) => escapeZshDescribedWord(c, commandDescription(c, registry)))
+      .join(' ')})`,
   );
   lines.push('  _describe -t commands "spacemolt commands" commands');
   lines.push('}');
@@ -366,7 +422,8 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('end');
   lines.push('');
   lines.push('function __spacemolt_has_dynamic_complete');
-  lines.push('  test -n "(__spacemolt_dynamic_complete)"');
+  lines.push('  set -l dynamic_completions (__spacemolt_dynamic_complete)');
+  lines.push('  test (count $dynamic_completions) -gt 0');
   lines.push('end');
   lines.push('');
   lines.push('function __spacemolt_no_dynamic_complete');
@@ -384,7 +441,7 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   for (const cmd of topCommands) {
     const desc = escapeDoubleQuotedShell(commandDescription(cmd, registry));
     lines.push(
-      `complete -c spacemolt -n "${fishStaticFallbackCondition('__fish_use_subcommand')}" -a ${cmd} -d "${desc}"`,
+      `complete -c spacemolt -n "${fishStaticFallbackCondition('__fish_use_subcommand')}" -a ${escapeFishArgument(cmd)} -d "${desc}"`,
     );
   }
   lines.push('');
@@ -402,12 +459,12 @@ function generateFishCompletion(registry: CompletionRegistry): string {
         for (const val of arg.values) {
           const valueDesc = escapeDoubleQuotedShell(`${arg.description}: ${val}`);
           lines.push(
-            `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${cmd}`)}" -a ${val} -d "${valueDesc}"`,
+            `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${escapeFishConditionWord(cmd)}`)}" -a ${escapeFishArgument(val)} -d "${valueDesc}"`,
           );
         }
       } else {
         lines.push(
-          `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${cmd}`)}" -a ${arg.insert} -d "${escapeDoubleQuotedShell(desc)}"`,
+          `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${escapeFishConditionWord(cmd)}`)}" -a ${escapeFishArgument(arg.insert)} -d "${escapeDoubleQuotedShell(desc)}"`,
         );
       }
     }
@@ -416,7 +473,7 @@ function generateFishCompletion(registry: CompletionRegistry): string {
 
   lines.push('# explain command');
   lines.push(
-    `complete -c spacemolt -n "${fishStaticFallbackCondition('__fish_seen_subcommand_from explain')}" -a "${explainCommandNames.join(' ')}" -d "command"`,
+    `complete -c spacemolt -n "${fishStaticFallbackCondition('__fish_seen_subcommand_from explain')}" -a ${escapeFishArgumentList(explainCommandNames)} -d "command"`,
   );
   lines.push('');
   lines.push('# completion shell');
@@ -424,7 +481,7 @@ function generateFishCompletion(registry: CompletionRegistry): string {
     lines.push(`# ${cmd}`);
     for (const value of completion.values) {
       lines.push(
-        `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${cmd}`)}" -a ${value} -d "${escapeDoubleQuotedShell(`${completion.description}: ${value}`)}"`,
+        `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${escapeFishConditionWord(cmd)}`)}" -a ${escapeFishArgument(value)} -d "${escapeDoubleQuotedShell(`${completion.description}: ${value}`)}"`,
       );
     }
   }

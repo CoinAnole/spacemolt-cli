@@ -58,9 +58,9 @@ async function tempSessionWithCachedIds(): Promise<string> {
 }
 
 function bashCommandCaseBody(completion: string, command: string): string {
-  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedCommand = command.replace(/'/g, `'\\''`).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return (
-    completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'))?.groups?.body || ''
+    completion.match(new RegExp(`^\\s*'?${escapedCommand}'?\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'))?.groups?.body || ''
   );
 }
 
@@ -69,6 +69,191 @@ function fishCommandLines(completion: string, command: string): string[] {
 }
 
 describe('shell completion generation', () => {
+  test('generated completion scripts escape shell-special command metadata in static fallbacks', () => {
+    const registry = {
+      commands: {
+        'scan zone[1]': {
+          description: 'Find "rich": ore $vein `now` [safe]',
+          args: ['target'],
+          route: { tool: 'scan', action: 'zone' },
+          schema: {
+            target: {
+              enum: ['alpha zone', 'quote"zone', "quote'zone", 'bracket[zone]', 'colon:zone', 'cash$zone', 'tick`zone'],
+              description: 'Target "zone": $sector `now` [pick]',
+            },
+          },
+        },
+        'cash$scan`now`': {
+          description: 'Cash scan command',
+          args: ['target'],
+          route: { tool: 'scan', action: 'cash' },
+          schema: {
+            target: {
+              type: 'string',
+              description: 'Target ID',
+            },
+          },
+        },
+        'quote"cash$scan`now` [x]:': {
+          description: 'Quoted cash scan command',
+          args: ['mode'],
+          route: { tool: 'scan', action: 'quoted_cash' },
+          schema: {
+            mode: {
+              enum: ['alpha zone'],
+              description: 'Mode',
+            },
+          },
+        },
+        "quote'cmd": {
+          description: 'Single quoted command',
+          args: ['target'],
+          route: { tool: 'scan', action: 'single_quote' },
+          schema: {
+            target: {
+              type: 'string',
+              description: 'Target ID',
+            },
+          },
+        },
+        plain_scan: {
+          description: 'Plain scan command',
+          args: ['target'],
+          route: { tool: 'scan', action: 'plain' },
+          schema: {
+            target: {
+              type: 'string',
+              description: 'Target ID',
+            },
+          },
+        },
+      },
+      allCommands: {
+        'scan zone[1]': {
+          description: 'Find "rich": ore $vein `now` [safe]',
+          args: ['target'],
+          route: { tool: 'scan', action: 'zone' },
+          schema: {
+            target: {
+              enum: ['alpha zone', 'quote"zone', "quote'zone", 'bracket[zone]', 'colon:zone', 'cash$zone', 'tick`zone'],
+              description: 'Target "zone": $sector `now` [pick]',
+            },
+          },
+        },
+        'cash$scan`now`': {
+          description: 'Cash scan command',
+          args: ['target'],
+          route: { tool: 'scan', action: 'cash' },
+          schema: {
+            target: {
+              type: 'string',
+              description: 'Target ID',
+            },
+          },
+        },
+        'quote"cash$scan`now` [x]:': {
+          description: 'Quoted cash scan command',
+          args: ['mode'],
+          route: { tool: 'scan', action: 'quoted_cash' },
+          schema: {
+            mode: {
+              enum: ['alpha zone'],
+              description: 'Mode',
+            },
+          },
+        },
+        "quote'cmd": {
+          description: 'Single quoted command',
+          args: ['target'],
+          route: { tool: 'scan', action: 'single_quote' },
+          schema: {
+            target: {
+              type: 'string',
+              description: 'Target ID',
+            },
+          },
+        },
+        plain_scan: {
+          description: 'Plain scan command',
+          args: ['target'],
+          route: { tool: 'scan', action: 'plain' },
+          schema: {
+            target: {
+              type: 'string',
+              description: 'Target ID',
+            },
+          },
+        },
+      },
+    };
+
+    const bash = generateCompletion('bash', registry);
+    const zsh = generateCompletion('zsh', registry);
+    const fish = generateCompletion('fish', registry);
+
+    expect(bash).toContain(`'cash\\$scan\\\`now\\\`'`);
+    expect(bash).toContain(`'scan zone[1]'`);
+    expect(bash).toContain(
+      `COMPREPLY=( $(compgen -W "'alpha zone' 'quote\\"zone' 'quote'\\\\''zone' 'bracket[zone]' colon:zone 'cash\\$zone' 'tick\\\`zone' \${global_flags}" -- "$cur") )`,
+    );
+    expect(bash).not.toContain('local target_values="alpha zone');
+
+    expect(zsh).toContain(`'scan\\ zone\\[1\\][Find "rich"\\: ore $vein \`now\` \\[safe\\]]'`);
+    expect(zsh).toContain(`alpha\\ zone[alpha zone]`);
+    expect(zsh).toContain(`quote"zone[quote"zone]`);
+    expect(zsh).toContain(`colon:zone[colon\\:zone]`);
+    expect(zsh).toContain('        cash\\$scan\\`now\\`)');
+    expect(zsh).not.toContain('        cash$scan`now`)');
+    expect(zsh).toContain('        quote\\"cash\\$scan\\`now\\`\\ \\[x\\]:)');
+    expect(zsh).not.toContain('        quote"cash\\$scan\\`now\\`\\ \\[x\\]\\:)');
+    expect(zsh).toContain("        quote\\'cmd)");
+    expect(zsh).not.toContain("        quote'cmd)");
+    expect(zsh).toContain(`'cash$scan\`now\`[Cash scan command]'`);
+    expect(zsh).not.toContain(` cash$scan\`now\`[Cash scan command] `);
+    expect(zsh).toContain(`'plain_scan[Plain scan command]'`);
+    expect(zsh).not.toContain(` plain_scan[Plain scan command] `);
+
+    expect(fish).toContain(
+      `complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand" -a 'scan\\\\ zone\\\\[1\\\\]' -d "Find \\"rich\\": ore \\$vein \\\`now\\\` [safe]"`,
+    );
+    expect(fish).toContain(
+      `complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from scan\\\\ zone\\\\[1\\\\]" -a 'alpha\\\\ zone' -d "Target \\"zone\\": \\$sector \\\`now\\\` [pick]: alpha zone"`,
+    );
+    expect(fish).toContain(
+      `complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from quote\\\\\\"cash\\\\\\$scan\\\\\\\`now\\\\\\\`\\\\ \\\\[x\\\\]\\\\:" -a 'alpha\\\\ zone' -d "Mode: alpha zone"`,
+    );
+    expect(fish).toContain(
+      `complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from cash\\\\\\$scan\\\\\\\`now\\\\\\\`" -a target= -d "Target ID"`,
+    );
+    expect(fish).toContain('  set -l dynamic_completions (__spacemolt_dynamic_complete)');
+    expect(fish).toContain('  test (count $dynamic_completions) -gt 0');
+    expect(fish).not.toContain('test -n "(__spacemolt_dynamic_complete)"');
+    expect(fish).toContain(`-a 'quote\\\\\\'cmd'`);
+    expect(fish).toContain(`-a 'quote\\\\\\'zone'`);
+    expect(fish).not.toContain(`-a 'quote\\'\\''cmd'`);
+    expect(fish).not.toContain(`-a 'quote\\'\\''zone'`);
+    expect(fish).not.toContain(`__fish_seen_subcommand_from 'cash$scan\`now\`'`);
+    expect(fish).not.toContain(`__fish_seen_subcommand_from 'quote"cash$scan\`now\` [x]:'`);
+    expect(fish).toContain(`-a 'quote\\\\"zone'`);
+    expect(fish).toContain(`-a 'bracket\\\\[zone\\\\]'`);
+    expect(fish).toContain(`-a 'colon\\\\:zone'`);
+    expect(fish).toContain(`-a 'cash\\\\$zone'`);
+    expect(fish).toContain(`-a 'tick\\\\\`zone'`);
+    expect(fish).not.toContain(`-a 'alpha zone'`);
+    expect(fish).not.toContain(`-a 'cash$zone'`);
+  });
+
+  test('runtime completion line protocol preserves shell-special values and descriptions without interpolation', () => {
+    const output = formatCompletionCandidates([
+      {
+        value: 'alpha zone "one" [x]:$cash`tick`',
+        description: 'Desc "quoted" [x]: $cash `tick`',
+      },
+    ]);
+
+    expect(output).toBe('alpha zone "one" [x]:$cash`tick`\tDesc "quoted" [x]: $cash `tick`\n');
+  });
+
   test('runtime completion suggests top-level commands and global options by prefix', () => {
     expect(
       completeWords({ shell: 'fish', words: ['spacemolt', 'rep'], current: 'rep' }).map((candidate) => candidate.value),
