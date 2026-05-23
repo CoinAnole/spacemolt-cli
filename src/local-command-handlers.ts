@@ -37,7 +37,14 @@ import {
 import { defaultOpenApiCacheDir, type OpenApiCacheFile, refreshOpenApiCache } from './openapi-cache.ts';
 import { API_BASE, c, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
-import { getSessionPath, setDefaultProfile, showDefaultProfile, showProfiles, tryGetSessionPath } from './session.ts';
+import {
+  getSessionPath,
+  listProfileNames,
+  setDefaultProfile,
+  showDefaultProfile,
+  showProfiles,
+  tryGetSessionPath,
+} from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
 function writeJson(context: CliRuntimeContext | undefined, value: unknown, space: number | undefined = 2): void {
@@ -255,7 +262,11 @@ function createDynamicCompletionHandler(
     run(payload, _options, client, context) {
       const sessionPath = completionSessionPath(payload, client, context);
       return {
-        candidates: completeWords(payload, { registrySnapshot: { ...registrySnapshot, allCommands }, sessionPath }),
+        candidates: completeWords(payload, {
+          registrySnapshot: { ...registrySnapshot, allCommands },
+          sessionPath,
+          profileNames: listProfileNames(context?.env.HOME, undefined, context?.env),
+        }),
       };
     },
     render(result, _options, _client, context) {

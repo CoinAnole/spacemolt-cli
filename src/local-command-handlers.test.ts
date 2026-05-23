@@ -341,23 +341,37 @@ describe('local command handlers', () => {
     expect(stdout.join('')).toBe('');
   });
 
-  test('hidden __complete renders no candidates after command or option value positions', async () => {
-    for (const words of [
-      ['spacemolt', 'sell', ''],
-      ['spacemolt', '--format', ''],
-    ]) {
-      const { context, stdout, stderr } = captureDefaultLikeContext();
+  test('hidden __complete renders no candidates after a command positional starts without cached ID context', async () => {
+    const { context, stdout, stderr } = captureDefaultLikeContext();
 
-      const exitCode = await runInvocation(['__complete', 'fish', '--', ...words], undefined, context, {
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', 'sell', ''], undefined, context, {
+      checkForUpdates() {
+        throw new Error('__complete should not check for updates');
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toBe('');
+  });
+
+  test('hidden __complete renders global option values end to end', async () => {
+    const { context, stdout, stderr } = captureDefaultLikeContext();
+
+    const exitCode = await runInvocation(
+      ['__complete', 'fish', '--', 'spacemolt', '--format', ''],
+      undefined,
+      context,
+      {
         checkForUpdates() {
           throw new Error('__complete should not check for updates');
         },
-      });
+      },
+    );
 
-      expect(exitCode, words.join(' ')).toBe(0);
-      expect(stderr, words.join(' ')).toEqual([]);
-      expect(stdout.join(''), words.join(' ')).toBe('');
-    }
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toBe('table\t\njson\t\nyaml\t\ntext\t\n');
   });
 
   test('hidden __complete keeps completing top-level after non-value global flags', async () => {

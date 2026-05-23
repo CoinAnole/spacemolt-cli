@@ -80,9 +80,9 @@ describe('shell completion generation', () => {
     ).toContain('--plain');
   });
 
-  test('runtime completion returns no candidates after a command or value-taking global option', () => {
+  test('runtime completion returns no command candidates after a command or non-enum value-taking global option', () => {
     expect(completeWords({ shell: 'fish', words: ['spacemolt', 'sell', ''], current: '' })).toEqual([]);
-    expect(completeWords({ shell: 'fish', words: ['spacemolt', '--format', ''], current: '' })).toEqual([]);
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', '--jq', ''], current: '' })).toEqual([]);
     expect(
       completeWords({ shell: 'fish', words: ['spacemolt', '--plain', ''], current: '' }).map(
         (candidate) => candidate.value,
@@ -122,6 +122,63 @@ describe('shell completion generation', () => {
     ).toEqual([]);
   });
 
+  test('runtime completion suggests global option values from metadata', () => {
+    const formatValues = ['table', 'json', 'yaml', 'text'];
+    const booleanValues = ['true', 'false'];
+
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--format', ''], current: '' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(formatValues);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--format='], current: '--format=' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(formatValues);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '-fmt='], current: '-fmt=' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(formatValues);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--dry-run='], current: '--dry-run=' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(booleanValues);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--preview='], current: '--preview=' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(booleanValues);
+  });
+
+  test('runtime completion suggests saved profile names for profile option values and profile default', () => {
+    const options = { profileNames: ['marlowe', 'pilot'] };
+
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--profile', ''], current: '' }, options).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(['marlowe', 'pilot']);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--profile=p'], current: '--profile=p' }, options).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(['pilot']);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'profile', 'default', ''], current: '' }, options).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(['marlowe', 'pilot']);
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', '--plain', 'profile', 'default', ''], current: '' },
+        options,
+      ).map((candidate) => candidate.value),
+    ).toEqual(['marlowe', 'pilot']);
+  });
+
   test('hidden __complete reads cached ID candidates from the active profile session path', async () => {
     const home = tempDir();
     const env = {
@@ -157,54 +214,41 @@ describe('shell completion generation', () => {
     expect(stdout.join('')).toBe('ore_iron\tIron Ore\n');
   });
 
-  test('hidden __complete does not fall back to the process default cache when no session path is active', async () => {
-    const originalEnv = {
-      HOME: process.env.HOME,
-      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-      SPACEMOLT_PROFILE: process.env.SPACEMOLT_PROFILE,
+  test('hidden __complete does not fall back to an unrelated default cache when no session path is active', async () => {
+    const defaultHome = tempDir();
+    const defaultEnv = {
+      HOME: defaultHome,
+      XDG_CONFIG_HOME: path.join(defaultHome, '.config'),
+      SPACEMOLT_UPDATE_CHECK: 'false',
     };
-    const processHome = tempDir();
-    process.env.HOME = processHome;
-    process.env.XDG_CONFIG_HOME = path.join(processHome, '.config');
-    delete process.env.SPACEMOLT_PROFILE;
+    setDefaultProfile('realdev', undefined, undefined, defaultEnv);
+    await saveIdCache(cachedIdHints, getSessionPath({ profile: 'realdev' }, defaultEnv));
 
-    try {
-      setDefaultProfile('realdev', undefined, undefined, process.env);
-      await saveIdCache(cachedIdHints, getSessionPath({ profile: 'realdev' }, process.env));
+    const isolatedHome = tempDir();
+    const env = {
+      HOME: isolatedHome,
+      XDG_CONFIG_HOME: path.join(isolatedHome, '.config'),
+      SPACEMOLT_UPDATE_CHECK: 'false',
+    };
+    const stdout: string[] = [];
 
-      const isolatedHome = tempDir();
-      const env = {
-        HOME: isolatedHome,
-        XDG_CONFIG_HOME: path.join(isolatedHome, '.config'),
-        SPACEMOLT_UPDATE_CHECK: 'false',
-      };
-      const stdout: string[] = [];
-
-      const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', 'sell', 'ir'], undefined, {
-        env,
-        writer: {
-          out(message = '') {
-            stdout.push(message);
-          },
-          err() {},
-          writeOut(chunk) {
-            stdout.push(chunk);
-          },
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', 'sell', 'ir'], undefined, {
+      env,
+      writer: {
+        out(message = '') {
+          stdout.push(message);
         },
-        clock: { now: () => new Date('2026-05-18T12:00:00.000Z') },
-        sleep: async () => {},
-      });
+        err() {},
+        writeOut(chunk) {
+          stdout.push(chunk);
+        },
+      },
+      clock: { now: () => new Date('2026-05-18T12:00:00.000Z') },
+      sleep: async () => {},
+    });
 
-      expect(exitCode).toBe(0);
-      expect(stdout.join('')).toBe('');
-    } finally {
-      if (originalEnv.HOME === undefined) delete process.env.HOME;
-      else process.env.HOME = originalEnv.HOME;
-      if (originalEnv.XDG_CONFIG_HOME === undefined) delete process.env.XDG_CONFIG_HOME;
-      else process.env.XDG_CONFIG_HOME = originalEnv.XDG_CONFIG_HOME;
-      if (originalEnv.SPACEMOLT_PROFILE === undefined) delete process.env.SPACEMOLT_PROFILE;
-      else process.env.SPACEMOLT_PROFILE = originalEnv.SPACEMOLT_PROFILE;
-    }
+    expect(exitCode).toBe(0);
+    expect(stdout.join('')).toBe('');
   });
 
   test('hidden __complete uses the profile typed in completion words before the command', async () => {
@@ -245,6 +289,50 @@ describe('shell completion generation', () => {
       expect(exitCode).toBe(0);
       expect(stderr).toEqual([]);
       expect(stdout.join('')).toBe('ore_iron\tIron Ore\n');
+    }
+  });
+
+  test('hidden __complete completes saved profiles for profile option values and profile default', async () => {
+    const home = tempDir();
+    const env = {
+      HOME: home,
+      XDG_CONFIG_HOME: path.join(home, '.config'),
+      SPACEMOLT_UPDATE_CHECK: 'false',
+    };
+    for (const profile of ['marlowe', 'pilot']) {
+      const sessionPath = getSessionPath({ profile }, env);
+      fs.mkdirSync(path.dirname(sessionPath), { recursive: true });
+      fs.writeFileSync(sessionPath, JSON.stringify({ id: `sess_${profile}` }));
+    }
+
+    for (const words of [
+      ['spacemolt', '--profile', ''],
+      ['spacemolt', '--profile='],
+      ['spacemolt', 'profile', 'default', ''],
+    ]) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+
+      const exitCode = await runInvocation(['__complete', 'fish', '--', ...words], undefined, {
+        env,
+        writer: {
+          out(message = '') {
+            stdout.push(message);
+          },
+          err(message = '') {
+            stderr.push(message);
+          },
+          writeOut(chunk) {
+            stdout.push(chunk);
+          },
+        },
+        clock: { now: () => new Date('2026-05-18T12:00:00.000Z') },
+        sleep: async () => {},
+      });
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(stdout.join('')).toBe('marlowe\t\npilot\t\n');
     }
   });
 

@@ -22,10 +22,16 @@ type CompletionRuntimeOptions = {
   registrySnapshot?: Pick<CommandRegistrySnapshot, 'allCommands'> & Partial<Pick<CommandRegistrySnapshot, 'commands'>>;
   sessionPath?: string;
   idHints?: IdHint[];
+  profileNames?: string[];
 };
 
 const GLOBAL_OPTION_WORDS = new Set(
   GLOBAL_COMPLETION_OPTIONS.flatMap((option) => [option.long, option.short].filter(Boolean) as string[]),
+);
+const GLOBAL_OPTIONS_BY_WORD = new Map(
+  GLOBAL_COMPLETION_OPTIONS.flatMap((option) =>
+    ([option.long, option.short].filter(Boolean) as string[]).map((word) => [word, option] as const),
+  ),
 );
 const VALUE_TAKING_GLOBAL_OPTIONS = new Set(
   GLOBAL_COMPLETION_OPTIONS.filter((option) => option.takesValue).flatMap(
@@ -76,6 +82,27 @@ function globalOptionCandidates(): CompletionCandidate[] {
     if (option.short) candidates.push({ value: option.short, description: option.description });
     return candidates;
   });
+}
+
+function globalOptionValueCandidates(
+  input: CompletionRequest,
+  options: CompletionRuntimeOptions,
+): CompletionCandidate[] {
+  const wordIndex = currentWordIndex(input);
+  const currentWord = input.words[wordIndex] === input.current ? input.current : input.current || '';
+  const equalsIndex = currentWord.indexOf('=');
+  const optionWord = equalsIndex >= 0 ? currentWord.slice(0, equalsIndex) : input.words[wordIndex - 1];
+  if (!optionWord) return [];
+
+  const option = GLOBAL_OPTIONS_BY_WORD.get(optionWord);
+  if (!option) return [];
+  if (equalsIndex < 0 && !option.takesValue) return [];
+
+  const values = option.long === '--profile' ? options.profileNames || [] : option.values || [];
+  if (values.length === 0) return [];
+
+  const valuePrefix = equalsIndex >= 0 ? currentWord.slice(equalsIndex + 1) : input.current;
+  return values.filter((value) => value.startsWith(valuePrefix)).map((value) => ({ value }));
 }
 
 function currentWordIndex(input: CompletionRequest): number {
@@ -144,6 +171,30 @@ function commandContext(
   return undefined;
 }
 
+function isProfileDefaultValue(input: CompletionRequest): boolean {
+  const wordIndex = currentWordIndex(input);
+  const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
+  const completedArgs: string[] = [];
+
+  for (let i = firstArgIndex; i < wordIndex; i += 1) {
+    const word = input.words[i];
+    if (!word) continue;
+
+    if (VALUE_TAKING_GLOBAL_OPTIONS.has(word)) {
+      i += 1;
+      continue;
+    }
+
+    const optionName = word.split('=', 1)[0] || word;
+    if (VALUE_TAKING_GLOBAL_OPTIONS.has(optionName)) continue;
+    if (GLOBAL_OPTION_WORDS.has(word) || GLOBAL_OPTION_WORDS.has(optionName)) continue;
+
+    completedArgs.push(word);
+  }
+
+  return completedArgs[0] === 'profile' && completedArgs[1] === 'default';
+}
+
 function isCurrentGlobalOptionValue(wordsBeforeCurrent: string[]): boolean {
   const previousWord = wordsBeforeCurrent.at(-1);
   return Boolean(previousWord && VALUE_TAKING_GLOBAL_OPTIONS.has(previousWord));
@@ -209,6 +260,16 @@ function cachedIdCandidates(input: CompletionRequest, options: CompletionRuntime
 
 export function completeWords(input: CompletionRequest, options: CompletionRuntimeOptions = {}): CompletionCandidate[] {
   const registrySnapshot = options.registrySnapshot || BUNDLED_COMMAND_REGISTRY;
+  const optionValues = globalOptionValueCandidates(input, options);
+  if (optionValues.length > 0) return optionValues;
+
+  if (isProfileDefaultValue(input)) {
+    const prefix = input.current;
+    return (options.profileNames || [])
+      .filter((profileName) => profileName.startsWith(prefix))
+      .map((profileName) => ({ value: profileName }));
+  }
+
   if (!canCompleteTopLevel(input)) return cachedIdCandidates(input, { ...options, registrySnapshot });
 
   const prefix = input.current;

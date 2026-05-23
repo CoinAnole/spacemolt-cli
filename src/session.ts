@@ -93,6 +93,25 @@ export function listProfileSessions(homeDir?: string, platform?: string, env?: E
   }
 }
 
+export function listProfileNames(homeDir?: string, platform?: string, env?: EnvLike): string[] {
+  const sessionsDir = getProfileSessionsDir(homeDir, platform, env);
+  try {
+    return fs
+      .readdirSync(sessionsDir, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          entry.isFile() &&
+          entry.name.endsWith('.json') &&
+          !entry.name.endsWith('_state.json') &&
+          !entry.name.endsWith('.ids.json'),
+      )
+      .map((entry) => path.basename(entry.name, '.json'))
+      .sort((a, b) => a.localeCompare(b));
+  } catch {
+    return [];
+  }
+}
+
 export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike): void {
   const profiles = listProfileSessions(homeDir, platform, env);
   if (!profiles.length) {

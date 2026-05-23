@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -6,6 +6,7 @@ import type { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, JsonResponse } from './types.ts';
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-session-test-'));
+const testEnv = { HOME: tempDir, XDG_CONFIG_HOME: path.join(tempDir, '.config') };
 
 // Mock node:os before importing session.ts
 mock.module('node:os', () => {
@@ -22,10 +23,12 @@ mock.module('node:os', () => {
 const {
   getCliConfigPath,
   getDefaultProfile,
+  listProfileNames,
   getSpacemoltHome,
   loadCliConfig,
   saveCliConfig,
   SessionManager,
+  setActiveProfile,
   setDefaultProfile,
   showDefaultProfile,
 } = await import('./session.ts');
@@ -38,14 +41,18 @@ afterAll(() => {
   fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
+beforeEach(() => {
+  setActiveProfile(undefined);
+});
+
 describe('SessionManager', () => {
   test('session paths always resolve to named profile files', async () => {
-    const manager = new SessionManager({ profile: 'test_profile' });
+    const manager = new SessionManager({ profile: 'test_profile', env: testEnv });
     const expectedPath = path.join(tempDir, '.config', 'spacemolt-cli', 'sessions', 'test_profile.json');
     expect(manager.getSessionPath()).toBe(expectedPath);
 
-    setDefaultProfile('default_pilot');
-    const defaultManager = new SessionManager();
+    setDefaultProfile('default_pilot', undefined, undefined, testEnv);
+    const defaultManager = new SessionManager({ env: testEnv });
     expect(defaultManager.getSessionPath()).toBe(
       path.join(tempDir, '.config', 'spacemolt-cli', 'sessions', 'default_pilot.json'),
     );
@@ -72,8 +79,8 @@ describe('SessionManager', () => {
     const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
     fs.rmSync(configPath, { force: true });
 
-    const manager = new SessionManager();
-    expect(() => new SessionManager().getSessionPath()).toThrow(
+    const manager = new SessionManager({ env: testEnv });
+    expect(() => new SessionManager({ env: testEnv }).getSessionPath()).toThrow(
       'No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".',
     );
     await expect(manager.loadSession()).rejects.toThrow(
@@ -100,23 +107,25 @@ describe('SessionManager', () => {
   });
 
   test('CLI config stores the default profile in the config root', () => {
-    expect(getCliConfigPath()).toBe(path.join(tempDir, '.config', 'spacemolt-cli', 'config.json'));
+    expect(getCliConfigPath(undefined, undefined, testEnv)).toBe(
+      path.join(tempDir, '.config', 'spacemolt-cli', 'config.json'),
+    );
   });
 
   test('default profile config is read and written with hardened permissions', () => {
     const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
     fs.rmSync(configPath, { force: true });
 
-    expect(loadCliConfig()).toEqual({});
-    expect(getDefaultProfile()).toBeUndefined();
+    expect(loadCliConfig(undefined, undefined, testEnv)).toEqual({});
+    expect(getDefaultProfile(undefined, undefined, testEnv)).toBeUndefined();
 
-    saveCliConfig({ defaultProfile: 'marlowe' });
-    expect(loadCliConfig()).toEqual({ defaultProfile: 'marlowe' });
+    saveCliConfig({ defaultProfile: 'marlowe' }, undefined, undefined, testEnv);
+    expect(loadCliConfig(undefined, undefined, testEnv)).toEqual({ defaultProfile: 'marlowe' });
 
-    setDefaultProfile('marlowe');
+    setDefaultProfile('marlowe', undefined, undefined, testEnv);
 
-    expect(getDefaultProfile()).toBe('marlowe');
-    expect(loadCliConfig()).toEqual({ defaultProfile: 'marlowe' });
+    expect(getDefaultProfile(undefined, undefined, testEnv)).toBe('marlowe');
+    expect(loadCliConfig(undefined, undefined, testEnv)).toEqual({ defaultProfile: 'marlowe' });
 
     expect(JSON.parse(fs.readFileSync(configPath, 'utf-8'))).toEqual({ defaultProfile: 'marlowe' });
     if (process.platform !== 'win32') {
@@ -131,11 +140,26 @@ describe('SessionManager', () => {
     const stdout: string[] = [];
     const writer = { out: (message: string) => stdout.push(message) };
 
-    showDefaultProfile(writer);
-    setDefaultProfile('marlowe');
-    showDefaultProfile(writer);
+    showDefaultProfile(writer, undefined, undefined, testEnv);
+    setDefaultProfile('marlowe', undefined, undefined, testEnv);
+    showDefaultProfile(writer, undefined, undefined, testEnv);
 
     expect(stdout).toEqual(['No default profile set.', 'Default profile: marlowe']);
+  });
+
+  test('listProfileNames returns saved profile names without session contents', () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'profile-names-'));
+    const sessionsDir = path.join(home, '.config', 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.json'),
+      JSON.stringify({ username: 'pilot_user', password: 'secret', player_id: 'player_pilot' }),
+    );
+    fs.writeFileSync(path.join(sessionsDir, 'marlowe.json'), JSON.stringify({ id: 'sess_marlowe' }));
+    fs.writeFileSync(path.join(sessionsDir, 'pilot.ids.json'), JSON.stringify({ hints: [] }));
+    fs.writeFileSync(path.join(sessionsDir, 'pilot_state.json'), JSON.stringify({ state: true }));
+
+    expect(listProfileNames(home, 'linux', {})).toEqual(['marlowe', 'pilot']);
   });
 
   test('public client exports default profile display helper', () => {
@@ -146,15 +170,15 @@ describe('SessionManager', () => {
     const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
     fs.rmSync(configPath, { force: true });
 
-    const manager = new SessionManager();
+    const manager = new SessionManager({ env: testEnv });
     manager.ensureDefaultProfile();
-    expect(getDefaultProfile()).toBeUndefined();
+    expect(getDefaultProfile(undefined, undefined, testEnv)).toBeUndefined();
 
     manager.ensureDefaultProfile('first_pilot');
-    expect(getDefaultProfile()).toBe('first_pilot');
+    expect(getDefaultProfile(undefined, undefined, testEnv)).toBe('first_pilot');
 
     manager.ensureDefaultProfile('second_pilot');
-    expect(getDefaultProfile()).toBe('first_pilot');
+    expect(getDefaultProfile(undefined, undefined, testEnv)).toBe('first_pilot');
   });
 
   test('invalid default profile config is ignored', () => {
@@ -162,8 +186,8 @@ describe('SessionManager', () => {
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(path.join(configDir, 'config.json'), '{"defaultProfile":"../bad"}\n');
 
-    expect(loadCliConfig()).toEqual({});
-    expect(getDefaultProfile()).toBeUndefined();
+    expect(loadCliConfig(undefined, undefined, testEnv)).toEqual({});
+    expect(getDefaultProfile(undefined, undefined, testEnv)).toBeUndefined();
   });
 
   test('credential files are ignored', async () => {
@@ -177,6 +201,7 @@ describe('SessionManager', () => {
     const manager = new SessionManager({
       profile: 'test_profile',
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: (async () => ({
         status: 200,
         ok: true,
@@ -217,6 +242,7 @@ describe('SessionManager', () => {
     const manager = new SessionManager({
       profile: 'test_profile',
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: mockTransport as unknown as typeof requestJson,
     });
 
@@ -261,6 +287,7 @@ describe('SessionManager', () => {
     const manager = new SessionManager({
       profile: 'test_profile',
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: mockTransport as unknown as typeof requestJson,
     });
 
@@ -286,7 +313,7 @@ describe('SessionManager', () => {
   test('profile auth uses configured default profile when no active profile is set', async () => {
     const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
     fs.rmSync(configPath, { force: true });
-    setDefaultProfile('default_auth_profile');
+    setDefaultProfile('default_auth_profile', undefined, undefined, testEnv);
 
     let authCalled = false;
     const mockTransport = async (_url: string, options?: JsonRequestOptions): Promise<JsonResponse<APIResponse>> => {
@@ -309,6 +336,7 @@ describe('SessionManager', () => {
 
     const manager = new SessionManager({
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: mockTransport as unknown as typeof requestJson,
     });
     const sessionObj: Session = {
@@ -346,6 +374,7 @@ describe('SessionManager', () => {
     const manager = new SessionManager({
       profile: 'test_profile',
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: mockTransport as unknown as typeof requestJson,
     });
 
@@ -378,6 +407,7 @@ describe('SessionManager', () => {
     const manager = new SessionManager({
       profile: 'test_profile',
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: mockTransport as unknown as typeof requestJson,
       clock: () => fixedNow,
     });
@@ -426,6 +456,7 @@ describe('SessionManager', () => {
     const manager = new SessionManager({
       profile: 'refresh_credentials_profile',
       apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
       transport: (async (url: string): Promise<JsonResponse<APIResponse>> => {
         expect(url).toBe('https://api.spacemolt.test/api/v2/session');
         return {
