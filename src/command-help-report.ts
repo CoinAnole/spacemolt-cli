@@ -26,6 +26,7 @@ export interface CommandHelpReportInput {
 export interface CommandHelpDifference {
   field: string;
   status: 'different' | 'missing' | 'match' | 'curated-only';
+  signal: 'review' | 'intentional' | 'info' | 'match';
   curated?: unknown;
   openapi?: unknown;
   apiMd?: unknown;
@@ -44,10 +45,12 @@ export interface CommandHelpReport {
 
 export interface FormatCommandHelpReportOptions {
   includeAll?: boolean;
+  includeIntentional?: boolean;
 }
 
 export interface ReportArgs {
   includeAll: boolean;
+  includeIntentional: boolean;
   json: boolean;
   command?: string;
   failOnDiff: boolean;
@@ -113,6 +116,16 @@ function valuesMatch(left: unknown, right: unknown): boolean {
   return normalizedLeft === normalizedRight;
 }
 
+function isWeakCommandText(value: unknown): boolean {
+  const normalized = normalizeText(value);
+  return Boolean(normalized && /^[a-z][a-z0-9_]*$/.test(normalized));
+}
+
+function isUsefulHelpText(value: unknown): boolean {
+  const normalized = normalizeText(value);
+  return Boolean(normalized && !isWeakCommandText(normalized));
+}
+
 function generatedArgNames(generated?: GeneratedApiRoute): string[] {
   if (!generated?.schema) return [];
   const positional = Object.entries(generated.schema)
@@ -154,10 +167,18 @@ function pushComparedDifference(
   curated: unknown,
   openapi: unknown,
   apiMd: unknown,
+  signalForDifference: CommandHelpDifference['signal'] = 'review',
 ): void {
   const presentValues = [curated, openapi, apiMd].filter((value) => value !== undefined);
   const allMatch = presentValues.length <= 1 || presentValues.every((value) => valuesMatch(value, presentValues[0]));
-  differences.push({ field, status: allMatch ? 'match' : 'different', curated, openapi, apiMd });
+  differences.push({
+    field,
+    status: allMatch ? 'match' : 'different',
+    signal: allMatch ? 'match' : signalForDifference,
+    curated,
+    openapi,
+    apiMd,
+  });
 }
 
 function pushCuratedOnly(differences: CommandHelpDifference[], field: string, value: unknown): void {
@@ -166,12 +187,28 @@ function pushCuratedOnly(differences: CommandHelpDifference[], field: string, va
     : value && typeof value === 'object'
       ? Object.keys(value).length > 0
       : value !== undefined && value !== '';
-  if (hasValue) differences.push({ field, status: 'curated-only', curated: value });
+  if (hasValue) differences.push({ field, status: 'curated-only', signal: 'info', curated: value });
 }
 
 function countActionableDifferences(differences: CommandHelpDifference[]): number {
-  return differences.filter((difference) => difference.status !== 'curated-only' && difference.status !== 'match')
-    .length;
+  return differences.filter((difference) => difference.signal === 'review').length;
+}
+
+function descriptionSignal(
+  curated: string | undefined,
+  openapi: string | undefined,
+  apiMd: string | undefined,
+): CommandHelpDifference['signal'] {
+  if ((isWeakCommandText(curated) || valuesMatch(curated, openapi)) && isUsefulHelpText(apiMd)) return 'review';
+  return 'intentional';
+}
+
+function missingApiMdSignal(
+  command: string,
+  generated: GeneratedApiRoute | undefined,
+): CommandHelpDifference['signal'] {
+  if (generated && openApiCommandName(generated) !== command) return 'intentional';
+  return 'review';
 }
 
 export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHelpReport {
@@ -187,21 +224,41 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
     const differences: CommandHelpDifference[] = [];
 
     if (!generated) {
-      differences.push({ field: 'openapi route', status: 'missing', curated: signature });
+      differences.push({ field: 'openapi route', status: 'missing', signal: 'review', curated: signature });
     }
     if (!apiMd) {
-      differences.push({ field: 'api.md command', status: 'missing', curated: command });
+      differences.push({
+        field: 'api.md command',
+        status: 'missing',
+        signal: missingApiMdSignal(command, generated),
+        curated: command,
+      });
     }
 
     if (generated || apiMd) {
-      pushComparedDifference(differences, 'command name', command, openApiCommandName(generated), apiMd?.name);
-      pushComparedDifference(differences, 'description', config.description, generated?.summary, apiMd?.description);
+      pushComparedDifference(
+        differences,
+        'command name',
+        command,
+        openApiCommandName(generated),
+        apiMd?.name,
+        'intentional',
+      );
+      pushComparedDifference(
+        differences,
+        'description',
+        config.description,
+        generated?.summary,
+        apiMd?.description,
+        descriptionSignal(config.description, generated?.summary, apiMd?.description),
+      );
       pushComparedDifference(
         differences,
         'usage',
         usageArgNames(config.usage),
         generatedArgNames(generated),
         apiMd?.args.map((arg) => arg.name),
+        'intentional',
       );
     }
 
@@ -245,7 +302,7 @@ function formatValue(value: unknown): string {
 }
 
 function shouldShowDifference(difference: CommandHelpDifference, includeAll: boolean): boolean {
-  return includeAll || (difference.status !== 'match' && difference.status !== 'curated-only');
+  return includeAll || difference.signal === 'review';
 }
 
 export function formatCommandHelpReport(
@@ -253,11 +310,13 @@ export function formatCommandHelpReport(
   options: FormatCommandHelpReportOptions = {},
 ): string {
   const includeAll = Boolean(options.includeAll);
-  const lines = ['Command Help Comparison', `Actionable differences: ${report.differenceCount}`];
+  const includeIntentional = Boolean(options.includeIntentional);
+  const lines = ['Command Help Comparison', `Review differences: ${report.differenceCount}`];
 
   for (const commandReport of report.commands) {
-    const visibleDifferences = commandReport.differences.filter((difference) =>
-      shouldShowDifference(difference, includeAll),
+    const visibleDifferences = commandReport.differences.filter(
+      (difference) =>
+        shouldShowDifference(difference, includeAll) || (includeIntentional && difference.signal === 'intentional'),
     );
     if (!includeAll && visibleDifferences.length === 0) continue;
 
@@ -267,7 +326,7 @@ export function formatCommandHelpReport(
       continue;
     }
     for (const difference of visibleDifferences) {
-      lines.push(`  - ${difference.field} [${difference.status}]`);
+      lines.push(`  - ${difference.field} [${difference.status}, ${difference.signal}]`);
       if (difference.curated !== undefined) lines.push(`    curated: ${formatValue(difference.curated)}`);
       if (difference.openapi !== undefined) lines.push(`    openapi: ${formatValue(difference.openapi)}`);
       if (difference.apiMd !== undefined) lines.push(`    api.md: ${formatValue(difference.apiMd)}`);
@@ -281,6 +340,7 @@ export function formatCommandHelpReport(
 export function parseReportArgs(args: string[]): ReportArgs {
   const parsed: ReportArgs = {
     includeAll: false,
+    includeIntentional: false,
     json: false,
     failOnDiff: false,
   };
@@ -293,6 +353,10 @@ export function parseReportArgs(args: string[]): ReportArgs {
     }
     if (arg === '--json') {
       parsed.json = true;
+      continue;
+    }
+    if (arg === '--include-intentional') {
+      parsed.includeIntentional = true;
       continue;
     }
     if (arg === '--fail-on-diff') {

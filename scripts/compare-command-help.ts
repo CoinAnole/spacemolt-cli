@@ -44,7 +44,12 @@ function main(argv: string[]): number {
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    console.log(formatCommandHelpReport(report, { includeAll: args.includeAll }));
+    console.log(
+      formatCommandHelpReport(report, {
+        includeAll: args.includeAll,
+        includeIntentional: args.includeIntentional,
+      }),
+    );
   }
 
   return args.failOnDiff && report.differenceCount > 0 ? 1 : 0;

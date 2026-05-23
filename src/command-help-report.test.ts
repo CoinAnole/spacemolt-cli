@@ -107,19 +107,65 @@ describe('command help report', () => {
       'curated-only aliases',
       'curated-only discoverWith',
     ]);
-    expect(report.differenceCount).toBe(3);
+    expect(report.differenceCount).toBe(1);
     expect(dock?.differences.every((diff) => diff.status === 'match')).toBe(true);
 
     const defaultText = formatCommandHelpReport(report);
     expect(defaultText).toContain('travel');
-    expect(defaultText).toContain('Curated travel help');
+    expect(defaultText).toContain('field.target_poi.description');
+    expect(defaultText).not.toContain('Curated travel help');
     expect(defaultText).not.toContain('dock');
     expect(defaultText).not.toContain('curated-only example');
 
+    const intentionalText = formatCommandHelpReport(report, { includeIntentional: true });
+    expect(intentionalText).toContain('Curated travel help');
+
     const allText = formatCommandHelpReport(report, { includeAll: true });
     expect(allText).toContain('dock');
-    expect(allText).toContain('[match]');
+    expect(allText).toContain('[match, match]');
     expect(allText).toContain('curated-only example');
+  });
+
+  test('classifies intentional aliases separately from review-worthy description drift', () => {
+    const report = buildCommandHelpReport({
+      commands: {
+        travel: {
+          description: 'travel',
+          usage: '<poi_id_or_cached_name>',
+          aliases: { poi_id_or_cached_name: 'target_poi' },
+          route: { tool: 'spacemolt', action: 'travel', method: 'POST' },
+          schema: { target_poi: { type: 'string', description: 'Target POI' } },
+        },
+      },
+      generatedRoutes: {
+        'POST /api/v2/spacemolt/travel': {
+          summary: 'travel',
+          route: { tool: 'spacemolt', action: 'travel', method: 'POST' },
+          required: ['target_poi'],
+          schema: { target_poi: { type: 'string', description: 'Target POI', positionalIndex: 0 } },
+        },
+      },
+      apiMdCommands: {
+        travel: {
+          name: 'travel',
+          args: [{ name: 'target_poi', optional: false }],
+          description: 'Travel to a different POI',
+          category: 'Navigation',
+        },
+      },
+    });
+    const travel = report.commands[0];
+
+    expect(travel?.differences.find((diff) => diff.field === 'description')?.signal).toBe('review');
+    expect(travel?.differences.find((diff) => diff.field === 'usage')?.signal).toBe('intentional');
+    expect(report.differenceCount).toBe(1);
+
+    const defaultText = formatCommandHelpReport(report);
+    expect(defaultText).toContain('description [different, review]');
+    expect(defaultText).not.toContain('usage [different, intentional]');
+
+    const intentionalText = formatCommandHelpReport(report, { includeIntentional: true });
+    expect(intentionalText).toContain('usage [different, intentional]');
   });
 
   test('records missing docs entries as command differences', () => {
@@ -138,11 +184,13 @@ describe('command help report', () => {
       {
         field: 'openapi route',
         status: 'missing',
+        signal: 'review',
         curated: 'POST /api/v2/spacemolt/travel',
       },
       {
         field: 'api.md command',
         status: 'missing',
+        signal: 'review',
         curated: 'travel',
       },
     ]);
@@ -150,14 +198,18 @@ describe('command help report', () => {
   });
 
   test('parses report script flags', () => {
-    expect(parseReportArgs(['--all', '--json', '--command', 'travel', '--fail-on-diff'])).toEqual({
+    expect(
+      parseReportArgs(['--all', '--json', '--command', 'travel', '--include-intentional', '--fail-on-diff']),
+    ).toEqual({
       includeAll: true,
+      includeIntentional: true,
       json: true,
       command: 'travel',
       failOnDiff: true,
     });
     expect(parseReportArgs(['--command=buy'])).toEqual({
       includeAll: false,
+      includeIntentional: false,
       json: false,
       command: 'buy',
       failOnDiff: false,
