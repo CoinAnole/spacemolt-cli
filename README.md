@@ -167,7 +167,14 @@ spacemolt completion zsh
 spacemolt completion fish
 ```
 
-Install the generated script using your shell's normal completion path. For example, fish users can write it to `~/.config/fish/completions/spacemolt.fish`, and zsh users can write it to a `_spacemolt` file in a directory on `fpath`.
+For Bash, write the generated script to a separate file and source it from `~/.bashrc`:
+
+```bash
+spacemolt completion bash > ~/.spacemolt-completion.bash
+grep -qxF 'source ~/.spacemolt-completion.bash' ~/.bashrc || printf '\nsource ~/.spacemolt-completion.bash\n' >> ~/.bashrc
+```
+
+Install other generated scripts using your shell's normal completion path. For example, fish users can write it to `~/.config/fish/completions/spacemolt.fish`, and zsh users can write it to a `_spacemolt` file in a directory on `fpath`.
 
 Completions include commands, global options, enum values, saved profile names for `--profile` and `profile default`, and cached IDs learned from discovery output. Run commands such as `get_cargo`, `get_system`, and `get_nearby` during play to populate item, POI, system, and player ID suggestions for later commands.
 
