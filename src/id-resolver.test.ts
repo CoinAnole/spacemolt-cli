@@ -85,6 +85,31 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'ore_iron', quantity: 50 } });
   });
 
+  test('keeps sell fuel reserved for ship tank fuel even when fuel cells are cached', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'fuel_cell',
+            name: 'Fuel Cell',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const fuel = preparePayload('sell', { item_id: 'fuel', quantity: '100' }, options(), sessionPath);
+    const tankFuel = preparePayload('sell', { item_id: 'tank_fuel', quantity: '100' }, options(), sessionPath);
+
+    expect(fuel).toEqual({ type: 'payload', payload: { id: 'fuel', quantity: 100 } });
+    expect(tankFuel).toEqual({ type: 'payload', payload: { id: 'fuel', quantity: 100 } });
+  });
+
   test('stops before execution on ambiguous cached item matches', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

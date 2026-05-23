@@ -97,6 +97,11 @@ function resolveCachedIdsForPayload(
       }
       resolvedPayload[field] = resolvedArray;
     } else if (typeof value === 'string') {
+      const reservedValue = reservedIdValue(command, field, value);
+      if (reservedValue) {
+        resolvedPayload[field] = reservedValue;
+        continue;
+      }
       const resolved = resolveCachedId(kind, value, hints);
       if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
       if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
@@ -104,6 +109,14 @@ function resolveCachedIdsForPayload(
   }
 
   return { type: 'payload', payload: resolvedPayload };
+}
+
+function reservedIdValue(command: string, field: string, value: string): string | undefined {
+  if (command !== 'sell') return undefined;
+  if (field !== 'id' && field !== 'item_id') return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'fuel' || normalized === 'tank_fuel') return 'fuel';
+  return undefined;
 }
 
 export function displayCommandParseErrors(
