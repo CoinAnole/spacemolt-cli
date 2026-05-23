@@ -916,6 +916,49 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('get_ship renders installed modules from nested ship data when top-level modules is empty', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ship: {
+        id: 'ship-1',
+        name: 'Deep Survey',
+        class_id: 'deep_survey',
+        hull: 420,
+        max_hull: 420,
+        shield: 300,
+        max_shield: 300,
+        fuel: 240,
+        max_fuel: 240,
+        cargo_used: 0,
+        cargo_capacity: 1250,
+        cpu_used: 16,
+        cpu_capacity: 34,
+        power_used: 23,
+        power_capacity: 75,
+        modules: [
+          {
+            module_id: 'module-nested-1',
+            name: 'Cargo Expander III',
+            slot: 'utility',
+            type: 'utility',
+            type_id: 'cargo_expander_iii',
+            wear_status: 'Pristine',
+            wear: 0,
+            cpu_usage: 2,
+            power_usage: 2,
+            size: 10,
+          },
+        ],
+      },
+      modules: [],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Modules ===');
+    expect(stdout).toContain('Cargo Expander III');
+    expect(stdout).toContain('module-nested-1');
+    expect(stdout).not.toContain('(None)');
+  });
+
   test('normalizes get_status location data before player status formatting', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', getStatusFixture);
 

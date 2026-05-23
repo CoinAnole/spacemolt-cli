@@ -41,6 +41,15 @@ function printPassiveRecipeTable(recipes: Array<Record<string, unknown>>): void 
   );
 }
 
+function preferPopulatedArray(
+  primary: Array<Record<string, unknown>> | undefined,
+  fallback: Array<Record<string, unknown>> | undefined,
+): Array<Record<string, unknown>> | undefined {
+  if (primary?.length) return primary;
+  if (fallback?.length) return fallback;
+  return primary ?? fallback;
+}
+
 export const shipFormatters = [
   // Cargo
   namedFormatter(
@@ -94,7 +103,7 @@ export const shipFormatters = [
       const passiveRecipes = summarizePassiveRecipes(ship.passive_recipes ?? r.passive_recipes);
       if (passiveRecipes) emitLine(`Passive Recipes: ${passiveRecipes}`);
 
-      const modules = firstArray(r, ['modules']);
+      const modules = preferPopulatedArray(firstArray(r, ['modules']), firstArray(ship, ['modules']));
       if (modules) {
         printCompactTable('Modules', modules, [
           ['Slot', ['slot']],
