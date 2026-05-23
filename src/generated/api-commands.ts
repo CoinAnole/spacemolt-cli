@@ -2471,6 +2471,23 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       },
     },
   },
+  'POST /api/v2/spacemolt_faction/accept_invite': {
+    operationId: 'spacemolt_faction_accept_invite',
+    summary: 'accept_invite',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'accept_invite',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of faction to join (must have pending invite)',
+        positionalIndex: 0,
+      },
+    },
+  },
   'POST /api/v2/spacemolt_faction/accept_peace': {
     operationId: 'spacemolt_faction_accept_peace',
     summary: 'accept_peace',
@@ -2655,7 +2672,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Player ID to invite/kick',
+        description: 'Player ID or username',
         positionalIndex: 0,
       },
     },
@@ -2689,7 +2706,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'Player ID to invite/kick',
+        description: 'Player ID or username',
         positionalIndex: 0,
       },
     },
@@ -2846,6 +2863,23 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       id: {
         type: 'string',
         description: 'ID of the room to visit',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/withdraw_invite': {
+    operationId: 'spacemolt_faction_withdraw_invite',
+    summary: 'withdraw_invite',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'withdraw_invite',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID or username',
         positionalIndex: 0,
       },
     },
@@ -5170,7 +5204,8 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     schema: {
       id: {
         type: 'string',
-        description: 'ID of the adjacent system to jump to (use get_system to see connected systems)',
+        description:
+          'ID of the adjacent system to jump to (use get_system to see connected systems), or a numeric compass bearing in degrees for an off-network Pathfinder Drive jump',
         positionalIndex: 0,
       },
     },

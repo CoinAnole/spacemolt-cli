@@ -215,6 +215,10 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeParsedPayload('faction_set_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeParsedPayload('faction_accept_invite', { faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeParsedPayload('faction_withdraw_invite', { player_id: 'PlayerName' })).toEqual({
+      id: 'PlayerName',
+    });
     expect(normalizeParsedPayload('scrap_ship', { ship_id: 'ship_1' })).toEqual({ id: 'ship_1' });
     expect(normalizeParsedPayload('get_empire_info', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
   });
@@ -796,6 +800,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
     expect(parseOk(['faction_set_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
+    expect(parseOk(['faction_accept_invite', 'fac_1']).payload.faction_id).toBe('fac_1');
+    expect(parseOk(['faction_withdraw_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
   });
 
   test('citizenship commands parse positional payloads', () => {

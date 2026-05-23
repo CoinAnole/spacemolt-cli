@@ -56,6 +56,14 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/get_invites',
   },
+  faction_accept_invite: {
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_faction/accept_invite',
+    positionals: ['faction_id'],
+    aliases: {
+      faction_id: 'id',
+    },
+  },
   faction_decline_invite: {
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/decline_invite',
@@ -124,6 +132,14 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/invite',
     positionals: ['player_id'],
+  },
+  faction_withdraw_invite: {
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_faction/withdraw_invite',
+    positionals: ['player_id'],
+    aliases: {
+      player_id: 'id',
+    },
   },
   faction_kick: {
     category: 'Factions',
