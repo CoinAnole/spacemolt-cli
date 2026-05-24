@@ -270,7 +270,7 @@ describe('command metadata', () => {
   });
 
   test('craft help does not advertise a fixed batch quantity limit', () => {
-    const config = BUNDLED_COMMAND_REGISTRY.allCommands.craft;
+    const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.usage).toContain('server-capped by crafting skill level');
     expect(config?.usage).not.toContain('1-10');
     expect(config?.schema?.quantity?.description).toContain('server-capped by crafting skill level');

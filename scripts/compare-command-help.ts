@@ -3,60 +3,54 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  type ApiMdCommandMap,
   buildCommandHelpReport,
   formatCommandHelpReport,
-  type OpenApiV1DescriptionMap,
-  parseApiMdCommands,
-  parseOpenApiV1Descriptions,
+  type OpenApiHelpEntry,
+  parseOpenApiHelpEntries,
   parseReportArgs,
 } from '../src/command-help-report.ts';
-import { COMMANDS } from '../src/commands.ts';
-import { GENERATED_API_ROUTES } from '../src/generated/api-commands.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+function readOpenApiHelpEntries(specPath: string): OpenApiHelpEntry[] {
+  const entries = parseOpenApiHelpEntries(JSON.parse(fs.readFileSync(specPath, 'utf-8')));
+  if (entries.length === 0) throw new Error('no operations found');
+  return entries;
+}
+
 function main(argv: string[]): number {
   const args = parseReportArgs(argv);
-  if (args.command && !COMMANDS[args.command]) {
-    console.error(`Unknown curated command: ${args.command}`);
-    return 1;
-  }
-
-  const apiMdPath = path.join(root, 'spacemolt-docs', 'api.md');
-  let apiMdCommands: ApiMdCommandMap;
-  try {
-    apiMdCommands = parseApiMdCommands(fs.readFileSync(apiMdPath, 'utf-8'));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to parse ${apiMdPath}: ${message}`);
-    return 1;
-  }
-  if (Object.keys(apiMdCommands).length === 0) {
-    console.error(`Failed to parse ${apiMdPath}: no Client Commands entries found.`);
-    return 1;
-  }
-
   const openApiV1Path = path.join(root, 'spacemolt-docs', 'openapi-v1.json');
-  let openApiV1Descriptions: OpenApiV1DescriptionMap;
+  const openApiV2Path = path.join(root, 'spacemolt-docs', 'openapi.json');
+  let v1Entries: OpenApiHelpEntry[];
+  let v2Entries: OpenApiHelpEntry[];
+
   try {
-    openApiV1Descriptions = parseOpenApiV1Descriptions(JSON.parse(fs.readFileSync(openApiV1Path, 'utf-8')));
+    v1Entries = readOpenApiHelpEntries(openApiV1Path);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to parse ${openApiV1Path}: ${message}`);
     return 1;
   }
-  if (Object.keys(openApiV1Descriptions).length === 0) {
-    console.error(`Failed to parse ${openApiV1Path}: no operation descriptions found.`);
+
+  try {
+    v2Entries = readOpenApiHelpEntries(openApiV2Path);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to parse ${openApiV2Path}: ${message}`);
+    return 1;
+  }
+
+  const command = args.command;
+  if (command && !v2Entries.some((entry) => entry.command === command || entry.aliases.includes(command))) {
+    console.error(`Unknown OpenAPI command: ${command}`);
     return 1;
   }
 
   const report = buildCommandHelpReport({
-    commands: COMMANDS,
-    generatedRoutes: GENERATED_API_ROUTES,
-    apiMdCommands,
-    openApiV1Descriptions,
-    command: args.command,
+    v1Entries,
+    v2Entries,
+    command,
   });
 
   if (args.json) {

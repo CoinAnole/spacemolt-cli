@@ -254,13 +254,13 @@ Check command metadata against the cached spec:
 bun test src/api-sync.test.ts
 ```
 
-Compare curated CLI help against generated OpenAPI metadata, `spacemolt-docs/openapi-v1.json`, and `spacemolt-docs/api.md`:
+Compare v2 OpenAPI operation summaries and descriptions against `spacemolt-docs/openapi-v1.json`:
 
 ```bash
 bun run scripts/compare-command-help.ts
 ```
 
-Useful report flags include `--all` for every comparison row, `--json` for machine-readable output, `--include-intentional` for intentional differences, `--command <name>` for one curated command, and `--fail-on-diff` for CI-style failure on review differences.
+Useful report flags include `--all` for every comparison row, `--json` for machine-readable output, `--command <name>` for one OpenAPI command, and `--fail-on-diff` for CI-style failure on review differences.
 
 Use the live spec only when network access is intentional:
 

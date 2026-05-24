@@ -1,48 +1,35 @@
-import { type CommandConfig, routeSignature } from './commands.ts';
-import { generatedCommandName } from './dynamic-commands.ts';
-import type { GeneratedApiRoute } from './openapi-metadata.ts';
-
-export interface ApiMdArg {
-  name: string;
-  optional: boolean;
-}
-
-export interface ApiMdCommandEntry {
-  name: string;
-  args: ApiMdArg[];
-  description: string;
-  category: string;
-}
-
-export type ApiMdCommandMap = Record<string, ApiMdCommandEntry>;
-export type OpenApiV1DescriptionMap = Record<string, string>;
-
-interface OpenApiV1Operation {
+interface OpenApiOperation {
   operationId?: unknown;
   summary?: unknown;
   description?: unknown;
+  'x-cli-command'?: unknown;
 }
 
-interface OpenApiV1Document {
-  paths?: Record<string, Record<string, OpenApiV1Operation>>;
+interface OpenApiDocument {
+  paths?: Record<string, Record<string, OpenApiOperation>>;
+}
+
+export interface OpenApiHelpEntry {
+  command: string;
+  routeSignature: string;
+  aliases: string[];
+  operationId?: string;
+  summary?: string;
+  description?: string;
 }
 
 export interface CommandHelpReportInput {
-  commands: Record<string, CommandConfig>;
-  generatedRoutes: Record<string, GeneratedApiRoute>;
-  apiMdCommands: ApiMdCommandMap;
-  openApiV1Descriptions?: OpenApiV1DescriptionMap;
+  v1Entries: OpenApiHelpEntry[];
+  v2Entries: OpenApiHelpEntry[];
   command?: string;
 }
 
 export interface CommandHelpDifference {
-  field: string;
-  status: 'different' | 'missing' | 'match' | 'curated-only';
+  field: 'summary' | 'description' | 'openapi-v1 operation';
+  status: 'different' | 'missing' | 'match';
   signal: 'review' | 'intentional' | 'info' | 'match';
-  curated?: unknown;
-  openapi?: unknown;
-  apiMd?: unknown;
   openapiV1?: unknown;
+  openapiV2?: unknown;
 }
 
 export interface CommandHelpCommandReport {
@@ -69,87 +56,17 @@ export interface ReportArgs {
   failOnDiff: boolean;
 }
 
-function stripMutationMarker(value: string): string {
-  return value.replace(/\s*\*\*Mutation\.\*\*\s*$/i, '').trim();
-}
-
-function parseSignatureArgs(argsText: string): ApiMdArg[] {
-  const trimmed = argsText.trim();
-  if (!trimmed) return [];
-  return trimmed.split(',').map((raw) => {
-    const token = raw.trim();
-    return { name: token.replace(/\?$/, ''), optional: token.endsWith('?') };
-  });
-}
-
-export function parseApiMdCommands(markdown: string): ApiMdCommandMap {
-  const entries: ApiMdCommandMap = {};
-  const lines = markdown.split(/\r?\n/);
-  let inClientCommands = false;
-  let category = '';
-
-  for (const line of lines) {
-    const heading = line.match(/^##\s+(.+)\s*$/);
-    if (heading) {
-      inClientCommands = heading[1] === 'Client Commands';
-      if (!inClientCommands && Object.keys(entries).length > 0) break;
-      continue;
-    }
-    if (!inClientCommands) continue;
-
-    const categoryMatch = line.match(/^###\s+(.+)\s*$/);
-    if (categoryMatch) {
-      category = categoryMatch[1] || '';
-      continue;
-    }
-
-    const entryMatch = line.match(/^- `([^`(]+)\(([^`]*)\)` -- (.+)$/);
-    if (!entryMatch) continue;
-
-    const name = entryMatch[1] || '';
-    entries[name] = {
-      name,
-      args: parseSignatureArgs(entryMatch[2] || ''),
-      description: stripMutationMarker(entryMatch[3] || ''),
-      category,
-    };
-  }
-
-  return entries;
-}
-
-function commandNameFromV1Path(pathName: string): string | undefined {
-  const trimmed = pathName.replace(/^\/+|\/+$/g, '');
-  if (!trimmed || trimmed.includes('/')) return undefined;
-  return trimmed;
-}
-
-function addOpenApiV1Description(descriptions: OpenApiV1DescriptionMap, key: unknown, description: string): void {
-  if (typeof key !== 'string') return;
-  const normalizedKey = key.trim();
-  if (normalizedKey) descriptions[normalizedKey] = description;
-}
-
-export function parseOpenApiV1Descriptions(document: OpenApiV1Document): OpenApiV1DescriptionMap {
-  const descriptions: OpenApiV1DescriptionMap = {};
-
-  for (const [pathName, pathItem] of Object.entries(document.paths || {})) {
-    for (const operation of Object.values(pathItem || {})) {
-      if (!operation || typeof operation !== 'object' || typeof operation.description !== 'string') continue;
-      const description = operation.description.trim();
-      if (!description) continue;
-
-      addOpenApiV1Description(descriptions, commandNameFromV1Path(pathName), description);
-      addOpenApiV1Description(descriptions, operation.operationId, description);
-    }
-  }
-
-  return descriptions;
-}
+const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
 
 function normalizeText(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
   return String(value).trim().replace(/[—–]/g, '-').replace(/→/g, '->').replace(/\s+/g, ' ');
+}
+
+function normalizedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
 }
 
 function valuesMatch(left: unknown, right: unknown): boolean {
@@ -168,178 +85,121 @@ function isUsefulHelpText(value: unknown): boolean {
   return Boolean(normalized && !isWeakCommandText(normalized));
 }
 
-function generatedArgNames(generated?: GeneratedApiRoute): string[] {
-  if (!generated?.schema) return [];
-  const positional = Object.entries(generated.schema)
-    .filter(([, schema]) => schema.positionalIndex !== undefined)
-    .sort((a, b) => (a[1].positionalIndex ?? 0) - (b[1].positionalIndex ?? 0))
-    .map(([field]) => field);
-  const remaining = Object.keys(generated.schema).filter((field) => !positional.includes(field));
-  return [...positional, ...remaining];
+function commandNameFromPath(pathName: string): string | undefined {
+  const segments = pathName
+    .replace(/^\/+|\/+$/g, '')
+    .split('/')
+    .filter(Boolean);
+  if (segments.length === 0) return undefined;
+  return segments[segments.length - 1];
 }
 
-function usageArgNames(usage: string | undefined): string[] {
-  if (!usage) return [];
-  const names: string[] = [];
-  for (const match of usage.matchAll(/[<[{]([a-zA-Z0-9_=-]+)(?:[=>|\]}]|\|)/g)) {
-    const name = match[1]?.split('=')[0];
-    if (name) names.push(name);
+function isCommandToken(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z][a-z0-9_]*$/.test(value.trim());
+}
+
+function uniqueStrings(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+export function parseOpenApiHelpEntries(document: OpenApiDocument): OpenApiHelpEntry[] {
+  const entries: OpenApiHelpEntry[] = [];
+
+  for (const [pathName, pathItem] of Object.entries(document.paths || {})) {
+    for (const [method, operation] of Object.entries(pathItem || {})) {
+      if (!HTTP_METHODS.has(method.toLowerCase()) || !operation || typeof operation !== 'object') continue;
+
+      const pathCommand = commandNameFromPath(pathName);
+      const cliCommand = normalizedString(operation['x-cli-command']);
+      const summary = normalizedString(operation.summary);
+      const summaryCommand = isCommandToken(summary) ? summary.trim() : undefined;
+      const operationId = normalizedString(operation.operationId);
+      const command = cliCommand ?? summaryCommand ?? pathCommand ?? operationId;
+      if (!command) continue;
+
+      entries.push({
+        aliases: uniqueStrings([command, cliCommand, summaryCommand, pathCommand, operationId]),
+        command,
+        description: normalizedString(operation.description),
+        operationId,
+        routeSignature: `${method.toUpperCase()} ${pathName}`,
+        summary,
+      });
+    }
   }
-  return names;
+
+  return entries.sort((a, b) => a.routeSignature.localeCompare(b.routeSignature));
 }
 
-function openApiCommandName(generated: GeneratedApiRoute | undefined): string | undefined {
-  if (!generated) return undefined;
-  const summary = generated.summary?.trim();
-  if (summary && /^[a-z][a-z0-9_]*$/.test(summary)) return summary;
-  return generatedCommandName(generated);
+function buildAliasIndex(entries: OpenApiHelpEntry[]): Map<string, OpenApiHelpEntry> {
+  const index = new Map<string, OpenApiHelpEntry>();
+  for (const entry of entries) {
+    for (const alias of entry.aliases) {
+      if (!index.has(alias)) index.set(alias, entry);
+    }
+  }
+  return index;
 }
 
-function findApiMdCommand(
-  command: string,
-  generated: GeneratedApiRoute | undefined,
-  apiMdCommands: ApiMdCommandMap,
-): ApiMdCommandEntry | undefined {
-  return apiMdCommands[command] ?? (generated?.summary ? apiMdCommands[generated.summary] : undefined);
+function findMatchingV1Entry(
+  v2Entry: OpenApiHelpEntry,
+  v1Index: Map<string, OpenApiHelpEntry>,
+): OpenApiHelpEntry | undefined {
+  for (const alias of v2Entry.aliases) {
+    const entry = v1Index.get(alias);
+    if (entry) return entry;
+  }
+  return undefined;
 }
 
-function findOpenApiV1Description(
-  command: string,
-  generated: GeneratedApiRoute | undefined,
-  openApiV1Descriptions: OpenApiV1DescriptionMap | undefined,
-): string | undefined {
-  if (!openApiV1Descriptions) return undefined;
-  return openApiV1Descriptions[command] ?? (generated?.summary ? openApiV1Descriptions[generated.summary] : undefined);
-}
+function compareHelpField(
+  field: 'summary' | 'description',
+  openapiV1: string | undefined,
+  openapiV2: string | undefined,
+): CommandHelpDifference {
+  if (valuesMatch(openapiV1, openapiV2)) {
+    return { field, status: 'match', signal: 'match', openapiV1, openapiV2 };
+  }
 
-function pushComparedDifference(
-  differences: CommandHelpDifference[],
-  field: string,
-  curated: unknown,
-  openapi: unknown,
-  apiMd: unknown,
-  openapiV1: unknown,
-  signalForDifference: CommandHelpDifference['signal'] = 'review',
-): void {
-  const presentValues = [curated, openapi, apiMd, openapiV1].filter((value) => value !== undefined);
-  const allMatch = presentValues.length <= 1 || presentValues.every((value) => valuesMatch(value, presentValues[0]));
-  differences.push({
+  const status = openapiV1 === undefined || openapiV2 === undefined ? 'missing' : 'different';
+  const v1IsUseful = field === 'summary' ? isUsefulHelpText(openapiV1) : Boolean(normalizeText(openapiV1));
+  const v2NeedsHelp = openapiV2 === undefined || (field === 'summary' && isWeakCommandText(openapiV2));
+
+  return {
     field,
-    status: allMatch ? 'match' : 'different',
-    signal: allMatch ? 'match' : signalForDifference,
-    curated,
-    openapi,
-    apiMd,
+    status,
+    signal: v1IsUseful && (v2NeedsHelp || !valuesMatch(openapiV1, openapiV2)) ? 'review' : 'info',
     openapiV1,
-  });
-}
-
-function pushCuratedOnly(differences: CommandHelpDifference[], field: string, value: unknown): void {
-  const hasValue = Array.isArray(value)
-    ? value.length > 0
-    : value && typeof value === 'object'
-      ? Object.keys(value).length > 0
-      : value !== undefined && value !== '';
-  if (hasValue) differences.push({ field, status: 'curated-only', signal: 'info', curated: value });
+    openapiV2,
+  };
 }
 
 function countActionableDifferences(differences: CommandHelpDifference[]): number {
   return differences.filter((difference) => difference.signal === 'review').length;
 }
 
-function descriptionSignal(
-  curated: string | undefined,
-  openapi: string | undefined,
-  apiMd: string | undefined,
-): CommandHelpDifference['signal'] {
-  if ((isWeakCommandText(curated) || valuesMatch(curated, openapi)) && isUsefulHelpText(apiMd)) return 'review';
-  return 'intentional';
-}
-
-function missingApiMdSignal(
-  command: string,
-  generated: GeneratedApiRoute | undefined,
-): CommandHelpDifference['signal'] {
-  if (generated && openApiCommandName(generated) !== command) return 'intentional';
-  return 'review';
-}
-
 export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHelpReport {
-  const commandEntries = Object.entries(input.commands)
-    .filter(([command]) => !input.command || command === input.command)
-    .sort(([a], [b]) => a.localeCompare(b));
+  const v1Index = buildAliasIndex(input.v1Entries);
   const commands: CommandHelpCommandReport[] = [];
 
-  for (const [command, config] of commandEntries) {
-    const signature = routeSignature(config.route);
-    const generated = input.generatedRoutes[signature];
-    const apiMd = findApiMdCommand(command, generated, input.apiMdCommands);
-    const openapiV1Description = findOpenApiV1Description(command, generated, input.openApiV1Descriptions);
+  for (const v2Entry of input.v2Entries) {
+    if (input.command && v2Entry.command !== input.command && !v2Entry.aliases.includes(input.command)) continue;
+
+    const v1Entry = findMatchingV1Entry(v2Entry, v1Index);
     const differences: CommandHelpDifference[] = [];
 
-    if (!generated) {
-      differences.push({ field: 'openapi route', status: 'missing', signal: 'review', curated: signature });
-    }
-    if (!apiMd) {
+    if (!v1Entry) {
       differences.push({
-        field: 'api.md command',
+        field: 'openapi-v1 operation',
         status: 'missing',
-        signal: missingApiMdSignal(command, generated),
-        curated: command,
+        signal: 'info',
+        openapiV2: v2Entry.command,
       });
     }
 
-    if (generated || apiMd) {
-      pushComparedDifference(
-        differences,
-        'command name',
-        command,
-        openApiCommandName(generated),
-        apiMd?.name,
-        undefined,
-        'intentional',
-      );
-      pushComparedDifference(
-        differences,
-        'description',
-        config.description,
-        generated?.summary,
-        apiMd?.description,
-        openapiV1Description,
-        descriptionSignal(config.description, generated?.summary, apiMd?.description),
-      );
-      pushComparedDifference(
-        differences,
-        'usage',
-        usageArgNames(config.usage),
-        generatedArgNames(generated),
-        apiMd?.args.map((arg) => arg.name),
-        undefined,
-        'intentional',
-      );
-    }
-
-    if (config.schema && generated?.schema) {
-      for (const field of Object.keys(config.schema).sort()) {
-        const curatedDescription = config.schema[field]?.description;
-        const openApiDescription = generated.schema[field]?.description;
-        pushComparedDifference(
-          differences,
-          `field.${field}.description`,
-          curatedDescription,
-          openApiDescription,
-          undefined,
-          undefined,
-        );
-      }
-    }
-
-    pushCuratedOnly(differences, 'curated-only example', config.example);
-    pushCuratedOnly(differences, 'curated-only aliases', config.aliases);
-    pushCuratedOnly(differences, 'curated-only discoverWith', config.discoverWith);
-    pushCuratedOnly(differences, 'curated-only seeAlso', config.seeAlso);
-
-    commands.push({ command, routeSignature: signature, differences });
+    differences.push(compareHelpField('summary', v1Entry?.summary, v2Entry.summary));
+    differences.push(compareHelpField('description', v1Entry?.description, v2Entry.description));
+    commands.push({ command: v2Entry.command, routeSignature: v2Entry.routeSignature, differences });
   }
 
   return {
@@ -369,7 +229,7 @@ export function formatCommandHelpReport(
 ): string {
   const includeAll = Boolean(options.includeAll);
   const includeIntentional = Boolean(options.includeIntentional);
-  const lines = ['Command Help Comparison', `Review differences: ${report.differenceCount}`];
+  const lines = ['OpenAPI Help Comparison', `Review differences: ${report.differenceCount}`];
 
   for (const commandReport of report.commands) {
     const visibleDifferences = commandReport.differences.filter(
@@ -385,10 +245,8 @@ export function formatCommandHelpReport(
     }
     for (const difference of visibleDifferences) {
       lines.push(`  - ${difference.field} [${difference.status}, ${difference.signal}]`);
-      if (difference.curated !== undefined) lines.push(`    curated: ${formatValue(difference.curated)}`);
-      if (difference.openapi !== undefined) lines.push(`    openapi: ${formatValue(difference.openapi)}`);
-      if (difference.apiMd !== undefined) lines.push(`    api.md: ${formatValue(difference.apiMd)}`);
       if (difference.openapiV1 !== undefined) lines.push(`    openapi-v1: ${formatValue(difference.openapiV1)}`);
+      if (difference.openapiV2 !== undefined) lines.push(`    openapi-v2: ${formatValue(difference.openapiV2)}`);
     }
   }
 
