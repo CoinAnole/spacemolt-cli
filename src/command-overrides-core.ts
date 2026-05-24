@@ -311,9 +311,17 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '<recipe_id> [quantity]  (1-10 for batch crafting, uses cargo + station storage, use catalog type=recipes to browse)',
+      '<recipe_id> [quantity]  (batch size is server-capped by crafting skill level; uses cargo + station storage, use catalog type=recipes to browse)',
     category: 'Crafting',
     apiRoute: 'POST /api/v2/spacemolt/craft',
     positionals: ['recipe_id', 'quantity'],
+    schemaExtensions: {
+      quantity: {
+        type: 'integer',
+        description:
+          'Quantity per craft action (default 1; server-capped by crafting skill level). Batch craft to save actions. If cargo is full, crafted items overflow to station storage.',
+        positionalIndex: 1,
+      },
+    },
   },
 };

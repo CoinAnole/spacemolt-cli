@@ -269,6 +269,18 @@ describe('command metadata', () => {
     expect(help).not.toContain('spacemolt repair modules');
   });
 
+  test('craft help does not advertise a fixed batch quantity limit', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.craft;
+    expect(config?.usage).toContain('server-capped by crafting skill level');
+    expect(config?.usage).not.toContain('1-10');
+    expect(config?.schema?.quantity?.description).toContain('server-capped by crafting skill level');
+    expect(config?.schema?.quantity?.description).not.toContain('1-10');
+
+    const help = captureHelp('craft');
+    expect(help).toContain('server-capped by crafting skill level');
+    expect(help).not.toContain('1-10');
+  });
+
   test('profile help advertises local action forms without key-value action fields', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
     expect(config).toBeDefined();

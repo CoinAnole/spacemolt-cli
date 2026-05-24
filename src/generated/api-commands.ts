@@ -4798,7 +4798,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       quantity: {
         type: 'integer',
         description:
-          'Number of times to craft (1-10, default 1). Batch craft to save actions. If cargo is full, crafted items overflow to station storage.',
+          'Quantity per craft action (default 1; server-capped by crafting skill level). Batch craft to save actions. If cargo is full, crafted items overflow to station storage.',
         positionalIndex: 1,
       },
     },
