@@ -151,12 +151,60 @@ describe('command help report', () => {
     expect(report.commands.map((entry) => entry.command)).toEqual(['dock']);
   });
 
+  test('omits v1-only operations unless explicitly included', () => {
+    const v1Entries = parseOpenApiHelpEntries({
+      paths: {
+        '/old_command': {
+          post: {
+            operationId: 'old_command',
+            summary: 'Deprecated old command',
+            description: 'Old command details.',
+          },
+        },
+      },
+    });
+    const v2Entries = parseOpenApiHelpEntries({
+      paths: {
+        '/api/v2/spacemolt/travel': {
+          post: {
+            operationId: 'spacemolt_travel',
+            summary: 'Travel',
+            description: 'Travel details.',
+          },
+        },
+      },
+    });
+
+    const defaultReport = buildCommandHelpReport({ v1Entries, v2Entries });
+
+    expect(defaultReport.commands.map((entry) => entry.command)).toEqual(['travel']);
+    expect(defaultReport.differenceCount).toBe(0);
+    expect(formatCommandHelpReport(defaultReport)).not.toContain('old_command');
+
+    const reportWithV1Only = buildCommandHelpReport({ v1Entries, v2Entries, includeV1Only: true });
+
+    expect(reportWithV1Only.differenceCount).toBe(0);
+    expect(reportWithV1Only.commands.map((entry) => entry.command)).toEqual(['travel', 'old_command']);
+    expect(formatCommandHelpReport(reportWithV1Only, { includeV1Only: true })).toContain(
+      'openapi-v2 operation [missing, intentional]',
+    );
+  });
+
   test('parses report script flags', () => {
     expect(
-      parseReportArgs(['--all', '--json', '--command', 'travel', '--include-intentional', '--fail-on-diff']),
+      parseReportArgs([
+        '--all',
+        '--json',
+        '--command',
+        'travel',
+        '--include-intentional',
+        '--include-v1-only',
+        '--fail-on-diff',
+      ]),
     ).toEqual({
       includeAll: true,
       includeIntentional: true,
+      includeV1Only: true,
       json: true,
       command: 'travel',
       failOnDiff: true,
@@ -164,6 +212,7 @@ describe('command help report', () => {
     expect(parseReportArgs(['--command=buy'])).toEqual({
       includeAll: false,
       includeIntentional: false,
+      includeV1Only: false,
       json: false,
       command: 'buy',
       failOnDiff: false,

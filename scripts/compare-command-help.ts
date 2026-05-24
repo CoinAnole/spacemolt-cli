@@ -42,7 +42,11 @@ function main(argv: string[]): number {
   }
 
   const command = args.command;
-  if (command && !v2Entries.some((entry) => entry.command === command || entry.aliases.includes(command))) {
+  if (
+    command &&
+    !v2Entries.some((entry) => entry.command === command || entry.aliases.includes(command)) &&
+    !(args.includeV1Only && v1Entries.some((entry) => entry.command === command || entry.aliases.includes(command)))
+  ) {
     console.error(`Unknown OpenAPI command: ${command}`);
     return 1;
   }
@@ -51,6 +55,7 @@ function main(argv: string[]): number {
     v1Entries,
     v2Entries,
     command,
+    includeV1Only: args.includeV1Only,
   });
 
   if (args.json) {
@@ -60,6 +65,7 @@ function main(argv: string[]): number {
       formatCommandHelpReport(report, {
         includeAll: args.includeAll,
         includeIntentional: args.includeIntentional,
+        includeV1Only: args.includeV1Only,
       }),
     );
   }

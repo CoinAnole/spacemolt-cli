@@ -22,10 +22,11 @@ export interface CommandHelpReportInput {
   v1Entries: OpenApiHelpEntry[];
   v2Entries: OpenApiHelpEntry[];
   command?: string;
+  includeV1Only?: boolean;
 }
 
 export interface CommandHelpDifference {
-  field: 'summary' | 'description' | 'openapi-v1 operation';
+  field: 'summary' | 'description' | 'openapi-v1 operation' | 'openapi-v2 operation';
   status: 'different' | 'missing' | 'match';
   signal: 'review' | 'intentional' | 'info' | 'match';
   openapiV1?: unknown;
@@ -46,11 +47,13 @@ export interface CommandHelpReport {
 export interface FormatCommandHelpReportOptions {
   includeAll?: boolean;
   includeIntentional?: boolean;
+  includeV1Only?: boolean;
 }
 
 export interface ReportArgs {
   includeAll: boolean;
   includeIntentional: boolean;
+  includeV1Only: boolean;
   json: boolean;
   command?: string;
   failOnDiff: boolean;
@@ -141,12 +144,12 @@ function buildAliasIndex(entries: OpenApiHelpEntry[]): Map<string, OpenApiHelpEn
   return index;
 }
 
-function findMatchingV1Entry(
-  v2Entry: OpenApiHelpEntry,
-  v1Index: Map<string, OpenApiHelpEntry>,
+function findMatchingEntry(
+  entryToMatch: OpenApiHelpEntry,
+  index: Map<string, OpenApiHelpEntry>,
 ): OpenApiHelpEntry | undefined {
-  for (const alias of v2Entry.aliases) {
-    const entry = v1Index.get(alias);
+  for (const alias of entryToMatch.aliases) {
+    const entry = index.get(alias);
     if (entry) return entry;
   }
   return undefined;
@@ -180,12 +183,13 @@ function countActionableDifferences(differences: CommandHelpDifference[]): numbe
 
 export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHelpReport {
   const v1Index = buildAliasIndex(input.v1Entries);
+  const v2Index = buildAliasIndex(input.v2Entries);
   const commands: CommandHelpCommandReport[] = [];
 
   for (const v2Entry of input.v2Entries) {
     if (input.command && v2Entry.command !== input.command && !v2Entry.aliases.includes(input.command)) continue;
 
-    const v1Entry = findMatchingV1Entry(v2Entry, v1Index);
+    const v1Entry = findMatchingEntry(v2Entry, v1Index);
     const differences: CommandHelpDifference[] = [];
 
     if (!v1Entry) {
@@ -200,6 +204,26 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
     differences.push(compareHelpField('summary', v1Entry?.summary, v2Entry.summary));
     differences.push(compareHelpField('description', v1Entry?.description, v2Entry.description));
     commands.push({ command: v2Entry.command, routeSignature: v2Entry.routeSignature, differences });
+  }
+
+  if (input.includeV1Only) {
+    for (const v1Entry of input.v1Entries) {
+      if (input.command && v1Entry.command !== input.command && !v1Entry.aliases.includes(input.command)) continue;
+      if (findMatchingEntry(v1Entry, v2Index)) continue;
+
+      commands.push({
+        command: v1Entry.command,
+        routeSignature: v1Entry.routeSignature,
+        differences: [
+          {
+            field: 'openapi-v2 operation',
+            status: 'missing',
+            signal: 'intentional',
+            openapiV1: v1Entry.command,
+          },
+        ],
+      });
+    }
   }
 
   return {
@@ -223,18 +247,25 @@ function shouldShowDifference(difference: CommandHelpDifference, includeAll: boo
   return includeAll || difference.signal === 'review';
 }
 
+function shouldShowV1OnlyDifference(difference: CommandHelpDifference, includeV1Only: boolean): boolean {
+  return includeV1Only && difference.field === 'openapi-v2 operation' && difference.signal === 'intentional';
+}
+
 export function formatCommandHelpReport(
   report: CommandHelpReport,
   options: FormatCommandHelpReportOptions = {},
 ): string {
   const includeAll = Boolean(options.includeAll);
   const includeIntentional = Boolean(options.includeIntentional);
+  const includeV1Only = Boolean(options.includeV1Only);
   const lines = ['OpenAPI Help Comparison', `Review differences: ${report.differenceCount}`];
 
   for (const commandReport of report.commands) {
     const visibleDifferences = commandReport.differences.filter(
       (difference) =>
-        shouldShowDifference(difference, includeAll) || (includeIntentional && difference.signal === 'intentional'),
+        shouldShowDifference(difference, includeAll) ||
+        (includeIntentional && difference.signal === 'intentional') ||
+        shouldShowV1OnlyDifference(difference, includeV1Only),
     );
     if (!includeAll && visibleDifferences.length === 0) continue;
 
@@ -258,6 +289,7 @@ export function parseReportArgs(args: string[]): ReportArgs {
   const parsed: ReportArgs = {
     includeAll: false,
     includeIntentional: false,
+    includeV1Only: false,
     json: false,
     failOnDiff: false,
   };
@@ -274,6 +306,10 @@ export function parseReportArgs(args: string[]): ReportArgs {
     }
     if (arg === '--include-intentional') {
       parsed.includeIntentional = true;
+      continue;
+    }
+    if (arg === '--include-v1-only') {
+      parsed.includeV1Only = true;
       continue;
     }
     if (arg === '--fail-on-diff') {

@@ -260,7 +260,7 @@ Compare v2 OpenAPI operation summaries and descriptions against `spacemolt-docs/
 bun run scripts/compare-command-help.ts
 ```
 
-Useful report flags include `--all` for every comparison row, `--json` for machine-readable output, `--command <name>` for one OpenAPI command, and `--fail-on-diff` for CI-style failure on review differences.
+Useful report flags include `--all` for every comparison row, `--json` for machine-readable output, `--command <name>` for one OpenAPI command, `--include-v1-only` for deprecated v1 operations missing from v2, and `--fail-on-diff` for CI-style failure on review differences.
 
 Use the live spec only when network access is intentional:
 
