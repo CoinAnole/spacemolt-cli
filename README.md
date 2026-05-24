@@ -254,6 +254,14 @@ Check command metadata against the cached spec:
 bun test src/api-sync.test.ts
 ```
 
+Compare curated CLI help against generated OpenAPI metadata and `spacemolt-docs/api.md`:
+
+```bash
+bun run scripts/compare-command-help.ts
+```
+
+Useful report flags include `--all` for every comparison row, `--json` for machine-readable output, `--include-intentional` for intentional differences, `--command <name>` for one curated command, and `--fail-on-diff` for CI-style failure on review differences.
+
 Use the live spec only when network access is intentional:
 
 ```bash
