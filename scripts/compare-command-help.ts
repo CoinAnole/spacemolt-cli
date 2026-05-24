@@ -3,9 +3,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  type ApiMdCommandMap,
   buildCommandHelpReport,
   formatCommandHelpReport,
+  type OpenApiV1DescriptionMap,
   parseApiMdCommands,
+  parseOpenApiV1Descriptions,
   parseReportArgs,
 } from '../src/command-help-report.ts';
 import { COMMANDS } from '../src/commands.ts';
@@ -21,7 +24,7 @@ function main(argv: string[]): number {
   }
 
   const apiMdPath = path.join(root, 'spacemolt-docs', 'api.md');
-  let apiMdCommands;
+  let apiMdCommands: ApiMdCommandMap;
   try {
     apiMdCommands = parseApiMdCommands(fs.readFileSync(apiMdPath, 'utf-8'));
   } catch (error) {
@@ -34,10 +37,25 @@ function main(argv: string[]): number {
     return 1;
   }
 
+  const openApiV1Path = path.join(root, 'spacemolt-docs', 'openapi-v1.json');
+  let openApiV1Descriptions: OpenApiV1DescriptionMap;
+  try {
+    openApiV1Descriptions = parseOpenApiV1Descriptions(JSON.parse(fs.readFileSync(openApiV1Path, 'utf-8')));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to parse ${openApiV1Path}: ${message}`);
+    return 1;
+  }
+  if (Object.keys(openApiV1Descriptions).length === 0) {
+    console.error(`Failed to parse ${openApiV1Path}: no operation descriptions found.`);
+    return 1;
+  }
+
   const report = buildCommandHelpReport({
     commands: COMMANDS,
     generatedRoutes: GENERATED_API_ROUTES,
     apiMdCommands,
+    openApiV1Descriptions,
     command: args.command,
   });
 

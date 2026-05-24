@@ -6,6 +6,7 @@ import {
   buildCommandHelpReport,
   formatCommandHelpReport,
   parseApiMdCommands,
+  parseOpenApiV1Descriptions,
   parseReportArgs,
 } from './command-help-report';
 import type { CommandConfig } from './commands';
@@ -128,6 +129,52 @@ describe('command help report', () => {
     expect(allText).toContain('dock');
     expect(allText).toContain('[match, match]');
     expect(allText).toContain('curated-only example');
+  });
+
+  test('includes OpenAPI v1 long descriptions in description comparisons', () => {
+    const openApiV1Descriptions = parseOpenApiV1Descriptions({
+      paths: {
+        '/travel': {
+          post: {
+            operationId: 'travel',
+            summary: 'Travel to a different Point of Interest (POI) within your current system',
+            description: 'Use get_system to see available POIs. Consumes fuel based on ship speed and distance.',
+          },
+        },
+      },
+    });
+
+    const report = buildCommandHelpReport({
+      commands: {
+        travel: {
+          description: 'Travel to a POI',
+          route: { tool: 'spacemolt', action: 'travel', method: 'POST' },
+        },
+      },
+      generatedRoutes: {
+        'POST /api/v2/spacemolt/travel': {
+          summary: 'travel',
+          route: { tool: 'spacemolt', action: 'travel', method: 'POST' },
+        },
+      },
+      apiMdCommands: {
+        travel: {
+          name: 'travel',
+          args: [{ name: 'target_poi', optional: false }],
+          description: 'Travel to a different POI',
+          category: 'Navigation',
+        },
+      },
+      openApiV1Descriptions,
+    });
+
+    expect(report.commands[0]?.differences.find((diff) => diff.field === 'description')).toMatchObject({
+      openapiV1: 'Use get_system to see available POIs. Consumes fuel based on ship speed and distance.',
+    });
+
+    expect(formatCommandHelpReport(report, { includeIntentional: true })).toContain(
+      'openapi-v1: Use get_system to see available POIs. Consumes fuel based on ship speed and distance.',
+    );
   });
 
   test('classifies intentional aliases separately from review-worthy description drift', () => {

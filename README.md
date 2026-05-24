@@ -254,7 +254,7 @@ Check command metadata against the cached spec:
 bun test src/api-sync.test.ts
 ```
 
-Compare curated CLI help against generated OpenAPI metadata and `spacemolt-docs/api.md`:
+Compare curated CLI help against generated OpenAPI metadata, `spacemolt-docs/openapi-v1.json`, and `spacemolt-docs/api.md`:
 
 ```bash
 bun run scripts/compare-command-help.ts

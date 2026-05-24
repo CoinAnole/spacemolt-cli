@@ -15,11 +15,23 @@ export interface ApiMdCommandEntry {
 }
 
 export type ApiMdCommandMap = Record<string, ApiMdCommandEntry>;
+export type OpenApiV1DescriptionMap = Record<string, string>;
+
+interface OpenApiV1Operation {
+  operationId?: unknown;
+  summary?: unknown;
+  description?: unknown;
+}
+
+interface OpenApiV1Document {
+  paths?: Record<string, Record<string, OpenApiV1Operation>>;
+}
 
 export interface CommandHelpReportInput {
   commands: Record<string, CommandConfig>;
   generatedRoutes: Record<string, GeneratedApiRoute>;
   apiMdCommands: ApiMdCommandMap;
+  openApiV1Descriptions?: OpenApiV1DescriptionMap;
   command?: string;
 }
 
@@ -30,6 +42,7 @@ export interface CommandHelpDifference {
   curated?: unknown;
   openapi?: unknown;
   apiMd?: unknown;
+  openapiV1?: unknown;
 }
 
 export interface CommandHelpCommandReport {
@@ -105,6 +118,35 @@ export function parseApiMdCommands(markdown: string): ApiMdCommandMap {
   return entries;
 }
 
+function commandNameFromV1Path(pathName: string): string | undefined {
+  const trimmed = pathName.replace(/^\/+|\/+$/g, '');
+  if (!trimmed || trimmed.includes('/')) return undefined;
+  return trimmed;
+}
+
+function addOpenApiV1Description(descriptions: OpenApiV1DescriptionMap, key: unknown, description: string): void {
+  if (typeof key !== 'string') return;
+  const normalizedKey = key.trim();
+  if (normalizedKey) descriptions[normalizedKey] = description;
+}
+
+export function parseOpenApiV1Descriptions(document: OpenApiV1Document): OpenApiV1DescriptionMap {
+  const descriptions: OpenApiV1DescriptionMap = {};
+
+  for (const [pathName, pathItem] of Object.entries(document.paths || {})) {
+    for (const operation of Object.values(pathItem || {})) {
+      if (!operation || typeof operation !== 'object' || typeof operation.description !== 'string') continue;
+      const description = operation.description.trim();
+      if (!description) continue;
+
+      addOpenApiV1Description(descriptions, commandNameFromV1Path(pathName), description);
+      addOpenApiV1Description(descriptions, operation.operationId, description);
+    }
+  }
+
+  return descriptions;
+}
+
 function normalizeText(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
   return String(value).trim().replace(/[—–]/g, '-').replace(/→/g, '->').replace(/\s+/g, ' ');
@@ -161,15 +203,25 @@ function findApiMdCommand(
   return apiMdCommands[command] ?? (generated?.summary ? apiMdCommands[generated.summary] : undefined);
 }
 
+function findOpenApiV1Description(
+  command: string,
+  generated: GeneratedApiRoute | undefined,
+  openApiV1Descriptions: OpenApiV1DescriptionMap | undefined,
+): string | undefined {
+  if (!openApiV1Descriptions) return undefined;
+  return openApiV1Descriptions[command] ?? (generated?.summary ? openApiV1Descriptions[generated.summary] : undefined);
+}
+
 function pushComparedDifference(
   differences: CommandHelpDifference[],
   field: string,
   curated: unknown,
   openapi: unknown,
   apiMd: unknown,
+  openapiV1: unknown,
   signalForDifference: CommandHelpDifference['signal'] = 'review',
 ): void {
-  const presentValues = [curated, openapi, apiMd].filter((value) => value !== undefined);
+  const presentValues = [curated, openapi, apiMd, openapiV1].filter((value) => value !== undefined);
   const allMatch = presentValues.length <= 1 || presentValues.every((value) => valuesMatch(value, presentValues[0]));
   differences.push({
     field,
@@ -178,6 +230,7 @@ function pushComparedDifference(
     curated,
     openapi,
     apiMd,
+    openapiV1,
   });
 }
 
@@ -221,6 +274,7 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
     const signature = routeSignature(config.route);
     const generated = input.generatedRoutes[signature];
     const apiMd = findApiMdCommand(command, generated, input.apiMdCommands);
+    const openapiV1Description = findOpenApiV1Description(command, generated, input.openApiV1Descriptions);
     const differences: CommandHelpDifference[] = [];
 
     if (!generated) {
@@ -242,6 +296,7 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
         command,
         openApiCommandName(generated),
         apiMd?.name,
+        undefined,
         'intentional',
       );
       pushComparedDifference(
@@ -250,6 +305,7 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
         config.description,
         generated?.summary,
         apiMd?.description,
+        openapiV1Description,
         descriptionSignal(config.description, generated?.summary, apiMd?.description),
       );
       pushComparedDifference(
@@ -258,6 +314,7 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
         usageArgNames(config.usage),
         generatedArgNames(generated),
         apiMd?.args.map((arg) => arg.name),
+        undefined,
         'intentional',
       );
     }
@@ -271,6 +328,7 @@ export function buildCommandHelpReport(input: CommandHelpReportInput): CommandHe
           `field.${field}.description`,
           curatedDescription,
           openApiDescription,
+          undefined,
           undefined,
         );
       }
@@ -330,6 +388,7 @@ export function formatCommandHelpReport(
       if (difference.curated !== undefined) lines.push(`    curated: ${formatValue(difference.curated)}`);
       if (difference.openapi !== undefined) lines.push(`    openapi: ${formatValue(difference.openapi)}`);
       if (difference.apiMd !== undefined) lines.push(`    api.md: ${formatValue(difference.apiMd)}`);
+      if (difference.openapiV1 !== undefined) lines.push(`    openapi-v1: ${formatValue(difference.openapiV1)}`);
     }
   }
 
