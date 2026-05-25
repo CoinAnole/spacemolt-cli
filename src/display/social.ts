@@ -49,8 +49,9 @@ export const socialFormatters = [
         ...message,
         timestamp_preview: formatTimestampPreview(message.timestamp ?? message.created_at ?? message.sent_at),
       }));
+      if (r.channel) emitLine(`${c.dim}channel ${r.channel}${c.reset}`);
       printCompactTable(
-        `Chat: ${r.channel || 'history'}`,
+        'Messages',
         rows,
         [
           ['Timestamp', ['timestamp_preview', 'timestamp', 'created_at', 'sent_at']],
@@ -75,8 +76,9 @@ export const socialFormatters = [
         created_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp ?? entry.date),
         entry_preview: firstLinePreview(entry.entry ?? entry.content ?? entry.text),
       }));
+      emitLine(`${c.dim}log captain${c.reset}`);
       printCompactTable(
-        "Captain's Log",
+        'Entries',
         rows,
         [
           ['Index', ['index']],
@@ -101,8 +103,9 @@ export const socialFormatters = [
         timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
         category: entry.category ?? category,
       }));
+      emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable(
-        `Action Log: ${category}`,
+        'Entries',
         rows,
         [
           ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
@@ -203,7 +206,7 @@ export const socialFormatters = [
         category,
         ...(isRecord(raw) ? raw : { description: String(raw) }),
       }));
-      printCompactTable('Facility Type Categories', categories, [
+      printCompactTable('Categories', categories, [
         ['Category', ['category']],
         ['Count', ['count']],
         ['Buildable', ['buildable']],
@@ -251,7 +254,7 @@ export const socialFormatters = [
       if (fleet.leader_name || fleet.leader_id) emitLine(`Leader: ${fleet.leader_name || fleet.leader_id}`);
       const members = (fleet.members || r.members) as Array<Record<string, unknown>> | undefined;
       if (Array.isArray(members)) {
-        printCompactTable('Fleet Members', members, [
+        printCompactTable('Members', members, [
           ['Name', ['username', 'name', 'player_name']],
           ['ID', ['player_id', 'id']],
           ['Ship', ['ship_class', 'ship_name']],

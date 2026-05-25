@@ -133,8 +133,8 @@ export function emitLines(lines: string[]): void {
   for (const line of lines) emitLine(line);
 }
 
-export function emitItemTable(items: Array<Record<string, unknown>>, indent = '  '): void {
-  const lines = formatItemTable(items, indent);
+export function emitItemTable(items: Array<Record<string, unknown>>, indent = '  ', title = 'Items'): void {
+  const lines = formatItemTable(items, indent, title);
   if (lines[0] !== undefined) lines[0] = `${c.bright}${lines[0]}${c.reset}`;
   emitLines(lines);
 }

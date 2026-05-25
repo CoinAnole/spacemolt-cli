@@ -305,7 +305,7 @@ describe('response renderer', () => {
 
     const output = capture.text();
     expect(exitCode).toBe(0);
-    expect(output).toContain('Items (2):');
+    expect(output).toContain('Cargo (2):');
     expect(output).toContain('Iron Ore');
     expect(output).toContain('Copper Ore');
     expect(output).not.toContain('Fuel Cell');
@@ -339,7 +339,7 @@ describe('response renderer', () => {
 
     const output = capture.text();
     expect(exitCode).toBe(0);
-    expect(output).toContain('Items (3):');
+    expect(output).toContain('Cargo (3):');
     expect(output).toContain('Fuel Cell');
     expect(output.indexOf('Iron Ore')).toBeLessThan(output.indexOf('Copper Ore'));
     expect(output.indexOf('Copper Ore')).toBeLessThan(output.indexOf('Fuel Cell'));
@@ -371,7 +371,7 @@ describe('response renderer', () => {
 
     const output = capture.text();
     expect(exitCode).toBe(0);
-    expect(output).toContain('Items (2):');
+    expect(output).toContain('Cargo (2):');
     expect(output).toContain('Iron Ore');
     expect(output).toContain('Copper Ore');
     expect(output).not.toContain('Fuel Cell');
@@ -402,7 +402,7 @@ describe('response renderer', () => {
 
     const output = capture.text();
     expect(exitCode).toBe(0);
-    expect(output).toContain('Items (1):');
+    expect(output).toContain('Cargo (1):');
     expect(output).toContain('Iron Ore');
     expect(output).not.toContain('Copper Ore');
   });

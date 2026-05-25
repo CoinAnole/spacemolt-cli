@@ -96,7 +96,7 @@ export const marketFormatters = [
     (r) => {
       if (!Array.isArray(r.listings)) return false;
       const listings = r.listings as Array<Record<string, unknown>>;
-      emitLine(`\n${c.bright}=== Market Listings ===${c.reset}`);
+      emitLine(`\n${c.bright}=== Listings ===${c.reset}`);
       if (r.buy_price_modifier) {
         emitLine(`Buy price modifier: ${r.buy_price_modifier}x`);
         emitLine(`Sell price modifier: ${r.sell_price_modifier}x`);
@@ -129,7 +129,7 @@ export const marketFormatters = [
       }
       emitLine(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n`);
       if (items.length > 1) {
-        printCompactTable('Market Summary', marketSummaryRows(items), [
+        printCompactTable('Items', marketSummaryRows(items), [
           ['Item', ['item_name']],
           ['ID', ['item_id']],
           ['Best Buy', ['best_buy']],
@@ -249,7 +249,7 @@ export const marketFormatters = [
     (r) => {
       const orders = firstArray(r, ['orders']);
       if (!orders) return false;
-      printCompactTable('Market Orders', orders, [
+      printCompactTable('Orders', orders, [
         ['Item', ['item_id', 'item_name']],
         ['ID', ['order_id', 'listing_id', 'id']],
         ['Side', ['side', 'type']],
@@ -266,7 +266,7 @@ export const marketFormatters = [
     (r) => {
       const commissions = firstArray(r, ['commissions']);
       if (!commissions) return false;
-      printCompactTable('Ship Commissions', commissions, [
+      printCompactTable('Commissions', commissions, [
         ['Ship', ['ship_name', 'ship_class_id']],
         ['Status', ['status']],
         ['Base', ['base_name', 'base_id']],

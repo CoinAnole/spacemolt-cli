@@ -273,7 +273,7 @@ export const genericFormatters = [
         passive_recipes_summary: summarizePassiveRecipes(ship.passive_recipes),
       }));
       printCompactTable(
-        'Ships',
+        'Items',
         rows,
         [
           ['Name', ['name', 'class_name']],
@@ -323,7 +323,7 @@ export const genericFormatters = [
       const columns = scalarColumns(recordRows, columnCandidates);
       if (recordRows.length > 0 && columns.length < 2) return false;
 
-      const title = typeof r.type === 'string' && key === 'items' ? titleForListKey(r.type) : titleForListKey(key);
+      const title = titleForListKey(key);
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]]);
       printMetadata(r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);

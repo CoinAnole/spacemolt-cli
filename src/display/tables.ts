@@ -28,8 +28,8 @@ export function truncateCell(value: string, maxCellWidth: number): string {
   return `${value.slice(0, maxCellWidth - 3)}...`;
 }
 
-export function formatItemTable(items: Array<Record<string, unknown>>, indent = '  '): string[] {
-  const lines = [`Items (${items.length}):`];
+export function formatItemTable(items: Array<Record<string, unknown>>, indent = '  ', title = 'Items'): string[] {
+  const lines = [`${title} (${items.length}):`];
   if (!items.length) {
     lines.push(`${indent}(Empty)`);
     return lines;

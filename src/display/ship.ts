@@ -71,7 +71,7 @@ export const shipFormatters = [
         const suffix = available !== undefined ? ` (${available} available)` : '';
         emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${suffix}\n`);
       }
-      printItemTable(cargo);
+      printItemTable(cargo, '  ', 'Cargo');
       return true;
     },
     { commands: ['get_cargo'], shapeFallback: true },

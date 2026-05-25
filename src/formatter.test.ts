@@ -759,7 +759,8 @@ describe('structuredContent formatters', () => {
     const { stdout, stderr } = captureStructuredOutput('get_chat_history', chatHistoryFixture);
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Chat: local ===');
+    expect(stdout).toContain('channel local');
+    expect(stdout).toContain('=== Messages ===');
     expect(stdout).toContain('Timestamp');
     expect(stdout).toContain('2026-05-23 15:04:05');
     expect(stdout).toContain('Ibis');
@@ -772,7 +773,8 @@ describe('structuredContent formatters', () => {
     const { stdout, stderr } = captureStructuredOutput('captains_log_list', captainsLogListFixture);
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Captain');
+    expect(stdout).toContain('log captain');
+    expect(stdout).toContain('=== Entries ===');
     expect(stdout).toContain('Index');
     expect(stdout).toContain('2026-05-23 15:04:05');
     expect(stdout).toContain('Found an old beacon.');
@@ -784,7 +786,8 @@ describe('structuredContent formatters', () => {
     const { stdout, stderr } = captureStructuredOutput('get_action_log', actionLogFixture);
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Action Log: combat ===');
+    expect(stdout).toContain('category combat');
+    expect(stdout).toContain('=== Entries ===');
     expect(stdout).toContain('Timestamp');
     expect(stdout).toContain('2026-05-23 15:04:05');
     expect(stdout).toContain('Destroyed pirate skiff near Earth.');
@@ -810,7 +813,8 @@ describe('structuredContent formatters', () => {
 
     expect(exitCode).toBe(0);
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Notifications (2) ===');
+    expect(stdout).toContain('count 2');
+    expect(stdout).toContain('=== Notifications ===');
     expect(stdout).toContain('2026-05-23 18:59:39');
     expect(stdout).toContain('system');
     expect(stdout).toContain('Server maintenance scheduled.');
@@ -845,7 +849,7 @@ describe('structuredContent formatters', () => {
       === Market at earth_station ===
 
 
-      === Market Summary ===
+      === Items ===
 
         Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
         ----------+-----------+----------+-----------+-----------+-----------
@@ -905,7 +909,7 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Market Listings ===');
+    expect(stdout).toContain('=== Listings ===');
     expect(stdout).not.toContain('=== Ships for Sale');
   });
 
@@ -975,10 +979,102 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Ships ===');
+    expect(stdout).toContain('=== Items ===');
     expect(stdout).toContain('T4 Ore Refinery');
     expect(stdout).toContain('passive_refine_iron_ore, passive_refine_solar_crystal');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('table output keeps structured collection names stable', () => {
+    const cases: Array<{
+      command: string;
+      fixture: Record<string, unknown>;
+      expected: string;
+      unexpected?: string;
+    }> = [
+      {
+        command: 'get_cargo',
+        fixture: { cargo: [{ item_id: 'ore_iron', quantity: 4 }] },
+        expected: 'Cargo (1):',
+        unexpected: 'Items (1):',
+      },
+      {
+        command: 'view_market',
+        fixture: viewMarketFixture,
+        expected: '=== Items ===',
+        unexpected: '=== Market Summary ===',
+      },
+      {
+        command: 'view_orders',
+        fixture: { orders: [{ order_id: 'order-1', item_id: 'ore_iron', side: 'buy', quantity: 5 }] },
+        expected: '=== Orders ===',
+        unexpected: '=== Market Orders ===',
+      },
+      {
+        command: 'commission_status',
+        fixture: { commissions: [{ commission_id: 'commission-1', ship_class_id: 'prospector' }] },
+        expected: '=== Commissions ===',
+        unexpected: '=== Ship Commissions ===',
+      },
+      {
+        command: 'get_trades',
+        fixture: { listings: [{ listing_id: 'listing-1', item_id: 'ore_iron', quantity: 5, price_each: 12 }] },
+        expected: '=== Listings ===',
+        unexpected: '=== Market Listings ===',
+      },
+      {
+        command: 'catalog',
+        fixture: {
+          items: [{ id: 't4_ore_refinery', name: 'T4 Ore Refinery', type: 'ship' }],
+          type: 'ships',
+        },
+        expected: '=== Items ===',
+        unexpected: '=== Ships ===',
+      },
+      {
+        command: 'get_chat_history',
+        fixture: chatHistoryFixture,
+        expected: '=== Messages ===',
+        unexpected: '=== Chat: local ===',
+      },
+      {
+        command: 'captains_log_list',
+        fixture: captainsLogListFixture,
+        expected: '=== Entries ===',
+        unexpected: "=== Captain's Log ===",
+      },
+      {
+        command: 'get_action_log',
+        fixture: actionLogFixture,
+        expected: '=== Entries ===',
+        unexpected: '=== Action Log: combat ===',
+      },
+      {
+        command: 'notifications',
+        fixture: notificationsFixture,
+        expected: '=== Notifications ===',
+        unexpected: '=== Notifications (2) ===',
+      },
+      {
+        command: 'facility_types',
+        fixture: { categories: { production: { count: 2, buildable: true } }, total: 2 },
+        expected: '=== Categories ===',
+        unexpected: '=== Facility Type Categories ===',
+      },
+      {
+        command: 'fleet_status',
+        fixture: { fleet: { fleet_id: 'fleet-1', members: [{ username: 'Ibis', player_id: 'player-1' }] } },
+        expected: '=== Members ===',
+        unexpected: '=== Fleet Members ===',
+      },
+    ];
+
+    for (const { command, fixture, expected, unexpected } of cases) {
+      const { stdout, stderr } = captureStructuredOutput(command, fixture);
+      expect(stderr, command).toBe('');
+      expect(stdout, command).toContain(expected);
+      if (unexpected) expect(stdout, command).not.toContain(unexpected);
+    }
   });
 
   test('catalog recipe responses show inputs outputs and craftability markers', () => {
@@ -1038,7 +1134,7 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Ships ===');
+    expect(stdout).toContain('=== Items ===');
     expect(stdout).toContain('=== Passive Recipes ===');
     expect(stdout).toContain('Passive Iron Refining');
     expect(stdout).toContain('ship passive');
@@ -1324,7 +1420,7 @@ describe('structuredContent formatters', () => {
       === Cargo ===
       Used: 50/100 (50 available)
 
-      Items (1):
+      Cargo (1):
 
         Name     | ID       | Qty | Unit Size
         ---------+----------+-----+----------
@@ -1396,7 +1492,7 @@ describe('structuredContent formatters', () => {
       ,
         "facility_types": 
       "
-      === Facility Type Categories ===
+      === Categories ===
 
         Category       | Count | Buildable | Description                   
         ---------------+-------+-----------+-------------------------------
@@ -1414,7 +1510,7 @@ describe('structuredContent formatters', () => {
       ID: fleet-1
       Leader: Marlowe
 
-      === Fleet Members ===
+      === Members ===
 
         Name    | ID       | Ship       | Location | Status
         --------+----------+------------+----------+-------
@@ -1430,7 +1526,7 @@ describe('structuredContent formatters', () => {
       ,
         "market_orders": 
       "
-      === Market Orders ===
+      === Orders ===
 
         Item     | ID      | Side | Qty | Price
         ---------+---------+------+-----+------
@@ -1520,7 +1616,7 @@ describe('structuredContent formatters', () => {
       === Market at earth_station ===
 
 
-      === Market Summary ===
+      === Items ===
 
         Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
         ----------+-----------+----------+-----------+-----------+-----------

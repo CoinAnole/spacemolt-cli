@@ -74,8 +74,9 @@ export const notificationFormatters = [
         message_preview: formatNotificationMessage(notification),
       }));
 
+      emitLine(`${c.dim}count ${count}${c.reset}`);
       printCompactTable(
-        `Notifications (${count})`,
+        'Notifications',
         rows,
         [
           ['Timestamp', ['timestamp_preview', 'timestamp', 'created_at']],
