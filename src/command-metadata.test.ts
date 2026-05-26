@@ -157,16 +157,86 @@ function zshTopLevelCommandWords(completion: string): string[] {
 
 function zshFunctionCommandWords(completion: string, functionName: string): string[] {
   const escapedFunctionName = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = completion.match(
-    new RegExp(`${escapedFunctionName}\\(\\) \\{[\\s\\S]*?^\\s*commands=\\(([^)]*)\\)`, 'm'),
-  );
-  const body = match?.[1] || '';
-  const words: string[] = [];
-  for (const quoted of body.matchAll(/'((?:[^'\\]|\\.)*)'/g)) {
-    const word = quoted[1]?.match(/^([^[]+)/)?.[1];
-    if (word) words.push(word);
+  const match = completion.match(new RegExp(`${escapedFunctionName}\\(\\) \\{[\\s\\S]*?^\\s*commands=\\(`, 'm'));
+  if (!match || match.index === undefined) return [];
+
+  const bodyStart = match.index + match[0].length;
+  const bodyEnd = findZshArrayEnd(completion, bodyStart);
+  if (bodyEnd === -1) return [];
+
+  return parseZshDescribedWords(completion.slice(bodyStart, bodyEnd));
+}
+
+function findZshArrayEnd(source: string, start: number): number {
+  let inSingleQuote = false;
+
+  for (let index = start; index < source.length; index++) {
+    const char = source[index];
+    if (char === "'") {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+    if (!inSingleQuote && char === ')') return index;
   }
+
+  return -1;
+}
+
+function parseZshDescribedWords(body: string): string[] {
+  const words: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+
+  const finishWord = () => {
+    if (!current) return;
+    const word = zshDescribedWordName(current);
+    if (word) words.push(word);
+    current = '';
+  };
+
+  for (let index = 0; index < body.length; index++) {
+    const char = body[index];
+    const next = body[index + 1];
+
+    if (!inSingleQuote && /\s/.test(char)) {
+      finishWord();
+      continue;
+    }
+
+    if (char === "'") {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+
+    if (!inSingleQuote && char === '\\' && next === "'") {
+      current += "'";
+      index++;
+      continue;
+    }
+
+    current += char;
+  }
+
+  finishWord();
   return words;
+}
+
+function zshDescribedWordName(describedWord: string): string {
+  let name = '';
+
+  for (let index = 0; index < describedWord.length; index++) {
+    const char = describedWord[index];
+    const next = describedWord[index + 1];
+    if (char === '\\' && next) {
+      name += next;
+      index++;
+      continue;
+    }
+    if (char === '[') return name;
+    name += char;
+  }
+
+  return name;
 }
 
 function fishTopLevelCommandWords(completion: string): string[] {
