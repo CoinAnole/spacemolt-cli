@@ -1,0 +1,63 @@
+name: Update API metadata
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-api-metadata
+  cancel-in-progress: false
+
+jobs:
+  update-api-metadata:
+    name: Update API metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+          submodules: recursive
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Update spacemolt-docs submodule
+        run: git submodule update --remote --checkout spacemolt-docs
+
+      - name: Generate API metadata
+        run: bun run generate:api
+
+      - name: Read gameserver version
+        id: version
+        run: |
+          version="$(sed -n "s/^export const GENERATED_API_GAMESERVER_VERSION = '\([^']*\)';$/\1/p" src/generated/api-commands.ts)"
+          if [ -z "$version" ]; then
+            echo "Failed to read GENERATED_API_GAMESERVER_VERSION" >&2
+            exit 1
+          fi
+          echo "gameserver_version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Test generated API metadata
+        run: bun test src/api-sync.test.ts
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add spacemolt-docs src/generated/api-commands.ts
+          if git diff --cached --quiet; then
+            echo "No API metadata changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ steps.version.outputs.gameserver_version }}"
+          git push origin HEAD:${{ github.event.repository.default_branch }}
