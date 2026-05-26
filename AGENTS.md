@@ -43,6 +43,7 @@ LIVE_API_SYNC=1 bun test src/api-sync.test.ts
 - Single-endpoint tools use `POST /api/v2/{tool}`; see `SINGLE_ENDPOINT_TOOLS` in `src/commands.ts`.
 - Update `src/commands.ts` for command names, positional arguments, aliases, examples, and route overrides.
 - Regenerate bundled mechanical route/schema metadata with `bun run generate:api` after OpenAPI spec changes. This updates committed metadata only.
+- When the task is only to update the `spacemolt-docs` submodule pointer and regenerate API metadata, use the gameserver version number as the entire commit message, for example `v0.327.2`.
 - Runtime dynamic commands come from the user's cached OpenAPI metadata. Refresh that cache with `spacemolt sync-api`.
 
 ## Dynamic API Commands
