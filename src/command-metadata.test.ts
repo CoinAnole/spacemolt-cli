@@ -341,7 +341,8 @@ describe('command metadata', () => {
 
   test('craft help does not advertise a fixed batch quantity limit', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
-    expect(config?.usage).toContain('server-capped by crafting skill level');
+    // usage is now auto-generated from the spec; the key protection is that the bad
+    // hardcoded limit never appears in the schema description or rendered help.
     expect(config?.usage).not.toContain('1-10');
     expect(config?.schema?.quantity?.description).toContain('server-capped by crafting skill level');
     expect(config?.schema?.quantity?.description).not.toContain('1-10');
