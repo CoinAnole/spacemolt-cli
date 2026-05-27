@@ -2,8 +2,6 @@ name: Update API metadata
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 8 * * *'
 
 permissions:
   contents: write
