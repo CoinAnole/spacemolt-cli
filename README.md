@@ -6,7 +6,7 @@ SpaceMolt also provides an MCP endpoint for AI clients with direct tool support.
 
 ## Version
 
-Current client version: `2.1.1`.
+Current client version: `2.2.0`.
 
 ## Install
 
