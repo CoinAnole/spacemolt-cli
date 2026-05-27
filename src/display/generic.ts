@@ -1,3 +1,4 @@
+import { catalogTruncationWarning } from '../catalog-pagination.ts';
 import { c, emitLine, firstArray, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
@@ -172,6 +173,11 @@ function printMetadata(result: Record<string, unknown>): void {
   if (parts.length) emitLine(`${c.dim}${parts.join(' | ')}${c.reset}`);
 }
 
+function printCatalogTruncationWarning(command: string | undefined, result: Record<string, unknown>): void {
+  const warning = catalogTruncationWarning(command ?? '', result);
+  if (warning) emitLine(`${c.yellow}${warning}${c.reset}`);
+}
+
 function titleForListKey(key: string): string {
   return key
     .split('_')
@@ -290,6 +296,7 @@ export const genericFormatters = [
       const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
       if (passiveRecipeDetails) printRecipeRows('Passive Recipes', passiveRecipeDetails, { passive: true });
       printMetadata(r);
+      printCatalogTruncationWarning('catalog', r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
@@ -302,6 +309,7 @@ export const genericFormatters = [
       if (!recipes) return false;
       printRecipeRows('Recipes', recipes);
       printMetadata(r);
+      printCatalogTruncationWarning('catalog', r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
@@ -310,7 +318,7 @@ export const genericFormatters = [
 
   // Generic table fallback for common list-shaped responses.
   formatter(
-    (r) => {
+    (r, command) => {
       const matches = GENERIC_LIST_KEYS.filter((key) => Array.isArray(r[key]));
       if (matches.length !== 1) return false;
 
@@ -326,6 +334,7 @@ export const genericFormatters = [
       const title = titleForListKey(key);
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]]);
       printMetadata(r);
+      printCatalogTruncationWarning(command, r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },

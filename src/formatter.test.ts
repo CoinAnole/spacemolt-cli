@@ -954,7 +954,35 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Items ===');
     expect(stdout).toContain('Antimatter Torpedoes');
+    expect(stdout).toContain('(Showing 2 of 537 items. Use --page 2 for more results.)');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('catalog recipe responses warn when pagination hides more results', () => {
+    const { stdout, stderr } = captureStructuredOutput('catalog', {
+      recipes: [{ id: 'repair_patch', name: 'Repair Patch' }],
+      page: 1,
+      page_size: 20,
+      total: 3,
+      total_pages: 2,
+      type: 'recipes',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Recipes ===');
+    expect(stdout).toContain('(Showing 1 of 3 recipes. Use --page 2 for more results.)');
+  });
+
+  test('--structured catalog output keeps JSON stdout and writes truncation warning to stderr', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: catalogItemsFixture },
+      { structured: true },
+      { command: 'catalog', displayCommand: 'catalog' },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout)).toEqual(catalogItemsFixture);
+    expect(stderr).toBe('(Showing 2 of 537 items. Use --page 2 for more results.)');
   });
 
   test('catalog ship responses include passive recipe ids', () => {

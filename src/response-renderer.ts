@@ -1,4 +1,5 @@
 import { defaultClient, type SpaceMoltClient } from './api.ts';
+import { catalogTruncationWarning } from './catalog-pagination.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import type { CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
@@ -95,6 +96,12 @@ export async function renderResponse(
   if ((isJson || options.structured) && !hasProjection) {
     if (options.structured && response.structuredContent) {
       const out = writer?.out.bind(writer) ?? console.log;
+      const warning =
+        options.quiet || isJson ? undefined : catalogTruncationWarning(displayCommand, response.structuredContent);
+      if (warning) {
+        const err = writer?.err.bind(writer) ?? console.error;
+        err(warning);
+      }
       out(
         JSON.stringify(
           limitStructuredNearbyForOutput(displayCommand, response.structuredContent),

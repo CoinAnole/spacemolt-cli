@@ -195,8 +195,8 @@ function parseZshDescribedWords(body: string): string[] {
   };
 
   for (let index = 0; index < body.length; index++) {
-    const char = body[index];
-    const next = body[index + 1];
+    const char = body.charAt(index);
+    const next = body.charAt(index + 1);
 
     if (!inSingleQuote && /\s/.test(char)) {
       finishWord();
@@ -225,8 +225,8 @@ function zshDescribedWordName(describedWord: string): string {
   let name = '';
 
   for (let index = 0; index < describedWord.length; index++) {
-    const char = describedWord[index];
-    const next = describedWord[index + 1];
+    const char = describedWord.charAt(index);
+    const next = describedWord.charAt(index + 1);
     if (char === '\\' && next) {
       name += next;
       index++;
