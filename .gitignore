@@ -43,8 +43,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # official client source
 official-client
 
-# Coding Agents
+# Coding agent / AI scratch directories (local only, never commit)
+# These contain transient plans, specs, research notes, etc. generated during development.
+# A docs/README.md is explicitly allowed (and committed) to document this policy.
 .kilo
 .codex
-docs
-reports
+docs/**
+!docs/README.md
+reports/**
