@@ -641,6 +641,32 @@ describe('SpaceMoltClient', () => {
     expect(calls).toHaveLength(1);
   });
 
+  test('login retries with a fresh session when the saved session expired on the server', async () => {
+    const store = createStore(session({ id: 'sess_stale' }));
+    const { client, calls } = createClient(
+      [
+        response({ error: { code: 'session_expired', message: 'expired' } }),
+        response({
+          structuredContent: { player: { id: 'player_login' } },
+          session: {
+            id: 'sess_new',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }),
+      ],
+      store,
+    );
+
+    const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+
+    expect(result.error).toBeUndefined();
+    expect(calls.map((call) => call.options?.sessionId)).toEqual(['sess_stale', 'sess_new']);
+    expect(store.current?.username).toBe('Pilot');
+    expect(store.current?.password).toBe('secret');
+    expect(store.current?.player_id).toBe('player_login');
+  });
+
   test('register skips profile auto-auth', async () => {
     const store = createStore();
     store.authError = response({ error: { code: 'invalid_credentials', message: 'bad profile' } });

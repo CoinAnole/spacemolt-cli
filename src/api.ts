@@ -18,6 +18,13 @@ const SESSION_ERROR_CODES = new Set(
     .map(([code]) => code),
 );
 
+const SESSION_BOOTSTRAP_ERROR_CODES = new Set([
+  'not_authenticated',
+  'session_expired',
+  'session_invalid',
+  'invalid_session',
+]);
+
 function appendQueryPayload(url: string, payload?: Record<string, unknown>): string {
   if (!payload || Object.keys(payload).length === 0) return url;
 
@@ -145,6 +152,15 @@ export class SpaceMoltClient {
       const data = await this.sendRequest(session, url, method, payload, sessionProfile);
 
       if (data.error && SESSION_ERROR_CODES.has(data.error.code)) {
+        if (
+          (command === 'login' || command === 'register') &&
+          SESSION_BOOTSTRAP_ERROR_CODES.has(data.error.code) &&
+          sessionRecoveryAttempts < this.maxSessionRecoveryAttempts
+        ) {
+          sessionRecoveryAttempts += 1;
+          session = await this.sessionStore.createSession(sessionProfile);
+          continue;
+        }
         if (
           command === 'login' ||
           command === 'register' ||
