@@ -205,6 +205,10 @@ describe('normalizeParsedPayload', () => {
   });
 
   test('new feature command aliases normalize to API fields', () => {
+    expect(normalizeParsedPayload('name_drone', { drone_id: 'drone_1', name: 'Scout One' })).toEqual({
+      id: 'drone_1',
+      text: 'Scout One',
+    });
     expect(normalizeParsedPayload('upload_drone', { drone_id: 'drone_1', script: 'scan' })).toEqual({
       id: 'drone_1',
       text: 'scan',
@@ -775,6 +779,10 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   test('new explicit drone commands parse positional payloads', () => {
     expect(parseOk(['list_drones']).payload).toEqual({});
     expect(parseOk(['get_drone', 'drone_1']).payload.drone_id).toBe('drone_1');
+    expect(parseOk(['name_drone', 'drone_1', 'Scout One']).payload).toEqual({
+      drone_id: 'drone_1',
+      name: 'Scout One',
+    });
     expect(parseOk(['upload_drone', 'drone_1', 'scan', 'asteroids']).payload).toEqual({
       drone_id: 'drone_1',
       script: 'scan asteroids',

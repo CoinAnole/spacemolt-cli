@@ -102,6 +102,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   load_drone: 'Load a drone from cargo into your drone bay.',
   loot_wreck: 'Loot items and modules from a wreck.',
   modify_order: 'Change the price on an existing order.',
+  name_drone: 'Set or clear a display name for a drone.',
   name_ship: 'Set or clear a custom name for your active ship.',
   petition: 'Send a petition to an empire government.',
   read_note: 'Read a note document contents.',

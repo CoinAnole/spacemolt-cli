@@ -273,6 +273,20 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       drone_item_id: 'id',
     },
   },
+  name_drone: {
+    usage: '<drone_id> <name>',
+    description: 'Set or clear a display name for a drone.',
+    example: 'spacemolt name_drone <drone_id> "Scout One"',
+    discoverWith: ['list_drones', 'get_drone'],
+    seeAlso: ['get_drone', 'upload_drone'],
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/name',
+    positionals: ['drone_id', 'name'],
+    aliases: {
+      drone_id: 'id',
+      name: 'text',
+    },
+  },
   unload_drone: {
     usage: '<drone_id>',
     category: 'Drones',
