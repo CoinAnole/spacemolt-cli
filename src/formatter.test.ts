@@ -894,6 +894,20 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Order ID: order-sell-1');
   });
 
+  test('does not format cancelled orders as created sell orders', () => {
+    const { stdout, stderr } = captureStructuredOutput('cancel_order', {
+      action: 'cancel_order',
+      order_id: 'order-sell-1',
+      message: 'Order cancelled.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Sell Order Created ===');
+    expect(stdout).not.toContain('Item: unknown');
+    expect(stdout).toContain('cancel_order');
+    expect(stdout).toContain('order-sell-1');
+  });
+
   test('prefers command-scoped formatters before shape fallbacks', () => {
     const { stdout, stderr } = captureStructuredOutput('get_trades', {
       listings: [

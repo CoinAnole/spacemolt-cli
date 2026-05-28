@@ -179,7 +179,8 @@ export const marketFormatters = [
     'create_sell_order',
     ['listing_fee', 'order_id'],
     (r) => {
-      if (r.action !== 'create_sell_order' && r.order_id === undefined && r.listing_fee === undefined) return false;
+      if (r.action && r.action !== 'create_sell_order' && r.action !== 'create_buy_order') return false;
+      if (r.order_id === undefined && r.listing_fee === undefined) return false;
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
       const quantity = r.quantity_listed ?? r.quantity;
