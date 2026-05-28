@@ -666,6 +666,35 @@ describe('SpaceMoltClient', () => {
     expect(store.current?.player_id).toBe('player_login');
   });
 
+  test('register starts with a fresh session when the saved session is stale', async () => {
+    const store = createStore(session({ id: 'sess_stale' }));
+    const { client, calls } = createClient(
+      [
+        response({
+          structuredContent: { password: 'generated', player_id: 'player_register' },
+          session: {
+            id: 'sess_new',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }),
+      ],
+      store,
+    );
+
+    const result = await client.execute('register', {
+      username: 'NewPilot',
+      empire: 'solarian',
+      registration_code: 'code',
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(calls.map((call) => call.options?.sessionId)).toEqual(['sess_new']);
+    expect(store.current?.username).toBe('NewPilot');
+    expect(store.current?.password).toBe('generated');
+    expect(store.current?.player_id).toBe('player_register');
+  });
+
   test('register skips profile auto-auth', async () => {
     const store = createStore();
     store.authError = response({ error: { code: 'invalid_credentials', message: 'bad profile' } });
