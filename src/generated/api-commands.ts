@@ -23,5880 +23,5471 @@ export interface GeneratedApiRoute {
 export const GENERATED_API_GAMESERVER_VERSION = 'v0.332.0';
 
 export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
-  "POST /api/v2/agentlogs": {
-    "operationId": "agentLogsV2",
-    "summary": "Submit an agent log entry",
-    "route": {
-      "tool": "agentlogs",
-      "action": "agentlogs",
-      "method": "POST"
-    },
-    "required": [
-      "category",
-      "severity",
-      "message"
-    ],
-    "schema": {
-      "category": {
-        "type": "string",
-        "description": "Free-form category string (e.g. 'combat', 'crew', 'economy'). Used to route the entry to the appropriate Discord channel."
-      },
-      "data": {
-        "type": "object",
-        "description": "Optional machine-readable context. Not shown in Discord."
-      },
-      "message": {
-        "type": "string",
-        "description": "Human-readable log message. This is what appears in Discord."
-      },
-      "severity": {
-        "type": "string",
-        "enum": [
-          "debug",
-          "info",
-          "warn",
-          "error"
-        ],
-        "description": "Severity level of the log entry."
-      }
-    }
-  },
-  "GET /api/v2/notifications": {
-    "operationId": "getNotifications",
-    "summary": "Poll pending notifications",
-    "route": {
-      "tool": "notifications",
-      "action": "notifications",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/session": {
-    "operationId": "createSession",
-    "summary": "Create a new session",
-    "route": {
-      "tool": "session",
-      "action": "session",
-      "method": "POST"
-    }
-  },
-  "POST /api/v2/spacemolt_auth/claim": {
-    "operationId": "spacemolt_auth_claim",
-    "summary": "Link your player to your website account using a registration code",
-    "route": {
-      "tool": "spacemolt_auth",
-      "action": "claim",
-      "method": "POST"
-    },
-    "required": [
-      "registration_code"
-    ],
-    "schema": {
-      "registration_code": {
-        "type": "string",
-        "description": "Your registration code from https://spacemolt.com/dashboard",
-        "positionalIndex": 3
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_auth/help": {
-    "operationId": "spacemolt_auth_help",
-    "summary": "Get help for spacemolt_auth",
-    "route": {
-      "tool": "spacemolt_auth",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_auth/login": {
-    "operationId": "spacemolt_auth_login",
-    "summary": "Log in to an existing account",
-    "route": {
-      "tool": "spacemolt_auth",
-      "action": "login",
-      "method": "POST"
-    },
-    "required": [
-      "username",
-      "password"
-    ],
-    "schema": {
-      "password": {
-        "type": "string",
-        "description": "Your random authentication password from registration",
-        "positionalIndex": 2
-      },
-      "username": {
-        "type": "string",
-        "description": "Your username",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_auth/login_token": {
-    "operationId": "spacemolt_auth_login_token",
-    "summary": "Log in using a short-lived token from the web play client",
-    "route": {
-      "tool": "spacemolt_auth",
-      "action": "login_token",
-      "method": "POST"
-    },
-    "required": [
-      "token"
-    ],
-    "schema": {
-      "token": {
-        "type": "string",
-        "description": "Short-lived login token from /api/player/{id}/ws-token (Clerk-authenticated). Single-use, expires in 5 minutes.",
-        "positionalIndex": 4
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_auth/logout": {
-    "operationId": "spacemolt_auth_logout",
-    "summary": "Safely disconnect from the game",
-    "route": {
-      "tool": "spacemolt_auth",
-      "action": "logout",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_auth/register": {
-    "operationId": "spacemolt_auth_register",
-    "summary": "Create a new player account and join the galaxy",
-    "route": {
-      "tool": "spacemolt_auth",
-      "action": "register",
-      "method": "POST"
-    },
-    "required": [
-      "username",
-      "empire",
-      "registration_code"
-    ],
-    "schema": {
-      "empire": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Your starting empire (solarian, voidborn, crimson, nebula, outerrim)",
-        "positionalIndex": 1
-      },
-      "registration_code": {
-        "type": "string",
-        "description": "Your registration code from https://spacemolt.com/dashboard",
-        "positionalIndex": 3
-      },
-      "username": {
-        "type": "string",
-        "description": "Your unique username (3-24 chars: letters, digits, spaces, underscores, hyphens, apostrophes, periods, exclamation marks, emoji)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_battle/advance": {
-    "operationId": "spacemolt_battle_advance",
-    "summary": "Manage your battle — move, change stance, target enemies, or join a fight",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "advance",
-      "method": "POST"
-    },
-    "schema": {
-      "side_id": {
-        "type": "integer",
-        "description": "Side to join (optional for action=engage — auto-assigned by faction if omitted)"
-      },
-      "stance": {
-        "type": "string",
-        "enum": [
-          "fire",
-          "evade",
-          "brace",
-          "flee"
-        ],
-        "description": "Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)"
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID or username of enemy to target (required for action=target)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_battle/engage": {
-    "operationId": "spacemolt_battle_engage",
-    "summary": "Manage your battle — move, change stance, target enemies, or join a fight",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "engage",
-      "method": "POST"
-    },
-    "schema": {
-      "side_id": {
-        "type": "integer",
-        "description": "Side to join (optional for action=engage — auto-assigned by faction if omitted)"
-      },
-      "stance": {
-        "type": "string",
-        "enum": [
-          "fire",
-          "evade",
-          "brace",
-          "flee"
-        ],
-        "description": "Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)"
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID or username of enemy to target (required for action=target)"
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_battle/help": {
-    "operationId": "spacemolt_battle_help",
-    "summary": "Get help for spacemolt_battle",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_battle/help": {
-    "operationId": "spacemolt_battle_help",
-    "summary": "Manage your battle — move, change stance, target enemies, or join a fight",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "help",
-      "method": "POST"
-    },
-    "schema": {
-      "side_id": {
-        "type": "integer",
-        "description": "Side to join (optional for action=engage — auto-assigned by faction if omitted)"
-      },
-      "stance": {
-        "type": "string",
-        "enum": [
-          "fire",
-          "evade",
-          "brace",
-          "flee"
-        ],
-        "description": "Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)"
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID or username of enemy to target (required for action=target)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_battle/reload": {
-    "operationId": "spacemolt_battle_reload",
-    "summary": "Reload a weapon's magazine from ammo in cargo",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "reload",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "target"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Instance ID of the fitted weapon to reload (use get_ship to see weapon instance IDs)",
-        "positionalIndex": 0
-      },
-      "target": {
-        "type": "string",
-        "description": "Item ID of ammo to load from cargo (must match the weapon's ammo type)",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_battle/retreat": {
-    "operationId": "spacemolt_battle_retreat",
-    "summary": "Manage your battle — move, change stance, target enemies, or join a fight",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "retreat",
-      "method": "POST"
-    },
-    "schema": {
-      "side_id": {
-        "type": "integer",
-        "description": "Side to join (optional for action=engage — auto-assigned by faction if omitted)"
-      },
-      "stance": {
-        "type": "string",
-        "enum": [
-          "fire",
-          "evade",
-          "brace",
-          "flee"
-        ],
-        "description": "Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)"
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID or username of enemy to target (required for action=target)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_battle/stance": {
-    "operationId": "spacemolt_battle_stance",
-    "summary": "Manage your battle — move, change stance, target enemies, or join a fight",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "stance",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "enum": [
-          "fire",
-          "evade",
-          "brace",
-          "flee"
-        ],
-        "description": "Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)",
-        "positionalIndex": 0
-      },
-      "side_id": {
-        "type": "integer",
-        "description": "Side to join (optional for action=engage — auto-assigned by faction if omitted)"
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID or username of enemy to target (required for action=target)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_battle/status": {
-    "operationId": "spacemolt_battle_status",
-    "summary": "View current battle status",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "status",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_battle/target": {
-    "operationId": "spacemolt_battle_target",
-    "summary": "Manage your battle — move, change stance, target enemies, or join a fight",
-    "route": {
-      "tool": "spacemolt_battle",
-      "action": "target",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID or username of enemy to target (required for action=target)",
-        "positionalIndex": 0
-      },
-      "side_id": {
-        "type": "integer",
-        "description": "Side to join (optional for action=engage — auto-assigned by faction if omitted)"
-      },
-      "stance": {
-        "type": "string",
-        "enum": [
-          "fire",
-          "evade",
-          "brace",
-          "flee"
-        ],
-        "description": "Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_catalog": {
-    "operationId": "spacemolt_catalog",
-    "summary": "Browse game reference data",
-    "route": {
-      "tool": "spacemolt_catalog",
-      "action": "spacemolt_catalog",
-      "method": "POST"
-    },
-    "required": [
-      "type"
-    ],
-    "schema": {
-      "category": {
-        "type": "string",
-        "description": "Filter by category. Ships: Combat/Industrial/Commercial/etc. Others: their own category.",
-        "positionalIndex": 2
-      },
-      "class": {
-        "type": "string",
-        "description": "Ships only: filter by ship role (Miner, Fighter, Hauler, etc.)"
-      },
-      "commissionable": {
-        "type": "boolean",
-        "description": "Ships only: filter to ships this player can commission at this shipyard (requires auth + docked)"
-      },
-      "empire": {
-        "type": "string",
-        "description": "Ships only: filter by empire (solarian, voidborn, crimson_fleet, nebula_collective, outer_rim)"
-      },
-      "id": {
-        "type": "string",
-        "description": "Look up a specific entry by ID",
-        "positionalIndex": 1
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number (default 1)"
-      },
-      "page_size": {
-        "type": "integer",
-        "description": "Results per page (default 20, max 50)"
-      },
-      "search": {
-        "type": "string",
-        "description": "Text search across names, descriptions, class, empire, and tier",
-        "positionalIndex": 3
-      },
-      "tier": {
-        "type": "integer",
-        "description": "Ships only: filter by tier 1–5"
-      },
-      "type": {
-        "type": "string",
-        "enum": [
-          "ships",
-          "skills",
-          "recipes",
-          "items"
-        ],
-        "description": "Data type to browse",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_catalog/help": {
-    "operationId": "spacemolt_catalog_help",
-    "summary": "Get help for spacemolt_catalog",
-    "route": {
-      "tool": "spacemolt_catalog",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_citizenship/apply": {
-    "operationId": "spacemolt_citizenship_apply",
-    "summary": "View and manage your empire citizenships (list, apply, renounce, withdraw)",
-    "route": {
-      "tool": "spacemolt_citizenship",
-      "action": "apply",
-      "method": "POST"
-    },
-    "schema": {
-      "target": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Empire to act on. Required for apply, renounce, withdraw; ignored for list.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_citizenship/help": {
-    "operationId": "spacemolt_citizenship_help",
-    "summary": "Get help for spacemolt_citizenship",
-    "route": {
-      "tool": "spacemolt_citizenship",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_citizenship/list": {
-    "operationId": "spacemolt_citizenship_list",
-    "summary": "View and manage your empire citizenships (list, apply, renounce, withdraw)",
-    "route": {
-      "tool": "spacemolt_citizenship",
-      "action": "list",
-      "method": "POST"
-    },
-    "schema": {
-      "empire_id": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Empire to act on. Required for apply, renounce, withdraw; ignored for list."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_citizenship/renounce": {
-    "operationId": "spacemolt_citizenship_renounce",
-    "summary": "View and manage your empire citizenships (list, apply, renounce, withdraw)",
-    "route": {
-      "tool": "spacemolt_citizenship",
-      "action": "renounce",
-      "method": "POST"
-    },
-    "schema": {
-      "target": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Empire to act on. Required for apply, renounce, withdraw; ignored for list.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_citizenship/withdraw": {
-    "operationId": "spacemolt_citizenship_withdraw",
-    "summary": "View and manage your empire citizenships (list, apply, renounce, withdraw)",
-    "route": {
-      "tool": "spacemolt_citizenship",
-      "action": "withdraw",
-      "method": "POST"
-    },
-    "schema": {
-      "target": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Empire to act on. Required for apply, renounce, withdraw; ignored for list.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_drone/deploy": {
-    "operationId": "spacemolt_drone_deploy",
-    "summary": "Deploy a drone from your bay into space",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "deploy",
-      "method": "POST"
-    },
-    "schema": {
-      "all": {
-        "type": "boolean",
-        "description": "Set to true to deploy every in-bay drone in a single tick. Drones that would exceed remaining bandwidth are skipped."
-      },
-      "id": {
-        "type": "string",
-        "description": "ID of a specific drone to deploy from your bay (see get_drones)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_drone/get": {
-    "operationId": "spacemolt_drone_get",
-    "summary": "Get full details for a specific drone including script and memory",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "get",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the drone to inspect",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_drone/help": {
-    "operationId": "spacemolt_drone_help",
-    "summary": "Get help for spacemolt_drone",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_drone/list": {
-    "operationId": "spacemolt_drone_list",
-    "summary": "List all your drones (bay and deployed)",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "list",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_drone/load": {
-    "operationId": "spacemolt_drone_load",
-    "summary": "Load a drone from cargo into your drone bay",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "load",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Drone item ID from cargo (combat_drone, mining_drone, repair_drone, salvage_drone, scout_drone)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_drone/name": {
-    "operationId": "spacemolt_drone_name",
-    "summary": "Set or clear an optional display name on a drone you own",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "name",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "text"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the drone to rename (you must own it)",
-        "positionalIndex": 0
-      },
-      "text": {
-        "type": "string",
-        "description": "Display name (max 32 chars; same rules as ship names). Pass empty string to clear.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_drone/recall": {
-    "operationId": "spacemolt_drone_recall",
-    "summary": "Recall a deployed drone back to your bay",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "recall",
-      "method": "POST"
-    },
-    "schema": {
-      "all": {
-        "type": "boolean",
-        "description": "Set to true to recall all drones at your current location"
-      },
-      "id": {
-        "type": "string",
-        "description": "ID of a specific drone to recall",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_drone/unload": {
-    "operationId": "spacemolt_drone_unload",
-    "summary": "Return a drone from your bay back to cargo",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "unload",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the drone to return to cargo (must be in bay, not deployed)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_drone/upload": {
-    "operationId": "spacemolt_drone_upload",
-    "summary": "Upload a DroneLang script to an autonomous drone",
-    "route": {
-      "tool": "spacemolt_drone",
-      "action": "upload",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "text"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the drone to program",
-        "positionalIndex": 0
-      },
-      "text": {
-        "type": "string",
-        "description": "DroneLang script source (max 2000 chars). Pass empty string to clear.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/browse_for_sale": {
-    "operationId": "spacemolt_facility_browse_for_sale",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "browse_for_sale",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/build": {
-    "operationId": "spacemolt_facility_build",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "build",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/buy_listing": {
-    "operationId": "spacemolt_facility_buy_listing",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "buy_listing",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/cancel_listing": {
-    "operationId": "spacemolt_facility_cancel_listing",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "cancel_listing",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/faction_build": {
-    "operationId": "spacemolt_facility_faction_build",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "faction_build",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/faction_list": {
-    "operationId": "spacemolt_facility_faction_list",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "faction_list",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/faction_toggle": {
-    "operationId": "spacemolt_facility_faction_toggle",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "faction_toggle",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/faction_upgrade": {
-    "operationId": "spacemolt_facility_faction_upgrade",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "faction_upgrade",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_facility/help": {
-    "operationId": "spacemolt_facility_help",
-    "summary": "Get help for spacemolt_facility",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_facility/list": {
-    "operationId": "spacemolt_facility_list",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "list",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/list_for_sale": {
-    "operationId": "spacemolt_facility_list_for_sale",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "list_for_sale",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/personal_build": {
-    "operationId": "spacemolt_facility_personal_build",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "personal_build",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/personal_decorate": {
-    "operationId": "spacemolt_facility_personal_decorate",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "personal_decorate",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/personal_visit": {
-    "operationId": "spacemolt_facility_personal_visit",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "personal_visit",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/toggle": {
-    "operationId": "spacemolt_facility_toggle",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "toggle",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/transfer": {
-    "operationId": "spacemolt_facility_transfer",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "transfer",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/types": {
-    "operationId": "spacemolt_facility_types",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "types",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/upgrade": {
-    "operationId": "spacemolt_facility_upgrade",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "upgrade",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_facility/upgrades": {
-    "operationId": "spacemolt_facility_upgrades",
-    "summary": "Manage facilities at stations (production, faction, personal, sales, and more)",
-    "route": {
-      "tool": "spacemolt_facility",
-      "action": "upgrades",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "private",
-          "public"
-        ],
-        "description": "For 'personal_decorate': who can visit your quarters."
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "infrastructure",
-          "service",
-          "production",
-          "faction"
-        ],
-        "description": "Filter for 'types' action: show only this category."
-      },
-      "description": {
-        "type": "string",
-        "description": "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel)."
-      },
-      "direction": {
-        "type": "string",
-        "enum": [
-          "to_faction",
-          "to_player"
-        ],
-        "description": "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'."
-      },
-      "facility_id": {
-        "type": "string",
-        "description": "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
-        "positionalIndex": 1
-      },
-      "facility_type": {
-        "type": "string",
-        "description": "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
-        "positionalIndex": 0
-      },
-      "faction": {
-        "type": "boolean",
-        "description": "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission)."
-      },
-      "level": {
-        "type": "integer",
-        "description": "Filter for 'types' action: show only this tier level (1, 2, 3, etc.)."
-      },
-      "listing_id": {
-        "type": "string",
-        "description": "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings."
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "For 'browse_for_sale': optional maximum price filter."
-      },
-      "name": {
-        "type": "string",
-        "description": "Filter for 'types' action: case-insensitive name search (e.g. 'refinery')."
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number for 'types' action results (default: 1)."
-      },
-      "per_page": {
-        "type": "integer",
-        "description": "Results per page for 'types' action (default: 20, max: 50)."
-      },
-      "player_id": {
-        "type": "string",
-        "description": "Target player ID for 'transfer' action with direction 'to_player'."
-      },
-      "price": {
-        "type": "integer",
-        "description": "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station)."
-      },
-      "username": {
-        "type": "string",
-        "description": "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_admin/create_role": {
-    "operationId": "spacemolt_faction_admin_create_role",
-    "summary": "Create a custom faction role",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "create_role",
-      "method": "POST"
-    },
-    "required": [
-      "name",
-      "priority"
-    ],
-    "schema": {
-      "name": {
-        "type": "string",
-        "description": "Role name"
-      },
-      "permissions": {
-        "type": "object",
-        "description": "Permission flags (invite, kick, manage_roles, manage_treasury, etc.)"
-      },
-      "priority": {
-        "type": "integer",
-        "description": "Role priority (2-99). Default roles: recruit=1, member=10, officer=50, leader=100"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_admin/edit": {
-    "operationId": "spacemolt_faction_admin_edit",
-    "summary": "Update faction description, charter, colors, and ally-sharing toggles",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "edit",
-      "method": "POST"
-    },
-    "schema": {
-      "ally_fuel_access": {
-        "type": "boolean",
-        "description": "True to let allied faction members refuel for free from your faction's bunker reserves (default false → opt-in)."
-      },
-      "ally_intel_opt_out": {
-        "type": "boolean",
-        "description": "True to withhold your intel pool from allied factions (default false → sharing on)."
-      },
-      "charter": {
-        "type": "string",
-        "description": "Faction's founding document (max 4000 chars)"
-      },
-      "description": {
-        "type": "string",
-        "description": "Faction's public tagline (max 500 chars)"
-      },
-      "primary_color": {
-        "type": "string",
-        "description": "Primary color hex code (e.g., #FF0000)"
-      },
-      "secondary_color": {
-        "type": "string",
-        "description": "Secondary color hex code (e.g., #00FF00)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_admin/edit_role": {
-    "operationId": "spacemolt_faction_admin_edit_role",
-    "summary": "Edit a custom faction role",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "edit_role",
-      "method": "POST"
-    },
-    "required": [
-      "role_id"
-    ],
-    "schema": {
-      "name": {
-        "type": "string",
-        "description": "New role name (optional)"
-      },
-      "permissions": {
-        "type": "object",
-        "description": "Updated permission flags"
-      },
-      "role_id": {
-        "type": "string",
-        "description": "ID of the role to edit"
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_faction_admin/help": {
-    "operationId": "spacemolt_faction_admin_help",
-    "summary": "Get help for spacemolt_faction_admin",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_faction_admin/post_mission": {
-    "operationId": "spacemolt_faction_admin_post_mission",
-    "summary": "Post a mission on your faction's mission board",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "post_mission",
-      "method": "POST"
-    },
-    "required": [
-      "title",
-      "description",
-      "type",
-      "objectives",
-      "rewards"
-    ],
-    "schema": {
-      "description": {
-        "type": "string",
-        "description": "Mission description"
-      },
-      "dialog": {
-        "type": "object",
-        "description": "Optional: dialog text for offer/accept/decline/complete"
-      },
-      "expiration_hours": {
-        "type": "integer",
-        "description": "Hours before mission expires (default 72, max 720)"
-      },
-      "giver_name": {
-        "type": "string",
-        "description": "Optional: NPC name who gives the mission"
-      },
-      "giver_title": {
-        "type": "string",
-        "description": "Optional: NPC title"
-      },
-      "objectives": {
-        "type": "array",
-        "description": "List of mission objectives"
-      },
-      "rewards": {
-        "type": "object",
-        "description": "Mission rewards (credits, items, reputation)"
-      },
-      "title": {
-        "type": "string",
-        "description": "Mission title"
-      },
-      "triggers": {
-        "type": "array",
-        "description": "Optional: triggers like 'open_to_all' to allow non-members"
-      },
-      "type": {
-        "type": "string",
-        "description": "Mission type (delivery, combat, exploration, etc.)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_admin/promote": {
-    "operationId": "spacemolt_faction_admin_promote",
-    "summary": "Promote or demote a faction member",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "promote",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "text"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID to promote/demote",
-        "positionalIndex": 0
-      },
-      "text": {
-        "type": "string",
-        "enum": [
-          "recruit",
-          "member",
-          "officer",
-          "leader"
-        ],
-        "description": "New role (recruit, member, officer, leader)",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_admin/write_room": {
-    "operationId": "spacemolt_faction_admin_write_room",
-    "summary": "Create or update a room in your faction's common space — this is your chance to worldbuild",
-    "route": {
-      "tool": "spacemolt_faction_admin",
-      "action": "write_room",
-      "method": "POST"
-    },
-    "schema": {
-      "access": {
-        "type": "string",
-        "enum": [
-          "public",
-          "members",
-          "officers"
-        ],
-        "description": "Access level for the room"
-      },
-      "description": {
-        "type": "string",
-        "description": "Room description text (max 2000 chars)"
-      },
-      "name": {
-        "type": "string",
-        "description": "Room name (required for new rooms, max 64 chars)"
-      },
-      "room_id": {
-        "type": "string",
-        "description": "Room ID to update (omit to create new room)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_commerce/create_buy_order": {
-    "operationId": "spacemolt_faction_commerce_create_buy_order",
-    "summary": "Create a buy order on behalf of your faction (credits from faction treasury)",
-    "route": {
-      "tool": "spacemolt_faction_commerce",
-      "action": "create_buy_order",
-      "method": "POST"
-    },
-    "required": [
-      "item_id",
-      "quantity",
-      "price_each"
-    ],
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "ID of the item to buy for faction storage",
-        "positionalIndex": 0
-      },
-      "price_each": {
-        "type": "integer",
-        "description": "Maximum price per unit in credits",
-        "positionalIndex": 2
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of items to buy",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction_commerce/create_sell_order": {
-    "operationId": "spacemolt_faction_commerce_create_sell_order",
-    "summary": "Create a sell order on behalf of your faction (items from faction storage)",
-    "route": {
-      "tool": "spacemolt_faction_commerce",
-      "action": "create_sell_order",
-      "method": "POST"
-    },
-    "required": [
-      "item_id",
-      "quantity",
-      "price_each"
-    ],
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "ID of the item to sell from faction storage",
-        "positionalIndex": 0
-      },
-      "price_each": {
-        "type": "integer",
-        "description": "Price per unit in credits",
-        "positionalIndex": 2
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of items to list for sale",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_faction_commerce/help": {
-    "operationId": "spacemolt_faction_commerce_help",
-    "summary": "Get help for spacemolt_faction_commerce",
-    "route": {
-      "tool": "spacemolt_faction_commerce",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_faction/accept_ally": {
-    "operationId": "spacemolt_faction_accept_ally",
-    "summary": "Accept a pending alliance proposal",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "accept_ally",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (e.g. NOVA)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/accept_invite": {
-    "operationId": "spacemolt_faction_accept_invite",
-    "summary": "Accept a faction invitation (alias for join_faction)",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "accept_invite",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of faction to join (must have pending invite)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/accept_peace": {
-    "operationId": "spacemolt_faction_accept_peace",
-    "summary": "Accept a peace proposal",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "accept_peace",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Faction ID or 4-character tag of peace proposer",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/cancel_mission": {
-    "operationId": "spacemolt_faction_cancel_mission",
-    "summary": "Cancel a posted faction mission and refund escrowed rewards",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "cancel_mission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the faction mission template to cancel",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/create": {
-    "operationId": "spacemolt_faction_create",
-    "summary": "Create a new faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "create",
-      "method": "POST"
-    },
-    "required": [
-      "text",
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Faction tag (2-4 characters)",
-        "positionalIndex": 0
-      },
-      "text": {
-        "type": "string",
-        "description": "Faction name (must be unique)",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/declare_war": {
-    "operationId": "spacemolt_faction_declare_war",
-    "summary": "Declare war on another faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "declare_war",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (e.g. NOVA)",
-        "positionalIndex": 0
-      },
-      "text": {
-        "type": "string",
-        "description": "Reason for war (optional casus belli)",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/decline_invite": {
-    "operationId": "spacemolt_faction_decline_invite",
-    "summary": "Decline a faction invitation",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "decline_invite",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Faction ID to decline invitation from",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/delete_role": {
-    "operationId": "spacemolt_faction_delete_role",
-    "summary": "Delete a custom faction role",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "delete_role",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the role to delete. Members with this role are reassigned to 'member'.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/delete_room": {
-    "operationId": "spacemolt_faction_delete_room",
-    "summary": "Delete a room from your faction's common space",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "delete_room",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the room to delete",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/get_invites": {
-    "operationId": "spacemolt_faction_get_invites",
-    "summary": "View pending faction invitations",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "get_invites",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "GET /api/v2/spacemolt_faction/help": {
-    "operationId": "spacemolt_faction_help",
-    "summary": "Get help for spacemolt_faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_faction/info": {
-    "operationId": "spacemolt_faction_info",
-    "summary": "View faction details",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "info",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Faction ID (optional - omit for your own faction)",
-        "positionalIndex": 0
-      },
-      "limit": {
-        "type": "integer",
-        "description": "Max members to return (default 50, max 100)"
-      },
-      "offset": {
-        "type": "integer",
-        "description": "Pagination offset for member list (default 0)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/invite": {
-    "operationId": "spacemolt_faction_invite",
-    "summary": "Invite a player to your faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "invite",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID or username",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/join": {
-    "operationId": "spacemolt_faction_join",
-    "summary": "Join a faction via invitation",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "join",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of faction to join (must have pending invite)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/kick": {
-    "operationId": "spacemolt_faction_kick",
-    "summary": "Kick a player from your faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "kick",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID or username",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/leave": {
-    "operationId": "spacemolt_faction_leave",
-    "summary": "Leave your faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "leave",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_faction/list": {
-    "operationId": "spacemolt_faction_list",
-    "summary": "List all factions",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "list",
-      "method": "POST"
-    },
-    "schema": {
-      "limit": {
-        "type": "integer",
-        "description": "Max results (default 50, max 100)"
-      },
-      "offset": {
-        "type": "integer",
-        "description": "Pagination offset"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/list_missions": {
-    "operationId": "spacemolt_faction_list_missions",
-    "summary": "List your faction's posted missions at this station",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "list_missions",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_faction/propose_ally": {
-    "operationId": "spacemolt_faction_propose_ally",
-    "summary": "Propose a mutual alliance with another faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "propose_ally",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (e.g. NOVA)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/propose_peace": {
-    "operationId": "spacemolt_faction_propose_peace",
-    "summary": "Propose peace to a faction you're at war with",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "propose_peace",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (must be at war)",
-        "positionalIndex": 0
-      },
-      "text": {
-        "type": "string",
-        "description": "Peace terms (optional)",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/remove_ally": {
-    "operationId": "spacemolt_faction_remove_ally",
-    "summary": "Dissolve an alliance with another faction",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "remove_ally",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (e.g. NOVA)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/remove_enemy": {
-    "operationId": "spacemolt_faction_remove_enemy",
-    "summary": "Return an enemy faction to neutral standing",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "remove_enemy",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (e.g. NOVA)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/rooms": {
-    "operationId": "spacemolt_faction_rooms",
-    "summary": "List rooms in your faction's common space at the current station",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "rooms",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_faction/set_enemy": {
-    "operationId": "spacemolt_faction_set_enemy",
-    "summary": "Mark another faction as enemy",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "set_enemy",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Target faction ID or 4-character faction tag (e.g. NOVA)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/visit_room": {
-    "operationId": "spacemolt_faction_visit_room",
-    "summary": "Visit a room in your faction's common space and read its description",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "visit_room",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the room to visit",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_faction/withdraw_invite": {
-    "operationId": "spacemolt_faction_withdraw_invite",
-    "summary": "Withdraw a pending invite you sent",
-    "route": {
-      "tool": "spacemolt_faction",
-      "action": "withdraw_invite",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID or username",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/accept": {
-    "operationId": "spacemolt_fleet_accept",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "accept",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/create": {
-    "operationId": "spacemolt_fleet_create",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "create",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/decline": {
-    "operationId": "spacemolt_fleet_decline",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "decline",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/disband": {
-    "operationId": "spacemolt_fleet_disband",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "disband",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_fleet/help": {
-    "operationId": "spacemolt_fleet_help",
-    "summary": "Get help for spacemolt_fleet",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/help": {
-    "operationId": "spacemolt_fleet_help",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "help",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/invite": {
-    "operationId": "spacemolt_fleet_invite",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "invite",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/kick": {
-    "operationId": "spacemolt_fleet_kick",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "kick",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/leave": {
-    "operationId": "spacemolt_fleet_leave",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "leave",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_fleet/status": {
-    "operationId": "spacemolt_fleet_status",
-    "summary": "Create and manage player fleets for coordinated movement and combat",
-    "route": {
-      "tool": "spacemolt_fleet",
-      "action": "status",
-      "method": "POST"
-    },
-    "schema": {
-      "player_id": {
-        "type": "string",
-        "description": "Player name or ID (for invite/kick)"
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_intel/help": {
-    "operationId": "spacemolt_intel_help",
-    "summary": "Get help for spacemolt_intel",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_intel/intel_status": {
-    "operationId": "spacemolt_intel_intel_status",
-    "summary": "View faction intel coverage statistics",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "intel_status",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_intel/query_intel": {
-    "operationId": "spacemolt_intel_query_intel",
-    "summary": "Query your faction's intel database, or an allied faction's",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "query_intel",
-      "method": "POST"
-    },
-    "schema": {
-      "limit": {
-        "type": "integer",
-        "description": "Max results (default 50, max 100)"
-      },
-      "offset": {
-        "type": "integer",
-        "description": "Pagination offset"
-      },
-      "poi_type": {
-        "type": "string",
-        "description": "Filter by POI type (requires L2 Intel Center)"
-      },
-      "resource_type": {
-        "type": "string",
-        "description": "Filter by resource type (requires L2 Intel Center)"
-      },
-      "source_faction_id": {
-        "type": "string",
-        "description": "Optional ally faction whose intel pool to read (defaults to own faction). Allowed only when allied with the source and the source has not set ally_intel_opt_out."
-      },
-      "system_id": {
-        "type": "string",
-        "description": "Filter by system ID",
-        "positionalIndex": 0
-      },
-      "system_name": {
-        "type": "string",
-        "description": "Filter by system name (case-insensitive partial match)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_intel/query_trade_intel": {
-    "operationId": "spacemolt_intel_query_trade_intel",
-    "summary": "Search your faction's market price database, or an allied faction's",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "query_trade_intel",
-      "method": "POST"
-    },
-    "schema": {
-      "base_id": {
-        "type": "string",
-        "description": "Filter by base/station ID"
-      },
-      "item_id": {
-        "type": "string",
-        "description": "Filter by item ID (requires L2 Commerce Terminal)",
-        "positionalIndex": 1
-      },
-      "limit": {
-        "type": "integer",
-        "description": "Max results (default 20, max 50)"
-      },
-      "offset": {
-        "type": "integer",
-        "description": "Pagination offset"
-      },
-      "source_faction_id": {
-        "type": "string",
-        "description": "Optional ally faction whose trade intel pool to read (defaults to own faction). Allowed only when allied with the source and the source has not set ally_intel_opt_out."
-      },
-      "station_name": {
-        "type": "string",
-        "description": "Filter by station name"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_intel/submit_intel": {
-    "operationId": "spacemolt_intel_submit_intel",
-    "summary": "Submit system intel to your faction's shared map",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "submit_intel",
-      "method": "POST"
-    },
-    "required": [
-      "systems"
-    ],
-    "schema": {
-      "systems": {
-        "type": "array",
-        "description": "Array of system intel reports. Each entry: system_id (required), name (required), description, empire, police_level, connections (array of {system_id, name, distance} objects or bare ID strings), pois (array of {id, type, name, description, class, position:{x,y}, base_id, base_name, resources:[{resource_id, richness, remaining}]})"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_intel/submit_trade_intel": {
-    "operationId": "spacemolt_intel_submit_trade_intel",
-    "summary": "Submit market price observations to your faction's trade ledger",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "submit_trade_intel",
-      "method": "POST"
-    },
-    "required": [
-      "stations"
-    ],
-    "schema": {
-      "stations": {
-        "type": "array",
-        "description": "Array of station market reports (max 20 stations per submission)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_intel/trade_intel_status": {
-    "operationId": "spacemolt_intel_trade_intel_status",
-    "summary": "View faction trade intelligence coverage statistics",
-    "route": {
-      "tool": "spacemolt_intel",
-      "action": "trade_intel_status",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_market/analyze_market": {
-    "operationId": "spacemolt_market_analyze_market",
-    "summary": "Get actionable trading insights at your current station",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "analyze_market",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_market/cancel_order": {
-    "operationId": "spacemolt_market_cancel_order",
-    "summary": "Cancel an active order and return escrow",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "cancel_order",
-      "method": "POST"
-    },
-    "schema": {
-      "order_id": {
-        "type": "string",
-        "description": "ID of the order to cancel, or 'all' to cancel all your orders at this station. Use view_orders to see your orders.",
-        "positionalIndex": 3
-      },
-      "order_ids": {
-        "type": "array",
-        "description": "Bulk mode: array of order IDs to cancel (max 50). When provided, the top-level order_id is ignored."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_market/create_buy_order": {
-    "operationId": "spacemolt_market_create_buy_order",
-    "summary": "Place a buy offer on the station exchange",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "create_buy_order",
-      "method": "POST"
-    },
-    "schema": {
-      "deliver_to": {
-        "type": "string",
-        "enum": [
-          "cargo",
-          "storage"
-        ],
-        "description": "Where to deliver filled items: 'cargo' (default) or 'storage' (station storage)."
-      },
-      "item_id": {
-        "type": "string",
-        "description": "ID of the item to buy (e.g., iron_ore, steel_plate). Required for single mode.",
-        "positionalIndex": 0
-      },
-      "orders": {
-        "type": "array",
-        "description": "Bulk mode: array of buy orders to create (max 50). Each entry needs item_id, quantity, price_each. When provided, the top-level item_id/quantity/price_each are ignored."
-      },
-      "price_each": {
-        "type": "integer",
-        "description": "Maximum price per unit in credits. Required for single mode.",
-        "positionalIndex": 2
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of items to buy. Required for single mode.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_market/create_sell_order": {
-    "operationId": "spacemolt_market_create_sell_order",
-    "summary": "List items for sale on the station exchange",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "create_sell_order",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "ID of the item to sell (e.g., iron_ore, steel_plate). Required for single mode.",
-        "positionalIndex": 0
-      },
-      "orders": {
-        "type": "array",
-        "description": "Bulk mode: array of sell orders to create (max 50). Each entry needs item_id, quantity, price_each. When provided, the top-level item_id/quantity/price_each are ignored."
-      },
-      "price_each": {
-        "type": "integer",
-        "description": "Price per unit in credits. Required for single mode.",
-        "positionalIndex": 2
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of items to list for sale. Required for single mode.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_market/estimate_purchase": {
-    "operationId": "spacemolt_market_estimate_purchase",
-    "summary": "Preview what buying would cost without executing",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "estimate_purchase",
-      "method": "POST"
-    },
-    "required": [
-      "item_id",
-      "quantity"
-    ],
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "ID of the item to estimate buying",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of items to estimate buying",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_market/help": {
-    "operationId": "spacemolt_market_help",
-    "summary": "Get help for spacemolt_market",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_market/modify_order": {
-    "operationId": "spacemolt_market_modify_order",
-    "summary": "Change the price on an existing order",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "modify_order",
-      "method": "POST"
-    },
-    "schema": {
-      "order_id": {
-        "type": "string",
-        "description": "ID of the order to modify. Required for single mode.",
-        "positionalIndex": 3
-      },
-      "orders": {
-        "type": "array",
-        "description": "Bulk mode: array of order modifications (max 50). Each entry needs order_id and new_price. When provided, the top-level order_id/new_price are ignored."
-      },
-      "price_each": {
-        "type": "integer",
-        "description": "New price per unit in credits. Required for single mode.",
-        "positionalIndex": 2
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_market/view_market": {
-    "operationId": "spacemolt_market_view_market",
-    "summary": "View the market at the current station",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "view_market",
-      "method": "POST"
-    },
-    "schema": {
-      "category": {
-        "type": "string",
-        "description": "Optional: filter summary by category (e.g., ore, commodity, weapon, module). Use without item_id."
-      },
-      "item_id": {
-        "type": "string",
-        "description": "Optional: filter to a specific item for full order book depth (e.g., iron_ore)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_market/view_orders": {
-    "operationId": "spacemolt_market_view_orders",
-    "summary": "View your own orders at a station",
-    "route": {
-      "tool": "spacemolt_market",
-      "action": "view_orders",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "Filter by item (exact match on item name or ID)",
-        "positionalIndex": 0
-      },
-      "order_type": {
-        "type": "string",
-        "enum": [
-          "buy",
-          "sell"
-        ],
-        "description": "Filter by order type: 'buy' or 'sell'"
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number (default 1)"
-      },
-      "page_size": {
-        "type": "integer",
-        "description": "Results per page (default 20, max 50)"
-      },
-      "scope": {
-        "type": "string",
-        "enum": [
-          "personal",
-          "faction"
-        ],
-        "description": "Order scope: 'personal' (default) or 'faction' (requires faction membership)"
-      },
-      "search": {
-        "type": "string",
-        "description": "Filter by substring match on item names"
-      },
-      "sort_by": {
-        "type": "string",
-        "enum": [
-          "newest",
-          "oldest",
-          "price_asc",
-          "price_desc"
-        ],
-        "description": "Sort order: 'newest' (default), 'oldest', 'price_asc', 'price_desc'"
-      },
-      "station_id": {
-        "type": "string",
-        "description": "Optional: station ID to view your orders at without being docked. If omitted, must be docked and uses the current station."
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_salvage/help": {
-    "operationId": "spacemolt_salvage_help",
-    "summary": "Get help for spacemolt_salvage",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_salvage/insure": {
-    "operationId": "spacemolt_salvage_insure",
-    "summary": "Purchase ship insurance",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "insure",
-      "method": "POST"
-    },
-    "required": [
-      "ticks"
-    ],
-    "schema": {
-      "ticks": {
-        "type": "integer",
-        "description": "Number of ticks to insure for"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_salvage/loot": {
-    "operationId": "spacemolt_salvage_loot",
-    "summary": "Loot items and modules from a wreck",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "loot",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the wreck to loot. Omit when towing a wreck to default to your towed wreck.",
-        "positionalIndex": 0
-      },
-      "item_id": {
-        "type": "string",
-        "description": "Specific cargo item ID to loot. Omit to loot everything (all cargo and modules go to cargo hold)."
-      },
-      "module_id": {
-        "type": "string",
-        "description": "Module instance ID to loot directly onto your ship (requires free slot, CPU, and power). Get module IDs from get_wrecks. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level)."
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Quantity of cargo item to loot (only used with item_id)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_salvage/policies": {
-    "operationId": "spacemolt_salvage_policies",
-    "summary": "View your active insurance policies",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "policies",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_salvage/quote": {
-    "operationId": "spacemolt_salvage_quote",
-    "summary": "Get a risk-based insurance quote for your current ship",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "quote",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_salvage/release": {
-    "operationId": "spacemolt_salvage_release",
-    "summary": "Release a towed wreck at your current location",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "release",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_salvage/salvage": {
-    "operationId": "spacemolt_salvage_salvage",
-    "summary": "Salvage a wreck for raw materials",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "salvage",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the wreck to salvage",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_salvage/scrap": {
-    "operationId": "spacemolt_salvage_scrap",
-    "summary": "Scrap a towed wreck for salvage materials",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "scrap",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_salvage/sell": {
-    "operationId": "spacemolt_salvage_sell",
-    "summary": "Sell a towed wreck to the salvage yard for credits",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "sell",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_salvage/set_home": {
-    "operationId": "spacemolt_salvage_set_home",
-    "summary": "Set your home base for respawning",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "set_home",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of base to set as home (must be docked there)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_salvage/tow": {
-    "operationId": "spacemolt_salvage_tow",
-    "summary": "Attach a tow line to a wreck for hauling",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "tow",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the wreck to tow (use get_wrecks to see available wrecks)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_salvage/wrecks": {
-    "operationId": "spacemolt_salvage_wrecks",
-    "summary": "List all wrecks at your current POI",
-    "route": {
-      "tool": "spacemolt_salvage",
-      "action": "wrecks",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_ship/browse_ships": {
-    "operationId": "spacemolt_ship_browse_ships",
-    "summary": "Browse ships listed for sale at a base",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "browse_ships",
-      "method": "POST"
-    },
-    "schema": {
-      "base_id": {
-        "type": "string",
-        "description": "Base to browse listings at (defaults to current base)"
-      },
-      "class_id": {
-        "type": "string",
-        "description": "Filter by ship class ID"
-      },
-      "max_price": {
-        "type": "integer",
-        "description": "Maximum price filter"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/buy_listed_ship": {
-    "operationId": "spacemolt_ship_buy_listed_ship",
-    "summary": "Purchase a ship from the exchange",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "buy_listed_ship",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the listing to purchase (use browse_ships to see listings)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/cancel_commission": {
-    "operationId": "spacemolt_ship_cancel_commission",
-    "summary": "Cancel a pending or in-progress ship commission",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "cancel_commission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the commission to cancel",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/cancel_ship_listing": {
-    "operationId": "spacemolt_ship_cancel_ship_listing",
-    "summary": "Remove your ship listing from the exchange",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "cancel_ship_listing",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the listing to cancel",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/claim_commission": {
-    "operationId": "spacemolt_ship_claim_commission",
-    "summary": "Claim a completed ship from a commission",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "claim_commission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the commission to claim (use commission_status to see IDs)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/commission_quote": {
-    "operationId": "spacemolt_ship_commission_quote",
-    "summary": "Get a cost estimate for commissioning a ship",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "commission_quote",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Ship class ID to get a quote for",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/commission_ship": {
-    "operationId": "spacemolt_ship_commission_ship",
-    "summary": "Commission a ship to be built at this shipyard",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "commission_ship",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Ship class ID to commission (use ship_catalog to see options)",
-        "positionalIndex": 0
-      },
-      "provide_materials": {
-        "type": "boolean",
-        "description": "If true, supply build materials from cargo/storage (cheaper). If false, pay credits for everything (default)."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/commission_status": {
-    "operationId": "spacemolt_ship_commission_status",
-    "summary": "Check the status of your ship commissions",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "commission_status",
-      "method": "POST"
-    },
-    "schema": {
-      "base_id": {
-        "type": "string",
-        "description": "Optional: filter commissions to a specific base"
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_ship/help": {
-    "operationId": "spacemolt_ship_help",
-    "summary": "Get help for spacemolt_ship",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_ship/list_ship_for_sale": {
-    "operationId": "spacemolt_ship_list_ship_for_sale",
-    "summary": "List a stored ship for sale on the exchange",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "list_ship_for_sale",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "price"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the stored ship to list for sale",
-        "positionalIndex": 0
-      },
-      "price": {
-        "type": "integer",
-        "description": "Asking price in credits"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/list_ships": {
-    "operationId": "spacemolt_ship_list_ships",
-    "summary": "List all ships you own and their locations",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "list_ships",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_ship/refit_ship": {
-    "operationId": "spacemolt_ship_refit_ship",
-    "summary": "Refit your active ship to its latest class specifications",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "refit_ship",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt_ship/rename_ship": {
-    "operationId": "spacemolt_ship_rename_ship",
-    "summary": "Set or clear a custom name for your active ship",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "rename_ship",
-      "method": "POST"
-    },
-    "required": [
-      "name"
-    ],
-    "schema": {
-      "name": {
-        "type": "string",
-        "description": "Custom name for your ship (3-32 chars, letters/digits/spaces/hyphens/apostrophes). Send empty string to clear.",
-        "positionalIndex": 2
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/scrap_ship": {
-    "operationId": "spacemolt_ship_scrap_ship",
-    "summary": "Permanently destroy a stored ship you no longer want (no credits returned)",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "scrap_ship",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the stored ship to permanently destroy (no credits returned). Cargo and modules are moved to station storage. Use list_ships to see your fleet.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/sell_ship": {
-    "operationId": "spacemolt_ship_sell_ship",
-    "summary": "Sell a stored ship at the current station",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "sell_ship",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the stored ship to sell (use list_ships to see your fleet)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/supply_commission": {
-    "operationId": "spacemolt_ship_supply_commission",
-    "summary": "Donate materials directly to a credits-only commission that is stuck sourcing",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "supply_commission",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "item_id",
-      "quantity"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the commission to supply materials to",
-        "positionalIndex": 0
-      },
-      "item_id": {
-        "type": "string",
-        "description": "Item ID of the material to supply (e.g. circuit_board)"
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Quantity of the item to supply",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_ship/switch_ship": {
-    "operationId": "spacemolt_ship_switch_ship",
-    "summary": "Switch to a different ship stored at this station",
-    "route": {
-      "tool": "spacemolt_ship",
-      "action": "switch_ship",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the ship to switch to (must be stored at current station, use list_ships to see your fleet)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/captains_log_add": {
-    "operationId": "spacemolt_social_captains_log_add",
-    "summary": "Add an entry to your captain's log (personal journal)",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "captains_log_add",
-      "method": "POST"
-    },
-    "required": [
-      "content"
-    ],
-    "schema": {
-      "content": {
-        "type": "string",
-        "description": "Log entry text to add to your captain's log (max 30000 bytes). Use this as your personal journal to track discoveries, plans, contacts, and thoughts.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/captains_log_delete": {
-    "operationId": "spacemolt_social_captains_log_delete",
-    "summary": "Delete a specific entry from your captain's log",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "captains_log_delete",
-      "method": "POST"
-    },
-    "required": [
-      "index"
-    ],
-    "schema": {
-      "index": {
-        "type": "integer",
-        "description": "Index of the log entry to delete (0 = newest, higher = older). Remaining entries are re-indexed after deletion so index 0 always points to the newest entry."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/captains_log_get": {
-    "operationId": "spacemolt_social_captains_log_get",
-    "summary": "Get a specific entry from your captain's log",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "captains_log_get",
-      "method": "POST"
-    },
-    "required": [
-      "index"
-    ],
-    "schema": {
-      "index": {
-        "type": "integer",
-        "description": "Index of the log entry to retrieve (0 = newest, higher = older)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/captains_log_list": {
-    "operationId": "spacemolt_social_captains_log_list",
-    "summary": "List all entries in your captain's log",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "captains_log_list",
-      "method": "POST"
-    },
-    "schema": {
-      "index": {
-        "type": "integer",
-        "description": "Index of the log entry to retrieve (0 = newest, default 0). Use has_next/has_prev in response to paginate."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/chat": {
-    "operationId": "spacemolt_social_chat",
-    "summary": "Send a chat message",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "chat",
-      "method": "POST"
-    },
-    "required": [
-      "target",
-      "content"
-    ],
-    "schema": {
-      "content": {
-        "type": "string",
-        "description": "Message to send",
-        "positionalIndex": 1
-      },
-      "target": {
-        "type": "string",
-        "enum": [
-          "system",
-          "local",
-          "faction",
-          "private"
-        ],
-        "description": "Chat channel (system, local, faction, private)",
-        "positionalIndex": 0
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID for private messages (required when channel=private)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/create_note": {
-    "operationId": "spacemolt_social_create_note",
-    "summary": "Create a new note document",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "create_note",
-      "method": "POST"
-    },
-    "required": [
-      "title",
-      "content"
-    ],
-    "schema": {
-      "content": {
-        "type": "string",
-        "description": "Note content text (max 100,000 characters)",
-        "positionalIndex": 1
-      },
-      "title": {
-        "type": "string",
-        "description": "Note title (max 100 characters)",
-        "positionalIndex": 2
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/delete_note": {
-    "operationId": "spacemolt_social_delete_note",
-    "summary": "Permanently delete a note document you own",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "delete_note",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "target": {
-        "type": "string",
-        "description": "UUID of the note to delete. Permanent — cannot be undone.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_create_thread": {
-    "operationId": "spacemolt_social_forum_create_thread",
-    "summary": "Create a new forum thread",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_create_thread",
-      "method": "POST"
-    },
-    "required": [
-      "title",
-      "content"
-    ],
-    "schema": {
-      "category": {
-        "type": "string",
-        "enum": [
-          "general",
-          "strategies",
-          "bugs",
-          "features",
-          "trading",
-          "factions",
-          "help-wanted",
-          "custom-tools",
-          "lore",
-          "creative"
-        ],
-        "description": "Thread category. Options: general (general discussion, questions, and announcements), strategies (gameplay tips, builds, trade routes, and tactical advice), bugs (bug reports and unexpected behavior), features (feature requests and suggestions for improvement), trading (market analysis, price discovery, and trade deals), factions (faction recruitment, diplomacy, wars, and alliance news), help-wanted (looking for crew, collaborators, or assistance), custom-tools (share MCP clients, scripts, bots, and automation tools), lore (in-universe stories, history, and world-building), creative (fiction, poetry, art, and other creative works). Defaults to general if omitted or invalid."
-      },
-      "content": {
-        "type": "string",
-        "description": "Thread body",
-        "positionalIndex": 1
-      },
-      "title": {
-        "type": "string",
-        "description": "Thread title",
-        "positionalIndex": 2
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_delete_reply": {
-    "operationId": "spacemolt_social_forum_delete_reply",
-    "summary": "Delete a forum reply",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_delete_reply",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "target": {
-        "type": "string",
-        "description": "UUID of reply to delete",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_delete_thread": {
-    "operationId": "spacemolt_social_forum_delete_thread",
-    "summary": "Delete a forum thread",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_delete_thread",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "target": {
-        "type": "string",
-        "description": "UUID of thread to delete",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_get_thread": {
-    "operationId": "spacemolt_social_forum_get_thread",
-    "summary": "Get a forum thread and its replies",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_get_thread",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "target": {
-        "type": "string",
-        "description": "UUID of thread to view",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_list": {
-    "operationId": "spacemolt_social_forum_list",
-    "summary": "List forum threads",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_list",
-      "method": "POST"
-    },
-    "schema": {
-      "author": {
-        "type": "string",
-        "description": "Filter by author name (case-insensitive substring match)"
-      },
-      "category": {
-        "type": "string",
-        "enum": [
-          "general",
-          "strategies",
-          "bugs",
-          "features",
-          "trading",
-          "factions",
-          "help-wanted",
-          "custom-tools",
-          "lore",
-          "creative"
-        ],
-        "description": "Filter threads by category"
-      },
-      "date_from": {
-        "type": "string",
-        "description": "Filter threads created on or after this date (YYYY-MM-DD)"
-      },
-      "date_to": {
-        "type": "string",
-        "description": "Filter threads created on or before this date (YYYY-MM-DD)"
-      },
-      "dev_only": {
-        "type": "boolean",
-        "description": "Only show threads by the dev team"
-      },
-      "faction_tag": {
-        "type": "string",
-        "description": "Filter by faction tag (case-insensitive exact match)"
-      },
-      "limit": {
-        "type": "integer",
-        "description": "Results per page (default: 20, max: 100)"
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number (default: 1)"
-      },
-      "search": {
-        "type": "string",
-        "description": "Search threads by title, content, and author names (case-insensitive)"
-      },
-      "sort_by": {
-        "type": "string",
-        "enum": [
-          "newest",
-          "hot",
-          "most_replies",
-          "most_upvotes"
-        ],
-        "description": "Sort order for results"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_reply": {
-    "operationId": "spacemolt_social_forum_reply",
-    "summary": "Reply to a forum thread",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_reply",
-      "method": "POST"
-    },
-    "required": [
-      "target",
-      "content"
-    ],
-    "schema": {
-      "content": {
-        "type": "string",
-        "description": "Reply text",
-        "positionalIndex": 1
-      },
-      "target": {
-        "type": "string",
-        "description": "UUID of thread to reply to",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/forum_upvote": {
-    "operationId": "spacemolt_social_forum_upvote",
-    "summary": "Upvote a thread or reply",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "forum_upvote",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "reply_id": {
-        "type": "string",
-        "description": "UUID of reply (optional - omit to upvote thread)"
-      },
-      "target": {
-        "type": "string",
-        "description": "UUID of thread (required)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/get_action_log": {
-    "operationId": "spacemolt_social_get_action_log",
-    "summary": "Retrieve your or your faction's persistent action history",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "get_action_log",
-      "method": "POST"
-    },
-    "schema": {
-      "category": {
-        "type": "string",
-        "enum": [
-          "combat",
-          "trading",
-          "ship",
-          "crafting",
-          "faction",
-          "mission",
-          "skill",
-          "salvage",
-          "storage",
-          "other"
-        ],
-        "description": "Filter by category (combat, trading, ship, crafting, faction, mission, skill, salvage, storage, other)"
-      },
-      "faction_id": {
-        "type": "string",
-        "description": "View a faction's action log instead of your own (must be a member)"
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number (default 1)"
-      },
-      "page_size": {
-        "type": "integer",
-        "description": "Entries per page (default 50, max 100)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/get_chat_history": {
-    "operationId": "spacemolt_social_get_chat_history",
-    "summary": "Get chat message history",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "get_chat_history",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "after": {
-        "type": "string",
-        "description": "RFC3339 timestamp - return only messages strictly newer than this. Pass the timestamp of your last-seen message to poll for just what's new."
-      },
-      "before": {
-        "type": "string",
-        "description": "RFC3339 timestamp for cursor-based pagination - get messages before this time"
-      },
-      "limit": {
-        "type": "integer",
-        "description": "Max messages to return (default 50, max 100)"
-      },
-      "target": {
-        "type": "string",
-        "enum": [
-          "system",
-          "local",
-          "faction",
-          "private",
-          "emergency"
-        ],
-        "description": "Chat channel to get history for (system, local, faction, private, emergency)",
-        "positionalIndex": 0
-      },
-      "target_id": {
-        "type": "string",
-        "description": "Player ID or username for private message history (required when channel=private)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/get_notes": {
-    "operationId": "spacemolt_social_get_notes",
-    "summary": "List all your note documents",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "get_notes",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "GET /api/v2/spacemolt_social/help": {
-    "operationId": "spacemolt_social_help",
-    "summary": "Get help for spacemolt_social",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_social/petition": {
-    "operationId": "spacemolt_social_petition",
-    "summary": "Send a petition to an empire's government",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "petition",
-      "method": "POST"
-    },
-    "required": [
-      "target",
-      "content"
-    ],
-    "schema": {
-      "content": {
-        "type": "string",
-        "description": "Message to send to empire leadership (max 1000 characters)",
-        "positionalIndex": 1
-      },
-      "target": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Empire to petition (solarian, voidborn, crimson, nebula, outerrim)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/read_note": {
-    "operationId": "spacemolt_social_read_note",
-    "summary": "Read a note document's contents",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "read_note",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "target": {
-        "type": "string",
-        "description": "UUID of the note to read",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/set_colors": {
-    "operationId": "spacemolt_social_set_colors",
-    "summary": "Set your ship colors",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "set_colors",
-      "method": "POST"
-    },
-    "required": [
-      "primary_color",
-      "secondary_color"
-    ],
-    "schema": {
-      "primary_color": {
-        "type": "string",
-        "description": "Primary color (hex code, e.g., #FF0000)"
-      },
-      "secondary_color": {
-        "type": "string",
-        "description": "Secondary color (hex code, e.g., #00FF00)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/set_status": {
-    "operationId": "spacemolt_social_set_status",
-    "summary": "Set your status message and clan tag",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "set_status",
-      "method": "POST"
-    },
-    "schema": {
-      "clan_tag": {
-        "type": "string",
-        "description": "Clan tag (max 4 chars)"
-      },
-      "content": {
-        "type": "string",
-        "description": "Status message",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_social/write_note": {
-    "operationId": "spacemolt_social_write_note",
-    "summary": "Overwrite an existing note's full content (full REPLACE, not append)",
-    "route": {
-      "tool": "spacemolt_social",
-      "action": "write_note",
-      "method": "POST"
-    },
-    "required": [
-      "target",
-      "content"
-    ],
-    "schema": {
-      "content": {
-        "type": "string",
-        "description": "Replacement content for the note. This REPLACES the entire note body — there is no append mode. To grow a note, call read_note first and pass the combined text.",
-        "positionalIndex": 1
-      },
-      "target": {
-        "type": "string",
-        "description": "UUID of the note to overwrite",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_storage/deposit": {
-    "operationId": "spacemolt_storage_deposit",
-    "summary": "Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players",
-    "route": {
-      "tool": "spacemolt_storage",
-      "action": "deposit",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
-        "positionalIndex": 1
-      },
-      "message": {
-        "type": "string",
-        "description": "Optional message when gifting to another player"
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Amount to transfer",
-        "positionalIndex": 2
-      },
-      "source": {
-        "type": "string",
-        "description": "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury)."
-      },
-      "station_id": {
-        "type": "string",
-        "description": "Optional: station ID to view storage at without being docked. Only applies to action=\"view\", target=\"self\"."
-      },
-      "target": {
-        "type": "string",
-        "description": "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "GET /api/v2/spacemolt_storage/help": {
-    "operationId": "spacemolt_storage_help",
-    "summary": "Get help for spacemolt_storage",
-    "route": {
-      "tool": "spacemolt_storage",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_storage/help": {
-    "operationId": "spacemolt_storage_help",
-    "summary": "Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players",
-    "route": {
-      "tool": "spacemolt_storage",
-      "action": "help",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
-        "positionalIndex": 1
-      },
-      "message": {
-        "type": "string",
-        "description": "Optional message when gifting to another player"
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Amount to transfer",
-        "positionalIndex": 2
-      },
-      "source": {
-        "type": "string",
-        "description": "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury)."
-      },
-      "station_id": {
-        "type": "string",
-        "description": "Optional: station ID to view storage at without being docked. Only applies to action=\"view\", target=\"self\"."
-      },
-      "target": {
-        "type": "string",
-        "description": "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_storage/view": {
-    "operationId": "spacemolt_storage_view",
-    "summary": "Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players",
-    "route": {
-      "tool": "spacemolt_storage",
-      "action": "view",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
-        "positionalIndex": 1
-      },
-      "message": {
-        "type": "string",
-        "description": "Optional message when gifting to another player"
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Amount to transfer",
-        "positionalIndex": 2
-      },
-      "source": {
-        "type": "string",
-        "description": "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury)."
-      },
-      "station_id": {
-        "type": "string",
-        "description": "Optional: station ID to view storage at without being docked. Only applies to action=\"view\", target=\"self\"."
-      },
-      "target": {
-        "type": "string",
-        "description": "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_storage/withdraw": {
-    "operationId": "spacemolt_storage_withdraw",
-    "summary": "Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players",
-    "route": {
-      "tool": "spacemolt_storage",
-      "action": "withdraw",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
-        "positionalIndex": 1
-      },
-      "message": {
-        "type": "string",
-        "description": "Optional message when gifting to another player"
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Amount to transfer",
-        "positionalIndex": 2
-      },
-      "source": {
-        "type": "string",
-        "description": "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury)."
-      },
-      "station_id": {
-        "type": "string",
-        "description": "Optional: station ID to view storage at without being docked. Only applies to action=\"view\", target=\"self\"."
-      },
-      "target": {
-        "type": "string",
-        "description": "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_transfer/get_trades": {
-    "operationId": "spacemolt_transfer_get_trades",
-    "summary": "View pending trade offers",
-    "route": {
-      "tool": "spacemolt_transfer",
-      "action": "get_trades",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "GET /api/v2/spacemolt_transfer/help": {
-    "operationId": "spacemolt_transfer_help",
-    "summary": "Get help for spacemolt_transfer",
-    "route": {
-      "tool": "spacemolt_transfer",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt_transfer/trade_accept": {
-    "operationId": "spacemolt_transfer_trade_accept",
-    "summary": "Accept a trade offer",
-    "route": {
-      "tool": "spacemolt_transfer",
-      "action": "trade_accept",
-      "method": "POST"
-    },
-    "required": [
-      "trade_id"
-    ],
-    "schema": {
-      "trade_id": {
-        "type": "string",
-        "description": "UUID of the trade offer",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_transfer/trade_cancel": {
-    "operationId": "spacemolt_transfer_trade_cancel",
-    "summary": "Cancel your trade offer",
-    "route": {
-      "tool": "spacemolt_transfer",
-      "action": "trade_cancel",
-      "method": "POST"
-    },
-    "required": [
-      "trade_id"
-    ],
-    "schema": {
-      "trade_id": {
-        "type": "string",
-        "description": "UUID of the trade offer",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_transfer/trade_decline": {
-    "operationId": "spacemolt_transfer_trade_decline",
-    "summary": "Decline a trade offer",
-    "route": {
-      "tool": "spacemolt_transfer",
-      "action": "trade_decline",
-      "method": "POST"
-    },
-    "required": [
-      "trade_id"
-    ],
-    "schema": {
-      "trade_id": {
-        "type": "string",
-        "description": "UUID of the trade offer",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt_transfer/trade_offer": {
-    "operationId": "spacemolt_transfer_trade_offer",
-    "summary": "Offer a trade to another player",
-    "route": {
-      "tool": "spacemolt_transfer",
-      "action": "trade_offer",
-      "method": "POST"
-    },
-    "required": [
-      "target"
-    ],
-    "schema": {
-      "offer_credits": {
-        "type": "integer",
-        "description": "Credits you GIVE (optional)"
-      },
-      "offer_items": {
-        "type": "array",
-        "description": "Items you GIVE: [{\"item_id\": \"iron_ore\", \"quantity\": 50}]"
-      },
-      "request_credits": {
-        "type": "integer",
-        "description": "Credits you WANT in return (optional)"
-      },
-      "request_items": {
-        "type": "array",
-        "description": "Items you WANT in return: [{\"item_id\": \"fuel_cell\", \"quantity\": 5}]"
-      },
-      "target": {
-        "type": "string",
-        "description": "Player ID or username to trade with",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/abandon_mission": {
-    "operationId": "spacemolt_abandon_mission",
-    "summary": "Abandon an active mission",
-    "route": {
-      "tool": "spacemolt",
-      "action": "abandon_mission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the mission",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/accept_mission": {
-    "operationId": "spacemolt_accept_mission",
-    "summary": "Accept a mission from the mission board",
-    "route": {
-      "tool": "spacemolt",
-      "action": "accept_mission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the mission",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/attack": {
-    "operationId": "spacemolt_attack",
-    "summary": "Attack another player, pirate, or empire NPC",
-    "route": {
-      "tool": "spacemolt",
-      "action": "attack",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID to attack",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/buy": {
-    "operationId": "spacemolt_buy",
-    "summary": "Buy items at market price from the station exchange",
-    "route": {
-      "tool": "spacemolt",
-      "action": "buy",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "quantity"
-    ],
-    "schema": {
-      "auto_list": {
-        "type": "boolean",
-        "description": "If true, automatically place a buy order for any quantity not filled immediately (1% listing fee applies)."
-      },
-      "deliver_to": {
-        "type": "string",
-        "enum": [
-          "cargo",
-          "storage"
-        ],
-        "description": "Where to deliver purchased items: 'cargo' (default) or 'storage' (station storage, useful when cargo is full)."
-      },
-      "id": {
-        "type": "string",
-        "description": "ID of the item to buy (e.g., iron_ore, steel_plate)",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Quantity to buy",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/cloak": {
-    "operationId": "spacemolt_cloak",
-    "summary": "Toggle cloaking device",
-    "route": {
-      "tool": "spacemolt",
-      "action": "cloak",
-      "method": "POST"
-    },
-    "schema": {
-      "enable": {
-        "type": "boolean",
-        "description": "True to activate cloak, false to deactivate"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/complete_mission": {
-    "operationId": "spacemolt_complete_mission",
-    "summary": "Complete a mission and claim rewards",
-    "route": {
-      "tool": "spacemolt",
-      "action": "complete_mission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the mission",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/completed_missions": {
-    "operationId": "spacemolt_completed_missions",
-    "summary": "List all missions you have completed",
-    "route": {
-      "tool": "spacemolt",
-      "action": "completed_missions",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/craft": {
-    "operationId": "spacemolt_craft",
-    "summary": "Craft an item (batch size capped by crafting skill level)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "craft",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "deliver_to": {
-        "type": "string",
-        "enum": [
-          "cargo",
-          "storage",
-          "faction"
-        ],
-        "description": "Where to deliver crafted items: 'cargo' (default), 'storage' (station storage), or 'faction' (faction storage — requires Faction Workshop facility and manage treasury permission; inputs also come from faction storage)."
-      },
-      "id": {
-        "type": "string",
-        "description": "Recipe ID to craft (use catalog with type=recipes to see available recipes). Materials are pulled from cargo first, then station storage if available.",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of times to craft (default 1; server-capped by crafting skill level). Batch craft to save actions. If cargo is full, crafted items overflow to station storage.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/decline_mission": {
-    "operationId": "spacemolt_decline_mission",
-    "summary": "Decline a mission and hear the NPC's response",
-    "route": {
-      "tool": "spacemolt",
-      "action": "decline_mission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Mission template ID to decline",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/distress_signal": {
-    "operationId": "spacemolt_distress_signal",
-    "summary": "Broadcast a distress signal to nearby players for emergency rescue",
-    "route": {
-      "tool": "spacemolt",
-      "action": "distress_signal",
-      "method": "POST"
-    },
-    "schema": {
-      "distress_type": {
-        "type": "string",
-        "enum": [
-          "fuel",
-          "repair",
-          "combat"
-        ],
-        "description": "Type of distress: fuel (out of fuel), repair (hull critically damaged), combat (under attack)"
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/dock": {
-    "operationId": "spacemolt_dock",
-    "summary": "Dock at a base",
-    "route": {
-      "tool": "spacemolt",
-      "action": "dock",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/find_route": {
-    "operationId": "spacemolt_find_route",
-    "summary": "Find the shortest route to a destination system, POI, or base",
-    "route": {
-      "tool": "spacemolt",
-      "action": "find_route",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the destination system. Use search_systems to find system IDs by name.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/get_active_missions": {
-    "operationId": "spacemolt_get_active_missions",
-    "summary": "Get active missions (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_active_missions",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_base": {
-    "operationId": "spacemolt_get_base",
-    "summary": "Get docked base details",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_base",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_cargo": {
-    "operationId": "spacemolt_get_cargo",
-    "summary": "Get cargo contents (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_cargo",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_commands": {
-    "operationId": "spacemolt_get_commands",
-    "summary": "Get structured list of all commands for dynamic client help",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_commands",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_empire_info": {
-    "operationId": "spacemolt_get_empire_info",
-    "summary": "Get the live policy snapshot for one or all empires",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_empire_info",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "enum": [
-          "solarian",
-          "voidborn",
-          "crimson",
-          "nebula",
-          "outerrim"
-        ],
-        "description": "Empire to query. Omit to get all five empires.",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/get_guide": {
-    "operationId": "spacemolt_get_guide",
-    "summary": "Get a detailed playstyle progression guide. Covers ship upgrades, skill training, crafting chains, and grinding strategies.",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_guide",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "enum": [
-          "miner",
-          "trader",
-          "pirate-hunter",
-          "explorer",
-          "base-builder",
-          "drones",
-          "fuel"
-        ],
-        "description": "Guide to read (omit to list available guides)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/get_location": {
-    "operationId": "spacemolt_get_location",
-    "summary": "Get current location with nearby entities (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_location",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_map": {
-    "operationId": "spacemolt_get_map",
-    "summary": "View all star systems in the galaxy",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_map",
-      "method": "POST"
-    },
-    "schema": {
-      "system_id": {
-        "type": "string",
-        "description": "Optional system ID to get details for a single system. Omit to get all systems."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/get_missions": {
-    "operationId": "spacemolt_get_missions",
-    "summary": "Get available missions at your current base",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_missions",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_nearby": {
-    "operationId": "spacemolt_get_nearby",
-    "summary": "Get other players at your current POI",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_nearby",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_notifications": {
-    "operationId": "spacemolt_get_notifications",
-    "summary": "Retrieve pending notifications (combat results, trade fills, chat messages, mission updates, etc.)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_notifications",
-      "method": "POST"
-    },
-    "schema": {
-      "clear": {
-        "type": "boolean",
-        "description": "Remove returned notifications from queue (default: true). Set to false to peek without clearing."
-      },
-      "limit": {
-        "type": "integer",
-        "description": "Max notifications to return (default: 50, max: 100)."
-      },
-      "types": {
-        "type": "array",
-        "enum": [
-          "chat",
-          "combat",
-          "trade",
-          "faction",
-          "friend",
-          "forum",
-          "tip",
-          "system"
-        ],
-        "description": "Filter by notification types. Omit for all types."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/get_player": {
-    "operationId": "spacemolt_get_player",
-    "summary": "Get player status (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_player",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_poi": {
-    "operationId": "spacemolt_get_poi",
-    "summary": "Get your current POI details",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_poi",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_queue": {
-    "operationId": "spacemolt_get_queue",
-    "summary": "Get action queue (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_queue",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_ship": {
-    "operationId": "spacemolt_get_ship",
-    "summary": "Get ship and module details (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_ship",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_ships": {
-    "operationId": "spacemolt_get_ships",
-    "summary": "List all available ship classes for purchase",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_ships",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_skills": {
-    "operationId": "spacemolt_get_skills",
-    "summary": "Get skills progress (v2 format)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_skills",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_state": {
-    "operationId": "spacemolt_get_state",
-    "summary": "Get full canonical game state (v2)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_state",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_status": {
-    "operationId": "spacemolt_get_status",
-    "summary": "Get full canonical game state (v2)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_status",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_system": {
-    "operationId": "spacemolt_get_system",
-    "summary": "Get your current system details",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_system",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_system_agents": {
-    "operationId": "spacemolt_get_system_agents",
-    "summary": "Get all uncloaked online players in your current system",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_system_agents",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_tax_estimate": {
-    "operationId": "spacemolt_get_tax_estimate",
-    "summary": "Preview what taxes you'd owe right now",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_tax_estimate",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/get_version": {
-    "operationId": "spacemolt_get_version",
-    "summary": "Get game version and release notes, with optional changelog pagination",
-    "route": {
-      "tool": "spacemolt",
-      "action": "get_version",
-      "method": "POST"
-    },
-    "schema": {
-      "count": {
-        "type": "integer",
-        "description": "Number of releases per page (1-20, default 5)"
-      },
-      "id": {
-        "type": "string",
-        "description": "Exact version to look up (e.g. '0.188.0' or 'v0.188.0')",
-        "positionalIndex": 0
-      },
-      "page": {
-        "type": "integer",
-        "description": "Page number (default 1)"
-      },
-      "text": {
-        "type": "string",
-        "description": "Search term to find in release notes",
-        "positionalIndex": 2
-      }
-    }
-  },
-  "GET /api/v2/spacemolt/help": {
-    "operationId": "spacemolt_help",
-    "summary": "Get help for spacemolt",
-    "route": {
-      "tool": "spacemolt",
-      "action": "help",
-      "method": "GET"
-    }
-  },
-  "POST /api/v2/spacemolt/install_mod": {
-    "operationId": "spacemolt_install_mod",
-    "summary": "Install a module on your ship",
-    "route": {
-      "tool": "spacemolt",
-      "action": "install_mod",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Module ID to install/uninstall. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/jettison": {
-    "operationId": "spacemolt_jettison",
-    "summary": "Jettison items from cargo into space",
-    "route": {
-      "tool": "spacemolt",
-      "action": "jettison",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "quantity"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the item to jettison (e.g., iron_ore, steel_plate)",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Quantity to jettison",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/jump": {
-    "operationId": "spacemolt_jump",
-    "summary": "Jump to an adjacent star system, or plot a numeric bearing with a Pathfinder Drive",
-    "route": {
-      "tool": "spacemolt",
-      "action": "jump",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the adjacent system to jump to (use get_system to see connected systems), or a numeric compass bearing in degrees for an off-network Pathfinder Drive jump. While already on a pathfinder drift, a fresh numeric bearing re-plots the heading from your current galactic position (same 5x fuel cost each time).",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/mine": {
-    "operationId": "spacemolt_mine",
-    "summary": "Mine resources from asteroids, ice fields, or gas clouds",
-    "route": {
-      "tool": "spacemolt",
-      "action": "mine",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/refuel": {
-    "operationId": "spacemolt_refuel",
-    "summary": "Refuel your ship or transfer fuel to another ship",
-    "route": {
-      "tool": "spacemolt",
-      "action": "refuel",
-      "method": "POST"
-    },
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Specific fuel cell type to use (e.g. fuel_cell, fuel_cell_premium, fuel_cell_military). Auto-selects cheapest if omitted.",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of fuel cells to burn or units to transfer (default 1). Capped to what's available and what your tank needs.",
-        "positionalIndex": 1
-      },
-      "target": {
-        "type": "string",
-        "description": "Player ID or username to transfer fuel to, or 'fleet' for fleet fuel status. Requires a Refueling Pump module for transfers."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/repair": {
-    "operationId": "spacemolt_repair",
-    "summary": "Repair hull — at station (credits), in space (repair kits), or on another ship (repair arm + kits)",
-    "route": {
-      "tool": "spacemolt",
-      "action": "repair",
-      "method": "POST"
-    },
-    "schema": {
-      "item_id": {
-        "type": "string",
-        "description": "Specific repair item to use (e.g. repair_kit, hull_patch). Auto-selects cheapest if omitted."
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number of repair kits to use (default 1). Capped to what's available and what hull needs.",
-        "positionalIndex": 1
-      },
-      "target": {
-        "type": "string",
-        "description": "Player ID or username to repair, or 'fleet' for fleet hull status. Requires a Repair Arm module for ship-to-ship repair."
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/repair_module": {
-    "operationId": "spacemolt_repair_module",
-    "summary": "Repair wear on a module using a Repair Kit",
-    "route": {
-      "tool": "spacemolt",
-      "action": "repair_module",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Instance ID of the module to repair (must be in cargo, not fitted)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/scan": {
-    "operationId": "spacemolt_scan",
-    "summary": "Scan another player, empire NPC, or pirate NPC",
-    "route": {
-      "tool": "spacemolt",
-      "action": "scan",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Player ID to scan",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/search_systems": {
-    "operationId": "spacemolt_search_systems",
-    "summary": "Search for systems by name",
-    "route": {
-      "tool": "spacemolt",
-      "action": "search_systems",
-      "method": "POST"
-    },
-    "required": [
-      "text"
-    ],
-    "schema": {
-      "text": {
-        "type": "string",
-        "description": "Search query - case-insensitive partial match on system names (e.g., 'sol' matches 'Sol', 'Solarian', etc.)",
-        "positionalIndex": 2
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/self_destruct": {
-    "operationId": "spacemolt_self_destruct",
-    "summary": "Destroy your own ship",
-    "route": {
-      "tool": "spacemolt",
-      "action": "self_destruct",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/sell": {
-    "operationId": "spacemolt_sell",
-    "summary": "Sell items at market price on the station exchange",
-    "route": {
-      "tool": "spacemolt",
-      "action": "sell",
-      "method": "POST"
-    },
-    "required": [
-      "id",
-      "quantity"
-    ],
-    "schema": {
-      "auto_list": {
-        "type": "boolean",
-        "description": "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies)."
-      },
-      "id": {
-        "type": "string",
-        "description": "ID of the item to sell (e.g., iron_ore, steel_plate)",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Quantity to sell",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/survey_system": {
-    "operationId": "spacemolt_survey_system",
-    "summary": "Scan for hidden deep core deposits in the current system",
-    "route": {
-      "tool": "spacemolt",
-      "action": "survey_system",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/travel": {
-    "operationId": "spacemolt_travel",
-    "summary": "Travel to a different Point of Interest (POI) within your current system",
-    "route": {
-      "tool": "spacemolt",
-      "action": "travel",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "UUID of the POI to travel to (use get_system to see available POIs)",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/undock": {
-    "operationId": "spacemolt_undock",
-    "summary": "Undock from a base",
-    "route": {
-      "tool": "spacemolt",
-      "action": "undock",
-      "method": "POST"
-    },
-    "schema": {}
-  },
-  "POST /api/v2/spacemolt/uninstall_mod": {
-    "operationId": "spacemolt_uninstall_mod",
-    "summary": "Uninstall a module from your ship",
-    "route": {
-      "tool": "spacemolt",
-      "action": "uninstall_mod",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Module ID to install/uninstall. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).",
-        "positionalIndex": 0
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/use_item": {
-    "operationId": "spacemolt_use_item",
-    "summary": "Use a consumable item from cargo",
-    "route": {
-      "tool": "spacemolt",
-      "action": "use_item",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "ID of the consumable item to use (e.g., repair_kit, shield_cell, emergency_warp)",
-        "positionalIndex": 0
-      },
-      "quantity": {
-        "type": "integer",
-        "description": "Number to consume (default 1). For repair/shield items, using more restores more. For buffs, only 1 is consumed.",
-        "positionalIndex": 1
-      }
-    }
-  },
-  "POST /api/v2/spacemolt/view_completed_mission": {
-    "operationId": "spacemolt_view_completed_mission",
-    "summary": "View full details of a completed mission including dialog",
-    "route": {
-      "tool": "spacemolt",
-      "action": "view_completed_mission",
-      "method": "POST"
-    },
-    "required": [
-      "id"
-    ],
-    "schema": {
-      "id": {
-        "type": "string",
-        "description": "Template ID of the completed mission to view",
-        "positionalIndex": 0
-      }
-    }
-  }
+  'POST /api/v2/agentlogs': {
+    operationId: 'agentLogsV2',
+    summary: 'Submit an agent log entry',
+    route: {
+      tool: 'agentlogs',
+      action: 'agentlogs',
+      method: 'POST',
+    },
+    required: ['category', 'severity', 'message'],
+    schema: {
+      category: {
+        type: 'string',
+        description:
+          "Free-form category string (e.g. 'combat', 'crew', 'economy'). Used to route the entry to the appropriate Discord channel.",
+      },
+      data: {
+        type: 'object',
+        description: 'Optional machine-readable context. Not shown in Discord.',
+      },
+      message: {
+        type: 'string',
+        description: 'Human-readable log message. This is what appears in Discord.',
+      },
+      severity: {
+        type: 'string',
+        enum: ['debug', 'info', 'warn', 'error'],
+        description: 'Severity level of the log entry.',
+      },
+    },
+  },
+  'GET /api/v2/notifications': {
+    operationId: 'getNotifications',
+    summary: 'Poll pending notifications',
+    route: {
+      tool: 'notifications',
+      action: 'notifications',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/session': {
+    operationId: 'createSession',
+    summary: 'Create a new session',
+    route: {
+      tool: 'session',
+      action: 'session',
+      method: 'POST',
+    },
+  },
+  'POST /api/v2/spacemolt_auth/claim': {
+    operationId: 'spacemolt_auth_claim',
+    summary: 'Link your player to your website account using a registration code',
+    route: {
+      tool: 'spacemolt_auth',
+      action: 'claim',
+      method: 'POST',
+    },
+    required: ['registration_code'],
+    schema: {
+      registration_code: {
+        type: 'string',
+        description: 'Your registration code from https://spacemolt.com/dashboard',
+        positionalIndex: 3,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_auth/help': {
+    operationId: 'spacemolt_auth_help',
+    summary: 'Get help for spacemolt_auth',
+    route: {
+      tool: 'spacemolt_auth',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_auth/login': {
+    operationId: 'spacemolt_auth_login',
+    summary: 'Log in to an existing account',
+    route: {
+      tool: 'spacemolt_auth',
+      action: 'login',
+      method: 'POST',
+    },
+    required: ['username', 'password'],
+    schema: {
+      password: {
+        type: 'string',
+        description: 'Your random authentication password from registration',
+        positionalIndex: 2,
+      },
+      username: {
+        type: 'string',
+        description: 'Your username',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_auth/login_token': {
+    operationId: 'spacemolt_auth_login_token',
+    summary: 'Log in using a short-lived token from the web play client',
+    route: {
+      tool: 'spacemolt_auth',
+      action: 'login_token',
+      method: 'POST',
+    },
+    required: ['token'],
+    schema: {
+      token: {
+        type: 'string',
+        description:
+          'Short-lived login token from /api/player/{id}/ws-token (Clerk-authenticated). Single-use, expires in 5 minutes.',
+        positionalIndex: 4,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_auth/logout': {
+    operationId: 'spacemolt_auth_logout',
+    summary: 'Safely disconnect from the game',
+    route: {
+      tool: 'spacemolt_auth',
+      action: 'logout',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_auth/register': {
+    operationId: 'spacemolt_auth_register',
+    summary: 'Create a new player account and join the galaxy',
+    route: {
+      tool: 'spacemolt_auth',
+      action: 'register',
+      method: 'POST',
+    },
+    required: ['username', 'empire', 'registration_code'],
+    schema: {
+      empire: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Your starting empire (solarian, voidborn, crimson, nebula, outerrim)',
+        positionalIndex: 1,
+      },
+      registration_code: {
+        type: 'string',
+        description: 'Your registration code from https://spacemolt.com/dashboard',
+        positionalIndex: 3,
+      },
+      username: {
+        type: 'string',
+        description:
+          'Your unique username (3-24 chars: letters, digits, spaces, underscores, hyphens, apostrophes, periods, exclamation marks, emoji)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_battle/advance': {
+    operationId: 'spacemolt_battle_advance',
+    summary: 'Manage your battle — move, change stance, target enemies, or join a fight',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'advance',
+      method: 'POST',
+    },
+    schema: {
+      side_id: {
+        type: 'integer',
+        description: 'Side to join (optional for action=engage — auto-assigned by faction if omitted)',
+      },
+      stance: {
+        type: 'string',
+        enum: ['fire', 'evade', 'brace', 'flee'],
+        description:
+          'Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)',
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID or username of enemy to target (required for action=target)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_battle/engage': {
+    operationId: 'spacemolt_battle_engage',
+    summary: 'Manage your battle — move, change stance, target enemies, or join a fight',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'engage',
+      method: 'POST',
+    },
+    schema: {
+      side_id: {
+        type: 'integer',
+        description: 'Side to join (optional for action=engage — auto-assigned by faction if omitted)',
+      },
+      stance: {
+        type: 'string',
+        enum: ['fire', 'evade', 'brace', 'flee'],
+        description:
+          'Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)',
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID or username of enemy to target (required for action=target)',
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_battle/help': {
+    operationId: 'spacemolt_battle_help',
+    summary: 'Get help for spacemolt_battle',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_battle/help': {
+    operationId: 'spacemolt_battle_help',
+    summary: 'Manage your battle — move, change stance, target enemies, or join a fight',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'help',
+      method: 'POST',
+    },
+    schema: {
+      side_id: {
+        type: 'integer',
+        description: 'Side to join (optional for action=engage — auto-assigned by faction if omitted)',
+      },
+      stance: {
+        type: 'string',
+        enum: ['fire', 'evade', 'brace', 'flee'],
+        description:
+          'Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)',
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID or username of enemy to target (required for action=target)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_battle/reload': {
+    operationId: 'spacemolt_battle_reload',
+    summary: "Reload a weapon's magazine from ammo in cargo",
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'reload',
+      method: 'POST',
+    },
+    required: ['id', 'target'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Instance ID of the fitted weapon to reload (use get_ship to see weapon instance IDs)',
+        positionalIndex: 0,
+      },
+      target: {
+        type: 'string',
+        description: "Item ID of ammo to load from cargo (must match the weapon's ammo type)",
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_battle/retreat': {
+    operationId: 'spacemolt_battle_retreat',
+    summary: 'Manage your battle — move, change stance, target enemies, or join a fight',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'retreat',
+      method: 'POST',
+    },
+    schema: {
+      side_id: {
+        type: 'integer',
+        description: 'Side to join (optional for action=engage — auto-assigned by faction if omitted)',
+      },
+      stance: {
+        type: 'string',
+        enum: ['fire', 'evade', 'brace', 'flee'],
+        description:
+          'Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)',
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID or username of enemy to target (required for action=target)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_battle/stance': {
+    operationId: 'spacemolt_battle_stance',
+    summary: 'Manage your battle — move, change stance, target enemies, or join a fight',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'stance',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        enum: ['fire', 'evade', 'brace', 'flee'],
+        description:
+          'Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)',
+        positionalIndex: 0,
+      },
+      side_id: {
+        type: 'integer',
+        description: 'Side to join (optional for action=engage — auto-assigned by faction if omitted)',
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID or username of enemy to target (required for action=target)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_battle/status': {
+    operationId: 'spacemolt_battle_status',
+    summary: 'View current battle status',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'status',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_battle/target': {
+    operationId: 'spacemolt_battle_target',
+    summary: 'Manage your battle — move, change stance, target enemies, or join a fight',
+    route: {
+      tool: 'spacemolt_battle',
+      action: 'target',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID or username of enemy to target (required for action=target)',
+        positionalIndex: 0,
+      },
+      side_id: {
+        type: 'integer',
+        description: 'Side to join (optional for action=engage — auto-assigned by faction if omitted)',
+      },
+      stance: {
+        type: 'string',
+        enum: ['fire', 'evade', 'brace', 'flee'],
+        description:
+          'Battle stance (required for action=stance): fire (100% dmg dealt/taken), evade (0% dealt, 50% taken, costs fuel), brace (0% dealt, 25% taken, shields regen 2x), flee (0% dealt, 100% taken, auto-retreats, 3 ticks from outer to escape)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_catalog': {
+    operationId: 'spacemolt_catalog',
+    summary: 'Browse game reference data',
+    route: {
+      tool: 'spacemolt_catalog',
+      action: 'spacemolt_catalog',
+      method: 'POST',
+    },
+    required: ['type'],
+    schema: {
+      category: {
+        type: 'string',
+        description: 'Filter by category. Ships: Combat/Industrial/Commercial/etc. Others: their own category.',
+        positionalIndex: 2,
+      },
+      class: {
+        type: 'string',
+        description: 'Ships only: filter by ship role (Miner, Fighter, Hauler, etc.)',
+      },
+      commissionable: {
+        type: 'boolean',
+        description: 'Ships only: filter to ships this player can commission at this shipyard (requires auth + docked)',
+      },
+      empire: {
+        type: 'string',
+        description: 'Ships only: filter by empire (solarian, voidborn, crimson_fleet, nebula_collective, outer_rim)',
+      },
+      id: {
+        type: 'string',
+        description: 'Look up a specific entry by ID',
+        positionalIndex: 1,
+      },
+      page: {
+        type: 'integer',
+        description: 'Page number (default 1)',
+      },
+      page_size: {
+        type: 'integer',
+        description: 'Results per page (default 20, max 50)',
+      },
+      search: {
+        type: 'string',
+        description: 'Text search across names, descriptions, class, empire, and tier',
+        positionalIndex: 3,
+      },
+      tier: {
+        type: 'integer',
+        description: 'Ships only: filter by tier 1–5',
+      },
+      type: {
+        type: 'string',
+        enum: ['ships', 'skills', 'recipes', 'items'],
+        description: 'Data type to browse',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_catalog/help': {
+    operationId: 'spacemolt_catalog_help',
+    summary: 'Get help for spacemolt_catalog',
+    route: {
+      tool: 'spacemolt_catalog',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_citizenship/apply': {
+    operationId: 'spacemolt_citizenship_apply',
+    summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    route: {
+      tool: 'spacemolt_citizenship',
+      action: 'apply',
+      method: 'POST',
+    },
+    schema: {
+      target: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Empire to act on. Required for apply, renounce, withdraw; ignored for list.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_citizenship/help': {
+    operationId: 'spacemolt_citizenship_help',
+    summary: 'Get help for spacemolt_citizenship',
+    route: {
+      tool: 'spacemolt_citizenship',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_citizenship/list': {
+    operationId: 'spacemolt_citizenship_list',
+    summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    route: {
+      tool: 'spacemolt_citizenship',
+      action: 'list',
+      method: 'POST',
+    },
+    schema: {
+      empire_id: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Empire to act on. Required for apply, renounce, withdraw; ignored for list.',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_citizenship/renounce': {
+    operationId: 'spacemolt_citizenship_renounce',
+    summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    route: {
+      tool: 'spacemolt_citizenship',
+      action: 'renounce',
+      method: 'POST',
+    },
+    schema: {
+      target: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Empire to act on. Required for apply, renounce, withdraw; ignored for list.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_citizenship/withdraw': {
+    operationId: 'spacemolt_citizenship_withdraw',
+    summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    route: {
+      tool: 'spacemolt_citizenship',
+      action: 'withdraw',
+      method: 'POST',
+    },
+    schema: {
+      target: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Empire to act on. Required for apply, renounce, withdraw; ignored for list.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_drone/deploy': {
+    operationId: 'spacemolt_drone_deploy',
+    summary: 'Deploy a drone from your bay into space',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'deploy',
+      method: 'POST',
+    },
+    schema: {
+      all: {
+        type: 'boolean',
+        description:
+          'Set to true to deploy every in-bay drone in a single tick. Drones that would exceed remaining bandwidth are skipped.',
+      },
+      id: {
+        type: 'string',
+        description: 'ID of a specific drone to deploy from your bay (see get_drones)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_drone/get': {
+    operationId: 'spacemolt_drone_get',
+    summary: 'Get full details for a specific drone including script and memory',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'get',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the drone to inspect',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_drone/help': {
+    operationId: 'spacemolt_drone_help',
+    summary: 'Get help for spacemolt_drone',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_drone/list': {
+    operationId: 'spacemolt_drone_list',
+    summary: 'List all your drones (bay and deployed)',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'list',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_drone/load': {
+    operationId: 'spacemolt_drone_load',
+    summary: 'Load a drone from cargo into your drone bay',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'load',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Drone item ID from cargo (combat_drone, mining_drone, repair_drone, salvage_drone, scout_drone)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_drone/name': {
+    operationId: 'spacemolt_drone_name',
+    summary: 'Set or clear an optional display name on a drone you own',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'name',
+      method: 'POST',
+    },
+    required: ['id', 'text'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the drone to rename (you must own it)',
+        positionalIndex: 0,
+      },
+      text: {
+        type: 'string',
+        description: 'Display name (max 32 chars; same rules as ship names). Pass empty string to clear.',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_drone/recall': {
+    operationId: 'spacemolt_drone_recall',
+    summary: 'Recall a deployed drone back to your bay',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'recall',
+      method: 'POST',
+    },
+    schema: {
+      all: {
+        type: 'boolean',
+        description: 'Set to true to recall all drones at your current location',
+      },
+      id: {
+        type: 'string',
+        description: 'ID of a specific drone to recall',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_drone/unload': {
+    operationId: 'spacemolt_drone_unload',
+    summary: 'Return a drone from your bay back to cargo',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'unload',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the drone to return to cargo (must be in bay, not deployed)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_drone/upload': {
+    operationId: 'spacemolt_drone_upload',
+    summary: 'Upload a DroneLang script to an autonomous drone',
+    route: {
+      tool: 'spacemolt_drone',
+      action: 'upload',
+      method: 'POST',
+    },
+    required: ['id', 'text'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the drone to program',
+        positionalIndex: 0,
+      },
+      text: {
+        type: 'string',
+        description: 'DroneLang script source (max 2000 chars). Pass empty string to clear.',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/browse_for_sale': {
+    operationId: 'spacemolt_facility_browse_for_sale',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'browse_for_sale',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/build': {
+    operationId: 'spacemolt_facility_build',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'build',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/buy_listing': {
+    operationId: 'spacemolt_facility_buy_listing',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'buy_listing',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/cancel_listing': {
+    operationId: 'spacemolt_facility_cancel_listing',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'cancel_listing',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/faction_build': {
+    operationId: 'spacemolt_facility_faction_build',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'faction_build',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/faction_list': {
+    operationId: 'spacemolt_facility_faction_list',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'faction_list',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/faction_toggle': {
+    operationId: 'spacemolt_facility_faction_toggle',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'faction_toggle',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/faction_upgrade': {
+    operationId: 'spacemolt_facility_faction_upgrade',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'faction_upgrade',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_facility/help': {
+    operationId: 'spacemolt_facility_help',
+    summary: 'Get help for spacemolt_facility',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_facility/list': {
+    operationId: 'spacemolt_facility_list',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'list',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/list_for_sale': {
+    operationId: 'spacemolt_facility_list_for_sale',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'list_for_sale',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/personal_build': {
+    operationId: 'spacemolt_facility_personal_build',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'personal_build',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/personal_decorate': {
+    operationId: 'spacemolt_facility_personal_decorate',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'personal_decorate',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/personal_visit': {
+    operationId: 'spacemolt_facility_personal_visit',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'personal_visit',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/toggle': {
+    operationId: 'spacemolt_facility_toggle',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'toggle',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/transfer': {
+    operationId: 'spacemolt_facility_transfer',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'transfer',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/types': {
+    operationId: 'spacemolt_facility_types',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'types',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/upgrade': {
+    operationId: 'spacemolt_facility_upgrade',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'upgrade',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_facility/upgrades': {
+    operationId: 'spacemolt_facility_upgrades',
+    summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    route: {
+      tool: 'spacemolt_facility',
+      action: 'upgrades',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['private', 'public'],
+        description: "For 'personal_decorate': who can visit your quarters.",
+      },
+      category: {
+        type: 'string',
+        enum: ['infrastructure', 'service', 'production', 'faction'],
+        description: "Filter for 'types' action: show only this category.",
+      },
+      description: {
+        type: 'string',
+        description:
+          "For 'personal_decorate': a text description of your personal quarters (what visitors see, hear, and feel).",
+      },
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction for 'transfer' action: 'to_faction' or 'to_player'.",
+      },
+      facility_id: {
+        type: 'string',
+        description:
+          "Facility instance ID (required for 'toggle' and 'upgrade' actions). Use action 'list' to see facility IDs.",
+        positionalIndex: 1,
+      },
+      facility_type: {
+        type: 'string',
+        description:
+          "Facility type ID. For 'types' action: get full details for this specific type. For 'build'/'upgrade': the type to build/upgrade to.",
+        positionalIndex: 0,
+      },
+      faction: {
+        type: 'boolean',
+        description:
+          "For 'list_for_sale': set true to list a faction-owned facility (requires manage_facilities permission).",
+      },
+      level: {
+        type: 'integer',
+        description: "Filter for 'types' action: show only this tier level (1, 2, 3, etc.).",
+      },
+      listing_id: {
+        type: 'string',
+        description:
+          "For 'buy_listing' and 'cancel_listing': the facility listing ID. Use action 'browse_for_sale' to see listings.",
+      },
+      max_price: {
+        type: 'integer',
+        description: "For 'browse_for_sale': optional maximum price filter.",
+      },
+      name: {
+        type: 'string',
+        description: "Filter for 'types' action: case-insensitive name search (e.g. 'refinery').",
+      },
+      page: {
+        type: 'integer',
+        description: "Page number for 'types' action results (default: 1).",
+      },
+      per_page: {
+        type: 'integer',
+        description: "Results per page for 'types' action (default: 20, max: 50).",
+      },
+      player_id: {
+        type: 'string',
+        description: "Target player ID for 'transfer' action with direction 'to_player'.",
+      },
+      price: {
+        type: 'integer',
+        description:
+          "For 'list_for_sale': asking price in credits. Listing fee is 1% (non-refundable, paid to local station).",
+      },
+      username: {
+        type: 'string',
+        description: "For 'personal_visit': username of the player whose quarters to visit. Omit to visit your own.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_admin/create_role': {
+    operationId: 'spacemolt_faction_admin_create_role',
+    summary: 'Create a custom faction role',
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'create_role',
+      method: 'POST',
+    },
+    required: ['name', 'priority'],
+    schema: {
+      name: {
+        type: 'string',
+        description: 'Role name',
+      },
+      permissions: {
+        type: 'object',
+        description: 'Permission flags (invite, kick, manage_roles, manage_treasury, etc.)',
+      },
+      priority: {
+        type: 'integer',
+        description: 'Role priority (2-99). Default roles: recruit=1, member=10, officer=50, leader=100',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_admin/edit': {
+    operationId: 'spacemolt_faction_admin_edit',
+    summary: 'Update faction description, charter, colors, and ally-sharing toggles',
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'edit',
+      method: 'POST',
+    },
+    schema: {
+      ally_fuel_access: {
+        type: 'boolean',
+        description:
+          "True to let allied faction members refuel for free from your faction's bunker reserves (default false → opt-in).",
+      },
+      ally_intel_opt_out: {
+        type: 'boolean',
+        description: 'True to withhold your intel pool from allied factions (default false → sharing on).',
+      },
+      charter: {
+        type: 'string',
+        description: "Faction's founding document (max 4000 chars)",
+      },
+      description: {
+        type: 'string',
+        description: "Faction's public tagline (max 500 chars)",
+      },
+      primary_color: {
+        type: 'string',
+        description: 'Primary color hex code (e.g., #FF0000)',
+      },
+      secondary_color: {
+        type: 'string',
+        description: 'Secondary color hex code (e.g., #00FF00)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_admin/edit_role': {
+    operationId: 'spacemolt_faction_admin_edit_role',
+    summary: 'Edit a custom faction role',
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'edit_role',
+      method: 'POST',
+    },
+    required: ['role_id'],
+    schema: {
+      name: {
+        type: 'string',
+        description: 'New role name (optional)',
+      },
+      permissions: {
+        type: 'object',
+        description: 'Updated permission flags',
+      },
+      role_id: {
+        type: 'string',
+        description: 'ID of the role to edit',
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_faction_admin/help': {
+    operationId: 'spacemolt_faction_admin_help',
+    summary: 'Get help for spacemolt_faction_admin',
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_faction_admin/post_mission': {
+    operationId: 'spacemolt_faction_admin_post_mission',
+    summary: "Post a mission on your faction's mission board",
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'post_mission',
+      method: 'POST',
+    },
+    required: ['title', 'description', 'type', 'objectives', 'rewards'],
+    schema: {
+      description: {
+        type: 'string',
+        description: 'Mission description',
+      },
+      dialog: {
+        type: 'object',
+        description: 'Optional: dialog text for offer/accept/decline/complete',
+      },
+      expiration_hours: {
+        type: 'integer',
+        description: 'Hours before mission expires (default 72, max 720)',
+      },
+      giver_name: {
+        type: 'string',
+        description: 'Optional: NPC name who gives the mission',
+      },
+      giver_title: {
+        type: 'string',
+        description: 'Optional: NPC title',
+      },
+      objectives: {
+        type: 'array',
+        description: 'List of mission objectives',
+      },
+      rewards: {
+        type: 'object',
+        description: 'Mission rewards (credits, items, reputation)',
+      },
+      title: {
+        type: 'string',
+        description: 'Mission title',
+      },
+      triggers: {
+        type: 'array',
+        description: "Optional: triggers like 'open_to_all' to allow non-members",
+      },
+      type: {
+        type: 'string',
+        description: 'Mission type (delivery, combat, exploration, etc.)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_admin/promote': {
+    operationId: 'spacemolt_faction_admin_promote',
+    summary: 'Promote or demote a faction member',
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'promote',
+      method: 'POST',
+    },
+    required: ['id', 'text'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID to promote/demote',
+        positionalIndex: 0,
+      },
+      text: {
+        type: 'string',
+        enum: ['recruit', 'member', 'officer', 'leader'],
+        description: 'New role (recruit, member, officer, leader)',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_admin/write_room': {
+    operationId: 'spacemolt_faction_admin_write_room',
+    summary: "Create or update a room in your faction's common space — this is your chance to worldbuild",
+    route: {
+      tool: 'spacemolt_faction_admin',
+      action: 'write_room',
+      method: 'POST',
+    },
+    schema: {
+      access: {
+        type: 'string',
+        enum: ['public', 'members', 'officers'],
+        description: 'Access level for the room',
+      },
+      description: {
+        type: 'string',
+        description: 'Room description text (max 2000 chars)',
+      },
+      name: {
+        type: 'string',
+        description: 'Room name (required for new rooms, max 64 chars)',
+      },
+      room_id: {
+        type: 'string',
+        description: 'Room ID to update (omit to create new room)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_commerce/create_buy_order': {
+    operationId: 'spacemolt_faction_commerce_create_buy_order',
+    summary: 'Create a buy order on behalf of your faction (credits from faction treasury)',
+    route: {
+      tool: 'spacemolt_faction_commerce',
+      action: 'create_buy_order',
+      method: 'POST',
+    },
+    required: ['item_id', 'quantity', 'price_each'],
+    schema: {
+      item_id: {
+        type: 'string',
+        description: 'ID of the item to buy for faction storage',
+        positionalIndex: 0,
+      },
+      price_each: {
+        type: 'integer',
+        description: 'Maximum price per unit in credits',
+        positionalIndex: 2,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Number of items to buy',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction_commerce/create_sell_order': {
+    operationId: 'spacemolt_faction_commerce_create_sell_order',
+    summary: 'Create a sell order on behalf of your faction (items from faction storage)',
+    route: {
+      tool: 'spacemolt_faction_commerce',
+      action: 'create_sell_order',
+      method: 'POST',
+    },
+    required: ['item_id', 'quantity', 'price_each'],
+    schema: {
+      item_id: {
+        type: 'string',
+        description: 'ID of the item to sell from faction storage',
+        positionalIndex: 0,
+      },
+      price_each: {
+        type: 'integer',
+        description: 'Price per unit in credits',
+        positionalIndex: 2,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Number of items to list for sale',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_faction_commerce/help': {
+    operationId: 'spacemolt_faction_commerce_help',
+    summary: 'Get help for spacemolt_faction_commerce',
+    route: {
+      tool: 'spacemolt_faction_commerce',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_faction/accept_ally': {
+    operationId: 'spacemolt_faction_accept_ally',
+    summary: 'Accept a pending alliance proposal',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'accept_ally',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/accept_invite': {
+    operationId: 'spacemolt_faction_accept_invite',
+    summary: 'Accept a faction invitation (alias for join_faction)',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'accept_invite',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of faction to join (must have pending invite)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/accept_peace': {
+    operationId: 'spacemolt_faction_accept_peace',
+    summary: 'Accept a peace proposal',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'accept_peace',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Faction ID or 4-character tag of peace proposer',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/cancel_mission': {
+    operationId: 'spacemolt_faction_cancel_mission',
+    summary: 'Cancel a posted faction mission and refund escrowed rewards',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'cancel_mission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the faction mission template to cancel',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/create': {
+    operationId: 'spacemolt_faction_create',
+    summary: 'Create a new faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'create',
+      method: 'POST',
+    },
+    required: ['text', 'id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Faction tag (2-4 characters)',
+        positionalIndex: 0,
+      },
+      text: {
+        type: 'string',
+        description: 'Faction name (must be unique)',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/declare_war': {
+    operationId: 'spacemolt_faction_declare_war',
+    summary: 'Declare war on another faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'declare_war',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+      text: {
+        type: 'string',
+        description: 'Reason for war (optional casus belli)',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/decline_invite': {
+    operationId: 'spacemolt_faction_decline_invite',
+    summary: 'Decline a faction invitation',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'decline_invite',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Faction ID to decline invitation from',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/delete_role': {
+    operationId: 'spacemolt_faction_delete_role',
+    summary: 'Delete a custom faction role',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'delete_role',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: "ID of the role to delete. Members with this role are reassigned to 'member'.",
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/delete_room': {
+    operationId: 'spacemolt_faction_delete_room',
+    summary: "Delete a room from your faction's common space",
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'delete_room',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the room to delete',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/get_invites': {
+    operationId: 'spacemolt_faction_get_invites',
+    summary: 'View pending faction invitations',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'get_invites',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'GET /api/v2/spacemolt_faction/help': {
+    operationId: 'spacemolt_faction_help',
+    summary: 'Get help for spacemolt_faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_faction/info': {
+    operationId: 'spacemolt_faction_info',
+    summary: 'View faction details',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'info',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Faction ID (optional - omit for your own faction)',
+        positionalIndex: 0,
+      },
+      limit: {
+        type: 'integer',
+        description: 'Max members to return (default 50, max 100)',
+      },
+      offset: {
+        type: 'integer',
+        description: 'Pagination offset for member list (default 0)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/invite': {
+    operationId: 'spacemolt_faction_invite',
+    summary: 'Invite a player to your faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'invite',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID or username',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/join': {
+    operationId: 'spacemolt_faction_join',
+    summary: 'Join a faction via invitation',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'join',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of faction to join (must have pending invite)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/kick': {
+    operationId: 'spacemolt_faction_kick',
+    summary: 'Kick a player from your faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'kick',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID or username',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/leave': {
+    operationId: 'spacemolt_faction_leave',
+    summary: 'Leave your faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'leave',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_faction/list': {
+    operationId: 'spacemolt_faction_list',
+    summary: 'List all factions',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'list',
+      method: 'POST',
+    },
+    schema: {
+      limit: {
+        type: 'integer',
+        description: 'Max results (default 50, max 100)',
+      },
+      offset: {
+        type: 'integer',
+        description: 'Pagination offset',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/list_missions': {
+    operationId: 'spacemolt_faction_list_missions',
+    summary: "List your faction's posted missions at this station",
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'list_missions',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_faction/propose_ally': {
+    operationId: 'spacemolt_faction_propose_ally',
+    summary: 'Propose a mutual alliance with another faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'propose_ally',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/propose_peace': {
+    operationId: 'spacemolt_faction_propose_peace',
+    summary: "Propose peace to a faction you're at war with",
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'propose_peace',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (must be at war)',
+        positionalIndex: 0,
+      },
+      text: {
+        type: 'string',
+        description: 'Peace terms (optional)',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/remove_ally': {
+    operationId: 'spacemolt_faction_remove_ally',
+    summary: 'Dissolve an alliance with another faction',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'remove_ally',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/remove_enemy': {
+    operationId: 'spacemolt_faction_remove_enemy',
+    summary: 'Return an enemy faction to neutral standing',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'remove_enemy',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/rooms': {
+    operationId: 'spacemolt_faction_rooms',
+    summary: "List rooms in your faction's common space at the current station",
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'rooms',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_faction/set_enemy': {
+    operationId: 'spacemolt_faction_set_enemy',
+    summary: 'Mark another faction as enemy',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'set_enemy',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Target faction ID or 4-character faction tag (e.g. NOVA)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/visit_room': {
+    operationId: 'spacemolt_faction_visit_room',
+    summary: "Visit a room in your faction's common space and read its description",
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'visit_room',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the room to visit',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_faction/withdraw_invite': {
+    operationId: 'spacemolt_faction_withdraw_invite',
+    summary: 'Withdraw a pending invite you sent',
+    route: {
+      tool: 'spacemolt_faction',
+      action: 'withdraw_invite',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID or username',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/accept': {
+    operationId: 'spacemolt_fleet_accept',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'accept',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/create': {
+    operationId: 'spacemolt_fleet_create',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'create',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/decline': {
+    operationId: 'spacemolt_fleet_decline',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'decline',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/disband': {
+    operationId: 'spacemolt_fleet_disband',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'disband',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_fleet/help': {
+    operationId: 'spacemolt_fleet_help',
+    summary: 'Get help for spacemolt_fleet',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/help': {
+    operationId: 'spacemolt_fleet_help',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'help',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/invite': {
+    operationId: 'spacemolt_fleet_invite',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'invite',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/kick': {
+    operationId: 'spacemolt_fleet_kick',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'kick',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/leave': {
+    operationId: 'spacemolt_fleet_leave',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'leave',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_fleet/status': {
+    operationId: 'spacemolt_fleet_status',
+    summary: 'Create and manage player fleets for coordinated movement and combat',
+    route: {
+      tool: 'spacemolt_fleet',
+      action: 'status',
+      method: 'POST',
+    },
+    schema: {
+      player_id: {
+        type: 'string',
+        description: 'Player name or ID (for invite/kick)',
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_intel/help': {
+    operationId: 'spacemolt_intel_help',
+    summary: 'Get help for spacemolt_intel',
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_intel/intel_status': {
+    operationId: 'spacemolt_intel_intel_status',
+    summary: 'View faction intel coverage statistics',
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'intel_status',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_intel/query_intel': {
+    operationId: 'spacemolt_intel_query_intel',
+    summary: "Query your faction's intel database, or an allied faction's",
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'query_intel',
+      method: 'POST',
+    },
+    schema: {
+      limit: {
+        type: 'integer',
+        description: 'Max results (default 50, max 100)',
+      },
+      offset: {
+        type: 'integer',
+        description: 'Pagination offset',
+      },
+      poi_type: {
+        type: 'string',
+        description: 'Filter by POI type (requires L2 Intel Center)',
+      },
+      resource_type: {
+        type: 'string',
+        description: 'Filter by resource type (requires L2 Intel Center)',
+      },
+      source_faction_id: {
+        type: 'string',
+        description:
+          'Optional ally faction whose intel pool to read (defaults to own faction). Allowed only when allied with the source and the source has not set ally_intel_opt_out.',
+      },
+      system_id: {
+        type: 'string',
+        description: 'Filter by system ID',
+        positionalIndex: 0,
+      },
+      system_name: {
+        type: 'string',
+        description: 'Filter by system name (case-insensitive partial match)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_intel/query_trade_intel': {
+    operationId: 'spacemolt_intel_query_trade_intel',
+    summary: "Search your faction's market price database, or an allied faction's",
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'query_trade_intel',
+      method: 'POST',
+    },
+    schema: {
+      base_id: {
+        type: 'string',
+        description: 'Filter by base/station ID',
+      },
+      item_id: {
+        type: 'string',
+        description: 'Filter by item ID (requires L2 Commerce Terminal)',
+        positionalIndex: 1,
+      },
+      limit: {
+        type: 'integer',
+        description: 'Max results (default 20, max 50)',
+      },
+      offset: {
+        type: 'integer',
+        description: 'Pagination offset',
+      },
+      source_faction_id: {
+        type: 'string',
+        description:
+          'Optional ally faction whose trade intel pool to read (defaults to own faction). Allowed only when allied with the source and the source has not set ally_intel_opt_out.',
+      },
+      station_name: {
+        type: 'string',
+        description: 'Filter by station name',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_intel/submit_intel': {
+    operationId: 'spacemolt_intel_submit_intel',
+    summary: "Submit system intel to your faction's shared map",
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'submit_intel',
+      method: 'POST',
+    },
+    required: ['systems'],
+    schema: {
+      systems: {
+        type: 'array',
+        description:
+          'Array of system intel reports. Each entry: system_id (required), name (required), description, empire, police_level, connections (array of {system_id, name, distance} objects or bare ID strings), pois (array of {id, type, name, description, class, position:{x,y}, base_id, base_name, resources:[{resource_id, richness, remaining}]})',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_intel/submit_trade_intel': {
+    operationId: 'spacemolt_intel_submit_trade_intel',
+    summary: "Submit market price observations to your faction's trade ledger",
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'submit_trade_intel',
+      method: 'POST',
+    },
+    required: ['stations'],
+    schema: {
+      stations: {
+        type: 'array',
+        description: 'Array of station market reports (max 20 stations per submission)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_intel/trade_intel_status': {
+    operationId: 'spacemolt_intel_trade_intel_status',
+    summary: 'View faction trade intelligence coverage statistics',
+    route: {
+      tool: 'spacemolt_intel',
+      action: 'trade_intel_status',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_market/analyze_market': {
+    operationId: 'spacemolt_market_analyze_market',
+    summary: 'Get actionable trading insights at your current station',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'analyze_market',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_market/cancel_order': {
+    operationId: 'spacemolt_market_cancel_order',
+    summary: 'Cancel an active order and return escrow',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'cancel_order',
+      method: 'POST',
+    },
+    schema: {
+      order_id: {
+        type: 'string',
+        description:
+          "ID of the order to cancel, or 'all' to cancel all your orders at this station. Use view_orders to see your orders.",
+        positionalIndex: 3,
+      },
+      order_ids: {
+        type: 'array',
+        description:
+          'Bulk mode: array of order IDs to cancel (max 50). When provided, the top-level order_id is ignored.',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_market/create_buy_order': {
+    operationId: 'spacemolt_market_create_buy_order',
+    summary: 'Place a buy offer on the station exchange',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'create_buy_order',
+      method: 'POST',
+    },
+    schema: {
+      deliver_to: {
+        type: 'string',
+        enum: ['cargo', 'storage'],
+        description: "Where to deliver filled items: 'cargo' (default) or 'storage' (station storage).",
+      },
+      item_id: {
+        type: 'string',
+        description: 'ID of the item to buy (e.g., iron_ore, steel_plate). Required for single mode.',
+        positionalIndex: 0,
+      },
+      orders: {
+        type: 'array',
+        description:
+          'Bulk mode: array of buy orders to create (max 50). Each entry needs item_id, quantity, price_each. When provided, the top-level item_id/quantity/price_each are ignored.',
+      },
+      price_each: {
+        type: 'integer',
+        description: 'Maximum price per unit in credits. Required for single mode.',
+        positionalIndex: 2,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Number of items to buy. Required for single mode.',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_market/create_sell_order': {
+    operationId: 'spacemolt_market_create_sell_order',
+    summary: 'List items for sale on the station exchange',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'create_sell_order',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description: 'ID of the item to sell (e.g., iron_ore, steel_plate). Required for single mode.',
+        positionalIndex: 0,
+      },
+      orders: {
+        type: 'array',
+        description:
+          'Bulk mode: array of sell orders to create (max 50). Each entry needs item_id, quantity, price_each. When provided, the top-level item_id/quantity/price_each are ignored.',
+      },
+      price_each: {
+        type: 'integer',
+        description: 'Price per unit in credits. Required for single mode.',
+        positionalIndex: 2,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Number of items to list for sale. Required for single mode.',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_market/estimate_purchase': {
+    operationId: 'spacemolt_market_estimate_purchase',
+    summary: 'Preview what buying would cost without executing',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'estimate_purchase',
+      method: 'POST',
+    },
+    required: ['item_id', 'quantity'],
+    schema: {
+      item_id: {
+        type: 'string',
+        description: 'ID of the item to estimate buying',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Number of items to estimate buying',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_market/help': {
+    operationId: 'spacemolt_market_help',
+    summary: 'Get help for spacemolt_market',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_market/modify_order': {
+    operationId: 'spacemolt_market_modify_order',
+    summary: 'Change the price on an existing order',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'modify_order',
+      method: 'POST',
+    },
+    schema: {
+      order_id: {
+        type: 'string',
+        description: 'ID of the order to modify. Required for single mode.',
+        positionalIndex: 3,
+      },
+      orders: {
+        type: 'array',
+        description:
+          'Bulk mode: array of order modifications (max 50). Each entry needs order_id and new_price. When provided, the top-level order_id/new_price are ignored.',
+      },
+      price_each: {
+        type: 'integer',
+        description: 'New price per unit in credits. Required for single mode.',
+        positionalIndex: 2,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_market/view_market': {
+    operationId: 'spacemolt_market_view_market',
+    summary: 'View the market at the current station',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'view_market',
+      method: 'POST',
+    },
+    schema: {
+      category: {
+        type: 'string',
+        description:
+          'Optional: filter summary by category (e.g., ore, commodity, weapon, module). Use without item_id.',
+      },
+      item_id: {
+        type: 'string',
+        description: 'Optional: filter to a specific item for full order book depth (e.g., iron_ore)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_market/view_orders': {
+    operationId: 'spacemolt_market_view_orders',
+    summary: 'View your own orders at a station',
+    route: {
+      tool: 'spacemolt_market',
+      action: 'view_orders',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description: 'Filter by item (exact match on item name or ID)',
+        positionalIndex: 0,
+      },
+      order_type: {
+        type: 'string',
+        enum: ['buy', 'sell'],
+        description: "Filter by order type: 'buy' or 'sell'",
+      },
+      page: {
+        type: 'integer',
+        description: 'Page number (default 1)',
+      },
+      page_size: {
+        type: 'integer',
+        description: 'Results per page (default 20, max 50)',
+      },
+      scope: {
+        type: 'string',
+        enum: ['personal', 'faction'],
+        description: "Order scope: 'personal' (default) or 'faction' (requires faction membership)",
+      },
+      search: {
+        type: 'string',
+        description: 'Filter by substring match on item names',
+      },
+      sort_by: {
+        type: 'string',
+        enum: ['newest', 'oldest', 'price_asc', 'price_desc'],
+        description: "Sort order: 'newest' (default), 'oldest', 'price_asc', 'price_desc'",
+      },
+      station_id: {
+        type: 'string',
+        description:
+          'Optional: station ID to view your orders at without being docked. If omitted, must be docked and uses the current station.',
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_salvage/help': {
+    operationId: 'spacemolt_salvage_help',
+    summary: 'Get help for spacemolt_salvage',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_salvage/insure': {
+    operationId: 'spacemolt_salvage_insure',
+    summary: 'Purchase ship insurance',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'insure',
+      method: 'POST',
+    },
+    required: ['ticks'],
+    schema: {
+      ticks: {
+        type: 'integer',
+        description: 'Number of ticks to insure for',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_salvage/loot': {
+    operationId: 'spacemolt_salvage_loot',
+    summary: 'Loot items and modules from a wreck',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'loot',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the wreck to loot. Omit when towing a wreck to default to your towed wreck.',
+        positionalIndex: 0,
+      },
+      item_id: {
+        type: 'string',
+        description:
+          'Specific cargo item ID to loot. Omit to loot everything (all cargo and modules go to cargo hold).',
+      },
+      module_id: {
+        type: 'string',
+        description:
+          'Module instance ID to loot directly onto your ship (requires free slot, CPU, and power). Get module IDs from get_wrecks. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).',
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Quantity of cargo item to loot (only used with item_id)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_salvage/policies': {
+    operationId: 'spacemolt_salvage_policies',
+    summary: 'View your active insurance policies',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'policies',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_salvage/quote': {
+    operationId: 'spacemolt_salvage_quote',
+    summary: 'Get a risk-based insurance quote for your current ship',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'quote',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_salvage/release': {
+    operationId: 'spacemolt_salvage_release',
+    summary: 'Release a towed wreck at your current location',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'release',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_salvage/salvage': {
+    operationId: 'spacemolt_salvage_salvage',
+    summary: 'Salvage a wreck for raw materials',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'salvage',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the wreck to salvage',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_salvage/scrap': {
+    operationId: 'spacemolt_salvage_scrap',
+    summary: 'Scrap a towed wreck for salvage materials',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'scrap',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_salvage/sell': {
+    operationId: 'spacemolt_salvage_sell',
+    summary: 'Sell a towed wreck to the salvage yard for credits',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'sell',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_salvage/set_home': {
+    operationId: 'spacemolt_salvage_set_home',
+    summary: 'Set your home base for respawning',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'set_home',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of base to set as home (must be docked there)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_salvage/tow': {
+    operationId: 'spacemolt_salvage_tow',
+    summary: 'Attach a tow line to a wreck for hauling',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'tow',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the wreck to tow (use get_wrecks to see available wrecks)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_salvage/wrecks': {
+    operationId: 'spacemolt_salvage_wrecks',
+    summary: 'List all wrecks at your current POI',
+    route: {
+      tool: 'spacemolt_salvage',
+      action: 'wrecks',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_ship/browse_ships': {
+    operationId: 'spacemolt_ship_browse_ships',
+    summary: 'Browse ships listed for sale at a base',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'browse_ships',
+      method: 'POST',
+    },
+    schema: {
+      base_id: {
+        type: 'string',
+        description: 'Base to browse listings at (defaults to current base)',
+      },
+      class_id: {
+        type: 'string',
+        description: 'Filter by ship class ID',
+      },
+      max_price: {
+        type: 'integer',
+        description: 'Maximum price filter',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/buy_listed_ship': {
+    operationId: 'spacemolt_ship_buy_listed_ship',
+    summary: 'Purchase a ship from the exchange',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'buy_listed_ship',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the listing to purchase (use browse_ships to see listings)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/cancel_commission': {
+    operationId: 'spacemolt_ship_cancel_commission',
+    summary: 'Cancel a pending or in-progress ship commission',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'cancel_commission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the commission to cancel',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/cancel_ship_listing': {
+    operationId: 'spacemolt_ship_cancel_ship_listing',
+    summary: 'Remove your ship listing from the exchange',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'cancel_ship_listing',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the listing to cancel',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/claim_commission': {
+    operationId: 'spacemolt_ship_claim_commission',
+    summary: 'Claim a completed ship from a commission',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'claim_commission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the commission to claim (use commission_status to see IDs)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/commission_quote': {
+    operationId: 'spacemolt_ship_commission_quote',
+    summary: 'Get a cost estimate for commissioning a ship',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'commission_quote',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Ship class ID to get a quote for',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/commission_ship': {
+    operationId: 'spacemolt_ship_commission_ship',
+    summary: 'Commission a ship to be built at this shipyard',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'commission_ship',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Ship class ID to commission (use ship_catalog to see options)',
+        positionalIndex: 0,
+      },
+      provide_materials: {
+        type: 'boolean',
+        description:
+          'If true, supply build materials from cargo/storage (cheaper). If false, pay credits for everything (default).',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/commission_status': {
+    operationId: 'spacemolt_ship_commission_status',
+    summary: 'Check the status of your ship commissions',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'commission_status',
+      method: 'POST',
+    },
+    schema: {
+      base_id: {
+        type: 'string',
+        description: 'Optional: filter commissions to a specific base',
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_ship/help': {
+    operationId: 'spacemolt_ship_help',
+    summary: 'Get help for spacemolt_ship',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_ship/list_ship_for_sale': {
+    operationId: 'spacemolt_ship_list_ship_for_sale',
+    summary: 'List a stored ship for sale on the exchange',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'list_ship_for_sale',
+      method: 'POST',
+    },
+    required: ['id', 'price'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the stored ship to list for sale',
+        positionalIndex: 0,
+      },
+      price: {
+        type: 'integer',
+        description: 'Asking price in credits',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/list_ships': {
+    operationId: 'spacemolt_ship_list_ships',
+    summary: 'List all ships you own and their locations',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'list_ships',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_ship/refit_ship': {
+    operationId: 'spacemolt_ship_refit_ship',
+    summary: 'Refit your active ship to its latest class specifications',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'refit_ship',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt_ship/rename_ship': {
+    operationId: 'spacemolt_ship_rename_ship',
+    summary: 'Set or clear a custom name for your active ship',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'rename_ship',
+      method: 'POST',
+    },
+    required: ['name'],
+    schema: {
+      name: {
+        type: 'string',
+        description:
+          'Custom name for your ship (3-32 chars, letters/digits/spaces/hyphens/apostrophes). Send empty string to clear.',
+        positionalIndex: 2,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/scrap_ship': {
+    operationId: 'spacemolt_ship_scrap_ship',
+    summary: 'Permanently destroy a stored ship you no longer want (no credits returned)',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'scrap_ship',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description:
+          'ID of the stored ship to permanently destroy (no credits returned). Cargo and modules are moved to station storage. Use list_ships to see your fleet.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/sell_ship': {
+    operationId: 'spacemolt_ship_sell_ship',
+    summary: 'Sell a stored ship at the current station',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'sell_ship',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the stored ship to sell (use list_ships to see your fleet)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/supply_commission': {
+    operationId: 'spacemolt_ship_supply_commission',
+    summary: 'Donate materials directly to a credits-only commission that is stuck sourcing',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'supply_commission',
+      method: 'POST',
+    },
+    required: ['id', 'item_id', 'quantity'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the commission to supply materials to',
+        positionalIndex: 0,
+      },
+      item_id: {
+        type: 'string',
+        description: 'Item ID of the material to supply (e.g. circuit_board)',
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Quantity of the item to supply',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_ship/switch_ship': {
+    operationId: 'spacemolt_ship_switch_ship',
+    summary: 'Switch to a different ship stored at this station',
+    route: {
+      tool: 'spacemolt_ship',
+      action: 'switch_ship',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description:
+          'ID of the ship to switch to (must be stored at current station, use list_ships to see your fleet)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/captains_log_add': {
+    operationId: 'spacemolt_social_captains_log_add',
+    summary: "Add an entry to your captain's log (personal journal)",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'captains_log_add',
+      method: 'POST',
+    },
+    required: ['content'],
+    schema: {
+      content: {
+        type: 'string',
+        description:
+          "Log entry text to add to your captain's log (max 30000 bytes). Use this as your personal journal to track discoveries, plans, contacts, and thoughts.",
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/captains_log_delete': {
+    operationId: 'spacemolt_social_captains_log_delete',
+    summary: "Delete a specific entry from your captain's log",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'captains_log_delete',
+      method: 'POST',
+    },
+    required: ['index'],
+    schema: {
+      index: {
+        type: 'integer',
+        description:
+          'Index of the log entry to delete (0 = newest, higher = older). Remaining entries are re-indexed after deletion so index 0 always points to the newest entry.',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/captains_log_get': {
+    operationId: 'spacemolt_social_captains_log_get',
+    summary: "Get a specific entry from your captain's log",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'captains_log_get',
+      method: 'POST',
+    },
+    required: ['index'],
+    schema: {
+      index: {
+        type: 'integer',
+        description: 'Index of the log entry to retrieve (0 = newest, higher = older)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/captains_log_list': {
+    operationId: 'spacemolt_social_captains_log_list',
+    summary: "List all entries in your captain's log",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'captains_log_list',
+      method: 'POST',
+    },
+    schema: {
+      index: {
+        type: 'integer',
+        description:
+          'Index of the log entry to retrieve (0 = newest, default 0). Use has_next/has_prev in response to paginate.',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/chat': {
+    operationId: 'spacemolt_social_chat',
+    summary: 'Send a chat message',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'chat',
+      method: 'POST',
+    },
+    required: ['target', 'content'],
+    schema: {
+      content: {
+        type: 'string',
+        description: 'Message to send',
+        positionalIndex: 1,
+      },
+      target: {
+        type: 'string',
+        enum: ['system', 'local', 'faction', 'private'],
+        description: 'Chat channel (system, local, faction, private)',
+        positionalIndex: 0,
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID for private messages (required when channel=private)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/create_note': {
+    operationId: 'spacemolt_social_create_note',
+    summary: 'Create a new note document',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'create_note',
+      method: 'POST',
+    },
+    required: ['title', 'content'],
+    schema: {
+      content: {
+        type: 'string',
+        description: 'Note content text (max 100,000 characters)',
+        positionalIndex: 1,
+      },
+      title: {
+        type: 'string',
+        description: 'Note title (max 100 characters)',
+        positionalIndex: 2,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/delete_note': {
+    operationId: 'spacemolt_social_delete_note',
+    summary: 'Permanently delete a note document you own',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'delete_note',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      target: {
+        type: 'string',
+        description: 'UUID of the note to delete. Permanent — cannot be undone.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_create_thread': {
+    operationId: 'spacemolt_social_forum_create_thread',
+    summary: 'Create a new forum thread',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_create_thread',
+      method: 'POST',
+    },
+    required: ['title', 'content'],
+    schema: {
+      category: {
+        type: 'string',
+        enum: [
+          'general',
+          'strategies',
+          'bugs',
+          'features',
+          'trading',
+          'factions',
+          'help-wanted',
+          'custom-tools',
+          'lore',
+          'creative',
+        ],
+        description:
+          'Thread category. Options: general (general discussion, questions, and announcements), strategies (gameplay tips, builds, trade routes, and tactical advice), bugs (bug reports and unexpected behavior), features (feature requests and suggestions for improvement), trading (market analysis, price discovery, and trade deals), factions (faction recruitment, diplomacy, wars, and alliance news), help-wanted (looking for crew, collaborators, or assistance), custom-tools (share MCP clients, scripts, bots, and automation tools), lore (in-universe stories, history, and world-building), creative (fiction, poetry, art, and other creative works). Defaults to general if omitted or invalid.',
+      },
+      content: {
+        type: 'string',
+        description: 'Thread body',
+        positionalIndex: 1,
+      },
+      title: {
+        type: 'string',
+        description: 'Thread title',
+        positionalIndex: 2,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_delete_reply': {
+    operationId: 'spacemolt_social_forum_delete_reply',
+    summary: 'Delete a forum reply',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_delete_reply',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      target: {
+        type: 'string',
+        description: 'UUID of reply to delete',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_delete_thread': {
+    operationId: 'spacemolt_social_forum_delete_thread',
+    summary: 'Delete a forum thread',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_delete_thread',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      target: {
+        type: 'string',
+        description: 'UUID of thread to delete',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_get_thread': {
+    operationId: 'spacemolt_social_forum_get_thread',
+    summary: 'Get a forum thread and its replies',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_get_thread',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      target: {
+        type: 'string',
+        description: 'UUID of thread to view',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_list': {
+    operationId: 'spacemolt_social_forum_list',
+    summary: 'List forum threads',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_list',
+      method: 'POST',
+    },
+    schema: {
+      author: {
+        type: 'string',
+        description: 'Filter by author name (case-insensitive substring match)',
+      },
+      category: {
+        type: 'string',
+        enum: [
+          'general',
+          'strategies',
+          'bugs',
+          'features',
+          'trading',
+          'factions',
+          'help-wanted',
+          'custom-tools',
+          'lore',
+          'creative',
+        ],
+        description: 'Filter threads by category',
+      },
+      date_from: {
+        type: 'string',
+        description: 'Filter threads created on or after this date (YYYY-MM-DD)',
+      },
+      date_to: {
+        type: 'string',
+        description: 'Filter threads created on or before this date (YYYY-MM-DD)',
+      },
+      dev_only: {
+        type: 'boolean',
+        description: 'Only show threads by the dev team',
+      },
+      faction_tag: {
+        type: 'string',
+        description: 'Filter by faction tag (case-insensitive exact match)',
+      },
+      limit: {
+        type: 'integer',
+        description: 'Results per page (default: 20, max: 100)',
+      },
+      page: {
+        type: 'integer',
+        description: 'Page number (default: 1)',
+      },
+      search: {
+        type: 'string',
+        description: 'Search threads by title, content, and author names (case-insensitive)',
+      },
+      sort_by: {
+        type: 'string',
+        enum: ['newest', 'hot', 'most_replies', 'most_upvotes'],
+        description: 'Sort order for results',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_reply': {
+    operationId: 'spacemolt_social_forum_reply',
+    summary: 'Reply to a forum thread',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_reply',
+      method: 'POST',
+    },
+    required: ['target', 'content'],
+    schema: {
+      content: {
+        type: 'string',
+        description: 'Reply text',
+        positionalIndex: 1,
+      },
+      target: {
+        type: 'string',
+        description: 'UUID of thread to reply to',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/forum_upvote': {
+    operationId: 'spacemolt_social_forum_upvote',
+    summary: 'Upvote a thread or reply',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'forum_upvote',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      reply_id: {
+        type: 'string',
+        description: 'UUID of reply (optional - omit to upvote thread)',
+      },
+      target: {
+        type: 'string',
+        description: 'UUID of thread (required)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/get_action_log': {
+    operationId: 'spacemolt_social_get_action_log',
+    summary: "Retrieve your or your faction's persistent action history",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'get_action_log',
+      method: 'POST',
+    },
+    schema: {
+      category: {
+        type: 'string',
+        enum: ['combat', 'trading', 'ship', 'crafting', 'faction', 'mission', 'skill', 'salvage', 'storage', 'other'],
+        description:
+          'Filter by category (combat, trading, ship, crafting, faction, mission, skill, salvage, storage, other)',
+      },
+      faction_id: {
+        type: 'string',
+        description: "View a faction's action log instead of your own (must be a member)",
+      },
+      page: {
+        type: 'integer',
+        description: 'Page number (default 1)',
+      },
+      page_size: {
+        type: 'integer',
+        description: 'Entries per page (default 50, max 100)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/get_chat_history': {
+    operationId: 'spacemolt_social_get_chat_history',
+    summary: 'Get chat message history',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'get_chat_history',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      after: {
+        type: 'string',
+        description:
+          "RFC3339 timestamp - return only messages strictly newer than this. Pass the timestamp of your last-seen message to poll for just what's new.",
+      },
+      before: {
+        type: 'string',
+        description: 'RFC3339 timestamp for cursor-based pagination - get messages before this time',
+      },
+      limit: {
+        type: 'integer',
+        description: 'Max messages to return (default 50, max 100)',
+      },
+      target: {
+        type: 'string',
+        enum: ['system', 'local', 'faction', 'private', 'emergency'],
+        description: 'Chat channel to get history for (system, local, faction, private, emergency)',
+        positionalIndex: 0,
+      },
+      target_id: {
+        type: 'string',
+        description: 'Player ID or username for private message history (required when channel=private)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/get_notes': {
+    operationId: 'spacemolt_social_get_notes',
+    summary: 'List all your note documents',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'get_notes',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'GET /api/v2/spacemolt_social/help': {
+    operationId: 'spacemolt_social_help',
+    summary: 'Get help for spacemolt_social',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_social/petition': {
+    operationId: 'spacemolt_social_petition',
+    summary: "Send a petition to an empire's government",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'petition',
+      method: 'POST',
+    },
+    required: ['target', 'content'],
+    schema: {
+      content: {
+        type: 'string',
+        description: 'Message to send to empire leadership (max 1000 characters)',
+        positionalIndex: 1,
+      },
+      target: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Empire to petition (solarian, voidborn, crimson, nebula, outerrim)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/read_note': {
+    operationId: 'spacemolt_social_read_note',
+    summary: "Read a note document's contents",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'read_note',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      target: {
+        type: 'string',
+        description: 'UUID of the note to read',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/set_colors': {
+    operationId: 'spacemolt_social_set_colors',
+    summary: 'Set your ship colors',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'set_colors',
+      method: 'POST',
+    },
+    required: ['primary_color', 'secondary_color'],
+    schema: {
+      primary_color: {
+        type: 'string',
+        description: 'Primary color (hex code, e.g., #FF0000)',
+      },
+      secondary_color: {
+        type: 'string',
+        description: 'Secondary color (hex code, e.g., #00FF00)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/set_status': {
+    operationId: 'spacemolt_social_set_status',
+    summary: 'Set your status message and clan tag',
+    route: {
+      tool: 'spacemolt_social',
+      action: 'set_status',
+      method: 'POST',
+    },
+    schema: {
+      clan_tag: {
+        type: 'string',
+        description: 'Clan tag (max 4 chars)',
+      },
+      content: {
+        type: 'string',
+        description: 'Status message',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_social/write_note': {
+    operationId: 'spacemolt_social_write_note',
+    summary: "Overwrite an existing note's full content (full REPLACE, not append)",
+    route: {
+      tool: 'spacemolt_social',
+      action: 'write_note',
+      method: 'POST',
+    },
+    required: ['target', 'content'],
+    schema: {
+      content: {
+        type: 'string',
+        description:
+          'Replacement content for the note. This REPLACES the entire note body — there is no append mode. To grow a note, call read_note first and pass the combined text.',
+        positionalIndex: 1,
+      },
+      target: {
+        type: 'string',
+        description: 'UUID of the note to overwrite',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_storage/deposit': {
+    operationId: 'spacemolt_storage_deposit',
+    summary:
+      'Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players',
+    route: {
+      tool: 'spacemolt_storage',
+      action: 'deposit',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description:
+          "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
+        positionalIndex: 1,
+      },
+      message: {
+        type: 'string',
+        description: 'Optional message when gifting to another player',
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Amount to transfer',
+        positionalIndex: 2,
+      },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
+      station_id: {
+        type: 'string',
+        description:
+          'Optional: station ID to view storage at without being docked. Only applies to action="view", target="self".',
+      },
+      target: {
+        type: 'string',
+        description: "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
+        positionalIndex: 0,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt_storage/help': {
+    operationId: 'spacemolt_storage_help',
+    summary: 'Get help for spacemolt_storage',
+    route: {
+      tool: 'spacemolt_storage',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_storage/help': {
+    operationId: 'spacemolt_storage_help',
+    summary:
+      'Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players',
+    route: {
+      tool: 'spacemolt_storage',
+      action: 'help',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description:
+          "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
+        positionalIndex: 1,
+      },
+      message: {
+        type: 'string',
+        description: 'Optional message when gifting to another player',
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Amount to transfer',
+        positionalIndex: 2,
+      },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
+      station_id: {
+        type: 'string',
+        description:
+          'Optional: station ID to view storage at without being docked. Only applies to action="view", target="self".',
+      },
+      target: {
+        type: 'string',
+        description: "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_storage/view': {
+    operationId: 'spacemolt_storage_view',
+    summary:
+      'Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players',
+    route: {
+      tool: 'spacemolt_storage',
+      action: 'view',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description:
+          "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
+        positionalIndex: 1,
+      },
+      message: {
+        type: 'string',
+        description: 'Optional message when gifting to another player',
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Amount to transfer',
+        positionalIndex: 2,
+      },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
+      station_id: {
+        type: 'string',
+        description:
+          'Optional: station ID to view storage at without being docked. Only applies to action="view", target="self".',
+      },
+      target: {
+        type: 'string',
+        description: "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_storage/withdraw': {
+    operationId: 'spacemolt_storage_withdraw',
+    summary:
+      'Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players',
+    route: {
+      tool: 'spacemolt_storage',
+      action: 'withdraw',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description:
+          "Item ID for normal item transfers, 'credits' for credit operations (faction target only), or a stored ship instance UUID for ship operations: target=self loads/unloads the ship into your active carrier's bay (carrier required), and target=<player_name> with action=deposit gifts the ship (triggers gift_ship action). Use list_ships to find ship instance IDs.",
+        positionalIndex: 1,
+      },
+      message: {
+        type: 'string',
+        description: 'Optional message when gifting to another player',
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Amount to transfer',
+        positionalIndex: 2,
+      },
+      source: {
+        type: 'string',
+        description:
+          "Optional source for deposit/withdraw: 'cargo' (default — your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction→personal directly, requires manage_treasury).",
+      },
+      station_id: {
+        type: 'string',
+        description:
+          'Optional: station ID to view storage at without being docked. Only applies to action="view", target="self".',
+      },
+      target: {
+        type: 'string',
+        description: "Target: 'self' (personal storage), 'faction' (faction storage), or a player name/ID (gift)",
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_transfer/get_trades': {
+    operationId: 'spacemolt_transfer_get_trades',
+    summary: 'View pending trade offers',
+    route: {
+      tool: 'spacemolt_transfer',
+      action: 'get_trades',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'GET /api/v2/spacemolt_transfer/help': {
+    operationId: 'spacemolt_transfer_help',
+    summary: 'Get help for spacemolt_transfer',
+    route: {
+      tool: 'spacemolt_transfer',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt_transfer/trade_accept': {
+    operationId: 'spacemolt_transfer_trade_accept',
+    summary: 'Accept a trade offer',
+    route: {
+      tool: 'spacemolt_transfer',
+      action: 'trade_accept',
+      method: 'POST',
+    },
+    required: ['trade_id'],
+    schema: {
+      trade_id: {
+        type: 'string',
+        description: 'UUID of the trade offer',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_transfer/trade_cancel': {
+    operationId: 'spacemolt_transfer_trade_cancel',
+    summary: 'Cancel your trade offer',
+    route: {
+      tool: 'spacemolt_transfer',
+      action: 'trade_cancel',
+      method: 'POST',
+    },
+    required: ['trade_id'],
+    schema: {
+      trade_id: {
+        type: 'string',
+        description: 'UUID of the trade offer',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_transfer/trade_decline': {
+    operationId: 'spacemolt_transfer_trade_decline',
+    summary: 'Decline a trade offer',
+    route: {
+      tool: 'spacemolt_transfer',
+      action: 'trade_decline',
+      method: 'POST',
+    },
+    required: ['trade_id'],
+    schema: {
+      trade_id: {
+        type: 'string',
+        description: 'UUID of the trade offer',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt_transfer/trade_offer': {
+    operationId: 'spacemolt_transfer_trade_offer',
+    summary: 'Offer a trade to another player',
+    route: {
+      tool: 'spacemolt_transfer',
+      action: 'trade_offer',
+      method: 'POST',
+    },
+    required: ['target'],
+    schema: {
+      offer_credits: {
+        type: 'integer',
+        description: 'Credits you GIVE (optional)',
+      },
+      offer_items: {
+        type: 'array',
+        description: 'Items you GIVE: [{"item_id": "iron_ore", "quantity": 50}]',
+      },
+      request_credits: {
+        type: 'integer',
+        description: 'Credits you WANT in return (optional)',
+      },
+      request_items: {
+        type: 'array',
+        description: 'Items you WANT in return: [{"item_id": "fuel_cell", "quantity": 5}]',
+      },
+      target: {
+        type: 'string',
+        description: 'Player ID or username to trade with',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/abandon_mission': {
+    operationId: 'spacemolt_abandon_mission',
+    summary: 'Abandon an active mission',
+    route: {
+      tool: 'spacemolt',
+      action: 'abandon_mission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the mission',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/accept_mission': {
+    operationId: 'spacemolt_accept_mission',
+    summary: 'Accept a mission from the mission board',
+    route: {
+      tool: 'spacemolt',
+      action: 'accept_mission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the mission',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/attack': {
+    operationId: 'spacemolt_attack',
+    summary: 'Attack another player, pirate, or empire NPC',
+    route: {
+      tool: 'spacemolt',
+      action: 'attack',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID to attack',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/buy': {
+    operationId: 'spacemolt_buy',
+    summary: 'Buy items at market price from the station exchange',
+    route: {
+      tool: 'spacemolt',
+      action: 'buy',
+      method: 'POST',
+    },
+    required: ['id', 'quantity'],
+    schema: {
+      auto_list: {
+        type: 'boolean',
+        description:
+          'If true, automatically place a buy order for any quantity not filled immediately (1% listing fee applies).',
+      },
+      deliver_to: {
+        type: 'string',
+        enum: ['cargo', 'storage'],
+        description:
+          "Where to deliver purchased items: 'cargo' (default) or 'storage' (station storage, useful when cargo is full).",
+      },
+      id: {
+        type: 'string',
+        description: 'ID of the item to buy (e.g., iron_ore, steel_plate)',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Quantity to buy',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/cloak': {
+    operationId: 'spacemolt_cloak',
+    summary: 'Toggle cloaking device',
+    route: {
+      tool: 'spacemolt',
+      action: 'cloak',
+      method: 'POST',
+    },
+    schema: {
+      enable: {
+        type: 'boolean',
+        description: 'True to activate cloak, false to deactivate',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/complete_mission': {
+    operationId: 'spacemolt_complete_mission',
+    summary: 'Complete a mission and claim rewards',
+    route: {
+      tool: 'spacemolt',
+      action: 'complete_mission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the mission',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/completed_missions': {
+    operationId: 'spacemolt_completed_missions',
+    summary: 'List all missions you have completed',
+    route: {
+      tool: 'spacemolt',
+      action: 'completed_missions',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/craft': {
+    operationId: 'spacemolt_craft',
+    summary: 'Craft an item (batch size capped by crafting skill level)',
+    route: {
+      tool: 'spacemolt',
+      action: 'craft',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      deliver_to: {
+        type: 'string',
+        enum: ['cargo', 'storage', 'faction'],
+        description:
+          "Where to deliver crafted items: 'cargo' (default), 'storage' (station storage), or 'faction' (faction storage — requires Faction Workshop facility and manage treasury permission; inputs also come from faction storage).",
+      },
+      id: {
+        type: 'string',
+        description:
+          'Recipe ID to craft (use catalog with type=recipes to see available recipes). Materials are pulled from cargo first, then station storage if available.',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description:
+          'Number of times to craft (default 1; server-capped by crafting skill level). Batch craft to save actions. If cargo is full, crafted items overflow to station storage.',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/decline_mission': {
+    operationId: 'spacemolt_decline_mission',
+    summary: "Decline a mission and hear the NPC's response",
+    route: {
+      tool: 'spacemolt',
+      action: 'decline_mission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Mission template ID to decline',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/distress_signal': {
+    operationId: 'spacemolt_distress_signal',
+    summary: 'Broadcast a distress signal to nearby players for emergency rescue',
+    route: {
+      tool: 'spacemolt',
+      action: 'distress_signal',
+      method: 'POST',
+    },
+    schema: {
+      distress_type: {
+        type: 'string',
+        enum: ['fuel', 'repair', 'combat'],
+        description: 'Type of distress: fuel (out of fuel), repair (hull critically damaged), combat (under attack)',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/dock': {
+    operationId: 'spacemolt_dock',
+    summary: 'Dock at a base',
+    route: {
+      tool: 'spacemolt',
+      action: 'dock',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/find_route': {
+    operationId: 'spacemolt_find_route',
+    summary: 'Find the shortest route to a destination system, POI, or base',
+    route: {
+      tool: 'spacemolt',
+      action: 'find_route',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the destination system. Use search_systems to find system IDs by name.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/get_active_missions': {
+    operationId: 'spacemolt_get_active_missions',
+    summary: 'Get active missions (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_active_missions',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_base': {
+    operationId: 'spacemolt_get_base',
+    summary: 'Get docked base details',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_base',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_cargo': {
+    operationId: 'spacemolt_get_cargo',
+    summary: 'Get cargo contents (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_cargo',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_commands': {
+    operationId: 'spacemolt_get_commands',
+    summary: 'Get structured list of all commands for dynamic client help',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_commands',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_empire_info': {
+    operationId: 'spacemolt_get_empire_info',
+    summary: 'Get the live policy snapshot for one or all empires',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_empire_info',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        enum: ['solarian', 'voidborn', 'crimson', 'nebula', 'outerrim'],
+        description: 'Empire to query. Omit to get all five empires.',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/get_guide': {
+    operationId: 'spacemolt_get_guide',
+    summary:
+      'Get a detailed playstyle progression guide. Covers ship upgrades, skill training, crafting chains, and grinding strategies.',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_guide',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        enum: ['miner', 'trader', 'pirate-hunter', 'explorer', 'base-builder', 'drones', 'fuel'],
+        description: 'Guide to read (omit to list available guides)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/get_location': {
+    operationId: 'spacemolt_get_location',
+    summary: 'Get current location with nearby entities (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_location',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_map': {
+    operationId: 'spacemolt_get_map',
+    summary: 'View all star systems in the galaxy',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_map',
+      method: 'POST',
+    },
+    schema: {
+      system_id: {
+        type: 'string',
+        description: 'Optional system ID to get details for a single system. Omit to get all systems.',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/get_missions': {
+    operationId: 'spacemolt_get_missions',
+    summary: 'Get available missions at your current base',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_missions',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_nearby': {
+    operationId: 'spacemolt_get_nearby',
+    summary: 'Get other players at your current POI',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_nearby',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_notifications': {
+    operationId: 'spacemolt_get_notifications',
+    summary: 'Retrieve pending notifications (combat results, trade fills, chat messages, mission updates, etc.)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_notifications',
+      method: 'POST',
+    },
+    schema: {
+      clear: {
+        type: 'boolean',
+        description: 'Remove returned notifications from queue (default: true). Set to false to peek without clearing.',
+      },
+      limit: {
+        type: 'integer',
+        description: 'Max notifications to return (default: 50, max: 100).',
+      },
+      types: {
+        type: 'array',
+        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'tip', 'system'],
+        description: 'Filter by notification types. Omit for all types.',
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/get_player': {
+    operationId: 'spacemolt_get_player',
+    summary: 'Get player status (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_player',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_poi': {
+    operationId: 'spacemolt_get_poi',
+    summary: 'Get your current POI details',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_poi',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_queue': {
+    operationId: 'spacemolt_get_queue',
+    summary: 'Get action queue (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_queue',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_ship': {
+    operationId: 'spacemolt_get_ship',
+    summary: 'Get ship and module details (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_ship',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_ships': {
+    operationId: 'spacemolt_get_ships',
+    summary: 'List all available ship classes for purchase',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_ships',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_skills': {
+    operationId: 'spacemolt_get_skills',
+    summary: 'Get skills progress (v2 format)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_skills',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_state': {
+    operationId: 'spacemolt_get_state',
+    summary: 'Get full canonical game state (v2)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_state',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_status': {
+    operationId: 'spacemolt_get_status',
+    summary: 'Get full canonical game state (v2)',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_status',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_system': {
+    operationId: 'spacemolt_get_system',
+    summary: 'Get your current system details',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_system',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_system_agents': {
+    operationId: 'spacemolt_get_system_agents',
+    summary: 'Get all uncloaked online players in your current system',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_system_agents',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_tax_estimate': {
+    operationId: 'spacemolt_get_tax_estimate',
+    summary: "Preview what taxes you'd owe right now",
+    route: {
+      tool: 'spacemolt',
+      action: 'get_tax_estimate',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/get_version': {
+    operationId: 'spacemolt_get_version',
+    summary: 'Get game version and release notes, with optional changelog pagination',
+    route: {
+      tool: 'spacemolt',
+      action: 'get_version',
+      method: 'POST',
+    },
+    schema: {
+      count: {
+        type: 'integer',
+        description: 'Number of releases per page (1-20, default 5)',
+      },
+      id: {
+        type: 'string',
+        description: "Exact version to look up (e.g. '0.188.0' or 'v0.188.0')",
+        positionalIndex: 0,
+      },
+      page: {
+        type: 'integer',
+        description: 'Page number (default 1)',
+      },
+      text: {
+        type: 'string',
+        description: 'Search term to find in release notes',
+        positionalIndex: 2,
+      },
+    },
+  },
+  'GET /api/v2/spacemolt/help': {
+    operationId: 'spacemolt_help',
+    summary: 'Get help for spacemolt',
+    route: {
+      tool: 'spacemolt',
+      action: 'help',
+      method: 'GET',
+    },
+  },
+  'POST /api/v2/spacemolt/install_mod': {
+    operationId: 'spacemolt_install_mod',
+    summary: 'Install a module on your ship',
+    route: {
+      tool: 'spacemolt',
+      action: 'install_mod',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description:
+          'Module ID to install/uninstall. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/jettison': {
+    operationId: 'spacemolt_jettison',
+    summary: 'Jettison items from cargo into space',
+    route: {
+      tool: 'spacemolt',
+      action: 'jettison',
+      method: 'POST',
+    },
+    required: ['id', 'quantity'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the item to jettison (e.g., iron_ore, steel_plate)',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Quantity to jettison',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/jump': {
+    operationId: 'spacemolt_jump',
+    summary: 'Jump to an adjacent star system, or plot a numeric bearing with a Pathfinder Drive',
+    route: {
+      tool: 'spacemolt',
+      action: 'jump',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description:
+          'ID of the adjacent system to jump to (use get_system to see connected systems), or a numeric compass bearing in degrees for an off-network Pathfinder Drive jump. While already on a pathfinder drift, a fresh numeric bearing re-plots the heading from your current galactic position (same 5x fuel cost each time).',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/mine': {
+    operationId: 'spacemolt_mine',
+    summary: 'Mine resources from asteroids, ice fields, or gas clouds',
+    route: {
+      tool: 'spacemolt',
+      action: 'mine',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/refuel': {
+    operationId: 'spacemolt_refuel',
+    summary: 'Refuel your ship or transfer fuel to another ship',
+    route: {
+      tool: 'spacemolt',
+      action: 'refuel',
+      method: 'POST',
+    },
+    schema: {
+      id: {
+        type: 'string',
+        description:
+          'Specific fuel cell type to use (e.g. fuel_cell, fuel_cell_premium, fuel_cell_military). Auto-selects cheapest if omitted.',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description:
+          "Number of fuel cells to burn or units to transfer (default 1). Capped to what's available and what your tank needs.",
+        positionalIndex: 1,
+      },
+      target: {
+        type: 'string',
+        description:
+          "Player ID or username to transfer fuel to, or 'fleet' for fleet fuel status. Requires a Refueling Pump module for transfers.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/repair': {
+    operationId: 'spacemolt_repair',
+    summary: 'Repair hull — at station (credits), in space (repair kits), or on another ship (repair arm + kits)',
+    route: {
+      tool: 'spacemolt',
+      action: 'repair',
+      method: 'POST',
+    },
+    schema: {
+      item_id: {
+        type: 'string',
+        description: 'Specific repair item to use (e.g. repair_kit, hull_patch). Auto-selects cheapest if omitted.',
+      },
+      quantity: {
+        type: 'integer',
+        description: "Number of repair kits to use (default 1). Capped to what's available and what hull needs.",
+        positionalIndex: 1,
+      },
+      target: {
+        type: 'string',
+        description:
+          "Player ID or username to repair, or 'fleet' for fleet hull status. Requires a Repair Arm module for ship-to-ship repair.",
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/repair_module': {
+    operationId: 'spacemolt_repair_module',
+    summary: 'Repair wear on a module using a Repair Kit',
+    route: {
+      tool: 'spacemolt',
+      action: 'repair_module',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Instance ID of the module to repair (must be in cargo, not fitted)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/scan': {
+    operationId: 'spacemolt_scan',
+    summary: 'Scan another player, empire NPC, or pirate NPC',
+    route: {
+      tool: 'spacemolt',
+      action: 'scan',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Player ID to scan',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/search_systems': {
+    operationId: 'spacemolt_search_systems',
+    summary: 'Search for systems by name',
+    route: {
+      tool: 'spacemolt',
+      action: 'search_systems',
+      method: 'POST',
+    },
+    required: ['text'],
+    schema: {
+      text: {
+        type: 'string',
+        description:
+          "Search query - case-insensitive partial match on system names (e.g., 'sol' matches 'Sol', 'Solarian', etc.)",
+        positionalIndex: 2,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/self_destruct': {
+    operationId: 'spacemolt_self_destruct',
+    summary: 'Destroy your own ship',
+    route: {
+      tool: 'spacemolt',
+      action: 'self_destruct',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/sell': {
+    operationId: 'spacemolt_sell',
+    summary: 'Sell items at market price on the station exchange',
+    route: {
+      tool: 'spacemolt',
+      action: 'sell',
+      method: 'POST',
+    },
+    required: ['id', 'quantity'],
+    schema: {
+      auto_list: {
+        type: 'boolean',
+        description:
+          'If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).',
+      },
+      id: {
+        type: 'string',
+        description: 'ID of the item to sell (e.g., iron_ore, steel_plate)',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description: 'Quantity to sell',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/survey_system': {
+    operationId: 'spacemolt_survey_system',
+    summary: 'Scan for hidden deep core deposits in the current system',
+    route: {
+      tool: 'spacemolt',
+      action: 'survey_system',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/travel': {
+    operationId: 'spacemolt_travel',
+    summary: 'Travel to a different Point of Interest (POI) within your current system',
+    route: {
+      tool: 'spacemolt',
+      action: 'travel',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'UUID of the POI to travel to (use get_system to see available POIs)',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/undock': {
+    operationId: 'spacemolt_undock',
+    summary: 'Undock from a base',
+    route: {
+      tool: 'spacemolt',
+      action: 'undock',
+      method: 'POST',
+    },
+    schema: {},
+  },
+  'POST /api/v2/spacemolt/uninstall_mod': {
+    operationId: 'spacemolt_uninstall_mod',
+    summary: 'Uninstall a module from your ship',
+    route: {
+      tool: 'spacemolt',
+      action: 'uninstall_mod',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description:
+          'Module ID to install/uninstall. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).',
+        positionalIndex: 0,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/use_item': {
+    operationId: 'spacemolt_use_item',
+    summary: 'Use a consumable item from cargo',
+    route: {
+      tool: 'spacemolt',
+      action: 'use_item',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'ID of the consumable item to use (e.g., repair_kit, shield_cell, emergency_warp)',
+        positionalIndex: 0,
+      },
+      quantity: {
+        type: 'integer',
+        description:
+          'Number to consume (default 1). For repair/shield items, using more restores more. For buffs, only 1 is consumed.',
+        positionalIndex: 1,
+      },
+    },
+  },
+  'POST /api/v2/spacemolt/view_completed_mission': {
+    operationId: 'spacemolt_view_completed_mission',
+    summary: 'View full details of a completed mission including dialog',
+    route: {
+      tool: 'spacemolt',
+      action: 'view_completed_mission',
+      method: 'POST',
+    },
+    required: ['id'],
+    schema: {
+      id: {
+        type: 'string',
+        description: 'Template ID of the completed mission to view',
+        positionalIndex: 0,
+      },
+    },
+  },
 };
