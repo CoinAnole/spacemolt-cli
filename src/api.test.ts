@@ -641,11 +641,10 @@ describe('SpaceMoltClient', () => {
     expect(calls).toHaveLength(1);
   });
 
-  test('login retries with a fresh session when the saved session expired on the server', async () => {
+  test('login starts with a fresh session when the saved session is stale', async () => {
     const store = createStore(session({ id: 'sess_stale' }));
     const { client, calls } = createClient(
       [
-        response({ error: { code: 'session_expired', message: 'expired' } }),
         response({
           structuredContent: { player: { id: 'player_login' } },
           session: {
@@ -661,7 +660,7 @@ describe('SpaceMoltClient', () => {
     const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
 
     expect(result.error).toBeUndefined();
-    expect(calls.map((call) => call.options?.sessionId)).toEqual(['sess_stale', 'sess_new']);
+    expect(calls.map((call) => call.options?.sessionId)).toEqual(['sess_new']);
     expect(store.current?.username).toBe('Pilot');
     expect(store.current?.password).toBe('secret');
     expect(store.current?.player_id).toBe('player_login');

@@ -139,7 +139,10 @@ export class SpaceMoltClient {
     const method = mapping.method || 'POST';
 
     const sessionProfile = this.sessionProfileForCommand(command, payload);
-    let session = await this.sessionStore.getSession(sessionProfile);
+    let session =
+      command === 'login' || command === 'register'
+        ? await this.sessionStore.createSession(sessionProfile)
+        : await this.sessionStore.getSession(sessionProfile);
     let sessionRecoveryAttempts = 0;
     let rateLimitRetries = 0;
 
