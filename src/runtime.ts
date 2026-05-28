@@ -10,7 +10,7 @@ export let PLAIN = false;
 export let QUIET = false;
 export let FORMAT: 'table' | 'json' | 'yaml' | 'text' = 'table';
 export let COMPACT = false;
-export const VERSION = '2.2.0';
+export const VERSION = '2.2.1';
 
 import {
   colorCodes,

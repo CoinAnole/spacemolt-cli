@@ -8,7 +8,8 @@ This repository is a Bun-based command-line client for the SpaceMolt v2 API. It 
 - `src/commands.ts`: user-facing commands, aliases, examples, and v2 route overrides.
 - `src/generated/api-commands.ts`: generated route/schema metadata.
 - `src/api-sync.test.ts`: checks local command metadata against the OpenAPI spec.
-- `src/version.test.ts`: parser, option, version, and behavior coverage.
+- `src/version-sync.test.ts`: package, runtime, and README version consistency.
+- `src/args.test.ts`, `src/runner.test.ts`, and related command tests: parser, option, and behavior coverage.
 - `spacemolt-docs/openapi.json`: cached v2 OpenAPI spec.
 
 ## Commands
