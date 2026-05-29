@@ -64,6 +64,12 @@ const queueFixture = {
   queue: { has_pending: true },
 };
 
+const { create_sell_order: createMarketOrderFixtureCase, ...otherFormatterFixtureCases } = formatterFixtureCases;
+const namedFormatterFixtureCases = {
+  ...otherFormatterFixtureCases,
+  create_market_order: createMarketOrderFixtureCase,
+};
+
 const playerProfileFixture = {
   player: {
     username: 'Marlowe',
@@ -937,6 +943,85 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('Quantity listed: 20');
   });
 
+  test('formats created buy order with buy-specific instant fill output', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_buy_order', {
+      action: 'create_buy_order',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      quantity: 10,
+      price_each: 5,
+      quantity_filled: 4,
+      quantity_listed: 6,
+      total_spent: 20,
+      total_escrowed: 30,
+      remaining_escrowed: 30,
+      listing_fee: 1,
+      delivered_to_cargo: 4,
+      order_id: 'order-buy-1',
+      fills: [{ quantity: 4, subtotal: 20, price_each: 5 }],
+      message: 'Created buy order.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Order Created ===');
+    expect(stdout).toContain('Item: Iron Ore (iron_ore)');
+    expect(stdout).toContain('Requested: 10');
+    expect(stdout).toContain('Instant fills: 4 (spent: 20 cr)');
+    expect(stdout).toContain('Delivered to cargo: 4');
+    expect(stdout).toContain('Remaining open: 6');
+    expect(stdout).toContain('Total escrowed: 30 cr');
+    expect(stdout).toContain('Remaining escrowed: 30 cr');
+    expect(stdout).toContain('Listing fee: 1 cr');
+    expect(stdout).toContain('Order ID: order-buy-1');
+    expect(stdout).not.toContain('Sell Order Created');
+    expect(stdout).not.toContain('earned:');
+  });
+
+  test('formats faction created buy order without sell wording', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_create_buy_order', {
+      action: 'create_buy_order',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 100,
+      price_each: 3,
+      quantity_filled: 0,
+      quantity_listed: 100,
+      total_spent: 0,
+      total_escrowed: 300,
+      remaining_escrowed: 300,
+      listing_fee: 6,
+      order_id: 'faction-buy-1',
+      message: 'Created buy order.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Order Created ===');
+    expect(stdout).toContain('Remaining open: 100');
+    expect(stdout).not.toContain('Sell Order Created');
+    expect(stdout).not.toContain('earned:');
+  });
+
+  test('formats faction created sell order with sell wording', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_create_sell_order', {
+      action: 'create_sell_order',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 100,
+      price_each: 4,
+      quantity_filled: 25,
+      quantity_listed: 75,
+      total_earned: 100,
+      listing_fee: 8,
+      order_id: 'faction-sell-1',
+      message: 'Created sell order.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Order Created ===');
+    expect(stdout).toContain('Instant fills: 25 (earned: 100 cr)');
+    expect(stdout).toContain('Remaining listed: 75');
+  });
+
   test('does not format cancelled orders as created sell orders', () => {
     const { stdout, stderr } = captureStructuredOutput('cancel_order', {
       action: 'cancel_order',
@@ -1449,13 +1534,13 @@ describe('structuredContent formatters', () => {
       .filter((name): name is string => Boolean(name))
       .sort();
 
-    expect(Object.keys(formatterFixtureCases).sort()).toEqual(namedFormatters);
+    expect(Object.keys(namedFormatterFixtureCases).sort()).toEqual(namedFormatters);
   });
 
   test('named formatter fixtures select custom formatters', () => {
     const outputs: Record<string, string> = {};
 
-    for (const [formatterName, { command, fixture }] of Object.entries(formatterFixtureCases).sort()) {
+    for (const [formatterName, { command, fixture }] of Object.entries(namedFormatterFixtureCases).sort()) {
       const { stdout, stderr } = captureStructuredOutput(command, fixture);
       expect(stderr, `${formatterName} should not emit drift warnings`).toBe('');
       expect(stdout, `${formatterName} should not fall back to JSON`).not.toContain('=== Response ===');
@@ -1512,7 +1597,7 @@ describe('structuredContent formatters', () => {
         Iron Ore | ore_iron |  50 |          "
       ,
         "chat_sent": "[local] Clear skies.",
-        "create_sell_order": 
+        "create_market_order": 
       "
       === Sell Order Created ===
       Item: Iron Ore (iron_ore)

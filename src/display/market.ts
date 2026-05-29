@@ -67,6 +67,20 @@ function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<
   });
 }
 
+type OrderSide = 'buy' | 'sell';
+
+function createOrderSide(result: Record<string, unknown>, command?: string): OrderSide | undefined {
+  if (result.action === 'create_buy_order') return 'buy';
+  if (result.action === 'create_sell_order') return 'sell';
+  if (command?.endsWith('create_buy_order')) return 'buy';
+  if (command?.endsWith('create_sell_order')) return 'sell';
+  return undefined;
+}
+
+function formatCredits(value: number): string {
+  return `${value.toLocaleString()} cr`;
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -186,36 +200,58 @@ export const marketFormatters = [
 
   // Market order creation
   namedFormatter(
-    'create_sell_order',
+    'create_market_order',
     ['listing_fee', 'order_id'],
-    (r) => {
-      if (r.action && r.action !== 'create_sell_order' && r.action !== 'create_buy_order') return false;
+    (r, command) => {
+      const side = createOrderSide(r, command);
+      if (!side) return false;
       if (r.order_id === undefined && r.listing_fee === undefined) return false;
+
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
       const requested = finiteNumber(r.quantity);
       const filled = finiteNumber(r.quantity_filled) ?? sumNumericField(r.fills, 'quantity');
-      const listed =
+      const remaining =
         finiteNumber(r.quantity_listed) ??
         (requested !== undefined && filled !== undefined ? Math.max(0, requested - filled) : undefined);
-      const earned = finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal');
+      const fillTotal =
+        side === 'buy'
+          ? finiteNumber(r.total_spent) ?? sumNumericField(r.fills, 'subtotal')
+          : finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal');
       const priceEach = finiteNumber(r.price_each);
       const listingFee = finiteNumber(r.listing_fee);
+      const totalEscrowed = finiteNumber(r.total_escrowed);
+      const remainingEscrowed = finiteNumber(r.remaining_escrowed);
+      const escrowRefunded = finiteNumber(r.escrow_refunded);
+      const notListed = finiteNumber(r.quantity_not_listed);
+      const deliveredToCargo = finiteNumber(r.delivered_to_cargo);
+      const deliveredToStorage = finiteNumber(r.delivered_to_storage);
 
-      emitLine(`\n${c.bright}=== Sell Order Created ===${c.reset}`);
+      emitLine(`\n${c.bright}=== ${side === 'buy' ? 'Buy' : 'Sell'} Order Created ===${c.reset}`);
       emitLine(`Item: ${itemName}${itemId}`);
       if (requested !== undefined) emitLine(`Requested: ${requested.toLocaleString()}`);
       if (filled !== undefined) {
-        const earnedText = earned !== undefined ? ` (earned: ${earned.toLocaleString()} cr)` : '';
-        emitLine(`Instant fills: ${filled.toLocaleString()}${earnedText}`);
+        const totalLabel = side === 'buy' ? 'spent' : 'earned';
+        const totalText = fillTotal !== undefined ? ` (${totalLabel}: ${formatCredits(fillTotal)})` : '';
+        emitLine(`Instant fills: ${filled.toLocaleString()}${totalText}`);
       }
-      if (listed !== undefined) emitLine(`Remaining listed: ${listed.toLocaleString()}`);
-      if (priceEach !== undefined) emitLine(`Price each: ${priceEach.toLocaleString()} cr`);
-      if (listingFee !== undefined) emitLine(`Listing fee: ${listingFee.toLocaleString()} cr`);
+      if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo.toLocaleString()}`);
+      if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage.toLocaleString()}`);
+      if (remaining !== undefined)
+        emitLine(`${side === 'buy' ? 'Remaining open' : 'Remaining listed'}: ${remaining.toLocaleString()}`);
+      if (notListed !== undefined) emitLine(`Not listed: ${notListed.toLocaleString()}`);
+      if (priceEach !== undefined) emitLine(`Price each: ${formatCredits(priceEach)}`);
+      if (totalEscrowed !== undefined) emitLine(`Total escrowed: ${formatCredits(totalEscrowed)}`);
+      if (remainingEscrowed !== undefined) emitLine(`Remaining escrowed: ${formatCredits(remainingEscrowed)}`);
+      if (escrowRefunded !== undefined) emitLine(`Escrow refunded: ${formatCredits(escrowRefunded)}`);
+      if (listingFee !== undefined) emitLine(`Listing fee: ${formatCredits(listingFee)}`);
       if (r.order_id) emitLine(`Order ID: ${r.order_id}`);
       return true;
     },
-    { commands: ['create_sell_order'], shapeFallback: true },
+    {
+      commands: ['create_sell_order', 'create_buy_order', 'faction_create_sell_order', 'faction_create_buy_order'],
+      shapeFallback: true,
+    },
   ),
 
   // Station storage
