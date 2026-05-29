@@ -42,6 +42,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # official client source
 official-client
+.worktrees/
 
 # Coding agent / AI scratch directories (local only, never commit)
 # These contain transient plans, specs, research notes, etc. generated during development.
