@@ -1,0 +1,14 @@
+
+=== Storage at earth_station ===
+
+Items (1):
+
+  Name      | ID        | Qty | Unit Size
+  ----------+-----------+-----+----------
+  Fuel Cell | fuel_cell |  12 |          
+
+Ships (1):
+
+  Ship Name  | Class      | Mods | Cargo | ID    
+  -----------+------------+------+-------+-------
+  Prospector | prospector |    3 |    10 | ship-1

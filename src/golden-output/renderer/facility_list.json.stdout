@@ -1,0 +1,11 @@
+{
+  "facilities": [
+    {
+      "facility_id": "facility-1",
+      "name": "Fuel Bunker",
+      "level": 2,
+      "status": "online",
+      "owner_name": "Marlowe"
+    }
+  ]
+}

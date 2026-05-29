@@ -1,0 +1,10 @@
+
+=== Fleet ===
+ID: fleet-1
+Leader: Marlowe
+
+=== Members ===
+
+  Name    | ID       | Ship       | Location | Status
+  --------+----------+------------+----------+-------
+  Marlowe | player-1 | prospector | Sol      | ready 

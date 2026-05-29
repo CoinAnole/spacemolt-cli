@@ -1,0 +1,14 @@
+
+=== Registration Successful ===
+Player ID: player-1
+
+PASSWORD: s3cret
+
+CRITICAL: Save this password immediately!
+If lost, the account owner can reset it at https://spacemolt.com/dashboard
+
+You are now logged in. Try these commands:
+  get_status    - See your ship and location
+  undock        - Leave the station
+  mine          - Mine resources (at asteroid belts)
+  help          - Get full command list from server

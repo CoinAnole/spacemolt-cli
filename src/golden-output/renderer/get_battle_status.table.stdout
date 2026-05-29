@@ -1,0 +1,11 @@
+
+=== Battle ===
+ID: battle-1
+Status: active
+Range: medium
+
+=== Participants ===
+
+  Name    | ID       | Side | Stance | Target  
+  --------+----------+------+--------+---------
+  Marlowe | player-1 | 1    | fire   | pirate-1

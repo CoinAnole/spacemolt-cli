@@ -1,0 +1,8 @@
+
+=== Wrecks at POI ===
+
+Wreck: wreck-1
+  Ship: skiff
+  Expires in: 5 ticks
+  Contents:
+    - 10x ore_iron

@@ -1,0 +1,18 @@
+{
+  "base_id": "nova_terra_central",
+  "base_name": "Nova Terra Central",
+  "missions": [
+    {
+      "difficulty": 3,
+      "mission_id": "pirate_sweep",
+      "title": "Pirate Sweep",
+      "type": "combat"
+    },
+    {
+      "difficulty": 5,
+      "mission_id": "deep_core_prospecting",
+      "title": "Deep Core Prospecting",
+      "type": "mining"
+    }
+  ]
+}

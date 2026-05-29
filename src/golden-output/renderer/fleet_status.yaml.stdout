@@ -1,0 +1,10 @@
+
+fleet:
+  fleet_id: "fleet-1"
+  leader_name: Marlowe
+  members:
+    - player_id: "player-1"
+      username: Marlowe
+      ship_class: prospector
+      system_name: Sol
+      status: ready

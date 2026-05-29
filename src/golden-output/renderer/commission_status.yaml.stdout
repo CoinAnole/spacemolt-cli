@@ -1,0 +1,9 @@
+
+commissions:
+  - commission_id: "commission-1"
+    ship_class_id: prospector
+    ship_name: "Lucky Strike"
+    status: building
+    base_name: "Earth Station"
+    ticks_remaining: 12
+count: 1

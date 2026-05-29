@@ -1,0 +1,9 @@
+
+=== Drone ===
+
+  Name         | ID      | Status | Location     
+  -------------+---------+--------+--------------
+  Survey Drone | drone-1 | loaded | earth_station
+
+Script:
+scan()

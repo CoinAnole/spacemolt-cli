@@ -1,0 +1,6 @@
+
+=== Drones ===
+
+  Name         | ID      | Status   | Location          | Cargo
+  -------------+---------+----------+-------------------+------
+  Survey Drone | drone-1 | deployed | Sol Asteroid Belt | 4    

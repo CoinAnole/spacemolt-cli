@@ -1,0 +1,7 @@
+
+=== Missions ===
+
+  Title                 | ID                    | Type   | Difficulty
+  ----------------------+-----------------------+--------+-----------
+  Pirate Sweep          | pirate_sweep          | combat | 3         
+  Deep Core Prospecting | deep_core_prospecting | mining | 5         

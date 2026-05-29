@@ -1,0 +1,1 @@
+{"drone":{"drone_id":"drone-1","name":"Survey Drone","status":"loaded","base_id":"earth_station","script":"scan()"}}

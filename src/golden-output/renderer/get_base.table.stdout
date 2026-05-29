@@ -1,0 +1,14 @@
+
+=== Base: Nova Terra Central ===
+ID: nova_terra_central
+POI: nova_terra_central
+Empire: solarian
+Defense: 55
+Fuel: 290750/0
+Fuel Price: 6 credits
+Condition: Critical infrastructure failure. (16% satisfaction)
+Services: crafting, market, missions, refuel
+Facilities: 3
+  fuel_grid, trade_nexus, fleet_yards
+
+A busy trade station.

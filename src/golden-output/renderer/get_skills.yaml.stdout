@@ -1,0 +1,14 @@
+
+skills:
+  - skill_id: mining
+    name: Mining
+    category: Industry
+player_skills:
+  - skill_id: mining
+    name: Mining
+    category: Industry
+    level: 3
+    max_level: 10
+    current_xp: 450
+    next_level_xp: 600
+player_skill_count: 1

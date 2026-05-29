@@ -1,0 +1,20 @@
+{
+  "categories": {
+    "infrastructure": {
+      "count": 55,
+      "description": "Power and life support systems"
+    },
+    "personal": {
+      "buildable": 4,
+      "count": 13,
+      "description": "Personal facilities"
+    },
+    "production": {
+      "buildable": 427,
+      "count": 1589,
+      "description": "Manufacturing facilities"
+    }
+  },
+  "hint": "Use filters to browse.",
+  "total": 1753
+}

@@ -1,0 +1,23 @@
+
+=== Player Status ===
+Username: Marlowe
+Empire: Terran
+Credits: 4242
+Faction: smc (captain)
+
+Location:
+  System: Sol
+  POI: Earth
+  Docked: Yes (earth_station)
+
+Ship: Surveyor (prospector)
+  Hull: 90/100
+  Shield: 35/50 (+5/tick)
+  Armor: 10
+  Fuel: 80/100
+  Cargo: 12/60
+  CPU: 8/20
+  Power: 10/25
+
+Nearby Players: 1
+  - Ibis (hauler)

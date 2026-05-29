@@ -1,0 +1,10 @@
+
+=== POI: Sol Asteroid Belt ===
+ID: sol_asteroid_belt
+Type: asteroid_belt
+System: sol
+Description: Dense mining field
+Class: common
+
+Resources:
+  - Iron Ore: richness 3, 750/1000 (75.00% remaining)

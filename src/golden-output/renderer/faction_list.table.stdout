@@ -1,0 +1,8 @@
+
+=== Factions ===
+
+  Name         | Tag  | Members | Leader       | Bases | ID       
+  -------------+------+---------+--------------+-------+----------
+  Drift Matrix | DMX7 | 20      | DriftMiner-7 | 0     | faction-1
+  Mercs United | MERC | 1       | Mercator     | 0     | faction-2
+limit 50 | offset 0 | total 129

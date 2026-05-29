@@ -1,0 +1,16 @@
+{
+  "battle": {
+    "battle_id": "battle-1",
+    "status": "active",
+    "range_band": "medium",
+    "participants": [
+      {
+        "player_id": "player-1",
+        "username": "Marlowe",
+        "side_id": 1,
+        "stance": "fire",
+        "target_id": "pirate-1"
+      }
+    ]
+  }
+}

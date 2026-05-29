@@ -1,0 +1,11 @@
+{
+  "action": "create_sell_order",
+  "item": "Iron Ore",
+  "item_id": "iron_ore",
+  "quantity": 1,
+  "price_each": 999999,
+  "quantity_listed": 1,
+  "listing_fee": 19999,
+  "order_id": "order-sell-1",
+  "message": "Created sell order for 1 Iron Ore at 999999 credits each."
+}

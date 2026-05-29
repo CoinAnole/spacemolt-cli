@@ -1,0 +1,20 @@
+
+=== Ship: Deep Survey ===
+ID: ship-1
+Class: Deep Survey
+Custom Name: Asteroid Accessory
+Hull: 420/420
+Shield: 300/300 (+4/tick)
+Armor: 18
+Fuel: 240/240
+Cargo: 0/1250
+CPU: 16/34
+Power: 23/75
+Slots: 1 weapon, 1 defense, 5 utility
+
+=== Modules ===
+
+  Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID      
+  --------+--------------------+---------+----------+-----+-------+------+---------
+  utility | Cargo Expander III | utility | Pristine | 2   | 2     | 10   | module-1
+  weapon  | Pulse Laser III    | weapon  | Scuffed  | 3   | 8     | 10   | module-2

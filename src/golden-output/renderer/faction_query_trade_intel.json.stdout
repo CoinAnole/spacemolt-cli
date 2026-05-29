@@ -1,0 +1,11 @@
+{
+  "intel": [
+    {
+      "system_name": "Sol",
+      "poi_name": "Earth",
+      "item_id": "fuel_cell",
+      "price_each": 25,
+      "updated_at": "2026-05-17T00:00:00Z"
+    }
+  ]
+}

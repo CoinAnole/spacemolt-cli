@@ -1,0 +1,19 @@
+{
+  "base_id": "earth_station",
+  "items": [
+    {
+      "item_id": "fuel_cell",
+      "item_name": "Fuel Cell",
+      "quantity": 12
+    }
+  ],
+  "ships": [
+    {
+      "ship_id": "ship-1",
+      "class_id": "prospector",
+      "class_name": "Prospector",
+      "modules": 3,
+      "cargo_used": 10
+    }
+  ]
+}

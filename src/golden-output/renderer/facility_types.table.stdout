@@ -1,0 +1,12 @@
+
+=== Categories ===
+
+  Category       | Count | Buildable | Description                   
+  ---------------+-------+-----------+-------------------------------
+  infrastructure | 55    |           | Power and life support systems
+  personal       | 13    | 4         | Personal facilities           
+  production     | 1589  | 427       | Manufacturing facilities      
+
+Total facility types: 1753
+
+Use filters to browse.

@@ -1,0 +1,25 @@
+{
+  "nearby": [
+    {
+      "username": "Marlowe",
+      "faction_tag": "SMC",
+      "ship_class": "prospector"
+    }
+  ],
+  "count": 1,
+  "pirates": [
+    {
+      "name": "Raider",
+      "ship_class": "skiff",
+      "status": "hostile"
+    }
+  ],
+  "pirate_count": 1,
+  "empire_npcs": [
+    {
+      "name": "Patrol",
+      "ship_class": "interceptor"
+    }
+  ],
+  "empire_npc_count": 1
+}

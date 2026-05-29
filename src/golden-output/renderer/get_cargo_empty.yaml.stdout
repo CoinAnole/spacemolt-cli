@@ -1,0 +1,5 @@
+
+message: "Cargo contents"
+ship:
+  cargo_capacity: 385
+  cargo_used: 0

@@ -1,0 +1,11 @@
+{
+  "poi_id": "sol_earth",
+  "poi": "Earth",
+  "online_players": [
+    {
+      "username": "Ibis",
+      "ship_class": "hauler"
+    }
+  ],
+  "online_players_count": 1
+}

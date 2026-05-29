@@ -1,0 +1,8 @@
+
+=== Active Missions ===
+
+  Title                           | ID                                | Type     | Difficulty | Objectives                                   | Rewards         | Expires
+  --------------------------------+-----------------------------------+----------+------------+----------------------------------------------+-----------------+--------
+  Distress Call: CombatDummy6     | mission-distress-combatdummy6     | distress | 2          | Rescue CombatDummy6 CombatDummy6 0/1         | piloting XP +25 | 17     
+  Distress Call: WealthyMiner2023 | mission-distress-wealthyminer2023 | distress | 3          | Rescue WealthyMiner2023 WealthyMiner2023 0/1 | piloting XP +50 | 22     
+missions 2/5

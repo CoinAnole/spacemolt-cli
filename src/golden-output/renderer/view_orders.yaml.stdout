@@ -1,0 +1,7 @@
+
+orders:
+  - order_id: "order-1"
+    item_id: ore_iron
+    side: buy
+    quantity: 100
+    price_each: 12
