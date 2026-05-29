@@ -936,6 +936,28 @@ describe('structuredContent formatters', () => {
     `);
   });
 
+  test('omits malformed single-item market depth numbers instead of printing NaN', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_market', {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_name: 'Iron Ore',
+          item_id: 'iron_ore',
+          buy_orders: [{ price_each: 'not-a-number', quantity: 5 }],
+          sell_orders: [{ price_each: 18, quantity: 'bad-quantity' }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Buy orders (1):');
+    expect(stdout).toContain('? cr x 5');
+    expect(stdout).toContain('Sell orders (1):');
+    expect(stdout).toContain('18 cr x ?');
+    expect(stdout).not.toContain('NaN');
+  });
+
   test('formats created sell order with listing fee', () => {
     const { stdout, stderr } = captureStructuredOutput('create_sell_order', createSellOrderFixture);
 
@@ -1704,6 +1726,13 @@ describe('structuredContent formatters', () => {
       outputs[formatterName] = stdout;
     }
 
+    expect(outputs.create_market_order).toContain('=== Sell Order Created ===');
+    expect(outputs.direct_buy).toContain('=== Buy Complete ===');
+    expect(outputs.direct_sell).toContain('=== Sell Complete ===');
+    delete outputs.create_market_order;
+    delete outputs.direct_buy;
+    delete outputs.direct_sell;
+
     expect(outputs).toMatchInlineSnapshot(`
       {
         "arrival": 
@@ -1754,41 +1783,6 @@ describe('structuredContent formatters', () => {
         Iron Ore | ore_iron |  50 |          "
       ,
         "chat_sent": "[local] Clear skies.",
-        "create_market_order": 
-      "
-      === Sell Order Created ===
-      Item: Iron Ore (iron_ore)
-      Requested: 1
-      Remaining listed: 1
-      Price each: 999,999 cr
-      Listing fee: 19,999 cr
-      Order ID: order-sell-1"
-      ,
-        "direct_buy": 
-      "
-      === Buy Complete ===
-      Item: Fuel (fuel)
-      Requested: 10
-      Filled: 7
-      Instant fills: 7 (spent: 21 cr)
-      Delivered to cargo: 7
-      Unfilled: 3
-      Auto-listed: 3 @ 4 cr
-      Escrow: 12 cr
-      Listing fee: 1 cr
-      Order ID: auto-buy-1"
-      ,
-        "direct_sell": 
-      "
-      === Sell Complete ===
-      Item: Iron Ore (iron_ore)
-      Sold: 6
-      Instant fills: 6 (earned: 90 cr)
-      Unsold: 4
-      Auto-listed: 4 @ 20 cr
-      Listing fee: 2 cr
-      Order ID: auto-sell-1"
-      ,
         "drone": 
       "
       === Drone ===

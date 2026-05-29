@@ -82,6 +82,11 @@ function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
 
+function formatOptionalNumber(value: unknown): string {
+  const number = finiteNumber(value);
+  return number === undefined ? '?' : number.toLocaleString();
+}
+
 function autoListedOrder(value: unknown): Record<string, unknown> | undefined {
   return isRecord(value) ? value : undefined;
 }
@@ -227,8 +232,8 @@ export const marketFormatters = [
         if (buyOrders && buyOrders.length > 0) {
           emitLine(`  Buy orders (${buyOrders.length}):`);
           for (const o of buyOrders) {
-            const price = Number(o.price_each).toLocaleString();
-            const qty = Number(o.quantity).toLocaleString();
+            const price = formatOptionalNumber(o.price_each);
+            const qty = formatOptionalNumber(o.quantity);
             const src = o.source && o.source !== 'station' && o.source !== 'player' ? ` [${o.source}]` : '';
             emitLine(`    ${c.green}${price} cr${c.reset} x ${qty}${src}`);
           }
@@ -236,8 +241,8 @@ export const marketFormatters = [
         if (sellOrders && sellOrders.length > 0) {
           emitLine(`  Sell orders (${sellOrders.length}):`);
           for (const o of sellOrders) {
-            const price = Number(o.price_each).toLocaleString();
-            const qty = Number(o.quantity).toLocaleString();
+            const price = formatOptionalNumber(o.price_each);
+            const qty = formatOptionalNumber(o.quantity);
             emitLine(`    ${c.red}${price} cr${c.reset} x ${qty}`);
           }
         }
