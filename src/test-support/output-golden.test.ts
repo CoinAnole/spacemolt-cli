@@ -15,6 +15,9 @@ describe('output golden test support', () => {
     expect(validateGoldenOutput({ stdout: '{"ok":', stderr: '' }, { stdoutFormat: 'json' })).toEqual([
       'stdout is not valid JSON',
     ]);
+    expect(validateGoldenOutput({ stdout: '', stderr: '' }, { stdoutFormat: 'json' })).toEqual([
+      'stdout is not valid JSON',
+    ]);
   });
 
   test('validates expected YAML top-level keys without parsing YAML', () => {
@@ -30,6 +33,12 @@ describe('output golden test support', () => {
         { stdoutFormat: 'yaml', expectedYamlKeys: ['player', 'ship'] },
       ),
     ).toEqual(['YAML stdout is missing top-level key "ship"']);
+    expect(
+      validateGoldenOutput(
+        { stdout: '  player:\n    username: Marlowe', stderr: '' },
+        { stdoutFormat: 'yaml', expectedYamlKeys: ['player'] },
+      ),
+    ).toEqual(['YAML stdout is missing top-level key "player"']);
   });
 
   test('detects fallback and accidental diagnostic tokens', () => {
@@ -64,6 +73,45 @@ describe('output golden test support', () => {
       expect(
         fs.readFileSync(goldenFilePath({ group: 'renderer', name: 'sample.case', goldenRoot }, 'stderr'), 'utf8'),
       ).toBe('err');
+    } finally {
+      fs.rmSync(goldenRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('assertGoldenOutput validates guardrails before writing in update mode', () => {
+    const goldenRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-golden-helper-'));
+    try {
+      const options = {
+        group: 'renderer' as const,
+        name: 'invalid.case',
+        goldenRoot,
+        update: true,
+        stdoutFormat: 'json' as const,
+      };
+
+      expect(() => assertGoldenOutput(options, { stdout: '{"ok":', stderr: '' })).toThrow(
+        'renderer/invalid.case guardrails',
+      );
+      expect(fs.existsSync(goldenFilePath(options, 'stdout'))).toBe(false);
+      expect(fs.existsSync(goldenFilePath(options, 'stderr'))).toBe(false);
+    } finally {
+      fs.rmSync(goldenRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('assertGoldenOutput missing golden error includes path and generic update guidance', () => {
+    const goldenRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-golden-helper-'));
+    try {
+      const options = {
+        group: 'renderer' as const,
+        name: 'missing.case',
+        goldenRoot,
+      };
+      const missingPath = goldenFilePath(options, 'stdout');
+
+      expect(() => assertGoldenOutput(options, { stdout: 'out', stderr: '' })).toThrow(
+        `Missing golden file: ${missingPath}\nRun UPDATE_GOLDENS=1 bun test <golden test file>`,
+      );
     } finally {
       fs.rmSync(goldenRoot, { recursive: true, force: true });
     }

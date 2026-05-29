@@ -44,7 +44,7 @@ export function goldenFilePath(
 export function validateGoldenOutput(actual: GoldenOutput, options: GoldenValidationOptions = {}): string[] {
   const errors: string[] = [];
 
-  if (options.stdoutFormat === 'json' && actual.stdout.trim()) {
+  if (options.stdoutFormat === 'json') {
     try {
       JSON.parse(actual.stdout);
     } catch {
@@ -75,19 +75,17 @@ export function validateGoldenOutput(actual: GoldenOutput, options: GoldenValida
 }
 
 function hasYamlTopLevelKey(output: string, key: string): boolean {
-  const trimmed = output.trimStart();
-  return trimmed.startsWith(`${key}:`) || output.includes(`\n${key}:`);
+  return output.split(/\r?\n/).some((line) => line.startsWith(`${key}:`));
 }
 
 export function assertGoldenOutput(options: GoldenAssertionOptions, actual: GoldenOutput): void {
   const expectedExitCode = options.expectedExitCode ?? 0;
   expect(actual.exitCode ?? 0, `${options.group}/${options.name} exit code`).toBe(expectedExitCode);
+  expect(validateGoldenOutput(actual, options), `${options.group}/${options.name} guardrails`).toEqual([]);
 
   const update = options.update ?? process.env.UPDATE_GOLDENS === '1';
   assertGoldenStream(options, 'stdout', actual.stdout, update);
   assertGoldenStream(options, 'stderr', actual.stderr, update);
-
-  expect(validateGoldenOutput(actual, options), `${options.group}/${options.name} guardrails`).toEqual([]);
 }
 
 function assertGoldenStream(
@@ -104,7 +102,7 @@ function assertGoldenStream(
   }
 
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Missing golden file: ${filePath}\nRun UPDATE_GOLDENS=1 bun test src/output-golden.test.ts`);
+    throw new Error(`Missing golden file: ${filePath}\nRun UPDATE_GOLDENS=1 bun test <golden test file>`);
   }
 
   const expectedValue = fs.readFileSync(filePath, 'utf8');
