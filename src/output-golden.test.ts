@@ -11,6 +11,8 @@ import {
   viewMarketFixture,
 } from './display/formatter-fixtures';
 import { runInvocation, type RunnerDependencies } from './runner';
+import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, QUIET, setOutputMode } from './runtime';
+import { ACTIVE_PROFILE, setActiveProfile } from './session';
 import {
   assertGoldenOutput,
   normalizeOutputLines,
@@ -95,7 +97,12 @@ function fakeClient(response: APIResponse): SpaceMoltClient {
   } as unknown as SpaceMoltClient;
 }
 
-function cliContext(tempDir: string, stdout: string[], stderr: string[]): CliRuntimeContext {
+interface CliStreamCapture {
+  stdout: string;
+  stderr: string;
+}
+
+function cliContext(tempDir: string, capture: CliStreamCapture): CliRuntimeContext {
   return {
     env: {
       XDG_CONFIG_HOME: path.join(tempDir, 'config'),
@@ -104,13 +111,13 @@ function cliContext(tempDir: string, stdout: string[], stderr: string[]): CliRun
     },
     writer: {
       out(message = '') {
-        stdout.push(message);
+        capture.stdout += `${message}\n`;
       },
       err(message = '') {
-        stderr.push(message);
+        capture.stderr += `${message}\n`;
       },
       writeOut(chunk) {
-        stdout.push(chunk);
+        capture.stdout += chunk;
       },
     },
     clock: {
@@ -133,18 +140,29 @@ function cliContext(tempDir: string, stdout: string[], stderr: string[]): CliRun
 
 async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-output-golden-'));
-  const stdout: string[] = [];
-  const stderr: string[] = [];
+  const capture: CliStreamCapture = { stdout: '', stderr: '' };
+  const originalOutputMode = {
+    json: JSON_OUTPUT,
+    quiet: QUIET,
+    plain: PLAIN,
+    debug: DEBUG,
+    format: FORMAT,
+    compact: COMPACT,
+  };
+  const originalActiveProfile = ACTIVE_PROFILE;
 
   try {
     const dependencies: RunnerDependencies = {
+      createClient() {
+        throw new Error('unexpected real client creation in golden test');
+      },
       loadCachedGeneratedRoutes() {
         return undefined;
       },
       defaultOpenApiCacheDir() {
         return path.join(tempDir, 'openapi-cache');
       },
-      checkForUpdates() {},
+      async checkForUpdates() {},
       getDefaultProfile() {
         return undefined;
       },
@@ -155,16 +173,18 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
     const exitCode = await runInvocation(
       testCase.argv,
       fakeClient(testCase.response ?? { structuredContent: { ok: true } }),
-      cliContext(tempDir, stdout, stderr),
+      cliContext(tempDir, capture),
       dependencies,
     );
 
     return {
       exitCode,
-      stdout: normalizeOutputLines(stdout),
-      stderr: normalizeOutputLines(stderr),
+      stdout: capture.stdout,
+      stderr: capture.stderr,
     };
   } finally {
+    setOutputMode(originalOutputMode);
+    setActiveProfile(originalActiveProfile);
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }
