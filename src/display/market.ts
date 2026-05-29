@@ -4,6 +4,7 @@ import {
   finiteNumber,
   firstArray,
   formatter,
+  isRecord,
   namedFormatter,
   printCompactTable,
   printItemTable,
@@ -79,6 +80,58 @@ function createOrderSide(result: Record<string, unknown>, command?: string): Ord
 
 function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
+}
+
+function autoListedOrder(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) ? value : undefined;
+}
+
+function emitAutoListed(value: unknown): void {
+  const order = autoListedOrder(value);
+  if (!order) return;
+  const quantity = finiteNumber(order.quantity);
+  const priceEach = finiteNumber(order.price_each);
+  const listingFee = finiteNumber(order.listing_fee);
+  const escrow = finiteNumber(order.escrow);
+
+  if (quantity !== undefined && priceEach !== undefined) {
+    emitLine(`Auto-listed: ${quantity.toLocaleString()} @ ${formatCredits(priceEach)}`);
+  } else if (quantity !== undefined) {
+    emitLine(`Auto-listed: ${quantity.toLocaleString()}`);
+  }
+  if (escrow !== undefined) emitLine(`Escrow: ${formatCredits(escrow)}`);
+  if (listingFee !== undefined) emitLine(`Listing fee: ${formatCredits(listingFee)}`);
+  if (order.order_id) emitLine(`Order ID: ${order.order_id}`);
+}
+
+function hasAnyField(record: Record<string, unknown>, fields: string[]): boolean {
+  return fields.some((field) => record[field] !== undefined);
+}
+
+function hasMarketItem(record: Record<string, unknown>): boolean {
+  return record.item !== undefined || record.item_name !== undefined || record.item_id !== undefined;
+}
+
+function isDirectMarketSellShape(record: Record<string, unknown>): boolean {
+  return (
+    hasMarketItem(record) &&
+    hasAnyField(record, ['quantity_sold', 'total_earned', 'fills', 'unsold', 'auto_listed'])
+  );
+}
+
+function isDirectMarketBuyShape(record: Record<string, unknown>): boolean {
+  return (
+    hasMarketItem(record) &&
+    hasAnyField(record, [
+      'quantity',
+      'total_cost',
+      'fills',
+      'unfilled',
+      'delivered_to_cargo',
+      'delivered_to_storage',
+      'auto_listed',
+    ])
+  );
 }
 
 export const marketFormatters = [
@@ -297,6 +350,70 @@ export const marketFormatters = [
       return true;
     },
     { commands: ['storage', 'view_storage', 'view_faction_storage'], shapeFallback: true },
+  ),
+
+  // Direct market sell
+  namedFormatter(
+    'direct_sell',
+    ['quantity_sold', 'total_earned', 'fills'],
+    (r, command) => {
+      if ((command !== 'sell' && r.action !== 'sell') || !isDirectMarketSellShape(r)) return false;
+      const itemName = r.item || r.item_name || r.item_id || 'unknown';
+      const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
+      const sold = finiteNumber(r.quantity_sold) ?? sumNumericField(r.fills, 'quantity');
+      const earned = finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal');
+      const unsold = finiteNumber(r.unsold);
+
+      emitLine(`\n${c.bright}=== Sell Complete ===${c.reset}`);
+      emitLine(`Item: ${itemName}${itemId}`);
+      if (sold !== undefined) emitLine(`Sold: ${sold.toLocaleString()}`);
+      if (sold !== undefined) {
+        const earnedText = earned !== undefined ? ` (earned: ${formatCredits(earned)})` : '';
+        emitLine(`Instant fills: ${sold.toLocaleString()}${earnedText}`);
+      } else if (earned !== undefined) {
+        emitLine(`Total earned: ${formatCredits(earned)}`);
+      }
+      if (unsold !== undefined) emitLine(`Unsold: ${unsold.toLocaleString()}`);
+      emitAutoListed(r.auto_listed);
+      return true;
+    },
+    { commands: ['sell'], shapeFallback: true },
+  ),
+
+  // Direct market buy
+  namedFormatter(
+    'direct_buy',
+    ['quantity', 'total_cost', 'fills'],
+    (r, command) => {
+      if ((command !== 'buy' && r.action !== 'buy') || !isDirectMarketBuyShape(r)) return false;
+      const itemName = r.item || r.item_name || r.item_id || 'unknown';
+      const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
+      const requested = finiteNumber(r.quantity);
+      const unfilled = finiteNumber(r.unfilled);
+      const filled =
+        sumNumericField(r.fills, 'quantity') ??
+        (requested !== undefined && unfilled !== undefined ? Math.max(0, requested - unfilled) : undefined);
+      const spent = finiteNumber(r.total_cost) ?? sumNumericField(r.fills, 'subtotal');
+      const deliveredToCargo = finiteNumber(r.delivered_to_cargo);
+      const deliveredToStorage = finiteNumber(r.delivered_to_storage);
+
+      emitLine(`\n${c.bright}=== Buy Complete ===${c.reset}`);
+      emitLine(`Item: ${itemName}${itemId}`);
+      if (requested !== undefined) emitLine(`Requested: ${requested.toLocaleString()}`);
+      if (filled !== undefined) emitLine(`Filled: ${filled.toLocaleString()}`);
+      if (filled !== undefined) {
+        const spentText = spent !== undefined ? ` (spent: ${formatCredits(spent)})` : '';
+        emitLine(`Instant fills: ${filled.toLocaleString()}${spentText}`);
+      } else if (spent !== undefined) {
+        emitLine(`Total cost: ${formatCredits(spent)}`);
+      }
+      if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo.toLocaleString()}`);
+      if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage.toLocaleString()}`);
+      if (unfilled !== undefined) emitLine(`Unfilled: ${unfilled.toLocaleString()}`);
+      emitAutoListed(r.auto_listed);
+      return true;
+    },
+    { commands: ['buy'], shapeFallback: true },
   ),
 
   // Market orders

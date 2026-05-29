@@ -68,6 +68,54 @@ const { create_sell_order: createMarketOrderFixtureCase, ...otherFormatterFixtur
 const namedFormatterFixtureCases = {
   ...otherFormatterFixtureCases,
   create_market_order: createMarketOrderFixtureCase,
+  direct_buy: {
+    command: 'buy',
+    fixture: {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 10,
+      total_cost: 21,
+      unfilled: 3,
+      delivered_to_cargo: 7,
+      fills: [
+        { quantity: 4, price_each: 3, subtotal: 12, source: 'station' },
+        { quantity: 3, price_each: 3, subtotal: 9, source: 'player' },
+      ],
+      auto_listed: {
+        order_id: 'auto-buy-1',
+        quantity: 3,
+        price_each: 4,
+        escrow: 12,
+        listing_fee: 1,
+      },
+      level_up: false,
+      message: 'Bought items.',
+    },
+  },
+  direct_sell: {
+    command: 'sell',
+    fixture: {
+      action: 'sell',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      quantity_sold: 6,
+      total_earned: 90,
+      unsold: 4,
+      fills: [
+        { quantity: 5, price_each: 15, subtotal: 75, source: 'station' },
+        { quantity: 1, price_each: 15, subtotal: 15, source: 'player' },
+      ],
+      auto_listed: {
+        order_id: 'auto-sell-1',
+        quantity: 4,
+        price_each: 20,
+        listing_fee: 2,
+      },
+      level_up: false,
+      message: 'Sold items.',
+    },
+  },
 };
 
 const playerProfileFixture = {
@@ -1022,6 +1070,115 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Remaining listed: 75');
   });
 
+  test('formats direct sell fills and auto-listed leftovers', () => {
+    const { stdout, stderr } = captureStructuredOutput('sell', {
+      action: 'sell',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      quantity_sold: 6,
+      total_earned: 90,
+      unsold: 4,
+      fills: [
+        { quantity: 5, price_each: 15, subtotal: 75, source: 'station' },
+        { quantity: 1, price_each: 15, subtotal: 15, source: 'player' },
+      ],
+      auto_listed: {
+        order_id: 'auto-sell-1',
+        quantity: 4,
+        price_each: 20,
+        listing_fee: 2,
+      },
+      level_up: false,
+      message: 'Sold items.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Complete ===');
+    expect(stdout).toContain('Item: Iron Ore (iron_ore)');
+    expect(stdout).toContain('Sold: 6');
+    expect(stdout).toContain('Instant fills: 6 (earned: 90 cr)');
+    expect(stdout).toContain('Unsold: 4');
+    expect(stdout).toContain('Auto-listed: 4 @ 20 cr');
+    expect(stdout).toContain('Listing fee: 2 cr');
+    expect(stdout).toContain('Order ID: auto-sell-1');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('does not format sparse sell messages as direct market sells', () => {
+    const { stdout, stderr } = captureStructuredOutput('sell', {
+      message: 'Sold items.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Sell Complete ===');
+    expect(stdout).not.toContain('Item: unknown');
+    expect(stdout).toContain('Sold items.');
+  });
+
+  test('does not format wreck sales as direct market sells', () => {
+    const { stdout, stderr } = captureStructuredOutput('sell_wreck', {
+      action: 'sell',
+      wreck_id: 'wreck-1',
+      credits_earned: 500,
+      message: 'Sold wreck.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Sell Complete ===');
+    expect(stdout).not.toContain('Item: unknown');
+    expect(stdout).toContain('wreck-1');
+  });
+
+  test('formats direct buy fills, delivery, and auto-listed unfilled quantity', () => {
+    const { stdout, stderr } = captureStructuredOutput('buy', {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 10,
+      total_cost: 21,
+      unfilled: 3,
+      delivered_to_cargo: 7,
+      fills: [
+        { quantity: 4, price_each: 3, subtotal: 12, source: 'station' },
+        { quantity: 3, price_each: 3, subtotal: 9, source: 'player' },
+      ],
+      auto_listed: {
+        order_id: 'auto-buy-1',
+        quantity: 3,
+        price_each: 4,
+        escrow: 12,
+        listing_fee: 1,
+      },
+      level_up: false,
+      message: 'Bought items.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Complete ===');
+    expect(stdout).toContain('Item: Fuel (fuel)');
+    expect(stdout).toContain('Requested: 10');
+    expect(stdout).toContain('Filled: 7');
+    expect(stdout).toContain('Instant fills: 7 (spent: 21 cr)');
+    expect(stdout).toContain('Delivered to cargo: 7');
+    expect(stdout).toContain('Unfilled: 3');
+    expect(stdout).toContain('Auto-listed: 3 @ 4 cr');
+    expect(stdout).toContain('Escrow: 12 cr');
+    expect(stdout).toContain('Listing fee: 1 cr');
+    expect(stdout).toContain('Order ID: auto-buy-1');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('does not format sparse buy messages as direct market buys', () => {
+    const { stdout, stderr } = captureStructuredOutput('buy', {
+      message: 'Bought items.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Buy Complete ===');
+    expect(stdout).not.toContain('Item: unknown');
+    expect(stdout).toContain('Bought items.');
+  });
+
   test('does not format cancelled orders as created sell orders', () => {
     const { stdout, stderr } = captureStructuredOutput('cancel_order', {
       action: 'cancel_order',
@@ -1606,6 +1763,31 @@ describe('structuredContent formatters', () => {
       Price each: 999,999 cr
       Listing fee: 19,999 cr
       Order ID: order-sell-1"
+      ,
+        "direct_buy": 
+      "
+      === Buy Complete ===
+      Item: Fuel (fuel)
+      Requested: 10
+      Filled: 7
+      Instant fills: 7 (spent: 21 cr)
+      Delivered to cargo: 7
+      Unfilled: 3
+      Auto-listed: 3 @ 4 cr
+      Escrow: 12 cr
+      Listing fee: 1 cr
+      Order ID: auto-buy-1"
+      ,
+        "direct_sell": 
+      "
+      === Sell Complete ===
+      Item: Iron Ore (iron_ore)
+      Sold: 6
+      Instant fills: 6 (earned: 90 cr)
+      Unsold: 4
+      Auto-listed: 4 @ 20 cr
+      Listing fee: 2 cr
+      Order ID: auto-sell-1"
       ,
         "drone": 
       "
