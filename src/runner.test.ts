@@ -197,6 +197,61 @@ describe('runInvocation option isolation', () => {
     });
   });
 
+  test('switch_ship resolves cached ship class names and prints API errors', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-ship-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        if (command === 'list_ships') {
+          return {
+            structuredContent: {
+              ships: [
+                {
+                  ship_id: '0ceb2c65cc4bf79727a8f0baec04dab0',
+                  class_id: 'dust_devil',
+                  class_name: 'Dust Devil',
+                  is_active: false,
+                },
+              ],
+              count: 1,
+            },
+          };
+        }
+        return {
+          error: {
+            code: 'ship_switch_failed',
+            message: 'cargo must be unloaded before switching ships',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' };
+      const listExitCode = await runInvocation(['--quiet', 'list_ships'], client, fakeContext(stdout, stderr, env));
+      const switchExitCode = await runInvocation(
+        ['--plain', 'switch_ship', 'dust_devil'],
+        client,
+        fakeContext(stdout, stderr, env),
+      );
+
+      expect(listExitCode).toBe(0);
+      expect(switchExitCode).toBe(1);
+      expect(calls).toEqual([
+        { command: 'list_ships', payload: {} },
+        { command: 'switch_ship', payload: { id: '0ceb2c65cc4bf79727a8f0baec04dab0' } },
+      ]);
+      expect(stderr.join('\n')).toContain('cargo must be unloaded before switching ships');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('repeated direct invocations do not leak --json', async () => {
     const jsonResult = await captureInvocation(['--json', 'trvel']);
     expect(jsonResult.exitCode).toBe(1);

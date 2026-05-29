@@ -197,8 +197,10 @@ The CLI learns useful IDs from structured responses and stores them beside the a
 ```bash
 bun run src/client.ts get_system
 bun run src/client.ts get_cargo
+bun run src/client.ts list_ships
 bun run src/client.ts ids poi
 bun run src/client.ts ids item
+bun run src/client.ts ids ship
 ```
 
 When an ID-sensitive command fails because an ID is missing or invalid, the CLI prints relevant cached suggestions.

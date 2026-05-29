@@ -38,6 +38,34 @@ describe('id cache', () => {
     expect(nearbyHints).toContainEqual(expect.objectContaining({ kind: 'player', id: 'Marlowe', name: 'Marlowe' }));
   });
 
+  test('extracts ship IDs from stored ship listings', () => {
+    const hints = extractIdHints(
+      'list_ships',
+      {
+        ships: [
+          {
+            ship_id: 'ship-1',
+            class_id: 'dust_devil',
+            class_name: 'Dust Devil',
+            location_base_id: 'earth_station',
+            is_active: false,
+          },
+        ],
+        count: 1,
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(hints).toContainEqual(
+      expect.objectContaining({
+        kind: 'ship',
+        id: 'ship-1',
+        name: 'dust_devil',
+        context: expect.objectContaining({ class_name: 'Dust Devil', location_base_id: 'earth_station' }),
+      }),
+    );
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
@@ -206,7 +234,9 @@ describe('id cache', () => {
     expect(idKindForCommandField('jump', 'id')).toBe('system');
     expect(idKindForCommandField('sell', 'id')).toBe('item');
     expect(idKindForCommandField('fleet_invite', 'id')).toBe('player');
+    expect(idKindForCommandField('switch_ship', 'id')).toBe('ship');
     expect(idKindForCommandField('unknown_command', 'target_system_id')).toBe('system');
+    expect(idKindForCommandField('unknown_command', 'ship_id')).toBe('ship');
     expect(idKindForCommandField('travel', 'target_system_id')).toBeUndefined();
   });
 

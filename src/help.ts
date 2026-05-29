@@ -602,8 +602,8 @@ ${c.bright}Dynamic API Cache:${c.reset}
   Cached v2 routes appear in help, command search, completion, and dispatch.
 
 ${c.bright}ID Cache:${c.reset}
-  Discovery commands like get_system, get_cargo, view_market, and get_nearby save useful IDs.
-  spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player IDs
+  Discovery commands like get_system, get_cargo, view_market, get_nearby, and list_ships save useful IDs.
+  spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship IDs
   spacemolt where-can-i <item>          Search cached item sightings`;
 }
 

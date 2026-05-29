@@ -7,7 +7,7 @@ import { c, QUIET } from './runtime.ts';
 import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
 import type { APIResponse } from './types.ts';
 
-export type IdKind = 'poi' | 'system' | 'item' | 'player';
+export type IdKind = 'poi' | 'system' | 'item' | 'player' | 'ship';
 
 export interface IdHint {
   kind: IdKind;
@@ -28,7 +28,7 @@ interface IdCacheFile {
   hints: IdHint[];
 }
 
-const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player']);
+const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player', 'ship']);
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
@@ -49,6 +49,10 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   use_item: { item: ['item_id', 'id'] },
   create_sell_order: { item: ['item_id', 'id'] },
   create_buy_order: { item: ['item_id', 'id'] },
+  switch_ship: { ship: ['ship_id', 'id'] },
+  sell_ship: { ship: ['ship_id', 'id'] },
+  scrap_ship: { ship: ['ship_id', 'id'] },
+  list_ship_for_sale: { ship: ['ship_id'] },
   view_storage: { poi: ['station_id'] },
   view_faction_storage: { poi: ['station_id'] },
 };
@@ -209,6 +213,7 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
     pushItem(push, itemWithContext, ['quantity', 'category', 'base_id']);
   }
   for (const item of arrayRecords(result.inventory)) pushItem(push, item, ['quantity']);
+  for (const ship of arrayRecords(result.ships)) pushShip(push, ship);
 
   for (const player of arrayRecords(result.nearby)) pushPlayer(push, player);
   for (const player of arrayRecords(result.players)) pushPlayer(push, player);
@@ -271,6 +276,7 @@ export function idKindForCommandField(command: string, field?: string): IdKind |
   if (normalizedField.includes('poi')) return 'poi';
   if (normalizedField.includes('system')) return 'system';
   if (normalizedField.includes('player') || normalizedField.includes('target')) return 'player';
+  if (normalizedField === 'ship_id' || normalizedField.endsWith('_ship_id')) return 'ship';
   if (normalizedField.includes('item')) return 'item';
   return undefined;
 }
@@ -424,6 +430,7 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     system: ['get_system', 'get_map'],
     item: ['get_cargo', 'view_market', 'catalog type=items'],
     player: ['get_nearby', 'get_system_agents'],
+    ship: ['list_ships', 'view_storage'],
   };
   out(`Run one of these to populate it:`);
   for (const command of commandsByKind[kind]) out(`  spacemolt ${command}`);
@@ -451,6 +458,18 @@ function pushPlayer(
     id: stringValue(player.player_id || player.id || player.username),
     name: stringValue(player.username || player.name),
     context: pick(player, ['ship_class', 'faction_tag', 'status']),
+  });
+}
+
+function pushShip(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  ship: Record<string, unknown>,
+): void {
+  push({
+    kind: 'ship',
+    id: stringValue(ship.ship_id || ship.id),
+    name: stringValue(ship.custom_name || ship.ship_name || ship.class_id || ship.class_name || ship.name),
+    context: pick(ship, ['class_id', 'class_name', 'location', 'location_base_id', 'is_active']),
   });
 }
 
