@@ -888,10 +888,53 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Sell Order Created ===');
     expect(stdout).toContain('Item: Iron Ore (iron_ore)');
-    expect(stdout).toContain('Quantity listed: 1');
+    expect(stdout).toContain('Requested: 1');
+    expect(stdout).toContain('Remaining listed: 1');
     expect(stdout).toContain('Price each: 999,999 cr');
     expect(stdout).toContain('Listing fee: 19,999 cr');
     expect(stdout).toContain('Order ID: order-sell-1');
+  });
+
+  test('formats created sell order with partial instant fills', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', {
+      action: 'create_sell_order',
+      item: 'Contained Enriched Uranium Rod',
+      item_id: 'contained_enriched_uranium_rod',
+      quantity: 14,
+      price_each: 24001,
+      quantity_filled: 13,
+      quantity_listed: 1,
+      total_earned: 430000,
+      listing_fee: 360,
+      order_id: 'order-sell-partial',
+      message: 'Created sell order.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Requested: 14');
+    expect(stdout).toContain('Instant fills: 13 (earned: 430,000 cr)');
+    expect(stdout).toContain('Remaining listed: 1');
+    expect(stdout).not.toContain('Quantity listed:');
+  });
+
+  test('formats created sell order with full instant fill without treating requested quantity as listed', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', {
+      action: 'create_sell_order',
+      item: 'Contained Enriched Uranium Rod',
+      item_id: 'contained_enriched_uranium_rod',
+      quantity: 20,
+      price_each: 24001,
+      quantity_filled: 20,
+      listing_fee: 0,
+      order_id: 'order-sell-full',
+      message: 'Created sell order.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Requested: 20');
+    expect(stdout).toContain('Instant fills: 20');
+    expect(stdout).toContain('Remaining listed: 0');
+    expect(stdout).not.toContain('Quantity listed: 20');
   });
 
   test('does not format cancelled orders as created sell orders', () => {
@@ -1473,7 +1516,8 @@ describe('structuredContent formatters', () => {
       "
       === Sell Order Created ===
       Item: Iron Ore (iron_ore)
-      Quantity listed: 1
+      Requested: 1
+      Remaining listed: 1
       Price each: 999,999 cr
       Listing fee: 19,999 cr
       Order ID: order-sell-1"

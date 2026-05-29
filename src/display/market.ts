@@ -16,6 +16,25 @@ function orderQuantity(order: Record<string, unknown>): number {
   return Number.isFinite(quantity) ? quantity : 0;
 }
 
+function finiteNumber(value: unknown): number | undefined {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function sumNumericField(values: unknown, field: string): number | undefined {
+  if (!Array.isArray(values)) return undefined;
+  let total = 0;
+  let found = false;
+  for (const value of values) {
+    if (!value || typeof value !== 'object') continue;
+    const number = finiteNumber((value as Record<string, unknown>)[field]);
+    if (number === undefined) continue;
+    total += number;
+    found = true;
+  }
+  return found ? total : undefined;
+}
+
 function bestPriceDepth(
   orders: Array<Record<string, unknown>> | undefined,
   side: 'buy' | 'sell',
@@ -183,15 +202,25 @@ export const marketFormatters = [
       if (r.order_id === undefined && r.listing_fee === undefined) return false;
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
-      const quantity = r.quantity_listed ?? r.quantity;
-      const priceEach = Number(r.price_each);
-      const listingFee = Number(r.listing_fee);
+      const requested = finiteNumber(r.quantity);
+      const filled = finiteNumber(r.quantity_filled) ?? sumNumericField(r.fills, 'quantity');
+      const listed =
+        finiteNumber(r.quantity_listed) ??
+        (requested !== undefined && filled !== undefined ? Math.max(0, requested - filled) : undefined);
+      const earned = finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal');
+      const priceEach = finiteNumber(r.price_each);
+      const listingFee = finiteNumber(r.listing_fee);
 
       emitLine(`\n${c.bright}=== Sell Order Created ===${c.reset}`);
       emitLine(`Item: ${itemName}${itemId}`);
-      if (quantity !== undefined) emitLine(`Quantity listed: ${Number(quantity).toLocaleString()}`);
-      if (Number.isFinite(priceEach)) emitLine(`Price each: ${priceEach.toLocaleString()} cr`);
-      if (Number.isFinite(listingFee)) emitLine(`Listing fee: ${listingFee.toLocaleString()} cr`);
+      if (requested !== undefined) emitLine(`Requested: ${requested.toLocaleString()}`);
+      if (filled !== undefined) {
+        const earnedText = earned !== undefined ? ` (earned: ${earned.toLocaleString()} cr)` : '';
+        emitLine(`Instant fills: ${filled.toLocaleString()}${earnedText}`);
+      }
+      if (listed !== undefined) emitLine(`Remaining listed: ${listed.toLocaleString()}`);
+      if (priceEach !== undefined) emitLine(`Price each: ${priceEach.toLocaleString()} cr`);
+      if (listingFee !== undefined) emitLine(`Listing fee: ${listingFee.toLocaleString()} cr`);
       if (r.order_id) emitLine(`Order ID: ${r.order_id}`);
       return true;
     },
