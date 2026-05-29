@@ -21,6 +21,18 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
     options: GlobalOptions,
     context?: CliRuntimeContext,
   ): CommandParseResult<Record<string, unknown>> {
+    if (argv.length === 2 && argv[1] === 'help') {
+      const prepared = preparePayload(this.name, { help: 'true' }, options, undefined, context?.writer, this.registry);
+      return {
+        ok: false,
+        error: {
+          code: 'exit',
+          message: '',
+          exitCode: prepared.type === 'exit' ? prepared.exitCode : 0,
+        },
+      };
+    }
+
     const parsedArgs = parseArgs(argv, { allowUnknown: options.allowUnknown, registry: this.registry });
     if (!parsedArgs.ok) {
       return { ok: false, error: validationErrorFromParseErrors(parsedArgs.errors) };

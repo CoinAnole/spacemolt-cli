@@ -67,7 +67,7 @@ export async function renderResponse(
   const hasProjection = Boolean(options.jq || options.field || (options.fields && options.fields.length > 0));
   const writer = context?.writer;
 
-  if (isJson && response.error) {
+  if ((isJson || options.structured) && response.error) {
     printJsonResponse(response, false, writer);
     return 1;
   }

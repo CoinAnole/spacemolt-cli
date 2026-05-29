@@ -944,6 +944,23 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('Dynamic command for inline help tests');
   });
 
+  test('api command trailing help renders local command help without network', async () => {
+    const handler = resolveHandler(['facility_upgrade', 'help'], options);
+
+    expect(handler).toBeInstanceOf(ApiCommandHandler);
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['facility_upgrade', 'help'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    expect(parsed.error.exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('facility_upgrade');
+    expect(stdout.join('\n')).toContain('spacemolt facility_upgrade --facility-type ... --facility-id ...');
+  });
+
   test('sync-api refreshes cached OpenAPI routes and renders a text summary', async () => {
     const configHome = tempDir();
     const fetches: string[] = [];

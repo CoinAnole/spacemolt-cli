@@ -158,6 +158,45 @@ describe('runInvocation option isolation', () => {
     ]);
   });
 
+  test('facility_upgrade flag syntax prints structured API errors', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return {
+          error: {
+            code: 'missing_materials',
+            message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(
+      ['facility_upgrade', '--facility-id', '3f67', '--facility-type', 'intel_center', '--structured'],
+      client,
+      fakeContext(stdout, stderr, { SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toEqual([]);
+    expect(calls).toEqual([
+      {
+        command: 'facility_upgrade',
+        payload: { facility_id: '3f67', facility_type: 'intel_center' },
+      },
+    ]);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({
+      error: {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+      },
+    });
+  });
+
   test('repeated direct invocations do not leak --json', async () => {
     const jsonResult = await captureInvocation(['--json', 'trvel']);
     expect(jsonResult.exitCode).toBe(1);

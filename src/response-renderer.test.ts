@@ -182,6 +182,34 @@ describe('response renderer', () => {
     expect(JSON.parse(capture.text())).toEqual({ error: { code: 'invalid_poi', message: 'Unknown POI' } });
   });
 
+  test('renderResponse prints structured-mode error envelopes and exits nonzero', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'facility_upgrade',
+        displayCommand: 'facility_upgrade',
+        response: {
+          error: {
+            code: 'missing_materials',
+            message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+          },
+        },
+      },
+      { ...baseOptions, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(capture.stderr).toEqual([]);
+    expect(JSON.parse(capture.text())).toEqual({
+      error: {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+      },
+    });
+  });
+
   test('renderResponse prints cached ID suggestions for ID-like errors', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-renderer-'));
     try {
