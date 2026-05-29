@@ -1,17 +1,23 @@
 import { describe, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import type { SpaceMoltClient } from './api';
+import type { CliRuntimeContext } from './cli-context';
 import { renderStructuredResult } from './display';
 import {
   getStatusFixture,
   highValueCommandFixtures,
   viewMarketFixture,
 } from './display/formatter-fixtures';
+import { runInvocation, type RunnerDependencies } from './runner';
 import {
   assertGoldenOutput,
   normalizeOutputLines,
   type GoldenOutput,
   type GoldenStdoutFormat,
 } from './test-support/output-golden';
-import type { GlobalOptions } from './types';
+import type { APIResponse, GlobalOptions } from './types';
 
 const baseOptions: GlobalOptions = {
   args: [],
@@ -66,6 +72,101 @@ function renderRendererCase(testCase: RendererGoldenCase): GoldenOutput {
     stdout: normalizeOutputLines(rendered.stdout),
     stderr: normalizeOutputLines(rendered.stderr),
   };
+}
+
+interface CliGoldenCase {
+  name: string;
+  argv: string[];
+  response?: APIResponse;
+  expectedExitCode?: number;
+  stdoutFormat?: GoldenStdoutFormat;
+  expectedYamlKeys?: string[];
+}
+
+function fakeClient(response: APIResponse): SpaceMoltClient {
+  return {
+    config: {},
+    async execute() {
+      return structuredClone(response);
+    },
+    async executeCommandConfig() {
+      return structuredClone(response);
+    },
+  } as unknown as SpaceMoltClient;
+}
+
+function cliContext(tempDir: string, stdout: string[], stderr: string[]): CliRuntimeContext {
+  return {
+    env: {
+      XDG_CONFIG_HOME: path.join(tempDir, 'config'),
+      SPACEMOLT_PROFILE: 'golden',
+      SPACEMOLT_UPDATE_CHECK: 'false',
+    },
+    writer: {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut(chunk) {
+        stdout.push(chunk);
+      },
+    },
+    clock: {
+      now() {
+        return new Date('2026-05-29T00:00:00.000Z');
+      },
+    },
+    sleep() {
+      return Promise.resolve();
+    },
+    output: {
+      json: false,
+      quiet: false,
+      plain: true,
+      format: 'table',
+      compact: false,
+    },
+  };
+}
+
+async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-output-golden-'));
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+
+  try {
+    const dependencies: RunnerDependencies = {
+      loadCachedGeneratedRoutes() {
+        return undefined;
+      },
+      defaultOpenApiCacheDir() {
+        return path.join(tempDir, 'openapi-cache');
+      },
+      checkForUpdates() {},
+      getDefaultProfile() {
+        return undefined;
+      },
+      onSigint() {
+        return () => undefined;
+      },
+    };
+    const exitCode = await runInvocation(
+      testCase.argv,
+      fakeClient(testCase.response ?? { structuredContent: { ok: true } }),
+      cliContext(tempDir, stdout, stderr),
+      dependencies,
+    );
+
+    return {
+      exitCode,
+      stdout: normalizeOutputLines(stdout),
+      stderr: normalizeOutputLines(stderr),
+    };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 const rendererMatrixCases: RendererGoldenCase[] = Object.entries(highValueCommandFixtures).flatMap(
@@ -132,6 +233,62 @@ const rendererProjectionCases: RendererGoldenCase[] = [
   },
 ];
 
+const cliCases: CliGoldenCase[] = [
+  {
+    name: 'get_status.--json',
+    argv: ['--plain', '--json', 'get_status'],
+    response: { structuredContent: getStatusFixture },
+    stdoutFormat: 'json',
+  },
+  {
+    name: 'get_status.--structured',
+    argv: ['--plain', '--structured', 'get_status'],
+    response: { result: 'server rendered status', structuredContent: getStatusFixture },
+    stdoutFormat: 'json',
+  },
+  {
+    name: 'get_status.--format-yaml',
+    argv: ['--plain', '--format', 'yaml', 'get_status'],
+    response: { structuredContent: getStatusFixture },
+    stdoutFormat: 'yaml',
+    expectedYamlKeys: Object.keys(getStatusFixture),
+  },
+  {
+    name: 'validation-error.table',
+    argv: ['--plain', 'travel'],
+    expectedExitCode: 1,
+  },
+  {
+    name: 'validation-error.--json',
+    argv: ['--plain', '--json', 'travel'],
+    expectedExitCode: 1,
+    stdoutFormat: 'json',
+  },
+  {
+    name: 'unknown-command.table',
+    argv: ['--plain', 'trvel'],
+    expectedExitCode: 1,
+  },
+  {
+    name: 'unknown-command.--json',
+    argv: ['--plain', '--json', 'trvel'],
+    expectedExitCode: 1,
+    stdoutFormat: 'json',
+  },
+  {
+    name: 'structured-api-error.--structured',
+    argv: ['--plain', '--structured', 'get_status'],
+    response: {
+      error: {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+      },
+    },
+    expectedExitCode: 1,
+    stdoutFormat: 'json',
+  },
+];
+
 describe('renderer golden output', () => {
   for (const testCase of [...rendererMatrixCases, ...rendererProjectionCases]) {
     test(testCase.name, () => {
@@ -144,6 +301,23 @@ describe('renderer golden output', () => {
           allowFallback: testCase.allowFallback,
         },
         renderRendererCase(testCase),
+      );
+    });
+  }
+});
+
+describe('CLI golden output', () => {
+  for (const testCase of cliCases) {
+    test(testCase.name, async () => {
+      assertGoldenOutput(
+        {
+          group: 'cli',
+          name: testCase.name,
+          expectedExitCode: testCase.expectedExitCode,
+          stdoutFormat: testCase.stdoutFormat,
+          expectedYamlKeys: testCase.expectedYamlKeys,
+        },
+        await renderCliCase(testCase),
       );
     });
   }

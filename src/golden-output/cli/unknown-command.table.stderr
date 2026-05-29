@@ -1,0 +1,5 @@
+Error: Unknown command "trvel"
+Did you mean: travel
+
+Run "spacemolt --help" for the local command overview.
+Run "spacemolt get_commands" for the server command list once connected.

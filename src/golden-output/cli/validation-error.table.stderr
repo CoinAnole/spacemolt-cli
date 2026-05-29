@@ -1,0 +1,14 @@
+Error: Missing required argument: target_poi
+
+Usage:
+  spacemolt travel <poi_id_or_cached_name>  (use get_system to cache POIs)
+
+Accepted forms:
+  spacemolt travel <poi_id_or_cached_name>  (use get_system to cache POIs)
+  spacemolt travel target_poi=...
+  spacemolt travel --target-poi ...
+
+Example:
+  spacemolt travel earth
+
+Next: run "spacemolt get_system" or "spacemolt get_status" or "spacemolt get_commands" to find a valid target_poi.
