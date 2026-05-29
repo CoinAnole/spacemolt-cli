@@ -8,6 +8,10 @@ This repository is a Bun-based command-line client for the SpaceMolt v2 API. It 
 - `src/commands.ts`: user-facing commands, aliases, examples, and v2 route overrides.
 - `src/generated/api-commands.ts`: generated route/schema metadata.
 - `src/api-sync.test.ts`: checks local command metadata against the OpenAPI spec.
+- `src/output-golden.test.ts`: exact stdout/stderr golden testing (148 cases → 296 committed files) for renderer and CLI output paths.
+- `src/test-support/output-golden.ts`: golden harness, normalization, guardrails (blocks `NaN`/`undefined`/`[object Object]`, `=== Response ===` fallback, enforces stdout/stderr separation).
+- `src/golden-output/`: committed `.stdout` and `.stderr` files (140 renderer cases from `highValueCommandFixtures` + 8 CLI cases).
+- `src/test-support/fixture-schema-compare.ts` + `scripts/report-fixture-schema-divergences.ts`: compare curated golden fixtures against response schemas in `spacemolt-docs/openapi.json`.
 - `src/version-sync.test.ts`: package, runtime, and README version consistency.
 - `src/args.test.ts`, `src/runner.test.ts`, and related command tests: parser, option, and behavior coverage.
 - `spacemolt-docs/openapi.json`: cached v2 OpenAPI spec.
@@ -21,6 +25,7 @@ bun install
 bun run src/client.ts <command> [args...]
 bun run src/client.ts sync-api
 bun test
+bun run report:fixture-schemas          # compare golden fixtures vs OpenAPI response schemas
 bun run typecheck
 bun run lint
 bun run build
@@ -37,6 +42,34 @@ The sync test reads `spacemolt-docs/openapi.json` by default. Only use the live 
 ```bash
 LIVE_API_SYNC=1 bun test src/api-sync.test.ts
 ```
+
+## Golden Output Tests
+
+The project uses committed golden files for exact output stability of both human-readable (table/text) and machine-readable (`--json`, `--yaml`, `--structured`, compact, `--field`/`--fields`/`--jq`) rendering.
+
+- Run the full suite (renderer + CLI layers):
+  ```bash
+  bun test src/output-golden.test.ts
+  ```
+- 33 high-value fixtures (in `src/display/*-fixtures.ts`) generate 140 renderer cases (table + json + yaml + compact-json, plus projections) + 8 CLI cases exercising `runInvocation`.
+- All 296 files live under `src/golden-output/{renderer,cli}/`. Use `UPDATE_GOLDENS=1` only for intentional output changes.
+
+To see structural differences between the curated fixtures and the actual response schemas in the OpenAPI spec (informational only — never fails tests):
+
+```bash
+# Standalone reporter (filterable)
+bun run report:fixture-schemas
+bun run report:fixture-schemas --only get_status,view_market,get_cargo
+
+# Or during a golden run
+SHOW_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts
+```
+
+The reporter resolves the 200 response schema for each command's `apiRoute`, unwraps the common `V2Response` + `structuredContent` envelope, and reports:
+- Fields in the fixture but absent from the schema
+- Fields declared in the schema but not exercised by the fixture
+- Type mismatches (with `integer`/`number` treated as compatible)
+- Required fields omitted from the (intentionally partial) fixture
 
 ## Routing
 
@@ -75,6 +108,7 @@ Use `spacemolt profile default <name>` to save the profile used when `--profile`
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses. |
 | `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks (disabled by default). |
 | `DEBUG=true` | Print verbose request and response diagnostics. |
+| `SHOW_FIXTURE_SCHEMA_DIVERGENCES=1` | When running `bun test src/output-golden.test.ts`, also emit a report comparing curated golden fixtures against OpenAPI response schemas (awareness/diagnostic only). |
 
 ## Release Notes
 

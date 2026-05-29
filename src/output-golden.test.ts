@@ -19,6 +19,10 @@ import {
   type GoldenOutput,
   type GoldenStdoutFormat,
 } from './test-support/output-golden';
+import {
+  compareHighValueFixturesToSpec,
+  formatComparisonReport,
+} from './test-support/fixture-schema-compare.ts';
 import type { APIResponse, GlobalOptions } from './types';
 
 const baseOptions: GlobalOptions = {
@@ -342,3 +346,18 @@ describe('CLI golden output', () => {
     });
   }
 });
+
+// Optional schema divergence report (awareness only, never fails the suite)
+if (process.env.SHOW_FIXTURE_SCHEMA_DIVERGENCES === '1') {
+  // Run after module load so it prints once when the golden test file is executed
+  // (Bun test loads the module before running describes).
+  // Using queueMicrotask so it appears after the test runner header output.
+  queueMicrotask(() => {
+    try {
+      const comparisons = compareHighValueFixturesToSpec();
+      console.log('\n' + formatComparisonReport(comparisons) + '\n');
+    } catch (err) {
+      console.error('[fixture-schema-compare] failed to generate report:', err);
+    }
+  });
+}
