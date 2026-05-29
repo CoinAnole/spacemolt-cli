@@ -1,4 +1,14 @@
-import { c, emitLine, firstArray, formatter, namedFormatter, printCompactTable, printItemTable } from './helpers.ts';
+import {
+  c,
+  emitLine,
+  finiteNumber,
+  firstArray,
+  formatter,
+  namedFormatter,
+  printCompactTable,
+  printItemTable,
+  sumNumericField,
+} from './helpers.ts';
 
 interface BestPriceDepth {
   price: number;
@@ -14,25 +24,6 @@ function orderPrice(order: Record<string, unknown>): number | undefined {
 function orderQuantity(order: Record<string, unknown>): number {
   const quantity = Number(order.quantity);
   return Number.isFinite(quantity) ? quantity : 0;
-}
-
-function finiteNumber(value: unknown): number | undefined {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : undefined;
-}
-
-function sumNumericField(values: unknown, field: string): number | undefined {
-  if (!Array.isArray(values)) return undefined;
-  let total = 0;
-  let found = false;
-  for (const value of values) {
-    if (!value || typeof value !== 'object') continue;
-    const number = finiteNumber((value as Record<string, unknown>)[field]);
-    if (number === undefined) continue;
-    total += number;
-    found = true;
-  }
-  return found ? total : undefined;
 }
 
 function bestPriceDepth(

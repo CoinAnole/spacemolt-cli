@@ -54,6 +54,25 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export function finiteNumber(value: unknown): number | undefined {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+export function sumNumericField(values: unknown, field: string): number | undefined {
+  if (!Array.isArray(values)) return undefined;
+  let total = 0;
+  let found = false;
+  for (const value of values) {
+    if (!isRecord(value)) continue;
+    const number = finiteNumber(value[field]);
+    if (number === undefined) continue;
+    total += number;
+    found = true;
+  }
+  return found ? total : undefined;
+}
+
 export interface FormatterFixture {
   command: string;
   fixture: Record<string, unknown>;
