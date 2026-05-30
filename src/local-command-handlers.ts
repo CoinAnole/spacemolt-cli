@@ -487,7 +487,8 @@ type HelpPayload =
   | { type: 'progressiveOrHelp' }
   | { type: 'helpAll' }
   | { type: 'helpGroup'; target: string }
-  | { type: 'helpCommand'; target: string };
+  | { type: 'helpCommand'; target: string }
+  | { type: 'helpSearch'; query: ReturnType<typeof parseCommandSearchQuery> };
 
 function createLocalHelpHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
@@ -531,15 +532,15 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'helpAll' } };
       }
 
-      if (allCommands[target]) {
+      if (subArgs.length === 1 && allCommands[target]) {
         return { ok: true, payload: { type: 'helpCommand', target } };
       }
 
-      if (hasCommandGroup(target)) {
+      if (subArgs.length === 1 && hasCommandGroup(target)) {
         return { ok: true, payload: { type: 'helpGroup', target } };
       }
 
-      return { ok: true, payload: { type: 'showHelp' } };
+      return { ok: true, payload: { type: 'helpSearch', query: parseCommandSearchQuery(subArgs) } };
     },
     async run(payload) {
       return payload;
@@ -568,6 +569,10 @@ function createLocalHelpHandler(
         } else {
           await showProgressiveHelp(context?.writer);
         }
+        return 0;
+      }
+      if (result.type === 'helpSearch') {
+        showCommandSearch(result.query, context?.writer, allCommands);
         return 0;
       }
       if (result.type === 'helpCommand') {
@@ -625,8 +630,6 @@ export function resolveHandler(
     Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
 ): CommandHandler | undefined {
   const commandName = argv[0];
-  const helpTarget = commandName === 'help' ? argv[1] : undefined;
-  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
   const groupInlineHelp =
     commandName &&
     hasCommandGroup(commandName) &&
@@ -637,8 +640,7 @@ export function resolveHandler(
     commandName === '--help' ||
     commandName === '-h' ||
     groupInlineHelp ||
-    (commandName === 'help' &&
-      (!helpTarget || helpTarget === 'all' || Boolean(allCommands[helpTarget]) || hasCommandGroup(helpTarget)))
+    commandName === 'help'
   ) {
     return createLocalHelpHandler(registrySnapshot);
   }

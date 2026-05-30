@@ -894,6 +894,26 @@ describe('local command handlers', () => {
     expect(output).toContain('API route:');
   });
 
+  test('help with unknown terms searches local commands', async () => {
+    const handler = resolveHandler(['help', 'faction', 'build'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['help', 'faction', 'build'], { ...options, profile: 'pilot' }, context);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot' }, {} as SpaceMoltClient, context);
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot' }, {} as SpaceMoltClient, context);
+
+    expect(exitCode).toBe(0);
+    const output = stdout.join('\n');
+    expect(output).toContain('Commands matching "faction build"');
+    expect(output).toContain('faction_build <facility_type>');
+  });
+
   test('group trailing --help renders local group help without network', async () => {
     const handler = resolveHandler(['faction', '--help'], options);
 
@@ -949,11 +969,22 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('Generated API');
   });
 
-  test('help command key-value form remains an API command', () => {
+  test('help command key-value form searches local commands', async () => {
     const handler = resolveHandler(['help', 'command=get_status'], options);
 
-    expect(handler).toBeInstanceOf(ApiCommandHandler);
     expect(handler?.name).toBe('help');
+    expect(handler).not.toBeInstanceOf(ApiCommandHandler);
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'command=get_status'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('Commands matching "command=get_status"');
   });
 
   test('api command inline help renders commands supplied by a registry snapshot', () => {
