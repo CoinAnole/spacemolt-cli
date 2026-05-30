@@ -83,7 +83,7 @@ describe('help output branches', () => {
     );
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
-    expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
+    expect(output).toContain('spacemolt help command=<name>   Local command help');
     expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
   });
 
@@ -166,7 +166,7 @@ describe('help output branches', () => {
     );
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
-    expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
+    expect(output).toContain('spacemolt help command=<name>   Local command help');
     expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
   });
 
@@ -406,7 +406,7 @@ describe('help output branches', () => {
     );
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
-    expect(output).toContain('spacemolt help command=<name>   Server-provided command help');
+    expect(output).toContain('spacemolt help command=<name>   Local command help');
   });
 
   test('showFullHelp includes cache sections near command discovery', () => {

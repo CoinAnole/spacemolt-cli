@@ -964,7 +964,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Use '--profile <name>' to isolate named player sessions
    - Use 'SPACEMOLT_PROFILE=<name>' when scripts share one named session
    - Use 'profile default <name>' to save the default named session
-   - Use 'help command=<command>' for server-provided command details
+   - Use 'help command=<command>' for local command details
    - Actions return results directly — no polling needed
    - Auto-dock/undock handles dock state automatically
    - Your session auto-renews; credentials are saved in sessions/<profile>.json
