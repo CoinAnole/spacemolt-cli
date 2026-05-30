@@ -54,6 +54,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_list_missions: 'List your faction posted missions at this station.',
   faction_post_mission: 'Post a mission on your faction mission board.',
   faction_promote: 'Promote or demote a faction member',
+  faction_propose_ally: 'Propose an alliance with another faction',
   faction_propose_peace: 'Propose peace to a faction you are at war with.',
   faction_query_intel: 'Query your faction intel database.',
   faction_query_trade_intel: 'Search your faction market price database.',

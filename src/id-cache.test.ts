@@ -307,6 +307,7 @@ describe('id cache', () => {
       ['faction_withdraw_invite', 'player_id', 'id', 'player'],
       ['faction_kick', 'player_id', 'id', 'player'],
       ['faction_promote', 'player_id', 'id', 'player'],
+      ['faction_propose_ally', 'target_faction_id', 'id', 'faction'],
       ['battle_target', 'target_id', 'id', 'player'],
       ['load_drone', 'drone_item_id', 'id', 'item'],
       ['reload', 'ammo_item_id', 'target', 'item'],

@@ -69,9 +69,19 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_faction/decline_invite',
     positionals: ['faction_id'],
   },
-  faction_set_ally: {
+  faction_propose_ally: {
     usage: '<faction_id_or_tag>',
     description: 'Propose an alliance with another faction.',
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_faction/propose_ally',
+    positionals: ['target_faction_id'],
+    aliases: {
+      target_faction_id: 'id',
+    },
+  },
+  faction_set_ally: {
+    usage: '<faction_id_or_tag>',
+    description: 'Backward-compatible alias for faction_propose_ally.',
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/propose_ally',
     positionals: ['target_faction_id'],

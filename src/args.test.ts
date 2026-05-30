@@ -216,6 +216,7 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeParsedPayload('battle_target', { target_id: 'player_1' })).toEqual({ id: 'player_1' });
     expect(normalizeParsedPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
+    expect(normalizeParsedPayload('faction_propose_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_set_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
@@ -822,6 +823,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       types: 'chat,combat',
     });
     expect(parseOk(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
+    expect(parseOk(['faction_propose_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseOk(['faction_set_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseOk(['faction_accept_invite', 'fac_1']).payload.faction_id).toBe('fac_1');

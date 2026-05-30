@@ -929,7 +929,9 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction_invite <player>           Invite player (requires invite permission)
     faction_kick <player>             Kick member (requires kick permission)
     faction_promote <player> <role>   Promote/demote (recruit/member/officer/leader)
-    faction_set_ally <faction_id>     Mark as ally
+    faction_propose_ally <faction_id>  Propose alliance
+    faction_accept_ally <faction_id>  Accept alliance proposal
+    faction_set_ally <faction_id>     Alias for faction_propose_ally
     faction_set_enemy <faction_id>     Mark as enemy
     faction_remove_ally <faction_id>  Remove ally
     faction_remove_enemy <faction_id>  Remove enemy

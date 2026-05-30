@@ -85,6 +85,7 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   join_faction: { faction: ['faction_id', 'id'] },
   faction_accept_invite: { faction: ['faction_id', 'id'] },
   faction_decline_invite: { faction: ['faction_id', 'id'] },
+  faction_propose_ally: { faction: ['target_faction_id', 'id'] },
   faction_set_ally: { faction: ['target_faction_id', 'id'] },
   faction_accept_ally: { faction: ['target_faction_id', 'id'] },
   faction_set_enemy: { faction: ['target_faction_id', 'id'] },
