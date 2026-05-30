@@ -352,6 +352,20 @@ describe('command metadata', () => {
     expect(help).not.toContain('1-10');
   });
 
+  test('buy help advertises storage delivery as the default and cargo as an override', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.buy;
+    expect(config?.route.defaults).toMatchObject({ deliver_to: 'storage' });
+    expect(config?.usage).toContain('[delivery=cargo|storage]');
+    expect(config?.aliases).toMatchObject({ delivery: 'deliver_to' });
+    expect(config?.schema?.deliver_to?.description).toContain('CLI default is storage');
+
+    const help = captureHelp('buy');
+    expect(help).toContain('delivery -> deliver_to');
+    expect(help).toContain('deliver_to (cargo|storage)');
+    expect(help).toContain('CLI default is storage');
+    expect(help).toContain('deliver_to=storage');
+  });
+
   test('profile help advertises local action forms without key-value action fields', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
     expect(config).toBeDefined();
@@ -636,7 +650,7 @@ describe('command metadata', () => {
       kind: 'id',
       insert: 'item_id=',
     });
-    expect(buyArgs.find((arg) => arg.name === 'deliver_to')).toMatchObject({
+    expect(buyArgs.find((arg) => arg.name === 'delivery')).toMatchObject({
       kind: 'enum',
       values: ['cargo', 'storage'],
     });

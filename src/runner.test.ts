@@ -197,6 +197,34 @@ describe('runInvocation option isolation', () => {
     });
   });
 
+  test('buy accepts delivery alias for the market delivery target', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(
+      ['--structured', 'buy', 'item_id=iron_ore', 'quantity=76270', 'delivery=cargo'],
+      client,
+      fakeContext(stdout, stderr, { SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(calls).toEqual([
+      {
+        command: 'buy',
+        payload: { id: 'iron_ore', quantity: 76270, deliver_to: 'cargo' },
+      },
+    ]);
+  });
+
   test('switch_ship resolves cached ship class names and prints API errors', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-ship-cache-'));
     const configHome = path.join(tempDir, 'config');

@@ -109,6 +109,31 @@ function createClient(
 }
 
 describe('SpaceMoltClient', () => {
+  test('defaults market buys to station storage delivery', async () => {
+    const { client, calls } = createClient([response()]);
+
+    await client.execute('buy', { id: 'iron_ore', quantity: 76270 });
+
+    expect(calls[0]?.url).toBe('https://game.test/api/v2/spacemolt/buy');
+    expect(calls[0]?.options?.payload).toEqual({
+      deliver_to: 'storage',
+      id: 'iron_ore',
+      quantity: 76270,
+    });
+  });
+
+  test('allows market buys to explicitly deliver to cargo', async () => {
+    const { client, calls } = createClient([response()]);
+
+    await client.execute('buy', { id: 'iron_ore', quantity: 10, deliver_to: 'cargo' });
+
+    expect(calls[0]?.options?.payload).toEqual({
+      deliver_to: 'cargo',
+      id: 'iron_ore',
+      quantity: 10,
+    });
+  });
+
   test('constructs routes and applies command defaults', async () => {
     const { client, calls } = createClient([response()]);
 

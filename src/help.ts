@@ -376,6 +376,11 @@ export function showCommandHelp(command: string, writer?: CliWriter, commands?: 
     }
   }
 
+  if ('route' in config && config.route.defaults && Object.keys(config.route.defaults).length > 0) {
+    write(`\n${c.bright}Default payload fields:${c.reset}`);
+    for (const [key, value] of Object.entries(config.route.defaults)) write(`  ${key}=${value}`);
+  }
+
   if (config.example) {
     write(`\n${c.bright}Example:${c.reset}`);
     write(`  ${config.example}`);

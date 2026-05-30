@@ -158,14 +158,29 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   buy: {
     usage:
-      '<item_id_or_cached_name> [quantity] [auto_list=true] [deliver_to=base_id]  (use view_market to cache items)',
-    description: 'Buy an item from the current market. Use view_market to inspect and cache available listings.',
-    example: 'spacemolt buy fuel 10',
+      '<item_id_or_cached_name> [quantity] [auto_list=true] [delivery=cargo|storage]  (defaults to station storage; use view_market to cache items)',
+    description:
+      'Buy an item from the current market. Purchases deliver to station storage by default; pass delivery=cargo to use ship cargo.',
+    example: 'spacemolt buy fuel 10 delivery=cargo',
     discoverWith: ['view_market', 'get_status'],
-    seeAlso: ['view_market', 'get_cargo'],
+    seeAlso: ['view_market', 'view_storage', 'get_cargo'],
     category: 'Trading',
     apiRoute: 'POST /api/v2/spacemolt/buy',
-    positionals: ['item_id', 'quantity', 'auto_list', 'deliver_to'],
+    positionals: ['item_id', 'quantity', 'auto_list', 'delivery'],
+    defaults: {
+      deliver_to: 'storage',
+    },
+    aliases: {
+      delivery: 'deliver_to',
+    },
+    schemaExtensions: {
+      deliver_to: {
+        type: 'string',
+        enum: ['cargo', 'storage'],
+        description:
+          'Where to deliver purchased items. CLI default is storage (station storage, useful for large buys); use delivery=cargo to put items in ship cargo.',
+      },
+    },
   },
   trade_offer: {
     usage: '<player_id> [credits=N] [items=...]  (use get_trades to see pending offers)',
