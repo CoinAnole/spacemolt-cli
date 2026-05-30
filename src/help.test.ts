@@ -7,6 +7,7 @@ import type { CommandRegistrySnapshot } from './command-registry';
 import type { PlayerState } from './help';
 import {
   displayError,
+  displayUnknownCommand,
   parseCommandSearchQuery,
   renderProgressiveHelp,
   showCommandGroup,
@@ -508,5 +509,17 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).toContain('Login required');
     expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
     expect(quiet.stderr.join('\n')).not.toContain('This is an authentication error.');
+  });
+
+  test('displayUnknownCommand points group-like commands to group help', () => {
+    const capture = captureWriter();
+
+    displayUnknownCommand('faction', capture.writer);
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Unknown command "faction"');
+    expect(output).toContain('"faction" is a help group.');
+    expect(output).toContain('spacemolt help faction');
+    expect(output).toContain('spacemolt commands --search faction');
   });
 });

@@ -174,7 +174,7 @@ function hasNoArgs(config: CommandConfig | LocalCommandConfig | undefined): bool
   );
 }
 
-function findCommandGroup(topic: string): CommandGroup | undefined {
+export function findCommandGroup(topic: string): CommandGroup | undefined {
   const normalized = normalizeHelpTopic(topic);
   return COMMAND_GROUPS.find(
     (group) =>
@@ -410,9 +410,18 @@ function printNextSteps(command: string, missingArg?: string, writer?: CliWriter
 export function displayUnknownCommand(command: string, writer?: CliWriter): void {
   const writeErr = err(writer);
   writeErr(`${c.red}Error:${c.reset} Unknown command "${command}"`);
+
+  const group = findCommandGroup(command);
+  if (group) {
+    writeErr(`"${command}" is a help group. Try: spacemolt help ${group.key}`);
+    writeErr(`Search commands: spacemolt commands --search ${command}`);
+    return;
+  }
+
   const suggestions = suggestCommands(command);
   if (suggestions.length > 0) writeErr(`Did you mean: ${suggestions.join(', ')}`);
   writeErr(`\nRun "spacemolt --help" for the local command overview.`);
+  writeErr(`Run "spacemolt commands --search ${command}" to search local command metadata.`);
   writeErr(`Run "spacemolt get_commands" for the server command list once connected.`);
 }
 
