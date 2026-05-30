@@ -66,6 +66,30 @@ describe('id cache', () => {
     );
   });
 
+  test('extracts faction IDs from faction-shaped responses', () => {
+    const hints = extractIdHints(
+      'faction_list',
+      {
+        factions: [
+          {
+            faction_id: 'smc',
+            tag: 'SMC',
+            name: 'Space Mining Collective',
+          },
+        ],
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(hints).toContainEqual(
+      expect.objectContaining({
+        kind: 'faction',
+        id: 'smc',
+        name: 'SMC',
+      }),
+    );
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');

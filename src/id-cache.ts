@@ -7,7 +7,7 @@ import { c, QUIET } from './runtime.ts';
 import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
 import type { APIResponse } from './types.ts';
 
-export type IdKind = 'poi' | 'system' | 'item' | 'player' | 'ship';
+export type IdKind = 'poi' | 'system' | 'item' | 'player' | 'ship' | 'faction';
 
 export interface IdHint {
   kind: IdKind;
@@ -28,7 +28,7 @@ interface IdCacheFile {
   hints: IdHint[];
 }
 
-const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player', 'ship']);
+const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player', 'ship', 'faction']);
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
@@ -60,6 +60,18 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   citizenship_renounce: {},
   citizenship_withdraw: {},
   petition: {},
+  faction_info: { faction: ['faction_id', 'id'] },
+  join_faction: { faction: ['faction_id', 'id'] },
+  faction_accept_invite: { faction: ['faction_id', 'id'] },
+  faction_decline_invite: { faction: ['faction_id', 'id'] },
+  faction_set_ally: { faction: ['target_faction_id', 'id'] },
+  faction_accept_ally: { faction: ['target_faction_id', 'id'] },
+  faction_set_enemy: { faction: ['target_faction_id', 'id'] },
+  faction_remove_ally: { faction: ['target_faction_id', 'id'] },
+  faction_remove_enemy: { faction: ['target_faction_id', 'id'] },
+  faction_declare_war: { faction: ['target_faction_id', 'id'] },
+  faction_propose_peace: { faction: ['target_faction_id', 'id'] },
+  faction_accept_peace: { faction: ['target_faction_id', 'id'] },
   sell: { item: ['item_id', 'id'] },
   buy: { item: ['item_id', 'id'] },
   deposit_items: { item: ['item_id', 'id'] },
@@ -215,6 +227,10 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
       name: stringValue(poi.name || poi.poi_name),
       context: pick(poi, ['type', 'system_id']),
     });
+
+  const faction = isRecord(result.faction) ? result.faction : undefined;
+  if (faction) pushFaction(push, faction);
+  for (const faction of arrayRecords(result.factions)) pushFaction(push, faction);
 
   const location = isRecord(result.location) ? result.location : undefined;
   if (location) {
@@ -452,6 +468,7 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     item: ['get_cargo', 'view_market', 'catalog type=items'],
     player: ['get_nearby', 'get_system_agents'],
     ship: ['list_ships', 'view_storage'],
+    faction: ['faction_list', 'faction_info'],
   };
   out(`Run one of these to populate it:`);
   for (const command of commandsByKind[kind]) out(`  spacemolt ${command}`);
@@ -491,6 +508,18 @@ function pushShip(
     id: stringValue(ship.ship_id || ship.id),
     name: stringValue(ship.custom_name || ship.ship_name || ship.class_id || ship.class_name || ship.name),
     context: pick(ship, ['class_id', 'class_name', 'location', 'location_base_id', 'is_active']),
+  });
+}
+
+function pushFaction(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  faction: Record<string, unknown>,
+): void {
+  push({
+    kind: 'faction',
+    id: stringValue(faction.faction_id || faction.id || faction.tag),
+    name: stringValue(faction.tag || faction.name),
+    context: pick(faction, ['name', 'member_count', 'relationship']),
   });
 }
 

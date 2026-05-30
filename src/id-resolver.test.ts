@@ -321,6 +321,29 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('resolves faction diplomacy targets from cached faction tags after alias normalization', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'faction',
+            id: 'faction-smc',
+            name: 'SMC',
+            sourceCommand: 'faction_list',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('faction_declare_war', { target_faction_id: 'smc' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'faction-smc' } });
+  });
+
   test('stops before execution on ambiguous cached item matches', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
