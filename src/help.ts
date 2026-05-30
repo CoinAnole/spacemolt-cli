@@ -256,6 +256,7 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
   for (const command of Object.keys(allCommands)) {
     const config = allCommands[command];
     const commandText = command.toLowerCase();
+    const categoryText = (config?.category || '').toLowerCase();
     const descriptionText = (config?.description || '').toLowerCase();
     const usageText = (config?.usage || '').toLowerCase();
     const exampleText = (config?.example || '').toLowerCase();
@@ -270,6 +271,7 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
 
       if (descriptionText.includes(term)) score += 35;
       if (exampleText.includes(term)) score += 30;
+      if (categoryText.includes(term)) score += 25;
       if (usageText.includes(term)) score += 20;
       if (argText.includes(term)) score += 15;
       if (relatedText.includes(term)) score += 10;

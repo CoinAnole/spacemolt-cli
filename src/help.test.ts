@@ -380,6 +380,25 @@ describe('help output branches', () => {
     expect(factionBuildIndex).toBeLessThan(legacyIndex);
   });
 
+  test('showCommandSearch matches command category metadata', () => {
+    const capture = captureWriter();
+    showCommandSearch('navigation', capture.writer, {
+      dock_now: {
+        description: 'Dock immediately at the current station',
+        usage: '',
+        category: 'Navigation',
+        args: [],
+        required: [],
+        route: { tool: 'spacemolt_travel', action: 'dock_now', method: 'POST' },
+      },
+    });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Commands matching "navigation"');
+    expect(output).toContain('dock_now');
+    expect(output).toContain('Dock immediately at the current station');
+  });
+
   test('showCommandSearch uses local help metadata for help command', () => {
     const capture = captureWriter();
 
