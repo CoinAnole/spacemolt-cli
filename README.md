@@ -126,7 +126,7 @@ bun run src/client.ts help market
 bun run src/client.ts commands --search fuel
 ```
 
-Use `help command=<name>` when you specifically want server-provided help for a command.
+Use `help command=<name>` when you specifically want local CLI help for a command.
 
 Fetch the server-provided structured command list with:
 

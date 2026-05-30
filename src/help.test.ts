@@ -365,6 +365,18 @@ describe('help output branches', () => {
     expect(output).toContain('Did you mean: travel');
   });
 
+  test('showCommandSearch uses local help metadata for help command', () => {
+    const capture = captureWriter();
+
+    showCommandSearch('help', capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Commands matching "help"');
+    expect(output).toContain('help ');
+    expect(output).toContain('Local command help');
+    expect(output).not.toContain('Fetch server help');
+  });
+
   test('parseCommandSearchQuery supports search forms', () => {
     expect(parseCommandSearchQuery(['--search', 'fuel', 'cell'])).toBe('fuel cell');
     expect(parseCommandSearchQuery(['--search=fuel'])).toBe('fuel');

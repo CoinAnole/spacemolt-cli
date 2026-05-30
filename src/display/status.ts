@@ -178,7 +178,7 @@ export const statusFormatters = [
       emitLine(`  get_status    - See your ship and location`);
       emitLine(`  undock        - Leave the station`);
       emitLine(`  mine          - Mine resources (at asteroid belts)`);
-      emitLine(`  help          - Get full command list from server`);
+      emitLine(`  help          - Show local command help and discovery`);
       return true;
     },
     { commands: ['register'] },

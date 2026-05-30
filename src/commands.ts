@@ -77,6 +77,15 @@ import { COMMAND_OVERRIDES } from './command-overrides.ts';
 export { COMMAND_OVERRIDES };
 
 export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
+  help: {
+    usage: '[command|group|all|command=<name>|search terms...]',
+    description: 'Local command help, usage details, command groups, and command search.',
+    example: 'spacemolt help travel',
+    category: 'Reference & Help',
+    args: [],
+    required: [],
+    seeAlso: ['commands', 'sync-api', 'get_guide'],
+  },
   ids: {
     usage: '<poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]',
     description: 'Show recently discovered IDs from cached command output.',

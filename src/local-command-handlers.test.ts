@@ -1030,6 +1030,27 @@ describe('local command handlers', () => {
     expect(output).not.toContain('Commands matching "-h"');
   });
 
+  test('help help renders local help metadata without API route', async () => {
+    const handler = resolveHandler(['help', 'help'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'help'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    const output = stdout.join('\n');
+    expect(output).toContain('spacemolt help');
+    expect(output).toContain('local helper command');
+    expect(output).not.toContain('API route:');
+    expect(output).not.toContain('Fetch server help');
+  });
+
   test('api command inline help renders commands supplied by a registry snapshot', () => {
     const command = 'dynamic_inline_help_snapshot_test';
     const registry = {
