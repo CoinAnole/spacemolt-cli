@@ -141,9 +141,10 @@ export function isIdKind(value: string): value is IdKind {
 export function commandResolverFields(command: string): Record<string, string[]> | undefined {
   const rules = COMMAND_ID_RESOLVER_RULES[command];
   if (!rules) return undefined;
-  return Object.fromEntries(
-    Object.entries(rules).map(([kind, fields]) => [kind, [...(fields ?? [])]]),
-  ) as Record<string, string[]>;
+  return Object.fromEntries(Object.entries(rules).map(([kind, fields]) => [kind, [...(fields ?? [])]])) as Record<
+    string,
+    string[]
+  >;
 }
 
 export function getIdCachePath(sessionPath?: string): string {
@@ -559,10 +560,7 @@ function pushPlayer(
   });
 }
 
-function pushShip(
-  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
-  ship: Record<string, unknown>,
-): void {
+function pushShip(push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void, ship: Record<string, unknown>): void {
   push({
     kind: 'ship',
     id: stringValue(ship.ship_id || ship.id),

@@ -5,24 +5,17 @@ import * as path from 'node:path';
 import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
 import { renderStructuredResult } from './display';
-import {
-  getStatusFixture,
-  highValueCommandFixtures,
-  viewMarketFixture,
-} from './display/formatter-fixtures';
-import { runInvocation, type RunnerDependencies } from './runner';
+import { getStatusFixture, highValueCommandFixtures, viewMarketFixture } from './display/formatter-fixtures';
+import { type RunnerDependencies, runInvocation } from './runner';
 import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, QUIET, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
+import { compareHighValueFixturesToSpec, formatComparisonReport } from './test-support/fixture-schema-compare.ts';
 import {
   assertGoldenOutput,
-  normalizeOutputLines,
   type GoldenOutput,
   type GoldenStdoutFormat,
+  normalizeOutputLines,
 } from './test-support/output-golden';
-import {
-  compareHighValueFixturesToSpec,
-  formatComparisonReport,
-} from './test-support/fixture-schema-compare.ts';
 import type { APIResponse, GlobalOptions } from './types';
 
 const baseOptions: GlobalOptions = {
@@ -355,7 +348,7 @@ if (process.env.SHOW_FIXTURE_SCHEMA_DIVERGENCES === '1') {
   queueMicrotask(() => {
     try {
       const comparisons = compareHighValueFixturesToSpec();
-      console.log('\n' + formatComparisonReport(comparisons) + '\n');
+      console.log(`\n${formatComparisonReport(comparisons)}\n`);
     } catch (err) {
       console.error('[fixture-schema-compare] failed to generate report:', err);
     }

@@ -408,12 +408,12 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { facility_id: 'facility-1' },
     });
-    expect(preparePayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath)).toEqual(
-      {
-        type: 'payload',
-        payload: { listing_id: 'listing-1' },
-      },
-    );
+    expect(
+      preparePayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { listing_id: 'listing-1' },
+    });
   });
 
   test('stops before execution on ambiguous cached item matches', () => {

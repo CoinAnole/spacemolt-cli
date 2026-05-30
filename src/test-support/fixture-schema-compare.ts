@@ -46,7 +46,10 @@ type JsonSchema = Record<string, unknown> & {
 };
 
 interface OpenApiSpec {
-  paths: Record<string, Record<string, { responses?: Record<string, { content?: Record<string, { schema?: JsonSchema }> }> }>>;
+  paths: Record<
+    string,
+    Record<string, { responses?: Record<string, { content?: Record<string, { schema?: JsonSchema }> }> }>
+  >;
   components?: { schemas?: Record<string, JsonSchema> };
 }
 
@@ -82,16 +85,18 @@ function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): J
 }
 
 function mergeAllOf(spec: OpenApiSpec, schemas: JsonSchema[], seen = new Set<string>()): JsonSchema {
-  const out: JsonSchema = { type: 'object', properties: {}, required: [] };
+  const properties: Record<string, JsonSchema> = {};
+  const required: string[] = [];
+  const out: JsonSchema = { type: 'object', properties, required };
   for (const s of schemas) {
     const resolved = s.$ref ? resolveRef(spec, s.$ref, seen) : s;
     if (resolved.allOf) {
       const merged = mergeAllOf(spec, resolved.allOf, seen);
-      Object.assign(out.properties!, merged.properties || {});
-      if (merged.required) out.required!.push(...merged.required);
+      Object.assign(properties, merged.properties || {});
+      if (merged.required) required.push(...merged.required);
     } else {
-      if (resolved.properties) Object.assign(out.properties!, resolved.properties);
-      if (resolved.required) out.required!.push(...resolved.required);
+      if (resolved.properties) Object.assign(properties, resolved.properties);
+      if (resolved.required) required.push(...resolved.required);
       if (resolved.type && !out.type) out.type = resolved.type;
     }
   }
@@ -183,7 +188,7 @@ function compareValueToSchema(
   // Type check when schema declares a type
   if (sType && vType !== 'undefined') {
     const schemaTypes = Array.isArray(schema.type) ? schema.type : [schema.type];
-    const numericCompat = (vType === 'number' && (schemaTypes.includes('integer') || schemaTypes.includes('number')));
+    const numericCompat = vType === 'number' && (schemaTypes.includes('integer') || schemaTypes.includes('number'));
     if (!numericCompat && !schemaTypes.includes(vType) && !schemaTypes.includes('object') && vType !== 'null') {
       // loose: many schemas use "object" for maps too
       if (!(vType === 'object' && schemaTypes.includes('object'))) {
@@ -231,7 +236,15 @@ function compareValueToSchema(
       const childRequired = (propSchema as JsonSchema).required || schema.required;
 
       if (childVal !== undefined) {
-        compareValueToSchema(childVal, propSchema as JsonSchema, childPath, childRequired, depth + 1, maxDepth, divergences);
+        compareValueToSchema(
+          childVal,
+          propSchema as JsonSchema,
+          childPath,
+          childRequired,
+          depth + 1,
+          maxDepth,
+          divergences,
+        );
       } else if (required?.includes(k)) {
         divergences.push({
           path: childPath,
@@ -288,7 +301,9 @@ export function compareFixtureToSchema(
           message: isRequired
             ? 'declared as required in schema but not exercised by fixture'
             : 'present in live response schema but not exercised by this fixture',
-          schemaInfo: (prop as JsonSchema).description ? String((prop as JsonSchema).description).slice(0, 80) : undefined,
+          schemaInfo: (prop as JsonSchema).description
+            ? String((prop as JsonSchema).description).slice(0, 80)
+            : undefined,
         });
       }
     }
@@ -327,7 +342,10 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
   const results: FixtureSchemaComparison[] = [];
 
   for (const [label, entry] of Object.entries(highValueCommandFixtures) as [string, HighValueFixtureEntry][]) {
-    if (only && !only.some((needle) => label.toLowerCase().includes(needle) || entry.command.toLowerCase().includes(needle))) {
+    if (
+      only &&
+      !only.some((needle) => label.toLowerCase().includes(needle) || entry.command.toLowerCase().includes(needle))
+    ) {
       continue;
     }
 
@@ -432,11 +450,15 @@ export function formatComparisonReport(comparisons: FixtureSchemaComparison[]): 
 
   lines.push('Legend:');
   lines.push('  extra-in-schema   = live API response shape has fields our curated golden fixture does not exercise');
-  lines.push('  extra-in-fixture  = fixture contains keys the current OpenAPI schema does not declare (review carefully)');
+  lines.push(
+    '  extra-in-fixture  = fixture contains keys the current OpenAPI schema does not declare (review carefully)',
+  );
   lines.push('  type-mismatch     = fixture value type differs from schema declaration');
   lines.push('  required-missing  = schema marks a field required but fixture omits it (common for partial examples)');
   lines.push('');
-  lines.push('Run with SHOW_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts to see this during golden runs.');
+  lines.push(
+    'Run with SHOW_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts to see this during golden runs.',
+  );
   lines.push('Or: bun run report:fixture-schemas [--only get_status,view_market]');
 
   return lines.join('\n');

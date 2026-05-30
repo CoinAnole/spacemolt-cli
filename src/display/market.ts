@@ -119,8 +119,7 @@ function hasMarketItem(record: Record<string, unknown>): boolean {
 
 function isDirectMarketSellShape(record: Record<string, unknown>): boolean {
   return (
-    hasMarketItem(record) &&
-    hasAnyField(record, ['quantity_sold', 'total_earned', 'fills', 'unsold', 'auto_listed'])
+    hasMarketItem(record) && hasAnyField(record, ['quantity_sold', 'total_earned', 'fills', 'unsold', 'auto_listed'])
   );
 }
 
@@ -274,8 +273,8 @@ export const marketFormatters = [
         (requested !== undefined && filled !== undefined ? Math.max(0, requested - filled) : undefined);
       const fillTotal =
         side === 'buy'
-          ? finiteNumber(r.total_spent) ?? sumNumericField(r.fills, 'subtotal')
-          : finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal');
+          ? (finiteNumber(r.total_spent) ?? sumNumericField(r.fills, 'subtotal'))
+          : (finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal'));
       const priceEach = finiteNumber(r.price_each);
       const listingFee = finiteNumber(r.listing_fee);
       const totalEscrowed = finiteNumber(r.total_escrowed);
