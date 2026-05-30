@@ -25,6 +25,17 @@ const SESSION_BOOTSTRAP_ERROR_CODES = new Set([
   'invalid_session',
 ]);
 
+const PUBLIC_SESSION_COMMANDS = new Set(['get_empire_info']);
+
+function isMissingDefaultProfileError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith('No default profile set.');
+}
+
+interface CommandSession {
+  session: Session;
+  transient: boolean;
+}
+
 function appendQueryPayload(url: string, payload?: Record<string, unknown>): string {
   if (!payload || Object.keys(payload).length === 0) return url;
 
@@ -50,6 +61,7 @@ export interface SpaceMoltClientOptions {
     loadSession(profile?: string): Promise<Session | null>;
     saveSession(session: Session, profile?: string): Promise<void>;
     createSession(profile?: string): Promise<Session>;
+    createTransientSession?(): Promise<Session>;
     authenticateProfileSession(session: Session): Promise<APIResponse | null>;
     ensureDefaultProfile?(profile?: string): void;
   };
@@ -137,22 +149,24 @@ export class SpaceMoltClient {
 
     const url = `${this.baseUrl}/${routeToPath(mapping)}`;
     const method = mapping.method || 'POST';
+    const publicSessionCommand = PUBLIC_SESSION_COMMANDS.has(command);
 
     const sessionProfile = this.sessionProfileForCommand(command, payload);
-    let session =
-      command === 'login' || command === 'register'
-        ? await this.sessionStore.createSession(sessionProfile)
-        : await this.sessionStore.getSession(sessionProfile);
+    const commandSession = await this.getSessionForCommand(command, sessionProfile);
+    let session = commandSession.session;
+    let transientSession = commandSession.transient;
     let sessionRecoveryAttempts = 0;
     let rateLimitRetries = 0;
 
     while (true) {
-      if (command !== 'login' && command !== 'register') {
+      if (command !== 'login' && command !== 'register' && !publicSessionCommand) {
         const authError = await this.sessionStore.authenticateProfileSession(session);
         if (authError) return authError;
       }
 
-      const data = await this.sendRequest(session, url, method, payload, sessionProfile);
+      const data = await this.sendRequest(session, url, method, payload, sessionProfile, {
+        persistSession: !transientSession,
+      });
 
       if (data.error && SESSION_ERROR_CODES.has(data.error.code)) {
         if (
@@ -175,6 +189,7 @@ export class SpaceMoltClient {
         const recoveredSession = await this.recoverSession();
         if (!recoveredSession) return data;
         session = recoveredSession;
+        transientSession = false;
         continue;
       }
 
@@ -204,6 +219,7 @@ export class SpaceMoltClient {
     requestMethod: string,
     requestPayload?: Record<string, unknown>,
     sessionProfile?: string,
+    options: { persistSession?: boolean } = {},
   ): Promise<APIResponse> {
     const finalRequestUrl = requestMethod === 'GET' ? appendQueryPayload(requestUrl, requestPayload) : requestUrl;
 
@@ -234,7 +250,7 @@ export class SpaceMoltClient {
       if (data.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
     }
 
-    if (data.session) {
+    if (data.session && options.persistSession !== false) {
       currentSession.expires_at = data.session.expires_at;
       if (data.session.player_id) currentSession.player_id = data.session.player_id;
       await this.sessionStore.saveSession(currentSession, sessionProfile);
@@ -340,6 +356,24 @@ export class SpaceMoltClient {
       }
     }
     return newSession;
+  }
+
+  private async getSessionForCommand(command: string, sessionProfile?: string): Promise<CommandSession> {
+    if (command === 'login' || command === 'register') {
+      return { session: await this.sessionStore.createSession(sessionProfile), transient: false };
+    }
+
+    try {
+      return { session: await this.sessionStore.getSession(sessionProfile), transient: false };
+    } catch (error) {
+      if (PUBLIC_SESSION_COMMANDS.has(command) && isMissingDefaultProfileError(error)) {
+        const session = this.sessionStore.createTransientSession
+          ? await this.sessionStore.createTransientSession()
+          : await this.sessionStore.createSession(sessionProfile);
+        return { session, transient: true };
+      }
+      throw error;
+    }
   }
 }
 

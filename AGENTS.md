@@ -123,6 +123,12 @@ Session state is stored under the platform config directory: `~/Library/Applicat
 
 Use `spacemolt profile default <name>` to save the profile used when `--profile` and `SPACEMOLT_PROFILE` are absent. Session files contain credentials. Do not commit them.
 
+Some public API commands still require an `X-Session-Id` header even when they do not require a logged-in player profile. For those commands, use the transient anonymous session path in `src/api.ts`: add the command to `PUBLIC_SESSION_COMMANDS` so `SpaceMoltClient` can call `SessionManager.createTransientSession()`, skip profile authentication, and avoid writing a session file when no default profile exists. `get_empire_info` is the current example. Do not use this path for commands that read or mutate player state, because those must use a named profile session and saved credentials.
+
+When adding another public command to this path, cover both layers:
+- `src/api.test.ts`: command creates an anonymous session and sends the API request without creating a default profile.
+- `src/runner.test.ts`: command can parse, execute, and render with an empty `XDG_CONFIG_HOME`.
+
 ## Useful Environment Variables
 
 | Variable | Purpose |

@@ -313,6 +313,12 @@ export class SessionManager {
     profileOverride?: string,
     savedCredentials?: Pick<Session, 'username' | 'password'>,
   ): Promise<Session> {
+    const session = await this.createTransientSession(savedCredentials);
+    await this.saveSession(session, profileOverride);
+    return session;
+  }
+
+  async createTransientSession(savedCredentials?: Pick<Session, 'username' | 'password'>): Promise<Session> {
     if (this.debug) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
       method: 'POST',
@@ -327,7 +333,6 @@ export class SessionManager {
       expires_at: data.session.expires_at,
       ...savedCredentials,
     };
-    await this.saveSession(session, profileOverride);
     return session;
   }
 

@@ -225,6 +225,39 @@ describe('runInvocation option isolation', () => {
     ]);
   });
 
+  test('public get_empire_info renders without a configured profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-render-'));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: false,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return { structuredContent: { empires: [{ id: 'solarian', sales_tax_bps: 500 }] } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(
+      ['--structured', 'get_empire_info', 'solarian'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(calls).toEqual([{ command: 'get_empire_info', payload: { id: 'solarian' } }]);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({ empires: [{ id: 'solarian', sales_tax_bps: 500 }] });
+  });
+
   test('switch_ship resolves cached ship class names and prints API errors', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-ship-cache-'));
     const configHome = path.join(tempDir, 'config');
