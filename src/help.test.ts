@@ -366,6 +366,20 @@ describe('help output branches', () => {
     expect(output).toContain('Did you mean: travel');
   });
 
+  test('showCommandSearch ranks curated faction_build before legacy faction facility build', () => {
+    const capture = captureWriter();
+
+    showCommandSearch('faction facility build', capture.writer);
+
+    const lines = capture.stdout.join('\n').split('\n');
+    const factionBuildIndex = lines.findIndex((line) => line.includes('faction_build <facility_type>'));
+    const legacyIndex = lines.findIndex((line) => line.includes('faction_facility_build <facility_type>'));
+
+    expect(factionBuildIndex).toBeGreaterThan(-1);
+    expect(legacyIndex).toBeGreaterThan(-1);
+    expect(factionBuildIndex).toBeLessThan(legacyIndex);
+  });
+
   test('showCommandSearch uses local help metadata for help command', () => {
     const capture = captureWriter();
 

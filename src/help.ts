@@ -246,23 +246,6 @@ export function showCommandGroup(topic: string, writer?: CliWriter, commands?: C
   return true;
 }
 
-function commandSearchText(command: string, commands: CommandHelpMap): string {
-  const config = commands[command];
-  if (!config) return command.toLowerCase();
-  const argNames = getArgNames(config);
-  const parts = [
-    command,
-    config.category,
-    config.usage,
-    config.description,
-    config.example,
-    ...argNames,
-    ...(config.discoverWith || []),
-    ...(config.seeAlso || []),
-  ];
-  return parts.filter(Boolean).join(' ').toLowerCase();
-}
-
 function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSource): string[] {
   const allCommands = commandHelpMap(commands);
   const normalized = query.trim().toLowerCase();
@@ -271,14 +254,29 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
   const terms = normalized.split(/\s+/).filter(Boolean);
   const matches: CommandSearchMatch[] = [];
   for (const command of Object.keys(allCommands)) {
-    const haystack = commandSearchText(command, allCommands);
+    const config = allCommands[command];
+    const commandText = command.toLowerCase();
+    const descriptionText = (config?.description || '').toLowerCase();
+    const usageText = (config?.usage || '').toLowerCase();
+    const exampleText = (config?.example || '').toLowerCase();
+    const relatedText = [...(config?.discoverWith || []), ...(config?.seeAlso || [])].join(' ').toLowerCase();
+    const argText = getArgNames(config).join(' ').toLowerCase();
     let score = 0;
     for (const term of terms) {
-      if (command === term) score += 100;
-      else if (command.startsWith(term)) score += 60;
-      else if (command.includes(term)) score += 35;
-      else if (haystack.includes(term)) score += 20;
+      if (commandText === term) score += 120;
+      else if (commandText.startsWith(term)) score += 70;
+      else if (commandText.split('_').includes(term)) score += 55;
+      else if (commandText.includes(term)) score += 35;
+
+      if (descriptionText.includes(term)) score += 35;
+      if (exampleText.includes(term)) score += 30;
+      if (usageText.includes(term)) score += 20;
+      if (argText.includes(term)) score += 15;
+      if (relatedText.includes(term)) score += 10;
     }
+    if (terms.length > 1 && terms.every((term) => descriptionText.includes(term))) score += 100;
+    if (score > 0 && config?.description && !isWeakDescription(command, config.description)) score += 8;
+    if (score > 0 && config?.example) score += 6;
     if (score > 0) matches.push({ command, score });
   }
 
