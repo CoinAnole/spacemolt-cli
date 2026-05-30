@@ -7,7 +7,17 @@ import { c, QUIET } from './runtime.ts';
 import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
 import type { APIResponse } from './types.ts';
 
-export type IdKind = 'poi' | 'system' | 'item' | 'player' | 'ship' | 'faction' | 'drone' | 'wreck';
+export type IdKind =
+  | 'poi'
+  | 'system'
+  | 'item'
+  | 'player'
+  | 'ship'
+  | 'faction'
+  | 'drone'
+  | 'wreck'
+  | 'facility'
+  | 'listing';
 
 export interface IdHint {
   kind: IdKind;
@@ -28,7 +38,18 @@ interface IdCacheFile {
   hints: IdHint[];
 }
 
-const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player', 'ship', 'faction', 'drone', 'wreck']);
+const ID_KINDS = new Set<IdKind>([
+  'poi',
+  'system',
+  'item',
+  'player',
+  'ship',
+  'faction',
+  'drone',
+  'wreck',
+  'facility',
+  'listing',
+]);
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
@@ -91,6 +112,16 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   tow_wreck: { wreck: ['wreck_id', 'id'] },
   salvage_wreck: { wreck: ['wreck_id', 'id'] },
   loot_wreck: { wreck: ['wreck_id', 'id'], item: ['item_id'] },
+  facility_toggle: { facility: ['facility_id'] },
+  facility_upgrade: { facility: ['facility_id'] },
+  facility_transfer: { facility: ['facility_id'], player: ['player_id'] },
+  facility_list_for_sale: { facility: ['facility_id'] },
+  facility_buy_listing: { listing: ['listing_id'] },
+  facility_cancel_listing: { listing: ['listing_id'] },
+  faction_facility_toggle: { facility: ['facility_id'] },
+  faction_facility_upgrade: { facility: ['facility_id'] },
+  buy_listed_ship: { listing: ['listing_id', 'id'] },
+  cancel_ship_listing: { listing: ['listing_id', 'id'] },
   switch_ship: { ship: ['ship_id', 'id'] },
   sell_ship: { ship: ['ship_id', 'id'] },
   scrap_ship: { ship: ['ship_id', 'id'] },
@@ -240,6 +271,10 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
   const faction = isRecord(result.faction) ? result.faction : undefined;
   if (faction) pushFaction(push, faction);
   for (const faction of arrayRecords(result.factions)) pushFaction(push, faction);
+  const facility = isRecord(result.facility) ? result.facility : undefined;
+  if (facility) pushFacility(push, facility);
+  for (const facility of arrayRecords(result.facilities)) pushFacility(push, facility);
+  for (const listing of arrayRecords(result.listings)) pushListing(push, listing);
 
   const location = isRecord(result.location) ? result.location : undefined;
   if (location) {
@@ -484,6 +519,8 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     faction: ['faction_list', 'faction_info'],
     drone: ['list_drones'],
     wreck: ['get_wrecks'],
+    facility: ['facility_list', 'faction_facility_list'],
+    listing: ['facility_browse_for_sale', 'browse_ships', 'get_trades'],
   };
   out(`Run one of these to populate it:`);
   for (const command of commandsByKind[kind]) out(`  spacemolt ${command}`);
@@ -559,6 +596,38 @@ function pushWreck(
     id: stringValue(wreck.wreck_id || wreck.id),
     name: stringValue(wreck.name || wreck.ship_class),
     context: pick(wreck, ['ticks_remaining', 'poi_id', 'base_id']),
+  });
+}
+
+function pushFacility(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  facility: Record<string, unknown>,
+): void {
+  push({
+    kind: 'facility',
+    id: stringValue(facility.facility_id || facility.id),
+    name: stringValue(facility.name || facility.type_name || facility.facility_type),
+    context: pick(facility, ['facility_type', 'type_name', 'base_id', 'owner_name', 'faction_id']),
+  });
+}
+
+function pushListing(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  listing: Record<string, unknown>,
+): void {
+  push({
+    kind: 'listing',
+    id: stringValue(listing.listing_id || listing.id),
+    name: stringValue(
+      listing.name ||
+        listing.item_name ||
+        listing.ship_name ||
+        listing.class_name ||
+        listing.class_id ||
+        listing.facility_name ||
+        listing.facility_type,
+    ),
+    context: pick(listing, ['item_id', 'ship_id', 'facility_id', 'price', 'price_each', 'seller_name']),
   });
 }
 

@@ -204,6 +204,8 @@ bun run src/client.ts ids ship
 bun run src/client.ts ids faction
 bun run src/client.ts ids drone
 bun run src/client.ts ids wreck
+bun run src/client.ts ids facility
+bun run src/client.ts ids listing
 ```
 
 When an ID-sensitive command fails because an ID is missing or invalid, the CLI prints relevant cached suggestions.

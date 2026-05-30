@@ -379,6 +379,43 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('resolves facility and listing IDs from cache', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'facility',
+            id: 'facility-1',
+            name: 'Fuel Bunker',
+            sourceCommand: 'facility_list',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'listing',
+            id: 'listing-1',
+            name: 'Fuel Bunker Listing',
+            sourceCommand: 'facility_browse_for_sale',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(preparePayload('facility_toggle', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { facility_id: 'facility-1' },
+    });
+    expect(preparePayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath)).toEqual(
+      {
+        type: 'payload',
+        payload: { listing_id: 'listing-1' },
+      },
+    );
+  });
+
   test('stops before execution on ambiguous cached item matches', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

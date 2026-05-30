@@ -106,6 +106,20 @@ describe('id cache', () => {
     expect(wreckHints).toContainEqual(expect.objectContaining({ kind: 'wreck', id: 'wreck-1', name: 'Skiff' }));
   });
 
+  test('extracts facility and listing IDs from facility responses', () => {
+    const hints = extractIdHints(
+      'facility_list',
+      {
+        facilities: [{ facility_id: 'facility-1', name: 'Fuel Bunker', facility_type: 'fuel_bunker' }],
+        listings: [{ listing_id: 'listing-1', facility_id: 'facility-1', name: 'Fuel Bunker' }],
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(hints).toContainEqual(expect.objectContaining({ kind: 'facility', id: 'facility-1', name: 'Fuel Bunker' }));
+    expect(hints).toContainEqual(expect.objectContaining({ kind: 'listing', id: 'listing-1', name: 'Fuel Bunker' }));
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');

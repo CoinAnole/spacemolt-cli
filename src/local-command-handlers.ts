@@ -360,8 +360,9 @@ const idsHandler: CommandHandler<
         ok: false,
         error: {
           code: 'validation_error',
-          message: 'Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck> [--search text]',
-          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck> [--search text]`,
+          message:
+            'Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]',
+          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]`,
           exitCode: 1,
         },
       };
