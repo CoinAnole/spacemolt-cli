@@ -73,6 +73,16 @@ const COMMAND_GROUPS: CommandGroup[] = [
   },
 ];
 
+const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
+  faction: [
+    'faction_build',
+    'faction_facility_build',
+    'faction_facility_list',
+    'faction_facility_toggle',
+    'faction_facility_upgrade',
+  ],
+};
+
 export function printJsonResponse(response: APIResponse, compact = false, writer?: CliWriter): void {
   const out = writer?.out.bind(writer) ?? console.log;
   out(JSON.stringify(response, null, compact ? 0 : 2));
@@ -150,6 +160,14 @@ function commandMatchesCategories(command: string, categories: Set<string>, comm
   return Boolean(category && categories.has(category));
 }
 
+function commandMatchesGroup(command: string, group: CommandGroup, commands: CommandHelpMap): boolean {
+  const categories = new Set(group.categories);
+  return (
+    commandMatchesCategories(command, categories, commands) ||
+    (COMMAND_GROUP_INCLUDES[group.key] || []).includes(command)
+  );
+}
+
 function hasNoArgs(config: CommandConfig | LocalCommandConfig | undefined): boolean {
   return Boolean(
     config && (!config.args || config.args.length === 0) && (!config.required || config.required.length === 0),
@@ -191,9 +209,8 @@ export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSour
   const write = out(writer);
   write(`\n${c.bright}Command Groups${c.reset}`);
   for (const group of COMMAND_GROUPS) {
-    const categories = new Set(group.categories);
     const count = Object.keys(allCommands).filter((command) =>
-      commandMatchesCategories(command, categories, allCommands),
+      commandMatchesGroup(command, group, allCommands),
     ).length;
     write(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
   }
@@ -207,9 +224,8 @@ export function showCommandGroup(topic: string, writer?: CliWriter, commands?: C
   const allCommands = commandHelpMap(commands);
   const write = out(writer);
 
-  const categories = new Set(group.categories);
   const matchingCommands = Object.keys(allCommands)
-    .filter((command) => commandMatchesCategories(command, categories, allCommands))
+    .filter((command) => commandMatchesGroup(command, group, allCommands))
     .sort((a, b) => {
       const categoryCompare = (allCommands[a]?.category || '').localeCompare(allCommands[b]?.category || '');
       return categoryCompare || a.localeCompare(b);
@@ -218,7 +234,8 @@ export function showCommandGroup(topic: string, writer?: CliWriter, commands?: C
   write(`\n${c.bright}${group.label} Commands${c.reset}`);
   let lastCategory = '';
   for (const command of matchingCommands) {
-    const category = allCommands[command]?.category || 'Other';
+    const includedInGroup = (COMMAND_GROUP_INCLUDES[group.key] || []).includes(command);
+    const category = includedInGroup && group.key === 'faction' ? 'Faction facilities' : allCommands[command]?.category || 'Other';
     if (category !== lastCategory) {
       lastCategory = category;
       write(`\n${c.cyan}${category}:${c.reset}`);

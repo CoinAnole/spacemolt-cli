@@ -249,6 +249,18 @@ describe('help output branches', () => {
     expect(navOutput).toContain('dock - Dock at the current station');
   });
 
+  test('faction group includes faction facility commands', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('faction', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Faction Commands');
+    expect(output).toContain('Faction facilities:');
+    expect(output).toContain('faction_build <facility_type> - Build a faction facility at the current base.');
+    expect(output).toContain('faction_facility_list');
+  });
+
   test('showCommandHelp renders no-arg commands without args placeholder', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
