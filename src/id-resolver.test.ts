@@ -242,6 +242,85 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'weapon-1', target: 'laser_cell' } });
   });
 
+  test('does not resolve chat channel target as a player', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-system',
+            name: 'system',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('chat', { channel: 'system', content: 'hello' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { target: 'system', content: 'hello' } });
+  });
+
+  test('does not resolve social target ids as players for note and forum commands', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-note',
+            name: 'note-1',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(preparePayload('read_note', { note_id: 'note-1' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { target: 'note-1' },
+    });
+    expect(preparePayload('forum_get_thread', { thread_id: 'note-1' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { target: 'note-1' },
+    });
+  });
+
+  test('does not resolve empire targets as players', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-solarian',
+            name: 'solarian',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(preparePayload('petition', { empire_id: 'solarian', message: 'hello' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { target: 'solarian', content: 'hello' },
+    });
+    expect(preparePayload('citizenship_apply', { empire: 'solarian' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { target: 'solarian' },
+    });
+  });
+
   test('stops before execution on ambiguous cached item matches', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
