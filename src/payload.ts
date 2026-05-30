@@ -112,11 +112,20 @@ function resolveCachedIdsForPayload(
 }
 
 function reservedIdValue(command: string, field: string, value: string): string | undefined {
+  if (command === 'jump' && (field === 'id' || field === 'target_system') && isNumericJumpBearing(value)) {
+    return value.trim();
+  }
   if (command !== 'sell') return undefined;
   if (field !== 'id' && field !== 'item_id') return undefined;
   const normalized = value.trim().toLowerCase();
   if (normalized === 'fuel' || normalized === 'tank_fuel') return 'fuel';
   return undefined;
+}
+
+function isNumericJumpBearing(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return Number.isFinite(Number(trimmed));
 }
 
 export function displayCommandParseErrors(

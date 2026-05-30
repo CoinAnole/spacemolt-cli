@@ -54,11 +54,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   jump: {
-    usage: '<system_id>  (use get_system to see connections)',
-    description: 'Move to a connected system. Use get_system first to find connected system IDs.',
-    example: 'spacemolt jump alpha_centauri',
-    discoverWith: ['get_system', 'find_route'],
-    seeAlso: ['get_system', 'travel', 'refuel'],
+    usage: '<system_id_or_bearing>  (connected system ID/name, or numeric Pathfinder bearing)',
+    description:
+      'Move to a connected system, or plot a numeric compass bearing with a Pathfinder Drive. Use get_system for lane jumps and get_map/get_location for coordinates.',
+    example: 'spacemolt jump 90',
+    discoverWith: ['get_system', 'get_map', 'get_location', 'find_route'],
+    seeAlso: ['get_system', 'get_map', 'get_location', 'travel', 'refuel'],
     category: 'Navigation',
     apiRoute: 'POST /api/v2/spacemolt/jump',
     positionals: ['target_system'],

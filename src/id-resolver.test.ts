@@ -50,6 +50,29 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'sol_earth' } });
   });
 
+  test('keeps numeric jump bearings instead of resolving cached system IDs', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'system',
+            id: '90_eridani',
+            name: '90 Eridani',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-30T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('jump', { target_system: '90' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: '90' } });
+  });
+
   test('resolves view_storage station_id from cached station POI prefix', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

@@ -813,7 +813,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Navigation:${c.reset}
     travel <poi_id>           Travel within system
-    jump <system_id>          Jump to connected system
+    jump <system|bearing>     Jump lane or Pathfinder bearing
     dock                      Enter station
     undock                    Leave station
 
