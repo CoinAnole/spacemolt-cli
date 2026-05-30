@@ -11,7 +11,9 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { generate, type OpenApiSpec } from '../scripts/generate-api-metadata';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands';
@@ -19,65 +21,180 @@ import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './genera
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
-let liveOpenApiSpecPromise: Promise<OpenApiSpec> | undefined;
+
+type OpenApiFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+interface FetchLiveOpenApiSpecOptions {
+  fetchImpl?: OpenApiFetch;
+  sleep?: (ms: number) => Promise<void>;
+  maxAttempts?: number;
+  retryDelayMs?: number;
+  timeoutMs?: number;
+  log?: (message: string) => void;
+  localOpenApiPath?: string;
+}
+
+interface OpenApiSpecLoaderOptions {
+  liveApiSync?: boolean;
+  fetchLive?: () => Promise<OpenApiSpec>;
+  readLocal?: () => OpenApiSpec;
+}
 
 function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help');
 }
 
-async function fetchLiveOpenApiSpec(): Promise<OpenApiSpec> {
-  const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
-  if (resp.status === 429) {
-    console.log('[SKIP] OpenAPI spec rate-limited (429) — skipping API sync check');
-    return { info: { 'x-gameserver-version': 'rate-limited' }, paths: {} };
+async function fetchLiveOpenApiSpec(options: FetchLiveOpenApiSpecOptions = {}): Promise<OpenApiSpec> {
+  const fetchImpl = options.fetchImpl || fetch;
+  const sleep = options.sleep || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const maxAttempts = options.maxAttempts ?? Number(process.env.LIVE_API_SYNC_MAX_ATTEMPTS || 4);
+  const retryDelayMs = options.retryDelayMs ?? Number(process.env.LIVE_API_SYNC_RETRY_DELAY_MS || 1_000);
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  const log = options.log || console.log;
+  const localOpenApiPath = options.localOpenApiPath || LOCAL_OPENAPI_PATH;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const resp = await fetchImpl(OPENAPI_URL, { signal: AbortSignal.timeout(timeoutMs) });
+    if (resp.status === 429 && attempt < maxAttempts) {
+      log(`[RETRY] OpenAPI spec rate-limited (429); retrying ${attempt + 1}/${maxAttempts}`);
+      await sleep(retryDelayMs);
+      continue;
+    }
+    if (resp.status === 429) {
+      const fallback = await readLocalOpenApiSpecWithMatchingLiveEtag(fetchImpl, localOpenApiPath, timeoutMs);
+      if (fallback) {
+        log('[FALLBACK] OpenAPI GET rate-limited (429); live HEAD ETag matches local spec.');
+        return fallback;
+      }
+    }
+    expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
+    return (await resp.json()) as OpenApiSpec;
   }
-  expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
-  return (await resp.json()) as OpenApiSpec;
+
+  throw new Error('Failed to fetch OpenAPI spec');
 }
 
-async function loadOpenApiSpec(): Promise<OpenApiSpec> {
-  if (process.env.LIVE_API_SYNC === '1') {
-    liveOpenApiSpecPromise ??= fetchLiveOpenApiSpec();
-    return liveOpenApiSpecPromise;
-  }
-
+function readLocalOpenApiSpec(): OpenApiSpec {
   return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as OpenApiSpec;
 }
 
+async function readLocalOpenApiSpecWithMatchingLiveEtag(
+  fetchImpl: OpenApiFetch,
+  localOpenApiPath: string,
+  timeoutMs: number,
+): Promise<OpenApiSpec | undefined> {
+  const localBytes = fs.readFileSync(localOpenApiPath);
+  const localHashPrefix = crypto.createHash('sha256').update(localBytes).digest('hex').slice(0, 16);
+  const response = await fetchImpl(OPENAPI_URL, { method: 'HEAD', signal: AbortSignal.timeout(timeoutMs) });
+  if (!response.ok) return undefined;
+
+  const etag = response.headers.get('etag');
+  if (!etag || normalizeEtag(etag) !== localHashPrefix) return undefined;
+
+  return JSON.parse(localBytes.toString('utf-8')) as OpenApiSpec;
+}
+
+function normalizeEtag(etag: string): string {
+  return etag.trim().replace(/^W\//, '').replace(/^"|"$/g, '');
+}
+
+function createOpenApiSpecLoader(options: OpenApiSpecLoaderOptions = {}): () => Promise<OpenApiSpec> {
+  let liveOpenApiSpecPromise: Promise<OpenApiSpec> | undefined;
+
+  return async () => {
+    const liveApiSync = options.liveApiSync ?? process.env.LIVE_API_SYNC === '1';
+    if (liveApiSync) {
+      liveOpenApiSpecPromise ??= options.fetchLive ? options.fetchLive() : fetchLiveOpenApiSpec();
+      return liveOpenApiSpecPromise;
+    }
+
+    return options.readLocal ? options.readLocal() : readLocalOpenApiSpec();
+  };
+}
+
+const loadOpenApiSpec = createOpenApiSpecLoader();
 const skip = process.env.SKIP_API_SYNC === '1';
 
 describe('api sync', () => {
   test('LIVE_API_SYNC reuses one OpenAPI fetch per test process', async () => {
-    const originalLiveApiSync = process.env.LIVE_API_SYNC;
-    const originalFetch = globalThis.fetch;
     let fetchCount = 0;
     const spec = {
       info: { 'x-gameserver-version': 'v.test' },
       paths: {},
     } as OpenApiSpec;
+    const loadSpec = createOpenApiSpecLoader({
+      liveApiSync: true,
+      fetchLive: async () => {
+        fetchCount += 1;
+        return spec;
+      },
+    });
 
-    process.env.LIVE_API_SYNC = '1';
-    liveOpenApiSpecPromise = undefined;
-    globalThis.fetch = (async () => {
-      fetchCount += 1;
-      return new Response(JSON.stringify(spec), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
-    }) as unknown as typeof fetch;
+    const first = await loadSpec();
+    const second = await loadSpec();
+
+    expect(first).toEqual(spec);
+    expect(second).toEqual(spec);
+    expect(fetchCount).toBe(1);
+  });
+
+  test('LIVE_API_SYNC retries a rate-limited OpenAPI fetch before using the response', async () => {
+    let fetchCount = 0;
+    const spec = {
+      info: { 'x-gameserver-version': 'v.retry' },
+      paths: {},
+    } as OpenApiSpec;
+
+    const result = await fetchLiveOpenApiSpec({
+      maxAttempts: 2,
+      retryDelayMs: 0,
+      sleep: async () => {},
+      log: () => {},
+      fetchImpl: async () => {
+        fetchCount += 1;
+        if (fetchCount === 1) return new Response('', { status: 429 });
+        return new Response(JSON.stringify(spec), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+    });
+
+    expect(result).toEqual(spec);
+    expect(fetchCount).toBe(2);
+  });
+
+  test('LIVE_API_SYNC falls back to a local spec when repeated 429s have a matching live ETag', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-sync-'));
+    const spec = {
+      info: { 'x-gameserver-version': 'v.etag' },
+      paths: {},
+    } as OpenApiSpec;
+    const localOpenApiPath = path.join(dir, 'openapi.json');
+    const body = JSON.stringify(spec);
+    const etag = `W/"${crypto.createHash('sha256').update(body).digest('hex').slice(0, 16)}"`;
+    const methods: string[] = [];
+    fs.writeFileSync(localOpenApiPath, body);
 
     try {
-      const first = await loadOpenApiSpec();
-      const second = await loadOpenApiSpec();
+      const result = await fetchLiveOpenApiSpec({
+        maxAttempts: 2,
+        retryDelayMs: 0,
+        sleep: async () => {},
+        log: () => {},
+        localOpenApiPath,
+        fetchImpl: async (_url, init) => {
+          const method = init?.method || 'GET';
+          methods.push(method);
+          if (method === 'HEAD') return new Response('', { status: 200, headers: { etag } });
+          return new Response('', { status: 429 });
+        },
+      });
 
-      expect(first).toEqual(spec);
-      expect(second).toEqual(spec);
-      expect(fetchCount).toBe(1);
+      expect(result).toEqual(spec);
+      expect(methods).toEqual(['GET', 'GET', 'HEAD']);
     } finally {
-      if (originalLiveApiSync === undefined) delete process.env.LIVE_API_SYNC;
-      else process.env.LIVE_API_SYNC = originalLiveApiSync;
-      liveOpenApiSpecPromise = undefined;
-      globalThis.fetch = originalFetch;
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
