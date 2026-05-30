@@ -366,6 +366,16 @@ describe('command metadata', () => {
     expect(help).toContain('deliver_to=storage');
   });
 
+  test('deploy_drone help advertises bulk deploy mode', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.deploy_drone;
+    expect(config?.usage).toContain('[all=true]');
+    expect(config?.schema?.all?.description).toContain('deploy every in-bay drone');
+
+    const help = captureHelp('deploy_drone');
+    expect(help).toContain('[all=true]');
+    expect(help).toContain('deploy every in-bay drone');
+  });
+
   test('profile help advertises local action forms without key-value action fields', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
     expect(config).toBeDefined();

@@ -161,6 +161,35 @@ describe('CLI local usability behavior', () => {
     expect(withdraw.stdout).toContain('"target": "self"');
   });
 
+  test('patch-note storage fuel deposit command is accepted without raw mode', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      'storage',
+      'action=deposit',
+      'target=faction',
+      'item_id=fuel',
+      'quantity=25',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
+    expect(result.stdout).toContain('"action": "deposit"');
+    expect(result.stdout).toContain('"target": "faction"');
+    expect(result.stdout).toContain('"item_id": "fuel"');
+    expect(result.stdout).toContain('"quantity": 25');
+  });
+
+  test('patch-note set_drone_name command maps to drone rename route', async () => {
+    const result = await runDirect(['--dry-run', 'set_drone_name', 'drone_1', 'Miner-1']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "set_drone_name"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_drone/name"');
+    expect(result.stdout).toContain('"id": "drone_1"');
+    expect(result.stdout).toContain('"text": "Miner-1"');
+  });
+
   test('profile list reads saved profile session names without secrets', async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-test-'));
     const originalHome = process.env.HOME;

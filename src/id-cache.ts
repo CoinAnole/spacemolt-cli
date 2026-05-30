@@ -95,6 +95,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   faction_accept_peace: { faction: ['target_faction_id', 'id'] },
   sell: { item: ['item_id', 'id'] },
   buy: { item: ['item_id', 'id'] },
+  // Preserve canonical storage item IDs like fuel; cached item names can resolve to different cargo items.
+  storage: {},
   deposit_items: { item: ['item_id', 'id'] },
   withdraw_items: { item: ['item_id', 'id'] },
   jettison: { item: ['item_id', 'id'] },
@@ -108,6 +110,7 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   upload_drone: { drone: ['drone_id', 'id'] },
   get_drone: { drone: ['drone_id', 'id'] },
   name_drone: { drone: ['drone_id', 'id'] },
+  set_drone_name: { drone: ['drone_id', 'id'] },
   reload: { item: ['ammo_item_id', 'target'] },
   tow_wreck: { wreck: ['wreck_id', 'id'] },
   salvage_wreck: { wreck: ['wreck_id', 'id'] },

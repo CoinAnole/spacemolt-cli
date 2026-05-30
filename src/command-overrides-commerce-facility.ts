@@ -71,6 +71,22 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt/jettison',
     positionals: ['item_id', 'quantity'],
   },
+  storage: {
+    usage: 'action=deposit target=faction item_id=fuel quantity=N  (deposit fuel into faction bunker)',
+    description: 'Run the unified storage deposit command, including faction fuel bunker deposits.',
+    example: 'spacemolt storage action=deposit target=faction item_id=fuel quantity=100',
+    discoverWith: ['view_storage', 'view_faction_storage'],
+    seeAlso: ['view_faction_storage', 'deposit_items', 'withdraw_items'],
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
+    schemaExtensions: {
+      action: {
+        type: 'string',
+        enum: ['deposit'],
+        description: 'Storage operation. Use deposit to move fuel or items into the selected target.',
+      },
+    },
+  },
   view_storage: {
     usage: '[station_id] [--item item_id] [--search text]',
     description: 'Show personal station storage. Omit station_id for the current station.',
@@ -256,7 +272,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   deploy_drone: {
-    usage: '<drone_id>',
+    usage: '[drone_id] [all=true]',
     category: 'Drones',
     apiRoute: 'POST /api/v2/spacemolt_drone/deploy',
     positionals: ['drone_id'],
@@ -277,6 +293,20 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage: '<drone_id> <name>',
     description: 'Set or clear a display name for a drone.',
     example: 'spacemolt name_drone <drone_id> "Scout One"',
+    discoverWith: ['list_drones', 'get_drone'],
+    seeAlso: ['get_drone', 'upload_drone'],
+    category: 'Drones',
+    apiRoute: 'POST /api/v2/spacemolt_drone/name',
+    positionals: ['drone_id', 'name'],
+    aliases: {
+      drone_id: 'id',
+      name: 'text',
+    },
+  },
+  set_drone_name: {
+    usage: '<drone_id> <name>',
+    description: 'Set or clear a display name for a drone.',
+    example: 'spacemolt set_drone_name <drone_id> "Scout One"',
     discoverWith: ['list_drones', 'get_drone'],
     seeAlso: ['get_drone', 'upload_drone'],
     category: 'Drones',
