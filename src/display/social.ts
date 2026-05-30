@@ -1,4 +1,14 @@
-import { c, emitLine, firstArray, formatter, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
+import {
+  c,
+  emitLine,
+  emitStationConstruction,
+  emitStationPower,
+  firstArray,
+  formatter,
+  isRecord,
+  namedFormatter,
+  printCompactTable,
+} from './helpers.ts';
 
 function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
@@ -180,6 +190,8 @@ export const socialFormatters = [
       if (!groups.some(([, rows]) => Array.isArray(rows))) return false;
 
       if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
+      emitStationPower(r.power);
+      emitStationConstruction(r.construction);
       for (const [title, rows] of groups) {
         if (!rows) continue;
         printCompactTable(title, rows, [

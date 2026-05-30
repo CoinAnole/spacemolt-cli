@@ -1,6 +1,8 @@
 import {
   c,
   emitLine,
+  emitStationConstruction,
+  emitStationPower,
   firstArray,
   formatter,
   isRecord,
@@ -139,6 +141,7 @@ export const shipFormatters = [
       if (base.fuel !== undefined || base.max_fuel !== undefined)
         emitLine(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
       if (r.fuel_price !== undefined) emitLine(`Fuel Price: ${r.fuel_price} credits`);
+      emitStationPower(r.power);
 
       const condition = r.condition as Record<string, unknown> | undefined;
       if (condition && isRecord(condition)) {
@@ -159,6 +162,8 @@ export const shipFormatters = [
           emitLine(`  ${preview}${suffix}`);
         }
       }
+
+      emitStationConstruction(r.construction);
 
       if (base.description) emitLine(`\n${base.description}`);
       return true;

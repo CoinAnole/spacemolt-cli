@@ -18,6 +18,41 @@ export const facilitiesFixture = {
 
 export const facilityListFixture = {
   base_id: 'earth_station',
+  power: {
+    supply: 120,
+    structural_draw: 95,
+    battery_stored: 420,
+    battery_capacity: 600,
+    efficiency: 0.85,
+  },
+  construction: {
+    pending: [
+      {
+        definition_id: 'life_support_mk2',
+        name: 'Life Support Mk II',
+        category: 'infrastructure',
+        status: 'gathering_materials',
+        materials: [
+          {
+            item_id: 'circuit_board',
+            name: 'Circuit Board',
+            quantity_required: 40,
+            quantity_in_storage: 12,
+            quantity_missing: 28,
+          },
+        ],
+      },
+    ],
+    under_construction: [
+      {
+        definition_id: 'battery_bank_mk1',
+        name: 'Battery Bank Mk I',
+        category: 'infrastructure',
+        status: 'building',
+        ticks_until_complete: 9,
+      },
+    ],
+  },
   station_facilities: [
     {
       facility_id: 'station-fuel',

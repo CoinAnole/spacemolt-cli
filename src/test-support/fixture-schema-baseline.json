@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.332.0",
+  "generatedAtGameserver": "v0.334.0",
   "blockingDivergenceSignatures": [
     "browse_ships|browse_ships|extra-in-fixture|listings[0].seller_name",
     "browse_ships|browse_ships|required-missing|base_id",
@@ -27,7 +27,6 @@
     "fleet_status|fleet_status|extra-in-fixture|fleet",
     "fleet_status|fleet_status|required-missing|action",
     "fleet_status|fleet_status|required-missing|in_fleet",
-    "get_base|get_base|required-missing|base.has_drones",
     "get_battle_status|get_battle_status|extra-in-fixture|battle",
     "get_battle_status|get_battle_status|required-missing|battle_id",
     "get_battle_status|get_battle_status|required-missing|is_participant",

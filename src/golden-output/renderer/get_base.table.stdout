@@ -6,9 +6,27 @@ Empire: solarian
 Defense: 55
 Fuel: 290750/0
 Fuel Price: 6 credits
+
+Power:
+  Power: 95/120 draw (85% efficiency)
+  Battery: 420/600
 Condition: Critical infrastructure failure. (16% satisfaction)
 Services: crafting, market, missions, refuel
 Facilities: 3
   fuel_grid, trade_nexus, fleet_yards
+
+=== Construction ===
+
+=== Pending ===
+
+  Name               | ID               | Category       | Status              | ETA | Materials                       
+  -------------------+------------------+----------------+---------------------+-----+---------------------------------
+  Life Support Mk II | life_support_mk2 | infrastructure | gathering_materials |     | Circuit Board: 12/40, 28 missing
+
+=== Under Construction ===
+
+  Name              | ID               | Category       | Status   | ETA     | Materials
+  ------------------+------------------+----------------+----------+---------+----------
+  Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |          
 
 A busy trade station.

@@ -1493,6 +1493,41 @@ describe('structuredContent formatters', () => {
   test('facility_list formats grouped facility responses', () => {
     const { stdout, stderr } = captureStructuredOutput('facility_list', {
       base_id: 'earth_station',
+      power: {
+        supply: 120,
+        structural_draw: 95,
+        battery_stored: 420,
+        battery_capacity: 600,
+        efficiency: 0.85,
+      },
+      construction: {
+        pending: [
+          {
+            definition_id: 'life_support_mk2',
+            name: 'Life Support Mk II',
+            category: 'infrastructure',
+            status: 'gathering_materials',
+            materials: [
+              {
+                item_id: 'circuit_board',
+                name: 'Circuit Board',
+                quantity_required: 40,
+                quantity_in_storage: 12,
+                quantity_missing: 28,
+              },
+            ],
+          },
+        ],
+        under_construction: [
+          {
+            definition_id: 'battery_bank_mk1',
+            name: 'Battery Bank Mk I',
+            category: 'infrastructure',
+            status: 'building',
+            ticks_until_complete: 9,
+          },
+        ],
+      },
       station_facilities: [
         {
           facility_id: 'station-fuel',
@@ -1517,10 +1552,75 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
+    expect(stdout).toContain('Power: 95/120 draw (85% efficiency)');
+    expect(stdout).toContain('Battery: 420/600');
+    expect(stdout).toContain('=== Construction ===');
+    expect(stdout).toContain('Life Support Mk II');
+    expect(stdout).toContain('28 missing');
+    expect(stdout).toContain('Battery Bank Mk I');
+    expect(stdout).toContain('9 ticks');
     expect(stdout).toContain('=== Station Facilities ===');
     expect(stdout).toContain('Fuel Bunker');
     expect(stdout).toContain('=== Player Facilities ===');
     expect(stdout).toContain('Ore Refinery');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base formats station power and construction state', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', {
+      base: {
+        id: 'earth_station',
+        name: 'Earth Station',
+        poi_id: 'earth_station',
+        empire: 'solarian',
+        defense_level: 100,
+        fuel: 1200,
+        max_fuel: 2400,
+        has_drones: true,
+        public_access: true,
+      },
+      services: ['market', 'storage'],
+      condition: {
+        condition: 'stable',
+        condition_text: 'All systems nominal.',
+        satisfaction_pct: 100,
+        satisfied_count: 4,
+        total_service_infra: 4,
+      },
+      power: {
+        supply: 200,
+        structural_draw: 150,
+        battery_stored: 900,
+        battery_capacity: 1000,
+        efficiency: 0.92,
+      },
+      construction: {
+        pending: [
+          {
+            definition_id: 'life_support_mk3',
+            name: 'Life Support Mk III',
+            category: 'infrastructure',
+            status: 'gathering_materials',
+            materials: [
+              {
+                item_id: 'oxygen_generator',
+                name: 'Oxygen Generator',
+                quantity_required: 10,
+                quantity_in_storage: 6,
+                quantity_missing: 4,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Power: 150/200 draw (92% efficiency)');
+    expect(stdout).toContain('Battery: 900/1,000');
+    expect(stdout).toContain('=== Construction ===');
+    expect(stdout).toContain('Life Support Mk III');
+    expect(stdout).toContain('4 missing');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -1751,10 +1851,28 @@ describe('structuredContent formatters', () => {
       Defense: 55
       Fuel: 290750/0
       Fuel Price: 6 credits
+
+      Power:
+        Power: 95/120 draw (85% efficiency)
+        Battery: 420/600
       Condition: Critical infrastructure failure. (16% satisfaction)
       Services: crafting, market, missions, refuel
       Facilities: 3
         fuel_grid, trade_nexus, fleet_yards
+
+      === Construction ===
+
+      === Pending ===
+
+        Name               | ID               | Category       | Status              | ETA | Materials                       
+        -------------------+------------------+----------------+---------------------+-----+---------------------------------
+        Life Support Mk II | life_support_mk2 | infrastructure | gathering_materials |     | Circuit Board: 12/40, 28 missing
+
+      === Under Construction ===
+
+        Name              | ID               | Category       | Status   | ETA     | Materials
+        ------------------+------------------+----------------+----------+---------+----------
+        Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |          
 
       A busy trade station."
       ,
@@ -1821,6 +1939,24 @@ describe('structuredContent formatters', () => {
         "facility_list": 
       "
       === Facilities at earth_station ===
+
+      Power:
+        Power: 95/120 draw (85% efficiency)
+        Battery: 420/600
+
+      === Construction ===
+
+      === Pending ===
+
+        Name               | ID               | Category       | Status              | ETA | Materials                       
+        -------------------+------------------+----------------+---------------------+-----+---------------------------------
+        Life Support Mk II | life_support_mk2 | infrastructure | gathering_materials |     | Circuit Board: 12/40, 28 missing
+
+      === Under Construction ===
+
+        Name              | ID               | Category       | Status   | ETA     | Materials
+        ------------------+------------------+----------------+----------+---------+----------
+        Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |          
 
       === Station Facilities ===
 
