@@ -142,7 +142,7 @@ function warnAboutUnsupportedServerHelpFilters(
 }
 
 function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {
-  if (command === 'get_cargo' || command === 'v2_get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
+  if (command === 'get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
   if (!payload || !['view_storage', 'view_faction_storage'].includes(command)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const searchFilter = typeof payload.search === 'string' ? payload.search : undefined;

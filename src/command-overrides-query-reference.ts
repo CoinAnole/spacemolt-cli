@@ -163,47 +163,6 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_state',
   },
-  v2_get_player: {
-    description: 'Show your player profile, credits, empire, faction, home base, and standings.',
-    category: 'V2 state commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_player',
-  },
-  v2_get_ship: {
-    category: 'V2 state commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_ship',
-  },
-  v2_get_cargo: {
-    usage: '[--top N|--limit N] [--show-empty]',
-    category: 'V2 state commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_cargo',
-    aliases: {
-      limit: 'top',
-    },
-    schemaExtensions: {
-      top: {
-        type: 'integer',
-        description: 'Client-side display limit for the largest cargo stacks.',
-      },
-      show_empty: {
-        type: 'boolean',
-        description: 'Client-side display flag to include zero-quantity cargo stacks.',
-      },
-    },
-    clientOnlyFields: ['top', 'show_empty'],
-  },
-  v2_get_missions: {
-    category: 'V2 state commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_missions',
-  },
-  v2_get_queue: {
-    description: 'Show whether you have a queued action pending.',
-    category: 'V2 state commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_queue',
-  },
-  v2_get_skills: {
-    category: 'V2 state commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_skills',
-  },
   fleet_status: {
     category: 'Fleet',
     apiRoute: 'POST /api/v2/spacemolt_fleet/status',

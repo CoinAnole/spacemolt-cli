@@ -375,6 +375,28 @@ describe('command metadata', () => {
     );
   });
 
+  test('command registry does not expose duplicate v2-prefixed state commands', () => {
+    const snapshot = buildCommandRegistrySnapshot();
+    const removedCommands = [
+      'v2_get_cargo',
+      'v2_get_missions',
+      'v2_get_player',
+      'v2_get_queue',
+      'v2_get_ship',
+      'v2_get_skills',
+    ];
+
+    for (const command of removedCommands) {
+      expect(snapshot.commands[command]).toBeUndefined();
+      expect(snapshot.allCommands[command]).toBeUndefined();
+      expect(snapshot.apiRoutes[command]).toBeUndefined();
+    }
+
+    for (const command of ['get_cargo', 'get_missions', 'get_player', 'get_queue', 'get_ship', 'get_skills']) {
+      expect(snapshot.commands[command]).toBeDefined();
+    }
+  });
+
   test('notifications is curated instead of exposed as a generated fallback', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.notifications;
 

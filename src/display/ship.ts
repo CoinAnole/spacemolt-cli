@@ -56,7 +56,7 @@ export const shipFormatters = [
     'cargo',
     ['cargo'],
     (r, command) => {
-      const isCargoCommand = command === 'get_cargo' || command === 'v2_get_cargo';
+      const isCargoCommand = command === 'get_cargo';
       if (r.cargo === undefined && !isCargoCommand) return false;
       if (!isCargoCommand && r.used === undefined && r.cargo_used === undefined) {
         return false;
