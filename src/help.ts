@@ -270,7 +270,7 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
       else if (commandText.includes(term)) score += 35;
 
       if (descriptionText.includes(term)) score += 35;
-      if (categoryText.includes(term)) score += 40;
+      if (categoryText.includes(term)) score += 50;
       if (exampleText.includes(term)) score += 30;
       if (usageText.includes(term)) score += 20;
       if (argText.includes(term)) score += 15;

@@ -384,7 +384,7 @@ describe('help output branches', () => {
     const capture = captureWriter();
     showCommandSearch('navigation', capture.writer, {
       dock_now: {
-        description: 'Dock immediately at the current station',
+        description: 'dock_now',
         usage: '',
         category: 'Navigation',
         args: [],
