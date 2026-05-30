@@ -44,6 +44,19 @@ function generatedUsage(generated: GeneratedApiRoute, args: string[] | undefined
     .join(' ');
 }
 
+export function buildGeneratedCommandConfig(generated: GeneratedApiRoute): CommandConfig {
+  const args = generatedArgs(generated);
+  return {
+    args,
+    required: generated.required,
+    description: generated.summary,
+    usage: generatedUsage(generated, args),
+    category: generated.cli?.category || 'Generated API',
+    route: generated.route,
+    schema: generated.schema,
+  };
+}
+
 function shouldExposeGeneratedRoute(signature: string, generated: GeneratedApiRoute): boolean {
   if (generated.cli?.hidden) return false;
   if (signature.endsWith('/help')) return false;
@@ -64,16 +77,7 @@ export function buildDynamicCommands(
     if (curatedRouteSignatures.has(signature)) continue;
     const command = generatedCommandName(generated);
     if (!command || curatedCommandNames.has(command) || commands[command]) continue;
-    const args = generatedArgs(generated);
-    commands[command] = {
-      args,
-      required: generated.required,
-      description: generated.summary,
-      usage: generatedUsage(generated, args),
-      category: generated.cli?.category || 'Generated API',
-      route: generated.route,
-      schema: generated.schema,
-    };
+    commands[command] = buildGeneratedCommandConfig(generated);
   }
 
   return commands;

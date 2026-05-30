@@ -26,6 +26,7 @@ bun run src/client.ts <command> [args...]
 bun run src/client.ts sync-api
 bun test
 bun run report:fixture-schemas          # compare golden fixtures vs OpenAPI response schemas
+bun run report:curated-commands         # compare curated commands vs generated OpenAPI command metadata
 bun run typecheck
 bun run lint
 bun run build
@@ -70,6 +71,20 @@ The reporter resolves the 200 response schema for each command's `apiRoute`, unw
 - Fields declared in the schema but not exercised by the fixture
 - Type mismatches (with `integer`/`number` treated as compatible)
 - Required fields omitted from the (intentionally partial) fixture
+
+To see structural differences between curated command overrides and the command configs generated OpenAPI metadata would produce for those same routes (informational only — never fails tests):
+
+```bash
+bun run report:curated-commands
+bun run report:curated-commands --only get_status,view_market,get_cargo
+```
+
+The reporter compares each curated command's `apiRoute` against its generated counterpart and reports:
+- Generated command name differences
+- User-facing metadata differences (`args`, `required`, `usage`, `description`, `category`)
+- Route/default differences
+- Request schema field and metadata differences
+- Curated routes missing from generated OpenAPI metadata
 
 ## Routing
 
