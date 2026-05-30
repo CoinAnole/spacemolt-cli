@@ -387,6 +387,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_list',
   },
+  faction_build: {
+    usage: '<facility_type>',
+    description: 'Build a faction facility at the current base.',
+    example: 'spacemolt faction_build ore_refinery',
+    discoverWith: ['facility_types', 'faction_facility_list'],
+    seeAlso: ['facility_types', 'faction_facility_list', 'faction_facility_build'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
+    positionals: ['facility_type'],
+  },
   faction_facility_build: {
     usage: '<facility_type>',
     category: 'Facilities',

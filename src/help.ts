@@ -855,6 +855,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility_buy_listing <id>            Buy a listed facility
     facility_cancel_listing <id>         Cancel a facility listing
     faction_facility_list     List faction facilities at current base
+    faction_build <type>      Build a faction facility
     faction_facility_build <type>  Build a faction facility
     faction_facility_upgrade <type>  Upgrade a faction facility
     faction_facility_toggle <id>     Toggle a faction facility

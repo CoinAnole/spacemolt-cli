@@ -384,6 +384,13 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.payload).toEqual({ id: 'ship_1' });
   });
 
+  test('faction_build previews the faction facility build endpoint', () => {
+    const response = createDryRunResponse('faction_build', { facility_type: 'ore_refinery' });
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+    expect(response.structuredContent?.url).toContain('/api/v2/spacemolt_facility/faction_build');
+    expect(response.structuredContent?.payload).toEqual({ facility_type: 'ore_refinery' });
+  });
+
   test('buy with quantity uses the server estimate endpoint as its preview', () => {
     expect(getServerPreviewCommand('buy', { item_id: 'ore_iron', quantity: 50 })).toBe('estimate_purchase');
     expect(getServerPreviewCommand('buy', { item_id: 'ore_iron' })).toBeNull();
@@ -802,6 +809,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['fleet_status']).payload).toEqual({});
     expect(parseOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
     expect(parseOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
+    expect(parseOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseOk(['facility_toggle', 'fac_1']).payload.facility_id).toBe('fac_1');
   });
 
