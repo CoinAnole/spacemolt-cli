@@ -22,6 +22,13 @@ function firstLinePreview(value: unknown): string {
   return String(value).split(/\r?\n/, 1)[0]?.trim() ?? '';
 }
 
+function formatChatSender(message: Record<string, unknown>): string | undefined {
+  const sender = message.sender ?? message.username ?? message.sender_name ?? message.sender_id;
+  const verified = message.empire_official === true ? ' [empire_official]' : '';
+  if (sender === undefined || sender === null || sender === '') return verified.trim() || undefined;
+  return `${sender}${verified}`;
+}
+
 function captainLogRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
   if (Array.isArray(result.entries)) return result.entries.filter(isRecord);
   if (Array.isArray(result.logs)) return result.logs.filter(isRecord);
@@ -58,6 +65,7 @@ export const socialFormatters = [
       const rows = r.messages.filter(isRecord).map((message) => ({
         ...message,
         timestamp_preview: formatTimestampPreview(message.timestamp ?? message.created_at ?? message.sent_at),
+        sender_display: formatChatSender(message),
       }));
       if (r.channel) emitLine(`${c.dim}channel ${r.channel}${c.reset}`);
       printCompactTable(
@@ -65,7 +73,7 @@ export const socialFormatters = [
         rows,
         [
           ['Timestamp', ['timestamp_preview', 'timestamp', 'created_at', 'sent_at']],
-          ['Sender', ['sender', 'username', 'sender_name']],
+          ['Sender', ['sender_display', 'sender', 'username', 'sender_name']],
           ['Message', ['content', 'message', 'text']],
         ],
         { maxCellWidth: 80 },

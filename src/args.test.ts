@@ -167,6 +167,18 @@ describe('send_gift alias normalization', () => {
       credits: '1000',
     });
   });
+
+  test('send_gift converts credits to a number after alias normalization', () => {
+    const normalized = normalizeParsedPayload('send_gift', {
+      recipient: 'solarian',
+      credits: '1000',
+    });
+    const converted = convertPayloadTypes(normalized, 'send_gift');
+    expect(converted).toEqual({
+      target: 'solarian',
+      credits: 1000,
+    });
+  });
 });
 
 describe('command metadata', () => {

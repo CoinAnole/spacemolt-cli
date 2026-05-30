@@ -85,6 +85,7 @@
     "get_skills|get_skills|extra-in-fixture|player_skill_count",
     "get_skills|get_skills|extra-in-fixture|player_skills",
     "get_status|get_status|extra-in-fixture|location.nearby_players",
+    "get_status|get_status|extra-in-fixture|player.citizenships",
     "get_status|get_status|extra-in-fixture|ship.cpu_capacity",
     "get_status|get_status|extra-in-fixture|ship.cpu_used",
     "get_status|get_status|extra-in-fixture|ship.name",

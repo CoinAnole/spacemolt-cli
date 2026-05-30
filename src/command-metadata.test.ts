@@ -30,7 +30,6 @@ const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
   'trade_offer.credits',
   'faction_create_buy_order.deliver_to',
-  'send_gift.credits',
   'analyze_market.item_id',
   'analyze_market.page',
   'help.category',

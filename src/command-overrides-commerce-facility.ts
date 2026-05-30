@@ -188,6 +188,12 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       recipient: 'target',
       ship_id: 'item_id',
     },
+    schemaExtensions: {
+      credits: {
+        type: 'integer',
+        description: 'Credits to gift to a player or donate to an empire treasury.',
+      },
+    },
   },
   create_sell_order: {
     usage: '<item_id_or_cached_name> <quantity> <price_each>  (list items for sale)',

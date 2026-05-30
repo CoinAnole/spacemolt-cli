@@ -123,6 +123,10 @@ const playerProfileFixture = {
     username: 'Marlowe',
     credits: 4242,
     empire: 'Terran',
+    citizenships: {
+      solarian: { empire_id: 'solarian', granted_by: 'origin', granted_at: '2026-05-13T00:00:00.000Z' },
+      nebula: { empire_id: 'nebula', granted_by: 'petition:cit-1', granted_at: '2026-05-14T00:00:00.000Z' },
+    },
     faction_id: 'smc',
     clan_tag: 'SMC',
     home_base: 'earth_station',
@@ -147,6 +151,14 @@ const chatHistoryFixture = {
       sender: 'Ibis',
       content: 'Clear skies over Sol today.',
       timestamp: '2026-05-23T15:04:05.000Z',
+    },
+    {
+      id: 'chat-2',
+      sender: 'Solarian Confederacy',
+      sender_id: 'solarian',
+      empire_official: true,
+      content: 'Treasury payment processed.',
+      timestamp: '2026-05-23T15:05:05.000Z',
     },
   ],
 };
@@ -798,6 +810,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Player ===');
     expect(stdout).toContain('Username: Marlowe');
     expect(stdout).toContain('Credits: 4,242');
+    expect(stdout).toContain('Citizenships: solarian, nebula');
     expect(stdout).toContain('Faction: smc [SMC]');
     expect(stdout).toContain('Home Base: earth_station');
     expect(stdout).toContain('Piloting: Level 5 (1200 XP)');
@@ -818,6 +831,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Timestamp');
     expect(stdout).toContain('2026-05-23 15:04:05');
     expect(stdout).toContain('Ibis');
+    expect(stdout).toContain('Solarian Confederacy [empire_official]');
     expect(stdout).toContain('Clear skies over Sol today.');
     expect(stdout).toContain('More messages available.');
     expect(stdout).not.toContain('=== Response ===');
@@ -1785,6 +1799,7 @@ describe('structuredContent formatters', () => {
       === Player Status ===
       Username: Marlowe
       Empire: Terran
+      Citizenships: solarian, nebula
       Credits: 4242
       Faction: smc (captain)
 

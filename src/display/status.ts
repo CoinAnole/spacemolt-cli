@@ -47,6 +47,30 @@ function formatStandingValue(value: unknown): string | undefined {
   return String(value);
 }
 
+function formatCitizenshipId(value: unknown, key?: string): string | undefined {
+  if (isRecord(value)) {
+    const id = value.empire_id ?? value.id ?? value.name ?? key;
+    return id === undefined || id === null || id === '' ? undefined : String(id);
+  }
+  if (typeof value === 'string') return value;
+  if (value === true && key) return key;
+  return undefined;
+}
+
+function formatCitizenships(value: unknown): string | undefined {
+  const citizenships = Array.isArray(value)
+    ? value.map((entry) => formatCitizenshipId(entry))
+    : isRecord(value)
+      ? Object.entries(value).map(([key, entry]) => {
+          if (entry === undefined || entry === null || entry === false) return undefined;
+          return formatCitizenshipId(entry, key);
+        })
+      : [];
+
+  const unique = [...new Set(citizenships.filter((citizenship): citizenship is string => Boolean(citizenship)))];
+  return unique.length ? unique.join(', ') : undefined;
+}
+
 export const statusFormatters = [
   // Queue state
   formatter(
@@ -70,6 +94,8 @@ export const statusFormatters = [
       if (player.username) emitLine(`Username: ${player.username}`);
       if (player.credits !== undefined) emitLine(`Credits: ${formatNumber(player.credits)}`);
       if (player.empire) emitLine(`Empire: ${formatDisplayValue(player.empire)}`);
+      const citizenships = formatCitizenships(player.citizenships ?? player.held_citizenships ?? player.citizenship);
+      if (citizenships) emitLine(`Citizenships: ${citizenships}`);
       if (player.faction_id || player.clan_tag || player.faction_rank) {
         const faction = player.faction_id || 'None';
         const clan = player.clan_tag ? ` [${player.clan_tag}]` : '';
@@ -120,6 +146,8 @@ export const statusFormatters = [
       emitLine(`\n${c.bright}=== Player Status ===${c.reset}`);
       emitLine(`Username: ${c.bright}${p.username}${c.reset}`);
       emitLine(`Empire: ${p.empire}`);
+      const citizenships = formatCitizenships(p.citizenships ?? p.held_citizenships ?? p.citizenship);
+      if (citizenships) emitLine(`Citizenships: ${citizenships}`);
       emitLine(`Credits: ${p.credits}`);
       emitLine(`Faction: ${p.faction_id ? `${p.faction_id} (${p.faction_rank})` : 'None'}`);
 
