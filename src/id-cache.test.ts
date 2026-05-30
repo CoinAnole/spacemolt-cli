@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { cargoFixture, nearbyFixture, systemInfoFixture, viewMarketFixture } from './display/formatter-fixtures';
 import {
   cacheIdsFromResponse,
+  commandResolverFields,
   extractIdHints,
   formatCachedIdAmbiguity,
   getIdCachePath,
@@ -292,6 +293,29 @@ describe('id cache', () => {
     expect(idKindForCommandField('unknown_command', 'target_system_id')).toBe('system');
     expect(idKindForCommandField('unknown_command', 'ship_id')).toBe('ship');
     expect(idKindForCommandField('travel', 'target_system_id')).toBeUndefined();
+  });
+
+  test('resolver rules cover alias-normalized target fields for commands with friendly ID fields', () => {
+    const resolvableAliases = [
+      ['switch_ship', 'ship_id', 'id', 'ship'],
+      ['sell_ship', 'ship_id', 'id', 'ship'],
+      ['scrap_ship', 'ship_id', 'id', 'ship'],
+      ['list_ship_for_sale', 'ship_id', 'id', 'ship'],
+      ['buy_listed_ship', 'listing_id', 'id', 'listing'],
+      ['cancel_ship_listing', 'listing_id', 'id', 'listing'],
+      ['faction_invite', 'player_id', 'id', 'player'],
+      ['faction_withdraw_invite', 'player_id', 'id', 'player'],
+      ['faction_kick', 'player_id', 'id', 'player'],
+      ['faction_promote', 'player_id', 'id', 'player'],
+      ['battle_target', 'target_id', 'id', 'player'],
+      ['load_drone', 'drone_item_id', 'id', 'item'],
+      ['reload', 'ammo_item_id', 'target', 'item'],
+    ] as const;
+
+    for (const [command, _friendlyField, normalizedField, kind] of resolvableAliases) {
+      const rules = commandResolverFields(command);
+      expect(rules?.[kind]).toContain(normalizedField);
+    }
   });
 
   test('hintsForKind returns only cached IDs for the inferred command field kind', () => {

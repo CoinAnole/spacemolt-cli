@@ -138,6 +138,14 @@ export function isIdKind(value: string): value is IdKind {
   return ID_KINDS.has(value as IdKind);
 }
 
+export function commandResolverFields(command: string): Record<string, string[]> | undefined {
+  const rules = COMMAND_ID_RESOLVER_RULES[command];
+  if (!rules) return undefined;
+  return Object.fromEntries(
+    Object.entries(rules).map(([kind, fields]) => [kind, [...(fields ?? [])]]),
+  ) as Record<string, string[]>;
+}
+
 export function getIdCachePath(sessionPath?: string): string {
   const resolvedPath = sessionPath || getSessionPath();
   const parsed = path.parse(resolvedPath);
