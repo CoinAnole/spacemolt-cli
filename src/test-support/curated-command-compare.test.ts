@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { CommandOverride } from '../commands.ts';
+import { CURATED_COMMAND_DESCRIPTIONS } from '../command-descriptions.ts';
+import { COMMAND_OVERRIDES, type CommandOverride } from '../commands.ts';
+import { GENERATED_API_ROUTES } from '../generated/api-commands.ts';
 import type { GeneratedApiRoute } from '../openapi-metadata.ts';
 import { compareCuratedCommandsToGenerated, formatCuratedCommandComparisonReport } from './curated-command-compare.ts';
 
@@ -23,6 +25,15 @@ const generatedRouteWithOnlyRequiredField = (): GeneratedApiRoute => ({
     ship_id: { type: 'string', positionalIndex: 0 },
   },
 });
+
+function differsOnlyByTrailingPeriod(left: string, right: string): boolean {
+  const normalizedLeft = left.trim();
+  const normalizedRight = right.trim();
+  return (
+    (normalizedLeft.endsWith('.') && normalizedLeft.slice(0, -1) === normalizedRight) ||
+    (normalizedRight.endsWith('.') && normalizedRight.slice(0, -1) === normalizedLeft)
+  );
+}
 
 describe('curated command vs generated command comparison', () => {
   test('reports no differences when curated config matches generated config', () => {
@@ -62,6 +73,21 @@ describe('curated command vs generated command comparison', () => {
     expect(report.commands[0]?.differences.map((d) => d.field)).toEqual(
       expect.arrayContaining(['commandName', 'args', 'required', 'usage', 'description', 'category']),
     );
+  });
+
+  test('curated source descriptions adopt OpenAPI summaries when they only differ by trailing periods', () => {
+    const periodOnlyDifferences: string[] = [];
+    for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      const curated = override.description ?? CURATED_COMMAND_DESCRIPTIONS[command];
+      const generated = GENERATED_API_ROUTES[override.apiRoute]?.summary;
+      if (curated && generated && curated !== generated && differsOnlyByTrailingPeriod(curated, generated)) {
+        periodOnlyDifferences.push(
+          `${command}: curated ${JSON.stringify(curated)} vs generated ${JSON.stringify(generated)}`,
+        );
+      }
+    }
+
+    expect(periodOnlyDifferences).toEqual([]);
   });
 
   test('reports missing and changed schema fields', () => {

@@ -102,7 +102,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     arrayFields: ['types'],
   },
   notifications: {
-    description: 'Poll pending notifications.',
+    description: 'Poll pending notifications',
     example: 'spacemolt notifications',
     seeAlso: ['get_notifications', 'get_status'],
     category: 'Query commands',

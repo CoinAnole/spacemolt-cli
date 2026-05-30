@@ -402,7 +402,7 @@ describe('command metadata', () => {
 
     expect(config).toMatchObject({
       category: 'Query commands',
-      description: 'Poll pending notifications.',
+      description: 'Poll pending notifications',
       example: 'spacemolt notifications',
       route: { tool: 'notifications', action: 'notifications', method: 'GET' },
     });
