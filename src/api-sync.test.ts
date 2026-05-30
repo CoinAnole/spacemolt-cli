@@ -19,20 +19,26 @@ import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './genera
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
+let liveOpenApiSpecPromise: Promise<OpenApiSpec> | undefined;
 
 function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help');
 }
 
+async function fetchLiveOpenApiSpec(): Promise<OpenApiSpec> {
+  const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
+  if (resp.status === 429) {
+    console.log('[SKIP] OpenAPI spec rate-limited (429) — skipping API sync check');
+    return { info: { 'x-gameserver-version': 'rate-limited' }, paths: {} };
+  }
+  expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
+  return (await resp.json()) as OpenApiSpec;
+}
+
 async function loadOpenApiSpec(): Promise<OpenApiSpec> {
   if (process.env.LIVE_API_SYNC === '1') {
-    const resp = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10_000) });
-    if (resp.status === 429) {
-      console.log('[SKIP] OpenAPI spec rate-limited (429) — skipping API sync check');
-      return { info: { 'x-gameserver-version': 'rate-limited' }, paths: {} };
-    }
-    expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
-    return (await resp.json()) as OpenApiSpec;
+    liveOpenApiSpecPromise ??= fetchLiveOpenApiSpec();
+    return liveOpenApiSpecPromise;
   }
 
   return JSON.parse(fs.readFileSync(LOCAL_OPENAPI_PATH, 'utf-8')) as OpenApiSpec;
@@ -41,6 +47,40 @@ async function loadOpenApiSpec(): Promise<OpenApiSpec> {
 const skip = process.env.SKIP_API_SYNC === '1';
 
 describe('api sync', () => {
+  test('LIVE_API_SYNC reuses one OpenAPI fetch per test process', async () => {
+    const originalLiveApiSync = process.env.LIVE_API_SYNC;
+    const originalFetch = globalThis.fetch;
+    let fetchCount = 0;
+    const spec = {
+      info: { 'x-gameserver-version': 'v.test' },
+      paths: {},
+    } as OpenApiSpec;
+
+    process.env.LIVE_API_SYNC = '1';
+    liveOpenApiSpecPromise = undefined;
+    globalThis.fetch = (async () => {
+      fetchCount += 1;
+      return new Response(JSON.stringify(spec), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+
+    try {
+      const first = await loadOpenApiSpec();
+      const second = await loadOpenApiSpec();
+
+      expect(first).toEqual(spec);
+      expect(second).toEqual(spec);
+      expect(fetchCount).toBe(1);
+    } finally {
+      if (originalLiveApiSync === undefined) delete process.env.LIVE_API_SYNC;
+      else process.env.LIVE_API_SYNC = originalLiveApiSync;
+      liveOpenApiSpecPromise = undefined;
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test.skipIf(skip)(
     'client.ts V2 map matches OpenAPI spec',
     async () => {
