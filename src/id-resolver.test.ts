@@ -110,6 +110,138 @@ describe('cached ID payload resolver', () => {
     expect(tankFuel).toEqual({ type: 'payload', payload: { id: 'fuel', quantity: 100 } });
   });
 
+  test('resolves faction player commands after player_id aliases normalize to id', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-marlowe',
+            name: 'Marlowe',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('faction_invite', { player_id: 'marlowe' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'player-marlowe' } });
+  });
+
+  test('resolves battle_target after target_id alias normalizes to id', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-raider',
+            name: 'Raider',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('battle_target', { target_id: 'raider' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'player-raider' } });
+  });
+
+  test('resolves load_drone item names after drone_item_id alias normalizes to id', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'combat_drone',
+            name: 'Combat Drone',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('load_drone', { drone_item_id: 'combat' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'combat_drone' } });
+  });
+
+  test('resolves list_ship_for_sale after ship_id alias normalizes to id', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'ship',
+            id: 'ship-dust-devil',
+            name: 'dust_devil',
+            sourceCommand: 'list_ships',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload(
+      'list_ship_for_sale',
+      { ship_id: 'dust_devil', price: '1000' },
+      options(),
+      sessionPath,
+    );
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'ship-dust-devil', price: 1000 } });
+  });
+
+  test('resolves reload ammo as an item but leaves weapon instance id unchanged', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'laser_cell',
+            name: 'Laser Cell',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-laser',
+            name: 'Laser Cell',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload(
+      'reload',
+      { weapon_instance_id: 'weapon-1', ammo_item_id: 'laser cell' },
+      options(),
+      sessionPath,
+    );
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'weapon-1', target: 'laser_cell' } });
+  });
+
   test('stops before execution on ambiguous cached item matches', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
