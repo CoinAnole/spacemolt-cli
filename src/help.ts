@@ -209,9 +209,7 @@ export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSour
   const write = out(writer);
   write(`\n${c.bright}Command Groups${c.reset}`);
   for (const group of COMMAND_GROUPS) {
-    const count = Object.keys(allCommands).filter((command) =>
-      commandMatchesGroup(command, group, allCommands),
-    ).length;
+    const count = Object.keys(allCommands).filter((command) => commandMatchesGroup(command, group, allCommands)).length;
     write(`  ${group.key.padEnd(10)} ${group.label} (${count})`);
   }
   write(`\nRun "spacemolt help <group>" to list commands in a group.`);
@@ -235,7 +233,8 @@ export function showCommandGroup(topic: string, writer?: CliWriter, commands?: C
   let lastCategory = '';
   for (const command of matchingCommands) {
     const includedInGroup = (COMMAND_GROUP_INCLUDES[group.key] || []).includes(command);
-    const category = includedInGroup && group.key === 'faction' ? 'Faction facilities' : allCommands[command]?.category || 'Other';
+    const category =
+      includedInGroup && group.key === 'faction' ? 'Faction facilities' : allCommands[command]?.category || 'Other';
     if (category !== lastCategory) {
       lastCategory = category;
       write(`\n${c.cyan}${category}:${c.reset}`);
@@ -261,7 +260,7 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
     const usageText = (config?.usage || '').toLowerCase();
     const exampleText = (config?.example || '').toLowerCase();
     const relatedText = [...(config?.discoverWith || []), ...(config?.seeAlso || [])].join(' ').toLowerCase();
-    const argText = getArgNames(config).join(' ').toLowerCase();
+    const argText = config ? getArgNames(config).join(' ').toLowerCase() : '';
     let score = 0;
     for (const term of terms) {
       if (commandText === term) score += 120;

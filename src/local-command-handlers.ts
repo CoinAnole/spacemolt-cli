@@ -639,9 +639,7 @@ export function resolveHandler(
 ): CommandHandler | undefined {
   const commandName = argv[0];
   const groupInlineHelp =
-    commandName &&
-    hasCommandGroup(commandName) &&
-    (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
+    commandName && hasCommandGroup(commandName) && (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
 
   if (
     argv.length === 0 ||
