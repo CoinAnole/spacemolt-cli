@@ -791,7 +791,7 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   facility_list       Facilities at your current base
   catalog <type>      Browse ships/items/skills/recipes
   get_guide [guide]   Game guide and onboarding info
-  help                Full command list from server
+  help                Local command help and discovery
   get_commands        Structured command list (for automation)
 
 ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
@@ -983,7 +983,7 @@ ${c.bright}Environment Variables:${c.reset}
 ${c.bright}API Routing:${c.reset}
   - The client uses v2 exclusively
   - Commands route to /api/v2/{tool}/{action}
-  - help and get_guide route through v2 spacemolt endpoints
+  - get_guide routes through v2 spacemolt endpoints; help is local
 
 ${c.bright}Documentation:${c.reset}
   API Reference: https://game.spacemolt.com/api/v2/openapi.json
