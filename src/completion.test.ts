@@ -265,6 +265,13 @@ describe('shell completion generation', () => {
     ).toContain('--plain');
   });
 
+  test('runtime completion describes help using local help metadata', () => {
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'hel'], current: 'hel' })).toContainEqual({
+      value: 'help',
+      description: 'Local command help, usage details, command groups, and command search.',
+    });
+  });
+
   test('runtime completion returns no command candidates after a command or non-enum value-taking global option', () => {
     expect(completeWords({ shell: 'fish', words: ['spacemolt', 'sell', ''], current: '' })).toEqual([]);
     expect(completeWords({ shell: 'fish', words: ['spacemolt', '--jq', ''], current: '' })).toEqual([]);

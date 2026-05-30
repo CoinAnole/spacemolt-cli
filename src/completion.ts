@@ -55,7 +55,7 @@ function commandDescription(command: string, registry: CompletionRegistry): stri
       : command === 'explain'
         ? 'Explain a command'
         : command === 'help'
-          ? 'Show help for a group'
+          ? 'Local command help and discovery'
           : command)
   );
 }

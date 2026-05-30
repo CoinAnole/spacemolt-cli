@@ -70,7 +70,10 @@ function commandCandidates(
 
   commands.set('commands', { value: 'commands', description: 'Search local commands' });
   commands.set('explain', { value: 'explain', description: 'Explain a command' });
-  commands.set('help', { value: 'help', description: 'Show help for a group' });
+  commands.set('help', {
+    value: 'help',
+    description: allCommands.help?.description || 'Local command help and discovery',
+  });
 
   return [...commands.values()];
 }

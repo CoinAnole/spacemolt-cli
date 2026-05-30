@@ -259,7 +259,7 @@ describe('help output branches', () => {
     expect(output).toContain('Faction Commands');
     expect(output).toContain('Faction facilities:');
     expect(output).toContain('faction_build <facility_type> - Build a faction facility at the current base.');
-    expect(output).toContain('faction_facility_list');
+    expect(output).toContain('faction_facility_list <args...> - List faction facilities at the current base.');
   });
 
   test('showCommandHelp renders no-arg commands without args placeholder', () => {
