@@ -90,6 +90,22 @@ describe('id cache', () => {
     );
   });
 
+  test('extracts drone and wreck IDs from common responses', () => {
+    const droneHints = extractIdHints(
+      'list_drones',
+      { drones: [{ drone_id: 'drone-1', name: 'Survey Drone', status: 'loaded' }] },
+      '2026-05-18T00:00:00.000Z',
+    );
+    const wreckHints = extractIdHints(
+      'get_wrecks',
+      { wrecks: [{ wreck_id: 'wreck-1', ship_class: 'Skiff', ticks_remaining: 5 }] },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(droneHints).toContainEqual(expect.objectContaining({ kind: 'drone', id: 'drone-1', name: 'Survey Drone' }));
+    expect(wreckHints).toContainEqual(expect.objectContaining({ kind: 'wreck', id: 'wreck-1', name: 'Skiff' }));
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');

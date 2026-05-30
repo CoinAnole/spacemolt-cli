@@ -344,6 +344,41 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'faction-smc' } });
   });
 
+  test('resolves drone and wreck command IDs from cache', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'drone',
+            id: 'drone-1',
+            name: 'Survey Drone',
+            sourceCommand: 'list_drones',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'wreck',
+            id: 'wreck-1',
+            name: 'Skiff',
+            sourceCommand: 'get_wrecks',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(preparePayload('deploy_drone', { drone_id: 'survey' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'drone-1' },
+    });
+    expect(preparePayload('tow_wreck', { wreck_id: 'skiff' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'wreck-1' },
+    });
+  });
+
   test('stops before execution on ambiguous cached item matches', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

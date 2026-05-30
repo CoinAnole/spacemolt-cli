@@ -603,7 +603,7 @@ ${c.bright}Dynamic API Cache:${c.reset}
 
 ${c.bright}ID Cache:${c.reset}
   Discovery commands like get_system, get_cargo, view_market, get_nearby, and list_ships save useful IDs.
-  spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction IDs
+  spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck IDs
   spacemolt where-can-i <item>          Search cached item sightings`;
 }
 

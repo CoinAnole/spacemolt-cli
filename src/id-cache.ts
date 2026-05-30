@@ -7,7 +7,7 @@ import { c, QUIET } from './runtime.ts';
 import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
 import type { APIResponse } from './types.ts';
 
-export type IdKind = 'poi' | 'system' | 'item' | 'player' | 'ship' | 'faction';
+export type IdKind = 'poi' | 'system' | 'item' | 'player' | 'ship' | 'faction' | 'drone' | 'wreck';
 
 export interface IdHint {
   kind: IdKind;
@@ -28,7 +28,7 @@ interface IdCacheFile {
   hints: IdHint[];
 }
 
-const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player', 'ship', 'faction']);
+const ID_KINDS = new Set<IdKind>(['poi', 'system', 'item', 'player', 'ship', 'faction', 'drone', 'wreck']);
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
@@ -81,7 +81,16 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   create_sell_order: { item: ['item_id', 'id'] },
   create_buy_order: { item: ['item_id', 'id'] },
   load_drone: { item: ['drone_item_id', 'id'] },
+  deploy_drone: { drone: ['drone_id', 'id'] },
+  recall_drone: { drone: ['drone_id', 'id'] },
+  unload_drone: { drone: ['drone_id', 'id'] },
+  upload_drone: { drone: ['drone_id', 'id'] },
+  get_drone: { drone: ['drone_id', 'id'] },
+  name_drone: { drone: ['drone_id', 'id'] },
   reload: { item: ['ammo_item_id', 'target'] },
+  tow_wreck: { wreck: ['wreck_id', 'id'] },
+  salvage_wreck: { wreck: ['wreck_id', 'id'] },
+  loot_wreck: { wreck: ['wreck_id', 'id'], item: ['item_id'] },
   switch_ship: { ship: ['ship_id', 'id'] },
   sell_ship: { ship: ['ship_id', 'id'] },
   scrap_ship: { ship: ['ship_id', 'id'] },
@@ -251,6 +260,10 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
   }
   for (const item of arrayRecords(result.inventory)) pushItem(push, item, ['quantity']);
   for (const ship of arrayRecords(result.ships)) pushShip(push, ship);
+  const drone = isRecord(result.drone) ? result.drone : undefined;
+  if (drone) pushDrone(push, drone);
+  for (const drone of arrayRecords(result.drones)) pushDrone(push, drone);
+  for (const wreck of arrayRecords(result.wrecks)) pushWreck(push, wreck);
 
   for (const player of arrayRecords(result.nearby)) pushPlayer(push, player);
   for (const player of arrayRecords(result.players)) pushPlayer(push, player);
@@ -469,6 +482,8 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     player: ['get_nearby', 'get_system_agents'],
     ship: ['list_ships', 'view_storage'],
     faction: ['faction_list', 'faction_info'],
+    drone: ['list_drones'],
+    wreck: ['get_wrecks'],
   };
   out(`Run one of these to populate it:`);
   for (const command of commandsByKind[kind]) out(`  spacemolt ${command}`);
@@ -520,6 +535,30 @@ function pushFaction(
     id: stringValue(faction.faction_id || faction.id || faction.tag),
     name: stringValue(faction.tag || faction.name),
     context: pick(faction, ['name', 'member_count', 'relationship']),
+  });
+}
+
+function pushDrone(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  drone: Record<string, unknown>,
+): void {
+  push({
+    kind: 'drone',
+    id: stringValue(drone.drone_id || drone.id),
+    name: stringValue(drone.name || drone.type || drone.type_id),
+    context: pick(drone, ['status', 'base_id', 'poi_id']),
+  });
+}
+
+function pushWreck(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  wreck: Record<string, unknown>,
+): void {
+  push({
+    kind: 'wreck',
+    id: stringValue(wreck.wreck_id || wreck.id),
+    name: stringValue(wreck.name || wreck.ship_class),
+    context: pick(wreck, ['ticks_remaining', 'poi_id', 'base_id']),
   });
 }
 
