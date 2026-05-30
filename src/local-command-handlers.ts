@@ -514,6 +514,14 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'showHelpAndGroups' } };
       }
 
+      if (
+        commandName &&
+        hasCommandGroup(commandName) &&
+        (subArgs[0] === '--help' || subArgs[0] === '-h' || subArgs[0] === 'help')
+      ) {
+        return { ok: true, payload: { type: 'helpGroup', target: commandName } };
+      }
+
       const target = subArgs[0];
       if (!target) {
         return { ok: true, payload: { type: 'progressiveOrHelp' } };
@@ -619,11 +627,16 @@ export function resolveHandler(
   const commandName = argv[0];
   const helpTarget = commandName === 'help' ? argv[1] : undefined;
   const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  const groupInlineHelp =
+    commandName &&
+    hasCommandGroup(commandName) &&
+    (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
 
   if (
     argv.length === 0 ||
     commandName === '--help' ||
     commandName === '-h' ||
+    groupInlineHelp ||
     (commandName === 'help' &&
       (!helpTarget || helpTarget === 'all' || Boolean(allCommands[helpTarget]) || hasCommandGroup(helpTarget)))
   ) {

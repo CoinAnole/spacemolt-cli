@@ -894,6 +894,42 @@ describe('local command handlers', () => {
     expect(output).toContain('API route:');
   });
 
+  test('group trailing --help renders local group help without network', async () => {
+    const handler = resolveHandler(['faction', '--help'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['faction', '--help'], { ...options, profile: 'pilot' }, context);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot' }, {} as SpaceMoltClient, context);
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot' }, {} as SpaceMoltClient, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('Faction Commands');
+  });
+
+  test('group trailing -h renders local group help without network', async () => {
+    const handler = resolveHandler(['facility', '-h'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['facility', '-h'], { ...options, profile: 'pilot' }, context);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot' }, {} as SpaceMoltClient, context);
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot' }, {} as SpaceMoltClient, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('Facilities Commands');
+  });
+
   test('full help includes commands supplied only by a registry snapshot', async () => {
     const registry = dynamicRegistry();
     const handler = resolveHandler(['help', 'all'], options, registry);
