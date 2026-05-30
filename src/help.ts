@@ -576,7 +576,7 @@ ${c.bright}Command Discovery:${c.reset}
   spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
-  spacemolt help command=<name>   Server-provided command help
+  spacemolt help command=<name>   Local command help
 ${cacheHelpSections()}
 
 ${c.bright}Arguments:${c.reset}
@@ -657,7 +657,7 @@ ${c.bright}Command Discovery:${c.reset}
   spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
-  spacemolt help command=<name>   Server-provided command help
+  spacemolt help command=<name>   Local command help
 ${cacheHelpSections()}
 
 ${c.bright}Arguments:${c.reset}
@@ -768,7 +768,7 @@ ${c.bright}Usage:${c.reset}
      spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
      spacemolt commands --search fuel
      spacemolt help all              Full local command reference
-     spacemolt help command=<name>   Server-provided command help
+     spacemolt help command=<name>   Local command help
 ${cacheHelpSections()}
 
 ${c.bright}Information Commands (unlimited):${c.reset}

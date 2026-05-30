@@ -969,7 +969,7 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('Generated API');
   });
 
-  test('help command key-value form searches local commands', async () => {
+  test('help command key-value form normalizes to command help', async () => {
     const handler = resolveHandler(['help', 'command=get_status'], options);
 
     expect(handler?.name).toBe('help');
@@ -984,7 +984,50 @@ describe('local command handlers', () => {
     const exitCode = await handler.render(result, options, undefined, context);
 
     expect(exitCode).toBe(0);
-    expect(stdout.join('\n')).toContain('Commands matching "command=get_status"');
+    const output = stdout.join('\n');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toContain('API route:');
+    expect(output).not.toContain('Commands matching "command=get_status"');
+  });
+
+  test('help --help shows local help overview', async () => {
+    const handler = resolveHandler(['help', '--help'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', '--help'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    const output = stdout.join('\n');
+    expect(output).toContain('SpaceMolt CLI');
+    expect(output).toContain('Command Groups');
+    expect(output).not.toContain('Commands matching "--help"');
+  });
+
+  test('help -h shows local help overview', async () => {
+    const handler = resolveHandler(['help', '-h'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', '-h'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    const output = stdout.join('\n');
+    expect(output).toContain('SpaceMolt CLI');
+    expect(output).toContain('Command Groups');
+    expect(output).not.toContain('Commands matching "-h"');
   });
 
   test('api command inline help renders commands supplied by a registry snapshot', () => {

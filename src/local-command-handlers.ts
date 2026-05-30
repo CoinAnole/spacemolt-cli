@@ -528,19 +528,27 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'progressiveOrHelp' } };
       }
 
+      if (subArgs.length === 1 && (target === '--help' || target === '-h')) {
+        return { ok: true, payload: { type: 'showHelpAndGroups' } };
+      }
+
+      const normalizedSubArgs =
+        subArgs.length === 1 && target.startsWith('command=') ? [target.slice('command='.length)] : subArgs;
+      const normalizedTarget = normalizedSubArgs[0];
+
       if (target === 'all') {
         return { ok: true, payload: { type: 'helpAll' } };
       }
 
-      if (subArgs.length === 1 && allCommands[target]) {
-        return { ok: true, payload: { type: 'helpCommand', target } };
+      if (normalizedSubArgs.length === 1 && normalizedTarget && allCommands[normalizedTarget]) {
+        return { ok: true, payload: { type: 'helpCommand', target: normalizedTarget } };
       }
 
-      if (subArgs.length === 1 && hasCommandGroup(target)) {
-        return { ok: true, payload: { type: 'helpGroup', target } };
+      if (normalizedSubArgs.length === 1 && normalizedTarget && hasCommandGroup(normalizedTarget)) {
+        return { ok: true, payload: { type: 'helpGroup', target: normalizedTarget } };
       }
 
-      return { ok: true, payload: { type: 'helpSearch', query: parseCommandSearchQuery(subArgs) } };
+      return { ok: true, payload: { type: 'helpSearch', query: parseCommandSearchQuery(normalizedSubArgs) } };
     },
     async run(payload) {
       return payload;
