@@ -31,6 +31,30 @@ export const catalogItemsFixture = {
   type: 'items',
 };
 
+export const catalogRecipesFixture = {
+  items: [],
+  message: 'Recipes: showing 1 of 24',
+  page: 1,
+  page_size: 20,
+  recipes: [
+    {
+      category: 'refining',
+      crafting_time: 3,
+      description: 'Smelt iron ore into reinforced plates.',
+      id: 'refine_iron_plates',
+      inputs: [
+        { item_id: 'ore_iron', quantity: 4 },
+        { item_id: 'fuel_cell', quantity: 1 },
+      ],
+      name: 'Refine Iron Plates',
+      outputs: [{ item_id: 'iron_plate', quantity: 2 }],
+    },
+  ],
+  total: 24,
+  total_pages: 2,
+  type: 'recipes',
+};
+
 export const missionsFixture = {
   base_id: 'nova_terra_central',
   base_name: 'Nova Terra Central',
@@ -125,6 +149,7 @@ export const genericFixtureCases = {};
 export const genericHighValueFixtures = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
+  catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
 };

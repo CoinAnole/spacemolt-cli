@@ -23,6 +23,19 @@ export interface FixtureSchemaComparison {
   isPartialExample: boolean;
 }
 
+export type BlockingDivergenceKind = 'extra-in-fixture' | 'type-mismatch' | 'required-missing';
+
+export interface LabeledDivergence extends Divergence {
+  label: string;
+  command: string;
+  apiRoute?: string;
+}
+
+export interface FixtureSchemaBaseline {
+  generatedAtGameserver?: string;
+  blockingDivergenceSignatures: string[];
+}
+
 export interface CompareOptions {
   /** Only compare these labels or command names (substring match) */
   only?: string[];
@@ -31,6 +44,7 @@ export interface CompareOptions {
 }
 
 const DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
+export const DEFAULT_SCHEMA_BASELINE_PATH = path.join(import.meta.dir, 'fixture-schema-baseline.json');
 
 type JsonSchema = Record<string, unknown> & {
   type?: string | string[];
@@ -45,7 +59,7 @@ type JsonSchema = Record<string, unknown> & {
   description?: string;
 };
 
-interface OpenApiSpec {
+export interface OpenApiSpec {
   paths: Record<
     string,
     Record<string, { responses?: Record<string, { content?: Record<string, { schema?: JsonSchema }> }> }>
@@ -87,30 +101,39 @@ function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): J
 function mergeAllOf(spec: OpenApiSpec, schemas: JsonSchema[], seen = new Set<string>()): JsonSchema {
   const properties: Record<string, JsonSchema> = {};
   const required: string[] = [];
-  const out: JsonSchema = { type: 'object', properties, required };
+  const out: JsonSchema = {};
   for (const s of schemas) {
     const resolved = s.$ref ? resolveRef(spec, s.$ref, seen) : s;
-    if (resolved.allOf) {
-      const merged = mergeAllOf(spec, resolved.allOf, seen);
-      Object.assign(properties, merged.properties || {});
-      if (merged.required) required.push(...merged.required);
-    } else {
-      if (resolved.properties) Object.assign(properties, resolved.properties);
-      if (resolved.required) required.push(...resolved.required);
-      if (resolved.type && !out.type) out.type = resolved.type;
+    const effective = resolved.allOf ? mergeAllOf(spec, resolved.allOf, seen) : resolved;
+
+    for (const [key, value] of Object.entries(effective)) {
+      if (key === 'properties' || key === 'required' || key === 'allOf') continue;
+      if (out[key] === undefined) out[key] = value;
     }
+
+    if (effective.properties) {
+      for (const [key, propertySchema] of Object.entries(effective.properties)) {
+        properties[key] = { ...(properties[key] ?? {}), ...propertySchema };
+      }
+    }
+    if (effective.required) required.push(...effective.required);
   }
-  // dedupe required
-  out.required = Array.from(new Set(out.required));
+  if (Object.keys(properties).length > 0) out.properties = properties;
+  if (required.length > 0) out.required = Array.from(new Set(required));
   return out;
 }
 
 function getEffectiveSchema(spec: OpenApiSpec, schema: JsonSchema, seen = new Set<string>()): JsonSchema {
-  if (schema.$ref) return resolveRef(spec, schema.$ref, seen);
-  if (schema.allOf && schema.allOf.length > 0) {
-    return mergeAllOf(spec, schema.allOf, seen);
+  const resolved = schema.$ref ? resolveRef(spec, schema.$ref, seen) : schema;
+  if (resolved.allOf && resolved.allOf.length > 0) {
+    return mergeAllOf(spec, resolved.allOf, seen);
   }
-  return schema;
+  return resolved;
+}
+
+function resolveChildSchema(schema: JsonSchema, spec?: OpenApiSpec): JsonSchema {
+  if (!spec) return schema;
+  return getEffectiveSchema(spec, schema);
 }
 
 /**
@@ -179,6 +202,7 @@ function compareValueToSchema(
   depth: number,
   maxDepth: number,
   divergences: Divergence[],
+  spec?: OpenApiSpec,
 ): void {
   if (depth > maxDepth) return;
 
@@ -189,7 +213,15 @@ function compareValueToSchema(
   if (sType && vType !== 'undefined') {
     const schemaTypes = Array.isArray(schema.type) ? schema.type : [schema.type];
     const numericCompat = vType === 'number' && (schemaTypes.includes('integer') || schemaTypes.includes('number'));
-    if (!numericCompat && !schemaTypes.includes(vType) && !schemaTypes.includes('object') && vType !== 'null') {
+    const nullableCompat = vType === 'null' && schemaTypes.includes('null');
+    if (vType === 'null' && !nullableCompat) {
+      divergences.push({
+        path,
+        kind: 'type-mismatch',
+        message: `type ${vType} vs schema ${schemaTypes.join('|')}`,
+        fixtureValue: value,
+      });
+    } else if (!numericCompat && !nullableCompat && !schemaTypes.includes(vType) && !schemaTypes.includes('object')) {
       // loose: many schemas use "object" for maps too
       if (!(vType === 'object' && schemaTypes.includes('object'))) {
         divergences.push({
@@ -231,19 +263,21 @@ function compareValueToSchema(
 
     // Recurse into known properties
     for (const [k, propSchema] of Object.entries(schemaProps)) {
+      const resolvedPropSchema = resolveChildSchema(propSchema as JsonSchema, spec);
       const childPath = path ? `${path}.${k}` : k;
       const childVal = (obj as Record<string, unknown>)[k];
-      const childRequired = (propSchema as JsonSchema).required || schema.required;
+      const childRequired = resolvedPropSchema.required || schema.required;
 
       if (childVal !== undefined) {
         compareValueToSchema(
           childVal,
-          propSchema as JsonSchema,
+          resolvedPropSchema,
           childPath,
           childRequired,
           depth + 1,
           maxDepth,
           divergences,
+          spec,
         );
       } else if (required?.includes(k)) {
         divergences.push({
@@ -254,10 +288,11 @@ function compareValueToSchema(
       }
     }
   } else if (vType === 'array' && Array.isArray(value) && schema.items) {
-    const itemSchema = schema.items as JsonSchema;
+    const itemSchema = resolveChildSchema(schema.items as JsonSchema, spec);
+    const itemRequired = Array.isArray(itemSchema.required) ? itemSchema.required : undefined;
     for (let i = 0; i < Math.min(value.length, 3); i++) {
       // sample first few items to keep report short
-      compareValueToSchema(value[i], itemSchema, `${path}[${i}]`, undefined, depth + 1, maxDepth, divergences);
+      compareValueToSchema(value[i], itemSchema, `${path}[${i}]`, itemRequired, depth + 1, maxDepth, divergences, spec);
     }
     if (value.length > 3) {
       divergences.push({
@@ -275,7 +310,14 @@ function compareValueToSchema(
 export function compareFixtureToSchema(
   fixtureValue: unknown,
   schema: JsonSchema,
-  opts: { label: string; command: string; apiRoute: string; primarySchemaName?: string; maxDepth?: number } = {
+  opts: {
+    label: string;
+    command: string;
+    apiRoute: string;
+    primarySchemaName?: string;
+    maxDepth?: number;
+    spec?: OpenApiSpec;
+  } = {
     label: '',
     command: '',
     apiRoute: '',
@@ -283,16 +325,17 @@ export function compareFixtureToSchema(
 ): FixtureSchemaComparison {
   const maxDepth = opts.maxDepth ?? 4;
   const divergences: Divergence[] = [];
+  const effectiveSchema = resolveChildSchema(schema, opts.spec);
 
   // Top level required from the primary schema
-  const topRequired = Array.isArray(schema.required) ? schema.required : undefined;
+  const topRequired = Array.isArray(effectiveSchema.required) ? effectiveSchema.required : undefined;
 
-  compareValueToSchema(fixtureValue, schema, '', topRequired, 0, maxDepth, divergences);
+  compareValueToSchema(fixtureValue, effectiveSchema, '', topRequired, 0, maxDepth, divergences, opts.spec);
 
   // Fields declared in schema but completely absent from fixture (informational for partial examples)
-  if (schema.properties && typeof fixtureValue === 'object' && fixtureValue !== null) {
+  if (effectiveSchema.properties && typeof fixtureValue === 'object' && fixtureValue !== null) {
     const present = new Set(Object.keys(fixtureValue as Record<string, unknown>));
-    for (const [k, prop] of Object.entries(schema.properties)) {
+    for (const [k, prop] of Object.entries(effectiveSchema.properties)) {
       if (!present.has(k)) {
         const isRequired = topRequired?.includes(k);
         divergences.push({
@@ -384,12 +427,91 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
       apiRoute,
       primarySchemaName: resolved.primarySchemaName,
       maxDepth,
+      spec,
     });
 
     results.push(comparison);
   }
 
   return results.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export function isBlockingDivergence(
+  divergence: Divergence,
+): divergence is Divergence & { kind: BlockingDivergenceKind } {
+  return (
+    divergence.kind === 'extra-in-fixture' ||
+    divergence.kind === 'type-mismatch' ||
+    divergence.kind === 'required-missing'
+  );
+}
+
+export function divergenceSignature(
+  divergence: Pick<LabeledDivergence, 'label' | 'command' | 'kind' | 'path'>,
+): string {
+  return `${divergence.label}|${divergence.command}|${divergence.kind}|${divergence.path}`;
+}
+
+export function filterBlockingDivergences(comparisons: FixtureSchemaComparison[]): LabeledDivergence[] {
+  return comparisons
+    .flatMap((comparison) =>
+      comparison.divergences.filter(isBlockingDivergence).map((divergence) => ({
+        ...divergence,
+        label: comparison.label,
+        command: comparison.command,
+        apiRoute: comparison.apiRoute,
+      })),
+    )
+    .sort((a, b) => divergenceSignature(a).localeCompare(divergenceSignature(b)));
+}
+
+export function loadFixtureSchemaBaseline(customPath = DEFAULT_SCHEMA_BASELINE_PATH): FixtureSchemaBaseline {
+  const raw = fs.readFileSync(customPath, 'utf8');
+  const parsed = JSON.parse(raw) as FixtureSchemaBaseline;
+  return {
+    generatedAtGameserver: parsed.generatedAtGameserver,
+    blockingDivergenceSignatures: [...(parsed.blockingDivergenceSignatures ?? [])].sort(),
+  };
+}
+
+export function formatBlockingDivergenceDiff(actual: string[], expected: string[]): string {
+  const actualSet = new Set(actual);
+  const expectedSet = new Set(expected);
+  const added = actual.filter((signature) => !expectedSet.has(signature));
+  const removed = expected.filter((signature) => !actualSet.has(signature));
+  const lines: string[] = [];
+
+  if (added.length > 0) {
+    lines.push('Added blocking fixture/schema divergence signatures:');
+    lines.push(...added.map((signature) => `  + ${signature}`));
+  }
+
+  if (removed.length > 0) {
+    if (lines.length > 0) lines.push('');
+    lines.push('Removed blocking fixture/schema divergence signatures:');
+    lines.push(...removed.map((signature) => `  - ${signature}`));
+  }
+
+  return lines.length > 0 ? lines.join('\n') : 'No blocking fixture/schema divergence signature changes.';
+}
+
+export function assertFixtureSchemaBaseline(options: { baselinePath?: string } = {}): void {
+  const actual = filterBlockingDivergences(compareHighValueFixturesToSpec())
+    .map((divergence) => divergenceSignature(divergence))
+    .sort();
+  const expected = loadFixtureSchemaBaseline(options.baselinePath).blockingDivergenceSignatures;
+
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(
+      [
+        'Blocking fixture/schema divergences do not match the reviewed baseline.',
+        formatBlockingDivergenceDiff(actual, expected),
+        '',
+        'Review the schema drift, then run:',
+        '  bun run report:fixture-schemas --update-baseline',
+      ].join('\n'),
+    );
+  }
 }
 
 export function formatComparisonReport(comparisons: FixtureSchemaComparison[]): string {

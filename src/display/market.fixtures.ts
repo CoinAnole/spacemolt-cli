@@ -144,10 +144,12 @@ export const marketHighValueFixtures = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
+  storage: { command: 'storage', fixture: storageFixture },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   view_storage: { command: 'view_storage', fixture: storageFixture },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
+  faction_trade_intel: { command: 'faction_trade_intel', fixture: intelFixture },
   get_trades: { command: 'get_trades', fixture: marketListingsFixture },
 };

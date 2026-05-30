@@ -1,0 +1,6 @@
+
+=== Facility ===
+
+  Name        | ID         | Level | Status | Owner  
+  ------------+------------+-------+--------+--------
+  Fuel Bunker | facility-1 | 2     | true   | Marlowe

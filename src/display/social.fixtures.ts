@@ -118,6 +118,8 @@ export const socialFixtureCases = {
 export const socialHighValueFixtures = {
   chat: { command: 'chat', fixture: chatSentFixture },
   facility_list: { command: 'facility_list', fixture: facilitiesFixture },
+  facility_list_detailed: { command: 'facility_list', fixture: facilityListFixture },
+  facility_get: { command: 'facility_get', fixture: facilityFixture },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },

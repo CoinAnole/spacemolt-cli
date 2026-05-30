@@ -52,8 +52,17 @@ The project uses committed golden files for exact output stability of both human
   ```bash
   bun test src/output-golden.test.ts
   ```
-- 33 high-value fixtures (in `src/display/*-fixtures.ts`) generate 140 renderer cases (table + json + yaml + compact-json, plus projections) + 8 CLI cases exercising `runInvocation`.
-- All 296 files live under `src/golden-output/{renderer,cli}/`. Use `UPDATE_GOLDENS=1` only for intentional output changes.
+- 39 high-value fixtures (in `src/display/*-fixtures.ts`) generate 160 renderer cases (table + json + yaml + compact-json, plus projections) + 9 CLI cases exercising `runInvocation`.
+- All 338 files live under `src/golden-output/{renderer,cli}/`. Use `UPDATE_GOLDENS=1` only for intentional output changes.
+
+Golden maintenance helpers:
+
+- `UPDATE_GOLDENS=1 GOLDEN_ONLY=renderer/get_status.table bun test src/output-golden.test.ts`
+  updates only matching golden cases.
+- `STRICT_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts`
+  verifies the current fixture/schema drift matches the reviewed baseline.
+- `bun run report:fixture-schemas --update-baseline`
+  refreshes the reviewed fixture/schema drift baseline after intentional fixture or OpenAPI changes.
 
 To see structural differences between the curated fixtures and the actual response schemas in the OpenAPI spec (informational only — never fails tests):
 

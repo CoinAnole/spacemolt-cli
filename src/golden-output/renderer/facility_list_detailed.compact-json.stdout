@@ -1,0 +1,1 @@
+{"base_id":"earth_station","station_facilities":[{"facility_id":"station-fuel","type":"fuel_bunker","name":"Fuel Bunker","category":"service","active":true,"maintenance_satisfied":true}],"player_facilities":[{"facility_id":"player-refinery","type":"ore_refinery","name":"Ore Refinery","category":"production","active":false,"maintenance_satisfied":true}],"faction_facilities":[]}

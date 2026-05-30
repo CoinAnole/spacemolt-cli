@@ -6,12 +6,19 @@ import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
 import { renderStructuredResult } from './display';
 import { getStatusFixture, highValueCommandFixtures, viewMarketFixture } from './display/formatter-fixtures';
+import type { GeneratedApiRoute } from './openapi-metadata';
 import { type RunnerDependencies, runInvocation } from './runner';
 import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, QUIET, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
-import { compareHighValueFixturesToSpec, formatComparisonReport } from './test-support/fixture-schema-compare.ts';
 import {
+  assertFixtureSchemaBaseline,
+  compareHighValueFixturesToSpec,
+  formatComparisonReport,
+} from './test-support/fixture-schema-compare.ts';
+import {
+  assertGoldenFileSet,
   assertGoldenOutput,
+  type GoldenManifestEntry,
   type GoldenOutput,
   type GoldenStdoutFormat,
   normalizeOutputLines,
@@ -76,6 +83,7 @@ function renderRendererCase(testCase: RendererGoldenCase): GoldenOutput {
 interface CliGoldenCase {
   name: string;
   argv: string[];
+  generatedRoutes?: Record<string, GeneratedApiRoute>;
   response?: APIResponse;
   expectedExitCode?: number;
   stdoutFormat?: GoldenStdoutFormat;
@@ -154,7 +162,7 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
         throw new Error('unexpected real client creation in golden test');
       },
       loadCachedGeneratedRoutes() {
-        return undefined;
+        return testCase.generatedRoutes;
       },
       defaultOpenApiCacheDir() {
         return path.join(tempDir, 'openapi-cache');
@@ -304,7 +312,48 @@ const cliCases: CliGoldenCase[] = [
     expectedExitCode: 1,
     stdoutFormat: 'json',
   },
+  {
+    name: 'dynamic-generated-command.table',
+    argv: ['--plain', 'experimental_ping', 'alpha'],
+    generatedRoutes: {
+      'POST /api/v2/spacemolt_experimental/ping': {
+        operationId: 'spacemolt_experimental_ping',
+        summary: 'Exercise a dynamically generated command',
+        route: {
+          tool: 'spacemolt_experimental',
+          action: 'ping',
+          method: 'POST',
+        },
+        required: ['target'],
+        schema: {
+          target: {
+            type: 'string',
+            positionalIndex: 0,
+            description: 'Target identifier',
+          },
+        },
+      },
+    },
+    response: {
+      structuredContent: {
+        items: [{ id: 'alpha', name: 'Alpha Probe', type: 'experimental' }],
+        total: 1,
+      },
+    },
+  },
 ];
+
+const goldenManifest: GoldenManifestEntry[] = [
+  ...rendererMatrixCases.map((testCase) => ({ group: 'renderer' as const, name: testCase.name })),
+  ...rendererProjectionCases.map((testCase) => ({ group: 'renderer' as const, name: testCase.name })),
+  ...cliCases.map((testCase) => ({ group: 'cli' as const, name: testCase.name })),
+];
+
+describe('golden output manifest', () => {
+  test('all committed golden files are referenced by active cases', () => {
+    assertGoldenFileSet(goldenManifest);
+  });
+});
 
 describe('renderer golden output', () => {
   for (const testCase of [...rendererMatrixCases, ...rendererProjectionCases]) {
@@ -352,5 +401,13 @@ if (process.env.SHOW_FIXTURE_SCHEMA_DIVERGENCES === '1') {
     } catch (err) {
       console.error('[fixture-schema-compare] failed to generate report:', err);
     }
+  });
+}
+
+if (process.env.STRICT_FIXTURE_SCHEMA_DIVERGENCES === '1') {
+  describe('fixture schema drift baseline', () => {
+    test('blocking fixture/schema divergences match the reviewed baseline', () => {
+      assertFixtureSchemaBaseline();
+    });
   });
 }

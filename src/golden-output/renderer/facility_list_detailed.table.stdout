@@ -1,0 +1,17 @@
+
+=== Facilities at earth_station ===
+
+=== Station Facilities ===
+
+  Name        | ID           | Category | Active | Maint | Owner
+  ------------+--------------+----------+--------+-------+------
+  Fuel Bunker | station-fuel | service  | true   | true  |      
+
+=== Player Facilities ===
+
+  Name         | ID              | Category   | Active | Maint | Owner
+  -------------+-----------------+------------+--------+-------+------
+  Ore Refinery | player-refinery | production | false  | true  |      
+
+=== Faction Facilities ===
+(None)
