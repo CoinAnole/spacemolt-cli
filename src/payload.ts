@@ -18,6 +18,25 @@ type PayloadResolveResult =
   | { type: 'payload'; payload: Record<string, unknown> }
   | { type: 'ambiguous'; field: string; result: Extract<CachedIdResolveResult, { type: 'ambiguous' }> };
 
+const EMPIRE_RECIPIENT_ALIASES = new Set([
+  'solarian',
+  'solarian_confederacy',
+  'confederacy',
+  'voidborn',
+  'voidborn_collective',
+  'collective',
+  'crimson',
+  'crimson_pact',
+  'pact',
+  'nebula',
+  'nebula_trade_federation',
+  'trade_federation',
+  'outerrim',
+  'outer_rim',
+  'outer_rim_explorers',
+  'explorers',
+]);
+
 export function preparePayload(
   command: string,
   rawPayload: Record<string, unknown>,
@@ -112,6 +131,9 @@ function resolveCachedIdsForPayload(
 }
 
 function reservedIdValue(command: string, field: string, value: string): string | undefined {
+  if (command === 'send_gift' && field === 'target' && isEmpireRecipientAlias(value)) {
+    return value.trim();
+  }
   if (command === 'jump' && (field === 'id' || field === 'target_system') && isNumericJumpBearing(value)) {
     return value.trim();
   }
@@ -120,6 +142,15 @@ function reservedIdValue(command: string, field: string, value: string): string 
   const normalized = value.trim().toLowerCase();
   if (normalized === 'fuel' || normalized === 'tank_fuel') return 'fuel';
   return undefined;
+}
+
+function isEmpireRecipientAlias(value: string): boolean {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (normalized.startsWith('empire:')) return true;
+  return EMPIRE_RECIPIENT_ALIASES.has(normalized);
 }
 
 function isNumericJumpBearing(value: string): boolean {

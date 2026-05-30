@@ -342,6 +342,10 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { target: 'solarian' },
     });
+    expect(preparePayload('send_gift', { recipient: 'solarian', credits: '200' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { target: 'solarian', credits: 200 },
+    });
   });
 
   test('resolves faction diplomacy targets from cached faction tags after alias normalization', () => {
