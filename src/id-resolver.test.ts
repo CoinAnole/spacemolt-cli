@@ -133,6 +133,59 @@ describe('cached ID payload resolver', () => {
     expect(tankFuel).toEqual({ type: 'payload', payload: { id: 'fuel', quantity: 100 } });
   });
 
+  test('keeps real fuel item IDs reserved for fuel market and gift commands', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'fuel_cell',
+            name: 'Fuel Cell',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(
+      preparePayload(
+        'faction_create_sell_order',
+        { item_id: 'fuel', quantity: '100', price_each: '7' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'fuel', quantity: 100, price_each: 7 },
+    });
+    expect(
+      preparePayload(
+        'faction_create_buy_order',
+        { item_id: 'fuel', quantity: '100', price_each: '6' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'fuel', quantity: 100, price_each: 6 },
+    });
+    expect(
+      preparePayload(
+        'send_gift',
+        { recipient: 'empire:crimson', item_id: 'fuel', quantity: '50' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'empire:crimson', item_id: 'fuel', quantity: 50 },
+    });
+  });
+
   test('resolves faction player commands after player_id aliases normalize to id', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

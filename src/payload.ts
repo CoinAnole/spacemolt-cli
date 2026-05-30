@@ -116,7 +116,7 @@ function resolveCachedIdsForPayload(
       }
       resolvedPayload[field] = resolvedArray;
     } else if (typeof value === 'string') {
-      const reservedValue = reservedIdValue(command, field, value);
+      const reservedValue = reservedIdValue(command, field, value, kind);
       if (reservedValue) {
         resolvedPayload[field] = reservedValue;
         continue;
@@ -130,17 +130,17 @@ function resolveCachedIdsForPayload(
   return { type: 'payload', payload: resolvedPayload };
 }
 
-function reservedIdValue(command: string, field: string, value: string): string | undefined {
+function reservedIdValue(command: string, field: string, value: string, kind?: string): string | undefined {
   if (command === 'send_gift' && field === 'target' && isEmpireRecipientAlias(value)) {
     return value.trim();
   }
   if (command === 'jump' && (field === 'id' || field === 'target_system') && isNumericJumpBearing(value)) {
     return value.trim();
   }
-  if (command !== 'sell') return undefined;
-  if (field !== 'id' && field !== 'item_id') return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'fuel' || normalized === 'tank_fuel') return 'fuel';
+  if (kind === 'item') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'fuel' || normalized === 'tank_fuel') return 'fuel';
+  }
   return undefined;
 }
 
