@@ -391,12 +391,25 @@ describe('help output branches', () => {
         required: [],
         route: { tool: 'spacemolt_travel', action: 'dock_now', method: 'POST' },
       },
+      agentlogs: {
+        description: 'Read recent agent log entries',
+        usage: '',
+        category: 'Logs',
+        example: 'spacemolt agentlogs --tag navigation',
+        args: [],
+        required: [],
+        route: { tool: 'spacemolt_agent', action: 'logs', method: 'POST' },
+      },
     });
 
-    const output = capture.stdout.join('\n');
-    expect(output).toContain('Commands matching "navigation"');
-    expect(output).toContain('dock_now');
-    expect(output).toContain('Dock immediately at the current station');
+    const lines = capture.stdout.join('\n').split('\n');
+    const categoryIndex = lines.findIndex((line) => line.includes('dock_now'));
+    const exampleIndex = lines.findIndex((line) => line.includes('agentlogs'));
+
+    expect(capture.stdout.join('\n')).toContain('Commands matching "navigation"');
+    expect(categoryIndex).toBeGreaterThan(-1);
+    expect(exampleIndex).toBeGreaterThan(-1);
+    expect(categoryIndex).toBeLessThan(exampleIndex);
   });
 
   test('showCommandSearch uses local help metadata for help command', () => {
