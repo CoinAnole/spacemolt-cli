@@ -7,6 +7,7 @@ import {
   browseShipsFixture,
   catalogItemsFixture,
   createSellOrderFixture,
+  empireInfoFixture,
   formatterFixtureCases,
   getLocationFixture,
   getStatusFixture,
@@ -1257,6 +1258,21 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Missions ===');
     expect(stdout).toContain('Pirate Sweep');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats empire policy snapshots without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_empire_info', empireInfoFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Empire Policies ===');
+    expect(stdout).toContain('solarian');
+    expect(stdout).toContain('voidborn');
+    expect(stdout).toContain('Fee 5,000 cr, min balance 25,000 cr, min rep 40');
+    expect(stdout).toContain('Auto-approved');
+    expect(stdout).toContain('Sales 1%, income 5%, property 0.5%, foreign default 3%');
+    expect(stdout).toContain('unstable_core');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
   });
 
   test('get_active_missions formats nested active mission state instead of generic OK', () => {

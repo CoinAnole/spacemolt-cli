@@ -1,0 +1,25 @@
+
+=== Empire Policies ===
+
+solarian
+  Citizenship: Fee 5,000 cr, min balance 25,000 cr, min rep 40
+  Taxes: Sales 1%, income 5%, property 0.5%, foreign default 3%, stateless 3%
+  Foreign Overrides: crimson 2%, nebula 2%, outerrim 2%
+  Fees: Listing 2%, ship 1%, rent 200%, eviction grace 2 cycles
+  Costs: Fuel 6 cr/unit, repair 5 cr/hull, starting 500 cr
+  Bounties: Attack bounty 500 cr, kill bounty 2,000 cr, tax delinquency 10,000/credit
+  Enforcement: jail 24h, shoot <= -20, customs fine 200%
+  Reputation: Attack -5, kill -10, restore 50% cap 10, decay 1, trade fill cap 2 per 200, baseline 20/10
+  Contraband: None
+  Updated: 2026-05-16 21:48 UTC
+
+voidborn
+  Citizenship: Auto-approved
+  Taxes: Sales 1%, income 2%, property 0.5%, foreign default 0%, stateless 0%
+  Fees: Listing 1%, ship 1%, rent 100%, eviction grace 2 cycles
+  Costs: Fuel 2 cr/unit, repair 5 cr/hull, starting 100 cr
+  Bounties: Attack bounty 500 cr, kill bounty 2,000 cr, tax delinquency 0/credit
+  Enforcement: jail 24h, shoot <= -20, customs fine 200%
+  Reputation: Attack -5, kill -10, restore 50% cap 10, decay 1, trade fill cap 2 per 200, baseline 20/10
+  Contraband: unstable_core
+  Updated: 2026-05-16 21:41 UTC
