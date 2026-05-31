@@ -644,7 +644,7 @@ describe('structuredContent output mode precedence', () => {
       {
         structuredContent: {
           base_id: 'earth_station',
-          hint: 'Faction storage at Earth Station',
+          hint: "2,162,917 items in faction storage at crimson_war_citadel, nova_terra_central Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
           faction_fuel_reserve: 320,
           faction_fuel_capacity: 500,
           items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 }],
@@ -659,7 +659,9 @@ describe('structuredContent output mode precedence', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Faction Storage at earth_station ===');
     expect(stdout).toContain('Fuel bunker: 320 / 500 units');
-    expect(stdout).toContain('Faction storage at Earth Station');
+    expect(stdout).toContain(
+      "2,162,917 items in faction storage at crimson_war_citadel, nova_terra_central\nFuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
+    );
   });
 
   test('rendered text output uses context clock for timestamps', async () => {

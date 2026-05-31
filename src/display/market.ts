@@ -51,6 +51,10 @@ function formatPriceDepth(depth: BestPriceDepth | undefined): { price: string; d
   };
 }
 
+function formatStorageHint(hint: string): string {
+  return hint.replace(/[ \t]+(Fuel bunker here:)/g, '\n$1');
+}
+
 function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return items.map((item) => {
     const buy = formatPriceDepth(bestPriceDepth(item.buy_orders as Array<Record<string, unknown>> | undefined, 'buy'));
@@ -327,7 +331,7 @@ export const marketFormatters = [
       if (isFactionStorage && (factionFuelReserve !== undefined || factionFuelCapacity !== undefined)) {
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }
-      if (typeof r.hint === 'string' && r.hint) emitLine(`${c.dim}${r.hint}${c.reset}\n`);
+      if (typeof r.hint === 'string' && r.hint) emitLine(`${c.dim}${formatStorageHint(r.hint)}${c.reset}\n`);
       printItemTable(items);
       if (ships.length) {
         const nameW = Math.max(9, ...ships.map((s) => String(s.class_name || s.class_id || '').length));
