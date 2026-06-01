@@ -169,12 +169,14 @@ export const socialFormatters = [
     (r) => {
       const thread = isRecord(r.thread) ? r.thread : undefined;
       if (!thread) return false;
-      emitLine(`\n${c.bright}=== Forum Thread: ${thread.title ?? thread.thread_id ?? thread.id} ===${c.reset}`);
-      emitOptionalLine('ID', thread.thread_id ?? thread.id);
+      emitLine(`\n${c.bright}=== Forum Thread: ${thread.title ?? thread.id ?? thread.thread_id} ===${c.reset}`);
+      emitOptionalLine('ID', thread.id ?? thread.thread_id);
       emitOptionalLine('Category', thread.category);
-      emitOptionalLine('Author', thread.author ?? thread.username);
+      emitOptionalLine('Author', thread.author ?? thread.username ?? thread.author_id);
       emitOptionalLine('Created', formatTimestampPreview(thread.created_at));
+      emitOptionalLine('Updated', formatTimestampPreview(thread.updated_at));
       emitOptionalLine('Upvotes', thread.upvotes);
+      emitOptionalLine('Replies', thread.reply_count);
       emitBody('Content', thread.content ?? thread.text);
       const replies = firstArray(r, ['replies']);
       if (replies) {
@@ -187,11 +189,11 @@ export const socialFormatters = [
           'Replies',
           rows,
           [
-            ['Author', ['author', 'username']],
+            ['Author', ['author', 'username', 'author_id']],
             ['Created', ['created_preview', 'created_at', 'timestamp']],
             ['Reply', ['content_preview', 'content', 'text']],
             ['Votes', ['upvotes']],
-            ['ID', ['reply_id', 'id']],
+            ['ID', ['id', 'reply_id']],
           ],
           { maxCellWidth: 72 },
         );
