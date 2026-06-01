@@ -243,6 +243,21 @@ export const guideFixture = {
   hint: 'Use get_poi before mining.',
 };
 
+export const guideListFixture = {
+  guides: [
+    {
+      id: 'miner',
+      title: 'Miner',
+      description: 'Mining progression from asteroid belts to station markets.',
+    },
+    {
+      id: 'trader',
+      title: 'Trader',
+      description: 'Buying low, selling high, and watching market routes.',
+    },
+  ],
+};
+
 export const socialFixtureCases = {
   chat_sent: { command: 'chat', fixture: chatSentFixture },
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
@@ -269,4 +284,5 @@ export const socialHighValueFixtures = {
   faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },
   forum_get_thread: { command: 'forum_get_thread', fixture: forumThreadFixture },
   get_guide: { command: 'get_guide', fixture: guideFixture },
+  get_guide_list: { command: 'get_guide', fixture: guideListFixture },
 };

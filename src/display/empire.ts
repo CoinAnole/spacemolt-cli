@@ -319,14 +319,18 @@ export const empireFormatters = [
       if (r.income_tax === undefined && r.property_tax === undefined && r.sales_tax_rates === undefined) return false;
       emitLine(`\n${c.bright}=== Tax Estimate ===${c.reset}`);
       if (r.tax_collection_active !== undefined) emitLine(`Collection active: ${r.tax_collection_active}`);
-      if (r.taxable_income_to_date !== undefined) emitLine(`Taxable income: ${r.taxable_income_to_date}`);
+      if (r.taxable_income_to_date !== undefined)
+        emitLine(`Taxable income: ${formatCredits(r.taxable_income_to_date) ?? r.taxable_income_to_date}`);
       const incomeTax = formatTaxEntries(r.income_tax, 'income');
       if (incomeTax) emitLine(`Income tax: ${incomeTax}`);
-      if (r.income_tax_total !== undefined) emitLine(`Income tax total: ${r.income_tax_total}`);
-      if (r.assessed_property_value !== undefined) emitLine(`Assessed property: ${r.assessed_property_value}`);
+      if (r.income_tax_total !== undefined)
+        emitLine(`Income tax total: ${formatCredits(r.income_tax_total) ?? r.income_tax_total}`);
+      if (r.assessed_property_value !== undefined)
+        emitLine(`Assessed property: ${formatCredits(r.assessed_property_value) ?? r.assessed_property_value}`);
       const propertyTax = formatTaxEntries(r.property_tax, 'property');
       if (propertyTax) emitLine(`Property tax: ${propertyTax}`);
-      if (r.property_tax_total !== undefined) emitLine(`Property tax total: ${r.property_tax_total}`);
+      if (r.property_tax_total !== undefined)
+        emitLine(`Property tax total: ${formatCredits(r.property_tax_total) ?? r.property_tax_total}`);
       const salesTaxRates = formatSalesTaxRates(r.sales_tax_rates);
       if (salesTaxRates) emitLine(`Sales tax rates: ${salesTaxRates}`);
       const taxableIncomeBySource = formatTaxableIncomeSources(r.taxable_income_by_source);

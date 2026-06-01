@@ -149,6 +149,9 @@ export const completedMissionDetailFixture = {
   ],
   rewards: {
     credits: 7500,
+    items: { ore_iron: 25 },
+    reputation: 3,
+    pirate_rep: 1,
     skill_xp: { piloting: 25 },
   },
   dialog: { complete: 'Good work keeping the refineries supplied.' },

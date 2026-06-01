@@ -6,6 +6,12 @@ function formatNumber(value: unknown): string {
   return typeof value === 'number' ? value.toLocaleString() : String(value);
 }
 
+function formatSignedNumber(value: unknown): string {
+  const text = formatNumber(value);
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) && number < 0 ? text : `+${text}`;
+}
+
 function formatDisplayValue(value: unknown): string {
   if (isRecord(value)) {
     const name = value.name ?? value.base_name ?? value.username;
@@ -113,19 +119,41 @@ function formatCitizenships(value: unknown): string | undefined {
 function summarizeObjectiveForDisplay(objective: unknown): string {
   if (!isRecord(objective)) return String(objective);
   const description = objective.description ?? objective.title ?? objective.type;
+  const details: string[] = [];
+  if (objective.quantity !== undefined) details.push(`quantity ${formatNumber(objective.quantity)}`);
+  if (objective.item_id !== undefined) details.push(`item ${objective.item_id}`);
+  const system = objective.system_name ?? objective.system_id;
+  if (system !== undefined) details.push(`system ${system}`);
+  const targetBase = objective.target_base_name ?? objective.target_base_id;
+  if (targetBase !== undefined) details.push(`base ${targetBase}`);
+  if (Array.isArray(objective.participants) && objective.participants.length > 0) {
+    details.push(`participants ${objective.participants.join(', ')}`);
+  }
+  if (Array.isArray(objective.eligible_players) && objective.eligible_players.length > 0) {
+    details.push(`eligible ${objective.eligible_players.join(', ')}`);
+  }
   const progress = objective.progress;
   if (isRecord(progress)) {
     const current = progress.current ?? progress.completed ?? progress.amount;
     const required = progress.required ?? progress.target ?? progress.total;
-    if (current !== undefined && required !== undefined) return `${description ?? 'Objective'} ${current}/${required}`;
+    if (current !== undefined && required !== undefined) details.push(`${current}/${required}`);
   }
-  return String(description ?? objective.type ?? 'Objective');
+  const detailText = details.length ? ` (${details.join(', ')})` : '';
+  return `${description ?? objective.type ?? 'Objective'}${detailText}`;
 }
 
 function summarizeRewardForDisplay(rewards: unknown): string {
   if (!isRecord(rewards)) return '';
   const parts: string[] = [];
-  if (rewards.credits !== undefined) parts.push(`${rewards.credits} cr`);
+  if (rewards.credits !== undefined) parts.push(`${formatNumber(rewards.credits)} cr`);
+  if (isRecord(rewards.items)) {
+    const items = Object.entries(rewards.items)
+      .filter(([, quantity]) => quantity !== undefined && quantity !== null && quantity !== '')
+      .map(([item, quantity]) => `${formatNumber(quantity)} ${item}`);
+    if (items.length) parts.push(items.join(', '));
+  }
+  if (rewards.reputation !== undefined) parts.push(`reputation ${formatSignedNumber(rewards.reputation)}`);
+  if (rewards.pirate_rep !== undefined) parts.push(`pirate rep ${formatSignedNumber(rewards.pirate_rep)}`);
   if (isRecord(rewards.skill_xp)) {
     parts.push(
       Object.entries(rewards.skill_xp)

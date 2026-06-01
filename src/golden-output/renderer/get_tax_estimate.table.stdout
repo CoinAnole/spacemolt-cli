@@ -1,12 +1,12 @@
 
 === Tax Estimate ===
 Collection active: true
-Taxable income: 42000
+Taxable income: 42,000 cr
 Income tax: solarian owed 210 cr (gross 210 cr, credit 0 cr, rate 5%, brackets 0-50,000 @ 5% (42,000 cr income, 210 cr tax))
-Income tax total: 210
-Assessed property: 125000
+Income tax total: 210 cr
+Assessed property: 125,000 cr
 Property tax: solarian owed 625 cr (assessed 125,000 cr, rate 0.5%)
-Property tax total: 625
+Property tax total: 625 cr
 Sales tax rates: solarian 1% (citizen rate), voidborn 2.5% (foreign rate)
 Income by source: market 30,000 cr, missions 12,000 cr
 Property by ship: ship-1 125,000 cr

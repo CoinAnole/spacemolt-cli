@@ -10,7 +10,7 @@ Repeatable: true
 Deliver iron ore to Earth Station.
 
 Objectives:
-  - Deliver Iron Ore
-Rewards: 7500 cr; piloting +25 XP
+  - Deliver Iron Ore (quantity 500, item ore_iron)
+Rewards: 7,500 cr; 25 ore_iron; reputation +3; pirate rep +1; piloting +25 XP
 Dialog: Good work keeping the refineries supplied.
 Next: mission-refinery-check
