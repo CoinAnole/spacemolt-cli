@@ -276,6 +276,55 @@ export const socialFormatters = [
     { commands: ['faction_info'] },
   ),
 
+  formatter(
+    (r) => {
+      const invites = firstArray(r, ['invites']);
+      if (!invites) return false;
+      const rows = invites.map((invite) => ({
+        ...invite,
+        created_preview: formatTimestampPreview(invite.created_at ?? invite.timestamp),
+      }));
+      printCompactTable('Faction Invites', rows, [
+        ['Faction', ['faction_name', 'name']],
+        ['Tag', ['tag', 'faction_tag']],
+        ['ID', ['faction_id', 'id']],
+        ['Invited By', ['invited_by', 'sender', 'username']],
+        ['Created', ['created_preview', 'created_at', 'timestamp']],
+      ]);
+      return true;
+    },
+    { commands: ['faction_get_invites'] },
+  ),
+
+  formatter(
+    (r, command) => {
+      if (command !== 'faction_intel_status' && command !== 'faction_trade_intel_status') return false;
+      if (r.intel_level === undefined && r.coverage_pct === undefined) return false;
+      const title = command === 'faction_trade_intel_status' ? 'Faction Trade Intel' : 'Faction Intel';
+      emitLine(`\n${c.bright}=== ${title} Status ===${c.reset}`);
+      emitOptionalLine('Intel Level', r.intel_level);
+      emitOptionalLine('Coverage', r.coverage_pct === undefined ? undefined : `${r.coverage_pct}%`);
+      emitOptionalLine('Systems Known', r.systems_known);
+      emitOptionalLine('POIs Known', r.pois_known);
+      emitOptionalLine('Stations Known', r.stations_known);
+      emitOptionalLine('Items Tracked', r.items_tracked);
+      emitOptionalLine('Total Systems', r.total_systems);
+      emitOptionalLine('Total Stations', r.total_stations);
+      emitOptionalLine('Contributors', r.contributors);
+      emitOptionalLine('Top Contributor', r.top_contributor);
+      emitOptionalLine('Most Recent Tick', r.most_recent_tick);
+      const contributions = firstArray(r, ['top_contributions']);
+      if (contributions) {
+        printCompactTable('Top Contributions', contributions, [
+          ['Contributor', ['contributor', 'username', 'player_id']],
+          ['Count', ['count', 'contributions']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['faction_intel_status', 'faction_trade_intel_status'] },
+  ),
+
   // Facilities
   namedFormatter(
     'facilities',

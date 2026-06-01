@@ -167,6 +167,48 @@ export const factionVisitRoomFixture = {
   updated_at: '2026-05-29T00:00:00Z',
 };
 
+export const factionInvitesFixture = {
+  invites: [
+    {
+      faction_id: 'smc',
+      faction_name: 'Surveyor Mining Collective',
+      tag: 'SMC',
+      invited_by: 'Marlowe',
+      created_at: '2026-05-29T12:00:00Z',
+    },
+  ],
+};
+
+export const factionIntelStatusFixture = {
+  intel_level: 'regional',
+  coverage_pct: 42.5,
+  systems_known: 17,
+  pois_known: 68,
+  total_systems: 40,
+  contributors: 3,
+  top_contributor: 'Marlowe',
+  most_recent_tick: 12045,
+  top_contributions: [
+    { contributor: 'Marlowe', count: 12 },
+    { contributor: 'Ibis', count: 7 },
+  ],
+};
+
+export const factionTradeIntelStatusFixture = {
+  intel_level: 'station',
+  coverage_pct: 36.25,
+  stations_known: 11,
+  total_stations: 32,
+  items_tracked: 19,
+  contributors: 2,
+  top_contributor: 'Ibis',
+  most_recent_tick: 12050,
+  top_contributions: [
+    { contributor: 'Ibis', count: 9 },
+    { contributor: 'Marlowe', count: 5 },
+  ],
+};
+
 export const forumThreadFixture = {
   thread: {
     thread_id: 'thread-1',
@@ -215,6 +257,9 @@ export const socialHighValueFixtures = {
   captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
+  faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
+  faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },
+  faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },
   forum_get_thread: { command: 'forum_get_thread', fixture: forumThreadFixture },
   get_guide: { command: 'get_guide', fixture: guideFixture },
 };
