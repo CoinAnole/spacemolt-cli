@@ -1,6 +1,6 @@
 import { highValueCommandFixtures } from '../display/formatter-fixtures.ts';
-import { renderStructuredResult } from '../display/index.ts';
 import { resultFormatters } from '../display/formatters.ts';
+import { renderStructuredResult } from '../display/index.ts';
 
 const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   buy: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',

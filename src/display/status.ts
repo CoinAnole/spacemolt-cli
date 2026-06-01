@@ -35,7 +35,8 @@ function formatMissionObjectText(value: unknown): string | undefined {
 function formatMissionGiver(value: unknown): string | undefined {
   if (!isRecord(value)) return formatMissionObjectText(value);
 
-  const title = value.title === undefined || value.title === null || value.title === '' ? undefined : String(value.title);
+  const title =
+    value.title === undefined || value.title === null || value.title === '' ? undefined : String(value.title);
   const name = value.name === undefined || value.name === null || value.name === '' ? undefined : String(value.name);
   const id = value.id === undefined || value.id === null || value.id === '' ? undefined : String(value.id);
   const label = [title, name].filter(Boolean).join(' ');

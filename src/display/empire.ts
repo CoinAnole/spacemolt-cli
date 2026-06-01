@@ -96,7 +96,8 @@ function formatBpsMap(value: unknown): string {
 function formatUnknownRecord(value: Record<string, unknown>): string {
   return Object.entries(value)
     .map(([key, fieldValue]) => {
-      if (fieldValue === undefined || fieldValue === null || isRecord(fieldValue) || Array.isArray(fieldValue)) return undefined;
+      if (fieldValue === undefined || fieldValue === null || isRecord(fieldValue) || Array.isArray(fieldValue))
+        return undefined;
       return `${key} ${fieldValue}`;
     })
     .filter((part): part is string => Boolean(part))
@@ -172,7 +173,8 @@ function formatSalesTaxRates(value: unknown): string | undefined {
     .map((entry) => {
       const empire = entry.empire === undefined ? undefined : String(entry.empire);
       const rate = formatBps(entry.rate_bps);
-      const reason = entry.reason === undefined || entry.reason === null || entry.reason === '' ? undefined : String(entry.reason);
+      const reason =
+        entry.reason === undefined || entry.reason === null || entry.reason === '' ? undefined : String(entry.reason);
       const label = [empire, rate].filter(Boolean).join(' ') || 'rate';
       return reason ? `${label} (${reason})` : label;
     })

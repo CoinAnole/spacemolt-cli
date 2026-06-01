@@ -249,7 +249,9 @@ export const taxEstimateFixture = {
       gross: 210,
       credit: 0,
       owed: 210,
-      brackets: [{ lower_bound: 0, upper_bound: 50000, rate_bps: 500, income_in_bracket: 42000, tax_from_bracket: 210 }],
+      brackets: [
+        { lower_bound: 0, upper_bound: 50000, rate_bps: 500, income_in_bracket: 42000, tax_from_bracket: 210 },
+      ],
     },
   ],
   income_tax_total: 210,
