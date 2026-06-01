@@ -417,6 +417,67 @@ describe('runInvocation option isolation', () => {
     expect(ACTIVE_PROFILE).toBe('pilot');
   });
 
+  test('non-login command with missing explicit profile does not create a session file', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-missing-profile-'));
+    const configHome = path.join(tempDir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    let sessionCreated = false;
+    let apiRequested = false;
+
+    try {
+      const exitCode = await withConfigHome(configHome, async () =>
+        runInvocation(
+          ['--profile', 'dummy', 'get_status'],
+          undefined,
+          fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome }),
+          {
+            createClient(config) {
+              return new RealSpaceMoltClient({
+                config,
+                sessionStore: new SessionManager({
+                  apiBase: config.apiBase,
+                  profile: config.profile,
+                  profileIsExplicit: config.profileIsExplicit,
+                  transport: async <T>() => {
+                    sessionCreated = true;
+                    return {
+                      status: 200,
+                      ok: true,
+                      data: {
+                        session: {
+                          id: 'sess_dummy',
+                          created_at: '2026-01-01T00:00:00.000Z',
+                          expires_at: '2099-01-01T00:00:00.000Z',
+                        },
+                      } as T,
+                    };
+                  },
+                }),
+                transport: {
+                  async requestJson<T>() {
+                    apiRequested = true;
+                    return { status: 200, data: { structuredContent: { ok: true } } as T };
+                  },
+                },
+              });
+            },
+          },
+        ),
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout).toEqual([]);
+      expect(stderr.join('\n')).toContain('No saved session for profile "dummy"');
+      expect(sessionCreated).toBe(false);
+      expect(apiRequested).toBe(false);
+      expect(fs.existsSync(path.join(sessionsDir, 'dummy.json'))).toBe(false);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('login with saved default uses username profile without overwriting default session', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-login-default-'));
     const configHome = path.join(tempDir, 'config');

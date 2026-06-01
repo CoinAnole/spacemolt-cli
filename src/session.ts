@@ -395,7 +395,16 @@ export class SessionManager {
 
   async getSession(profileOverride?: string): Promise<Session> {
     const session = await this.loadSession(profileOverride);
-    if (!session) return this.createSession(profileOverride);
+    if (!session) {
+      const profile = this.effectiveProfile(profileOverride);
+      if (this._profileIsExplicit && profile) {
+        const profileName = normalizeProfileName(profile);
+        throw new Error(
+          `No saved session for profile "${profileName}". Run "spacemolt --profile ${profileName} login <username> <password>" first, or choose an existing profile with "spacemolt profile list".`,
+        );
+      }
+      return this.createSession(profileOverride);
+    }
     if (!this.isSessionExpired(session)) return session;
     const savedCredentials =
       session.username && session.password ? { username: session.username, password: session.password } : undefined;
