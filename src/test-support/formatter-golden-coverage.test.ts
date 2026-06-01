@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { formatFormatterCoverageError, formatterGoldenCoverageReport } from './formatter-golden-coverage';
+import {
+  formatFormatterCoverageError,
+  formatterGoldenCoverageReport,
+  friendlyFormattingGapReport,
+} from './formatter-golden-coverage';
 
 describe('formatter golden coverage', () => {
   test('every command-scoped formatter has a high-value fixture or explicit opt-out', () => {
@@ -14,5 +18,11 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('facility_list_detailed');
     expect(report.requiredCoverageKeys).toContain('catalog_recipes');
     expect(report.highValueFixtureLabels).toContain('catalog_recipes');
+  });
+
+  test('friendly formatting gap targets have high-value non-fallback table output', () => {
+    const report = friendlyFormattingGapReport();
+    expect(report.missingHighValueFixtures).toEqual([]);
+    expect(report.fallbackOutputs).toEqual([]);
   });
 });

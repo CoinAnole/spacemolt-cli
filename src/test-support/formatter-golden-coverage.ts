@@ -1,4 +1,5 @@
 import { highValueCommandFixtures } from '../display/formatter-fixtures.ts';
+import { renderStructuredResult } from '../display/index.ts';
 import { resultFormatters } from '../display/formatters.ts';
 
 const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
@@ -19,6 +20,29 @@ const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   view_faction_storage: 'Faction storage output needs a separate target=faction fixture before snapshotting.',
 };
 
+export const FRIENDLY_FORMATTING_TARGETS = [
+  'captains_log_get',
+  'create_faction',
+  'faction_get_invites',
+  'faction_intel_status',
+  'faction_trade_intel_status',
+  'faction_visit_room',
+  'forum_get_thread',
+  'get_commands',
+  'get_guide',
+  'get_map',
+  'get_system_agents',
+  'get_tax_estimate',
+  'read_note',
+  'reload',
+  'salvage_wreck',
+  'scan',
+  'set_colors',
+  'set_status',
+  'undock',
+  'view_completed_mission',
+] as const;
+
 const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   catalog_recipes: 'catalog',
   facility_list_detailed: 'facility_list',
@@ -32,6 +56,12 @@ export interface FormatterGoldenCoverageReport {
   optOuts: Record<string, string>;
   requiredCoverageKeys: string[];
   staleOptOuts: string[];
+}
+
+export interface FriendlyFormattingGapReport {
+  targets: string[];
+  missingHighValueFixtures: string[];
+  fallbackOutputs: string[];
 }
 
 export function formatterGoldenCoverageReport(): FormatterGoldenCoverageReport {
@@ -61,6 +91,44 @@ export function formatterGoldenCoverageReport(): FormatterGoldenCoverageReport {
     optOuts: GOLDEN_COVERAGE_OPT_OUTS,
     requiredCoverageKeys,
     staleOptOuts,
+  };
+}
+
+export function friendlyFormattingGapReport(): FriendlyFormattingGapReport {
+  const targetSet = new Set<string>(FRIENDLY_FORMATTING_TARGETS);
+  const highValueEntries = Object.values(highValueCommandFixtures);
+  const coveredTargets = new Set(
+    highValueEntries.filter((entry) => targetSet.has(entry.command)).map((entry) => entry.command),
+  );
+  const missingHighValueFixtures = FRIENDLY_FORMATTING_TARGETS.filter((command) => !coveredTargets.has(command));
+  const fallbackOutputs = highValueEntries
+    .filter((entry) => targetSet.has(entry.command))
+    .flatMap((entry) => {
+      const rendered = renderStructuredResult(
+        entry.command,
+        structuredClone(entry.fixture),
+        {
+          args: [],
+          json: false,
+          quiet: false,
+          plain: true,
+          allowUnknown: false,
+          dryRun: false,
+          noTimestamp: true,
+          compact: false,
+        },
+        {
+          clock: { now: () => new Date('2026-05-29T00:00:00.000Z') },
+          output: { json: false, quiet: false, plain: true, format: 'table', compact: false },
+        },
+      );
+      return rendered.stdout.some((line) => line.includes('=== Response ===')) ? [entry.command] : [];
+    });
+
+  return {
+    targets: [...FRIENDLY_FORMATTING_TARGETS],
+    missingHighValueFixtures,
+    fallbackOutputs: Array.from(new Set(fallbackOutputs)).sort((a, b) => a.localeCompare(b)),
   };
 }
 
