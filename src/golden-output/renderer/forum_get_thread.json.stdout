@@ -1,0 +1,20 @@
+{
+  "thread": {
+    "thread_id": "thread-1",
+    "title": "Fuel convoy",
+    "category": "logistics",
+    "author": "Marlowe",
+    "created_at": "2026-05-27T09:30:00Z",
+    "content": "Coordinating fuel convoy departures.",
+    "upvotes": 4
+  },
+  "replies": [
+    {
+      "reply_id": "reply-1",
+      "author": "Ibis",
+      "created_at": "2026-05-27T10:00:00Z",
+      "content": "I can cover the Sol leg.",
+      "upvotes": 2
+    }
+  ]
+}

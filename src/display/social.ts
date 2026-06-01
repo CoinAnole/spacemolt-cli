@@ -22,6 +22,18 @@ function firstLinePreview(value: unknown): string {
   return String(value).split(/\r?\n/, 1)[0]?.trim() ?? '';
 }
 
+function emitOptionalLine(label: string, value: unknown): void {
+  if (value === undefined || value === null || value === '') return;
+  emitLine(`${label}: ${value}`);
+}
+
+function emitBody(title: string, value: unknown): boolean {
+  if (typeof value !== 'string' || value.trim() === '') return false;
+  emitLine(`\n${c.bright}${title}:${c.reset}`);
+  for (const line of value.split(/\r?\n/)) emitLine(line);
+  return true;
+}
+
 function formatChatSender(message: Record<string, unknown>): string | undefined {
   const sender = message.sender ?? message.username ?? message.sender_name ?? message.sender_id;
   const verified = message.empire_official === true ? ' [empire_official]' : '';
@@ -109,6 +121,104 @@ export const socialFormatters = [
       return true;
     },
     { commands: ['captains_log_list'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.entry === undefined && r.content === undefined && r.text === undefined) return false;
+      emitLine(`\n${c.bright}=== Captain's Log Entry ===${c.reset}`);
+      emitOptionalLine('Index', r.index);
+      emitOptionalLine('Created', formatTimestampPreview(r.created_at ?? r.timestamp ?? r.date));
+      emitBody('Entry', r.entry ?? r.content ?? r.text);
+      return true;
+    },
+    { commands: ['captains_log_get'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!r.note_id && !r.title && r.content === undefined) return false;
+      emitLine(`\n${c.bright}=== Note: ${r.title ?? r.note_id ?? 'Untitled'} ===${c.reset}`);
+      emitOptionalLine('ID', r.note_id ?? r.id);
+      emitOptionalLine('Author', r.created_by ?? r.author);
+      emitOptionalLine('Created', formatTimestampPreview(r.created_at));
+      emitOptionalLine('Updated', formatTimestampPreview(r.updated_at));
+      emitOptionalLine('Value', r.value);
+      emitBody('Content', r.content ?? r.text);
+      return true;
+    },
+    { commands: ['read_note'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!r.room_id && !r.name && !r.description) return false;
+      emitLine(`\n${c.bright}=== Faction Room: ${r.name ?? r.room_id ?? 'Room'} ===${c.reset}`);
+      emitOptionalLine('ID', r.room_id ?? r.id);
+      emitOptionalLine('Access', r.access);
+      emitOptionalLine('Author', r.author);
+      emitOptionalLine('Created', formatTimestampPreview(r.created_at));
+      emitOptionalLine('Updated', formatTimestampPreview(r.updated_at));
+      emitBody('Description', r.description);
+      return true;
+    },
+    { commands: ['faction_visit_room'] },
+  ),
+
+  formatter(
+    (r) => {
+      const thread = isRecord(r.thread) ? r.thread : undefined;
+      if (!thread) return false;
+      emitLine(`\n${c.bright}=== Forum Thread: ${thread.title ?? thread.thread_id ?? thread.id} ===${c.reset}`);
+      emitOptionalLine('ID', thread.thread_id ?? thread.id);
+      emitOptionalLine('Category', thread.category);
+      emitOptionalLine('Author', thread.author ?? thread.username);
+      emitOptionalLine('Created', formatTimestampPreview(thread.created_at));
+      emitOptionalLine('Upvotes', thread.upvotes);
+      emitBody('Content', thread.content ?? thread.text);
+      const replies = firstArray(r, ['replies']);
+      if (replies) {
+        const rows = replies.map((reply) => ({
+          ...reply,
+          created_preview: formatTimestampPreview(reply.created_at ?? reply.timestamp),
+          content_preview: firstLinePreview(reply.content ?? reply.text),
+        }));
+        printCompactTable(
+          'Replies',
+          rows,
+          [
+            ['Author', ['author', 'username']],
+            ['Created', ['created_preview', 'created_at', 'timestamp']],
+            ['Reply', ['content_preview', 'content', 'text']],
+            ['Votes', ['upvotes']],
+            ['ID', ['reply_id', 'id']],
+          ],
+          { maxCellWidth: 72 },
+        );
+      }
+      return true;
+    },
+    { commands: ['forum_get_thread'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.content === undefined && !Array.isArray(r.guides)) return false;
+      if (Array.isArray(r.guides)) {
+        printCompactTable('Guides', r.guides.filter(isRecord), [
+          ['Guide', ['guide', 'id', 'name']],
+          ['Title', ['title']],
+          ['Summary', ['summary', 'description']],
+        ]);
+      }
+      if (r.content !== undefined) {
+        emitLine(`\n${c.bright}=== Guide: ${r.guide ?? 'Guide'} ===${c.reset}`);
+        emitBody('Content', r.content);
+      }
+      if (r.hint) emitLine(`\n${c.dim}${r.hint}${c.reset}`);
+      return true;
+    },
+    { commands: ['get_guide'] },
   ),
 
   // Action log

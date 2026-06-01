@@ -140,6 +140,60 @@ export const battleStatusFixture = {
   },
 };
 
+export const captainLogGetFixture = {
+  index: 0,
+  created_at: '2026-05-29T14:45:00Z',
+  entry: 'Reached Earth Station.\nLoaded fuel and checked the market.',
+};
+
+export const readNoteFixture = {
+  note_id: 'note-1',
+  title: 'Ore contract',
+  content: 'Deliver 500 ore_iron to Earth Station.',
+  created_by: 'Marlowe',
+  created_at: '2026-05-28T12:00:00Z',
+  updated_at: '2026-05-29T12:00:00Z',
+  value: 250,
+};
+
+export const factionVisitRoomFixture = {
+  action: 'visit_room',
+  room_id: 'bridge',
+  name: 'Bridge',
+  description: 'Command deck for fleet operations.',
+  access: 'members',
+  author: 'Marlowe',
+  created_at: '2026-05-01T00:00:00Z',
+  updated_at: '2026-05-29T00:00:00Z',
+};
+
+export const forumThreadFixture = {
+  thread: {
+    thread_id: 'thread-1',
+    title: 'Fuel convoy',
+    category: 'logistics',
+    author: 'Marlowe',
+    created_at: '2026-05-27T09:30:00Z',
+    content: 'Coordinating fuel convoy departures.',
+    upvotes: 4,
+  },
+  replies: [
+    {
+      reply_id: 'reply-1',
+      author: 'Ibis',
+      created_at: '2026-05-27T10:00:00Z',
+      content: 'I can cover the Sol leg.',
+      upvotes: 2,
+    },
+  ],
+};
+
+export const guideFixture = {
+  guide: 'miner',
+  content: 'Mine at asteroid belts, then sell ore at a station market.',
+  hint: 'Use get_poi before mining.',
+};
+
 export const socialFixtureCases = {
   chat_sent: { command: 'chat', fixture: chatSentFixture },
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
@@ -158,4 +212,9 @@ export const socialHighValueFixtures = {
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
+  captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },
+  read_note: { command: 'read_note', fixture: readNoteFixture },
+  faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
+  forum_get_thread: { command: 'forum_get_thread', fixture: forumThreadFixture },
+  get_guide: { command: 'get_guide', fixture: guideFixture },
 };
