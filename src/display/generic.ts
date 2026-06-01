@@ -86,9 +86,14 @@ function activeMissionCapacity(result: Record<string, unknown>, missionCount: nu
 }
 
 const GENERIC_LIST_KEYS = [
+  'commands',
   'items',
   'missions',
   'factions',
+  'systems',
+  'agents',
+  'invites',
+  'guides',
   'facilities',
   'facility_types',
   'types',
@@ -183,6 +188,22 @@ function titleForListKey(key: string): string {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function isScalarDisplayValue(value: unknown): boolean {
+  return value === null || ['string', 'number', 'boolean'].includes(typeof value);
+}
+
+function labelForScalarKey(key: string): string {
+  return key
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function titleForScalarAction(action: unknown): string {
+  if (typeof action !== 'string' || action.trim() === '') return 'Result';
+  return labelForScalarKey(action);
 }
 
 function summarizeItemQuantities(value: unknown): string {
@@ -349,6 +370,29 @@ export const genericFormatters = [
       if (extraKeys.length > 1) return false;
       if (extraKeys.some((key) => isRecord(r[key]) || Array.isArray(r[key]))) return false;
       emitLine(`${c.green}OK:${c.reset} ${r.message}`);
+      return true;
+    },
+    { shapeFallback: true },
+  ),
+
+  // Conservative fallback for scalar-only action responses.
+  formatter(
+    (r) => {
+      const entries = Object.entries(r).filter(([, value]) => value !== undefined && value !== null && value !== '');
+      if (!entries.length || entries.length > 8) return false;
+      if (entries.some(([, value]) => !isScalarDisplayValue(value))) return false;
+      const hasActionMarker =
+        typeof r.action === 'string' ||
+        typeof r.success === 'boolean' ||
+        entries.some(([key]) => key.endsWith('_id') || key === 'id');
+      if (!hasActionMarker) return false;
+
+      emitLine(`\n${c.bright}=== ${titleForScalarAction(r.action)} ===${c.reset}`);
+      for (const [key, value] of entries) {
+        if (key === 'action') continue;
+        emitLine(`${labelForScalarKey(key)}: ${String(value)}`);
+      }
+      if (entries.length === 1 && r.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
       return true;
     },
     { shapeFallback: true },

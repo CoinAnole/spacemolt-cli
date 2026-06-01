@@ -1,0 +1,5 @@
+{
+  "action": "create_faction",
+  "faction_id": "faction-smc",
+  "name": "Surveyor Mining Collective"
+}

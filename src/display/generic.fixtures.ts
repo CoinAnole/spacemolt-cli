@@ -231,6 +231,24 @@ export const empireInfoFixture = {
   ],
 };
 
+export const createFactionFixture = {
+  action: 'create_faction',
+  faction_id: 'faction-smc',
+  name: 'Surveyor Mining Collective',
+};
+
+export const setColorsFixture = {
+  action: 'set_colors',
+};
+
+export const setStatusFixture = {
+  action: 'set_status',
+};
+
+export const undockFixture = {
+  action: 'undock',
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures = {
@@ -240,4 +258,8 @@ export const genericHighValueFixtures = {
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
+  create_faction: { command: 'create_faction', fixture: createFactionFixture },
+  set_colors: { command: 'set_colors', fixture: setColorsFixture },
+  set_status: { command: 'set_status', fixture: setStatusFixture },
+  undock: { command: 'undock', fixture: undockFixture },
 };
