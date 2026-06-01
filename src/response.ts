@@ -69,6 +69,15 @@ export function normalizeStructuredResultForDisplay(result: Record<string, unkno
   return view;
 }
 
+export function normalizeStructuredResultForOutput(
+  command: string,
+  result: Record<string, unknown>,
+): Record<string, unknown> {
+  const limited = limitStructuredNearbyForOutput(command, result);
+  if (normalizeCommandName(command) === 'list_ships') return normalizeListShipsForOutput(limited);
+  return limited;
+}
+
 const STRUCTURED_NEARBY_LIMIT = 10;
 const NEARBY_LIMITED_COMMANDS = new Set(['get_location', 'get_nearby', 'get_status']);
 
@@ -116,4 +125,48 @@ function findExistingCount(container: Record<string, unknown>, countAliases: str
     if (typeof value === 'number' && Number.isFinite(value)) return value;
   }
   return undefined;
+}
+
+function normalizeCommandName(command: string): string {
+  return command.startsWith('v2_') ? command.slice(3) : command;
+}
+
+function normalizeListShipsForOutput(result: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(result.ships)) return result;
+
+  const view = structuredClone(result);
+  view.ships = result.ships.map((ship) => (isRecord(ship) ? normalizeListedShip(ship) : ship));
+  return view;
+}
+
+function normalizeListedShip(ship: Record<string, unknown>): Record<string, unknown> {
+  const customName = stringOrNull(ship.custom_name ?? ship.ship_name);
+  return {
+    ...ship,
+    ship_class: ship.ship_class ?? ship.class_id ?? ship.class_name ?? null,
+    custom_name: customName,
+    name: ship.name ?? customName,
+    active: booleanOrDefault(ship.active ?? ship.is_active, false),
+    location: normalizeListedShipLocation(ship),
+  };
+}
+
+function normalizeListedShipLocation(ship: Record<string, unknown>): Record<string, unknown> {
+  const location = isRecord(ship.location) ? ship.location : {};
+  const baseId = ship.location_base_id ?? ship.base_id ?? ship.poi_id ?? location.poi_id;
+  const docked = booleanOrDefault(ship.docked ?? ship.is_docked ?? location.docked, baseId !== undefined);
+  return {
+    system_id: location.system_id ?? ship.system_id ?? null,
+    poi_id: location.poi_id ?? baseId ?? null,
+    docked,
+    raw: typeof ship.location === 'string' ? ship.location : null,
+  };
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function booleanOrDefault(value: unknown, defaultValue: boolean): boolean {
+  return typeof value === 'boolean' ? value : defaultValue;
 }

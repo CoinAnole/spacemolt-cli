@@ -7,7 +7,7 @@ import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
-import { limitStructuredNearbyForOutput } from './response.ts';
+import { normalizeStructuredResultForOutput } from './response.ts';
 import { c } from './runtime.ts';
 import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
@@ -104,7 +104,7 @@ export async function renderResponse(
       }
       out(
         JSON.stringify(
-          limitStructuredNearbyForOutput(displayCommand, response.structuredContent),
+          normalizeStructuredResultForOutput(displayCommand, response.structuredContent),
           null,
           options.compact ? 0 : 2,
         ),

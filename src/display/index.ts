@@ -6,7 +6,7 @@ import {
   getObjectResult,
   getStructuredResult,
   isRecord,
-  limitStructuredNearbyForOutput,
+  normalizeStructuredResultForOutput,
   normalizeStructuredResultForDisplay,
 } from '../response.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
@@ -144,7 +144,7 @@ function displayStructuredResultInternal(
   const format = getOutputFormat(options, context);
   const compact = isCompact(options, context);
   const jqExpr = options?.jq;
-  const structuredOutputResult = limitStructuredNearbyForOutput(command, result);
+  const structuredOutputResult = normalizeStructuredResultForOutput(command, result);
 
   if (jqExpr) {
     try {

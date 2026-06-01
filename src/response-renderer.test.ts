@@ -306,6 +306,81 @@ describe('response renderer', () => {
     expect(structuredContent.empire_npcs).toHaveLength(13);
   });
 
+  test('renderResponse normalizes list_ships --structured output to canonical fields', async () => {
+    const capture = fakeContext();
+    const structuredContent = {
+      ships: [
+        {
+          ship_id: 'ship-active',
+          class_id: 'lithosphere',
+          class_name: 'Lithosphere',
+          custom_name: 'Burn-Rate Betty',
+          is_active: true,
+          location: 'active (with you)',
+        },
+        {
+          ship_id: 'ship-stored',
+          class_id: 'dust_devil',
+          class_name: 'Dust Devil',
+          is_active: false,
+          location: 'stored at Nova Terra Central',
+          location_base_id: 'nova_terra_central',
+        },
+      ],
+      count: 2,
+      active_ship_id: 'ship-active',
+      active_ship_class: 'lithosphere',
+    };
+
+    const exitCode = await renderResponse(
+      {
+        command: 'list_ships',
+        displayCommand: 'list_ships',
+        response: { structuredContent },
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.ships).toEqual([
+      expect.objectContaining({
+        ship_id: 'ship-active',
+        ship_class: 'lithosphere',
+        custom_name: 'Burn-Rate Betty',
+        name: 'Burn-Rate Betty',
+        active: true,
+        location: {
+          system_id: null,
+          poi_id: null,
+          docked: false,
+          raw: 'active (with you)',
+        },
+      }),
+      expect.objectContaining({
+        ship_id: 'ship-stored',
+        ship_class: 'dust_devil',
+        custom_name: null,
+        name: null,
+        active: false,
+        location: {
+          system_id: null,
+          poi_id: 'nova_terra_central',
+          docked: true,
+          raw: 'stored at Nova Terra Central',
+        },
+      }),
+    ]);
+    expect(parsed.ships[0].is_active).toBe(true);
+    expect(parsed.ships[1].location).not.toBe('stored at Nova Terra Central');
+    const originalStoredShip = structuredContent.ships[1];
+    expect(originalStoredShip).toBeDefined();
+    if (!originalStoredShip) throw new Error('missing stored ship fixture');
+    expect(originalStoredShip.location).toBe('stored at Nova Terra Central');
+  });
+
   test('renderResponse hides empty cargo stacks and sorts non-empty stacks by quantity descending', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
