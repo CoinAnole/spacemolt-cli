@@ -385,7 +385,7 @@ describe('SpaceMoltClient', () => {
 
     await client.execute('login', { username: 'Pilot', password: 'secret' });
 
-    expect(store.defaultProfile).toBe('Pilot');
+    expect(store.defaultProfile).toBe('pilot');
   });
 
   test('successful login with no default profile creates a username profile session', async () => {
@@ -434,8 +434,8 @@ describe('SpaceMoltClient', () => {
     try {
       await client.execute('login', { username: 'Pilot', password: 'secret' });
 
-      expect(getDefaultProfile()).toBe('Pilot');
-      const sessionPath = path.join(configRoot, 'spacemolt-cli', 'sessions', 'Pilot.json');
+      expect(getDefaultProfile()).toBe('pilot');
+      const sessionPath = path.join(configRoot, 'spacemolt-cli', 'sessions', 'pilot.json');
       expect(fs.existsSync(sessionPath)).toBe(true);
       expect(JSON.parse(fs.readFileSync(sessionPath, 'utf-8'))).toMatchObject({
         id: 'sess_bootstrap',
@@ -506,7 +506,7 @@ describe('SpaceMoltClient', () => {
       await client.execute('login', { username: 'OtherUser', password: 'other-secret' });
 
       expect(JSON.parse(fs.readFileSync(defaultSessionPath, 'utf-8'))).toEqual(defaultSession);
-      const otherSessionPath = path.join(sessionsDir, 'OtherUser.json');
+      const otherSessionPath = path.join(sessionsDir, 'otheruser.json');
       expect(fs.existsSync(otherSessionPath)).toBe(true);
       expect(JSON.parse(fs.readFileSync(otherSessionPath, 'utf-8'))).toMatchObject({
         id: 'sess_other_bootstrap',
@@ -514,7 +514,7 @@ describe('SpaceMoltClient', () => {
         password: 'other-secret',
         player_id: 'player_other',
       });
-      expect(getDefaultProfile()).toBe('DefaultPilot');
+      expect(getDefaultProfile()).toBe('defaultpilot');
     } finally {
       fs.rmSync(configRoot, { recursive: true, force: true });
     }
@@ -690,7 +690,7 @@ describe('SpaceMoltClient', () => {
       registration_code: 'code',
     });
 
-    expect(store.defaultProfile).toBe('NewPilot');
+    expect(store.defaultProfile).toBe('newpilot');
   });
 
   test('rate-limit retry cap limits the number of retries', async () => {

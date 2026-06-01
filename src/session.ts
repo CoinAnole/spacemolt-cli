@@ -41,11 +41,15 @@ export function validateProfileName(profile: string): string {
   return profile;
 }
 
+export function normalizeProfileName(profile: string): string {
+  return validateProfileName(profile).toLowerCase();
+}
+
 export function profileNameForUsername(username: string): string {
   try {
-    return validateProfileName(username);
+    return normalizeProfileName(username);
   } catch {
-    return validateProfileName(`user_${Buffer.from(username, 'utf-8').toString('base64url')}`);
+    return validateProfileName(`user_${Buffer.from(username, 'utf-8').toString('hex')}`);
   }
 }
 
@@ -112,6 +116,55 @@ export function listProfileNames(homeDir?: string, platform?: string, env?: EnvL
   }
 }
 
+function differsBySingleEdit(left: string, right: string): boolean {
+  if (left === right) return true;
+  if (Math.abs(left.length - right.length) > 1) return false;
+
+  if (left.length === right.length) {
+    const mismatches: number[] = [];
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) mismatches.push(i);
+      if (mismatches.length > 2) return false;
+    }
+    if (mismatches.length <= 1) return true;
+    const first = mismatches[0] as number;
+    const second = mismatches[1] as number;
+    return second === first + 1 && left[first] === right[second] && left[second] === right[first];
+  }
+
+  const shorter = left.length < right.length ? left : right;
+  const longer = left.length < right.length ? right : left;
+  let skipped = false;
+  for (let shortIndex = 0, longIndex = 0; longIndex < longer.length; longIndex++) {
+    if (shorter[shortIndex] === longer[longIndex]) {
+      shortIndex++;
+      continue;
+    }
+    if (skipped) return false;
+    skipped = true;
+  }
+  return true;
+}
+
+function resolveProfileName(profile: string, env: EnvLike): string {
+  const normalizedProfile = normalizeProfileName(profile);
+  const savedProfiles = listProfileNames(undefined, undefined, env);
+
+  if (savedProfiles.includes(normalizedProfile)) return normalizedProfile;
+
+  const caseMatches = savedProfiles.filter((savedProfile) => savedProfile.toLowerCase() === normalizedProfile);
+  const caseMatch = caseMatches.length === 1 ? caseMatches[0] : undefined;
+  if (caseMatch !== undefined) return caseMatch;
+
+  const nearbyMatches = savedProfiles.filter((savedProfile) =>
+    differsBySingleEdit(savedProfile.toLowerCase(), normalizedProfile),
+  );
+  const nearbyMatch = nearbyMatches.length === 1 ? nearbyMatches[0] : undefined;
+  if (nearbyMatch !== undefined) return nearbyMatch;
+
+  return normalizedProfile;
+}
+
 export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike): void {
   const profiles = listProfileSessions(homeDir, platform, env);
   if (!profiles.length) {
@@ -161,7 +214,7 @@ export function loadCliConfig(homeDir?: string, platform?: string, env?: EnvLike
     if (!isRecord(config)) return {};
     if (config.defaultProfile === undefined) return { ...config };
     if (typeof config.defaultProfile !== 'string') return {};
-    return { ...config, defaultProfile: validateProfileName(config.defaultProfile) };
+    return { ...config, defaultProfile: normalizeProfileName(config.defaultProfile) };
   } catch {
     return {};
   }
@@ -185,7 +238,7 @@ export function getDefaultProfile(homeDir?: string, platform?: string, env?: Env
 
 export function setDefaultProfile(profile: string, homeDir?: string, platform?: string, env?: EnvLike): void {
   saveCliConfig(
-    { ...loadCliConfig(homeDir, platform, env), defaultProfile: validateProfileName(profile) },
+    { ...loadCliConfig(homeDir, platform, env), defaultProfile: normalizeProfileName(profile) },
     homeDir,
     platform,
     env,
@@ -253,7 +306,7 @@ export class SessionManager {
     return path.join(
       getSpacemoltHome(undefined, undefined, this._env),
       'sessions',
-      `${validateProfileName(profile)}.json`,
+      `${resolveProfileName(profile, this._env)}.json`,
     );
   }
 

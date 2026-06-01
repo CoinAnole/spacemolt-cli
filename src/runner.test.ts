@@ -479,7 +479,7 @@ describe('runInvocation option isolation', () => {
       expect(exitCode).toBe(0);
       expect(stderr).toEqual([]);
       expect(JSON.parse(fs.readFileSync(defaultSessionPath, 'utf-8'))).toEqual(defaultSession);
-      expect(JSON.parse(fs.readFileSync(path.join(sessionsDir, 'OtherUser.json'), 'utf-8'))).toMatchObject({
+      expect(JSON.parse(fs.readFileSync(path.join(sessionsDir, 'otheruser.json'), 'utf-8'))).toMatchObject({
         id: 'sess_other_bootstrap',
         username: 'OtherUser',
         password: 'other-secret',

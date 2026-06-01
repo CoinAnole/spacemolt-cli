@@ -75,6 +75,36 @@ describe('SessionManager', () => {
     expect(await manager.loadSession()).toEqual(sessionObj);
   });
 
+  test('new profile session paths normalize capitalization', () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'profile-normalize-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const manager = new SessionManager({ profile: 'Arbogast', env });
+
+    expect(manager.getSessionPath()).toBe(path.join(home, '.config', 'spacemolt-cli', 'sessions', 'arbogast.json'));
+  });
+
+  test('session paths reuse a unique nearby saved profile name', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'profile-typo-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const sessionsDir = path.join(home, '.config', 'spacemolt-cli', 'sessions');
+    const existingPath = path.join(sessionsDir, 'fuelrescue.json');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      existingPath,
+      JSON.stringify({
+        id: 'sess_fuelrescue',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2099-01-01T00:00:00.000Z',
+      }),
+    );
+
+    const manager = new SessionManager({ profile: 'fuelresue', env });
+
+    expect(manager.getSessionPath()).toBe(existingPath);
+    expect((await manager.loadSession())?.id).toBe('sess_fuelrescue');
+    expect(fs.existsSync(path.join(sessionsDir, 'fuelresue.json'))).toBe(false);
+  });
+
   test('missing active and default profile produces an actionable error', async () => {
     const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
     fs.rmSync(configPath, { force: true });
