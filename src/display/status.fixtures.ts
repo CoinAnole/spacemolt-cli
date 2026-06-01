@@ -147,6 +147,69 @@ export const skillsV1Fixture = {
   },
 };
 
+export const getMapFixture = {
+  systems: [
+    {
+      system_id: 'sol',
+      name: 'Sol',
+      x: 0,
+      y: 0,
+      empire: 'solarian',
+      security_status: 'high security',
+      connections: ['alpha_centauri'],
+    },
+    {
+      system_id: 'alpha_centauri',
+      name: 'Alpha Centauri',
+      x: 4,
+      y: 1,
+      empire: 'solarian',
+      security_status: 'medium security',
+      connections: ['sol'],
+    },
+  ],
+  total_count: 2,
+};
+
+export const getSystemAgentsFixture = {
+  system_id: 'sol',
+  count: 2,
+  offline_collapsed: 4,
+  agents: [
+    {
+      username: 'Marlowe',
+      player_id: 'player-1',
+      ship_class: 'prospector',
+      poi_name: 'Earth Station',
+      online: true,
+    },
+    {
+      username: 'Ibis',
+      player_id: 'player-2',
+      ship_class: 'hauler',
+      poi_name: 'Mars Depot',
+      online: false,
+    },
+  ],
+};
+
+export const getCommandsFixture = {
+  commands: [
+    {
+      command: 'get_status',
+      category: 'Query commands',
+      description: 'Inspect player, ship, and location.',
+      usage: '',
+    },
+    {
+      command: 'travel',
+      category: 'Navigation',
+      description: 'Move to a POI.',
+      usage: '<poi_id>',
+    },
+  ],
+};
+
 export const statusFixtureCases = {
   arrival: { command: 'travel', fixture: arrivalFixture },
   nearby: { command: 'get_nearby', fixture: nearbyFixture },
@@ -161,6 +224,9 @@ export const statusHighValueFixtures = {
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   get_skills: { command: 'get_skills', fixture: skillsV2Fixture },
+  get_map: { command: 'get_map', fixture: getMapFixture },
+  get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
+  get_commands: { command: 'get_commands', fixture: getCommandsFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
   skills_v1: { command: 'get_skills', fixture: skillsV1Fixture },

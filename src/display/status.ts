@@ -1,4 +1,4 @@
-import { c, emitLine, formatPlayer, formatter, isRecord, namedFormatter } from './helpers.ts';
+import { c, emitLine, formatPlayer, formatter, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
 
@@ -210,6 +210,65 @@ export const statusFormatters = [
       return true;
     },
     { commands: ['register'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.systems)) return false;
+      const rows = r.systems.filter(isRecord).map((system) => ({
+        ...system,
+        connection_count: Array.isArray(system.connections) ? system.connections.length : system.connections,
+      }));
+      printCompactTable('Systems', rows, [
+        ['Name', ['name']],
+        ['ID', ['system_id', 'id']],
+        ['Empire', ['empire']],
+        ['Security', ['security_status']],
+        ['X', ['x']],
+        ['Y', ['y']],
+        ['Connections', ['connection_count']],
+      ]);
+      if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
+      return true;
+    },
+    { commands: ['get_map'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.agents)) return false;
+      emitLine(`\n${c.bright}=== System Agents: ${r.system_id ?? 'current system'} ===${c.reset}`);
+      printCompactTable('Agents', r.agents.filter(isRecord), [
+        ['Name', ['username', 'name']],
+        ['ID', ['player_id', 'id']],
+        ['Ship', ['ship_class', 'ship_name']],
+        ['POI', ['poi_name', 'poi_id']],
+        ['Online', ['online']],
+      ]);
+      if (r.count !== undefined) emitLine(`${c.dim}count ${r.count}${c.reset}`);
+      if (r.offline_collapsed !== undefined) emitLine(`${c.dim}offline collapsed ${r.offline_collapsed}${c.reset}`);
+      return true;
+    },
+    { commands: ['get_system_agents'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.commands)) return false;
+      printCompactTable(
+        'Commands',
+        r.commands.filter(isRecord),
+        [
+          ['Command', ['command', 'name']],
+          ['Category', ['category']],
+          ['Usage', ['usage']],
+          ['Description', ['description', 'summary']],
+        ],
+        { maxCellWidth: 72 },
+      );
+      return true;
+    },
+    { commands: ['get_commands'] },
   ),
 
   // System info

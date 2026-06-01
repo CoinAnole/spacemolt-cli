@@ -1,0 +1,8 @@
+
+=== Systems ===
+
+  Name           | ID             | Empire   | Security        | X | Y | Connections
+  ---------------+----------------+----------+-----------------+---+---+------------
+  Sol            | sol            | solarian | high security   | 0 | 0 | 1          
+  Alpha Centauri | alpha_centauri | solarian | medium security | 4 | 1 | 1          
+total 2

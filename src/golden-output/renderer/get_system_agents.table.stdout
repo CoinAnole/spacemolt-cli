@@ -1,0 +1,11 @@
+
+=== System Agents: sol ===
+
+=== Agents ===
+
+  Name    | ID       | Ship       | POI           | Online
+  --------+----------+------------+---------------+-------
+  Marlowe | player-1 | prospector | Earth Station | true  
+  Ibis    | player-2 | hauler     | Mars Depot    | false 
+count 2
+offline collapsed 4
