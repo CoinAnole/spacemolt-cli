@@ -282,14 +282,14 @@ export const socialFormatters = [
       if (!invites) return false;
       const rows = invites.map((invite) => ({
         ...invite,
-        created_preview: formatTimestampPreview(invite.created_at ?? invite.timestamp),
+        created_preview: formatTimestampPreview(invite.created_at ?? invite.invited_at ?? invite.timestamp),
       }));
       printCompactTable('Faction Invites', rows, [
         ['Faction', ['faction_name', 'name']],
         ['Tag', ['tag', 'faction_tag']],
         ['ID', ['faction_id', 'id']],
         ['Invited By', ['invited_by', 'sender', 'username']],
-        ['Created', ['created_preview', 'created_at', 'timestamp']],
+        ['Created', ['created_preview', 'created_at', 'invited_at', 'timestamp']],
       ]);
       return true;
     },

@@ -172,9 +172,9 @@ export const factionInvitesFixture = {
     {
       faction_id: 'smc',
       faction_name: 'Surveyor Mining Collective',
-      tag: 'SMC',
+      faction_tag: 'SMC',
       invited_by: 'Marlowe',
-      created_at: '2026-05-29T12:00:00Z',
+      invited_at: '2026-05-29T12:00:00Z',
     },
   ],
 };
