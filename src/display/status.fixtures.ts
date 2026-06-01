@@ -118,6 +118,45 @@ export const arrivalFixture = {
   online_players_count: 1,
 };
 
+export const scanFixture = {
+  success: true,
+  target_id: 'player-2',
+  username: 'Ibis',
+  faction_id: 'smc',
+  ship_class: 'hauler',
+  hull: 180,
+  shield: 75,
+  cloaked: false,
+  revealed_info: {
+    cargo_used: 20,
+    cargo_capacity: 200,
+    weapons: 1,
+  },
+};
+
+export const completedMissionDetailFixture = {
+  template_id: 'mission-ore-run',
+  title: 'Ore Run',
+  type: 'hauling',
+  difficulty: 2,
+  description: 'Deliver iron ore to Earth Station.',
+  giver: 'Dockmaster Vale',
+  completion_time: '2026-05-29T18:00:00Z',
+  repeatable: true,
+  objectives: [
+    {
+      description: 'Deliver Iron Ore',
+      progress: { current: 500, required: 500 },
+    },
+  ],
+  rewards: {
+    credits: 7500,
+    skill_xp: { piloting: 25 },
+  },
+  dialog: 'Good work keeping the refineries supplied.',
+  chain_next: 'mission-refinery-check',
+};
+
 export const skillsV2Fixture = {
   skills: [{ skill_id: 'mining', name: 'Mining', category: 'Industry' }],
   player_skills: [
@@ -227,6 +266,8 @@ export const statusHighValueFixtures = {
   get_map: { command: 'get_map', fixture: getMapFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
+  scan: { command: 'scan', fixture: scanFixture },
+  view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
   skills_v1: { command: 'get_skills', fixture: skillsV1Fixture },

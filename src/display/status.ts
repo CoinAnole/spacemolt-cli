@@ -71,6 +71,32 @@ function formatCitizenships(value: unknown): string | undefined {
   return unique.length ? unique.join(', ') : undefined;
 }
 
+function summarizeObjectiveForDisplay(objective: unknown): string {
+  if (!isRecord(objective)) return String(objective);
+  const description = objective.description ?? objective.title ?? objective.type;
+  const progress = objective.progress;
+  if (isRecord(progress)) {
+    const current = progress.current ?? progress.completed ?? progress.amount;
+    const required = progress.required ?? progress.target ?? progress.total;
+    if (current !== undefined && required !== undefined) return `${description ?? 'Objective'} ${current}/${required}`;
+  }
+  return String(description ?? objective.type ?? 'Objective');
+}
+
+function summarizeRewardForDisplay(rewards: unknown): string {
+  if (!isRecord(rewards)) return '';
+  const parts: string[] = [];
+  if (rewards.credits !== undefined) parts.push(`${rewards.credits} cr`);
+  if (isRecord(rewards.skill_xp)) {
+    parts.push(
+      Object.entries(rewards.skill_xp)
+        .map(([skill, xp]) => `${skill} +${xp} XP`)
+        .join(', '),
+    );
+  }
+  return parts.filter(Boolean).join('; ');
+}
+
 export const statusFormatters = [
   // Queue state
   formatter(
@@ -556,6 +582,54 @@ export const statusFormatters = [
       return true;
     },
     { commands: ['get_location'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.target_id === undefined && r.username === undefined && r.ship_class === undefined) return false;
+      emitLine(`\n${c.bright}=== Scan Result ===${c.reset}`);
+      if (r.username) emitLine(`Target: ${r.username}${r.target_id ? ` (${r.target_id})` : ''}`);
+      else if (r.target_id) emitLine(`Target: ${r.target_id}`);
+      if (r.faction_id) emitLine(`Faction: ${r.faction_id}`);
+      if (r.ship_class) emitLine(`Ship: ${r.ship_class}`);
+      if (r.hull !== undefined) emitLine(`Hull: ${r.hull}`);
+      if (r.shield !== undefined) emitLine(`Shield: ${r.shield}`);
+      if (r.cloaked !== undefined) emitLine(`Cloaked: ${r.cloaked}`);
+      if (isRecord(r.revealed_info)) {
+        emitLine(`\n${c.bright}Revealed:${c.reset}`);
+        for (const [key, value] of Object.entries(r.revealed_info)) {
+          if (value === undefined || value === null || isRecord(value) || Array.isArray(value)) continue;
+          emitLine(`  ${key}: ${value}`);
+        }
+      }
+      return true;
+    },
+    { commands: ['scan'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!r.template_id && !r.title && !r.description) return false;
+      emitLine(`\n${c.bright}=== Completed Mission: ${r.title ?? r.template_id ?? 'Mission'} ===${c.reset}`);
+      if (r.template_id) emitLine(`ID: ${r.template_id}`);
+      if (r.type) emitLine(`Type: ${r.type}`);
+      if (r.difficulty !== undefined) emitLine(`Difficulty: ${r.difficulty}`);
+      if (r.giver) emitLine(`Giver: ${r.giver}`);
+      if (r.completion_time) emitLine(`Completed: ${r.completion_time}`);
+      if (r.repeatable !== undefined) emitLine(`Repeatable: ${r.repeatable}`);
+      if (r.description) emitLine(`\n${r.description}`);
+      const objectives = Array.isArray(r.objectives) ? r.objectives.map(summarizeObjectiveForDisplay) : [];
+      if (objectives.length) {
+        emitLine(`\n${c.bright}Objectives:${c.reset}`);
+        for (const objective of objectives) emitLine(`  - ${objective}`);
+      }
+      const rewards = summarizeRewardForDisplay(r.rewards);
+      if (rewards) emitLine(`Rewards: ${rewards}`);
+      if (r.dialog) emitLine(`Dialog: ${r.dialog}`);
+      if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
+      return true;
+    },
+    { commands: ['view_completed_mission'] },
   ),
 
   // Arrival (travel/jump)

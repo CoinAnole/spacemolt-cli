@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "target_id": "player-2",
+  "username": "Ibis",
+  "faction_id": "smc",
+  "ship_class": "hauler",
+  "hull": 180,
+  "shield": 75,
+  "cloaked": false,
+  "revealed_info": {
+    "cargo_used": 20,
+    "cargo_capacity": 200,
+    "weapons": 1
+  }
+}

@@ -160,6 +160,26 @@ export const wrecksFixture = {
   ],
 };
 
+export const reloadFixture = {
+  action: 'reload',
+  weapon_id: 'weapon-1',
+  weapon_name: 'Pulse Laser',
+  ammo_id: 'ammo-cell',
+  ammo_name: 'Laser Cell',
+  previous_ammo: 'empty',
+  current_ammo: 'Laser Cell',
+  magazine_size: 8,
+  rounds_discarded: 0,
+};
+
+export const salvageWreckFixture = {
+  metal_scrap: 14,
+  rare_materials: 2,
+  components: 3,
+  total_value: 1250,
+  xp_gained: 18,
+};
+
 export const shipFixtureCases = {
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   ship: { command: 'get_ship', fixture: shipFixture },
@@ -174,6 +194,8 @@ export const shipHighValueFixtures = {
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
+  reload: { command: 'reload', fixture: reloadFixture },
+  salvage_wreck: { command: 'salvage_wreck', fixture: salvageWreckFixture },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
 };

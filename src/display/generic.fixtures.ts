@@ -231,6 +231,31 @@ export const empireInfoFixture = {
   ],
 };
 
+export const taxEstimateFixture = {
+  action: 'get_tax_estimate',
+  sales_tax_rates: {
+    solarian: 100,
+    voidborn: 250,
+  },
+  taxable_income_to_date: 42000,
+  taxable_income_by_source: {
+    market: 30000,
+    missions: 12000,
+  },
+  income_tax: 210,
+  income_tax_total: 210,
+  assessed_property_value: 125000,
+  assessed_property_by_ship: {
+    'ship-1': 125000,
+  },
+  property_tax: 625,
+  property_tax_total: 625,
+  tax_collection_active: true,
+  last_assessed_at: '2026-05-28T00:00:00Z',
+  next_assessment_approx_seconds: 3600,
+  note: 'Estimate only.',
+};
+
 export const createFactionFixture = {
   action: 'create_faction',
   faction_id: 'faction-smc',
@@ -258,6 +283,7 @@ export const genericHighValueFixtures = {
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
+  get_tax_estimate: { command: 'get_tax_estimate', fixture: taxEstimateFixture },
   create_faction: { command: 'create_faction', fixture: createFactionFixture },
   set_colors: { command: 'set_colors', fixture: setColorsFixture },
   set_status: { command: 'set_status', fixture: setStatusFixture },

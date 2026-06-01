@@ -171,6 +171,44 @@ export const shipFormatters = [
     { commands: ['get_base'], shapeFallback: true },
   ),
 
+  formatter(
+    (r) => {
+      if (r.action !== 'reload' && r.weapon_id === undefined && r.current_ammo === undefined) return false;
+      emitLine(`\n${c.bright}=== Reloaded ===${c.reset}`);
+      if (r.weapon_name || r.weapon_id)
+        emitLine(`Weapon: ${r.weapon_name ?? r.weapon_id}${r.weapon_id && r.weapon_name ? ` (${r.weapon_id})` : ''}`);
+      if (r.ammo_name || r.ammo_id)
+        emitLine(`Ammo: ${r.ammo_name ?? r.ammo_id}${r.ammo_id && r.ammo_name ? ` (${r.ammo_id})` : ''}`);
+      if (r.previous_ammo !== undefined) emitLine(`Previous ammo: ${r.previous_ammo}`);
+      if (r.current_ammo !== undefined) emitLine(`Current ammo: ${r.current_ammo}`);
+      if (r.magazine_size !== undefined) emitLine(`Magazine size: ${r.magazine_size}`);
+      if (r.rounds_discarded !== undefined) emitLine(`Rounds discarded: ${r.rounds_discarded}`);
+      return true;
+    },
+    { commands: ['reload'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (
+        r.metal_scrap === undefined &&
+        r.rare_materials === undefined &&
+        r.components === undefined &&
+        r.total_value === undefined &&
+        r.xp_gained === undefined
+      )
+        return false;
+      emitLine(`\n${c.bright}=== Salvage Complete ===${c.reset}`);
+      if (r.metal_scrap !== undefined) emitLine(`Metal scrap: ${r.metal_scrap}`);
+      if (r.rare_materials !== undefined) emitLine(`Rare materials: ${r.rare_materials}`);
+      if (r.components !== undefined) emitLine(`Components: ${r.components}`);
+      if (r.total_value !== undefined) emitLine(`Total value: ${r.total_value}`);
+      if (r.xp_gained !== undefined) emitLine(`XP gained: ${r.xp_gained}`);
+      return true;
+    },
+    { commands: ['salvage_wreck'] },
+  ),
+
   // Wrecks
   formatter(
     (r) => {

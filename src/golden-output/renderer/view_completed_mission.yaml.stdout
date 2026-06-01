@@ -1,0 +1,18 @@
+
+template_id: "mission-ore-run"
+title: "Ore Run"
+type: hauling
+difficulty: 2
+description: "Deliver iron ore to Earth Station."
+giver: "Dockmaster Vale"
+completion_time: 2026-05-29T18:00:00Z
+repeatable: true
+objectives:
+  - description: "Deliver Iron Ore"
+    progress: {current: 500, required: 500}
+rewards:
+  credits: 7500
+  skill_xp:
+    piloting: 25
+dialog: "Good work keeping the refineries supplied."
+chain_next: "mission-refinery-check"

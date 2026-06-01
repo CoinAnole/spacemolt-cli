@@ -189,6 +189,41 @@ function emitPolicyLine(label: string, value: unknown): void {
 
 export const empireFormatters = [
   formatter(
+    (r) => {
+      if (r.income_tax === undefined && r.property_tax === undefined && r.sales_tax_rates === undefined) return false;
+      emitLine(`\n${c.bright}=== Tax Estimate ===${c.reset}`);
+      if (r.tax_collection_active !== undefined) emitLine(`Collection active: ${r.tax_collection_active}`);
+      if (r.taxable_income_to_date !== undefined) emitLine(`Taxable income: ${r.taxable_income_to_date}`);
+      if (r.income_tax !== undefined) emitLine(`Income tax: ${r.income_tax}`);
+      if (r.income_tax_total !== undefined) emitLine(`Income tax total: ${r.income_tax_total}`);
+      if (r.assessed_property_value !== undefined) emitLine(`Assessed property: ${r.assessed_property_value}`);
+      if (r.property_tax !== undefined) emitLine(`Property tax: ${r.property_tax}`);
+      if (r.property_tax_total !== undefined) emitLine(`Property tax total: ${r.property_tax_total}`);
+      if (isRecord(r.sales_tax_rates)) emitLine(`Sales tax rates: ${formatBpsMap(r.sales_tax_rates)}`);
+      if (isRecord(r.taxable_income_by_source)) {
+        emitLine(
+          `Income by source: ${Object.entries(r.taxable_income_by_source)
+            .map(([key, value]) => `${key} ${value}`)
+            .join(', ')}`,
+        );
+      }
+      if (isRecord(r.assessed_property_by_ship)) {
+        emitLine(
+          `Property by ship: ${Object.entries(r.assessed_property_by_ship)
+            .map(([key, value]) => `${key} ${value}`)
+            .join(', ')}`,
+        );
+      }
+      if (r.last_assessed_at) emitLine(`Last assessed: ${r.last_assessed_at}`);
+      if (r.next_assessment_approx_seconds !== undefined)
+        emitLine(`Next assessment approx: ${r.next_assessment_approx_seconds}s`);
+      if (r.note) emitLine(`${c.dim}${r.note}${c.reset}`);
+      return true;
+    },
+    { commands: ['get_tax_estimate'] },
+  ),
+
+  formatter(
     (result) => {
       if (!Array.isArray(result.empires)) return false;
 

@@ -1,0 +1,13 @@
+
+=== Scan Result ===
+Target: Ibis (player-2)
+Faction: smc
+Ship: hauler
+Hull: 180
+Shield: 75
+Cloaked: false
+
+Revealed:
+  cargo_used: 20
+  cargo_capacity: 200
+  weapons: 1

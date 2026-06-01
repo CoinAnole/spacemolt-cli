@@ -1,0 +1,15 @@
+
+=== Tax Estimate ===
+Collection active: true
+Taxable income: 42000
+Income tax: 210
+Income tax total: 210
+Assessed property: 125000
+Property tax: 625
+Property tax total: 625
+Sales tax rates: solarian 1%, voidborn 2.5%
+Income by source: market 30000, missions 12000
+Property by ship: ship-1 125000
+Last assessed: 2026-05-28T00:00:00Z
+Next assessment approx: 3600s
+Estimate only.

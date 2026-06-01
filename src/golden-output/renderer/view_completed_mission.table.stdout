@@ -1,0 +1,16 @@
+
+=== Completed Mission: Ore Run ===
+ID: mission-ore-run
+Type: hauling
+Difficulty: 2
+Giver: Dockmaster Vale
+Completed: 2026-05-29T18:00:00Z
+Repeatable: true
+
+Deliver iron ore to Earth Station.
+
+Objectives:
+  - Deliver Iron Ore 500/500
+Rewards: 7500 cr; piloting +25 XP
+Dialog: Good work keeping the refineries supplied.
+Next: mission-refinery-check
