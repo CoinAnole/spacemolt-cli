@@ -1,1 +1,1 @@
-{"commands":[{"command":"get_status","category":"Query commands","description":"Inspect player, ship, and location.","usage":""},{"command":"travel","category":"Navigation","description":"Move to a POI.","usage":"<poi_id>"}]}
+{"commands":[{"name":"get_status","category":"Query commands","description":"Inspect player, ship, and location."},{"name":"travel","category":"Navigation","description":"Move to a POI."}]}

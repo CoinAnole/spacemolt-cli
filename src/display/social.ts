@@ -312,6 +312,7 @@ export const socialFormatters = [
       emitOptionalLine('Total Stations', r.total_stations);
       emitOptionalLine('Contributors', r.contributors);
       emitOptionalLine('Top Contributor', r.top_contributor);
+      if (!Array.isArray(r.top_contributions)) emitOptionalLine('Top Contributions', r.top_contributions);
       emitOptionalLine('Most Recent Tick', r.most_recent_tick);
       const contributions = firstArray(r, ['top_contributions']);
       if (contributions) {

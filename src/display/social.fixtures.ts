@@ -180,7 +180,7 @@ export const factionInvitesFixture = {
 };
 
 export const factionIntelStatusFixture = {
-  intel_level: 'regional',
+  intel_level: 3,
   coverage_pct: 42.5,
   systems_known: 17,
   pois_known: 68,
@@ -188,14 +188,11 @@ export const factionIntelStatusFixture = {
   contributors: 3,
   top_contributor: 'Marlowe',
   most_recent_tick: 12045,
-  top_contributions: [
-    { contributor: 'Marlowe', count: 12 },
-    { contributor: 'Ibis', count: 7 },
-  ],
+  top_contributions: 12,
 };
 
 export const factionTradeIntelStatusFixture = {
-  intel_level: 'station',
+  intel_level: 2,
   coverage_pct: 36.25,
   stations_known: 11,
   total_stations: 32,
@@ -203,10 +200,7 @@ export const factionTradeIntelStatusFixture = {
   contributors: 2,
   top_contributor: 'Ibis',
   most_recent_tick: 12050,
-  top_contributions: [
-    { contributor: 'Ibis', count: 9 },
-    { contributor: 'Marlowe', count: 5 },
-  ],
+  top_contributions: 9,
 };
 
 export const forumThreadFixture = {

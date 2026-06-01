@@ -1,7 +1,7 @@
 
 === Commands ===
 
-  Command    | Category       | Usage    | Description                        
-  -----------+----------------+----------+------------------------------------
-  get_status | Query commands |          | Inspect player, ship, and location.
-  travel     | Navigation     | <poi_id> | Move to a POI.                     
+  Command    | Category       | Description                        
+  -----------+----------------+------------------------------------
+  get_status | Query commands | Inspect player, ship, and location.
+  travel     | Navigation     | Move to a POI.                     

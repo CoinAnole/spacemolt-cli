@@ -1,10 +1,8 @@
 
 commands:
-  - command: get_status
+  - name: get_status
     category: "Query commands"
     description: "Inspect player, ship, and location."
-    usage: ""
-  - command: travel
+  - name: travel
     category: Navigation
     description: "Move to a POI."
-    usage: <poi_id>

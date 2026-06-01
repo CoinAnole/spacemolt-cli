@@ -1,5 +1,5 @@
 
-intel_level: station
+intel_level: 2
 coverage_pct: 36.25
 stations_known: 11
 total_stations: 32
@@ -7,8 +7,4 @@ items_tracked: 19
 contributors: 2
 top_contributor: Ibis
 most_recent_tick: 12050
-top_contributions:
-  - contributor: Ibis
-    count: 9
-  - contributor: Marlowe
-    count: 5
+top_contributions: 9

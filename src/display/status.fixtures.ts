@@ -189,20 +189,10 @@ export const getMapFixture = {
     {
       system_id: 'sol',
       name: 'Sol',
-      x: 0,
-      y: 0,
-      empire: 'solarian',
-      security_status: 'high security',
-      connections: ['alpha_centauri'],
     },
     {
       system_id: 'alpha_centauri',
       name: 'Alpha Centauri',
-      x: 4,
-      y: 1,
-      empire: 'solarian',
-      security_status: 'medium security',
-      connections: ['sol'],
     },
   ],
   total_count: 2,
@@ -217,15 +207,21 @@ export const getSystemAgentsFixture = {
       username: 'Marlowe',
       player_id: 'player-1',
       ship_class: 'prospector',
-      poi_name: 'Earth Station',
+      ship_name: 'Surveyor',
+      faction_tag: 'SMC',
+      status_message: 'surveying routes',
       offline: false,
+      in_combat: false,
     },
     {
       username: 'Ibis',
       player_id: 'player-2',
       ship_class: 'hauler',
-      poi_name: 'Mars Depot',
+      ship_name: 'Long Haul',
+      faction_tag: 'SMC',
+      status_message: 'hauling ore',
       offline: true,
+      in_combat: true,
     },
   ],
 };
@@ -233,16 +229,14 @@ export const getSystemAgentsFixture = {
 export const getCommandsFixture = {
   commands: [
     {
-      command: 'get_status',
+      name: 'get_status',
       category: 'Query commands',
       description: 'Inspect player, ship, and location.',
-      usage: '',
     },
     {
-      command: 'travel',
+      name: 'travel',
       category: 'Navigation',
       description: 'Move to a POI.',
-      usage: '<poi_id>',
     },
   ],
 };

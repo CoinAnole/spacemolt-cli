@@ -7,15 +7,21 @@
       "username": "Marlowe",
       "player_id": "player-1",
       "ship_class": "prospector",
-      "poi_name": "Earth Station",
-      "offline": false
+      "ship_name": "Surveyor",
+      "faction_tag": "SMC",
+      "status_message": "surveying routes",
+      "offline": false,
+      "in_combat": false
     },
     {
       "username": "Ibis",
       "player_id": "player-2",
       "ship_class": "hauler",
-      "poi_name": "Mars Depot",
-      "offline": true
+      "ship_name": "Long Haul",
+      "faction_tag": "SMC",
+      "status_message": "hauling ore",
+      "offline": true,
+      "in_combat": true
     }
   ]
 }

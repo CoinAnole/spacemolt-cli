@@ -17,6 +17,10 @@ function formatDisplayValue(value: unknown): string {
   return String(value);
 }
 
+function rowsHaveValue(rows: Array<Record<string, unknown>>, keys: string[]): boolean {
+  return rows.some((row) => keys.some((key) => row[key] !== undefined && row[key] !== null && row[key] !== ''));
+}
+
 function formatMissionObjectText(value: unknown): string | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   if (!isRecord(value)) return String(value);
@@ -275,18 +279,9 @@ export const statusFormatters = [
   formatter(
     (r) => {
       if (!Array.isArray(r.systems)) return false;
-      const rows = r.systems.filter(isRecord).map((system) => ({
-        ...system,
-        connection_count: Array.isArray(system.connections) ? system.connections.length : system.connections,
-      }));
-      printCompactTable('Systems', rows, [
+      printCompactTable('Systems', r.systems.filter(isRecord), [
         ['Name', ['name']],
-        ['ID', ['system_id', 'id']],
-        ['Empire', ['empire']],
-        ['Security', ['security_status']],
-        ['X', ['x']],
-        ['Y', ['y']],
-        ['Connections', ['connection_count']],
+        ['System ID', ['system_id']],
       ]);
       if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
       return true;
@@ -297,14 +292,21 @@ export const statusFormatters = [
   formatter(
     (r) => {
       if (!Array.isArray(r.agents)) return false;
-      emitLine(`\n${c.bright}=== System Agents: ${r.system_id ?? 'current system'} ===${c.reset}`);
-      printCompactTable('Agents', r.agents.filter(isRecord), [
+      const rows = r.agents.filter(isRecord);
+      const agentColumns: Array<[string, string[]]> = [
         ['Name', ['username', 'name']],
         ['ID', ['player_id', 'id']],
-        ['Ship', ['ship_class', 'ship_name']],
-        ['POI', ['poi_name', 'poi_id']],
-        ['Offline', ['offline']],
-      ]);
+      ];
+      if (rowsHaveValue(rows, ['ship_name', 'ship_class'])) agentColumns.push(['Ship', ['ship_name', 'ship_class']]);
+      if (rowsHaveValue(rows, ['faction_tag', 'clan_tag', 'faction_id'])) {
+        agentColumns.push(['Faction', ['faction_tag', 'clan_tag', 'faction_id']]);
+      }
+      agentColumns.push(['Combat', ['in_combat']]);
+      if (rowsHaveValue(rows, ['offline'])) agentColumns.push(['Offline', ['offline']]);
+      if (rowsHaveValue(rows, ['status_message'])) agentColumns.push(['Status', ['status_message']]);
+
+      emitLine(`\n${c.bright}=== System Agents: ${r.system_id ?? 'current system'} ===${c.reset}`);
+      printCompactTable('Agents', rows, agentColumns);
       if (r.count !== undefined) emitLine(`${c.dim}count ${r.count}${c.reset}`);
       if (r.offline_collapsed !== undefined) emitLine(`${c.dim}offline collapsed ${r.offline_collapsed}${c.reset}`);
       return true;
@@ -315,17 +317,11 @@ export const statusFormatters = [
   formatter(
     (r) => {
       if (!Array.isArray(r.commands)) return false;
-      printCompactTable(
-        'Commands',
-        r.commands.filter(isRecord),
-        [
-          ['Command', ['command', 'name']],
-          ['Category', ['category']],
-          ['Usage', ['usage']],
-          ['Description', ['description', 'summary']],
-        ],
-        { maxCellWidth: 72 },
-      );
+      const rows = r.commands.filter(isRecord);
+      const commandColumns: Array<[string, string[]]> = [['Command', ['name']]];
+      if (rowsHaveValue(rows, ['category'])) commandColumns.push(['Category', ['category']]);
+      commandColumns.push(['Description', ['description']]);
+      printCompactTable('Commands', rows, commandColumns, { maxCellWidth: 72 });
       return true;
     },
     { commands: ['get_commands'] },

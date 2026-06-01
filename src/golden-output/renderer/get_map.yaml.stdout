@@ -2,16 +2,6 @@
 systems:
   - system_id: sol
     name: Sol
-    x: 0
-    y: 0
-    empire: solarian
-    security_status: "high security"
-    connections: [alpha_centauri]
   - system_id: alpha_centauri
     name: "Alpha Centauri"
-    x: 4
-    y: 1
-    empire: solarian
-    security_status: "medium security"
-    connections: [sol]
 total_count: 2
