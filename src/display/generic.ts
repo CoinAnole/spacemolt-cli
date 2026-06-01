@@ -389,7 +389,6 @@ export const genericFormatters = [
 
       emitLine(`\n${c.bright}=== ${titleForScalarAction(r.action)} ===${c.reset}`);
       for (const [key, value] of entries) {
-        if (key === 'action') continue;
         emitLine(`${labelForScalarKey(key)}: ${String(value)}`);
       }
       if (entries.length === 1 && r.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
