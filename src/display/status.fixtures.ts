@@ -181,14 +181,14 @@ export const getSystemAgentsFixture = {
       player_id: 'player-1',
       ship_class: 'prospector',
       poi_name: 'Earth Station',
-      online: true,
+      offline: false,
     },
     {
       username: 'Ibis',
       player_id: 'player-2',
       ship_class: 'hauler',
       poi_name: 'Mars Depot',
-      online: false,
+      offline: true,
     },
   ],
 };

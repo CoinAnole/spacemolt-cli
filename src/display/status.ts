@@ -243,7 +243,7 @@ export const statusFormatters = [
         ['ID', ['player_id', 'id']],
         ['Ship', ['ship_class', 'ship_name']],
         ['POI', ['poi_name', 'poi_id']],
-        ['Online', ['online']],
+        ['Offline', ['offline']],
       ]);
       if (r.count !== undefined) emitLine(`${c.dim}count ${r.count}${c.reset}`);
       if (r.offline_collapsed !== undefined) emitLine(`${c.dim}offline collapsed ${r.offline_collapsed}${c.reset}`);

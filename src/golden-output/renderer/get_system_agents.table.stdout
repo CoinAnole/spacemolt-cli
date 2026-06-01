@@ -3,9 +3,9 @@
 
 === Agents ===
 
-  Name    | ID       | Ship       | POI           | Online
-  --------+----------+------------+---------------+-------
-  Marlowe | player-1 | prospector | Earth Station | true  
-  Ibis    | player-2 | hauler     | Mars Depot    | false 
+  Name    | ID       | Ship       | POI           | Offline
+  --------+----------+------------+---------------+--------
+  Marlowe | player-1 | prospector | Earth Station | false  
+  Ibis    | player-2 | hauler     | Mars Depot    | true   
 count 2
 offline collapsed 4
