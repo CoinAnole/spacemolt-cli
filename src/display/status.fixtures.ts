@@ -127,11 +127,7 @@ export const scanFixture = {
   hull: 180,
   shield: 75,
   cloaked: false,
-  revealed_info: {
-    cargo_used: 20,
-    cargo_capacity: 200,
-    weapons: 1,
-  },
+  revealed_info: ['Cargo: 20/200', 'Weapons: 1'],
 };
 
 export const completedMissionDetailFixture = {
@@ -140,20 +136,22 @@ export const completedMissionDetailFixture = {
   type: 'hauling',
   difficulty: 2,
   description: 'Deliver iron ore to Earth Station.',
-  giver: 'Dockmaster Vale',
+  giver: { name: 'Vale', title: 'Dockmaster' },
   completion_time: '2026-05-29T18:00:00Z',
   repeatable: true,
   objectives: [
     {
+      type: 'deliver_item',
       description: 'Deliver Iron Ore',
-      progress: { current: 500, required: 500 },
+      item_id: 'ore_iron',
+      quantity: 500,
     },
   ],
   rewards: {
     credits: 7500,
     skill_xp: { piloting: 25 },
   },
-  dialog: 'Good work keeping the refineries supplied.',
+  dialog: { complete: 'Good work keeping the refineries supplied.' },
   chain_next: 'mission-refinery-check',
 };
 

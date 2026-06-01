@@ -10,7 +10,7 @@ Repeatable: true
 Deliver iron ore to Earth Station.
 
 Objectives:
-  - Deliver Iron Ore 500/500
+  - Deliver Iron Ore
 Rewards: 7500 cr; piloting +25 XP
 Dialog: Good work keeping the refineries supplied.
 Next: mission-refinery-check

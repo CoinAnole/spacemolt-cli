@@ -17,6 +17,40 @@ function formatDisplayValue(value: unknown): string {
   return String(value);
 }
 
+function formatMissionObjectText(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (!isRecord(value)) return String(value);
+
+  const name = value.name ?? value.title ?? value.id ?? value.content ?? value.text ?? value.message;
+  if (name !== undefined && name !== null && name !== '') return String(name);
+
+  const json = JSON.stringify(value);
+  return json === undefined || json === '{}' ? undefined : json;
+}
+
+function formatMissionGiver(value: unknown): string | undefined {
+  if (!isRecord(value)) return formatMissionObjectText(value);
+
+  const title = value.title === undefined || value.title === null || value.title === '' ? undefined : String(value.title);
+  const name = value.name === undefined || value.name === null || value.name === '' ? undefined : String(value.name);
+  const id = value.id === undefined || value.id === null || value.id === '' ? undefined : String(value.id);
+  const label = [title, name].filter(Boolean).join(' ');
+  if (label && id && label !== id) return `${label} (${id})`;
+  if (label) return label;
+  return id ?? formatMissionObjectText(value);
+}
+
+function formatMissionDialog(value: unknown): string | undefined {
+  if (!isRecord(value)) return formatMissionObjectText(value);
+
+  for (const key of ['complete', 'content', 'text', 'message', 'offer', 'accept', 'decline']) {
+    const text = value[key];
+    if (text !== undefined && text !== null && text !== '') return String(text);
+  }
+
+  return formatMissionObjectText(value);
+}
+
 function formatSkillSummary(stats: Record<string, unknown>, skillId: string, label: string): string | undefined {
   const skill = stats[skillId];
   const levelKey = `${skillId}_level`;
@@ -595,7 +629,15 @@ export const statusFormatters = [
       if (r.hull !== undefined) emitLine(`Hull: ${r.hull}`);
       if (r.shield !== undefined) emitLine(`Shield: ${r.shield}`);
       if (r.cloaked !== undefined) emitLine(`Cloaked: ${r.cloaked}`);
-      if (isRecord(r.revealed_info)) {
+      if (Array.isArray(r.revealed_info)) {
+        const revealed = r.revealed_info
+          .filter((value) => value !== undefined && value !== null && !isRecord(value) && !Array.isArray(value))
+          .map(String);
+        if (revealed.length) {
+          emitLine(`\n${c.bright}Revealed:${c.reset}`);
+          for (const value of revealed) emitLine(`  ${value}`);
+        }
+      } else if (isRecord(r.revealed_info)) {
         emitLine(`\n${c.bright}Revealed:${c.reset}`);
         for (const [key, value] of Object.entries(r.revealed_info)) {
           if (value === undefined || value === null || isRecord(value) || Array.isArray(value)) continue;
@@ -614,7 +656,8 @@ export const statusFormatters = [
       if (r.template_id) emitLine(`ID: ${r.template_id}`);
       if (r.type) emitLine(`Type: ${r.type}`);
       if (r.difficulty !== undefined) emitLine(`Difficulty: ${r.difficulty}`);
-      if (r.giver) emitLine(`Giver: ${r.giver}`);
+      const giver = formatMissionGiver(r.giver);
+      if (giver) emitLine(`Giver: ${giver}`);
       if (r.completion_time) emitLine(`Completed: ${r.completion_time}`);
       if (r.repeatable !== undefined) emitLine(`Repeatable: ${r.repeatable}`);
       if (r.description) emitLine(`\n${r.description}`);
@@ -625,7 +668,8 @@ export const statusFormatters = [
       }
       const rewards = summarizeRewardForDisplay(r.rewards);
       if (rewards) emitLine(`Rewards: ${rewards}`);
-      if (r.dialog) emitLine(`Dialog: ${r.dialog}`);
+      const dialog = formatMissionDialog(r.dialog);
+      if (dialog) emitLine(`Dialog: ${dialog}`);
       if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
       return true;
     },

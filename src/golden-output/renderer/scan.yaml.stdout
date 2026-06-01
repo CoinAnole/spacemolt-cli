@@ -8,6 +8,5 @@ hull: 180
 shield: 75
 cloaked: false
 revealed_info:
-  cargo_used: 20
-  cargo_capacity: 200
-  weapons: 1
+  - "Cargo: 20/200"
+  - "Weapons: 1"

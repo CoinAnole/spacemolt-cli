@@ -167,7 +167,7 @@ export const reloadFixture = {
   ammo_id: 'ammo-cell',
   ammo_name: 'Laser Cell',
   previous_ammo: 'empty',
-  current_ammo: 'Laser Cell',
+  current_ammo: 8,
   magazine_size: 8,
   rounds_discarded: 0,
 };

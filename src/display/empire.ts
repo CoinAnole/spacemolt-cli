@@ -93,6 +93,130 @@ function formatBpsMap(value: unknown): string {
     .join(', ');
 }
 
+function formatUnknownRecord(value: Record<string, unknown>): string {
+  return Object.entries(value)
+    .map(([key, fieldValue]) => {
+      if (fieldValue === undefined || fieldValue === null || isRecord(fieldValue) || Array.isArray(fieldValue)) return undefined;
+      return `${key} ${fieldValue}`;
+    })
+    .filter((part): part is string => Boolean(part))
+    .join(', ');
+}
+
+function formatBracketRange(bracket: Record<string, unknown>): string | undefined {
+  const lower = formatNumber(bracket.lower_bound);
+  const upper = bracket.upper_bound === undefined ? undefined : formatNumber(bracket.upper_bound);
+  const rate = formatBps(bracket.rate_bps);
+  const tax = formatCredits(bracket.tax_from_bracket);
+  const income = formatCredits(bracket.income_in_bracket);
+  if (!lower && !upper && !rate && !tax && !income) return undefined;
+
+  const range = upper === undefined ? `${lower ?? '0'}+` : `${lower ?? '0'}-${upper}`;
+  const base = [range, rate === undefined ? undefined : `@ ${rate}`].filter(Boolean).join(' ') || 'bracket';
+  const details = joinParts([
+    income === undefined ? undefined : `${income} income`,
+    tax === undefined ? undefined : `${tax} tax`,
+  ]);
+  return details ? `${base} (${details})` : base;
+}
+
+function formatTaxEntries(value: unknown, kind: 'income' | 'property'): string | undefined {
+  if (!Array.isArray(value)) {
+    if (isRecord(value)) return formatUnknownRecord(value);
+    return value === undefined || value === null || value === '' ? undefined : String(value);
+  }
+
+  const entries = value
+    .filter(isRecord)
+    .map((entry) => {
+      const empire = entry.empire === undefined ? undefined : String(entry.empire);
+      const rate = formatBps(entry.rate_bps);
+      const owed = formatCredits(entry.owed);
+      const gross = formatCredits(entry.gross);
+      const credit = formatCredits(entry.credit);
+      const assessed = formatCredits(entry.assessed_value);
+      const brackets = Array.isArray(entry.brackets)
+        ? entry.brackets.filter(isRecord).map(formatBracketRange).filter(Boolean).join('; ')
+        : '';
+
+      const details =
+        kind === 'income'
+          ? joinParts([
+              gross === undefined ? undefined : `gross ${gross}`,
+              credit === undefined ? undefined : `credit ${credit}`,
+              rate === undefined ? undefined : `rate ${rate}`,
+              brackets ? `brackets ${brackets}` : undefined,
+            ])
+          : joinParts([
+              assessed === undefined ? undefined : `assessed ${assessed}`,
+              rate === undefined ? undefined : `rate ${rate}`,
+              brackets ? `brackets ${brackets}` : undefined,
+            ]);
+
+      const label = [empire, owed === undefined ? undefined : `owed ${owed}`].filter(Boolean).join(' ') || 'entry';
+      return details ? `${label} (${details})` : label;
+    })
+    .filter(Boolean);
+
+  return entries.length ? entries.join('; ') : undefined;
+}
+
+function formatSalesTaxRates(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    if (isRecord(value)) return formatBpsMap(value);
+    return value === undefined || value === null || value === '' ? undefined : String(value);
+  }
+
+  const rates = value
+    .filter(isRecord)
+    .map((entry) => {
+      const empire = entry.empire === undefined ? undefined : String(entry.empire);
+      const rate = formatBps(entry.rate_bps);
+      const reason = entry.reason === undefined || entry.reason === null || entry.reason === '' ? undefined : String(entry.reason);
+      const label = [empire, rate].filter(Boolean).join(' ') || 'rate';
+      return reason ? `${label} (${reason})` : label;
+    })
+    .filter(Boolean);
+
+  return rates.length ? rates.join(', ') : undefined;
+}
+
+function formatTaxableIncomeSources(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    if (isRecord(value)) return formatUnknownRecord(value);
+    return value === undefined || value === null || value === '' ? undefined : String(value);
+  }
+
+  const sources = value
+    .filter(isRecord)
+    .map((entry) => {
+      const category = entry.category === undefined ? undefined : String(entry.category);
+      const amount = formatCredits(entry.amount);
+      return [category, amount].filter(Boolean).join(' ') || 'source';
+    })
+    .filter(Boolean);
+
+  return sources.length ? sources.join(', ') : undefined;
+}
+
+function formatAssessedPropertySources(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    if (isRecord(value)) return formatUnknownRecord(value);
+    return value === undefined || value === null || value === '' ? undefined : String(value);
+  }
+
+  const sources = value
+    .filter(isRecord)
+    .map((entry) => {
+      const ship = entry.ship_id === undefined ? undefined : String(entry.ship_id);
+      const valueText = formatCredits(entry.value);
+      return [ship, valueText].filter(Boolean).join(' ') || 'ship';
+    })
+    .filter(Boolean);
+
+  return sources.length ? sources.join(', ') : undefined;
+}
+
 function formatFees(policy: Record<string, unknown>): string {
   const evictionGrace = formatNumber(policy.eviction_grace_cycles);
   return joinParts([
@@ -194,27 +318,23 @@ export const empireFormatters = [
       emitLine(`\n${c.bright}=== Tax Estimate ===${c.reset}`);
       if (r.tax_collection_active !== undefined) emitLine(`Collection active: ${r.tax_collection_active}`);
       if (r.taxable_income_to_date !== undefined) emitLine(`Taxable income: ${r.taxable_income_to_date}`);
-      if (r.income_tax !== undefined) emitLine(`Income tax: ${r.income_tax}`);
+      const incomeTax = formatTaxEntries(r.income_tax, 'income');
+      if (incomeTax) emitLine(`Income tax: ${incomeTax}`);
       if (r.income_tax_total !== undefined) emitLine(`Income tax total: ${r.income_tax_total}`);
       if (r.assessed_property_value !== undefined) emitLine(`Assessed property: ${r.assessed_property_value}`);
-      if (r.property_tax !== undefined) emitLine(`Property tax: ${r.property_tax}`);
+      const propertyTax = formatTaxEntries(r.property_tax, 'property');
+      if (propertyTax) emitLine(`Property tax: ${propertyTax}`);
       if (r.property_tax_total !== undefined) emitLine(`Property tax total: ${r.property_tax_total}`);
-      if (isRecord(r.sales_tax_rates)) emitLine(`Sales tax rates: ${formatBpsMap(r.sales_tax_rates)}`);
-      if (isRecord(r.taxable_income_by_source)) {
-        emitLine(
-          `Income by source: ${Object.entries(r.taxable_income_by_source)
-            .map(([key, value]) => `${key} ${value}`)
-            .join(', ')}`,
-        );
-      }
-      if (isRecord(r.assessed_property_by_ship)) {
-        emitLine(
-          `Property by ship: ${Object.entries(r.assessed_property_by_ship)
-            .map(([key, value]) => `${key} ${value}`)
-            .join(', ')}`,
-        );
-      }
-      if (r.last_assessed_at) emitLine(`Last assessed: ${r.last_assessed_at}`);
+      const salesTaxRates = formatSalesTaxRates(r.sales_tax_rates);
+      if (salesTaxRates) emitLine(`Sales tax rates: ${salesTaxRates}`);
+      const taxableIncomeBySource = formatTaxableIncomeSources(r.taxable_income_by_source);
+      if (taxableIncomeBySource) emitLine(`Income by source: ${taxableIncomeBySource}`);
+      const assessedPropertyByShip = formatAssessedPropertySources(r.assessed_property_by_ship);
+      if (assessedPropertyByShip) emitLine(`Property by ship: ${assessedPropertyByShip}`);
+      const lastAssessed = formatPolicyTimestamp(r.last_assessed_at);
+      if (lastAssessed) emitLine(`Last assessed: ${lastAssessed}`);
+      const lastPropertyAssessed = formatPolicyTimestamp(r.last_property_assessed_at);
+      if (lastPropertyAssessed) emitLine(`Last property assessed: ${lastPropertyAssessed}`);
       if (r.next_assessment_approx_seconds !== undefined)
         emitLine(`Next assessment approx: ${r.next_assessment_approx_seconds}s`);
       if (r.note) emitLine(`${c.dim}${r.note}${c.reset}`);

@@ -8,6 +8,5 @@ Shield: 75
 Cloaked: false
 
 Revealed:
-  cargo_used: 20
-  cargo_capacity: 200
-  weapons: 1
+  Cargo: 20/200
+  Weapons: 1
