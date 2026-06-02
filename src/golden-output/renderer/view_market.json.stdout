@@ -1,10 +1,25 @@
 {
   "action": "view_market",
+  "base": "Earth Station",
   "base_id": "earth_station",
+  "categories": [
+    "ore",
+    "fuel"
+  ],
+  "message": "Market at Earth Station",
   "items": [
     {
       "item_id": "ore_iron",
       "item_name": "Iron Ore",
+      "category": "ore",
+      "best_buy": 15,
+      "best_buy_qty": 575,
+      "best_sell": 18,
+      "best_sell_qty": 15,
+      "buy_quantity": 1475,
+      "buy_price": 15,
+      "sell_quantity": 1015,
+      "sell_price": 18,
       "buy_orders": [
         {
           "price_each": 15,
@@ -40,6 +55,15 @@
     {
       "item_id": "fuel_cell",
       "item_name": "Fuel Cell",
+      "category": "fuel",
+      "best_buy": 0,
+      "best_buy_qty": 0,
+      "best_sell": 0,
+      "best_sell_qty": 0,
+      "buy_quantity": 0,
+      "buy_price": 0,
+      "sell_quantity": 0,
+      "sell_price": 0,
       "buy_orders": [],
       "sell_orders": []
     }

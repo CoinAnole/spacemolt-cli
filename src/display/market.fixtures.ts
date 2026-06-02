@@ -20,11 +20,23 @@ export const browseShipsFixture = {
 
 export const viewMarketFixture = {
   action: 'view_market',
+  base: 'Earth Station',
   base_id: 'earth_station',
+  categories: ['ore', 'fuel'],
+  message: 'Market at Earth Station',
   items: [
     {
       item_id: 'ore_iron',
       item_name: 'Iron Ore',
+      category: 'ore',
+      best_buy: 15,
+      best_buy_qty: 575,
+      best_sell: 18,
+      best_sell_qty: 15,
+      buy_quantity: 1475,
+      buy_price: 15,
+      sell_quantity: 1015,
+      sell_price: 18,
       buy_orders: [
         { price_each: 15, quantity: 500, source: 'station' },
         { price_each: 15, quantity: 75, source: 'player' },
@@ -39,6 +51,15 @@ export const viewMarketFixture = {
     {
       item_id: 'fuel_cell',
       item_name: 'Fuel Cell',
+      category: 'fuel',
+      best_buy: 0,
+      best_buy_qty: 0,
+      best_sell: 0,
+      best_sell_qty: 0,
+      buy_quantity: 0,
+      buy_price: 0,
+      sell_quantity: 0,
+      sell_price: 0,
       buy_orders: [],
       sell_orders: [],
     },
@@ -66,15 +87,31 @@ export const storageFixture = {
 };
 
 export const marketOrdersFixture = {
+  action: 'view_orders',
+  base: 'Earth Station',
+  scope: 'personal',
   orders: [
     {
       order_id: 'order-1',
-      item_id: 'ore_iron',
+      order_type: 'limit',
       side: 'buy',
+      item_id: 'ore_iron',
+      item_name: 'Iron Ore',
       quantity: 100,
+      remaining: 75,
+      filled_quantity: 25,
       price_each: 12,
+      listing_fee: 25,
+      created_at: '2026-05-29T00:00:00Z',
     },
   ],
+  total: 1,
+  page: 1,
+  page_size: 20,
+  total_pages: 1,
+  has_more: false,
+  hint: 'Showing personal market orders.',
+  sort_by: 'newest',
 };
 
 export const createSellOrderFixture = {
