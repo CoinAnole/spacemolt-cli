@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -23,9 +24,11 @@ const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
 const LOCAL_OPENAPI_PATH = path.join(import.meta.dir, '..', 'spacemolt-docs', 'openapi.json');
 
 type OpenApiFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+type OpenApiEtagFallback = (timeoutMs: number) => Promise<string | undefined> | string | undefined;
 
 interface FetchLiveOpenApiSpecOptions {
   fetchImpl?: OpenApiFetch;
+  fetchLiveEtagFallback?: OpenApiEtagFallback;
   sleep?: (ms: number) => Promise<void>;
   maxAttempts?: number;
   retryDelayMs?: number;
@@ -46,6 +49,7 @@ function isInfrastructureSpecRoute(route: string): boolean {
 
 async function fetchLiveOpenApiSpec(options: FetchLiveOpenApiSpecOptions = {}): Promise<OpenApiSpec> {
   const fetchImpl = options.fetchImpl || fetch;
+  const fetchLiveEtagFallback = options.fetchLiveEtagFallback || fetchLiveOpenApiEtagWithCurl;
   const sleep = options.sleep || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const maxAttempts = options.maxAttempts ?? Number(process.env.LIVE_API_SYNC_MAX_ATTEMPTS || 4);
   const retryDelayMs = options.retryDelayMs ?? Number(process.env.LIVE_API_SYNC_RETRY_DELAY_MS || 1_000);
@@ -55,16 +59,21 @@ async function fetchLiveOpenApiSpec(options: FetchLiveOpenApiSpecOptions = {}): 
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const resp = await fetchImpl(OPENAPI_URL, { signal: AbortSignal.timeout(timeoutMs) });
-    if (resp.status === 429 && attempt < maxAttempts) {
-      log(`[RETRY] OpenAPI spec rate-limited (429); retrying ${attempt + 1}/${maxAttempts}`);
-      await sleep(retryDelayMs);
-      continue;
-    }
     if (resp.status === 429) {
-      const fallback = await readLocalOpenApiSpecWithMatchingLiveEtag(fetchImpl, localOpenApiPath, timeoutMs);
+      const fallback = await readLocalOpenApiSpecWithMatchingLiveEtag(
+        fetchImpl,
+        localOpenApiPath,
+        timeoutMs,
+        fetchLiveEtagFallback,
+      );
       if (fallback) {
-        log('[FALLBACK] OpenAPI GET rate-limited (429); live HEAD ETag matches local spec.');
+        log('[FALLBACK] OpenAPI GET rate-limited (429); live ETag matches local spec.');
         return fallback;
+      }
+      if (attempt < maxAttempts) {
+        log(`[RETRY] OpenAPI spec rate-limited (429); retrying ${attempt + 1}/${maxAttempts}`);
+        await sleep(retryDelayMs);
+        continue;
       }
     }
     expect(resp.status, `Failed to fetch OpenAPI spec: HTTP ${resp.status}`).toBe(200);
@@ -82,16 +91,45 @@ async function readLocalOpenApiSpecWithMatchingLiveEtag(
   fetchImpl: OpenApiFetch,
   localOpenApiPath: string,
   timeoutMs: number,
+  fetchLiveEtagFallback: OpenApiEtagFallback,
 ): Promise<OpenApiSpec | undefined> {
   const localBytes = fs.readFileSync(localOpenApiPath);
   const localHashPrefix = crypto.createHash('sha256').update(localBytes).digest('hex').slice(0, 16);
-  const response = await fetchImpl(OPENAPI_URL, { method: 'HEAD', signal: AbortSignal.timeout(timeoutMs) });
-  if (!response.ok) return undefined;
-
-  const etag = response.headers.get('etag');
+  const etag = await fetchLiveOpenApiEtag(fetchImpl, timeoutMs, fetchLiveEtagFallback);
   if (!etag || normalizeEtag(etag) !== localHashPrefix) return undefined;
 
   return JSON.parse(localBytes.toString('utf-8')) as OpenApiSpec;
+}
+
+async function fetchLiveOpenApiEtag(
+  fetchImpl: OpenApiFetch,
+  timeoutMs: number,
+  fetchLiveEtagFallback: OpenApiEtagFallback,
+): Promise<string | undefined> {
+  const response = await fetchImpl(OPENAPI_URL, { method: 'HEAD', signal: AbortSignal.timeout(timeoutMs) });
+  if (response.ok) return response.headers.get('etag') || undefined;
+  if (response.status === 429) return (await fetchLiveEtagFallback(timeoutMs)) || undefined;
+  return undefined;
+}
+
+function fetchLiveOpenApiEtagWithCurl(timeoutMs: number): string | undefined {
+  const maxTimeSeconds = Math.max(1, Math.ceil(timeoutMs / 1_000));
+  const result = spawnSync('curl', ['-sSIL', '--max-time', String(maxTimeSeconds), OPENAPI_URL], {
+    encoding: 'utf-8',
+    timeout: timeoutMs + 1_000,
+  });
+  if (result.error) return undefined;
+
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const statuses = Array.from(output.matchAll(/^HTTP\/\S+\s+(\d+)/gim));
+  const lastStatus = statuses[statuses.length - 1]?.[1];
+  if (lastStatus && Number(lastStatus) >= 400) return undefined;
+
+  const etagLine = output
+    .split(/\r?\n/)
+    .reverse()
+    .find((line) => /^etag:/i.test(line));
+  return etagLine?.replace(/^etag:\s*/i, '').trim() || undefined;
 }
 
 function normalizeEtag(etag: string): string {
@@ -139,7 +177,7 @@ describe('api sync', () => {
   });
 
   test('LIVE_API_SYNC retries a rate-limited OpenAPI fetch before using the response', async () => {
-    let fetchCount = 0;
+    const methods: string[] = [];
     const spec = {
       info: { 'x-gameserver-version': 'v.retry' },
       paths: {},
@@ -150,9 +188,9 @@ describe('api sync', () => {
       retryDelayMs: 0,
       sleep: async () => {},
       log: () => {},
-      fetchImpl: async () => {
-        fetchCount += 1;
-        if (fetchCount === 1) return new Response('', { status: 429 });
+      fetchImpl: async (_url, init) => {
+        methods.push(init?.method || 'GET');
+        if (methods.length === 1) return new Response('', { status: 429 });
         return new Response(JSON.stringify(spec), {
           status: 200,
           headers: { 'content-type': 'application/json' },
@@ -161,10 +199,10 @@ describe('api sync', () => {
     });
 
     expect(result).toEqual(spec);
-    expect(fetchCount).toBe(2);
+    expect(methods).toEqual(['GET', 'HEAD', 'GET']);
   });
 
-  test('LIVE_API_SYNC falls back to a local spec when repeated 429s have a matching live ETag', async () => {
+  test('LIVE_API_SYNC falls back to a local spec when a rate-limited GET has a matching live ETag', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-sync-'));
     const spec = {
       info: { 'x-gameserver-version': 'v.etag' },
@@ -192,7 +230,41 @@ describe('api sync', () => {
       });
 
       expect(result).toEqual(spec);
-      expect(methods).toEqual(['GET', 'GET', 'HEAD']);
+      expect(methods).toEqual(['GET', 'HEAD']);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('LIVE_API_SYNC can verify a local spec when fetch GET and HEAD are both rate-limited', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-sync-'));
+    const spec = {
+      info: { 'x-gameserver-version': 'v.independent-etag' },
+      paths: {},
+    } as OpenApiSpec;
+    const localOpenApiPath = path.join(dir, 'openapi.json');
+    const body = JSON.stringify(spec);
+    const etag = `W/"${crypto.createHash('sha256').update(body).digest('hex').slice(0, 16)}"`;
+    const methods: string[] = [];
+
+    fs.writeFileSync(localOpenApiPath, body);
+
+    try {
+      const result = await fetchLiveOpenApiSpec({
+        maxAttempts: 1,
+        retryDelayMs: 0,
+        sleep: async () => {},
+        log: () => {},
+        localOpenApiPath,
+        fetchImpl: async (_url, init) => {
+          methods.push(init?.method || 'GET');
+          return new Response('', { status: 429 });
+        },
+        fetchLiveEtagFallback: async () => etag,
+      });
+
+      expect(result).toEqual(spec);
+      expect(methods).toEqual(['GET', 'HEAD']);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
