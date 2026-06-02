@@ -240,13 +240,36 @@ export const shipFormatters = [
         emitLine(`(No wrecks at this location)`);
       } else {
         for (const w of wrecks) {
-          emitLine(`\n${c.yellow}Wreck: ${w.wreck_id}${c.reset}`);
-          emitLine(`  Ship: ${w.ship_class}`);
-          emitLine(`  Expires in: ${w.ticks_remaining} ticks`);
-          const items = (w.items as Array<Record<string, unknown>>) || [];
-          if (items.length) {
-            emitLine(`  Contents:`);
-            for (const item of items) emitLine(`    - ${item.quantity}x ${item.item_id}`);
+          const wreckId = w.id || w.wreck_id || 'unknown';
+          const ship = [w.ship_name, w.ship_class].filter(Boolean).join(' / ') || 'unknown';
+          const victim = w.victim_name ? ` (${w.victim_name})` : '';
+          const cargo = Array.isArray(w.cargo)
+            ? (w.cargo as Array<Record<string, unknown>>)
+            : ((w.items as Array<Record<string, unknown>>) || []);
+          const modules = Array.isArray(w.modules) ? (w.modules as Array<Record<string, unknown>>) : [];
+
+          emitLine(`\n${c.yellow}Wreck: ${wreckId}${c.reset}`);
+          emitLine(`  Ship: ${ship}${victim}`);
+          if (w.salvage_value !== undefined) emitLine(`  Salvage value: ${w.salvage_value}`);
+          if (w.expire_tick !== undefined) {
+            emitLine(`  Expires tick: ${w.expire_tick}`);
+          } else if (w.ticks_remaining !== undefined) {
+            emitLine(`  Expires in: ${w.ticks_remaining} ticks`);
+          }
+          if (w.expires_at !== undefined) emitLine(`  Expires at: ${w.expires_at}`);
+          if (cargo.length) {
+            emitLine(`  Cargo:`);
+            for (const item of cargo) {
+              const itemName = item.name || item.item_id || '?';
+              emitLine(`    - ${item.quantity ?? '?'}x ${itemName}`);
+            }
+          }
+          if (modules.length) {
+            emitLine(`  Modules:`);
+            for (const module of modules) {
+              const moduleName = module.name || module.type_id || module.id || '?';
+              emitLine(`    - ${moduleName}`);
+            }
           }
         }
       }

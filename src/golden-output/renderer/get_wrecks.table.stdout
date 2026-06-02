@@ -2,7 +2,11 @@
 === Wrecks at POI ===
 
 Wreck: wreck-1
-  Ship: skiff
-  Expires in: 5 ticks
-  Contents:
-    - 10x ore_iron
+  Ship: Lucky Strike / skiff (Ibis)
+  Salvage value: 1250
+  Expires tick: 12050
+  Expires at: 2026-05-29T01:00:00Z
+  Cargo:
+    - 10x Iron Ore
+  Modules:
+    - Pulse Laser I

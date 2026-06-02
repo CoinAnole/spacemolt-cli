@@ -1,15 +1,36 @@
 {
+  "count": 1,
   "wrecks": [
     {
-      "wreck_id": "wreck-1",
+      "id": "wreck-1",
+      "type": "ship",
+      "poi_id": "sol_asteroid_belt",
+      "system_id": "sol",
       "ship_class": "skiff",
-      "ticks_remaining": 5,
-      "items": [
+      "ship_name": "Lucky Strike",
+      "victim_id": "player-ibis",
+      "victim_name": "Ibis",
+      "cargo": [
         {
           "item_id": "ore_iron",
-          "quantity": 10
+          "name": "Iron Ore",
+          "quantity": 10,
+          "size": 1
         }
-      ]
+      ],
+      "modules": [
+        {
+          "id": "module-1",
+          "type_id": "pulse_laser_i",
+          "name": "Pulse Laser I",
+          "type": "weapon",
+          "wear": 0.2
+        }
+      ],
+      "salvage_value": 1250,
+      "created_at": "2026-05-29T00:00:00Z",
+      "expires_at": "2026-05-29T01:00:00Z",
+      "expire_tick": 12050
     }
   ]
 }
