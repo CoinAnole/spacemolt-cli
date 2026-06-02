@@ -1,6 +1,0 @@
-
-=== Facility ===
-
-  Name        | ID         | Level | Status | Recycler | Owner  
-  ------------+------------+-------+--------+----------+--------
-  Fuel Bunker | facility-1 | 2     | true   | false    | Marlowe

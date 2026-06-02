@@ -150,6 +150,5 @@ export const marketHighValueFixtures = {
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   view_storage: { command: 'view_storage', fixture: storageFixture },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
-  faction_trade_intel: { command: 'faction_trade_intel', fixture: intelFixture },
   get_trades: { command: 'get_trades', fixture: marketListingsFixture },
 };
