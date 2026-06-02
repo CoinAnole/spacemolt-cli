@@ -102,7 +102,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       search: {
         type: 'string',
-        description: 'Client-side search across item IDs and names in formatted output.',
+        description:
+          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
       },
     },
     clientOnlyFields: ['search'],
@@ -118,7 +119,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       search: {
         type: 'string',
-        description: 'Client-side search across item IDs and names in formatted output.',
+        description:
+          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
       },
     },
     clientOnlyFields: ['search'],
@@ -220,7 +222,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       search: {
         type: 'string',
-        description: 'Filter by substring match on item names',
+        description: 'Filter by substring match on item IDs or names. Comma-separated terms match any.',
       },
     },
   },

@@ -174,11 +174,23 @@ function storageItemMatches(item: Record<string, unknown>, itemFilter?: string, 
   }
 
   if (searchFilter) {
-    const needle = searchFilter.toLowerCase();
-    return haystack.some((value) => value.includes(needle));
+    const needles = searchNeedles(searchFilter);
+    const normalizedHaystack = haystack.map(normalizeSearchText);
+    return needles.some((needle) => normalizedHaystack.some((value) => value.includes(needle)));
   }
 
   return true;
+}
+
+function searchNeedles(searchFilter: string): string[] {
+  return searchFilter
+    .split(',')
+    .map(normalizeSearchText)
+    .filter(Boolean);
+}
+
+function normalizeSearchText(value: string): string {
+  return value.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
 }
 
 function applyCargoDisplayFilters(response: APIResponse, payload: Record<string, unknown>): APIResponse {

@@ -435,6 +435,62 @@ describe('response renderer', () => {
     expect(parsed.items).toEqual([expect.objectContaining({ item_id: 'fuel_cell' })]);
   });
 
+  test('renderResponse treats comma-separated storage search terms as alternatives', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_storage',
+        displayCommand: 'view_storage',
+        payload: { search: 'Copper Wiring,Steel Plate' },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'copper_wiring', item_name: 'Copper Wiring', quantity: 5 },
+              { item_id: 'steel_plate', item_name: 'Steel Plate', quantity: 7 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.items).toEqual([
+      expect.objectContaining({ item_id: 'copper_wiring' }),
+      expect.objectContaining({ item_id: 'steel_plate' }),
+    ]);
+  });
+
+  test('renderResponse normalizes storage search separators against item IDs', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_storage',
+        displayCommand: 'view_storage',
+        payload: { search: 'copper wiring' },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'copper_wiring', quantity: 5 },
+              { item_id: 'steel_plate', quantity: 7 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.items).toEqual([expect.objectContaining({ item_id: 'copper_wiring' })]);
+  });
+
   test('renderResponse applies view_market item filter to --json output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
