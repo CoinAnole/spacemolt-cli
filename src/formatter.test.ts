@@ -2002,14 +2002,6 @@ describe('structuredContent formatters', () => {
         ------------+------------+-------+--------+----------+--------
         Fuel Bunker | facility-1 | 2     | online | false    | Marlowe"
       ,
-        "facility": 
-      "
-      === Facility ===
-
-        Name        | ID         | Level | Status | Recycler | Owner
-        ------------+------------+-------+--------+----------+--------
-        Fuel Bunker | facility-1 | 2     | true   | false    | Marlowe"
-      ,
         "facility_list": 
       "
       === Facilities at earth_station ===

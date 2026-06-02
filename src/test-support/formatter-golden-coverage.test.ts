@@ -25,4 +25,12 @@ describe('formatter golden coverage', () => {
     expect(report.missingHighValueFixtures).toEqual([]);
     expect(report.fallbackOutputs).toEqual([]);
   });
+
+  test('stale formatter-only commands stay removed', () => {
+    const report = formatterGoldenCoverageReport();
+    expect(report.formatterCommands).not.toContain('facility_get');
+    expect(report.formatterCommands).not.toContain('faction_trade_intel');
+    expect(report.optOuts).not.toHaveProperty('facility_get');
+    expect(report.optOuts).not.toHaveProperty('faction_trade_intel');
+  });
 });

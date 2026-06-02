@@ -413,19 +413,6 @@ export const socialFormatters = [
     { commands: ['facility_types'], shapeFallback: true },
   ),
 
-  // Facility Get
-  namedFormatter(
-    'facility',
-    ['facility'],
-    (r) => {
-      const facility = r.facility as Record<string, unknown> | undefined;
-      if (!facility) return false;
-      printCompactTable('Facility', [facility], facilityColumns([facility]));
-      return true;
-    },
-    { commands: ['facility_get'], shapeFallback: true },
-  ),
-
   // Fleet Status
   namedFormatter(
     'fleet',

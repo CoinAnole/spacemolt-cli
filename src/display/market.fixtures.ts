@@ -174,7 +174,7 @@ export const marketFixtureCases = {
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   storage: { command: 'storage', fixture: storageFixture },
   market_orders: { command: 'view_orders', fixture: marketOrdersFixture },
-  intel: { command: 'faction_trade_intel', fixture: intelFixture },
+  intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
 };
 
 export const marketHighValueFixtures = {

@@ -103,17 +103,6 @@ export const facilityTypesFixture = {
   total: 1753,
 };
 
-export const facilityFixture = {
-  facility: {
-    facility_id: 'facility-1',
-    name: 'Fuel Bunker',
-    level: 2,
-    enabled: true,
-    owner_name: 'Marlowe',
-    is_recycler: false,
-  },
-};
-
 export const fleetFixture = {
   fleet: {
     fleet_id: 'fleet-1',
@@ -270,7 +259,6 @@ export const socialFixtureCases = {
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
   facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
-  facility: { command: 'facility_get', fixture: facilityFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
 };

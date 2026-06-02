@@ -477,6 +477,6 @@ export const marketFormatters = [
       ]);
       return true;
     },
-    { commands: ['faction_query_trade_intel', 'faction_trade_intel'], shapeFallback: true },
+    { commands: ['faction_query_trade_intel'], shapeFallback: true },
   ),
 ];
