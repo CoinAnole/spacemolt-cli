@@ -557,6 +557,29 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('This is an authentication error.');
   });
 
+  test('displayError gives invalid_payload a parameter spelling suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'facility_upgrade',
+      { code: 'invalid_payload', message: 'Unknown parameter "facilty_id". Valid parameters: facility_id.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [invalid_payload]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('Check parameter names and spelling');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
   test('displayUnknownCommand points group-like commands to group help', () => {
     const capture = captureWriter();
 

@@ -56,6 +56,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: [],
   },
+  invalid_payload: {
+    code: 'invalid_payload',
+    message: 'Invalid command payload.',
+    suggestion:
+      'Check parameter names and spelling. Run "spacemolt help <command>" for local command arguments, or "spacemolt get_commands" for the server command list.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['help', 'get_commands'],
+  },
   docked: {
     code: 'docked',
     message: 'Ship is docked.',
