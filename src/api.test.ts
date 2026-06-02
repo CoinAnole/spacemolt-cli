@@ -7,6 +7,7 @@ import type { CommandConfig } from './commands.ts';
 import { runCommand } from './response-renderer.ts';
 import { getDefaultProfile, profileNameForUsername, SessionManager, setDefaultProfile } from './session.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
+import { VERSION } from './runtime.ts';
 
 const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
 
@@ -207,7 +208,7 @@ describe('SpaceMoltClient', () => {
         url: 'https://game.test/api/v2/session',
         options: {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'User-Agent': 'SpaceMolt-Client/2.2.1' },
+          headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
         },
       },
     ]);
