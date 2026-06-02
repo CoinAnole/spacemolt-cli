@@ -58,6 +58,11 @@ function hasAnyDroneField(rows: Array<Record<string, unknown>>, fields: string[]
   );
 }
 
+function formatFuelDelta(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return value > 0 ? `+${value}` : String(value);
+}
+
 function droneTableColumns(rows: Array<Record<string, unknown>>, options: { includeCargo?: boolean } = {}) {
   const columns: Array<[string, string[]]> = [
     ['Name', ['name', 'type_name', 'drone_type', 'item_id', 'type']],
@@ -190,6 +195,34 @@ export const shipFormatters = [
       return true;
     },
     { commands: ['get_base'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.action !== 'refuel' && r.fuel_now === undefined && r.target_fuel_now === undefined) return false;
+
+      emitLine(`\n${c.bright}=== Refuel Complete ===${c.reset}`);
+      if (r.source !== undefined) emitLine(`Source: ${r.source}`);
+
+      const fuelDelta = formatFuelDelta(r.fuel);
+      if (r.fuel_now !== undefined || r.fuel_max !== undefined || fuelDelta !== undefined) {
+        const delta = fuelDelta === undefined ? '' : ` (${fuelDelta})`;
+        emitLine(`Ship fuel: ${r.fuel_now ?? '?'}/${r.fuel_max ?? '?'}${delta}`);
+      }
+
+      const targetName = r.target_player_name ?? r.target_name;
+      const targetId = r.target_player_id ?? r.target_id;
+      if (targetName !== undefined || targetId !== undefined) {
+        const idText = targetName !== undefined && targetId !== undefined ? ` (${targetId})` : '';
+        emitLine(`Target: ${targetName ?? targetId}${idText}`);
+      }
+      if (r.target_fuel_now !== undefined || r.target_fuel_max !== undefined) {
+        emitLine(`Target fuel: ${r.target_fuel_now ?? '?'}/${r.target_fuel_max ?? '?'}`);
+      }
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['refuel'] },
   ),
 
   formatter(

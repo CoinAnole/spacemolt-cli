@@ -829,6 +829,28 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats refuel transfers without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('refuel', {
+      action: 'refuel',
+      fuel: -697,
+      fuel_max: 4000,
+      fuel_now: 3046,
+      source: 'ship_transfer',
+      target_fuel_max: 700,
+      target_fuel_now: 700,
+      target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+      target_player_name: 'Fabrini',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Refuel Complete ===');
+    expect(stdout).toContain('Source: ship_transfer');
+    expect(stdout).toContain('Ship fuel: 3046/4000 (-697)');
+    expect(stdout).toContain('Target: Fabrini (9c8913b2cf825728a2404c9e4c4d7afb)');
+    expect(stdout).toContain('Target fuel: 700/700');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats chat history as a chat log without raw JSON fallback', () => {
     const { stdout, stderr } = captureStructuredOutput('get_chat_history', chatHistoryFixture);
 

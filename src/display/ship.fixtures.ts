@@ -208,6 +208,18 @@ export const reloadFixture = {
   rounds_discarded: 0,
 };
 
+export const refuelFixture = {
+  action: 'refuel',
+  fuel: -697,
+  fuel_max: 4000,
+  fuel_now: 3046,
+  source: 'ship_transfer',
+  target_fuel_max: 700,
+  target_fuel_now: 700,
+  target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+  target_player_name: 'Fabrini',
+};
+
 export const salvageWreckFixture = {
   metal_scrap: 14,
   rare_materials: 2,
@@ -230,6 +242,7 @@ export const shipHighValueFixtures = {
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
+  refuel: { command: 'refuel', fixture: refuelFixture },
   reload: { command: 'reload', fixture: reloadFixture },
   salvage_wreck: { command: 'salvage_wreck', fixture: salvageWreckFixture },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
