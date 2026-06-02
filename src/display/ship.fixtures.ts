@@ -128,25 +128,42 @@ export const baseFixture = {
 };
 
 export const dronesFixture = {
+  bay_count: 1,
+  bay_capacity: 2,
+  deployed_count: 1,
+  bandwidth_used: 1,
+  bandwidth_total: 4,
   drones: [
     {
-      drone_id: 'drone-1',
+      id: 'drone-1',
       name: 'Survey Drone',
+      type: 'survey',
       status: 'deployed',
-      poi_name: 'Sol Asteroid Belt',
-      cargo_used: 4,
+      hull: 90,
+      max_hull: 100,
+      poi_id: 'sol_asteroid_belt',
+      cargo_pct: 40,
+      has_script: true,
     },
   ],
 };
 
 export const droneFixture = {
-  drone: {
-    drone_id: 'drone-1',
-    name: 'Survey Drone',
-    status: 'loaded',
-    base_id: 'earth_station',
-    script: 'scan()',
-  },
+  id: 'drone-1',
+  item_id: 'survey_drone',
+  name: 'Survey Drone',
+  type: 'survey',
+  status: 'loaded',
+  system_id: 'sol',
+  poi_id: 'earth_station',
+  hull: 100,
+  max_hull: 100,
+  cargo: [],
+  cargo_used: 0,
+  cargo_capacity: 20,
+  script: 'scan()',
+  memory: {},
+  loaded_at: '2026-06-01T00:00:00Z',
 };
 
 export const wrecksFixture = {

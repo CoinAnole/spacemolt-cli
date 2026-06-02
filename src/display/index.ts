@@ -6,8 +6,8 @@ import {
   getObjectResult,
   getStructuredResult,
   isRecord,
-  normalizeStructuredResultForOutput,
   normalizeStructuredResultForDisplay,
+  normalizeStructuredResultForOutput,
 } from '../response.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';

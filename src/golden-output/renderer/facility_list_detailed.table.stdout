@@ -21,15 +21,15 @@ Power:
 
 === Station Facilities ===
 
-  Name        | ID           | Category | Active | Maint | Owner
-  ------------+--------------+----------+--------+-------+------
-  Fuel Bunker | station-fuel | service  | true   | true  |      
+  Name        | ID           | Level | Category | Active | Maint | Recycler | Owner
+  ------------+--------------+-------+----------+--------+-------+----------+------
+  Fuel Bunker | station-fuel | 3     | service  | true   | true  | false    |      
 
 === Player Facilities ===
 
-  Name         | ID              | Category   | Active | Maint | Owner
-  -------------+-----------------+------------+--------+-------+------
-  Ore Refinery | player-refinery | production | false  | true  |      
+  Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Owner
+  -------------+-----------------+-------+------------+--------+-------+----------+------------------+------
+  Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse |      
 
 === Faction Facilities ===
 (None)

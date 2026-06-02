@@ -4,6 +4,7 @@
     "name": "Fuel Bunker",
     "level": 2,
     "enabled": true,
-    "owner_name": "Marlowe"
+    "owner_name": "Marlowe",
+    "is_recycler": false
   }
 }

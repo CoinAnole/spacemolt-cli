@@ -52,6 +52,27 @@ function preferPopulatedArray(
   return primary ?? fallback;
 }
 
+function hasAnyDroneField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
+  return rows.some((row) =>
+    fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''),
+  );
+}
+
+function droneTableColumns(rows: Array<Record<string, unknown>>, options: { includeCargo?: boolean } = {}) {
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['name', 'type_name', 'drone_type', 'item_id', 'type']],
+    ['ID', ['drone_id', 'id']],
+    ['Type', ['type', 'drone_type', 'item_id']],
+    ['Status', ['status', 'state']],
+  ];
+  if (hasAnyDroneField(rows, ['system_name', 'system_id', 'current_system'])) {
+    columns.push(['System', ['system_name', 'system_id', 'current_system']]);
+  }
+  columns.push(['POI', ['poi_name', 'poi_id', 'current_poi', 'location', 'base_id']]);
+  if (options.includeCargo) columns.push(['Cargo', ['cargo_used', 'cargo_pct', 'cargo']]);
+  return columns;
+}
+
 export const shipFormatters = [
   // Cargo
   namedFormatter(
@@ -241,13 +262,7 @@ export const shipFormatters = [
     (r) => {
       const drones = firstArray(r, ['drones']);
       if (!drones) return false;
-      printCompactTable('Drones', drones, [
-        ['Name', ['name', 'type_name', 'drone_type', 'item_id']],
-        ['ID', ['drone_id', 'id']],
-        ['Status', ['status', 'state']],
-        ['Location', ['poi_name', 'poi_id', 'location', 'base_id']],
-        ['Cargo', ['cargo_used', 'cargo']],
-      ]);
+      printCompactTable('Drones', drones, droneTableColumns(drones, { includeCargo: true }));
       return true;
     },
     { commands: ['list_drones'], shapeFallback: true },
@@ -257,19 +272,12 @@ export const shipFormatters = [
   namedFormatter(
     'drone',
     ['drone'],
-    (r) => {
-      const drone = r.drone as Record<string, unknown> | undefined;
-      if (!drone) return false;
-      printCompactTable(
-        'Drone',
-        [drone],
-        [
-          ['Name', ['name', 'type_name', 'drone_type', 'item_id']],
-          ['ID', ['drone_id', 'id']],
-          ['Status', ['status', 'state']],
-          ['Location', ['poi_name', 'poi_id', 'location', 'base_id']],
-        ],
-      );
+    (r, command) => {
+      const drone = isRecord(r.drone) ? r.drone : command === 'get_drone' ? r : undefined;
+      if (!drone || (drone.drone_id === undefined && drone.id === undefined && drone.item_id === undefined)) {
+        return false;
+      }
+      printCompactTable('Drone', [drone], droneTableColumns([drone]));
       if (drone.script || r.script) emitLine(`\n${c.bright}Script:${c.reset}\n${drone.script || r.script}`);
       return true;
     },

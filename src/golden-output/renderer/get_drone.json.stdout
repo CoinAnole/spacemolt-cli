@@ -1,9 +1,17 @@
 {
-  "drone": {
-    "drone_id": "drone-1",
-    "name": "Survey Drone",
-    "status": "loaded",
-    "base_id": "earth_station",
-    "script": "scan()"
-  }
+  "id": "drone-1",
+  "item_id": "survey_drone",
+  "name": "Survey Drone",
+  "type": "survey",
+  "status": "loaded",
+  "system_id": "sol",
+  "poi_id": "earth_station",
+  "hull": 100,
+  "max_hull": 100,
+  "cargo": [],
+  "cargo_used": 0,
+  "cargo_capacity": 20,
+  "script": "scan()",
+  "memory": {},
+  "loaded_at": "2026-06-01T00:00:00Z"
 }

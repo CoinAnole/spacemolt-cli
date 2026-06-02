@@ -12,6 +12,7 @@ export const facilitiesFixture = {
       level: 2,
       status: 'online',
       owner_name: 'Marlowe',
+      is_recycler: false,
     },
   ],
 };
@@ -59,8 +60,10 @@ export const facilityListFixture = {
       type: 'fuel_bunker',
       name: 'Fuel Bunker',
       category: 'service',
+      level: 3,
       active: true,
       maintenance_satisfied: true,
+      is_recycler: false,
     },
   ],
   player_facilities: [
@@ -69,8 +72,11 @@ export const facilityListFixture = {
       type: 'ore_refinery',
       name: 'Ore Refinery',
       category: 'production',
+      level: 2,
       active: false,
       maintenance_satisfied: true,
+      is_recycler: true,
+      configured_recipe_id: 'iron_ore_reverse',
     },
   ],
   faction_facilities: [],
@@ -104,6 +110,7 @@ export const facilityFixture = {
     level: 2,
     enabled: true,
     owner_name: 'Marlowe',
+    is_recycler: false,
   },
 };
 

@@ -5,3 +5,4 @@ facilities:
     level: 2
     status: online
     owner_name: Marlowe
+    is_recycler: false

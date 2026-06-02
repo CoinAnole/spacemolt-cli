@@ -1,1 +1,1 @@
-{"drones":[{"drone_id":"drone-1","name":"Survey Drone","status":"deployed","poi_name":"Sol Asteroid Belt","cargo_used":4}]}
+{"bay_count":1,"bay_capacity":2,"deployed_count":1,"bandwidth_used":1,"bandwidth_total":4,"drones":[{"id":"drone-1","name":"Survey Drone","type":"survey","status":"deployed","hull":90,"max_hull":100,"poi_id":"sol_asteroid_belt","cargo_pct":40,"has_script":true}]}

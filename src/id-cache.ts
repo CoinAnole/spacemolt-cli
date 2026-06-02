@@ -593,7 +593,7 @@ function pushDrone(
     kind: 'drone',
     id: stringValue(drone.drone_id || drone.id),
     name: stringValue(drone.name || drone.type || drone.type_id),
-    context: pick(drone, ['status', 'base_id', 'poi_id']),
+    context: pick(drone, ['status', 'system_id', 'base_id', 'poi_id']),
   });
 }
 

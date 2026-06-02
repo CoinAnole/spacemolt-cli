@@ -5,7 +5,8 @@
       "name": "Fuel Bunker",
       "level": 2,
       "status": "online",
-      "owner_name": "Marlowe"
+      "owner_name": "Marlowe",
+      "is_recycler": false
     }
   ]
 }

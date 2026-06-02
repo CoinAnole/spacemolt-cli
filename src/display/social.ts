@@ -34,6 +34,31 @@ function emitBody(title: string, value: unknown): boolean {
   return true;
 }
 
+function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
+  return rows.some((row) =>
+    fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''),
+  );
+}
+
+function facilityColumns(rows: Array<Record<string, unknown>>, options: { grouped?: boolean } = {}) {
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['name', 'type_name', 'facility_type', 'type']],
+    ['ID', ['facility_id', 'id', 'type_id']],
+    ['Level', ['level', 'tier']],
+  ];
+  if (options.grouped) columns.push(['Category', ['category']]);
+  columns.push(
+    options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
+  );
+  if (options.grouped) columns.push(['Maint', ['maintenance_satisfied']]);
+  if (hasAnyField(rows, ['is_recycler'])) columns.push(['Recycler', ['is_recycler']]);
+  if (hasAnyField(rows, ['configured_recipe_id', 'recipe_id'])) {
+    columns.push(['Recipe', ['configured_recipe_id', 'recipe_id']]);
+  }
+  columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
+  return columns;
+}
+
 function formatChatSender(message: Record<string, unknown>): string | undefined {
   const sender = message.sender ?? message.username ?? message.sender_name ?? message.sender_id;
   const verified = message.empire_official === true ? ' [empire_official]' : '';
@@ -335,13 +360,7 @@ export const socialFormatters = [
     (r) => {
       const facilities = firstArray(r, ['facilities', 'facility_types', 'upgrades']);
       if (!facilities) return false;
-      printCompactTable('Facilities', facilities, [
-        ['Name', ['name', 'type_name', 'facility_type']],
-        ['ID', ['facility_id', 'id', 'type_id']],
-        ['Level', ['level', 'tier']],
-        ['Status', ['status', 'enabled', 'active']],
-        ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
-      ]);
+      printCompactTable('Facilities', facilities, facilityColumns(facilities));
       return true;
     },
     { commands: ['facility_list'], shapeFallback: true },
@@ -364,14 +383,7 @@ export const socialFormatters = [
       emitStationConstruction(r.construction);
       for (const [title, rows] of groups) {
         if (!rows) continue;
-        printCompactTable(title, rows, [
-          ['Name', ['name', 'type_name', 'facility_type', 'type']],
-          ['ID', ['facility_id', 'id']],
-          ['Category', ['category']],
-          ['Active', ['active', 'enabled', 'status']],
-          ['Maint', ['maintenance_satisfied']],
-          ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
-        ]);
+        printCompactTable(title, rows, facilityColumns(rows, { grouped: true }));
       }
       return true;
     },
@@ -408,17 +420,7 @@ export const socialFormatters = [
     (r) => {
       const facility = r.facility as Record<string, unknown> | undefined;
       if (!facility) return false;
-      printCompactTable(
-        'Facility',
-        [facility],
-        [
-          ['Name', ['name', 'type_name', 'facility_type']],
-          ['ID', ['facility_id', 'id']],
-          ['Level', ['level', 'tier']],
-          ['Status', ['status', 'enabled', 'active']],
-          ['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']],
-        ],
-      );
+      printCompactTable('Facility', [facility], facilityColumns([facility]));
       return true;
     },
     { commands: ['facility_get'], shapeFallback: true },

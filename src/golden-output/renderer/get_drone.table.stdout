@@ -1,9 +1,9 @@
 
 === Drone ===
 
-  Name         | ID      | Status | Location     
-  -------------+---------+--------+--------------
-  Survey Drone | drone-1 | loaded | earth_station
+  Name         | ID      | Type   | Status | System | POI          
+  -------------+---------+--------+--------+--------+--------------
+  Survey Drone | drone-1 | survey | loaded | sol    | earth_station
 
 Script:
 scan()

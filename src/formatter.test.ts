@@ -24,6 +24,10 @@ import type { GlobalOptions } from './types';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
+function trimLineEndSpaces(value: string): string {
+  return value.replace(/[ \t]+$/gm, '');
+}
+
 function captureStructuredOutput(
   command: string,
   fixture: Record<string, unknown>,
@@ -1566,8 +1570,10 @@ describe('structuredContent formatters', () => {
           type: 'fuel_bunker',
           name: 'Fuel Bunker',
           category: 'service',
+          level: 3,
           active: true,
           maintenance_satisfied: true,
+          is_recycler: false,
         },
       ],
       player_facilities: [
@@ -1576,8 +1582,11 @@ describe('structuredContent formatters', () => {
           type: 'ore_refinery',
           name: 'Ore Refinery',
           category: 'production',
+          level: 2,
           active: false,
           maintenance_satisfied: true,
+          is_recycler: true,
+          configured_recipe_id: 'iron_ore_reverse',
         },
       ],
       faction_facilities: [],
@@ -1595,6 +1604,38 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Fuel Bunker');
     expect(stdout).toContain('=== Player Facilities ===');
     expect(stdout).toContain('Ore Refinery');
+    expect(stdout).toContain('Level');
+    expect(stdout).toContain('Recycler');
+    expect(stdout).toContain('Recipe');
+    expect(stdout).toContain('iron_ore_reverse');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_drone formats documented location fields', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_drone', {
+      id: 'drone-1',
+      item_id: 'survey_drone',
+      type: 'survey',
+      name: 'Survey Drone',
+      status: 'loaded',
+      system_id: 'sol',
+      poi_id: 'earth_station',
+      hull: 100,
+      max_hull: 100,
+      cargo: [],
+      cargo_used: 0,
+      cargo_capacity: 20,
+      script: 'scan()',
+      memory: {},
+      loaded_at: '2026-06-01T00:00:00Z',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Drone ===');
+    expect(stdout).toContain('System');
+    expect(stdout).toContain('POI');
+    expect(stdout).toContain('sol');
+    expect(stdout).toContain('earth_station');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -1856,7 +1897,7 @@ describe('structuredContent formatters', () => {
       const { stdout, stderr } = captureStructuredOutput(command, fixture);
       expect(stderr, `${formatterName} should not emit drift warnings`).toBe('');
       expect(stdout, `${formatterName} should not fall back to JSON`).not.toContain('=== Response ===');
-      outputs[formatterName] = stdout;
+      outputs[formatterName] = trimLineEndSpaces(stdout);
     }
 
     expect(outputs.create_market_order).toContain('=== Sell Order Created ===');
@@ -1897,7 +1938,7 @@ describe('structuredContent formatters', () => {
 
       === Pending ===
 
-        Name               | ID               | Category       | Status              | ETA | Materials                       
+        Name               | ID               | Category       | Status              | ETA | Materials
         -------------------+------------------+----------------+---------------------+-----+---------------------------------
         Life Support Mk II | life_support_mk2 | infrastructure | gathering_materials |     | Circuit Board: 12/40, 28 missing
 
@@ -1905,7 +1946,7 @@ describe('structuredContent formatters', () => {
 
         Name              | ID               | Category       | Status   | ETA     | Materials
         ------------------+------------------+----------------+----------+---------+----------
-        Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |          
+        Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |
 
       A busy trade station."
       ,
@@ -1918,7 +1959,7 @@ describe('structuredContent formatters', () => {
 
       === Participants ===
 
-        Name    | ID       | Side | Stance | Target  
+        Name    | ID       | Side | Stance | Target
         --------+----------+------+--------+---------
         Marlowe | player-1 | 1    | fire   | pirate-1"
       ,
@@ -1931,16 +1972,16 @@ describe('structuredContent formatters', () => {
 
         Name     | ID       | Qty | Unit Size
         ---------+----------+-----+----------
-        Iron Ore | ore_iron |  50 |          "
+        Iron Ore | ore_iron |  50 |"
       ,
         "chat_sent": "[local] Clear skies.",
         "drone": 
       "
       === Drone ===
 
-        Name         | ID      | Status | Location     
-        -------------+---------+--------+--------------
-        Survey Drone | drone-1 | loaded | earth_station
+        Name         | ID      | Type   | Status | System | POI
+        -------------+---------+--------+--------+--------+--------------
+        Survey Drone | drone-1 | survey | loaded | sol    | earth_station
 
       Script:
       scan()"
@@ -1949,25 +1990,25 @@ describe('structuredContent formatters', () => {
       "
       === Drones ===
 
-        Name         | ID      | Status   | Location          | Cargo
-        -------------+---------+----------+-------------------+------
-        Survey Drone | drone-1 | deployed | Sol Asteroid Belt | 4    "
+        Name         | ID      | Type   | Status   | POI               | Cargo
+        -------------+---------+--------+----------+-------------------+------
+        Survey Drone | drone-1 | survey | deployed | sol_asteroid_belt | 40"
       ,
         "facilities": 
       "
       === Facilities ===
 
-        Name        | ID         | Level | Status | Owner  
-        ------------+------------+-------+--------+--------
-        Fuel Bunker | facility-1 | 2     | online | Marlowe"
+        Name        | ID         | Level | Status | Recycler | Owner
+        ------------+------------+-------+--------+----------+--------
+        Fuel Bunker | facility-1 | 2     | online | false    | Marlowe"
       ,
         "facility": 
       "
       === Facility ===
 
-        Name        | ID         | Level | Status | Owner  
-        ------------+------------+-------+--------+--------
-        Fuel Bunker | facility-1 | 2     | true   | Marlowe"
+        Name        | ID         | Level | Status | Recycler | Owner
+        ------------+------------+-------+--------+----------+--------
+        Fuel Bunker | facility-1 | 2     | true   | false    | Marlowe"
       ,
         "facility_list": 
       "
@@ -1981,7 +2022,7 @@ describe('structuredContent formatters', () => {
 
       === Pending ===
 
-        Name               | ID               | Category       | Status              | ETA | Materials                       
+        Name               | ID               | Category       | Status              | ETA | Materials
         -------------------+------------------+----------------+---------------------+-----+---------------------------------
         Life Support Mk II | life_support_mk2 | infrastructure | gathering_materials |     | Circuit Board: 12/40, 28 missing
 
@@ -1989,19 +2030,19 @@ describe('structuredContent formatters', () => {
 
         Name              | ID               | Category       | Status   | ETA     | Materials
         ------------------+------------------+----------------+----------+---------+----------
-        Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |          
+        Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |
 
       === Station Facilities ===
 
-        Name        | ID           | Category | Active | Maint | Owner
-        ------------+--------------+----------+--------+-------+------
-        Fuel Bunker | station-fuel | service  | true   | true  |      
+        Name        | ID           | Level | Category | Active | Maint | Recycler | Owner
+        ------------+--------------+-------+----------+--------+-------+----------+------
+        Fuel Bunker | station-fuel | 3     | service  | true   | true  | false    |
 
       === Player Facilities ===
 
-        Name         | ID              | Category   | Active | Maint | Owner
-        -------------+-----------------+------------+--------+-------+------
-        Ore Refinery | player-refinery | production | false  | true  |      
+        Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Owner
+        -------------+-----------------+-------+------------+--------+-------+----------+------------------+------
+        Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse |
 
       === Faction Facilities ===
       (None)"
@@ -2010,11 +2051,11 @@ describe('structuredContent formatters', () => {
       "
       === Categories ===
 
-        Category       | Count | Buildable | Description                   
+        Category       | Count | Buildable | Description
         ---------------+-------+-----------+-------------------------------
         infrastructure | 55    |           | Power and life support systems
-        personal       | 13    | 4         | Personal facilities           
-        production     | 1589  | 427       | Manufacturing facilities      
+        personal       | 13    | 4         | Personal facilities
+        production     | 1589  | 427       | Manufacturing facilities
 
       Total facility types: 1753
 
@@ -2030,13 +2071,13 @@ describe('structuredContent formatters', () => {
 
         Name    | ID       | Ship       | Location | Status
         --------+----------+------------+----------+-------
-        Marlowe | player-1 | prospector | Sol      | ready "
+        Marlowe | player-1 | prospector | Sol      | ready"
       ,
         "intel": 
       "
       === Intel ===
 
-        System | POI/Base | Type      | Value | Updated             
+        System | POI/Base | Type      | Value | Updated
         -------+----------+-----------+-------+---------------------
         Sol    | Earth    | fuel_cell | 25    | 2026-05-17T00:00:00Z"
       ,
@@ -2046,7 +2087,7 @@ describe('structuredContent formatters', () => {
 
         Item     | ID      | Side | Qty | Price
         ---------+---------+------+-----+------
-        ore_iron | order-1 | buy  | 100 | 12   "
+        ore_iron | order-1 | buy  | 100 | 12"
       ,
         "nearby": 
       "
@@ -2090,7 +2131,7 @@ describe('structuredContent formatters', () => {
 
       === Modules ===
 
-        Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID      
+        Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID
         --------+--------------------+---------+----------+-----+-------+------+---------
         utility | Cargo Expander III | utility | Pristine | 2   | 2     | 10   | module-1
         weapon  | Pulse Laser III    | weapon  | Scuffed  | 3   | 8     | 10   | module-2"
@@ -2103,11 +2144,11 @@ describe('structuredContent formatters', () => {
 
         Name      | ID        | Qty | Unit Size
         ----------+-----------+-----+----------
-        Fuel Cell | fuel_cell |  12 |          
+        Fuel Cell | fuel_cell |  12 |
 
       Ships (1):
 
-        Ship Name  | Class      | Mods | Cargo | ID    
+        Ship Name  | Class      | Mods | Cargo | ID
         -----------+------------+------+-------+-------
         Prospector | prospector |    3 |    10 | ship-1"
       ,
@@ -2136,8 +2177,8 @@ describe('structuredContent formatters', () => {
 
         Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
         ----------+-----------+----------+-----------+-----------+-----------
-        Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
-        Fuel Cell | fuel_cell |          |           |           |           
+        Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2
+        Fuel Cell | fuel_cell |          |           |           |
 
       Depth columns show quantity / orders at the best price.
       Use spacemolt view_market <item_id> for full order depth."

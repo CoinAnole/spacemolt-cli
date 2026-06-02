@@ -3,18 +3,10 @@
     "player": {
       "username": "Marlowe",
       "empire": "Terran",
-      "citizenships": {
-        "solarian": {
-          "empire_id": "solarian",
-          "granted_by": "origin",
-          "granted_at": "2026-05-13T00:00:00.000Z"
-        },
-        "nebula": {
-          "empire_id": "nebula",
-          "granted_by": "petition:cit-1",
-          "granted_at": "2026-05-14T00:00:00.000Z"
-        }
-      },
+      "citizenships": [
+        "solarian",
+        "nebula"
+      ],
       "credits": 4242,
       "faction_id": "smc",
       "faction_rank": "captain"

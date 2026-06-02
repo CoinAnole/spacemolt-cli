@@ -24,13 +24,18 @@ station_facilities:
     type: fuel_bunker
     name: "Fuel Bunker"
     category: service
+    level: 3
     active: true
     maintenance_satisfied: true
+    is_recycler: false
 player_facilities:
   - facility_id: "player-refinery"
     type: ore_refinery
     name: "Ore Refinery"
     category: production
+    level: 2
     active: false
     maintenance_satisfied: true
+    is_recycler: true
+    configured_recipe_id: iron_ore_reverse
 faction_facilities: []

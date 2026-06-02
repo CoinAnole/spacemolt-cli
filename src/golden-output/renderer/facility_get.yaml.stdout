@@ -5,3 +5,4 @@ facility:
   level: 2
   enabled: true
   owner_name: Marlowe
+  is_recycler: false
