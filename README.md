@@ -139,6 +139,7 @@ Useful output controls:
 ```bash
 bun run src/client.ts --json get_status
 bun run src/client.ts --format yaml get_status
+bun run src/client.ts --field player.name,ship.fuel get_status
 bun run src/client.ts --fields player.name,ship.fuel get_status
 bun run src/client.ts --jq .player.name get_status
 bun run src/client.ts --plain --compact get_system

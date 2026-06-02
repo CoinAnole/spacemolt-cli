@@ -324,6 +324,15 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toBe('42');
   });
 
+  test('--field comma-separated paths extracts an object like --fields', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      field: 'player.name,ship.fuel',
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ 'player.name': 'Marlowe', 'ship.fuel': 42 });
+  });
+
   test('--field resolves unique bare names one level under structured content', () => {
     const { stdout, stderr } = captureStructuredOutput(
       'get_status',
@@ -395,6 +404,24 @@ describe('structuredContent output mode precedence', () => {
 
     expect(stderr).toBe('');
     expect(JSON.parse(stdout)).toEqual({ fuel: 42 });
+  });
+
+  test('--jq supports simple object construction from paths', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      jq: '{name: .player.name, fuel: .ship.fuel}',
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ name: 'Marlowe', fuel: 42 });
+  });
+
+  test('--jq object construction supports quoted keys', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      jq: `{"pilot name": .player.name, 'ship fuel': .ship.fuel}`,
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ 'pilot name': 'Marlowe', 'ship fuel': 42 });
   });
 
   test('--jq supports array index bracket notation', () => {
@@ -470,6 +497,20 @@ describe('structuredContent output mode precedence', () => {
     expect(existingNull.success).toBe(true);
     expect(existingNull.stderr).toEqual([]);
     expect(existingNull.stdout).toEqual(['null']);
+  });
+
+  test('--jq hints when user starts from structuredContent', () => {
+    const rendered = renderStructuredResult(
+      'get_status',
+      outputModeFixture,
+      globalOptions({ jq: '.structuredContent.ship.fuel' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain(
+      'Hint: --jq operates on structuredContent (not the full API response). Try: .ship.fuel',
+    );
   });
 
   test('--compact compacts projected JSON', () => {

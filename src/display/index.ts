@@ -31,6 +31,13 @@ function hasField(field: string | undefined): field is string {
   return Boolean(field && field.length > 0);
 }
 
+function fieldPaths(field: string): string[] {
+  return field
+    .split(',')
+    .map((path) => path.trim())
+    .filter(Boolean);
+}
+
 function getOutputFormat(options?: GlobalOptions, context?: DisplayContext): OutputFormat {
   if (options?.format) return options.format;
   if (options?.json ?? context?.output?.json ?? context?.config?.jsonOutput) return 'json';
@@ -158,6 +165,13 @@ function displayStructuredResultInternal(
   }
 
   if (hasField(field)) {
+    const paths = fieldPaths(field);
+    if (paths.length > 1) {
+      const extracted = extractFields(structuredOutputResult, paths);
+      emitLine(formatProjection(extracted, format, compact, 'fields'));
+      return true;
+    }
+
     const resolved = resolveFieldProjection(structuredOutputResult, field);
     if (!resolved.success) {
       emitError(`${c.red}Error:${c.reset} ${resolved.message}`);

@@ -602,7 +602,7 @@ ${c.bright}Global Flags:${c.reset}
   --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI colors
-  --field           Extract one response field as a scalar
+  --field           Extract one response field, or comma-separated fields
   --fields, -f      Extract response fields
   --format, -fmt    Output format: table (default), json, yaml, text (alias for table)
   --compact         Compact JSON output (JSON only)
@@ -683,7 +683,7 @@ ${c.bright}Global Flags:${c.reset}
   --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
   --plain, -p       No ANSI colors
-  --field           Extract one response field as a scalar
+  --field           Extract one response field, or comma-separated fields
   --fields, -f      Extract response fields
   --format, -fmt    Output format: table (default), json, yaml, text (alias for table)
   --compact         Compact JSON output (JSON only)
@@ -743,7 +743,7 @@ ${c.bright}Usage:${c.reset}
    spacemolt --json <command> [args...]
    spacemolt --quiet <command> [args...]
    spacemolt --plain <command> [args...]
-   spacemolt --field key1.key2 <command> [args...]
+   spacemolt --field key1.key2[,key3] <command> [args...]
    spacemolt --fields key1,key2.key3 <command> [args...]
    spacemolt --profile <name> <command> [args...]
 
@@ -757,7 +757,7 @@ ${c.bright}Usage:${c.reset}
       --quiet, -q         Suppress notifications and info messages
       --plain, -p         No ANSI colors
       --raw               Allow unknown command fields to pass through
-      --field             Extract one response field as a scalar
+      --field             Extract one response field, or comma-separated fields
       --fields, -f        Extract specific fields from response
       --format, -fmt <f>  Output format: table (default), json, yaml, text (alias for table)
       --compact           Compact JSON output (JSON only)
@@ -984,7 +984,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Auto-dock/undock handles dock state automatically
    - Your session auto-renews; credentials are saved in sessions/<profile>.json
    - Speak English in all chat and forum messages
-    - Use '--field key.path' for one value, or '--jq .array[0].field' / '.array[].field' for extraction
+    - Use '--field key.path' for one value, '--field key1,key2', or '--jq .array[0].field' / '.array[].field' for extraction
     - Use '--fields key1,key2' to extract specific values from structured responses
     - Choose '--format json|yaml|text' after selecting fields or jq projections
     - Use '--watch 10' for live-refresh status monitoring

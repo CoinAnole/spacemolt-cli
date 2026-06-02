@@ -381,6 +381,87 @@ describe('response renderer', () => {
     expect(originalStoredShip.location).toBe('stored at Nova Terra Central');
   });
 
+  test('renderResponse applies view_storage item filter to --json output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_storage',
+        displayCommand: 'view_storage',
+        payload: { item_id: 'iron_ore' },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, json: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.structuredContent.total_items).toBe(2);
+    expect(parsed.structuredContent.items).toEqual([expect.objectContaining({ item_id: 'iron_ore' })]);
+  });
+
+  test('renderResponse applies view_storage search filter to --structured output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_storage',
+        displayCommand: 'view_storage',
+        payload: { search: 'fuel' },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.total_items).toBe(2);
+    expect(parsed.items).toEqual([expect.objectContaining({ item_id: 'fuel_cell' })]);
+  });
+
+  test('renderResponse applies view_market item filter to --json output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_market',
+        displayCommand: 'view_market',
+        payload: { item_id: 'fuel_cell' },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'iron_ore', item_name: 'Iron Ore', best_sell: 18 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', best_sell: 0 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, json: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.structuredContent.total_items).toBe(2);
+    expect(parsed.structuredContent.items).toEqual([expect.objectContaining({ item_id: 'fuel_cell' })]);
+  });
+
   test('renderResponse hides empty cargo stacks and sorts non-empty stacks by quantity descending', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
@@ -510,7 +591,7 @@ describe('response renderer', () => {
     expect(output).not.toContain('Copper Ore');
   });
 
-  test('renderResponse leaves get_cargo JSON output unfiltered', async () => {
+  test('renderResponse applies get_cargo filters to JSON output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -535,7 +616,7 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(capture.text());
-    expect(parsed.structuredContent.cargo).toHaveLength(2);
-    expect(parsed.structuredContent.cargo[0].item_id).toBe('ore_copper');
+    expect(parsed.structuredContent.cargo).toHaveLength(1);
+    expect(parsed.structuredContent.cargo[0].item_id).toBe('ore_iron');
   });
 });

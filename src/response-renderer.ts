@@ -93,34 +93,37 @@ export async function renderResponse(
   const sessionPath = tryGetSessionPath(client.config, context?.env);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
+  const filteredResponse = applyDisplayFilters(command, response, commandRun.payload);
+
   if ((isJson || options.structured) && !hasProjection) {
-    if (options.structured && response.structuredContent) {
+    if (options.structured && filteredResponse.structuredContent) {
       const out = writer?.out.bind(writer) ?? console.log;
       const warning =
-        options.quiet || isJson ? undefined : catalogTruncationWarning(displayCommand, response.structuredContent);
+        options.quiet || isJson
+          ? undefined
+          : catalogTruncationWarning(displayCommand, filteredResponse.structuredContent);
       if (warning) {
         const err = writer?.err.bind(writer) ?? console.error;
         err(warning);
       }
       out(
         JSON.stringify(
-          normalizeStructuredResultForOutput(displayCommand, response.structuredContent),
+          normalizeStructuredResultForOutput(displayCommand, filteredResponse.structuredContent),
           null,
           options.compact ? 0 : 2,
         ),
       );
       return 0;
     }
-    printJsonResponse(response, options.compact, writer);
-    return response.error ? 1 : 0;
+    printJsonResponse(filteredResponse, options.compact, writer);
+    return filteredResponse.error ? 1 : 0;
   }
 
-  const displayResponse = applyDisplayFilters(command, response, commandRun.payload);
   warnAboutUnsupportedServerHelpFilters(commandRun, { isJson, hasProjection, writer });
 
   const success = displayResult(
     displayCommand,
-    displayResponse,
+    filteredResponse,
     hasProjection ? { ...options, noTimestamp: true } : options,
     context,
   );
@@ -143,7 +146,7 @@ function warnAboutUnsupportedServerHelpFilters(
 
 function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {
   if (command === 'get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
-  if (!payload || !['view_storage', 'view_faction_storage'].includes(command)) return response;
+  if (!payload || !['view_storage', 'view_faction_storage', 'view_market'].includes(command)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const searchFilter = typeof payload.search === 'string' ? payload.search : undefined;
   if (!itemFilter && !searchFilter) return response;
@@ -153,6 +156,7 @@ function applyDisplayFilters(command: string, response: APIResponse, payload?: R
 
   const nextStructuredContent = structuredClone(structuredContent);
   const items = nextStructuredContent.items as Array<Record<string, unknown>>;
+  if (nextStructuredContent.total_items === undefined) nextStructuredContent.total_items = items.length;
   nextStructuredContent.items = items.filter((item) => storageItemMatches(item, itemFilter, searchFilter));
   return { ...response, structuredContent: nextStructuredContent };
 }
