@@ -717,6 +717,25 @@ describe('runInvocation option isolation', () => {
     }
   });
 
+  test('plain unknown command diagnostics use explicit output state', async () => {
+    const result = await captureInvocation(['--plain', 'trvel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Unknown command "trvel"');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('plain local command parse diagnostics use explicit output state', async () => {
+    const profileResult = await captureInvocation(['--plain', 'profile', 'nope']);
+    const explainResult = await captureInvocation(['--plain', 'explain']);
+    const completionResult = await captureInvocation(['--plain', 'completion', 'powershell']);
+
+    expect(profileResult.exitCode).toBe(1);
+    expect(explainResult.exitCode).toBe(1);
+    expect(completionResult.exitCode).toBe(1);
+    expect(`${profileResult.stderr}\n${explainResult.stderr}\n${completionResult.stderr}`).not.toContain('\x1b[');
+  });
+
   test('context profile is used for API payload preparation', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-context-'));
     const configHome = path.join(tempDir, 'config');

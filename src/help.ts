@@ -416,9 +416,10 @@ function printNextSteps(command: string, missingArg?: string, writer?: CliWriter
   );
 }
 
-export function displayUnknownCommand(command: string, writer?: CliWriter): void {
+export function displayUnknownCommand(command: string, writer?: CliWriter, options?: { plain?: boolean }): void {
   const writeErr = err(writer);
-  writeErr(`${c.red}Error:${c.reset} Unknown command "${command}"`);
+  const colors = colorsForPlain(Boolean(options?.plain));
+  writeErr(`${colors.red}Error:${colors.reset} Unknown command "${command}"`);
 
   const group = findCommandGroup(command);
   if (group) {

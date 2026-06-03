@@ -284,6 +284,31 @@ describe('id cache', () => {
     expect(lines.join('\n')).toContain('...and 2 more');
   });
 
+  test('formatCachedIdAmbiguity supports explicit plain output', () => {
+    const lines = formatCachedIdAmbiguity(
+      'sell',
+      'item_id',
+      {
+        type: 'ambiguous',
+        kind: 'item',
+        query: 'ore',
+        matches: [
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      },
+      { plain: true },
+    );
+
+    expect(lines.join('\n')).toContain('Ambiguous cached item match');
+    expect(lines.join('\n')).not.toContain('\x1b[');
+  });
+
   test('idKindForCommandField uses explicit command resolver rules before heuristics', () => {
     expect(idKindForCommandField('travel', 'id')).toBe('poi');
     expect(idKindForCommandField('jump', 'id')).toBe('system');

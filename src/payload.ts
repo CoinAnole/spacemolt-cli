@@ -12,7 +12,6 @@ import {
   resolveCachedId,
 } from './id-cache.ts';
 import { colorsForPlain } from './output-style.ts';
-import { c } from './runtime.ts';
 import type { GlobalOptions } from './types.ts';
 
 type PayloadResolveResult =
@@ -51,7 +50,7 @@ export function preparePayload(
       printJsonError('unknown_command', `Unknown command: ${command}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayUnknownCommand(command, writer);
+    displayUnknownCommand(command, writer, { plain: options.plain });
     return { type: 'exit', exitCode: 1 };
   }
 
@@ -78,7 +77,9 @@ export function preparePayload(
       return { type: 'exit', exitCode: 1 };
     }
     const writeErr = writer?.err.bind(writer) ?? console.error;
-    for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result)) {
+    for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result, {
+      plain: options.plain,
+    })) {
       writeErr(line);
     }
     return { type: 'exit', exitCode: 1 };

@@ -241,7 +241,7 @@ function renderUnknownCommand(invocation: Invocation, context: CliRuntimeContext
   if (invocation.options.json) {
     printJsonError('unknown_command', `Unknown command: ${commandName}`, context.writer);
   } else {
-    displayUnknownCommand(commandName, context.writer);
+    displayUnknownCommand(commandName, context.writer, { plain: context.config?.plain ?? context.output?.plain });
   }
   return 1;
 }
@@ -255,7 +255,8 @@ function renderCommandError(error: CommandError, options: GlobalOptions, context
     } else if (error.customStderr) {
       context.writer.err(error.customStderr);
     } else {
-      context.writer.err(`${c.red}Error:${c.reset} ${error.message}`);
+      const colors = colorsForPlain(Boolean(options.plain));
+      context.writer.err(`${colors.red}Error:${colors.reset} ${error.message}`);
     }
   }
   return error.exitCode ?? 1;
