@@ -81,7 +81,13 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
   if (!parsed.ok) return parsed;
 
   const envProfile = context?.env.SPACEMOLT_PROFILE;
-  const profile = parsed.options.profile ?? (envProfile ? validateEnvProfile(envProfile) : undefined);
+  const outputState = {
+    json: parsed.options.json || parsed.options.format === 'json',
+    plain: parsed.options.plain,
+    quiet: parsed.options.quiet,
+    debug: parsed.options.debug,
+  };
+  const profile = parsed.options.profile ?? (envProfile ? validateEnvProfile(envProfile, outputState) : undefined);
   if (typeof profile !== 'string' && profile) return { ok: false, error: profile };
   const options = profile ? { ...parsed.options, profile } : parsed.options;
 
@@ -89,7 +95,10 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
   return { ok: true, invocation: { options, args: options.args } };
 }
 
-function validateEnvProfile(value: string): string | GlobalOptionParseError {
+function validateEnvProfile(
+  value: string,
+  state: Pick<GlobalOptionParseError, 'json' | 'plain' | 'quiet' | 'debug'>,
+): string | GlobalOptionParseError {
   try {
     return validateProfileName(value);
   } catch (err) {
@@ -97,6 +106,7 @@ function validateEnvProfile(value: string): string | GlobalOptionParseError {
       code: 'invalid_global_option',
       option: 'SPACEMOLT_PROFILE',
       message: err instanceof Error ? err.message : String(err),
+      ...state,
     };
   }
 }

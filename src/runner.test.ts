@@ -604,6 +604,22 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('invalid env profile preserves parsed JSON output state', async () => {
+    const result = await captureInvocation(['--json', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+  });
+
+  test('invalid env profile preserves parsed plain output state', async () => {
+    const result = await captureInvocation(['--plain', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Profile names may only contain');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
   test('quiet parse errors still render diagnostics', async () => {
     const result = await captureInvocation(['--quiet', '--format=invalid']);
 
