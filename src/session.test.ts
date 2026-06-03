@@ -118,6 +118,22 @@ describe('SessionManager', () => {
     );
   });
 
+  test('explicit options construction does not read active profile fallback', () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'explicit-no-active-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    setActiveProfile('leaked');
+
+    expect(() => new SessionManager({ env }).getSessionPath()).toThrow(
+      'No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".',
+    );
+  });
+
+  test('legacy no-argument construction still reads active profile fallback', () => {
+    setActiveProfile('legacy-active');
+
+    expect(new SessionManager().getSessionPath()).toContain('legacy-active.json');
+  });
+
   test('default app directory follows Linux, macOS, and Windows conventions', () => {
     expect(getSpacemoltHome('/home/tester', 'linux', {})).toBe('/home/tester/.config/spacemolt-cli');
     expect(getSpacemoltHome('/home/tester', 'linux', { XDG_CONFIG_HOME: '/tmp/config' })).toBe(

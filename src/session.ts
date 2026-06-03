@@ -289,6 +289,7 @@ export class SessionManager {
   private readonly _apiBase?: string;
   private readonly _profile?: string;
   private readonly _profileIsExplicit: boolean;
+  private readonly _useActiveProfileFallback: boolean;
   private readonly _debug?: boolean;
   private readonly _plain: boolean;
   private readonly _logger: { log(message: string): void };
@@ -296,16 +297,17 @@ export class SessionManager {
   private readonly _clock: () => number;
   private readonly _env: EnvLike;
 
-  constructor(options: SessionManagerOptions = {}) {
-    this._apiBase = options.apiBase;
-    this._profile = options.profile;
-    this._profileIsExplicit = Boolean(options.profileIsExplicit);
-    this._debug = options.debug;
-    this._plain = Boolean(options.plain);
-    this._logger = options.logger ?? { log: (message) => console.log(message) };
-    this._transport = options.transport ?? requestJson;
-    this._clock = options.clock ?? Date.now;
-    this._env = options.env ?? process.env;
+  constructor(options?: SessionManagerOptions) {
+    this._apiBase = options?.apiBase;
+    this._profile = options?.profile;
+    this._profileIsExplicit = Boolean(options?.profileIsExplicit);
+    this._useActiveProfileFallback = options === undefined;
+    this._debug = options?.debug;
+    this._plain = Boolean(options?.plain);
+    this._logger = options?.logger ?? { log: (message) => console.log(message) };
+    this._transport = options?.transport ?? requestJson;
+    this._clock = options?.clock ?? Date.now;
+    this._env = options?.env ?? process.env;
   }
 
   get apiBase(): string {
@@ -313,7 +315,7 @@ export class SessionManager {
   }
 
   get profile(): string | undefined {
-    return this._profile ?? ACTIVE_PROFILE;
+    return this._profile ?? (this._useActiveProfileFallback ? ACTIVE_PROFILE : undefined);
   }
 
   get debug(): boolean {
