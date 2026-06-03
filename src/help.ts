@@ -7,10 +7,9 @@ import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { colorsForPlain } from './output-style.ts';
 import { getStructuredResult, isRecord } from './response.ts';
-import { c, VERSION } from './runtime.ts';
+import { VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
-import type { APIResponse, CommandGroup, CommandSearchMatch, Session } from './types.ts';
-import type { GlobalOptions } from './types.ts';
+import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions, Session } from './types.ts';
 
 const COMMAND_GROUPS: CommandGroup[] = [
   { key: 'auth', label: 'Authentication', aliases: ['authentication', 'login'], categories: ['Authentication'] },
@@ -206,9 +205,12 @@ function normalizeCommandSummaryText(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
-export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSource): void {
+type HelpOutputOptions = Partial<Pick<GlobalOptions, 'plain' | 'quiet'>>;
+
+export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSource, options?: HelpOutputOptions): void {
   const allCommands = commandHelpMap(commands);
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
   write(`\n${c.bright}Command Groups${c.reset}`);
   for (const group of COMMAND_GROUPS) {
     const count = Object.keys(allCommands).filter((command) => commandMatchesGroup(command, group, allCommands)).length;
@@ -218,11 +220,17 @@ export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSour
   write(`Run "spacemolt commands --search <query>" to search local command metadata.`);
 }
 
-export function showCommandGroup(topic: string, writer?: CliWriter, commands?: CommandHelpSource): boolean {
+export function showCommandGroup(
+  topic: string,
+  writer?: CliWriter,
+  commands?: CommandHelpSource,
+  options?: HelpOutputOptions,
+): boolean {
   const group = findCommandGroup(topic);
   if (!group) return false;
   const allCommands = commandHelpMap(commands);
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
 
   const matchingCommands = Object.keys(allCommands)
     .filter((command) => commandMatchesGroup(command, group, allCommands))
@@ -303,11 +311,17 @@ export function parseCommandSearchQuery(args: string[]): string {
   return args.join(' ').trim();
 }
 
-export function showCommandSearch(query: string, writer?: CliWriter, commands?: CommandHelpSource): void {
+export function showCommandSearch(
+  query: string,
+  writer?: CliWriter,
+  commands?: CommandHelpSource,
+  options?: HelpOutputOptions,
+): void {
   const allCommands = commandHelpMap(commands);
   const results = searchLocalCommands(query, 30, allCommands);
   const title = query ? `Commands matching "${query}"` : 'All Commands';
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
   write(`\n${c.bright}${title}${c.reset}`);
   if (!results.length) {
     write('  (No local command matches)');
@@ -319,13 +333,19 @@ export function showCommandSearch(query: string, writer?: CliWriter, commands?: 
   if (results.length === 30) write(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
 }
 
-export function showCommandExplanation(command: string, writer?: CliWriter, commands?: CommandHelpSource): boolean {
+export function showCommandExplanation(
+  command: string,
+  writer?: CliWriter,
+  commands?: CommandHelpSource,
+  options?: HelpOutputOptions,
+): boolean {
   const allCommands = commandHelpMap(commands);
   const config = allCommands[command];
   if (!config) return false;
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
 
-  showCommandHelp(command, writer, allCommands);
+  showCommandHelp(command, writer, allCommands, options);
   write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
     const routePath = routeToPath(config.route, { includeApiPrefix: true });
@@ -344,11 +364,17 @@ export function showCommandExplanation(command: string, writer?: CliWriter, comm
   return true;
 }
 
-export function showCommandHelp(command: string, writer?: CliWriter, commands?: CommandHelpSource): boolean {
+export function showCommandHelp(
+  command: string,
+  writer?: CliWriter,
+  commands?: CommandHelpSource,
+  options?: HelpOutputOptions,
+): boolean {
   const allCommands = commandHelpMap(commands);
   const config = allCommands[command];
   if (!config) return false;
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
 
   write(`\n${c.bright}${command}${c.reset}`);
   if (config.description) write(config.description);
@@ -397,8 +423,6 @@ export function showCommandHelp(command: string, writer?: CliWriter, commands?: 
   return true;
 }
 
-type HelpOutputOptions = Partial<Pick<GlobalOptions, 'plain' | 'quiet'>>;
-
 function printNextSteps(command: string, missingArg?: string, writer?: CliWriter, options?: HelpOutputOptions): void {
   const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
   const colors = colorsForPlain(Boolean(options?.plain));
@@ -445,7 +469,9 @@ export function displayMissingArgument(
   const allCommands = commandHelpMap(commands);
   const writeErr = err(writer);
   const colors = colorsForPlain(Boolean(options?.plain));
-  writeErr(`${colors.red}Error:${colors.reset} Missing required argument: ${colors.yellow}${missingArg}${colors.reset}`);
+  writeErr(
+    `${colors.red}Error:${colors.reset} Missing required argument: ${colors.yellow}${missingArg}${colors.reset}`,
+  );
   writeErr(`\n${colors.bright}Usage:${colors.reset}`);
   writeErr(`  ${getUsageLine(command, allCommands)}`);
 
@@ -513,8 +539,9 @@ async function getPlayerState(): Promise<PlayerState> {
   }
 }
 
-function printStateSection(state: PlayerState, writer?: CliWriter): void {
+function printStateSection(state: PlayerState, writer?: CliWriter, options?: HelpOutputOptions): void {
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
   if (!state.authenticated) {
     write(`${c.bright}Start:${c.reset}`);
     write(`  1. Get a registration code from https://spacemolt.com/dashboard`);
@@ -564,18 +591,19 @@ function printStateSection(state: PlayerState, writer?: CliWriter): void {
   write(`    spacemolt get_status          # Check ship and location`);
 }
 
-export async function showProgressiveHelp(writer?: CliWriter): Promise<void> {
-  renderProgressiveHelp(await getPlayerState(), writer);
+export async function showProgressiveHelp(writer?: CliWriter, options?: HelpOutputOptions): Promise<void> {
+  renderProgressiveHelp(await getPlayerState(), writer, options);
 }
 
-export function renderProgressiveHelp(state: PlayerState, writer?: CliWriter): void {
+export function renderProgressiveHelp(state: PlayerState, writer?: CliWriter, options?: HelpOutputOptions): void {
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
 
   write(`
 ${c.bright}SpaceMolt CLI v${VERSION}${c.reset}
 HTTP client for the SpaceMolt MMO.`);
 
-  printStateSection(state, writer);
+  printStateSection(state, writer, options);
 
   if (state.authenticated) {
     write(`
@@ -598,7 +626,7 @@ ${c.bright}Command Discovery:${c.reset}
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Local command help
-${cacheHelpSections()}
+${cacheHelpSections(options)}
 
 ${c.bright}Arguments:${c.reset}
   Positional:       spacemolt travel sol_asteroid_belt
@@ -633,7 +661,8 @@ ${c.bright}Output Precedence:${c.reset}
 // Help
 // =============================================================================
 
-function cacheHelpSections(): string {
+function cacheHelpSections(options?: HelpOutputOptions): string {
+  const c = colorsForPlain(Boolean(options?.plain));
   return `
 ${c.bright}Dynamic API Cache:${c.reset}
   spacemolt sync-api              Refresh cached OpenAPI command metadata
@@ -645,7 +674,8 @@ ${c.bright}ID Cache:${c.reset}
   spacemolt where-can-i <item>          Search cached item sightings`;
 }
 
-export function showHelp(writer?: CliWriter): void {
+export function showHelp(writer?: CliWriter, options?: HelpOutputOptions): void {
+  const c = colorsForPlain(Boolean(options?.plain));
   out(writer)(`
 ${c.bright}SpaceMolt CLI v${VERSION}${c.reset}
 HTTP client for the SpaceMolt MMO.
@@ -679,7 +709,7 @@ ${c.bright}Command Discovery:${c.reset}
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Local command help
-${cacheHelpSections()}
+${cacheHelpSections(options)}
 
 ${c.bright}Arguments:${c.reset}
   Positional:       spacemolt travel sol_asteroid_belt
@@ -710,7 +740,11 @@ ${c.bright}Output Precedence:${c.reset}
 `);
 }
 
-function showGeneratedCommandReference(commands: CommandHelpMap, writer?: CliWriter): void {
+function showGeneratedCommandReference(
+  commands: CommandHelpMap,
+  writer?: CliWriter,
+  options?: HelpOutputOptions,
+): void {
   const bundledCommands = BUNDLED_COMMAND_REGISTRY.allCommands;
   const generatedCommands = Object.entries(commands)
     .filter(([command]) => !bundledCommands[command])
@@ -718,12 +752,14 @@ function showGeneratedCommandReference(commands: CommandHelpMap, writer?: CliWri
   if (generatedCommands.length === 0) return;
 
   const write = out(writer);
+  const c = colorsForPlain(Boolean(options?.plain));
   write(`\n${c.bright}Generated API Commands:${c.reset}`);
   for (const [command] of generatedCommands) write(`  ${formatCommandSummary(command, commands)}`);
 }
 
-export function showFullHelp(writer?: CliWriter, commands?: CommandHelpSource): void {
+export function showFullHelp(writer?: CliWriter, commands?: CommandHelpSource, options?: HelpOutputOptions): void {
   const allCommands = commandHelpMap(commands);
+  const c = colorsForPlain(Boolean(options?.plain));
   out(writer)(`
 ${c.bright}SpaceMolt CLI Client v${VERSION}${c.reset}
 A command-line client for the SpaceMolt MMO.
@@ -790,7 +826,7 @@ ${c.bright}Usage:${c.reset}
      spacemolt commands --search fuel
      spacemolt help all              Full local command reference
      spacemolt help command=<name>   Local command help
-${cacheHelpSections()}
+${cacheHelpSections(options)}
 
 ${c.bright}Information Commands (unlimited):${c.reset}
   get_status          Your player, ship, location
@@ -1012,7 +1048,7 @@ ${c.bright}Documentation:${c.reset}
   API Reference: https://game.spacemolt.com/api/v2/openapi.json
   Game Website:  https://www.spacemolt.com
 `);
-  showGeneratedCommandReference(allCommands, writer);
+  showGeneratedCommandReference(allCommands, writer, options);
 }
 
 // =============================================================================

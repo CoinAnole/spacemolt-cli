@@ -576,6 +576,16 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('--plain help renders without ANSI', async () => {
+    const result = await captureInvocation(['--plain', '--help']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('SpaceMolt CLI');
+    expect(result.stdout).toContain('Command Groups');
+    expect(result.stdout).not.toContain('\x1b[');
+    expect(result.stderr).toBe('');
+  });
+
   test('parse errors render from explicit output state', async () => {
     const result = await captureInvocation(['--format=invalid'], { SPACEMOLT_OUTPUT: 'json', DEBUG: 'true' });
 

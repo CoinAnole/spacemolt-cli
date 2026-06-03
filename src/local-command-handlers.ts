@@ -59,6 +59,13 @@ function writeJson(context: CliRuntimeContext | undefined, value: unknown, space
   else console.log(json);
 }
 
+function localOutputOptions(options: GlobalOptions, context?: CliRuntimeContext): { plain?: boolean; quiet?: boolean } {
+  return {
+    plain: context?.config?.plain ?? context?.output?.plain ?? options.plain,
+    quiet: context?.config?.quiet ?? context?.output?.quiet ?? options.quiet,
+  };
+}
+
 function compareGameserverVersions(left: string, right: string): number | undefined {
   const parse = (value: string): [number, number, number] | undefined => {
     const match = value.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
@@ -134,8 +141,8 @@ function createCommandsHandler(
     run(payload) {
       return { query: parseCommandSearchQuery(payload.args) };
     },
-    render(result, _options, _client, context) {
-      showCommandSearch(result.query, context?.writer, allCommands);
+    render(result, options, _client, context) {
+      showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
       return 0;
     },
   };
@@ -190,6 +197,7 @@ function createExplainHandler(
         result.command,
         context?.writer,
         registrySnapshot.allCommands ?? registrySnapshot.commands,
+        localOutputOptions(options, context),
       );
       return 0;
     },
@@ -326,7 +334,7 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
     if (options.json) {
       writeJson(context, { structuredContent: doctorResult });
     } else {
-      printDoctorResult(doctorResult, context?.writer);
+      printDoctorResult(doctorResult, context?.writer, localOutputOptions(options, context));
     }
     return doctorResult.ok ? 0 : 1;
   },
@@ -562,38 +570,39 @@ function createLocalHelpHandler(
     },
     async render(result, options, _client, context) {
       if (result.type === 'showHelp') {
-        showHelp(context?.writer);
+        showHelp(context?.writer, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'showHelpAndGroups') {
-        showHelp(context?.writer);
-        showCommandGroups(context?.writer, allCommands);
+        showHelp(context?.writer, localOutputOptions(options, context));
+        showCommandGroups(context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpAll') {
-        showFullHelp(context?.writer, allCommands);
+        showFullHelp(context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpGroup') {
-        showCommandGroup(result.target, context?.writer, allCommands);
+        showCommandGroup(result.target, context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'progressiveOrHelp') {
         if (options.watch) {
-          showHelp(context?.writer);
+          showHelp(context?.writer, localOutputOptions(options, context));
         } else {
-          await showProgressiveHelp(context?.writer);
+          await showProgressiveHelp(context?.writer, localOutputOptions(options, context));
         }
         return 0;
       }
       if (result.type === 'helpSearch') {
-        showCommandSearch(result.query, context?.writer, allCommands);
+        showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpCommand') {
         if (
-          showCommandExplanation(result.target, context?.writer, allCommands) ||
-          (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer, allCommands))
+          showCommandExplanation(result.target, context?.writer, allCommands, localOutputOptions(options, context)) ||
+          (hasCommandGroup(result.target) &&
+            showCommandGroup(result.target, context?.writer, allCommands, localOutputOptions(options, context)))
         ) {
           return 0;
         }

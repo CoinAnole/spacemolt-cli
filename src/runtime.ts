@@ -2,8 +2,6 @@
 // Configuration
 // =============================================================================
 
-import { colorCodes } from './display/ansi.ts';
-
 export const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 export const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 export const VERSION = '2.3.0';
@@ -47,5 +45,3 @@ export const MAX_SESSION_RECOVERY_ATTEMPTS = 1;
 export const MAX_RATE_LIMIT_RETRIES = 3;
 export const GITHUB_REPO = 'CoinAnole/spacemolt-cli';
 export const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-
-export const c = colorCodes(false);

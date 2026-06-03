@@ -181,6 +181,12 @@ describe('doctor', () => {
     expect(result.stdout).toContain('SpaceMolt Doctor');
   });
 
+  test('CLI doctor --plain renders without ANSI', async () => {
+    const result = await runDirect(['--plain', 'doctor']);
+    expect(result.stdout).toContain('SpaceMolt Doctor');
+    expect(result.stdout).not.toContain('\x1b[');
+  });
+
   test('CLI doctor --json produces valid JSON', async () => {
     const result = await runDirect(['--json', 'doctor']);
     const parsed = JSON.parse(result.stdout);

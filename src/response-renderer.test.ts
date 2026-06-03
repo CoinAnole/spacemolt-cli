@@ -142,6 +142,7 @@ describe('response renderer', () => {
     expect(output).toContain('Notifications (1)');
     expect(output).toContain('Tick complete');
     expect(output.indexOf('Notifications (1)')).toBeLessThan(output.indexOf('Status ready'));
+    expect(capture.stdout.join('\n')).not.toContain('\x1b[');
   });
 
   test('renderResponse warns when server help filters are ignored by the API', async () => {
@@ -158,11 +159,13 @@ describe('response renderer', () => {
       capture.context,
     );
 
-    const stderr = capture.stderr.join('\n').replace(ANSI_PATTERN, '');
+    const rawStderr = capture.stderr.join('\n');
+    const stderr = rawStderr.replace(ANSI_PATTERN, '');
     expect(exitCode).toBe(0);
     expect(capture.text()).toContain('All server commands');
     expect(stderr).toContain('server help does not currently support category/command filtering');
     expect(stderr).toContain('spacemolt help <command>');
+    expect(rawStderr).not.toContain('\x1b[');
   });
 
   test('renderResponse prints JSON error envelopes and exits nonzero', async () => {
