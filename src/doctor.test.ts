@@ -5,6 +5,7 @@ import type { CliRuntimeContext } from './cli-context';
 import { runDoctor } from './doctor';
 import { runInvocation } from './main';
 import { createDefaultConfig } from './runtime';
+import { setActiveProfile } from './session';
 
 function fakeContext(stdout: string[], stderr: string[], env: Record<string, string> = {}): CliRuntimeContext {
   return {
@@ -43,6 +44,10 @@ async function runDirect(
 
 function tempDir(): string {
   return fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'spacemolt-doctor-test-'));
+}
+
+function defaultConfigWithoutEnvProfile() {
+  return createDefaultConfig({}, { ...process.env, SPACEMOLT_PROFILE: undefined });
 }
 
 function writeOpenApiCache(configHome: string): void {
@@ -107,7 +112,7 @@ describe('doctor', () => {
     const configHome = tempDir();
     let result: Awaited<ReturnType<typeof runDoctor>>;
     try {
-      result = await runDoctor(undefined, { ...process.env, XDG_CONFIG_HOME: configHome });
+      result = await runDoctor(defaultConfigWithoutEnvProfile(), { ...process.env, XDG_CONFIG_HOME: configHome });
     } finally {
       fs.rmSync(configHome, { recursive: true, force: true });
     }
@@ -122,7 +127,7 @@ describe('doctor', () => {
     const configHome = tempDir();
     let result: Awaited<ReturnType<typeof runDoctor>>;
     try {
-      result = await runDoctor(undefined, { ...process.env, XDG_CONFIG_HOME: configHome });
+      result = await runDoctor(defaultConfigWithoutEnvProfile(), { ...process.env, XDG_CONFIG_HOME: configHome });
     } finally {
       fs.rmSync(configHome, { recursive: true, force: true });
     }
@@ -156,11 +161,25 @@ describe('doctor', () => {
       fs.mkdirSync(path.join(configHome, 'spacemolt-cli'), { recursive: true });
       fs.writeFileSync(path.join(configHome, 'spacemolt-cli', 'config.json'), '{"defaultProfile":"saved"}\n');
 
-      const result = await runDoctor(undefined, { ...process.env, XDG_CONFIG_HOME: configHome });
+      const result = await runDoctor(defaultConfigWithoutEnvProfile(), { ...process.env, XDG_CONFIG_HOME: configHome });
       const profileCheck = result.checks.find((c) => c.name === 'profile');
 
       expect(profileCheck?.message).toBe('Default profile: saved');
     } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('explicit config without profile does not read active profile fallback', async () => {
+    const configHome = tempDir();
+    try {
+      setActiveProfile('leaked');
+      const result = await runDoctor(defaultConfigWithoutEnvProfile(), { ...process.env, XDG_CONFIG_HOME: configHome });
+      const profileCheck = result.checks.find((c) => c.name === 'profile');
+
+      expect(profileCheck?.message).toBe('No default profile set.');
+    } finally {
+      setActiveProfile(undefined);
       fs.rmSync(configHome, { recursive: true, force: true });
     }
   });

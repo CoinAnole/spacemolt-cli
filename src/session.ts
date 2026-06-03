@@ -192,11 +192,16 @@ export function showProfiles(
 
 export function getSessionPath(config?: { profile?: string }, env?: EnvLike): string {
   if (config) {
-    const manager = new SessionManager({
-      profile: config.profile,
-      env,
-    });
-    return manager.getSessionPath();
+    const sessionEnv = env ?? process.env;
+    const profile = config.profile ?? getDefaultProfile(undefined, undefined, sessionEnv);
+    if (!profile) {
+      throw new Error('No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".');
+    }
+    return path.join(
+      getSpacemoltHome(undefined, undefined, sessionEnv),
+      'sessions',
+      `${resolveProfileName(profile, sessionEnv)}.json`,
+    );
   }
   return new SessionManager({ env }).getSessionPath();
 }
@@ -442,7 +447,9 @@ export class SessionManager {
 
     const colors = colorsForPlain(this._plain);
     if (this.debug)
-      this._logger.log(`${colors.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${colors.reset}`);
+      this._logger.log(
+        `${colors.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${colors.reset}`,
+      );
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
       method: 'POST',
       sessionId: session.id,

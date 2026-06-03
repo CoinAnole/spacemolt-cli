@@ -39,7 +39,7 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
   let dynamicCommands = 0;
 
   const apiBase = config?.apiBase || API_BASE;
-  const profile = config?.profile !== undefined ? config.profile : ACTIVE_PROFILE;
+  const profile = config ? config.profile : ACTIVE_PROFILE;
   const defaultProfile = getDefaultProfile(undefined, undefined, env);
   const sessionPath = tryGetSessionPath(config, env);
 
