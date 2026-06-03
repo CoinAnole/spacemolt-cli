@@ -96,6 +96,7 @@ export class SpaceMoltClient {
         profile: this.config.profile,
         profileIsExplicit: this.config.profileIsExplicit,
         debug: this.config.debug,
+        plain: this.config.plain,
       });
     this.clock = options.clock ?? { now: Date.now };
     this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));

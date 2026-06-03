@@ -146,6 +146,21 @@ describe('checkForUpdates', () => {
     const lines: string[] = [];
     await checkForUpdates(
       updateOptions({
+        env: { SPACEMOLT_UPDATE_CHECK: 'true', DEBUG: 'true' },
+        writer: {
+          out(message = '') {
+            lines.push(message);
+          },
+          err() {},
+        },
+        transport: async () => ({ ok: false, status: 503, data: { tag_name: 'v9.9.9' } }),
+      }),
+    );
+
+    expect(lines).toEqual([]);
+
+    await checkForUpdates(
+      updateOptions({
         debug: true,
         writer: {
           out(message = '') {

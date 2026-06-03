@@ -386,7 +386,9 @@ const idsHandler: CommandHandler<
       writeJson(context, { structuredContent: { kind: result.kind, search: result.search, ids: result.hints } });
     } else {
       const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
-      printIds(result.kind, sessionPath, context?.writer, result.search);
+      printIds(result.kind, sessionPath, context?.writer, result.search, {
+        plain: context?.config?.plain ?? context?.output?.plain,
+      });
     }
     return 0;
   },
@@ -420,7 +422,9 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
       writeJson(context, { structuredContent: { query: result.query, matches: result.matches } });
     } else {
       const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
-      printWhereCanI(result.query, sessionPath, context?.writer);
+      printWhereCanI(result.query, sessionPath, context?.writer, {
+        plain: context?.config?.plain ?? context?.output?.plain,
+      });
     }
     return 0;
   },

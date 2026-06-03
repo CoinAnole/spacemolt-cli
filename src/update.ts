@@ -3,7 +3,7 @@ import * as path from 'node:path';
 
 import type { CliClock, CliEnv, CliWriter } from './cli-context.ts';
 import { colorsForPlain } from './output-style.ts';
-import { DEBUG, GITHUB_REPO, UPDATE_CHECK_INTERVAL_MS, VERSION } from './runtime.ts';
+import { GITHUB_REPO, UPDATE_CHECK_INTERVAL_MS, VERSION } from './runtime.ts';
 import { getSpacemoltHome } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { JsonResponse } from './types.ts';
@@ -80,7 +80,7 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
   };
   const version = options.version ?? VERSION;
   const repo = options.repo ?? GITHUB_REPO;
-  const debug = options.debug ?? DEBUG;
+  const debug = options.debug ?? false;
   const colors = colorsForPlain(Boolean(options.plain));
 
   // Skip update check by default unless explicitly enabled

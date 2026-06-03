@@ -389,6 +389,36 @@ describe('SpaceMoltClient', () => {
     expect(store.defaultProfile).toBe('pilot');
   });
 
+  test('session debug output uses explicit plain logger', async () => {
+    const lines: string[] = [];
+    const manager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      debug: true,
+      plain: true,
+      logger: {
+        log(message) {
+          lines.push(message);
+        },
+      },
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_bootstrap',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+
+    await manager.createTransientSession();
+
+    expect(lines.join('\n')).toContain('[DEBUG] Creating new session...');
+    expect(lines.join('\n')).not.toContain('\x1b[');
+  });
+
   test('successful login with no default profile creates a username profile session', async () => {
     const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-profile-test-'));
     process.env.XDG_CONFIG_HOME = configRoot;
