@@ -2,7 +2,9 @@
 
 ## Goal
 
-Remove the legacy mutable runtime/output globals from the SpaceMolt CLI without breaking current CLI behavior, exact golden output, or the public configuration API that package consumers may already use.
+Remove the legacy mutable runtime/output globals from the SpaceMolt CLI without breaking current CLI behavior or exact golden output.
+
+Public package API compatibility is not a constraint for this cleanup. Part 2 may remove or change exported legacy config symbols when doing so produces a clearer runtime model.
 
 The removal should happen in two parts:
 
@@ -38,7 +40,7 @@ Part 1 does not remove globals or change runtime behavior.
 
 Part 2 does not change command routing, output formats, profile resolution, session file layout, OpenAPI generation, or renderer semantics. Any output changes must be intentional and covered by golden updates.
 
-This design does not remove `createDefaultConfig()` or `createRuntimeState()`. They remain the public configuration API.
+Part 1 keeps `createDefaultConfig()` and `createRuntimeState()` intact. Part 2 may change no-argument defaults, export shape, or compatibility aliases if that helps remove global state cleanly.
 
 ## Part 1: Rename and Contain the Compatibility Layer
 
@@ -89,13 +91,13 @@ If exports change, also run:
 bun run typecheck
 ```
 
-## Part 2: Thread Explicit Runtime State and Remove Globals
+## Part 2: Aggressively Thread Explicit Runtime State and Remove Globals
 
-Part 2 removes process-wide output state after all remaining consumers can use explicit config/context.
+Part 2 removes process-wide output state after all remaining consumers can use explicit config/context. This phase should prefer direct removal over compatibility shims. The compatibility target is CLI behavior, not preservation of package imports for mutable global state.
 
 ### Runtime State Model
 
-Introduce a small explicit output state type if the existing `SpaceMoltConfig` is too broad for early parse errors:
+Introduce a small explicit output state type for early parse errors instead of relying on `SpaceMoltConfig` or mutable globals:
 
 ```ts
 interface OutputRuntimeState {
@@ -109,6 +111,8 @@ interface OutputRuntimeState {
 ```
 
 Use this for parse-error rendering before profile/default config resolution is complete. Once full global options are parsed, continue using `SpaceMoltConfig` through `CliRuntimeContext`.
+
+`createRuntimeState()` should require an explicit `SpaceMoltConfig` in Part 2 or be removed if it no longer has a distinct job. Do not keep a no-argument overload backed by a hidden env snapshot merely for compatibility.
 
 ### Color and Formatting
 
@@ -156,19 +160,23 @@ After these replacements, remove:
 - `setOutputMode()`.
 - `GlobalBackedConfig`.
 - Deprecated `LegacySpaceMoltConfig` alias.
-- Default no-argument `createRuntimeState()` behavior, unless it can be backed by an immutable env snapshot.
+- Default no-argument `createRuntimeState()` behavior.
+- Runtime exports for `JSON_OUTPUT`, `DEBUG`, `PLAIN`, `QUIET`, `FORMAT`, and `COMPACT`.
+- Entry-point exports for legacy config symbols that only exist to support global-backed state.
 
-`createDefaultConfig()` should remain, but in Part 2 it should return an immutable config snapshot seeded from environment variables and supplied overrides.
+`createDefaultConfig()` should remain only if it is still useful as an immutable env-backed config factory. It should return a plain snapshot object seeded from environment variables and supplied overrides. If call sites can use `getRuntimeConfig()` or explicit config construction instead, remove `createDefaultConfig()` from internal use and stop exporting it from `src/client.ts`.
 
 ## Compatibility and Release Strategy
 
 Part 1 is backward-compatible and can ship in a minor release.
 
-Part 2 is a breaking internal architecture change and may also be a public API break if external consumers import mutable globals, `setOutputMode()`, or `LegacySpaceMoltConfig`. Before Part 2, audit package exports and decide whether to:
+Part 2 is allowed to be a public API break. Remove legacy public symbols instead of carrying aliases or immutable compatibility facades.
 
-- Keep deprecated aliases for one release with immutable behavior.
-- Remove them in a major release.
-- Leave them unexported from `src/client.ts` while preserving internal modules.
+Specifically, Part 2 may remove from `src/client.ts`:
+
+- `LegacySpaceMoltConfig`
+- `GlobalBackedConfig`
+- `createDefaultConfig`, if no longer useful as a plain env-backed snapshot factory
 
 The CLI behavior must remain unchanged for ordinary command execution.
 
@@ -200,7 +208,8 @@ Part 2 should use focused TDD per migrated area:
 - Session tests for debug output without reading globals.
 - Update tests for injected debug behavior.
 - ID-cache tests for quiet/plain suggestion output.
-- Config tests proving default config is an env-backed snapshot.
+- Config tests proving no runtime state is read from mutable globals.
+- Export tests or typecheck coverage proving removed public symbols are no longer part of `src/client.ts`.
 
 Then run:
 
@@ -212,8 +221,8 @@ bun run typecheck
 
 If output changes are intentional, update only the affected golden files with targeted `GOLDEN_ONLY=... UPDATE_GOLDENS=1` runs.
 
-## Open Decisions
+## Resolved Decisions
 
-Before implementing Part 2, decide whether removal of `LegacySpaceMoltConfig`, `GlobalBackedConfig`, and `setOutputMode()` is a major-version change. If external package consumers are not considered supported for those names, remove them from the entrypoint first and keep the internal migration separate.
+Part 2 may break package-level imports. Do not preserve `LegacySpaceMoltConfig`, `GlobalBackedConfig`, `setOutputMode()`, mutable output globals, or no-argument `createRuntimeState()` for compatibility.
 
-Decide whether `createRuntimeState()` should keep a no-argument overload. Keeping it requires an env-backed default snapshot. Removing it makes runtime state fully explicit but may be a package API break.
+Keep `createDefaultConfig()` only if it remains useful as a plain immutable config factory. It must not read mutable module state, and it does not need to remain exported from `src/client.ts`.
