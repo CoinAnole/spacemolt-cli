@@ -104,9 +104,9 @@ const profileHandler: CommandHandler<ProfilePayload, ProfilePayload> = {
       },
     };
   },
-  run(payload, _options, _client, context) {
+  run(payload, options, _client, context) {
     if (payload.action === 'list') {
-      showProfiles(context?.env.HOME, undefined, context?.env);
+      showProfiles(context?.env.HOME, context?.writer, context?.env, { plain: options.plain });
       return payload;
     }
     if (payload.name) {

@@ -792,6 +792,32 @@ describe('runInvocation option isolation', () => {
     expect(`${profileResult.stderr}\n${explainResult.stderr}\n${completionResult.stderr}`).not.toContain('\x1b[');
   });
 
+  test('--plain profile list renders without ANSI', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-plain-'));
+    const configHome = path.join(tempDir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.json'),
+      JSON.stringify({
+        id: 's',
+        username: 'pilot',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2099-01-01T00:00:00.000Z',
+      }),
+    );
+
+    try {
+      const result = await captureInvocation(['--plain', 'profile', 'list'], { XDG_CONFIG_HOME: configHome });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Profiles');
+      expect(result.stdout).not.toContain('\x1b[');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('context profile is used for API payload preparation', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-context-'));
     const configHome = path.join(tempDir, 'config');

@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import type { CliWriter } from './cli-context.ts';
 import { colorsForPlain } from './output-style.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { API_BASE, VERSION } from './runtime.ts';
@@ -166,18 +167,26 @@ function resolveProfileName(profile: string, env: EnvLike): string {
   return normalizedProfile;
 }
 
-export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike): void {
+export function showProfiles(
+  homeDir?: string,
+  platformOrWriter?: string | CliWriter,
+  env?: EnvLike,
+  options: { plain?: boolean } = {},
+): void {
+  const platform = typeof platformOrWriter === 'string' ? platformOrWriter : undefined;
+  const writer = typeof platformOrWriter === 'string' ? undefined : platformOrWriter;
+  const out = writer?.out.bind(writer) ?? console.log;
   const profiles = listProfileSessions(homeDir, platform, env);
-  const colors = colorsForPlain(false);
+  const colors = colorsForPlain(Boolean(options.plain));
   if (!profiles.length) {
-    console.log(`No profiles found in ${getProfileSessionsDir(homeDir, platform, env)}.`);
+    out(`No profiles found in ${getProfileSessionsDir(homeDir, platform, env)}.`);
     return;
   }
 
-  console.log(`${colors.bright}Profiles${colors.reset}`);
+  out(`${colors.bright}Profiles${colors.reset}`);
   for (const profile of profiles) {
     const marker = profile.isDefault ? '* ' : '  ';
-    console.log(`${marker}${profile.name}`);
+    out(`${marker}${profile.name}`);
   }
 }
 
