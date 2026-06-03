@@ -20,7 +20,7 @@ import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { outputStateFromGlobalOptionError } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
-import { API_BASE, c, DEBUG } from './runtime.ts';
+import { API_BASE, c } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
@@ -123,7 +123,7 @@ async function runInvocationWithContext(
     const colors = colorsForPlain(output.plain);
     if (output.jsonOutput) {
       printJsonError(parsedInvocation.error.code, parsedInvocation.error.message, context.writer);
-    } else if (!output.quiet) {
+    } else {
       context.writer.err(`${colors.red}Error:${colors.reset} ${parsedInvocation.error.message}`);
     }
     return 1;
@@ -259,25 +259,41 @@ function renderCommandError(error: CommandError, options: GlobalOptions, context
   return error.exitCode ?? 1;
 }
 
+function outputFromContext(context: CliRuntimeContext): {
+  debug: boolean;
+  plain: boolean;
+  quiet: boolean;
+  apiBase: string;
+} {
+  return {
+    debug: Boolean(context.config?.debug ?? context.output?.debug),
+    plain: Boolean(context.config?.plain ?? context.output?.plain),
+    quiet: Boolean(context.config?.quiet ?? context.output?.quiet),
+    apiBase: context.config?.apiBase ?? context.env.SPACEMOLT_URL ?? API_BASE,
+  };
+}
+
 function renderConnectionError(error: unknown, options: GlobalOptions, context: CliRuntimeContext): number {
   const errorMessage = error instanceof Error ? error.message : String(error);
   if (options.json) {
     printJsonError('connection_error', errorMessage, context.writer);
     return 1;
   }
-  context.writer.err(`${c.red}${c.bright}Connection Error:${c.reset} ${errorMessage}`);
+  const output = outputFromContext(context);
+  const colors = colorsForPlain(output.plain);
+  context.writer.err(`${colors.red}${colors.bright}Connection Error:${colors.reset} ${errorMessage}`);
   context.writer.err('');
 
   if (errorMessage.includes('fetch') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
-    context.writer.err(`${c.yellow}Troubleshooting:${c.reset}`);
+    context.writer.err(`${colors.yellow}Troubleshooting:${colors.reset}`);
     context.writer.err(`  1. Check your internet connection`);
-    context.writer.err(`  2. Verify the API is reachable: ${API_BASE}`);
+    context.writer.err(`  2. Verify the API is reachable: ${output.apiBase}`);
     context.writer.err(`  3. The game server may be temporarily down`);
     context.writer.err(`  4. Try again in a few moments`);
   }
 
-  if (DEBUG) {
-    context.writer.err(`\n${c.dim}[DEBUG] Full error:${c.reset}`);
+  if (output.debug) {
+    context.writer.err(`\n${colors.dim}[DEBUG] Full error:${colors.reset}`);
     context.writer.err(String(error));
   }
 

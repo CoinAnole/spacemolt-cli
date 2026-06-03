@@ -591,6 +591,14 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('quiet parse errors still render diagnostics', async () => {
+    const result = await captureInvocation(['--quiet', '--format=invalid']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Invalid format "invalid"');
+  });
+
   test('--format json preserves JSON output for later global parse errors', async () => {
     const result = await captureInvocation(['--format', 'json', '--format', 'nope', 'get_status']);
 
@@ -640,6 +648,29 @@ describe('runInvocation option isolation', () => {
     expect(exitCode).toBe(1);
     expect(stdout.join('\n')).toContain('"unknown_command"');
     expect(stderr).toEqual([]);
+  });
+
+  test('connection errors use explicit output state after parsing', async () => {
+    const result = await captureInvocation(
+      ['--plain', '--debug', 'get_status'],
+      { SPACEMOLT_URL: 'https://configured.test/api/v2' },
+      {
+        createClient(config) {
+          return {
+            config,
+            async execute() {
+              throw new Error('fetch failed');
+            },
+          } as unknown as SpaceMoltClient;
+        },
+      },
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Connection Error: fetch failed');
+    expect(result.stderr).toContain('Verify the API is reachable: https://configured.test/api/v2');
+    expect(result.stderr).toContain('[DEBUG] Full error:');
+    expect(result.stderr).not.toContain('\x1b[');
   });
 
   test('context profile is used for API payload preparation', async () => {
