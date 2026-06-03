@@ -1092,6 +1092,23 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('spacemolt facility_upgrade --facility-type ... --facility-id ...');
   });
 
+  test('api command trailing help respects plain output state', async () => {
+    const handler = resolveHandler(['facility_upgrade', 'help'], { ...options, plain: true });
+
+    expect(handler).toBeInstanceOf(ApiCommandHandler);
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['facility_upgrade', 'help'], { ...options, plain: true, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    expect(parsed.error.exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('facility_upgrade');
+    expect(stdout.join('\n')).not.toContain('\x1b[');
+  });
+
   test('sync-api refreshes cached OpenAPI routes and renders a text summary', async () => {
     const configHome = tempDir();
     const fetches: string[] = [];

@@ -586,6 +586,16 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).toBe('');
   });
 
+  test('--plain payload command help renders without ANSI', async () => {
+    const result = await captureInvocation(['--plain', 'travel', 'help=true']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('travel');
+    expect(result.stdout).toContain('Usage:');
+    expect(result.stdout).not.toContain('\x1b[');
+    expect(result.stderr).toBe('');
+  });
+
   test('parse errors render from explicit output state', async () => {
     const result = await captureInvocation(['--format=invalid'], { SPACEMOLT_OUTPUT: 'json', DEBUG: 'true' });
 

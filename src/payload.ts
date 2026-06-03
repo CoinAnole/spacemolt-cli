@@ -55,7 +55,7 @@ export function preparePayload(
   }
 
   if (rawPayload.help === 'true' || rawPayload.help === '1') {
-    showCommandHelp(command, writer, registry.commands);
+    showCommandHelp(command, writer, registry.commands, { plain: options.plain });
     return { type: 'exit', exitCode: 0 };
   }
 
