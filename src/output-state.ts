@@ -3,6 +3,8 @@ import type { GlobalOptionParseError } from './global-options.ts';
 import { DEFAULT_V2_API_BASE, type SpaceMoltConfig } from './runtime.ts';
 import type { GlobalOptions, OutputFormat } from './types.ts';
 
+export type ImmutableSpaceMoltConfig = Readonly<SpaceMoltConfig>;
+
 export interface OutputRuntimeState {
   jsonOutput: boolean;
   debug: boolean;
@@ -43,7 +45,7 @@ export function outputStateFromGlobalOptionError(
 export function createDefaultConfig(
   overrides: Partial<SpaceMoltConfig> = {},
   env: CliEnv = process.env,
-): SpaceMoltConfig {
+): ImmutableSpaceMoltConfig {
   const jsonOutput = overrides.jsonOutput ?? env.SPACEMOLT_OUTPUT === 'json';
   return Object.freeze({
     apiBase: overrides.apiBase ?? env.SPACEMOLT_URL ?? DEFAULT_V2_API_BASE,

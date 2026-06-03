@@ -3,6 +3,7 @@ import {
   createDefaultConfig,
   outputStateFromGlobalOptionError,
   outputStateFromOptions,
+  type ImmutableSpaceMoltConfig,
   type OutputRuntimeState,
 } from './output-state.ts';
 import type { GlobalOptions } from './types.ts';
@@ -19,6 +20,11 @@ const baseOptions: GlobalOptions = {
   compact: false,
   args: [],
 };
+
+function assertImmutableConfigType(config: ImmutableSpaceMoltConfig) {
+  // @ts-expect-error Immutable config snapshots should not expose writable fields.
+  config.apiBase = 'https://mutated.example.test/api/v2';
+}
 
 describe('explicit output state', () => {
   test('derives output state from parsed options and env', () => {
@@ -93,5 +99,6 @@ describe('explicit output state', () => {
       profileIsExplicit: false,
     });
     expect(Object.isFrozen(config)).toBe(true);
+    void assertImmutableConfigType;
   });
 });

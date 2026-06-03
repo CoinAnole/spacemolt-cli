@@ -12,6 +12,9 @@ describe('plain-aware direct output styling', () => {
     const plain = colorsForPlain(true);
     const color = colorsForPlain(false);
 
+    expect(color).not.toBe(rawColors);
+    expect(Object.isFrozen(color)).toBe(true);
+    expect(Object.isFrozen(plain)).toBe(true);
     expect(plain.red).toBe('');
     expect(plain.reset).toBe('');
     expect(color.red).toBe(rawColors.red);
