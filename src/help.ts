@@ -397,7 +397,7 @@ export function showCommandHelp(command: string, writer?: CliWriter, commands?: 
   return true;
 }
 
-type HelpOutputOptions = Pick<GlobalOptions, 'plain' | 'quiet'>;
+type HelpOutputOptions = Partial<Pick<GlobalOptions, 'plain' | 'quiet'>>;
 
 function printNextSteps(command: string, missingArg?: string, writer?: CliWriter, options?: HelpOutputOptions): void {
   const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
@@ -1028,25 +1028,27 @@ export function displayError(
   const out = writer?.out.bind(writer) ?? console.log;
   const err = writer?.err.bind(writer) ?? console.error;
   const quiet = options?.context?.output?.quiet ?? options?.context?.config?.quiet ?? false;
+  const plain = options?.context?.output?.plain ?? options?.context?.config?.plain ?? false;
+  const colors = colorsForPlain(Boolean(plain));
   if (!quiet && !options?.noTimestamp) {
-    out(`${c.dim}[${(options?.context?.clock.now() ?? new Date()).toISOString()}]${c.reset}`);
+    out(`${colors.dim}[${(options?.context?.clock.now() ?? new Date()).toISOString()}]${colors.reset}`);
   }
-  err(`${c.red}Error [${error.code}]:${c.reset} ${error.message}`);
+  err(`${colors.red}Error [${error.code}]:${colors.reset} ${error.message}`);
   const retryAfter = error.retry_after ?? error.wait_seconds;
   if (retryAfter !== undefined) {
-    err(`${c.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${c.reset}`);
+    err(`${colors.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${colors.reset}`);
   }
   if (!quiet) {
     const help = getErrorSuggestion(error.code);
-    if (help) err(`\n${c.cyan}Suggestion:${c.reset} ${help}`);
+    if (help) err(`\n${colors.cyan}Suggestion:${colors.reset} ${help}`);
     if (isRetryableError(error.code) && retryAfter === undefined) {
-      err(`${c.dim}This error may be retryable.${c.reset}`);
+      err(`${colors.dim}This error may be retryable.${colors.reset}`);
     }
     if (isAuthError(error.code)) {
-      err(`${c.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${c.reset}`);
+      err(`${colors.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${colors.reset}`);
     }
     if (BUNDLED_COMMAND_REGISTRY.allCommands[command]) {
-      printNextSteps(command, undefined, writer);
+      printNextSteps(command, undefined, writer, { plain });
     }
   }
 }

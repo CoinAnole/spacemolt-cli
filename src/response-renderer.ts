@@ -85,7 +85,7 @@ export async function renderResponse(
     displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp, context });
     const sessionPath = tryGetSessionPath(client.config, context?.env);
     if (!options.quiet && shouldShowCachedIdSuggestions(command, response.error)) {
-      printCachedIdSuggestions(command, undefined, sessionPath, writer);
+      printCachedIdSuggestions(command, undefined, sessionPath, writer, { quiet: options.quiet, plain: options.plain });
     }
     return 1;
   }

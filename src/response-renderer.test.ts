@@ -250,6 +250,7 @@ describe('response renderer', () => {
       expect(exitCode).toBe(1);
       expect(stderr).toContain('Cached poi IDs');
       expect(stderr).toContain('earth (Earth)');
+      expect(capture.stderr.join('\n')).not.toContain('\x1b[');
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
