@@ -7,6 +7,7 @@ import { getRuntimeConfig } from './main.ts';
 import {
   createDefaultConfig,
   createRuntimeState,
+  GlobalBackedConfig,
   LegacySpaceMoltConfig,
   type SpaceMoltConfig,
   setOutputMode,
@@ -14,13 +15,11 @@ import {
 import { SessionManager, setDefaultProfile } from './session.ts';
 
 describe('Explicit Runtime Configuration', () => {
-  test('LegacySpaceMoltConfig resolves globals dynamically', () => {
-    const config = new LegacySpaceMoltConfig();
+  test('GlobalBackedConfig resolves globals dynamically', () => {
+    const config = new GlobalBackedConfig();
 
-    // Verify it resolves base URL
     expect(config.apiBase).toBeDefined();
 
-    // Verify overriding specific fields works
     const configWithOverrides = createDefaultConfig({
       apiBase: 'https://custom-test.spacemolt.com/api/v2',
       jsonOutput: true,
@@ -28,6 +27,10 @@ describe('Explicit Runtime Configuration', () => {
 
     expect(configWithOverrides.apiBase).toBe('https://custom-test.spacemolt.com/api/v2');
     expect(configWithOverrides.jsonOutput).toBe(true);
+  });
+
+  test('LegacySpaceMoltConfig remains a temporary alias', () => {
+    expect(new LegacySpaceMoltConfig()).toBeInstanceOf(GlobalBackedConfig);
   });
 
   test('SessionManager isolates default and explicit profile paths', () => {

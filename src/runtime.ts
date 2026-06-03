@@ -34,7 +34,7 @@ export interface SpaceMoltConfig {
   profileIsExplicit?: boolean;
 }
 
-export class LegacySpaceMoltConfig implements SpaceMoltConfig {
+export class GlobalBackedConfig implements SpaceMoltConfig {
   get apiBase(): string {
     return API_BASE;
   }
@@ -64,10 +64,13 @@ export class LegacySpaceMoltConfig implements SpaceMoltConfig {
   }
 }
 
+/** @deprecated Use explicit SpaceMoltConfig objects. This alias is removed in the global-state cleanup. */
+export const LegacySpaceMoltConfig = GlobalBackedConfig;
+
 export type RuntimeState = Required<Omit<SpaceMoltConfig, 'profile' | 'profileIsExplicit'>> &
   Pick<SpaceMoltConfig, 'profile'> & { profileIsExplicit: boolean };
 
-export function createRuntimeState(config: SpaceMoltConfig = new LegacySpaceMoltConfig()): RuntimeState {
+export function createRuntimeState(config: SpaceMoltConfig = new GlobalBackedConfig()): RuntimeState {
   return {
     apiBase: config.apiBase,
     jsonOutput: config.jsonOutput,
@@ -82,7 +85,7 @@ export function createRuntimeState(config: SpaceMoltConfig = new LegacySpaceMolt
 }
 
 export function createDefaultConfig(overrides?: Partial<SpaceMoltConfig>): SpaceMoltConfig {
-  const base = new LegacySpaceMoltConfig();
+  const base = new GlobalBackedConfig();
   if (!overrides) return base;
   return {
     get apiBase() {
