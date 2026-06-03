@@ -8,7 +8,6 @@ import { renderStructuredResult } from './display';
 import { getStatusFixture, highValueCommandFixtures, viewMarketFixture } from './display/formatter-fixtures';
 import type { GeneratedApiRoute } from './openapi-metadata';
 import { type RunnerDependencies, runInvocation } from './runner';
-import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, QUIET, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
 import {
   assertFixtureSchemaBaseline,
@@ -146,14 +145,6 @@ function cliContext(tempDir: string, capture: CliStreamCapture): CliRuntimeConte
 async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-output-golden-'));
   const capture: CliStreamCapture = { stdout: '', stderr: '' };
-  const originalOutputMode = {
-    json: JSON_OUTPUT,
-    quiet: QUIET,
-    plain: PLAIN,
-    debug: DEBUG,
-    format: FORMAT,
-    compact: COMPACT,
-  };
   const originalActiveProfile = ACTIVE_PROFILE;
 
   try {
@@ -188,7 +179,6 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
       stderr: capture.stderr,
     };
   } finally {
-    setOutputMode(originalOutputMode);
     setActiveProfile(originalActiveProfile);
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

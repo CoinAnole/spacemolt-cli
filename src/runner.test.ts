@@ -7,7 +7,6 @@ import { SpaceMoltClient as RealSpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
-import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, SessionManager, setActiveProfile, setDefaultProfile } from './session';
 
 async function captureInvocation(
@@ -79,13 +78,6 @@ async function withConfigHome<T>(configHome: string, fn: () => Promise<T>): Prom
 }
 
 afterEach(() => {
-  setOutputMode({
-    json: process.env.SPACEMOLT_OUTPUT === 'json',
-    format: 'table',
-    plain: false,
-    compact: false,
-    quiet: false,
-  });
   setActiveProfile(undefined);
 });
 
@@ -343,15 +335,17 @@ describe('runInvocation option isolation', () => {
     expect(defaultResult.config).toMatchObject({ debug: process.env.DEBUG === 'true' });
   });
 
-  test('successful global parsing temporarily seeds legacy output globals', async () => {
+  test('successful global parsing configures explicit runtime output state', async () => {
     const result = await captureInvocation(['--plain', '--compact', '--debug', '--format', 'json', 'trvel']);
 
     expect(result.exitCode).toBe(1);
-    expect(JSON_OUTPUT).toBe(true);
-    expect(FORMAT).toBe('json');
-    expect(PLAIN).toBe(true);
-    expect(COMPACT).toBe(true);
-    expect(DEBUG).toBe(true);
+    expect(result.config).toMatchObject({
+      jsonOutput: true,
+      format: 'json',
+      plain: true,
+      compact: true,
+      debug: true,
+    });
   });
 
   test('repeated direct invocations do not leak --profile', async () => {
@@ -582,13 +576,11 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
-  test('parse errors render from explicit output state without setOutputMode', async () => {
-    setOutputMode({ json: false, quiet: false, plain: false, debug: false, format: 'table', compact: false });
+  test('parse errors render from explicit output state', async () => {
     const result = await captureInvocation(['--format=invalid'], { SPACEMOLT_OUTPUT: 'json', DEBUG: 'true' });
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe('');
-    expect(DEBUG).toBe(false);
     expect(JSON.parse(result.stdout)).toMatchObject({
       error: {
         code: 'invalid_global_option',
@@ -941,7 +933,6 @@ describe('runInvocation watch cleanup', () => {
       config: {},
       async execute() {
         ticks += 1;
-        setOutputMode({ plain: false });
         if (ticks > 1) throw new Error('stop');
         return { structuredContent: { ok: true } };
       },

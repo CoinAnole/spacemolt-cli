@@ -2,35 +2,42 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as clientEntrypoint from './client.ts';
 import { SpaceMoltClient } from './api.ts';
 import { getRuntimeConfig } from './main.ts';
-import {
-  createDefaultConfig,
-  createRuntimeState,
-  GlobalBackedConfig,
-  LegacySpaceMoltConfig,
-  type SpaceMoltConfig,
-  setOutputMode,
-} from './runtime.ts';
+import { createDefaultConfig, createRuntimeState, type SpaceMoltConfig } from './runtime.ts';
 import { SessionManager, setDefaultProfile } from './session.ts';
 
 describe('Explicit Runtime Configuration', () => {
-  test('GlobalBackedConfig resolves globals dynamically', () => {
-    const config = new GlobalBackedConfig();
-
-    expect(config.apiBase).toBeDefined();
-
+  test('createDefaultConfig returns a frozen env-backed snapshot', () => {
+    const env = {
+      SPACEMOLT_URL: 'https://env-test.spacemolt.com/api/v2',
+      SPACEMOLT_OUTPUT: 'json',
+      DEBUG: 'true',
+      SPACEMOLT_PROFILE: 'env-pilot',
+    };
+    const config = createDefaultConfig({}, env);
     const configWithOverrides = createDefaultConfig({
       apiBase: 'https://custom-test.spacemolt.com/api/v2',
       jsonOutput: true,
     });
 
+    expect(config).toMatchObject({
+      apiBase: 'https://env-test.spacemolt.com/api/v2',
+      jsonOutput: true,
+      debug: true,
+      format: 'json',
+      profile: 'env-pilot',
+    });
+    expect(Object.isFrozen(config)).toBe(true);
     expect(configWithOverrides.apiBase).toBe('https://custom-test.spacemolt.com/api/v2');
     expect(configWithOverrides.jsonOutput).toBe(true);
   });
 
-  test('LegacySpaceMoltConfig remains a temporary alias', () => {
-    expect(new LegacySpaceMoltConfig()).toBeInstanceOf(GlobalBackedConfig);
+  test('client entrypoint omits removed legacy runtime exports', () => {
+    expect('LegacySpaceMoltConfig' in clientEntrypoint).toBe(false);
+    expect('GlobalBackedConfig' in clientEntrypoint).toBe(false);
+    expect('setOutputMode' in clientEntrypoint).toBe(false);
   });
 
   test('SessionManager isolates default and explicit profile paths', () => {
@@ -114,20 +121,8 @@ describe('Explicit Runtime Configuration', () => {
     });
   });
 
-  test('legacy output globals remain mutable for backwards compatibility', () => {
-    setOutputMode({ json: false, quiet: false, plain: false, debug: false, format: 'table', compact: false });
-    try {
-      setOutputMode({ json: true, quiet: true, plain: true, debug: true, format: 'text', compact: true });
-
-      const state = createRuntimeState();
-      expect(state.jsonOutput).toBe(true);
-      expect(state.quiet).toBe(true);
-      expect(state.plain).toBe(true);
-      expect(state.debug).toBe(true);
-      expect(state.format).toBe('text');
-      expect(state.compact).toBe(true);
-    } finally {
-      setOutputMode({ json: false, quiet: false, plain: false, debug: false, format: 'table', compact: false });
-    }
+  test('createRuntimeState requires explicit config state', () => {
+    // @ts-expect-error createRuntimeState no longer supports implicit global-backed state.
+    expect(() => createRuntimeState()).toThrow();
   });
 });
