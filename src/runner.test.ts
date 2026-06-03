@@ -673,6 +673,50 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('plain command parse errors use explicit output state', async () => {
+    const result = await captureInvocation(['--plain', 'travel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Missing required argument');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('quiet command parse errors suppress cached ID suggestions but keep required diagnostics', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-id-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const spacemoltHome = path.join(configHome, 'spacemolt-cli');
+    const sessionsDir = path.join(spacemoltHome, 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(path.join(spacemoltHome, 'config.json'), `${JSON.stringify({ defaultProfile: 'pilot' })}\n`);
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'sol_earth',
+            name: 'Earth',
+            sourceCommand: 'get_system',
+            seenAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    try {
+      const result = await withConfigHome(configHome, () =>
+        captureInvocation(['--quiet', 'travel'], { XDG_CONFIG_HOME: configHome }),
+      );
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Missing required argument');
+      expect(result.stderr).not.toContain('Cached poi IDs:');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('context profile is used for API payload preparation', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-context-'));
     const configHome = path.join(tempDir, 'config');

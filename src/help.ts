@@ -5,10 +5,12 @@ import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './comman
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
+import { colorsForPlain } from './output-style.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { c, VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
 import type { APIResponse, CommandGroup, CommandSearchMatch, Session } from './types.ts';
+import type { GlobalOptions } from './types.ts';
 
 const COMMAND_GROUPS: CommandGroup[] = [
   { key: 'auth', label: 'Authentication', aliases: ['authentication', 'login'], categories: ['Authentication'] },
@@ -395,8 +397,11 @@ export function showCommandHelp(command: string, writer?: CliWriter, commands?: 
   return true;
 }
 
-function printNextSteps(command: string, missingArg?: string, writer?: CliWriter): void {
+type HelpOutputOptions = Pick<GlobalOptions, 'plain' | 'quiet'>;
+
+function printNextSteps(command: string, missingArg?: string, writer?: CliWriter, options?: HelpOutputOptions): void {
   const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
+  const colors = colorsForPlain(Boolean(options?.plain));
   const steps: string[] = [];
   for (const related of config?.discoverWith || []) steps.push(`spacemolt ${related}`);
   if (!steps.includes('spacemolt get_status')) steps.push('spacemolt get_status');
@@ -404,7 +409,7 @@ function printNextSteps(command: string, missingArg?: string, writer?: CliWriter
 
   const reason = missingArg && config?.discoverWith?.length ? ` to find a valid ${missingArg}` : '';
   err(writer)(
-    `\n${c.cyan}Next:${c.reset} run ${steps
+    `\n${colors.cyan}Next:${colors.reset} run ${steps
       .slice(0, 3)
       .map((step) => `"${step}"`)
       .join(' or ')}${reason}.`,
@@ -434,26 +439,28 @@ export function displayMissingArgument(
   missingArg: string,
   writer?: CliWriter,
   commands?: CommandHelpSource,
+  options?: HelpOutputOptions,
 ): void {
   const allCommands = commandHelpMap(commands);
   const writeErr = err(writer);
-  writeErr(`${c.red}Error:${c.reset} Missing required argument: ${c.yellow}${missingArg}${c.reset}`);
-  writeErr(`\n${c.bright}Usage:${c.reset}`);
+  const colors = colorsForPlain(Boolean(options?.plain));
+  writeErr(`${colors.red}Error:${colors.reset} Missing required argument: ${colors.yellow}${missingArg}${colors.reset}`);
+  writeErr(`\n${colors.bright}Usage:${colors.reset}`);
   writeErr(`  ${getUsageLine(command, allCommands)}`);
 
   const config = allCommands[command];
   const argNames = config ? getArgNames(config) : [];
   if (argNames.length > 0) {
-    writeErr(`\n${c.bright}Accepted forms:${c.reset}`);
+    writeErr(`\n${colors.bright}Accepted forms:${colors.reset}`);
     writeErr(`  ${getUsageLine(command, allCommands)}`);
     writeErr(`  spacemolt ${command} ${argNames.map((arg) => `${arg}=...`).join(' ')}`);
     writeErr(`  spacemolt ${command} ${argNames.map((arg) => `--${arg.replace(/_/g, '-')} ...`).join(' ')}`);
   }
 
   const example = config?.example;
-  if (example) writeErr(`\n${c.bright}Example:${c.reset}\n  ${example}`);
-  printCachedIdSuggestions(command, missingArg, undefined, writer);
-  printNextSteps(command, missingArg, writer);
+  if (example) writeErr(`\n${colors.bright}Example:${colors.reset}\n  ${example}`);
+  printCachedIdSuggestions(command, missingArg, undefined, writer, options);
+  printNextSteps(command, missingArg, writer, options);
 }
 
 // =============================================================================

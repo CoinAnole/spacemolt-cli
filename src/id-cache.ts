@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
 import { COMMANDS } from './commands.ts';
+import { colorsForPlain } from './output-style.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
 import { c, QUIET } from './runtime.ts';
 import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
@@ -407,8 +408,9 @@ export function printCachedIdSuggestions(
   field?: string,
   sessionPath?: string,
   writer?: CliWriter,
+  options: { quiet?: boolean; plain?: boolean } = {},
 ): void {
-  if (QUIET) return;
+  if (options.quiet ?? QUIET) return;
   const kind = idKindForCommandField(command, field);
   if (!kind) return;
   const hints = loadIdCacheSync(sessionPath);
@@ -416,8 +418,9 @@ export function printCachedIdSuggestions(
   if (suggestions.length === 0) return;
 
   const err = writer?.err.bind(writer) ?? console.error;
-  err(`\n${c.cyan}Cached ${kind} IDs:${c.reset}`);
-  for (const hint of suggestions) err(`  ${formatHint(hint)}`);
+  const colors = colorsForPlain(Boolean(options.plain));
+  err(`\n${colors.cyan}Cached ${kind} IDs:${colors.reset}`);
+  for (const hint of suggestions) err(`  ${formatHint(hint, colors)}`);
 }
 
 export function printIds(kind: IdKind, sessionPath?: string, writer?: CliWriter, query?: string): void {
@@ -509,10 +512,10 @@ function resolveMatches(
   return { type: 'ambiguous', kind, query, matches };
 }
 
-function formatHint(hint: IdHint): string {
+function formatHint(hint: IdHint, colors = c): string {
   const name = hint.name && hint.name !== hint.id ? ` (${hint.name})` : '';
   const context = hint.context && Object.keys(hint.context).length > 0 ? ` ${formatContext(hint.context)}` : '';
-  return `${hint.id}${name}${context} ${c.dim}[${hint.sourceCommand}, ${hint.seenAt}]${c.reset}`;
+  return `${hint.id}${name}${context} ${colors.dim}[${hint.sourceCommand}, ${hint.seenAt}]${colors.reset}`;
 }
 
 function formatContext(context: Record<string, string | number | boolean>): string {

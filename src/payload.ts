@@ -11,6 +11,7 @@ import {
   loadIdCacheSync,
   resolveCachedId,
 } from './id-cache.ts';
+import { colorsForPlain } from './output-style.ts';
 import { c } from './runtime.ts';
 import type { GlobalOptions } from './types.ts';
 
@@ -65,7 +66,7 @@ export function preparePayload(
       printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayMissingArgument(command, missingArg, writer, registry.commands);
+    displayMissingArgument(command, missingArg, writer, registry.commands, options);
     return { type: 'exit', exitCode: 1 };
   }
 
@@ -169,8 +170,9 @@ export function displayCommandParseErrors(
     return;
   }
   const writeErr = writer?.err.bind(writer) ?? console.error;
+  const colors = colorsForPlain(Boolean(options.plain));
   for (const err of errors) {
-    writeErr(`${c.red}Error:${c.reset} ${err.message}`);
+    writeErr(`${colors.red}Error:${colors.reset} ${err.message}`);
   }
 }
 

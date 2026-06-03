@@ -164,6 +164,8 @@ async function runInvocationWithContext(
       env: resolvedContext.env,
       clock: resolvedContext.clock,
       writer: resolvedContext.writer,
+      debug: resolvedContext.config?.debug,
+      plain: resolvedContext.config?.plain,
     });
   }
 
