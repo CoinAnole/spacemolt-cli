@@ -907,6 +907,32 @@ describe('runInvocation watch cleanup', () => {
     expect(removed).toEqual(registered);
   });
 
+  test('watch refresh footer uses explicit plain output state', async () => {
+    let ticks = 0;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const client = {
+      config: {},
+      async execute() {
+        ticks += 1;
+        setOutputMode({ plain: false });
+        if (ticks > 1) throw new Error('stop');
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(['--plain', '--watch=1', 'get_status'], client, fakeContext(stdout, stderr), {
+      onSigint() {
+        return () => {};
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    const footer = stdout.find((line) => line.includes('[next refresh in 1s')) ?? '';
+    expect(footer).toContain('[next refresh in 1s');
+    expect(footer).not.toContain('\x1b[');
+  });
+
   test('removes SIGINT listener on normal stop', async () => {
     const before = process.listenerCount('SIGINT');
     const client = {

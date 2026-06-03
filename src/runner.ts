@@ -20,7 +20,7 @@ import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
 import { outputStateFromGlobalOptionError } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
-import { API_BASE, c } from './runtime.ts';
+import { API_BASE } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
@@ -233,7 +233,9 @@ async function runWatchLoop(
       await handler.render(runResult, watchOptions, client, context);
 
       if (running) {
-        context.writer.out(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
+        const output = outputFromContext(context);
+        const colors = colorsForPlain(output.plain);
+        context.writer.out(`${colors.dim}[next refresh in ${interval}s — Ctrl+C to stop]${colors.reset}`);
         await context.sleep(interval * 1000);
       }
     }
