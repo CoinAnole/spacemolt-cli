@@ -20,7 +20,7 @@ export function outputStateFromOptions(options: GlobalOptions, env: CliEnv = pro
     debug: Boolean(options.debug || env.DEBUG === 'true'),
     plain: options.plain,
     quiet: options.quiet,
-    format: jsonOutput ? 'json' : format,
+    format,
     compact: options.compact,
   };
 }
@@ -45,7 +45,7 @@ export function createDefaultConfig(
   env: CliEnv = process.env,
 ): SpaceMoltConfig {
   const jsonOutput = overrides.jsonOutput ?? env.SPACEMOLT_OUTPUT === 'json';
-  return {
+  return Object.freeze({
     apiBase: overrides.apiBase ?? env.SPACEMOLT_URL ?? DEFAULT_V2_API_BASE,
     jsonOutput,
     debug: overrides.debug ?? env.DEBUG === 'true',
@@ -55,5 +55,5 @@ export function createDefaultConfig(
     compact: overrides.compact ?? false,
     profile: overrides.profile ?? env.SPACEMOLT_PROFILE,
     profileIsExplicit: overrides.profileIsExplicit ?? false,
-  };
+  });
 }

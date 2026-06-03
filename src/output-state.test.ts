@@ -37,6 +37,28 @@ describe('explicit output state', () => {
     });
   });
 
+  test('env json output does not rewrite the derived format', () => {
+    const envJson = outputStateFromOptions(baseOptions, { DEBUG: undefined, SPACEMOLT_OUTPUT: 'json' });
+    const optionJson = outputStateFromOptions({ ...baseOptions, json: true }, { DEBUG: undefined });
+
+    expect(envJson).toEqual<OutputRuntimeState>({
+      jsonOutput: true,
+      debug: false,
+      plain: false,
+      quiet: false,
+      format: 'table',
+      compact: false,
+    });
+    expect(optionJson).toEqual<OutputRuntimeState>({
+      jsonOutput: true,
+      debug: false,
+      plain: false,
+      quiet: false,
+      format: 'json',
+      compact: false,
+    });
+  });
+
   test('derives early parse-error output state from partial flags', () => {
     const state = outputStateFromGlobalOptionError(
       { code: 'invalid_global_option', option: '--format', message: 'bad', json: true, plain: true },
@@ -70,5 +92,6 @@ describe('explicit output state', () => {
       profile: 'pilot',
       profileIsExplicit: false,
     });
+    expect(Object.isFrozen(config)).toBe(true);
   });
 });
