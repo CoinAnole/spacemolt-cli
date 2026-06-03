@@ -18,7 +18,9 @@ import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
-import { API_BASE, c, DEBUG, setOutputMode } from './runtime.ts';
+import { outputStateFromGlobalOptionError } from './output-state.ts';
+import { colorsForPlain } from './output-style.ts';
+import { API_BASE, c, DEBUG } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
@@ -117,22 +119,12 @@ async function runInvocationWithContext(
 ): Promise<number> {
   const parsedInvocation = parseInvocation(argv, context);
   if (!parsedInvocation.ok) {
-    const jsonOutput = Boolean(parsedInvocation.error.json || context.env.SPACEMOLT_OUTPUT === 'json');
-    const quiet = Boolean(parsedInvocation.error.quiet);
-    const plain = Boolean(parsedInvocation.error.plain);
-    const debug = Boolean(parsedInvocation.error.debug || context.env.DEBUG === 'true');
-    setOutputMode({
-      json: jsonOutput,
-      quiet,
-      plain,
-      debug,
-      compact: false,
-      format: jsonOutput ? 'json' : 'table',
-    });
-    if (jsonOutput) {
+    const output = outputStateFromGlobalOptionError(parsedInvocation.error, context.env);
+    const colors = colorsForPlain(output.plain);
+    if (output.jsonOutput) {
       printJsonError(parsedInvocation.error.code, parsedInvocation.error.message, context.writer);
-    } else {
-      context.writer.err(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
+    } else if (!output.quiet) {
+      context.writer.err(`${colors.red}Error:${colors.reset} ${parsedInvocation.error.message}`);
     }
     return 1;
   }

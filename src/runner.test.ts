@@ -7,7 +7,7 @@ import { SpaceMoltClient as RealSpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
-import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
+import { setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, SessionManager, setActiveProfile, setDefaultProfile } from './session';
 
 async function captureInvocation(
@@ -317,33 +317,30 @@ describe('runInvocation option isolation', () => {
     const jsonResult = await captureInvocation(['--json', 'trvel']);
     expect(jsonResult.exitCode).toBe(1);
     expect(jsonResult.stdout).toContain('"unknown_command"');
-    expect(JSON_OUTPUT).toBe(true);
-    expect(FORMAT).toBe('json');
+    expect(jsonResult.stderr).toBe('');
+    expect(jsonResult.config).toMatchObject({ jsonOutput: true, format: 'table' });
 
     const textResult = await captureInvocation(['trvel']);
     expect(textResult.exitCode).toBe(1);
     expect(textResult.stderr).toContain('Unknown command "trvel"');
     expect(textResult.stdout).not.toContain('"unknown_command"');
-    expect(JSON_OUTPUT).toBe(process.env.SPACEMOLT_OUTPUT === 'json');
-    expect(FORMAT).toBe('table');
+    expect(textResult.config).toMatchObject({ jsonOutput: process.env.SPACEMOLT_OUTPUT === 'json', format: 'table' });
   });
 
   test('repeated direct invocations do not leak --plain or --compact', async () => {
-    await captureInvocation(['--plain', '--compact', '--json', 'trvel']);
-    expect(PLAIN).toBe(true);
-    expect(COMPACT).toBe(true);
+    const plainResult = await captureInvocation(['--plain', '--compact', '--json', 'trvel']);
+    expect(plainResult.config).toMatchObject({ plain: true, compact: true });
 
-    await captureInvocation(['trvel']);
-    expect(PLAIN).toBe(false);
-    expect(COMPACT).toBe(false);
+    const defaultResult = await captureInvocation(['trvel']);
+    expect(defaultResult.config).toMatchObject({ plain: false, compact: false });
   });
 
   test('repeated direct invocations do not leak --debug', async () => {
-    await captureInvocation(['--debug', '--help']);
-    expect(DEBUG).toBe(true);
+    const debugResult = await captureInvocation(['--debug', '--help']);
+    expect(debugResult.config).toMatchObject({ debug: true });
 
-    await captureInvocation(['--help']);
-    expect(DEBUG).toBe(process.env.DEBUG === 'true');
+    const defaultResult = await captureInvocation(['--help']);
+    expect(defaultResult.config).toMatchObject({ debug: process.env.DEBUG === 'true' });
   });
 
   test('repeated direct invocations do not leak --profile', async () => {
@@ -574,6 +571,26 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('parse errors render from explicit output state without setOutputMode', async () => {
+    const result = await captureInvocation(['--format=invalid'], { SPACEMOLT_OUTPUT: 'json', DEBUG: 'true' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      error: {
+        code: 'invalid_global_option',
+      },
+    });
+  });
+
+  test('plain parse errors use explicit plain state', async () => {
+    const result = await captureInvocation(['--plain', '--format=invalid']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Error:');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
   test('--format json preserves JSON output for later global parse errors', async () => {
     const result = await captureInvocation(['--format', 'json', '--format', 'nope', 'get_status']);
 
@@ -592,8 +609,6 @@ describe('runInvocation option isolation', () => {
     expect(textResult.exitCode).toBe(1);
     expect(textResult.stdout).toBe('');
     expect(textResult.stderr).toContain('Invalid format "nope"');
-    expect(JSON_OUTPUT).toBe(process.env.SPACEMOLT_OUTPUT === 'json');
-    expect(FORMAT).toBe('table');
   });
 
   test('env JSON output applies to global parse errors', async () => {
@@ -625,7 +640,6 @@ describe('runInvocation option isolation', () => {
     expect(exitCode).toBe(1);
     expect(stdout.join('\n')).toContain('"unknown_command"');
     expect(stderr).toEqual([]);
-    expect(JSON_OUTPUT).toBe(true);
   });
 
   test('context profile is used for API payload preparation', async () => {
