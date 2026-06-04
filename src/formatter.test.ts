@@ -376,6 +376,42 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
+  test('--field missing top-level path hints available keys without failing', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: outputModeFixture },
+      { field: 'fuel_capacity' },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toBe('null');
+    expect(stderr).toContain('Field not found: "fuel_capacity"');
+    expect(stderr).toContain('Available keys: player, ship, items');
+  });
+
+  test('--field missing dotted path hints available keys without failing', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: outputModeFixture },
+      { field: 'ship.fuel_capacity' },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toBe('null');
+    expect(stderr).toContain('Field not found: "ship.fuel_capacity"');
+    expect(stderr).toContain('Available keys: player, ship, items');
+  });
+
+  test('--fields all missing emits one available-keys hint without failing', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: outputModeFixture },
+      { fields: ['fuel_capacity', 'cargo.used'] },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout)).toEqual({});
+    expect(stderr).toContain('Fields not found: fuel_capacity, cargo.used');
+    expect(stderr).toContain('Available keys: player, ship, items');
+  });
+
   test('--fields overrides --json for successful structured output', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       json: true,
@@ -494,6 +530,7 @@ describe('structuredContent output mode precedence', () => {
     expect(missing.success).toBe(false);
     expect(missing.stdout).toEqual([]);
     expect(missing.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('Path not found: ".ship.fuel_capacity"');
+    expect(missing.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('Available keys: player, ship, items');
     expect(existingNull.success).toBe(true);
     expect(existingNull.stderr).toEqual([]);
     expect(existingNull.stdout).toEqual(['null']);

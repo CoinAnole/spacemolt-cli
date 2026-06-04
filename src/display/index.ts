@@ -88,11 +88,30 @@ function formatProjection(
   return JSON.stringify(value);
 }
 
-type FieldProjectionResult = { success: true; value: unknown } | { success: false; message: string };
+type FieldProjectionResult =
+  | { success: true; value: unknown }
+  | { success: false; message: string; fatal: boolean };
+
+function formatAvailableKeys(result: Record<string, unknown>): string | undefined {
+  const keys = Object.keys(result);
+  if (keys.length === 0) return undefined;
+  return `Available keys: ${keys.join(', ')}`;
+}
+
+function formatFieldNotFoundMessage(result: Record<string, unknown>, field: string): string {
+  return [`Field not found: "${field}"`, formatAvailableKeys(result)].filter(Boolean).join('\n');
+}
+
+function formatFieldsNotFoundMessage(result: Record<string, unknown>, fields: string[]): string | undefined {
+  const availableKeys = formatAvailableKeys(result);
+  if (!availableKeys) return undefined;
+  return [`Fields not found: ${fields.join(', ')}`, availableKeys].join('\n');
+}
 
 function resolveFieldProjection(result: Record<string, unknown>, field: string): FieldProjectionResult {
   const exact = getFieldValue(result, field);
-  if (exact !== undefined || field.includes('.')) return { success: true, value: exact };
+  if (exact !== undefined) return { success: true, value: exact };
+  if (field.includes('.')) return { success: false, message: formatFieldNotFoundMessage(result, field), fatal: false };
 
   const matches = Object.entries(result)
     .filter((entry): entry is [string, Record<string, unknown>] => isRecord(entry[1]))
@@ -106,10 +125,11 @@ function resolveFieldProjection(result: Record<string, unknown>, field: string):
     return {
       success: false,
       message: `Ambiguous field "${field}". Use one of: ${matches.map((match) => match.path).join(', ')}`,
+      fatal: true,
     };
   }
 
-  return { success: true, value: undefined };
+  return { success: false, message: formatFieldNotFoundMessage(result, field), fatal: false };
 }
 
 export function displayStructuredResult(
@@ -175,7 +195,9 @@ function displayStructuredResultInternal(
     const resolved = resolveFieldProjection(structuredOutputResult, field);
     if (!resolved.success) {
       emitError(`${c.red}Error:${c.reset} ${resolved.message}`);
-      return false;
+      if (resolved.fatal) return false;
+      emitLine(formatProjection(undefined, format, compact, 'field'));
+      return true;
     }
     const extracted = resolved.value;
     emitLine(formatProjection(extracted, format, compact, 'field'));
@@ -184,6 +206,10 @@ function displayStructuredResultInternal(
 
   if (hasFields(fields)) {
     const extracted = extractFields(structuredOutputResult, fields);
+    if (Object.keys(extracted).length === 0) {
+      const message = formatFieldsNotFoundMessage(structuredOutputResult, fields);
+      if (message) emitError(`${c.red}Error:${c.reset} ${message}`);
+    }
     emitLine(formatProjection(extracted, format, compact, 'fields'));
     return true;
   }

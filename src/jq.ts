@@ -24,7 +24,7 @@ function evalPath(data: unknown, expr: string): unknown {
   const bracketIndex = withoutDot.indexOf('[');
   if (bracketIndex === -1) {
     const resolved = resolvePath(data, withoutDot);
-    if (!resolved.found) throw new Error(formatPathNotFoundError(expr));
+    if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data));
     return resolved.value;
   }
 
@@ -60,7 +60,7 @@ function evalPath(data: unknown, expr: string): unknown {
       .filter(Boolean)
       .join('.');
     const resolved = resolvePath(data, indexedPath);
-    if (!resolved.found) throw new Error(formatPathNotFoundError(expr));
+    if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data));
     return resolved.value;
   }
 
@@ -160,13 +160,23 @@ function unquote(value: string): string {
   return value.slice(1, -1).replace(/\\(["'\\])/g, '$1');
 }
 
-function formatPathNotFoundError(expr: string): string {
+function formatPathNotFoundError(expr: string, data: unknown): string {
   const base = `Path not found: "${expr}"`;
+  const availableKeys = formatAvailableKeys(data);
   const prefix = '.structuredContent.';
-  if (!expr.startsWith(prefix)) return base;
+  if (!expr.startsWith(prefix)) return availableKeys ? `${base}\n${availableKeys}` : base;
 
   const suggestedPath = `.${expr.slice(prefix.length)}`;
-  return `${base}\nHint: --jq operates on structuredContent (not the full API response). Try: ${suggestedPath}`;
+  const structuredContentHint = `Hint: --jq operates on structuredContent (not the full API response). Try: ${suggestedPath}`;
+  return [base, structuredContentHint, availableKeys].filter(Boolean).join('\n');
+}
+
+function formatAvailableKeys(data: unknown): string | undefined {
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) return undefined;
+
+  const keys = Object.keys(data);
+  if (keys.length === 0) return undefined;
+  return `Available keys: ${keys.join(', ')}`;
 }
 
 function formatExpectedArrayError(path: string, value: unknown): string {
