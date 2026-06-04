@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
   createDefaultConfig,
-  outputStateFromGlobalOptionError,
-  outputStateFromOptions,
   type ImmutableSpaceMoltConfig,
   type OutputRuntimeState,
+  outputStateFromGlobalOptionError,
+  outputStateFromOptions,
 } from './output-state.ts';
 import type { GlobalOptions } from './types.ts';
 

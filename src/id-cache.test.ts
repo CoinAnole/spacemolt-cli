@@ -313,7 +313,10 @@ describe('id cache', () => {
   });
 
   test('printCachedIdSuggestions respects explicit quiet output', async () => {
-    const sessionPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-quiet-test-')), 'pilot.json');
+    const sessionPath = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-quiet-test-')),
+      'pilot.json',
+    );
     await saveIdCache(
       [
         {
@@ -328,9 +331,15 @@ describe('id cache', () => {
     );
     const stderr: string[] = [];
 
-    printCachedIdSuggestions('sell', 'item_id', sessionPath, { out() {}, err: (message = '') => stderr.push(message) }, {
-      quiet: true,
-    });
+    printCachedIdSuggestions(
+      'sell',
+      'item_id',
+      sessionPath,
+      { out() {}, err: (message = '') => stderr.push(message) },
+      {
+        quiet: true,
+      },
+    );
 
     expect(stderr).toEqual([]);
   });

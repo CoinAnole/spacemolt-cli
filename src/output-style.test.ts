@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { colorsForPlain, colorizeForPlain } from './output-style.ts';
 import { rawColors } from './display/ansi.ts';
+import { colorizeForPlain, colorsForPlain } from './output-style.ts';
 
 describe('plain-aware direct output styling', () => {
   test('colorizeForPlain strips color when plain is true', () => {

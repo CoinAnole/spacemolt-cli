@@ -391,8 +391,7 @@ export function formatCachedIdAmbiguity(
     `${colors.red}Error:${colors.reset} Ambiguous cached ${result.kind} match for "${result.query}" in ${command}.${field}.`,
   ];
   for (const hint of result.matches.slice(0, 8)) lines.push(`  ${formatHint(hint, colors)}`);
-  if (result.matches.length > 8)
-    lines.push(`  ${colors.dim}...and ${result.matches.length - 8} more${colors.reset}`);
+  if (result.matches.length > 8) lines.push(`  ${colors.dim}...and ${result.matches.length - 8} more${colors.reset}`);
   lines.push(`Use the exact ID, or run a discovery command to refresh cached IDs.`);
   return lines;
 }
