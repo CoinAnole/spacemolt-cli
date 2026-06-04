@@ -3,6 +3,7 @@ import {
   emitLine,
   emitStationConstruction,
   emitStationPower,
+  finiteNumber,
   firstArray,
   formatter,
   isRecord,
@@ -63,6 +64,28 @@ function formatFuelDelta(value: unknown): string | undefined {
   return value > 0 ? `+${value}` : String(value);
 }
 
+function formatShipLabel(result: Record<string, unknown>): string {
+  const shipId = result.ship_id ?? result.item_id;
+  const name = result.ship_name ?? result.custom_name ?? result.name ?? result.class_name;
+  const classId = result.class_id;
+  if (name !== undefined && name !== null && name !== '') {
+    const classText = classId !== undefined && classId !== null && classId !== '' ? ` (${classId})` : '';
+    return `${name}${classText}`;
+  }
+  return String(shipId ?? 'unknown');
+}
+
+function baySlotsLine(result: Record<string, unknown>): string | undefined {
+  const remaining = finiteNumber(result.bay_slots_remaining ?? result.cargo_space);
+  if (remaining === undefined) return undefined;
+
+  const capacity = finiteNumber(result.bay_capacity ?? result.carrier_bay_capacity ?? result.bay_slots_capacity);
+  if (capacity === undefined) return `Bay Slots Remaining: ${remaining}`;
+
+  const used = Math.max(0, capacity - remaining);
+  return `Bay Slots Used: ${used}/${capacity} (${remaining} remaining)`;
+}
+
 function droneTableColumns(rows: Array<Record<string, unknown>>, options: { includeCargo?: boolean } = {}) {
   const columns: Array<[string, string[]]> = [
     ['Name', ['name', 'type_name', 'drone_type', 'item_id', 'type']],
@@ -79,6 +102,22 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
 }
 
 export const shipFormatters = [
+  formatter(
+    (r) => {
+      if (r.action !== 'deposit_items' && r.action !== 'load_ship_into_carrier_bay') return false;
+      if (!r.ship_id && !r.item_id) return false;
+
+      emitLine(`\n${c.bright}=== Load Ship Into Carrier Bay ===${c.reset}`);
+      emitLine(`Ship: ${formatShipLabel(r)}`);
+      const bayLine = baySlotsLine(r);
+      if (bayLine) emitLine(bayLine);
+      if (r.base_id || r.base_name) emitLine(`Base: ${r.base_name ?? r.base_id}`);
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['deposit_items_carrier_load'] },
+  ),
+
   // Cargo
   namedFormatter(
     'cargo',

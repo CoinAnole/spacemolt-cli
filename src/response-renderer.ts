@@ -4,11 +4,11 @@ import type { CliRuntimeContext } from './cli-context.ts';
 import type { CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
-import { cacheIdsFromResponse, idKindForCommandField, printCachedIdSuggestions } from './id-cache.ts';
+import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
-import { normalizeStructuredResultForOutput } from './response.ts';
+import { getStructuredResult, isRecord, normalizeStructuredResultForOutput } from './response.ts';
 import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 
@@ -122,13 +122,93 @@ export async function renderResponse(
 
   warnAboutUnsupportedServerHelpFilters(commandRun, { isJson, hasProjection, writer, plain: options.plain });
 
+  const display = prepareHumanDisplay(commandRun, filteredResponse, sessionPath);
   const success = displayResult(
-    displayCommand,
-    filteredResponse,
+    display.command,
+    display.response,
     hasProjection ? { ...options, noTimestamp: true } : options,
     context,
   );
   return success === false ? 1 : 0;
+}
+
+function prepareHumanDisplay(
+  commandRun: CommandRunResult,
+  response: APIResponse,
+  sessionPath?: string,
+): { command: string; response: APIResponse } {
+  if (!isDepositItemsCarrierLoad(commandRun, response)) {
+    return { command: commandRun.displayCommand, response };
+  }
+
+  return {
+    command: 'deposit_items_carrier_load',
+    response: enrichCarrierLoadDisplayResponse(commandRun, response, sessionPath),
+  };
+}
+
+function isDepositItemsCarrierLoad(commandRun: CommandRunResult, response: APIResponse): boolean {
+  if (commandRun.command !== 'deposit_items') return false;
+
+  const payload = commandRun.payload ?? {};
+  if (payload.target !== 'self') return false;
+  if (Number(payload.quantity) !== 1) return false;
+
+  const result = getStructuredResult(response);
+  if (!result || result.action !== 'deposit_items') return false;
+
+  const payloadItemId = typeof payload.item_id === 'string' ? payload.item_id : undefined;
+  const responseItemId = typeof result.item_id === 'string' ? result.item_id : undefined;
+  const itemId = payloadItemId ?? responseItemId;
+  if (!itemId || !isUuidLike(itemId)) return false;
+  if (payloadItemId && responseItemId && payloadItemId !== responseItemId) return false;
+
+  return true;
+}
+
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{32}$/i.test(value) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function enrichCarrierLoadDisplayResponse(
+  commandRun: CommandRunResult,
+  response: APIResponse,
+  sessionPath?: string,
+): APIResponse {
+  const result = getStructuredResult(response);
+  if (!result) return response;
+
+  const nextResult = { ...result };
+  const shipId =
+    (typeof result.item_id === 'string' ? result.item_id : undefined) ??
+    (typeof commandRun.payload?.item_id === 'string' ? commandRun.payload.item_id : undefined);
+  if (shipId && nextResult.ship_id === undefined) nextResult.ship_id = shipId;
+
+  const shipHint = shipId ? findCachedShipHint(shipId, sessionPath) : undefined;
+  if (shipHint) {
+    if (nextResult.ship_name === undefined && shipHint.name) nextResult.ship_name = shipHint.name;
+    if (isRecord(shipHint.context)) {
+      if (nextResult.class_id === undefined && typeof shipHint.context.class_id === 'string') {
+        nextResult.class_id = shipHint.context.class_id;
+      }
+      if (nextResult.class_name === undefined && typeof shipHint.context.class_name === 'string') {
+        nextResult.class_name = shipHint.context.class_name;
+      }
+      if (nextResult.base_id === undefined && typeof shipHint.context.location_base_id === 'string') {
+        nextResult.base_id = shipHint.context.location_base_id;
+      }
+    }
+  }
+
+  if (nextResult.bay_slots_remaining === undefined && result.cargo_space !== undefined) {
+    nextResult.bay_slots_remaining = result.cargo_space;
+  }
+
+  return { ...response, structuredContent: nextResult };
+}
+
+function findCachedShipHint(shipId: string, sessionPath?: string) {
+  return loadIdCacheSync(sessionPath).find((hint) => hint.kind === 'ship' && hint.id === shipId);
 }
 
 function warnAboutUnsupportedServerHelpFilters(

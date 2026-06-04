@@ -664,6 +664,96 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Fuel Cell');
   });
 
+  test('deposit_items with a ship UUID and self target renders carrier bay load confirmation', async () => {
+    const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          action: 'deposit_items',
+          item_id: shipId,
+          quantity: 1,
+          storage_total: 3,
+          cargo_remaining: 0,
+          cargo_space: 5,
+          bay_capacity: 8,
+          class_name: 'Dust Devil',
+          class_id: 'dust_devil',
+          base_id: 'grand_exchange_station',
+        },
+      },
+      {},
+      {
+        command: 'deposit_items',
+        displayCommand: 'deposit_items',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Load Ship Into Carrier Bay ===');
+    expect(stdout).toContain('Ship: Dust Devil (dust_devil)');
+    expect(stdout).toContain('Bay Slots Used: 3/8 (5 remaining)');
+    expect(stdout).toContain('Base: grand_exchange_station');
+    expect(stdout).not.toContain('Cargo Remaining: 0');
+    expect(stdout).not.toContain('Cargo Space: 5');
+    expect(stdout).not.toContain('Storage Total: 3');
+  });
+
+  test('deposit_items carrier bay load falls back to remaining slots when capacity is absent', async () => {
+    const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          action: 'deposit_items',
+          item_id: shipId,
+          quantity: 1,
+          storage_total: 3,
+          cargo_remaining: 0,
+          cargo_space: 5,
+        },
+      },
+      {},
+      {
+        command: 'deposit_items',
+        displayCommand: 'deposit_items',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Load Ship Into Carrier Bay ===');
+    expect(stdout).toContain(`Ship: ${shipId}`);
+    expect(stdout).toContain('Bay Slots Remaining: 5');
+    expect(stdout).not.toContain('Storage Total: 3');
+  });
+
+  test('deposit_items carrier bay display specialization does not alter structured output', async () => {
+    const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
+    const structuredContent = {
+      action: 'deposit_items',
+      item_id: shipId,
+      quantity: 1,
+      storage_total: 3,
+      cargo_remaining: 0,
+      cargo_space: 5,
+    };
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent },
+      { structured: true },
+      {
+        command: 'deposit_items',
+        displayCommand: 'deposit_items',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual(structuredContent);
+  });
+
   test('view_faction_storage search filter narrows displayed rows', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {

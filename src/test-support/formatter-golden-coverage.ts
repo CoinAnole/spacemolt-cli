@@ -6,6 +6,8 @@ const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   buy: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',
   captains_log_list: 'Captain log response shape needs a representative fixture before snapshotting.',
   create_buy_order: 'Buy-order success response needs a representative fixture before snapshotting.',
+  deposit_items_carrier_load:
+    'Internal display variant selected from deposit_items payload context; covered by renderResponse behavior tests.',
   faction_create_buy_order: 'Faction buy-order success response needs a representative fixture before snapshotting.',
   faction_create_sell_order: 'Faction sell-order success response needs a representative fixture before snapshotting.',
   faction_info: 'Faction profile response needs a representative fixture before snapshotting.',
