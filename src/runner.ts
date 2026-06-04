@@ -18,7 +18,9 @@ import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
-import { API_BASE, c, DEBUG, setOutputMode } from './runtime.ts';
+import { outputStateFromGlobalOptionError } from './output-state.ts';
+import { colorsForPlain } from './output-style.ts';
+import { API_BASE } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
@@ -79,7 +81,13 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
   if (!parsed.ok) return parsed;
 
   const envProfile = context?.env.SPACEMOLT_PROFILE;
-  const profile = parsed.options.profile ?? (envProfile ? validateEnvProfile(envProfile) : undefined);
+  const outputState = {
+    json: parsed.options.json || parsed.options.format === 'json',
+    plain: parsed.options.plain,
+    quiet: parsed.options.quiet,
+    debug: parsed.options.debug,
+  };
+  const profile = parsed.options.profile ?? (envProfile ? validateEnvProfile(envProfile, outputState) : undefined);
   if (typeof profile !== 'string' && profile) return { ok: false, error: profile };
   const options = profile ? { ...parsed.options, profile } : parsed.options;
 
@@ -87,7 +95,10 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
   return { ok: true, invocation: { options, args: options.args } };
 }
 
-function validateEnvProfile(value: string): string | GlobalOptionParseError {
+function validateEnvProfile(
+  value: string,
+  state: Pick<GlobalOptionParseError, 'json' | 'plain' | 'quiet' | 'debug'>,
+): string | GlobalOptionParseError {
   try {
     return validateProfileName(value);
   } catch (err) {
@@ -95,6 +106,7 @@ function validateEnvProfile(value: string): string | GlobalOptionParseError {
       code: 'invalid_global_option',
       option: 'SPACEMOLT_PROFILE',
       message: err instanceof Error ? err.message : String(err),
+      ...state,
     };
   }
 }
@@ -117,22 +129,12 @@ async function runInvocationWithContext(
 ): Promise<number> {
   const parsedInvocation = parseInvocation(argv, context);
   if (!parsedInvocation.ok) {
-    const jsonOutput = Boolean(parsedInvocation.error.json || context.env.SPACEMOLT_OUTPUT === 'json');
-    const quiet = Boolean(parsedInvocation.error.quiet);
-    const plain = Boolean(parsedInvocation.error.plain);
-    const debug = Boolean(parsedInvocation.error.debug || context.env.DEBUG === 'true');
-    setOutputMode({
-      json: jsonOutput,
-      quiet,
-      plain,
-      debug,
-      compact: false,
-      format: jsonOutput ? 'json' : 'table',
-    });
-    if (jsonOutput) {
+    const output = outputStateFromGlobalOptionError(parsedInvocation.error, context.env);
+    const colors = colorsForPlain(output.plain);
+    if (output.jsonOutput) {
       printJsonError(parsedInvocation.error.code, parsedInvocation.error.message, context.writer);
     } else {
-      context.writer.err(`${c.red}Error:${c.reset} ${parsedInvocation.error.message}`);
+      context.writer.err(`${colors.red}Error:${colors.reset} ${parsedInvocation.error.message}`);
     }
     return 1;
   }
@@ -172,6 +174,8 @@ async function runInvocationWithContext(
       env: resolvedContext.env,
       clock: resolvedContext.clock,
       writer: resolvedContext.writer,
+      debug: resolvedContext.config?.debug,
+      plain: resolvedContext.config?.plain,
     });
   }
 
@@ -229,7 +233,9 @@ async function runWatchLoop(
       await handler.render(runResult, watchOptions, client, context);
 
       if (running) {
-        context.writer.out(`${c.dim}[next refresh in ${interval}s — Ctrl+C to stop]${c.reset}`);
+        const output = outputFromContext(context);
+        const colors = colorsForPlain(output.plain);
+        context.writer.out(`${colors.dim}[next refresh in ${interval}s — Ctrl+C to stop]${colors.reset}`);
         await context.sleep(interval * 1000);
       }
     }
@@ -247,7 +253,7 @@ function renderUnknownCommand(invocation: Invocation, context: CliRuntimeContext
   if (invocation.options.json) {
     printJsonError('unknown_command', `Unknown command: ${commandName}`, context.writer);
   } else {
-    displayUnknownCommand(commandName, context.writer);
+    displayUnknownCommand(commandName, context.writer, { plain: context.config?.plain ?? context.output?.plain });
   }
   return 1;
 }
@@ -261,10 +267,25 @@ function renderCommandError(error: CommandError, options: GlobalOptions, context
     } else if (error.customStderr) {
       context.writer.err(error.customStderr);
     } else {
-      context.writer.err(`${c.red}Error:${c.reset} ${error.message}`);
+      const colors = colorsForPlain(Boolean(options.plain));
+      context.writer.err(`${colors.red}Error:${colors.reset} ${error.message}`);
     }
   }
   return error.exitCode ?? 1;
+}
+
+function outputFromContext(context: CliRuntimeContext): {
+  debug: boolean;
+  plain: boolean;
+  quiet: boolean;
+  apiBase: string;
+} {
+  return {
+    debug: Boolean(context.config?.debug ?? context.output?.debug),
+    plain: Boolean(context.config?.plain ?? context.output?.plain),
+    quiet: Boolean(context.config?.quiet ?? context.output?.quiet),
+    apiBase: context.config?.apiBase ?? context.env.SPACEMOLT_URL ?? API_BASE,
+  };
 }
 
 function renderConnectionError(error: unknown, options: GlobalOptions, context: CliRuntimeContext): number {
@@ -273,19 +294,21 @@ function renderConnectionError(error: unknown, options: GlobalOptions, context: 
     printJsonError('connection_error', errorMessage, context.writer);
     return 1;
   }
-  context.writer.err(`${c.red}${c.bright}Connection Error:${c.reset} ${errorMessage}`);
+  const output = outputFromContext(context);
+  const colors = colorsForPlain(output.plain);
+  context.writer.err(`${colors.red}${colors.bright}Connection Error:${colors.reset} ${errorMessage}`);
   context.writer.err('');
 
   if (errorMessage.includes('fetch') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
-    context.writer.err(`${c.yellow}Troubleshooting:${c.reset}`);
+    context.writer.err(`${colors.yellow}Troubleshooting:${colors.reset}`);
     context.writer.err(`  1. Check your internet connection`);
-    context.writer.err(`  2. Verify the API is reachable: ${API_BASE}`);
+    context.writer.err(`  2. Verify the API is reachable: ${output.apiBase}`);
     context.writer.err(`  3. The game server may be temporarily down`);
     context.writer.err(`  4. Try again in a few moments`);
   }
 
-  if (DEBUG) {
-    context.writer.err(`\n${c.dim}[DEBUG] Full error:${c.reset}`);
+  if (output.debug) {
+    context.writer.err(`\n${colors.dim}[DEBUG] Full error:${colors.reset}`);
     context.writer.err(String(error));
   }
 

@@ -1,5 +1,4 @@
 import type { CliEnv } from './cli-context.ts';
-import { setOutputMode } from './runtime.ts';
 import { setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions, OutputFormat } from './types.ts';
 
@@ -213,14 +212,5 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
 }
 
 export function applyGlobalOptions(options: GlobalOptions, env: CliEnv = process.env): void {
-  const format = options.format ?? (options.json ? 'json' : 'table');
-  setOutputMode({
-    json: options.json || format === 'json' || env.SPACEMOLT_OUTPUT === 'json',
-    format,
-    quiet: options.quiet,
-    plain: options.plain,
-    debug: options.debug || env.DEBUG === 'true',
-    compact: options.compact,
-  });
   setActiveProfile(options.profile || env.SPACEMOLT_PROFILE);
 }

@@ -2,8 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
 import { COMMANDS } from './commands.ts';
+import { colorsForPlain, type DirectColors } from './output-style.ts';
 import { getObjectResult, getStructuredResult, isRecord } from './response.ts';
-import { c, QUIET } from './runtime.ts';
 import { getSessionPath, hardenPermissions, tryGetSessionPath } from './session.ts';
 import type { APIResponse } from './types.ts';
 
@@ -54,6 +54,7 @@ const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
 const DEFAULT_CLOCK = { now: () => new Date() };
+const DEFAULT_COLORS = colorsForPlain(false);
 const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>>> = {
   travel: { poi: ['target_poi', 'id'] },
   jump: { system: ['target_system', 'id'] },
@@ -383,12 +384,15 @@ export function formatCachedIdAmbiguity(
   command: string,
   field: string,
   result: Extract<CachedIdResolveResult, { type: 'ambiguous' }>,
+  options: { plain?: boolean } = {},
 ): string[] {
+  const colors = colorsForPlain(Boolean(options.plain));
   const lines = [
-    `${c.red}Error:${c.reset} Ambiguous cached ${result.kind} match for "${result.query}" in ${command}.${field}.`,
+    `${colors.red}Error:${colors.reset} Ambiguous cached ${result.kind} match for "${result.query}" in ${command}.${field}.`,
   ];
-  for (const hint of result.matches.slice(0, 8)) lines.push(`  ${formatHint(hint)}`);
-  if (result.matches.length > 8) lines.push(`  ${c.dim}...and ${result.matches.length - 8} more${c.reset}`);
+  for (const hint of result.matches.slice(0, 8)) lines.push(`  ${formatHint(hint, colors)}`);
+  if (result.matches.length > 8)
+    lines.push(`  ${colors.dim}...and ${result.matches.length - 8} more${colors.reset}`);
   lines.push(`Use the exact ID, or run a discovery command to refresh cached IDs.`);
   return lines;
 }
@@ -407,8 +411,9 @@ export function printCachedIdSuggestions(
   field?: string,
   sessionPath?: string,
   writer?: CliWriter,
+  options: { quiet?: boolean; plain?: boolean } = {},
 ): void {
-  if (QUIET) return;
+  if (options.quiet) return;
   const kind = idKindForCommandField(command, field);
   if (!kind) return;
   const hints = loadIdCacheSync(sessionPath);
@@ -416,14 +421,22 @@ export function printCachedIdSuggestions(
   if (suggestions.length === 0) return;
 
   const err = writer?.err.bind(writer) ?? console.error;
-  err(`\n${c.cyan}Cached ${kind} IDs:${c.reset}`);
-  for (const hint of suggestions) err(`  ${formatHint(hint)}`);
+  const colors = colorsForPlain(Boolean(options.plain));
+  err(`\n${colors.cyan}Cached ${kind} IDs:${colors.reset}`);
+  for (const hint of suggestions) err(`  ${formatHint(hint, colors)}`);
 }
 
-export function printIds(kind: IdKind, sessionPath?: string, writer?: CliWriter, query?: string): void {
+export function printIds(
+  kind: IdKind,
+  sessionPath?: string,
+  writer?: CliWriter,
+  query?: string,
+  options: { plain?: boolean } = {},
+): void {
   const hints = loadIdCacheSync(sessionPath);
   const filtered = query ? searchIdHints(kind, query, hints) : hintsForKind(kind, hints);
   const out = writer?.out.bind(writer) ?? console.log;
+  const colors = colorsForPlain(Boolean(options.plain));
   if (filtered.length === 0) {
     if (query) {
       out(`No cached ${kind} matches for "${query}".`);
@@ -434,14 +447,24 @@ export function printIds(kind: IdKind, sessionPath?: string, writer?: CliWriter,
     return;
   }
 
-  out(query ? `${c.bright}${kind} IDs matching "${query}"${c.reset}` : `${c.bright}${kind} IDs${c.reset}`);
-  for (const hint of filtered) out(`  ${formatHint(hint)}`);
+  out(
+    query
+      ? `${colors.bright}${kind} IDs matching "${query}"${colors.reset}`
+      : `${colors.bright}${kind} IDs${colors.reset}`,
+  );
+  for (const hint of filtered) out(`  ${formatHint(hint, colors)}`);
 }
 
-export function printWhereCanI(query: string, sessionPath?: string, writer?: CliWriter): void {
+export function printWhereCanI(
+  query: string,
+  sessionPath?: string,
+  writer?: CliWriter,
+  options: { plain?: boolean } = {},
+): void {
   const hints = loadIdCacheSync(sessionPath);
   const matches = searchItemHints(query, hints);
   const out = writer?.out.bind(writer) ?? console.log;
+  const colors = colorsForPlain(Boolean(options.plain));
   if (matches.length === 0) {
     out(`No cached item matches for "${query}".`);
     out(`Try: spacemolt catalog type=items search=${query}`);
@@ -449,8 +472,8 @@ export function printWhereCanI(query: string, sessionPath?: string, writer?: Cli
     return;
   }
 
-  out(`${c.bright}Cached locations for "${query}"${c.reset}`);
-  for (const hint of matches) out(`  ${formatHint(hint)}`);
+  out(`${colors.bright}Cached locations for "${query}"${colors.reset}`);
+  for (const hint of matches) out(`  ${formatHint(hint, colors)}`);
 }
 
 function mergeHints(newHints: IdHint[], existing: IdHint[]): IdHint[] {
@@ -509,10 +532,10 @@ function resolveMatches(
   return { type: 'ambiguous', kind, query, matches };
 }
 
-function formatHint(hint: IdHint): string {
+function formatHint(hint: IdHint, colors: DirectColors = DEFAULT_COLORS): string {
   const name = hint.name && hint.name !== hint.id ? ` (${hint.name})` : '';
   const context = hint.context && Object.keys(hint.context).length > 0 ? ` ${formatContext(hint.context)}` : '';
-  return `${hint.id}${name}${context} ${c.dim}[${hint.sourceCommand}, ${hint.seenAt}]${c.reset}`;
+  return `${hint.id}${name}${context} ${colors.dim}[${hint.sourceCommand}, ${hint.seenAt}]${colors.reset}`;
 }
 
 function formatContext(context: Record<string, string | number | boolean>): string {

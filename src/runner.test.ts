@@ -7,7 +7,6 @@ import { SpaceMoltClient as RealSpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
-import { COMPACT, DEBUG, FORMAT, JSON_OUTPUT, PLAIN, setOutputMode } from './runtime';
 import { ACTIVE_PROFILE, SessionManager, setActiveProfile, setDefaultProfile } from './session';
 
 async function captureInvocation(
@@ -79,13 +78,6 @@ async function withConfigHome<T>(configHome: string, fn: () => Promise<T>): Prom
 }
 
 afterEach(() => {
-  setOutputMode({
-    json: process.env.SPACEMOLT_OUTPUT === 'json',
-    format: 'table',
-    plain: false,
-    compact: false,
-    quiet: false,
-  });
   setActiveProfile(undefined);
 });
 
@@ -317,33 +309,43 @@ describe('runInvocation option isolation', () => {
     const jsonResult = await captureInvocation(['--json', 'trvel']);
     expect(jsonResult.exitCode).toBe(1);
     expect(jsonResult.stdout).toContain('"unknown_command"');
-    expect(JSON_OUTPUT).toBe(true);
-    expect(FORMAT).toBe('json');
+    expect(jsonResult.stderr).toBe('');
+    expect(jsonResult.config).toMatchObject({ jsonOutput: true, format: 'table' });
 
     const textResult = await captureInvocation(['trvel']);
     expect(textResult.exitCode).toBe(1);
     expect(textResult.stderr).toContain('Unknown command "trvel"');
     expect(textResult.stdout).not.toContain('"unknown_command"');
-    expect(JSON_OUTPUT).toBe(process.env.SPACEMOLT_OUTPUT === 'json');
-    expect(FORMAT).toBe('table');
+    expect(textResult.config).toMatchObject({ jsonOutput: process.env.SPACEMOLT_OUTPUT === 'json', format: 'table' });
   });
 
   test('repeated direct invocations do not leak --plain or --compact', async () => {
-    await captureInvocation(['--plain', '--compact', '--json', 'trvel']);
-    expect(PLAIN).toBe(true);
-    expect(COMPACT).toBe(true);
+    const plainResult = await captureInvocation(['--plain', '--compact', '--json', 'trvel']);
+    expect(plainResult.config).toMatchObject({ plain: true, compact: true });
 
-    await captureInvocation(['trvel']);
-    expect(PLAIN).toBe(false);
-    expect(COMPACT).toBe(false);
+    const defaultResult = await captureInvocation(['trvel']);
+    expect(defaultResult.config).toMatchObject({ plain: false, compact: false });
   });
 
   test('repeated direct invocations do not leak --debug', async () => {
-    await captureInvocation(['--debug', '--help']);
-    expect(DEBUG).toBe(true);
+    const debugResult = await captureInvocation(['--debug', '--help']);
+    expect(debugResult.config).toMatchObject({ debug: true });
 
-    await captureInvocation(['--help']);
-    expect(DEBUG).toBe(process.env.DEBUG === 'true');
+    const defaultResult = await captureInvocation(['--help']);
+    expect(defaultResult.config).toMatchObject({ debug: process.env.DEBUG === 'true' });
+  });
+
+  test('successful global parsing configures explicit runtime output state', async () => {
+    const result = await captureInvocation(['--plain', '--compact', '--debug', '--format', 'json', 'trvel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.config).toMatchObject({
+      jsonOutput: true,
+      format: 'json',
+      plain: true,
+      compact: true,
+      debug: true,
+    });
   });
 
   test('repeated direct invocations do not leak --profile', async () => {
@@ -574,6 +576,97 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('--plain help renders without ANSI', async () => {
+    const result = await captureInvocation(['--plain', '--help']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('SpaceMolt CLI');
+    expect(result.stdout).toContain('Command Groups');
+    expect(result.stdout).not.toContain('\x1b[');
+    expect(result.stderr).toBe('');
+  });
+
+  test('--plain payload command help renders without ANSI', async () => {
+    const result = await captureInvocation(['--plain', 'travel', 'help=true']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('travel');
+    expect(result.stdout).toContain('Usage:');
+    expect(result.stdout).not.toContain('\x1b[');
+    expect(result.stderr).toBe('');
+  });
+
+  test('parse errors render from explicit output state', async () => {
+    const result = await captureInvocation(['--format=invalid'], { SPACEMOLT_OUTPUT: 'json', DEBUG: 'true' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      error: {
+        code: 'invalid_global_option',
+      },
+    });
+  });
+
+  test('plain parse errors use explicit plain state', async () => {
+    const result = await captureInvocation(['--plain', '--format=invalid']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Error:');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('invalid env profile preserves parsed JSON output state', async () => {
+    const result = await captureInvocation(['--json', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+  });
+
+  test('invalid env profile preserves parsed format json output state', async () => {
+    const result = await captureInvocation(['--format=json', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+  });
+
+  test('invalid env profile preserves env JSON output state', async () => {
+    const result = await captureInvocation(['help'], {
+      SPACEMOLT_PROFILE: 'bad/name',
+      SPACEMOLT_OUTPUT: 'json',
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+  });
+
+  test('invalid env profile preserves parsed plain output state', async () => {
+    const result = await captureInvocation(['--plain', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Profile names may only contain');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('invalid env profile preserves parsed quiet output state', async () => {
+    const result = await captureInvocation(['--quiet', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Profile names may only contain');
+  });
+
+  test('quiet parse errors still render diagnostics', async () => {
+    const result = await captureInvocation(['--quiet', '--format=invalid']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Invalid format "invalid"');
+  });
+
   test('--format json preserves JSON output for later global parse errors', async () => {
     const result = await captureInvocation(['--format', 'json', '--format', 'nope', 'get_status']);
 
@@ -592,8 +685,6 @@ describe('runInvocation option isolation', () => {
     expect(textResult.exitCode).toBe(1);
     expect(textResult.stdout).toBe('');
     expect(textResult.stderr).toContain('Invalid format "nope"');
-    expect(JSON_OUTPUT).toBe(process.env.SPACEMOLT_OUTPUT === 'json');
-    expect(FORMAT).toBe('table');
   });
 
   test('env JSON output applies to global parse errors', async () => {
@@ -625,7 +716,118 @@ describe('runInvocation option isolation', () => {
     expect(exitCode).toBe(1);
     expect(stdout.join('\n')).toContain('"unknown_command"');
     expect(stderr).toEqual([]);
-    expect(JSON_OUTPUT).toBe(true);
+  });
+
+  test('connection errors use explicit output state after parsing', async () => {
+    const result = await captureInvocation(
+      ['--plain', '--debug', 'get_status'],
+      { SPACEMOLT_URL: 'https://configured.test/api/v2' },
+      {
+        createClient(config) {
+          return {
+            config,
+            async execute() {
+              throw new Error('fetch failed');
+            },
+          } as unknown as SpaceMoltClient;
+        },
+      },
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Connection Error: fetch failed');
+    expect(result.stderr).toContain('Verify the API is reachable: https://configured.test/api/v2');
+    expect(result.stderr).toContain('[DEBUG] Full error:');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('plain command parse errors use explicit output state', async () => {
+    const result = await captureInvocation(['--plain', 'travel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Missing required argument');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('quiet command parse errors suppress cached ID suggestions but keep required diagnostics', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-id-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const spacemoltHome = path.join(configHome, 'spacemolt-cli');
+    const sessionsDir = path.join(spacemoltHome, 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(path.join(spacemoltHome, 'config.json'), `${JSON.stringify({ defaultProfile: 'pilot' })}\n`);
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'sol_earth',
+            name: 'Earth',
+            sourceCommand: 'get_system',
+            seenAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    try {
+      const result = await withConfigHome(configHome, () =>
+        captureInvocation(['--quiet', 'travel'], { XDG_CONFIG_HOME: configHome }),
+      );
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Missing required argument');
+      expect(result.stderr).not.toContain('Cached poi IDs:');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('plain unknown command diagnostics use explicit output state', async () => {
+    const result = await captureInvocation(['--plain', 'trvel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Unknown command "trvel"');
+    expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('plain local command parse diagnostics use explicit output state', async () => {
+    const profileResult = await captureInvocation(['--plain', 'profile', 'nope']);
+    const explainResult = await captureInvocation(['--plain', 'explain']);
+    const completionResult = await captureInvocation(['--plain', 'completion', 'powershell']);
+
+    expect(profileResult.exitCode).toBe(1);
+    expect(explainResult.exitCode).toBe(1);
+    expect(completionResult.exitCode).toBe(1);
+    expect(`${profileResult.stderr}\n${explainResult.stderr}\n${completionResult.stderr}`).not.toContain('\x1b[');
+  });
+
+  test('--plain profile list renders without ANSI', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-profile-plain-'));
+    const configHome = path.join(tempDir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.json'),
+      JSON.stringify({
+        id: 's',
+        username: 'pilot',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2099-01-01T00:00:00.000Z',
+      }),
+    );
+
+    try {
+      const result = await captureInvocation(['--plain', 'profile', 'list'], { XDG_CONFIG_HOME: configHome });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Profiles');
+      expect(result.stdout).not.toContain('\x1b[');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test('context profile is used for API payload preparation', async () => {
@@ -741,6 +943,31 @@ describe('runInvocation watch cleanup', () => {
     expect(exitCode).toBe(0);
     expect(registered).toHaveLength(1);
     expect(removed).toEqual(registered);
+  });
+
+  test('watch refresh footer uses explicit plain output state', async () => {
+    let ticks = 0;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const client = {
+      config: {},
+      async execute() {
+        ticks += 1;
+        if (ticks > 1) throw new Error('stop');
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    const exitCode = await runInvocation(['--plain', '--watch=1', 'get_status'], client, fakeContext(stdout, stderr), {
+      onSigint() {
+        return () => {};
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    const footer = stdout.find((line) => line.includes('[next refresh in 1s')) ?? '';
+    expect(footer).toContain('[next refresh in 1s');
+    expect(footer).not.toContain('\x1b[');
   });
 
   test('removes SIGINT listener on normal stop', async () => {

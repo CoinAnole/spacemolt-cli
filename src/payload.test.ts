@@ -54,6 +54,21 @@ describe('payload preparation', () => {
     expect(capture.stdout.join('\n')).toContain('travel');
   });
 
+  test('help=true respects explicit plain output state', () => {
+    const capture = captureWriter();
+    const result = preparePayload(
+      'travel',
+      { help: 'true' },
+      { ...baseOptions, plain: true },
+      undefined,
+      capture.writer,
+    );
+
+    expect(result).toEqual({ type: 'exit', exitCode: 0 });
+    expect(capture.stdout.join('\n')).toContain('Usage:');
+    expect(capture.stdout.join('\n')).not.toContain('\x1b[');
+  });
+
   test('missing required args return JSON errors in JSON mode', () => {
     const capture = captureWriter();
     const result = preparePayload('travel', {}, { ...baseOptions, json: true }, undefined, capture.writer);

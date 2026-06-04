@@ -12,6 +12,9 @@ import {
   hintsForKind,
   idKindForCommandField,
   loadIdCacheSync,
+  printCachedIdSuggestions,
+  printIds,
+  printWhereCanI,
   resolveCachedId,
   saveIdCache,
   searchItemHints,
@@ -282,6 +285,103 @@ describe('id cache', () => {
 
     expect(lines.filter((line) => line.includes('ore_'))).toHaveLength(8);
     expect(lines.join('\n')).toContain('...and 2 more');
+  });
+
+  test('formatCachedIdAmbiguity supports explicit plain output', () => {
+    const lines = formatCachedIdAmbiguity(
+      'sell',
+      'item_id',
+      {
+        type: 'ambiguous',
+        kind: 'item',
+        query: 'ore',
+        matches: [
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      },
+      { plain: true },
+    );
+
+    expect(lines.join('\n')).toContain('Ambiguous cached item match');
+    expect(lines.join('\n')).not.toContain('\x1b[');
+  });
+
+  test('printCachedIdSuggestions respects explicit quiet output', async () => {
+    const sessionPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-quiet-test-')), 'pilot.json');
+    await saveIdCache(
+      [
+        {
+          kind: 'item',
+          id: 'ore_iron',
+          name: 'Iron Ore',
+          sourceCommand: 'get_cargo',
+          seenAt: '2026-05-18T00:00:00.000Z',
+        },
+      ],
+      sessionPath,
+    );
+    const stderr: string[] = [];
+
+    printCachedIdSuggestions('sell', 'item_id', sessionPath, { out() {}, err: (message = '') => stderr.push(message) }, {
+      quiet: true,
+    });
+
+    expect(stderr).toEqual([]);
+  });
+
+  test('printIds supports explicit plain output', async () => {
+    const sessionPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-ids-test-')), 'pilot.json');
+    await saveIdCache(
+      [
+        {
+          kind: 'item',
+          id: 'ore_iron',
+          name: 'Iron Ore',
+          sourceCommand: 'get_cargo',
+          seenAt: '2026-05-18T00:00:00.000Z',
+        },
+      ],
+      sessionPath,
+    );
+    const stdout: string[] = [];
+
+    printIds('item', sessionPath, { out: (message = '') => stdout.push(message), err() {} }, undefined, {
+      plain: true,
+    });
+
+    expect(stdout.join('\n')).toContain('item IDs');
+    expect(stdout.join('\n')).not.toContain('\x1b[');
+  });
+
+  test('printWhereCanI supports explicit plain output', async () => {
+    const sessionPath = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-where-test-')),
+      'pilot.json',
+    );
+    await saveIdCache(
+      [
+        {
+          kind: 'item',
+          id: 'ore_iron',
+          name: 'Iron Ore',
+          sourceCommand: 'view_market',
+          seenAt: '2026-05-18T00:00:00.000Z',
+        },
+      ],
+      sessionPath,
+    );
+    const stdout: string[] = [];
+
+    printWhereCanI('iron', sessionPath, { out: (message = '') => stdout.push(message), err() {} }, { plain: true });
+
+    expect(stdout.join('\n')).toContain('Cached locations for "iron"');
+    expect(stdout.join('\n')).not.toContain('\x1b[');
   });
 
   test('idKindForCommandField uses explicit command resolver rules before heuristics', () => {

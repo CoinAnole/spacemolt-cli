@@ -2,8 +2,10 @@ import { Buffer } from 'node:buffer';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import type { CliWriter } from './cli-context.ts';
+import { colorsForPlain } from './output-style.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
-import { API_BASE, c, DEBUG, VERSION } from './runtime.ts';
+import { API_BASE, VERSION } from './runtime.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, Session } from './types.ts';
 
@@ -165,27 +167,41 @@ function resolveProfileName(profile: string, env: EnvLike): string {
   return normalizedProfile;
 }
 
-export function showProfiles(homeDir?: string, platform?: string, env?: EnvLike): void {
+export function showProfiles(
+  homeDir?: string,
+  platformOrWriter?: string | CliWriter,
+  env?: EnvLike,
+  options: { plain?: boolean } = {},
+): void {
+  const platform = typeof platformOrWriter === 'string' ? platformOrWriter : undefined;
+  const writer = typeof platformOrWriter === 'string' ? undefined : platformOrWriter;
+  const out = writer?.out.bind(writer) ?? console.log;
   const profiles = listProfileSessions(homeDir, platform, env);
+  const colors = colorsForPlain(Boolean(options.plain));
   if (!profiles.length) {
-    console.log(`No profiles found in ${getProfileSessionsDir(homeDir, platform, env)}.`);
+    out(`No profiles found in ${getProfileSessionsDir(homeDir, platform, env)}.`);
     return;
   }
 
-  console.log(`${c.bright}Profiles${c.reset}`);
+  out(`${colors.bright}Profiles${colors.reset}`);
   for (const profile of profiles) {
     const marker = profile.isDefault ? '* ' : '  ';
-    console.log(`${marker}${profile.name}`);
+    out(`${marker}${profile.name}`);
   }
 }
 
 export function getSessionPath(config?: { profile?: string }, env?: EnvLike): string {
   if (config) {
-    const manager = new SessionManager({
-      profile: config.profile,
-      env,
-    });
-    return manager.getSessionPath();
+    const sessionEnv = env ?? process.env;
+    const profile = config.profile ?? getDefaultProfile(undefined, undefined, sessionEnv);
+    if (!profile) {
+      throw new Error('No default profile set. Run "spacemolt login <username> <password>" or use "--profile <name>".');
+    }
+    return path.join(
+      getSpacemoltHome(undefined, undefined, sessionEnv),
+      'sessions',
+      `${resolveProfileName(profile, sessionEnv)}.json`,
+    );
   }
   return new SessionManager({ env }).getSessionPath();
 }
@@ -262,6 +278,8 @@ export interface SessionManagerOptions {
   profile?: string;
   profileIsExplicit?: boolean;
   debug?: boolean;
+  plain?: boolean;
+  logger?: { log(message: string): void };
   transport?: typeof requestJson;
   clock?: () => number;
   env?: EnvLike;
@@ -271,19 +289,25 @@ export class SessionManager {
   private readonly _apiBase?: string;
   private readonly _profile?: string;
   private readonly _profileIsExplicit: boolean;
+  private readonly _useActiveProfileFallback: boolean;
   private readonly _debug?: boolean;
+  private readonly _plain: boolean;
+  private readonly _logger: { log(message: string): void };
   private readonly _transport: typeof requestJson;
   private readonly _clock: () => number;
   private readonly _env: EnvLike;
 
-  constructor(options: SessionManagerOptions = {}) {
-    this._apiBase = options.apiBase;
-    this._profile = options.profile;
-    this._profileIsExplicit = Boolean(options.profileIsExplicit);
-    this._debug = options.debug;
-    this._transport = options.transport ?? requestJson;
-    this._clock = options.clock ?? Date.now;
-    this._env = options.env ?? process.env;
+  constructor(options?: SessionManagerOptions) {
+    this._apiBase = options?.apiBase;
+    this._profile = options?.profile;
+    this._profileIsExplicit = Boolean(options?.profileIsExplicit);
+    this._useActiveProfileFallback = options === undefined;
+    this._debug = options?.debug;
+    this._plain = Boolean(options?.plain);
+    this._logger = options?.logger ?? { log: (message) => console.log(message) };
+    this._transport = options?.transport ?? requestJson;
+    this._clock = options?.clock ?? Date.now;
+    this._env = options?.env ?? process.env;
   }
 
   get apiBase(): string {
@@ -291,11 +315,11 @@ export class SessionManager {
   }
 
   get profile(): string | undefined {
-    return this._profile ?? ACTIVE_PROFILE;
+    return this._profile ?? (this._useActiveProfileFallback ? ACTIVE_PROFILE : undefined);
   }
 
   get debug(): boolean {
-    return this._debug ?? DEBUG;
+    return this._debug ?? false;
   }
 
   getSessionPath(profileOverride?: string): string {
@@ -372,7 +396,8 @@ export class SessionManager {
   }
 
   async createTransientSession(savedCredentials?: Pick<Session, 'username' | 'password'>): Promise<Session> {
-    if (this.debug) console.log(`${c.dim}[DEBUG] Creating new session...${c.reset}`);
+    const colors = colorsForPlain(this._plain);
+    if (this.debug) this._logger.log(`${colors.dim}[DEBUG] Creating new session...${colors.reset}`);
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
@@ -422,8 +447,11 @@ export class SessionManager {
     const profName = this.effectiveProfile();
     if (!profName || !session.username || !session.password || session.player_id) return null;
 
+    const colors = colorsForPlain(this._plain);
     if (this.debug)
-      console.log(`${c.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${c.reset}`);
+      this._logger.log(
+        `${colors.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${colors.reset}`,
+      );
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
       method: 'POST',
       sessionId: session.id,

@@ -5,8 +5,9 @@ import { buildCommandRegistrySnapshot } from './command-registry.ts';
 import { COMMANDS, routeSignature, routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
+import { colorsForPlain } from './output-style.ts';
 import { trimTrailingSlash } from './response.ts';
-import { API_BASE, c, type SpaceMoltConfig, VERSION } from './runtime.ts';
+import { API_BASE, type SpaceMoltConfig, VERSION } from './runtime.ts';
 import { ACTIVE_PROFILE, getDefaultProfile, SessionManager, tryGetSessionPath } from './session.ts';
 import { requestJson } from './transport.ts';
 
@@ -38,7 +39,7 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
   let dynamicCommands = 0;
 
   const apiBase = config?.apiBase || API_BASE;
-  const profile = config?.profile !== undefined ? config.profile : ACTIVE_PROFILE;
+  const profile = config ? config.profile : ACTIVE_PROFILE;
   const defaultProfile = getDefaultProfile(undefined, undefined, env);
   const sessionPath = tryGetSessionPath(config, env);
 
@@ -204,8 +205,9 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
   return { ok, checks, cachedOpenApiRoutes, dynamicCommands };
 }
 
-export function printDoctorResult(result: DoctorResult, writer?: CliWriter): void {
+export function printDoctorResult(result: DoctorResult, writer?: CliWriter, options?: { plain?: boolean }): void {
   const out = writer?.out.bind(writer) ?? console.log;
+  const c = colorsForPlain(Boolean(options?.plain));
   out(`${c.bright}SpaceMolt Doctor${c.reset}\n`);
   for (const check of result.checks) {
     const icon = check.ok ? `${c.green}✓${c.reset}` : `${c.red}✗${c.reset}`;

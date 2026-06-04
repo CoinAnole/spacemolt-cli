@@ -6,9 +6,9 @@ import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
+import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { normalizeStructuredResultForOutput } from './response.ts';
-import { c } from './runtime.ts';
 import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 
@@ -73,10 +73,11 @@ export async function renderResponse(
   }
 
   if (!isJson && !options.structured && !hasProjection && response.notifications?.length && !options.quiet) {
-    const header = `${c.dim}--- Notifications (${response.notifications.length}) ---${c.reset}`;
+    const colors = colorsForPlain(Boolean(options.plain));
+    const header = `${colors.dim}--- Notifications (${response.notifications.length}) ---${colors.reset}`;
     if (writer) writer.out(header);
     else console.log(header);
-    displayNotifications(response.notifications, writer, options.quiet);
+    displayNotifications(response.notifications, writer, options.quiet, { plain: options.plain });
     if (writer) writer.out('');
     else console.log('');
   }
@@ -85,7 +86,7 @@ export async function renderResponse(
     displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp, context });
     const sessionPath = tryGetSessionPath(client.config, context?.env);
     if (!options.quiet && shouldShowCachedIdSuggestions(command, response.error)) {
-      printCachedIdSuggestions(command, undefined, sessionPath, writer);
+      printCachedIdSuggestions(command, undefined, sessionPath, writer, { quiet: options.quiet, plain: options.plain });
     }
     return 1;
   }
@@ -119,7 +120,7 @@ export async function renderResponse(
     return filteredResponse.error ? 1 : 0;
   }
 
-  warnAboutUnsupportedServerHelpFilters(commandRun, { isJson, hasProjection, writer });
+  warnAboutUnsupportedServerHelpFilters(commandRun, { isJson, hasProjection, writer, plain: options.plain });
 
   const success = displayResult(
     displayCommand,
@@ -132,15 +133,16 @@ export async function renderResponse(
 
 function warnAboutUnsupportedServerHelpFilters(
   commandRun: CommandRunResult,
-  options: { isJson: boolean; hasProjection: boolean; writer?: CliRuntimeContext['writer'] },
+  options: { isJson: boolean; hasProjection: boolean; writer?: CliRuntimeContext['writer']; plain?: boolean },
 ): void {
   if (options.isJson || options.hasProjection || commandRun.command !== 'help') return;
   const payload = commandRun.payload ?? {};
   if (payload.category === undefined && payload.command === undefined) return;
 
   const warn = options.writer?.err.bind(options.writer) ?? console.error;
+  const colors = colorsForPlain(Boolean(options.plain));
   warn(
-    `${c.yellow}Note:${c.reset} server help does not currently support category/command filtering; use spacemolt help <command> or spacemolt help <group> for local filtered help.`,
+    `${colors.yellow}Note:${colors.reset} server help does not currently support category/command filtering; use spacemolt help <command> or spacemolt help <group> for local filtered help.`,
   );
 }
 

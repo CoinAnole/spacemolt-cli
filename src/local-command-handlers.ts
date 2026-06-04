@@ -41,7 +41,7 @@ import {
   type OpenApiCacheFile,
   refreshOpenApiCache,
 } from './openapi-cache.ts';
-import { API_BASE, c, VERSION } from './runtime.ts';
+import { API_BASE, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import {
   getSessionPath,
@@ -57,6 +57,13 @@ function writeJson(context: CliRuntimeContext | undefined, value: unknown, space
   const json = JSON.stringify(value, null, space);
   if (context) context.writer.out(json);
   else console.log(json);
+}
+
+function localOutputOptions(options: GlobalOptions, context?: CliRuntimeContext): { plain?: boolean; quiet?: boolean } {
+  return {
+    plain: context?.config?.plain ?? context?.output?.plain ?? options.plain,
+    quiet: context?.config?.quiet ?? context?.output?.quiet ?? options.quiet,
+  };
 }
 
 function compareGameserverVersions(left: string, right: string): number | undefined {
@@ -99,14 +106,14 @@ const profileHandler: CommandHandler<ProfilePayload, ProfilePayload> = {
       error: {
         code: 'unknown_command',
         message: `Unknown profile command: ${action}`,
-        customStderr: `${c.red}Error:${c.reset} Unknown profile command "${action}"\nUsage: ${PROFILE_USAGE}`,
+        customStderr: `Error: Unknown profile command "${action}"\nUsage: ${PROFILE_USAGE}`,
         exitCode: 1,
       },
     };
   },
-  run(payload, _options, _client, context) {
+  run(payload, options, _client, context) {
     if (payload.action === 'list') {
-      showProfiles(context?.env.HOME, undefined, context?.env);
+      showProfiles(context?.env.HOME, context?.writer, context?.env, { plain: options.plain });
       return payload;
     }
     if (payload.name) {
@@ -134,8 +141,8 @@ function createCommandsHandler(
     run(payload) {
       return { query: parseCommandSearchQuery(payload.args) };
     },
-    render(result, _options, _client, context) {
-      showCommandSearch(result.query, context?.writer, allCommands);
+    render(result, options, _client, context) {
+      showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
       return 0;
     },
   };
@@ -158,7 +165,7 @@ function createExplainHandler(
           error: {
             code: 'missing_argument',
             message: 'Missing command name.',
-            customStderr: `${c.red}Error:${c.reset} Missing command name.\nUsage: spacemolt explain <command>`,
+            customStderr: `Error: Missing command name.\nUsage: spacemolt explain <command>`,
             exitCode: 1,
           },
         };
@@ -181,13 +188,16 @@ function createExplainHandler(
           else printJsonError('unknown_command', `Unknown command: ${result.command}`);
           return 1;
         }
-        displayUnknownCommand(result.command, context?.writer);
+        displayUnknownCommand(result.command, context?.writer, {
+          plain: context?.config?.plain ?? context?.output?.plain,
+        });
         return 1;
       }
       showCommandExplanation(
         result.command,
         context?.writer,
         registrySnapshot.allCommands ?? registrySnapshot.commands,
+        localOutputOptions(options, context),
       );
       return 0;
     },
@@ -212,7 +222,7 @@ function createCompletionHandler(
           error: {
             code: 'validation_error',
             message: `Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
-            customStderr: `${c.red}Error:${c.reset} Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
+            customStderr: `Error: Unsupported shell: ${shell}. Use bash, zsh, or fish.`,
             exitCode: 1,
           },
         };
@@ -279,7 +289,7 @@ function createDynamicCompletionHandler(
           error: {
             code: 'validation_error',
             message: `Unsupported shell: ${shell || ''}. Use bash, zsh, or fish.`,
-            customStderr: `${c.red}Error:${c.reset} Unsupported shell: ${shell || ''}. Use bash, zsh, or fish.`,
+            customStderr: `Error: Unsupported shell: ${shell || ''}. Use bash, zsh, or fish.`,
             exitCode: 1,
           },
         };
@@ -324,7 +334,7 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
     if (options.json) {
       writeJson(context, { structuredContent: doctorResult });
     } else {
-      printDoctorResult(doctorResult, context?.writer);
+      printDoctorResult(doctorResult, context?.writer, localOutputOptions(options, context));
     }
     return doctorResult.ok ? 0 : 1;
   },
@@ -362,7 +372,8 @@ const idsHandler: CommandHandler<
           code: 'validation_error',
           message:
             'Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]',
-          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]`,
+          customStderr:
+            'Error: Usage: spacemolt ids <poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]',
           exitCode: 1,
         },
       };
@@ -383,7 +394,9 @@ const idsHandler: CommandHandler<
       writeJson(context, { structuredContent: { kind: result.kind, search: result.search, ids: result.hints } });
     } else {
       const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
-      printIds(result.kind, sessionPath, context?.writer, result.search);
+      printIds(result.kind, sessionPath, context?.writer, result.search, {
+        plain: context?.config?.plain ?? context?.output?.plain,
+      });
     }
     return 0;
   },
@@ -400,7 +413,7 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
         error: {
           code: 'missing_required_argument',
           message: 'Missing required argument: item',
-          customStderr: `${c.red}Error:${c.reset} Usage: spacemolt where-can-i <item>`,
+          customStderr: 'Error: Usage: spacemolt where-can-i <item>',
           exitCode: 1,
         },
       };
@@ -417,7 +430,9 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
       writeJson(context, { structuredContent: { query: result.query, matches: result.matches } });
     } else {
       const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
-      printWhereCanI(result.query, sessionPath, context?.writer);
+      printWhereCanI(result.query, sessionPath, context?.writer, {
+        plain: context?.config?.plain ?? context?.output?.plain,
+      });
     }
     return 0;
   },
@@ -555,38 +570,39 @@ function createLocalHelpHandler(
     },
     async render(result, options, _client, context) {
       if (result.type === 'showHelp') {
-        showHelp(context?.writer);
+        showHelp(context?.writer, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'showHelpAndGroups') {
-        showHelp(context?.writer);
-        showCommandGroups(context?.writer, allCommands);
+        showHelp(context?.writer, localOutputOptions(options, context));
+        showCommandGroups(context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpAll') {
-        showFullHelp(context?.writer, allCommands);
+        showFullHelp(context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpGroup') {
-        showCommandGroup(result.target, context?.writer, allCommands);
+        showCommandGroup(result.target, context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'progressiveOrHelp') {
         if (options.watch) {
-          showHelp(context?.writer);
+          showHelp(context?.writer, localOutputOptions(options, context));
         } else {
-          await showProgressiveHelp(context?.writer);
+          await showProgressiveHelp(context?.writer, localOutputOptions(options, context));
         }
         return 0;
       }
       if (result.type === 'helpSearch') {
-        showCommandSearch(result.query, context?.writer, allCommands);
+        showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpCommand') {
         if (
-          showCommandExplanation(result.target, context?.writer, allCommands) ||
-          (hasCommandGroup(result.target) && showCommandGroup(result.target, context?.writer, allCommands))
+          showCommandExplanation(result.target, context?.writer, allCommands, localOutputOptions(options, context)) ||
+          (hasCommandGroup(result.target) &&
+            showCommandGroup(result.target, context?.writer, allCommands, localOutputOptions(options, context)))
         ) {
           return 0;
         }
@@ -594,7 +610,9 @@ function createLocalHelpHandler(
           printJsonError('unknown_command', `Unknown command: ${result.target}`, context?.writer);
           return 1;
         }
-        displayUnknownCommand(result.target, context?.writer);
+        displayUnknownCommand(result.target, context?.writer, {
+          plain: context?.config?.plain ?? context?.output?.plain,
+        });
         return 1;
       }
       return 0;

@@ -15,6 +15,8 @@ export interface CliClock {
 
 export interface CliOutputOptions {
   json?: boolean;
+  jsonOutput?: boolean;
+  debug?: boolean;
   quiet?: boolean;
   plain?: boolean;
   format?: OutputFormat;
@@ -59,6 +61,8 @@ export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRun
     output: config
       ? {
           json: config.jsonOutput,
+          jsonOutput: config.jsonOutput,
+          debug: config.debug,
           quiet: config.quiet,
           plain: config.plain,
           format: config.format,
@@ -75,6 +79,8 @@ export function withResolvedConfig(context: CliRuntimeContext | undefined, confi
     output: {
       ...(context?.output ?? {}),
       json: config.jsonOutput,
+      jsonOutput: config.jsonOutput,
+      debug: config.debug,
       quiet: config.quiet,
       plain: config.plain,
       format: config.format,

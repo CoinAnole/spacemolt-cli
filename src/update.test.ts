@@ -146,6 +146,21 @@ describe('checkForUpdates', () => {
     const lines: string[] = [];
     await checkForUpdates(
       updateOptions({
+        env: { SPACEMOLT_UPDATE_CHECK: 'true', DEBUG: 'true' },
+        writer: {
+          out(message = '') {
+            lines.push(message);
+          },
+          err() {},
+        },
+        transport: async () => ({ ok: false, status: 503, data: { tag_name: 'v9.9.9' } }),
+      }),
+    );
+
+    expect(lines).toEqual([]);
+
+    await checkForUpdates(
+      updateOptions({
         debug: true,
         writer: {
           out(message = '') {
@@ -158,6 +173,27 @@ describe('checkForUpdates', () => {
     );
 
     expect(stripAnsi(lines.join('\n'))).toContain('[DEBUG] Update check failed: HTTP 503');
+  });
+
+  test('debug failures use explicit plain output', async () => {
+    const lines: string[] = [];
+    await checkForUpdates(
+      updateOptions({
+        debug: true,
+        plain: true,
+        writer: {
+          out(message = '') {
+            lines.push(message);
+          },
+          err() {},
+        },
+        transport: async () => ({ ok: false, status: 503, data: { tag_name: 'v9.9.9' } }),
+      }),
+    );
+
+    const output = lines.join('\n');
+    expect(output).toContain('[DEBUG] Update check failed: HTTP 503');
+    expect(output).not.toContain('\x1b[');
   });
 
   test('prints and records a newer version notification', async () => {
@@ -181,6 +217,27 @@ describe('checkForUpdates', () => {
     expect(output).toContain('v1.2.0');
     expect(readCache(options.cachePath).notified_version).toBe('1.2.0');
     expect(readCache(options.cachePath).notified_at).toBe(NOW.toISOString());
+  });
+
+  test('update notices use explicit plain output', async () => {
+    const lines: string[] = [];
+    const options = updateOptions({
+      version: '1.0.0',
+      plain: true,
+      writer: {
+        out(message = '') {
+          lines.push(message);
+        },
+        err() {},
+      },
+      transport: async () => ({ ok: true, status: 200, data: { tag_name: 'v1.2.0' } }),
+    });
+
+    await checkForUpdates(options);
+
+    const output = lines.join('\n');
+    expect(output).toContain('Update available!');
+    expect(output).not.toContain('\x1b[');
   });
 
   test('throttles repeated notifications for the same cached version', async () => {

@@ -4,7 +4,6 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { runInvocation } from './main';
-import { setOutputMode } from './runtime';
 import { setActiveProfile } from './session';
 
 function fakeContext(stdout: string[], stderr: string[], env: CliEnv = process.env): CliRuntimeContext {
@@ -70,13 +69,6 @@ function stripAnsi(value: string): string {
 }
 
 afterEach(() => {
-  setOutputMode({
-    json: process.env.SPACEMOLT_OUTPUT === 'json',
-    format: 'table',
-    plain: false,
-    compact: false,
-    quiet: false,
-  });
   setActiveProfile(undefined);
 });
 

@@ -27,7 +27,7 @@ export {
 export { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 export { getRuntimeConfig, main, runInvocation } from './main.ts';
 export type { SpaceMoltConfig } from './runtime.ts';
-export { createDefaultConfig, LegacySpaceMoltConfig } from './runtime.ts';
+export { createDefaultConfig } from './runtime.ts';
 export { getSessionPath, SessionManager, showDefaultProfile } from './session.ts';
 export { compareVersions } from './update.ts';
 

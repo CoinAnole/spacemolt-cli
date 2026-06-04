@@ -526,6 +526,7 @@ describe('help output branches', () => {
     expect(capture.stdout.join('\n')).toContain('2026-05-20T00:00:00.000Z');
     expect(capture.stderr.join('\n')).toContain('Wait 2.0 seconds before retrying.');
     expect(capture.stderr.join('\n')).toContain('Suggestion:');
+    expect(`${capture.stdout.join('\n')}\n${capture.stderr.join('\n')}`).not.toContain('\x1b[');
 
     const retryable = captureWriter();
     displayError(
@@ -555,6 +556,7 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).toContain('Login required');
     expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
     expect(quiet.stderr.join('\n')).not.toContain('This is an authentication error.');
+    expect(quiet.stderr.join('\n')).not.toContain('\x1b[');
   });
 
   test('displayError gives invalid_payload a parameter spelling suggestion', () => {

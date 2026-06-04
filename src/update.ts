@@ -2,7 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import type { CliClock, CliEnv, CliWriter } from './cli-context.ts';
-import { c, DEBUG, GITHUB_REPO, UPDATE_CHECK_INTERVAL_MS, VERSION } from './runtime.ts';
+import { colorsForPlain } from './output-style.ts';
+import { GITHUB_REPO, UPDATE_CHECK_INTERVAL_MS, VERSION } from './runtime.ts';
 import { getSpacemoltHome } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { JsonResponse } from './types.ts';
@@ -30,6 +31,7 @@ export interface UpdateCheckOptions {
   version?: string;
   repo?: string;
   debug?: boolean;
+  plain?: boolean;
 }
 
 export function getUpdateCachePath(): string {
@@ -78,7 +80,8 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
   };
   const version = options.version ?? VERSION;
   const repo = options.repo ?? GITHUB_REPO;
-  const debug = options.debug ?? DEBUG;
+  const debug = options.debug ?? false;
+  const colors = colorsForPlain(Boolean(options.plain));
 
   // Skip update check by default unless explicitly enabled
   if (env.SPACEMOLT_UPDATE_CHECK !== 'true') return;
@@ -104,7 +107,7 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
       });
 
       if (!response.ok) {
-        if (debug) writer.out(`${c.dim}[DEBUG] Update check failed: HTTP ${response.status}${c.reset}`);
+        if (debug) writer.out(`${colors.dim}[DEBUG] Update check failed: HTTP ${response.status}${colors.reset}`);
         return;
       }
 
@@ -124,7 +127,7 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
     const notifyExpired = clock.now().getTime() - lastNotified > UPDATE_NOTIFY_INTERVAL_MS;
 
     if (isNewVersion || notifyExpired) {
-      printUpdateNotice(latestVersion, writer, version, repo);
+      printUpdateNotice(latestVersion, writer, version, repo, { plain: options.plain });
       if (cache) {
         await saveUpdateCache(
           {
@@ -140,7 +143,7 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
     // Silently ignore update check failures - don't disrupt the user's workflow
     if (debug) {
       const msg = error instanceof Error ? error.message : String(error);
-      writer.out(`${c.dim}[DEBUG] Update check failed: ${msg}${c.reset}`);
+      writer.out(`${colors.dim}[DEBUG] Update check failed: ${msg}${colors.reset}`);
     }
   }
 }
@@ -150,18 +153,20 @@ export function printUpdateNotice(
   writer?: CliWriter,
   currentVersion = VERSION,
   repo = GITHUB_REPO,
+  options: { plain?: boolean } = {},
 ): void {
   const out = writer?.out.bind(writer) ?? console.log;
-  out(`${c.yellow}╭─────────────────────────────────────────────────────────────╮${c.reset}`);
+  const colors = colorsForPlain(Boolean(options.plain));
+  out(`${colors.yellow}╭─────────────────────────────────────────────────────────────╮${colors.reset}`);
   out(
-    `${c.yellow}│${c.reset}  ${c.bright}Update available!${c.reset} ${c.dim}v${currentVersion}${c.reset} → ${c.green}v${latestVersion}${c.reset}                        ${c.yellow}│${c.reset}`,
+    `${colors.yellow}│${colors.reset}  ${colors.bright}Update available!${colors.reset} ${colors.dim}v${currentVersion}${colors.reset} → ${colors.green}v${latestVersion}${colors.reset}                        ${colors.yellow}│${colors.reset}`,
   );
   out(
-    `${c.yellow}│${c.reset}  Run: ${c.cyan}curl -fsSL https://spacemolt.com/install.sh | bash${c.reset}  ${c.yellow}│${c.reset}`,
+    `${colors.yellow}│${colors.reset}  Run: ${colors.cyan}curl -fsSL https://spacemolt.com/install.sh | bash${colors.reset}  ${colors.yellow}│${colors.reset}`,
   );
   out(
-    `${c.yellow}│${c.reset}  Or download from: ${c.cyan}https://github.com/${repo}/releases${c.reset}   ${c.yellow}│${c.reset}`,
+    `${colors.yellow}│${colors.reset}  Or download from: ${colors.cyan}https://github.com/${repo}/releases${colors.reset}   ${colors.yellow}│${colors.reset}`,
   );
-  out(`${c.yellow}╰─────────────────────────────────────────────────────────────╯${c.reset}`);
+  out(`${colors.yellow}╰─────────────────────────────────────────────────────────────╯${colors.reset}`);
   out('');
 }

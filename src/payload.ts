@@ -11,7 +11,7 @@ import {
   loadIdCacheSync,
   resolveCachedId,
 } from './id-cache.ts';
-import { c } from './runtime.ts';
+import { colorsForPlain } from './output-style.ts';
 import type { GlobalOptions } from './types.ts';
 
 type PayloadResolveResult =
@@ -50,12 +50,12 @@ export function preparePayload(
       printJsonError('unknown_command', `Unknown command: ${command}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayUnknownCommand(command, writer);
+    displayUnknownCommand(command, writer, { plain: options.plain });
     return { type: 'exit', exitCode: 1 };
   }
 
   if (rawPayload.help === 'true' || rawPayload.help === '1') {
-    showCommandHelp(command, writer, registry.commands);
+    showCommandHelp(command, writer, registry.commands, { plain: options.plain });
     return { type: 'exit', exitCode: 0 };
   }
 
@@ -65,7 +65,7 @@ export function preparePayload(
       printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayMissingArgument(command, missingArg, writer, registry.commands);
+    displayMissingArgument(command, missingArg, writer, registry.commands, options);
     return { type: 'exit', exitCode: 1 };
   }
 
@@ -77,7 +77,9 @@ export function preparePayload(
       return { type: 'exit', exitCode: 1 };
     }
     const writeErr = writer?.err.bind(writer) ?? console.error;
-    for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result)) {
+    for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result, {
+      plain: options.plain,
+    })) {
       writeErr(line);
     }
     return { type: 'exit', exitCode: 1 };
@@ -169,8 +171,9 @@ export function displayCommandParseErrors(
     return;
   }
   const writeErr = writer?.err.bind(writer) ?? console.error;
+  const colors = colorsForPlain(Boolean(options.plain));
   for (const err of errors) {
-    writeErr(`${c.red}Error:${c.reset} ${err.message}`);
+    writeErr(`${colors.red}Error:${colors.reset} ${err.message}`);
   }
 }
 
