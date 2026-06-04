@@ -183,14 +183,14 @@ function storageItemMatches(item: Record<string, unknown>, itemFilter?: string, 
 }
 
 function searchNeedles(searchFilter: string): string[] {
-  return searchFilter
-    .split(',')
-    .map(normalizeSearchText)
-    .filter(Boolean);
+  return searchFilter.split(',').map(normalizeSearchText).filter(Boolean);
 }
 
 function normalizeSearchText(value: string): string {
-  return value.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+  return value
+    .toLowerCase()
+    .replace(/[\s_-]+/g, ' ')
+    .trim();
 }
 
 function applyCargoDisplayFilters(response: APIResponse, payload: Record<string, unknown>): APIResponse {

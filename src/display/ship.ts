@@ -278,7 +278,7 @@ export const shipFormatters = [
           const victim = w.victim_name ? ` (${w.victim_name})` : '';
           const cargo = Array.isArray(w.cargo)
             ? (w.cargo as Array<Record<string, unknown>>)
-            : ((w.items as Array<Record<string, unknown>>) || []);
+            : (w.items as Array<Record<string, unknown>>) || [];
           const modules = Array.isArray(w.modules) ? (w.modules as Array<Record<string, unknown>>) : [];
 
           emitLine(`\n${c.yellow}Wreck: ${wreckId}${c.reset}`);

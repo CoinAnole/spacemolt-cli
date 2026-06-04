@@ -5,9 +5,9 @@ import * as path from 'node:path';
 import { SpaceMoltClient, type SpaceMoltClientOptions } from './api.ts';
 import type { CommandConfig } from './commands.ts';
 import { runCommand } from './response-renderer.ts';
+import { VERSION } from './runtime.ts';
 import { getDefaultProfile, profileNameForUsername, SessionManager, setDefaultProfile } from './session.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
-import { VERSION } from './runtime.ts';
 
 const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
 
