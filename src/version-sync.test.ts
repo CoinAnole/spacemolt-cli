@@ -99,13 +99,6 @@ describe('client.ts source integrity', () => {
     expect(args).not.toContain('count');
   });
 
-  test('help uses topic, not category and command', () => {
-    const args = COMMANDS.help?.args;
-    expect(args).toContain('topic');
-    expect(args).not.toContain('category');
-    expect(args).not.toContain('command');
-  });
-
   test('payload conversion uses command schemas instead of a global numeric field set', () => {
     expect(getPayloadConversionSchema('travel').id?.type).toBe('string');
     expect(getPayloadConversionSchema('sell').quantity?.type).toBe('integer');

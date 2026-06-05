@@ -222,7 +222,7 @@ function warnAboutUnsupportedServerHelpFilters(
   const warn = options.writer?.err.bind(options.writer) ?? console.error;
   const colors = colorsForPlain(Boolean(options.plain));
   warn(
-    `${colors.yellow}Note:${colors.reset} server help accepts topic=<command|category|search>; category/command filters are ignored. Use spacemolt help <command> or spacemolt help <group> for local filtered help.`,
+    `${colors.yellow}Note:${colors.reset} server help returns the full unfiltered list (topic/category/command filters are ignored). Use spacemolt help <command> or spacemolt help <group> for local filtered help.`,
   );
 }
 

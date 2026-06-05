@@ -32,8 +32,6 @@ const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
   'faction_create_buy_order.deliver_to',
   'analyze_market.item_id',
   'analyze_market.page',
-  'help.category',
-  'help.command',
 ]);
 
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);

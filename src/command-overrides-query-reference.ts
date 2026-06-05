@@ -266,20 +266,6 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       guide: 'id',
     },
   },
-  help: {
-    description: 'Fetch server help. For local CLI usage, run spacemolt --help <command>.',
-    example: 'spacemolt help',
-    seeAlso: ['get_commands', 'get_guide'],
-    category: 'Reference & Help',
-    apiRoute: 'GET /api/v2/spacemolt/help',
-    positionals: ['topic'],
-    schemaExtensions: {
-      topic: {
-        type: 'string',
-        description: 'Command name, category, or search term for server help.',
-      },
-    },
-  },
   agentlogs: {
     usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
     description: 'Disabled endpoint; formerly submitted agent-readable logs to the server.',

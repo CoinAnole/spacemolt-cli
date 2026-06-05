@@ -630,13 +630,6 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.count).toBeUndefined();
   });
 
-  test('help uses topic arg', () => {
-    const { payload } = parseOk(['help', 'combat']);
-    expect(payload.topic).toBe('combat');
-    expect(payload.category).toBeUndefined();
-    expect(payload.command).toBeUndefined();
-  });
-
   test('distress_signal - no args', () => {
     const { command, payload } = parseOk(['distress_signal']);
     expect(command).toBe('distress_signal');

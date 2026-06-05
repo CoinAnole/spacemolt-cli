@@ -163,8 +163,8 @@ describe('response renderer', () => {
     const stderr = rawStderr.replace(ANSI_PATTERN, '');
     expect(exitCode).toBe(0);
     expect(capture.text()).toContain('All server commands');
-    expect(stderr).toContain('server help accepts topic=<command|category|search>');
-    expect(stderr).toContain('category/command filters are ignored');
+    expect(stderr).toContain('server help returns the full unfiltered list');
+    expect(stderr).toContain('topic/category/command filters are ignored');
     expect(stderr).toContain('spacemolt help <command>');
     expect(rawStderr).not.toContain('\x1b[');
   });
