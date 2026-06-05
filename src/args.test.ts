@@ -687,6 +687,12 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.page).toBe('2');
   });
 
+  test('get_action_log accepts event_type filter', () => {
+    const { payload } = parseOk(['get_action_log', 'event_type=faction.production_cycle', 'faction_id=faction_1']);
+    expect(payload.event_type).toBe('faction.production_cycle');
+    expect(payload.faction_id).toBe('faction_1');
+  });
+
   test('agentlogs - category and message required', () => {
     const { payload } = parseOk(['agentlogs', 'navigation', 'jumped to new system']);
     expect(payload.category).toBe('navigation');

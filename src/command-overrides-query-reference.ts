@@ -148,7 +148,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_ships',
   },
   get_action_log: {
-    usage: '[category=.. faction_id=.. page=..]  (recent actions, 30-day retention)',
+    usage: '[category=.. event_type=.. faction_id=.. page=..]  (recent actions, 30-day retention)',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt_social/get_action_log',
     positionals: ['category', 'faction_id', 'page'],

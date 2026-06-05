@@ -146,8 +146,11 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-output-golden-'));
   const capture: CliStreamCapture = { stdout: '', stderr: '' };
   const originalActiveProfile = ACTIVE_PROFILE;
+  const originalConfigHome = process.env.XDG_CONFIG_HOME;
+  const configHome = path.join(tempDir, 'config');
 
   try {
+    process.env.XDG_CONFIG_HOME = configHome;
     const dependencies: RunnerDependencies = {
       createClient() {
         throw new Error('unexpected real client creation in golden test');
@@ -180,6 +183,8 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
     };
   } finally {
     setActiveProfile(originalActiveProfile);
+    if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = originalConfigHome;
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }

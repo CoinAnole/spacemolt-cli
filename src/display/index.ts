@@ -88,9 +88,7 @@ function formatProjection(
   return JSON.stringify(value);
 }
 
-type FieldProjectionResult =
-  | { success: true; value: unknown }
-  | { success: false; message: string; fatal: boolean };
+type FieldProjectionResult = { success: true; value: unknown } | { success: false; message: string; fatal: boolean };
 
 function formatAvailableKeys(result: Record<string, unknown>): string | undefined {
   const keys = Object.keys(result);
