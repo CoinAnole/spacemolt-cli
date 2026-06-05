@@ -98,6 +98,22 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_status'],
   },
+  in_transit: {
+    code: 'in_transit',
+    message: 'Ship is in transit.',
+    suggestion: 'Wait for arrival, then rerun the command. Use "spacemolt get_status" to check movement progress.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status'],
+  },
+  fleet_moved: {
+    code: 'fleet_moved',
+    message: 'Fleet moved.',
+    suggestion: 'Your fleet moved while the command was pending. Run "spacemolt get_status" before retrying.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status'],
+  },
   invalid_poi: {
     code: 'invalid_poi',
     message: 'Invalid POI.',

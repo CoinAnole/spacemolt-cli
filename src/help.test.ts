@@ -582,6 +582,37 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError gives transit and fleet movement errors actionable suggestions', () => {
+    const baseContext: CliRuntimeContext = {
+      env: {},
+      writer: captureWriter().writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    const transit = captureWriter();
+    displayError(
+      'mine',
+      { code: 'in_transit', message: 'Ship is in transit', retry_after: 12 },
+      { context: { ...baseContext, writer: transit.writer } },
+    );
+
+    expect(transit.stderr.join('\n')).toContain('Wait 12.0 seconds before retrying.');
+    expect(transit.stderr.join('\n')).toContain('Wait for arrival, then rerun the command.');
+    expect(transit.stderr.join('\n')).toContain('spacemolt get_status');
+
+    const fleetMoved = captureWriter();
+    displayError(
+      'mine',
+      { code: 'fleet_moved', message: 'Fleet moved before this command completed' },
+      { context: { ...baseContext, writer: fleetMoved.writer } },
+    );
+
+    expect(fleetMoved.stderr.join('\n')).toContain('Your fleet moved while the command was pending.');
+    expect(fleetMoved.stderr.join('\n')).toContain('spacemolt get_status');
+  });
+
   test('displayUnknownCommand points group-like commands to group help', () => {
     const capture = captureWriter();
 
