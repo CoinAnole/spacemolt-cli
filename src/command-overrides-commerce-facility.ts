@@ -366,6 +366,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
   },
+  facility_owned: {
+    category: 'Facilities',
+    description: 'List every facility you own across all stations.',
+    example: 'spacemolt facility_owned',
+    discoverWith: ['facility_list'],
+    seeAlso: ['facility_list', 'facility_types'],
+    apiRoute: 'POST /api/v2/spacemolt_facility/owned',
+    positionals: [],
+  },
   facility_types: {
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/types',
@@ -434,6 +443,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_facility_list: {
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_list',
+  },
+  faction_facility_owned: {
+    category: 'Facilities',
+    description: "List your faction's facilities across all stations.",
+    example: 'spacemolt faction_facility_owned',
+    discoverWith: ['faction_facility_list'],
+    seeAlso: ['faction_facility_list', 'faction_build'],
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_owned',
+    positionals: [],
   },
   faction_build: {
     usage: '<facility_type>',

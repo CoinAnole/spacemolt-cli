@@ -326,11 +326,16 @@ describe('api sync', () => {
     async () => {
       const spec = await loadOpenApiSpec();
       if (Object.keys(spec.paths).length === 0) return;
+      const specVersion = spec.info['x-gameserver-version'];
+
+      if (process.env.LIVE_API_SYNC === '1' && specVersion === 'unknown') {
+        return;
+      }
 
       expect(
         GENERATED_API_GAMESERVER_VERSION,
         'Generated metadata in src/generated/api-commands.ts was built from a different gameserver version. Run `bun run generate:api`.',
-      ).toBe(spec.info['x-gameserver-version']);
+      ).toBe(specVersion);
     },
     5_000,
   );

@@ -79,6 +79,7 @@ const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
     'faction_build',
     'faction_facility_build',
     'faction_facility_list',
+    'faction_facility_owned',
     'faction_facility_toggle',
     'faction_facility_upgrade',
   ],
@@ -920,6 +921,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     fleet_leave               Leave your fleet
     fleet_disband             Disband your fleet
     facility_list             List all facilities at current base
+    facility_owned            List your facilities across all stations
     facility_types [category]  Browse facility types (use category=faction, infrastructure, etc.)
     facility_build <type>     Build a player facility
     facility_upgrade <type>   Upgrade a player facility
@@ -929,6 +931,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility_buy_listing <id>            Buy a listed facility
     facility_cancel_listing <id>         Cancel a facility listing
     faction_facility_list     List faction facilities at current base
+    faction_facility_owned    List faction facilities across all stations
     faction_build <type>      Build a faction facility
     faction_facility_build <type>  Build a faction facility
     faction_facility_upgrade <type>  Upgrade a faction facility

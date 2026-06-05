@@ -126,6 +126,21 @@ describe('client.ts source integrity', () => {
     expect(COMMANDS.configure_recycler?.schema?.recipe_id?.type).toBe('string');
   });
 
+  test('facility ownership commands map the v2 facility routes', () => {
+    expect(COMMANDS.facility_owned?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'owned',
+      method: 'POST',
+    });
+    expect(COMMANDS.faction_facility_owned?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'faction_owned',
+      method: 'POST',
+    });
+    expect(COMMANDS.facility_owned?.args).toEqual([]);
+    expect(COMMANDS.faction_facility_owned?.args).toEqual([]);
+  });
+
   test('local AI usability helpers are present', () => {
     expect(suggestCommands('trvel')).toContain('travel');
     expect(showCommandHelp('travel', { out() {}, err() {} })).toBe(true);

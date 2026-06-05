@@ -169,6 +169,11 @@ function findZshArrayEnd(source: string, start: number): number {
 
   for (let index = start; index < source.length; index++) {
     const char = source[index];
+    const next = source[index + 1];
+    if (!inSingleQuote && char === '\\' && next === "'") {
+      index++;
+      continue;
+    }
     if (char === "'") {
       inSingleQuote = !inSingleQuote;
       continue;
