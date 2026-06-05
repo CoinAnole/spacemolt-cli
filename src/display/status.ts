@@ -1,3 +1,4 @@
+import { emitShipCombatEffects } from './combat-effects.ts';
 import { c, emitLine, formatPlayer, formatter, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
@@ -258,6 +259,7 @@ export const statusFormatters = [
       emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}`);
       emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}`);
       emitLine(`  Power: ${s.power_used}/${s.power_capacity}`);
+      emitShipCombatEffects(s);
 
       if (s.class_id === 'escape_pod') {
         emitLine(`\n${c.yellow}WARNING: You are in an Escape Pod!${c.reset}`);

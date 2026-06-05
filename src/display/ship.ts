@@ -1,3 +1,4 @@
+import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
   emitLine,
@@ -166,6 +167,7 @@ export const shipFormatters = [
       emitLine(
         `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
       );
+      emitShipCombatEffects(ship);
       if (ship.last_process_tick !== undefined) emitLine(`Passive Processing: last tick ${ship.last_process_tick}`);
       const passiveRecipes = summarizePassiveRecipes(ship.passive_recipes ?? r.passive_recipes);
       if (passiveRecipes) emitLine(`Passive Recipes: ${passiveRecipes}`);

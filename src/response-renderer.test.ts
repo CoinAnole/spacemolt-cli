@@ -279,6 +279,166 @@ describe('response renderer', () => {
     expect(output).not.toContain('2026-05-20T00:00:00.000Z');
   });
 
+  test('renderResponse prints active ship combat effects in status tables', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        response: {
+          structuredContent: {
+            player: { username: 'Marlowe', empire: 'solarian', credits: 42 },
+            ship: {
+              name: 'Surveyor',
+              class_id: 'prospector',
+              hull: 90,
+              max_hull: 100,
+              shield: 35,
+              max_shield: 50,
+              shield_recharge: 5,
+              armor: 10,
+              fuel: 80,
+              max_fuel: 100,
+              cargo_used: 12,
+              cargo_capacity: 60,
+              cpu_used: 8,
+              cpu_capacity: 20,
+              power_used: 10,
+              power_capacity: 25,
+              burn_ticks_remaining: 3,
+              burn_damage_per_tick: 4,
+              armor_melt_pct: 0.25,
+              armor_melt_ticks_remaining: 2,
+              disruption_ticks_remaining: 1,
+            },
+            location: { system_name: 'Sol', poi_name: 'Earth' },
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Effects:');
+    expect(output).toContain('Burn: 3 ticks, 4 hull/tick');
+    expect(output).toContain('Armor melt: 25% for 2 ticks');
+    expect(output).toContain('Disruption: 1 tick');
+  });
+
+  test('renderResponse prints ammo effect summaries in catalog item tables', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'catalog',
+        displayCommand: 'catalog',
+        response: {
+          structuredContent: {
+            type: 'items',
+            items: [
+              {
+                id: 'ghost_rounds_box',
+                name: 'Ghost Rounds Box',
+                category: 'ammo',
+                rarity: 'rare',
+                base_value: 85,
+                size: 1,
+                effect: {
+                  type: 'ammo',
+                  ammo: {
+                    damage_mod: 0.9,
+                    armor_bypass: 0.4,
+                    untraceable: true,
+                    wear_per_shot: 0.02,
+                  },
+                },
+              },
+              {
+                id: 'corrosive_rounds_box',
+                name: 'Corrosive Rounds Box',
+                category: 'ammo',
+                rarity: 'uncommon',
+                base_value: 45,
+                size: 1,
+                effect: {
+                  type: 'ammo',
+                  ammo: {
+                    armor_melt_pct: 0.2,
+                    armor_melt_ticks: 4,
+                    splash_pct: 0.15,
+                  },
+                },
+              },
+            ],
+            page: 1,
+            page_size: 20,
+            total: 2,
+            total_pages: 1,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Effects');
+    expect(output).toContain('damage 90%');
+    expect(output).toContain('armor bypass 40%');
+    expect(output).toContain('untraceable');
+    expect(output).toContain('armor melt 20%/4t');
+    expect(output).toContain('splash 15%');
+  });
+
+  test('renderResponse prints dock arrival stories without raw JSON fallback', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'dock',
+        displayCommand: 'dock',
+        response: {
+          structuredContent: {
+            action: 'dock',
+            base: 'Confederacy Central Command',
+            story:
+              'You dock at Confederacy Central Command.\n\nYou queue into Confederacy Central Command behind a wall of traffic, controllers barking over every channel.',
+            station_condition: {
+              condition: 'operational',
+              condition_text: 'Most systems operational.',
+              satisfaction_pct: 78,
+              satisfied_count: 15,
+              total_service_infra: 19,
+            },
+            open_orders: [{ order_id: 'order-1', item_name: 'Steel Plate', type: 'sell' }],
+            open_orders_count: 2,
+            trade_fills: [{ item_name: 'Iron Ore', quantity: 95040, type: 'buy_filled' }],
+            trade_fills_count: 242,
+            trade_fills_truncated: true,
+            unread_chat: { system: 42, local: 79, faction: 0, private: 1 },
+            unread_chat_note: 'You have 122 unread chat message(s).',
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('=== Docked: Confederacy Central Command ===');
+    expect(output).toContain('behind a wall of traffic');
+    expect(output).toContain('Station condition: Most systems operational. (78%)');
+    expect(output).toContain('Open orders: 2');
+    expect(output).toContain('Trade fills: 242 (showing recent, truncated)');
+    expect(output).toContain('Unread chat: 122');
+    expect(output).not.toContain('=== Response ===');
+  });
+
   test('renderResponse truncates nearby collections in --structured output without mutating the response', async () => {
     const capture = fakeContext();
     const structuredContent = {

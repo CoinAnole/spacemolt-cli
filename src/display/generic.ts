@@ -1,5 +1,6 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
-import { c, emitLine, firstArray, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { summarizeAmmoEffects } from './combat-effects.ts';
+import { c, emitLine, finiteNumber, firstArray, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
   return Object.entries(value)
@@ -85,6 +86,41 @@ function activeMissionCapacity(result: Record<string, unknown>, missionCount: nu
   return maxMissions === undefined ? undefined : `${missionCount}/${maxMissions}`;
 }
 
+function formatCount(value: unknown): string | undefined {
+  const number = finiteNumber(value);
+  if (number === undefined) return undefined;
+  return number.toLocaleString();
+}
+
+function countFromFieldOrArray(
+  result: Record<string, unknown>,
+  countField: string,
+  arrayField: string,
+): string | undefined {
+  const count = formatCount(result[countField]);
+  if (count !== undefined) return count;
+  const value = result[arrayField];
+  return Array.isArray(value) ? value.length.toLocaleString() : undefined;
+}
+
+function sumNumericRecord(value: unknown): number | undefined {
+  if (!isRecord(value)) return undefined;
+  let total = 0;
+  let hasValue = false;
+  for (const entry of Object.values(value)) {
+    const number = finiteNumber(entry);
+    if (number === undefined) continue;
+    total += number;
+    hasValue = true;
+  }
+  return hasValue ? total : undefined;
+}
+
+function emitDockSummaryLine(label: string, value: string | undefined, suffix = ''): void {
+  if (value === undefined) return;
+  emitLine(`${label}: ${value}${suffix}`);
+}
+
 const GENERIC_LIST_KEYS = [
   'commands',
   'items',
@@ -143,6 +179,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Rarity', ['rarity']],
     ['Value', ['base_value', 'price_each', 'price']],
     ['Size', ['size']],
+    ['Effects', ['effects_summary']],
   ],
   missions: [
     ['Title', ['title', 'name']],
@@ -259,6 +296,37 @@ function printRecipeRows(
 export const genericFormatters = [
   formatter(
     (r) => {
+      if (r.action !== 'dock' || typeof r.story !== 'string') return false;
+
+      const base = String(r.base ?? r.base_name ?? 'station');
+      emitLine(`\n${c.bright}=== Docked: ${base} ===${c.reset}`);
+      emitLine(r.story.trimEnd());
+
+      const stationCondition = r.station_condition;
+      if (isRecord(stationCondition)) {
+        const condition = stationCondition.condition_text ?? stationCondition.condition;
+        const satisfaction = formatCount(stationCondition.satisfaction_pct);
+        if (condition !== undefined || satisfaction !== undefined) {
+          const suffix = satisfaction === undefined ? '' : ` (${satisfaction}%)`;
+          emitLine(`Station condition: ${condition ?? 'unknown'}${suffix}`);
+        }
+      }
+
+      emitDockSummaryLine('Storage items', formatCount(r.storage_items));
+      emitDockSummaryLine('Open orders', countFromFieldOrArray(r, 'open_orders_count', 'open_orders'));
+      const tradeFillSuffix = r.trade_fills_truncated === true ? ' (showing recent, truncated)' : '';
+      emitDockSummaryLine('Trade fills', countFromFieldOrArray(r, 'trade_fills_count', 'trade_fills'), tradeFillSuffix);
+
+      const unreadChat = sumNumericRecord(r.unread_chat);
+      if (unreadChat !== undefined) emitLine(`Unread chat: ${unreadChat.toLocaleString()}`);
+      if (typeof r.unread_chat_note === 'string') emitLine(`${c.dim}${r.unread_chat_note}${c.reset}`);
+      return true;
+    },
+    { shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
       const missions = activeMissionRows(r);
       if (!missions) return false;
 
@@ -347,13 +415,17 @@ export const genericFormatters = [
       if (!key) return false;
       const rows = r[key] as unknown[];
       if (!rows.every(isRecord)) return false;
-      const recordRows = rows as Array<Record<string, unknown>>;
+      const recordRows = (rows as Array<Record<string, unknown>>).map((row) =>
+        key === 'items' ? { ...row, effects_summary: summarizeAmmoEffects(row) } : row,
+      );
       const columnCandidates = GENERIC_LIST_COLUMNS_BY_KEY[key] ?? GENERIC_LIST_COLUMNS;
       const columns = scalarColumns(recordRows, columnCandidates);
       if (recordRows.length > 0 && columns.length < 2) return false;
 
       const title = titleForListKey(key);
-      printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]]);
+      printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
+        maxCellWidth: key === 'items' ? 80 : undefined,
+      });
       printMetadata(r);
       printCatalogTruncationWarning(command, r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
