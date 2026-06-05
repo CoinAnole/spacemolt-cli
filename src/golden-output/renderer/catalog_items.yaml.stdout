@@ -9,15 +9,17 @@ items:
     size: 1
     stackable: true
     tradeable: true
-  - base_value: 15
+    effect: {type: ammo, ammo: {damage_mod: 0.5, splash_pct: 0.6, hull_damage_mod: 1}}
+  - base_value: 85
     category: ammo
-    description: "Hardened penetrator tips packed in a sealed magazine."
-    id: armor_piercing_rounds_box
-    name: "Armor Piercing Rounds Box"
-    rarity: uncommon
+    description: "Ghost rounds are untraceable when used exclusively."
+    id: ghost_rounds_box
+    name: "Ghost Rounds Box"
+    rarity: rare
     size: 1
     stackable: true
     tradeable: true
+    effect: {type: ammo, ammo: {damage_mod: 0.9, armor_bypass: 0.3, untraceable: true, wear_per_shot: 0.01}}
 message: "Items: showing 2 of 537"
 page: 1
 page_size: 20

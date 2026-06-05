@@ -27,7 +27,11 @@
       "cpu_used": 8,
       "cpu_capacity": 20,
       "power_used": 10,
-      "power_capacity": 25
+      "power_capacity": 25,
+      "burn_ticks_remaining": 3,
+      "burn_damage_per_tick": 4,
+      "armor_melt_pct": 0.25,
+      "armor_melt_ticks_remaining": 2
     },
     "location": {
       "system_id": "sol",
