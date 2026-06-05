@@ -138,10 +138,20 @@ const GENERIC_LIST_KEYS = [
   'notes',
   'threads',
   'results',
+  'policies',
+  'versions',
+  'resources',
+  'route',
+  'citizenships',
+  'empires',
+  'petitions',
+  'recent_decisions',
+  'renounced',
+  'rules',
 ] as const;
 
 const GENERIC_LIST_COLUMNS: Array<[string, string[]]> = [
-  ['Name', ['name', 'title', 'item_name', 'ship_name', 'class_name', 'type_name', 'leader_username']],
+  ['Name', ['name', 'title', 'item_name', 'ship_name', 'class_name', 'type_name', 'leader_username', 'version']],
   [
     'ID',
     [
@@ -155,6 +165,21 @@ const GENERIC_LIST_COLUMNS: Array<[string, string[]]> = [
       'order_id',
       'note_id',
       'thread_id',
+      'system_id',
+      'player_id',
+      'base_id',
+      'template_id',
+      'policy_id',
+      'listing_id',
+      'drone_id',
+      'wreck_id',
+      'commission_id',
+      'petition_id',
+      'route_id',
+      'empire_id',
+      'citizenship_id',
+      'grant_id',
+      'version',
     ],
   ],
   ['Type', ['type', 'category', 'class_id', 'rarity', 'side', 'status']],
@@ -183,7 +208,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
   ],
   missions: [
     ['Title', ['title', 'name']],
-    ['ID', ['mission_id', 'id']],
+    ['ID', ['mission_id', 'id', 'template_id']],
     ['Type', ['type']],
     ['Difficulty', ['difficulty']],
   ],
@@ -408,7 +433,18 @@ export const genericFormatters = [
   // Generic table fallback for common list-shaped responses.
   formatter(
     (r, command) => {
-      const matches = GENERIC_LIST_KEYS.filter((key) => Array.isArray(r[key]));
+      let matches = GENERIC_LIST_KEYS.filter((key) => {
+        const arr = r[key];
+        if (!Array.isArray(arr)) return false;
+        if (arr.length === 0) return false;
+        return arr.every(isRecord);
+      });
+      if (matches.length === 0) {
+        const emptyArrays = GENERIC_LIST_KEYS.filter(
+          (key) => Array.isArray(r[key]) && (r[key] as unknown[]).length === 0,
+        );
+        if (emptyArrays.length === 1) matches = emptyArrays;
+      }
       if (matches.length !== 1) return false;
 
       const key = matches[0];
@@ -420,7 +456,7 @@ export const genericFormatters = [
       );
       const columnCandidates = GENERIC_LIST_COLUMNS_BY_KEY[key] ?? GENERIC_LIST_COLUMNS;
       const columns = scalarColumns(recordRows, columnCandidates);
-      if (recordRows.length > 0 && columns.length < 2) return false;
+      if (recordRows.length > 0 && columns.length < 1) return false;
 
       const title = titleForListKey(key);
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
@@ -452,7 +488,7 @@ export const genericFormatters = [
     (r) => {
       const entries = Object.entries(r).filter(([, value]) => value !== undefined && value !== null && value !== '');
       if (!entries.length || entries.length > 8) return false;
-      if (entries.some(([, value]) => !isScalarDisplayValue(value))) return false;
+      if (entries.some(([, value]) => !isScalarDisplayValue(value) && !Array.isArray(value))) return false;
       const hasActionMarker =
         typeof r.action === 'string' ||
         typeof r.success === 'boolean' ||
@@ -461,7 +497,11 @@ export const genericFormatters = [
 
       emitLine(`\n${c.bright}=== ${titleForScalarAction(r.action)} ===${c.reset}`);
       for (const [key, value] of entries) {
-        emitLine(`${labelForScalarKey(key)}: ${String(value)}`);
+        if (Array.isArray(value)) {
+          emitLine(`${labelForScalarKey(key)}: ${value.length} item(s)`);
+        } else {
+          emitLine(`${labelForScalarKey(key)}: ${String(value)}`);
+        }
       }
       if (entries.length === 1 && r.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
       return true;
