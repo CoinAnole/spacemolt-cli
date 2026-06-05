@@ -49,8 +49,6 @@
     "get_nearby|get_nearby|required-missing|pirates[0].pirate_id",
     "get_nearby|get_nearby|required-missing|pirates[0].tier",
     "get_nearby|get_nearby|required-missing|poi_id",
-    "get_skills|get_skills|extra-in-fixture|player_skill_count",
-    "get_skills|get_skills|extra-in-fixture|player_skills",
     "get_status|get_status|extra-in-fixture|ship.armor_melt_pct",
     "get_status|get_status|extra-in-fixture|ship.armor_melt_ticks_remaining",
     "get_status|get_status|extra-in-fixture|ship.burn_damage_per_tick",

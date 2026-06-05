@@ -520,36 +520,7 @@ export const statusFormatters = [
     { commands: ['get_nearby'], shapeFallback: true },
   ),
 
-  // Skills (v2 format: player_skills array + skills metadata)
-  formatter(
-    (r) => {
-      if (r.skills === undefined || r.player_skills === undefined) return false;
-      const playerSkills = (r.player_skills as Array<Record<string, unknown>>) || [];
-      emitLine(`\n${c.bright}=== Your Skills ===${c.reset}`);
-      emitLine(`Total skills: ${r.player_skill_count || playerSkills.length}`);
-      if (!playerSkills.length) {
-        emitLine(`\n(No skills trained yet - perform activities to gain XP)`);
-      } else {
-        const byCategory: Record<string, Array<Record<string, unknown>>> = {};
-        for (const skill of playerSkills) {
-          const cat = (skill.category as string) || 'Other';
-          if (!byCategory[cat]) byCategory[cat] = [];
-          byCategory[cat].push(skill);
-        }
-        for (const [category, skills] of Object.entries(byCategory)) {
-          emitLine(`\n${c.cyan}${category}:${c.reset}`);
-          for (const skill of skills) {
-            const progress = skill.next_level_xp ? ` (${skill.current_xp}/${skill.next_level_xp} XP)` : ' (MAX)';
-            emitLine(`  ${skill.name}: Level ${skill.level}/${skill.max_level}${progress}`);
-          }
-        }
-      }
-      return true;
-    },
-    { commands: ['get_skills'], shapeFallback: true },
-  ),
-
-  // Skills (v1 format: skills as object map of skill_id -> skill data)
+  // Skills state: skills as object map of skill_id -> skill data
   formatter(
     (r) => {
       if (!r.skills || typeof r.skills !== 'object' || Array.isArray(r.skills)) return false;
@@ -571,10 +542,11 @@ export const statusFormatters = [
       if (!firstSkill?.name || firstSkill.level === undefined) return false;
       emitLine(`\n${c.bright}=== Your Skills ===${c.reset}`);
       const byCategory: Record<string, typeof skillEntries> = {};
-      for (const [skillId, skill] of skillEntries) {
+      for (const entry of skillEntries) {
+        const [, skill] = entry;
         const cat = skill.category || 'Other';
         if (!byCategory[cat]) byCategory[cat] = [];
-        byCategory[cat].push([skillId, skill]);
+        byCategory[cat].push(entry);
       }
       for (const [category, entries] of Object.entries(byCategory)) {
         emitLine(`\n${c.cyan}${category}:${c.reset}`);

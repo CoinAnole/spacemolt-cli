@@ -159,23 +159,7 @@ export const completedMissionDetailFixture = {
   chain_next: 'mission-refinery-check',
 };
 
-export const skillsV2Fixture = {
-  skills: [{ skill_id: 'mining', name: 'Mining', category: 'Industry' }],
-  player_skills: [
-    {
-      skill_id: 'mining',
-      name: 'Mining',
-      category: 'Industry',
-      level: 3,
-      max_level: 10,
-      current_xp: 450,
-      next_level_xp: 600,
-    },
-  ],
-  player_skill_count: 1,
-};
-
-export const skillsV1Fixture = {
+export const skillsFixture = {
   skills: {
     mining: {
       name: 'Mining',
@@ -258,7 +242,7 @@ export const statusHighValueFixtures = {
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
-  get_skills: { command: 'get_skills', fixture: skillsV2Fixture },
+  get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
@@ -266,5 +250,4 @@ export const statusHighValueFixtures = {
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
-  skills_v1: { command: 'get_skills', fixture: skillsV1Fixture },
 };
