@@ -145,7 +145,7 @@ describe('response renderer', () => {
     expect(capture.stdout.join('\n')).not.toContain('\x1b[');
   });
 
-  test('renderResponse warns when server help filters are ignored by the API', async () => {
+  test('renderResponse warns when old server help filters are ignored by the API', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -163,7 +163,8 @@ describe('response renderer', () => {
     const stderr = rawStderr.replace(ANSI_PATTERN, '');
     expect(exitCode).toBe(0);
     expect(capture.text()).toContain('All server commands');
-    expect(stderr).toContain('server help does not currently support category/command filtering');
+    expect(stderr).toContain('server help accepts topic=<command|category|search>');
+    expect(stderr).toContain('category/command filters are ignored');
     expect(stderr).toContain('spacemolt help <command>');
     expect(rawStderr).not.toContain('\x1b[');
   });

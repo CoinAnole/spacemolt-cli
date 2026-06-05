@@ -71,9 +71,9 @@ describe('convertPayloadTypes', () => {
     expect(result.request_credits).toBe('200');
   });
 
-  test('count is NOT auto-converted (use quantity instead)', () => {
+  test('craft count alias is converted using the command schema', () => {
     const result = convertPayloadTypes({ count: '5' }, 'craft');
-    expect(result.count).toBe('5');
+    expect(result.count).toBe(5);
   });
 
   test('handles ticks and amount as numeric', () => {
@@ -630,11 +630,11 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.count).toBeUndefined();
   });
 
-  test('help uses category and command args', () => {
-    const { payload } = parseOk(['help', 'combat', 'attack']);
-    expect(payload.category).toBe('combat');
-    expect(payload.command).toBe('attack');
-    expect(payload.topic).toBeUndefined();
+  test('help uses topic arg', () => {
+    const { payload } = parseOk(['help', 'combat']);
+    expect(payload.topic).toBe('combat');
+    expect(payload.category).toBeUndefined();
+    expect(payload.command).toBeUndefined();
   });
 
   test('distress_signal - no args', () => {

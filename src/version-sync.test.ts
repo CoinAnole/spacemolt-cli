@@ -99,11 +99,11 @@ describe('client.ts source integrity', () => {
     expect(args).not.toContain('count');
   });
 
-  test('help uses category and command, not topic', () => {
+  test('help uses topic, not category and command', () => {
     const args = COMMANDS.help?.args;
-    expect(args).toContain('category');
-    expect(args).toContain('command');
-    expect(args).not.toContain('topic');
+    expect(args).toContain('topic');
+    expect(args).not.toContain('category');
+    expect(args).not.toContain('command');
   });
 
   test('payload conversion uses command schemas instead of a global numeric field set', () => {
@@ -121,6 +121,16 @@ describe('client.ts source integrity', () => {
     expect(COMMANDS.travel?.schema?.id?.type).toBe('string');
     expect(COMMANDS.travel?.required).toContain('target_poi');
     expect(COMMANDS.catalog?.schema?.type?.enum).toContain('items');
+  });
+
+  test('configure_recycler maps the v2 facility route with recipe id', () => {
+    expect(COMMANDS.configure_recycler?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'configure_recycler',
+      method: 'POST',
+    });
+    expect(COMMANDS.configure_recycler?.args).toEqual(['facility_id', 'recipe_id']);
+    expect(COMMANDS.configure_recycler?.schema?.recipe_id?.type).toBe('string');
   });
 
   test('local AI usability helpers are present', () => {

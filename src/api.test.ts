@@ -249,9 +249,9 @@ describe('SpaceMoltClient', () => {
   test('serializes GET command payloads as query parameters', async () => {
     const { client, calls } = createClient([response()]);
 
-    await client.execute('help', { category: 'Navigation', command: 'travel' });
+    await client.execute('help', { topic: 'travel' });
 
-    expect(calls[0]?.url).toBe('https://game.test/api/v2/spacemolt/help?category=Navigation&command=travel');
+    expect(calls[0]?.url).toBe('https://game.test/api/v2/spacemolt/help?topic=travel');
     expect(calls[0]?.options?.method).toBe('GET');
     expect(calls[0]?.options?.payload).toBeUndefined();
   });

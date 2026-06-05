@@ -398,6 +398,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/toggle',
     positionals: ['facility_id'],
   },
+  configure_recycler: {
+    usage: '<facility_id> <recipe_id>',
+    description: 'Configure a recycler facility to run a recipe in reverse.',
+    example: 'spacemolt configure_recycler <facility_id> refine_steel',
+    discoverWith: ['facility_list', 'facility_types'],
+    seeAlso: ['facility_list', 'facility_types'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/configure_recycler',
+    positionals: ['facility_id', 'recipe_id'],
+  },
   facility_transfer: {
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/transfer',

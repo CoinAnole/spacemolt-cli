@@ -272,7 +272,13 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     seeAlso: ['get_commands', 'get_guide'],
     category: 'Reference & Help',
     apiRoute: 'GET /api/v2/spacemolt/help',
-    positionals: ['category', 'command'],
+    positionals: ['topic'],
+    schemaExtensions: {
+      topic: {
+        type: 'string',
+        description: 'Command name, category, or search term for server help.',
+      },
+    },
   },
   agentlogs: {
     usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
