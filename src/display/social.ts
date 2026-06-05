@@ -55,6 +55,7 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   if (hasAnyField(rows, ['configured_recipe_id', 'recipe_id'])) {
     columns.push(['Recipe', ['configured_recipe_id', 'recipe_id']]);
   }
+  if (hasAnyField(rows, ['idle_reason'])) columns.push(['Idle Reason', ['idle_reason']]);
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
 }

@@ -6,7 +6,8 @@
       "level": 2,
       "status": "online",
       "owner_name": "Marlowe",
-      "is_recycler": false
+      "is_recycler": false,
+      "idle_reason": "fuel_tank_full"
     }
   ]
 }

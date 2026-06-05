@@ -381,8 +381,22 @@ describe('parseArgs - basic', () => {
       errors: [
         {
           field: 'enable',
-          message: 'Invalid boolean "flase" for "enable". Use true/false. Did you mean "false"?',
+          message: 'Parameter "enable" must be a boolean, but received "flase". Did you mean "false"?',
           code: 'invalid_boolean',
+        },
+      ],
+    });
+  });
+
+  test('schema validation integer errors name the parameter, expected type, and received value', () => {
+    const result = parseArgs(['sell', 'ore_iron', 'quantity=lots']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'quantity',
+          message: 'Parameter "quantity" must be an integer, but received "lots".',
+          code: 'invalid_integer',
         },
       ],
     });

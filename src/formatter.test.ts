@@ -2188,9 +2188,9 @@ describe('structuredContent formatters', () => {
       "
       === Facilities ===
 
-        Name        | ID         | Level | Status | Recycler | Owner
-        ------------+------------+-------+--------+----------+--------
-        Fuel Bunker | facility-1 | 2     | online | false    | Marlowe"
+        Name        | ID         | Level | Status | Recycler | Idle Reason    | Owner
+        ------------+------------+-------+--------+----------+----------------+--------
+        Fuel Bunker | facility-1 | 2     | online | false    | fuel_tank_full | Marlowe"
       ,
         "facility_list": 
       "
@@ -2222,12 +2222,15 @@ describe('structuredContent formatters', () => {
 
       === Player Facilities ===
 
-        Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Owner
-        -------------+-----------------+-------+------------+--------+-------+----------+------------------+------
-        Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse |
+        Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Idle Reason | Owner
+        -------------+-----------------+-------+------------+--------+-------+----------+------------------+-------------+------
+        Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse | no_inputs   |
 
       === Faction Facilities ===
-      (None)"
+
+        Name          | ID              | Level | Category   | Active | Maint | Idle Reason                | Owner
+        --------------+-----------------+-------+------------+--------+-------+----------------------------+------
+        Alloy Smelter | faction-smelter | 1     | production | true   | true  | insufficient_labor_credits |"
       ,
         "facility_types": 
       "

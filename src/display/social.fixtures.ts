@@ -13,6 +13,7 @@ export const facilitiesFixture = {
       status: 'online',
       owner_name: 'Marlowe',
       is_recycler: false,
+      idle_reason: 'fuel_tank_full',
     },
   ],
 };
@@ -77,9 +78,21 @@ export const facilityListFixture = {
       maintenance_satisfied: true,
       is_recycler: true,
       configured_recipe_id: 'iron_ore_reverse',
+      idle_reason: 'no_inputs',
     },
   ],
-  faction_facilities: [],
+  faction_facilities: [
+    {
+      facility_id: 'faction-smelter',
+      type: 'alloy_smelter',
+      name: 'Alloy Smelter',
+      category: 'production',
+      level: 1,
+      active: true,
+      maintenance_satisfied: true,
+      idle_reason: 'insufficient_labor_credits',
+    },
+  ],
 };
 
 export const facilityTypesFixture = {

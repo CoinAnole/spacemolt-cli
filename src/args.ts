@@ -384,7 +384,7 @@ export function validatePayloadAgainstSchema(
           if (fieldSchema.type === 'integer' && !Number.isInteger(val)) {
             errors.push({
               field: key,
-              message: `Invalid integer "${val}" for "${key}".`,
+              message: schemaTypeErrorMessage(key, 'integer', val),
               code: 'invalid_integer',
             });
           }
@@ -394,7 +394,7 @@ export function validatePayloadAgainstSchema(
         if (num === undefined) {
           errors.push({
             field: key,
-            message: `Invalid ${fieldSchema.type} "${val}" for "${key}".`,
+            message: schemaTypeErrorMessage(key, fieldSchema.type, val),
             code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
           });
         }
@@ -410,7 +410,7 @@ export function validatePayloadAgainstSchema(
           const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
           errors.push({
             field: key,
-            message: `Invalid boolean "${val}" for "${key}". Use true/false.${hint}`,
+            message: `${schemaTypeErrorMessage(key, 'boolean', val)}${hint}`,
             code: 'invalid_boolean',
           });
         }
@@ -419,6 +419,16 @@ export function validatePayloadAgainstSchema(
   }
 
   return errors;
+}
+
+function schemaTypeErrorMessage(field: string, expectedType: string, received: unknown): string {
+  const article = expectedType === 'integer' ? 'an' : 'a';
+  return `Parameter "${field}" must be ${article} ${expectedType}, but received ${formatReceivedValue(received)}.`;
+}
+
+function formatReceivedValue(value: unknown): string {
+  const encoded = JSON.stringify(value);
+  return encoded === undefined ? String(value) : encoded;
 }
 
 function suggestBooleanCorrection(value: string): string | null {

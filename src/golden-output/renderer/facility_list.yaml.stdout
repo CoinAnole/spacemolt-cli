@@ -6,3 +6,4 @@ facilities:
     status: online
     owner_name: Marlowe
     is_recycler: false
+    idle_reason: fuel_tank_full

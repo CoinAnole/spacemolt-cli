@@ -27,9 +27,12 @@ Power:
 
 === Player Facilities ===
 
-  Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Owner
-  -------------+-----------------+-------+------------+--------+-------+----------+------------------+------
-  Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse |      
+  Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Idle Reason | Owner
+  -------------+-----------------+-------+------------+--------+-------+----------+------------------+-------------+------
+  Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse | no_inputs   |      
 
 === Faction Facilities ===
-(None)
+
+  Name          | ID              | Level | Category   | Active | Maint | Idle Reason                | Owner
+  --------------+-----------------+-------+------------+--------+-------+----------------------------+------
+  Alloy Smelter | faction-smelter | 1     | production | true   | true  | insufficient_labor_credits |      
