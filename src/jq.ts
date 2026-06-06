@@ -1,77 +1,156 @@
-import { getFieldValue } from './response.ts';
-
 type PathResolution = { found: true; value: unknown } | { found: false };
+type PathToken =
+  | { kind: 'field'; name: string }
+  | { kind: 'each'; raw: string }
+  | { kind: 'index'; index: number; raw: string }
+  | { kind: 'slice'; start: number; end: number; raw: string };
 
-export function evaluateJq(data: Record<string, unknown>, expr: string): unknown {
+export function evaluateJq(data: unknown, expr: string): unknown {
   const trimmed = expr.trim();
 
   if (trimmed === '.') return data;
 
-  if (isObjectConstruction(trimmed)) return evalObjectConstruction(data, trimmed);
+  const pipeParts = splitTopLevel(trimmed, '|').map((part) => part.trim());
+  if (pipeParts.length > 1) return evalPipe(data, pipeParts);
 
-  if (trimmed.includes(',')) {
-    throw new Error('--jq does not support multiple values (use separate calls)');
-  }
+  const commaParts = splitTopLevel(trimmed, ',').map((part) => part.trim());
+  if (commaParts.length > 1) return commaParts.map((part) => evaluateJq(data, part));
+
+  if (isObjectConstruction(trimmed)) return evalObjectConstruction(data, trimmed);
 
   if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed);
 
   throw new Error(`Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field`);
 }
 
+function evalPipe(data: unknown, parts: string[]): unknown {
+  if (parts.some((part) => part.length === 0)) {
+    throw new Error(`Unsupported jq expression: "${parts.join(' | ')}"`);
+  }
+
+  let current = evaluateJq(data, parts[0] ?? '.');
+  for (const part of parts.slice(1)) {
+    if (Array.isArray(current)) {
+      current = current.map((item) => evaluateJq(item, part));
+    } else {
+      current = evaluateJq(current, part);
+    }
+  }
+
+  return current;
+}
+
 function evalPath(data: unknown, expr: string): unknown {
   const withoutDot = expr.slice(1);
+  const tokens = parsePathTokens(withoutDot);
+  const resolved = resolvePathTokens(data, tokens);
+  if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data));
+  return resolved.value;
+}
 
-  const bracketIndex = withoutDot.indexOf('[');
-  if (bracketIndex === -1) {
-    const resolved = resolvePath(data, withoutDot);
-    if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data));
-    return resolved.value;
-  }
+function parsePathTokens(path: string): PathToken[] {
+  const tokens: PathToken[] = [];
 
-  const arrayKey = withoutDot.slice(0, bracketIndex);
-  const rest = withoutDot.slice(bracketIndex);
-
-  const array = getFieldValue(data, arrayKey);
-  if (!Array.isArray(array)) {
-    throw new Error(formatExpectedArrayError(arrayKey, array));
-  }
-
-  const bracketContent = rest.slice(1, rest.indexOf(']'));
-  if (bracketContent.trim() === '') {
-    const afterBracket = rest.slice(rest.indexOf(']') + 1);
-    if (afterBracket.startsWith('.')) {
-      return array.map((item) => getFieldValue(item, afterBracket.slice(1)));
+  for (let index = 0; index < path.length; ) {
+    const char = path[index];
+    if (char === '.') {
+      index++;
+      continue;
     }
-    if (afterBracket === '') return array;
-    throw new Error(`Unsupported expression after []: "${afterBracket}"`);
-  }
 
-  const trimmedBracketContent = bracketContent.trim();
-  if (/^\d+$/.test(trimmedBracketContent)) {
-    const afterBracket = rest.slice(rest.indexOf(']') + 1);
-    if (afterBracket && !afterBracket.startsWith('.')) {
-      throw new Error(`Unsupported expression after [${trimmedBracketContent}]: "${afterBracket}"`);
+    if (char === '[') {
+      const closeIndex = path.indexOf(']', index);
+      if (closeIndex === -1) throw new Error(`Unsupported bracket content: "${path.slice(index)}"`);
+      tokens.push(parseBracketToken(path.slice(index + 1, closeIndex)));
+      index = closeIndex + 1;
+      continue;
     }
-    const indexedPath = [
-      arrayKey,
-      trimmedBracketContent,
-      afterBracket.startsWith('.') ? afterBracket.slice(1) : afterBracket,
-    ]
-      .filter(Boolean)
-      .join('.');
-    const resolved = resolvePath(data, indexedPath);
-    if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data));
-    return resolved.value;
+
+    const nextDot = path.indexOf('.', index);
+    const nextBracket = path.indexOf('[', index);
+    const nextIndexes = [nextDot, nextBracket].filter((value) => value !== -1);
+    const nextIndex = nextIndexes.length === 0 ? path.length : Math.min(...nextIndexes);
+    tokens.push({ kind: 'field', name: path.slice(index, nextIndex) });
+    index = nextIndex;
   }
 
-  throw new Error(`Unsupported bracket content: "[${bracketContent}]"`);
+  return tokens;
+}
+
+function parseBracketToken(content: string): PathToken {
+  const trimmed = content.trim();
+  if (trimmed === '') return { kind: 'each', raw: content };
+
+  const sliceMatch = /^(\d+):(\d+)$/.exec(trimmed);
+  if (sliceMatch) {
+    return {
+      kind: 'slice',
+      start: Number.parseInt(sliceMatch[1] ?? '0', 10),
+      end: Number.parseInt(sliceMatch[2] ?? '0', 10),
+      raw: content,
+    };
+  }
+
+  if (/^-?\d+$/.test(trimmed)) {
+    return { kind: 'index', index: Number.parseInt(trimmed, 10), raw: content };
+  }
+
+  throw new Error(`Unsupported bracket content: "[${content}]"`);
+}
+
+function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): PathResolution {
+  if (tokens.length === 0) return { found: true, value };
+
+  const [token, ...rest] = tokens;
+  if (!token) return { found: true, value };
+
+  if (token.kind === 'field') {
+    if (!token.name || typeof value !== 'object' || value === null || Array.isArray(value)) return { found: false };
+    if (!Object.hasOwn(value, token.name)) {
+      if (rest[0]?.kind && rest[0].kind !== 'field') {
+        throw new Error(formatExpectedArrayError(appendPath(path, token.name), undefined));
+      }
+      return { found: false };
+    }
+    return resolvePathTokens((value as Record<string, unknown>)[token.name], rest, appendPath(path, token.name));
+  }
+
+  if (token.kind === 'each') {
+    if (!Array.isArray(value)) throw new Error(formatExpectedArrayError(path, value));
+    if (rest.length === 0) return { found: true, value };
+
+    const mapped: unknown[] = [];
+    for (const item of value) {
+      const resolved = resolvePathTokens(item, rest, path);
+      if (!resolved.found) return { found: false };
+      mapped.push(resolved.value);
+    }
+    return { found: true, value: mapped };
+  }
+
+  if (token.kind === 'index') {
+    if (!Array.isArray(value)) throw new Error(formatExpectedArrayError(path, value));
+    const normalizedIndex = token.index < 0 ? value.length + token.index : token.index;
+    if (!Object.hasOwn(value, normalizedIndex)) return { found: false };
+    return resolvePathTokens(value[normalizedIndex], rest, appendPath(path, String(token.index)));
+  }
+
+  if (typeof value === 'string') {
+    return resolvePathTokens(value.slice(token.start, token.end), rest, path);
+  }
+  if (Array.isArray(value)) throw new Error(`Unsupported bracket content: "[${token.raw}]"`);
+  throw new Error(formatExpectedArrayError(path, value));
+}
+
+function appendPath(path: string, part: string): string {
+  return path ? `${path}.${part}` : part;
 }
 
 function isObjectConstruction(expr: string): boolean {
   return expr.startsWith('{') && expr.endsWith('}');
 }
 
-function evalObjectConstruction(data: Record<string, unknown>, expr: string): Record<string, unknown> {
+function evalObjectConstruction(data: unknown, expr: string): Record<string, unknown> {
   const body = expr.slice(1, -1).trim();
   if (!body) return {};
 
@@ -81,7 +160,9 @@ function evalObjectConstruction(data: Record<string, unknown>, expr: string): Re
     if (!trimmedEntry) continue;
     const colonIndex = findTopLevelDelimiter(trimmedEntry, ':');
     if (colonIndex === -1) {
-      throw new Error(`Unsupported jq object entry: "${trimmedEntry}"`);
+      const key = parseObjectShorthandKey(trimmedEntry);
+      result[key] = evaluateJq(data, `.${key}`);
+      continue;
     }
 
     const key = parseObjectKey(trimmedEntry.slice(0, colonIndex).trim());
@@ -91,6 +172,11 @@ function evalObjectConstruction(data: Record<string, unknown>, expr: string): Re
   }
 
   return result;
+}
+
+function parseObjectShorthandKey(rawKey: string): string {
+  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(rawKey)) return rawKey;
+  throw new Error(`Unsupported jq object entry: "${rawKey}"`);
 }
 
 function parseObjectKey(rawKey: string): string {
@@ -125,11 +211,11 @@ function splitTopLevel(value: string, delimiter: string): string[] {
       quote = char;
       continue;
     }
-    if (char === '[' || char === '(') {
+    if (char === '[' || char === '(' || char === '{') {
       bracketDepth++;
       continue;
     }
-    if (char === ']' || char === ')') {
+    if (char === ']' || char === ')' || char === '}') {
       bracketDepth = Math.max(0, bracketDepth - 1);
       continue;
     }
@@ -191,29 +277,6 @@ function formatExpectedArrayError(path: string, value: unknown): string {
 
 function hasUnsupportedWhitespace(expr: string): boolean {
   return /\s/.test(expr.replace(/\[[^\]]*\]/g, '[]'));
-}
-
-function resolvePath(obj: unknown, path: string): PathResolution {
-  if (!path || typeof obj !== 'object' || obj === null) return { found: false };
-
-  const parts = path.split('.');
-  let current: unknown = obj;
-
-  for (const part of parts) {
-    if (!part || current === null || current === undefined) return { found: false };
-    if (Array.isArray(current)) {
-      const index = Number.parseInt(part, 10);
-      if (Number.isNaN(index) || !Object.hasOwn(current, index)) return { found: false };
-      current = current[index];
-    } else if (typeof current === 'object') {
-      if (!Object.hasOwn(current, part)) return { found: false };
-      current = (current as Record<string, unknown>)[part];
-    } else {
-      return { found: false };
-    }
-  }
-
-  return { found: true, value: current };
 }
 
 export function formatJqResult(value: unknown, compact = false): string {

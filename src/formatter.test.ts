@@ -469,6 +469,53 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toBe('5');
   });
 
+  test('--jq supports string slice bracket notation', () => {
+    const fixture = {
+      commissions: [
+        { commission_id: 'commission-1', status: 'active', ticks_remaining: 3 },
+        { commission_id: 'commission-2', status: 'complete', ticks_remaining: 0 },
+      ],
+    };
+
+    const barePath = captureStructuredOutput('commission_status', fixture, {
+      jq: '.commissions[0].commission_id[0:8]',
+    });
+    const mappedObject = captureStructuredOutput('commission_status', fixture, {
+      compact: true,
+      jq: '.commissions[] | {id: .commission_id[0:8], status}',
+    });
+
+    expect(barePath.stderr).toBe('');
+    expect(barePath.stdout).toBe('commissi');
+    expect(mappedObject.stderr).toBe('');
+    expect(JSON.parse(mappedObject.stdout)).toEqual([
+      { id: 'commissi', status: 'active' },
+      { id: 'commissi', status: 'complete' },
+    ]);
+  });
+
+  test('--jq maps array item object construction into a JSON array', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'commission_status',
+      {
+        commissions: [
+          { commission_id: 'commission-1', status: 'active', ticks_remaining: 3 },
+          { commission_id: 'commission-2', status: 'complete', ticks_remaining: 0 },
+        ],
+      },
+      {
+        compact: true,
+        jq: '.commissions[] | {id: .commission_id, status, ticks: .ticks_remaining}',
+      },
+    );
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual([
+      { id: 'commission-1', status: 'active', ticks: 3 },
+      { id: 'commission-2', status: 'complete', ticks: 0 },
+    ]);
+  });
+
   test('--jq suggests object keys when bracket notation targets an object', () => {
     const rendered = renderStructuredResult(
       'get_skills',
@@ -489,18 +536,14 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
-  test('--jq rejects comma-separated expressions instead of silently returning null', () => {
-    const rendered = renderStructuredResult(
-      'get_status',
-      outputModeFixture,
-      globalOptions({ jq: '.ship.fuel, .ship.class_name' }),
-    );
+  test('--jq collects comma-separated expression values into a JSON array', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
+      compact: true,
+      jq: '.ship.fuel, .player.name',
+    });
 
-    expect(rendered.success).toBe(false);
-    expect(rendered.stdout).toEqual([]);
-    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain(
-      'Error: --jq does not support multiple values',
-    );
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual([42, 'Marlowe']);
   });
 
   test('--jq rejects whitespace-separated expressions instead of silently returning null', () => {
