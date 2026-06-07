@@ -1,0 +1,12 @@
+
+=== Faction Facilities ===
+
+  Name                   | ID             | Base          | System | Active | Rent    | Missed | Arrears | Labor/run | Idle                
+  -----------------------+----------------+---------------+--------+--------+---------+--------+---------+-----------+---------------------
+  Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | true   | 1,200cr | 2      | 2,400cr | 60cr      | awaiting_build_order
+
+Faction rent bill: 1,200cr/cycle
+Faction arrears: 2,400cr
+Grace remaining: 1 cycle
+Faction facilities pay rent from the treasury each cycle.
+Use action 'faction_list' while docked for full per-facility detail at that station.

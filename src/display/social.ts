@@ -40,6 +40,46 @@ function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): bo
   );
 }
 
+function formatNumber(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString();
+  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
+    return Number(value).toLocaleString();
+  }
+  return undefined;
+}
+
+function formatCredits(value: unknown): string | undefined {
+  const number = formatNumber(value);
+  return number === undefined ? undefined : `${number}cr`;
+}
+
+function formatCycles(value: unknown): string | undefined {
+  const number = formatNumber(value);
+  if (number === undefined) return undefined;
+  return `${number} ${Number(value) === 1 ? 'cycle' : 'cycles'}`;
+}
+
+function formatMaintenance(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts = value
+    .filter(isRecord)
+    .map((item) => {
+      const quantity = formatNumber(item.quantity) ?? '?';
+      const name = item.name ?? item.item_id ?? 'item';
+      return `${quantity} ${name}`;
+    })
+    .filter(Boolean);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return rows.map((row) => ({
+    ...row,
+    maintenance_display: formatMaintenance(row.maintenance_per_cycle),
+    labor_cycle_display: formatCredits(row.labor_per_cycle),
+  }));
+}
+
 function facilityColumns(rows: Array<Record<string, unknown>>, options: { grouped?: boolean } = {}) {
   const columns: Array<[string, string[]]> = [
     ['Name', ['name', 'type_name', 'facility_type', 'type']],
@@ -51,6 +91,12 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
     options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
   );
   if (options.grouped) columns.push(['Maint', ['maintenance_satisfied']]);
+  if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle'])) {
+    columns.push(['Upkeep', ['maintenance_display', 'maintenance_per_cycle']]);
+  }
+  if (hasAnyField(rows, ['labor_cycle_display', 'labor_per_cycle'])) {
+    columns.push(['Labor/cycle', ['labor_cycle_display', 'labor_per_cycle']]);
+  }
   if (hasAnyField(rows, ['is_recycler'])) columns.push(['Recycler', ['is_recycler']]);
   if (hasAnyField(rows, ['configured_recipe_id', 'recipe_id'])) {
     columns.push(['Recipe', ['configured_recipe_id', 'recipe_id']]);
@@ -58,6 +104,12 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   if (hasAnyField(rows, ['idle_reason'])) columns.push(['Idle Reason', ['idle_reason']]);
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
+}
+
+function rentSummaryValue(result: Record<string, unknown>, key: string): unknown {
+  if (result[key] !== undefined) return result[key];
+  const rent = isRecord(result.rent) ? result.rent : undefined;
+  return rent?.[key];
 }
 
 function formatChatSender(message: Record<string, unknown>): string | undefined {
@@ -354,6 +406,48 @@ export const socialFormatters = [
     { commands: ['faction_intel_status', 'faction_trade_intel_status'] },
   ),
 
+  namedFormatter(
+    'faction_facility_owned',
+    ['facilities'],
+    (r) => {
+      if (r.action !== 'faction_owned') return false;
+      const facilities = firstArray(r, ['facilities']);
+      if (!facilities) return false;
+
+      const rows = facilities.map((facility) => ({
+        ...facility,
+        rent_display: formatCredits(facility.rent_per_cycle),
+        arrears_display: formatCredits(facility.arrears_owed),
+        labor_display: formatCredits(facility.labor_per_run),
+      }));
+      printCompactTable('Faction Facilities', rows, [
+        ['Name', ['name', 'type']],
+        ['ID', ['facility_id', 'id']],
+        ['Base', ['base_name', 'base_id']],
+        ['System', ['system_id']],
+        ['Active', ['active', 'status']],
+        ['Rent', ['rent_display', 'rent_per_cycle']],
+        ['Missed', ['missed_rent_cycles']],
+        ['Arrears', ['arrears_display', 'arrears_owed']],
+        ['Labor/run', ['labor_display', 'labor_per_run']],
+        ['Idle', ['idle_reason']],
+      ]);
+
+      const totalRent = formatCredits(rentSummaryValue(r, 'total_rent_per_cycle'));
+      const arrears = formatCredits(rentSummaryValue(r, 'arrears_owed'));
+      const grace = formatCycles(rentSummaryValue(r, 'grace_cycles'));
+      const estRentPerDay = formatCredits(rentSummaryValue(r, 'est_rent_per_day'));
+      if (totalRent !== undefined) emitLine(`\nFaction rent bill: ${totalRent}/cycle`);
+      if (arrears !== undefined) emitLine(`Faction arrears: ${arrears}`);
+      if (grace !== undefined) emitLine(`Grace remaining: ${grace}`);
+      if (estRentPerDay !== undefined) emitLine(`Estimated rent/day: ${estRentPerDay}`);
+      if (r.note) emitLine(String(r.note));
+      if (r.hint) emitLine(String(r.hint));
+      return true;
+    },
+    { commands: ['faction_facility_owned'], shapeFallback: true },
+  ),
+
   // Facilities
   namedFormatter(
     'facilities',
@@ -361,7 +455,8 @@ export const socialFormatters = [
     (r) => {
       const facilities = firstArray(r, ['facilities', 'facility_types', 'upgrades']);
       if (!facilities) return false;
-      printCompactTable('Facilities', facilities, facilityColumns(facilities));
+      const rows = facilityRows(facilities);
+      printCompactTable('Facilities', rows, facilityColumns(rows));
       return true;
     },
     { commands: ['facility_list'], shapeFallback: true },
@@ -384,7 +479,8 @@ export const socialFormatters = [
       emitStationConstruction(r.construction);
       for (const [title, rows] of groups) {
         if (!rows) continue;
-        printCompactTable(title, rows, facilityColumns(rows, { grouped: true }));
+        const displayRows = facilityRows(rows);
+        printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true }));
       }
       return true;
     },

@@ -2263,9 +2263,10 @@ describe('structuredContent formatters', () => {
 
       === Station Facilities ===
 
-        Name        | ID           | Level | Category | Active | Maint | Recycler | Owner
-        ------------+--------------+-------+----------+--------+-------+----------+------
-        Fuel Bunker | station-fuel | 3     | service  | true   | true  | false    |
+        Name                    | ID            | Level | Category       | Active | Maint | Upkeep                           | Labor/cycle | Recycler | Owner
+        ------------------------+---------------+-------+----------------+--------+-------+----------------------------------+-------------+----------+------
+        Fuel Bunker             | station-fuel  | 3     | service        | true   | true  |                                  |             | false    |
+        Confederacy Fleet Depot | station-depot | 3     | infrastructure | true   | false | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |          |
 
       === Player Facilities ===
 
@@ -2292,6 +2293,20 @@ describe('structuredContent formatters', () => {
       Total facility types: 1753
 
       Use filters to browse."
+      ,
+        "faction_facility_owned": 
+      "
+      === Faction Facilities ===
+
+        Name                   | ID             | Base          | System | Active | Rent    | Missed | Arrears | Labor/run | Idle
+        -----------------------+----------------+---------------+--------+--------+---------+--------+---------+-----------+---------------------
+        Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | true   | 1,200cr | 2      | 2,400cr | 60cr      | awaiting_build_order
+
+      Faction rent bill: 1,200cr/cycle
+      Faction arrears: 2,400cr
+      Grace remaining: 1 cycle
+      Faction facilities pay rent from the treasury each cycle.
+      Use action 'faction_list' while docked for full per-facility detail at that station."
       ,
         "fleet": 
       "

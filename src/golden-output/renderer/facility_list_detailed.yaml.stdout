@@ -28,6 +28,15 @@ station_facilities:
     active: true
     maintenance_satisfied: true
     is_recycler: false
+  - facility_id: "station-depot"
+    type: confederacy_fleet_depot
+    name: "Confederacy Fleet Depot"
+    category: infrastructure
+    level: 3
+    active: true
+    maintenance_satisfied: false
+    maintenance_per_cycle: [{item_id: fuel_cell, name: "Fuel Cell", quantity: 12}, {item_id: plasma_cell_pack, name: "Plasma Cell Pack", quantity: 4}]
+    labor_per_cycle: 320
 player_facilities:
   - facility_id: "player-refinery"
     type: ore_refinery

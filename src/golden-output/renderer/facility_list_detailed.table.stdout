@@ -21,9 +21,10 @@ Power:
 
 === Station Facilities ===
 
-  Name        | ID           | Level | Category | Active | Maint | Recycler | Owner
-  ------------+--------------+-------+----------+--------+-------+----------+------
-  Fuel Bunker | station-fuel | 3     | service  | true   | true  | false    |      
+  Name                    | ID            | Level | Category       | Active | Maint | Upkeep                           | Labor/cycle | Recycler | Owner
+  ------------------------+---------------+-------+----------------+--------+-------+----------------------------------+-------------+----------+------
+  Fuel Bunker             | station-fuel  | 3     | service        | true   | true  |                                  |             | false    |      
+  Confederacy Fleet Depot | station-depot | 3     | infrastructure | true   | false | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |          |      
 
 === Player Facilities ===
 

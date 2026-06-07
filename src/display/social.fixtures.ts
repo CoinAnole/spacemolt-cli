@@ -66,6 +66,20 @@ export const facilityListFixture = {
       maintenance_satisfied: true,
       is_recycler: false,
     },
+    {
+      facility_id: 'station-depot',
+      type: 'confederacy_fleet_depot',
+      name: 'Confederacy Fleet Depot',
+      category: 'infrastructure',
+      level: 3,
+      active: true,
+      maintenance_satisfied: false,
+      maintenance_per_cycle: [
+        { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12 },
+        { item_id: 'plasma_cell_pack', name: 'Plasma Cell Pack', quantity: 4 },
+      ],
+      labor_per_cycle: 320,
+    },
   ],
   player_facilities: [
     {
@@ -114,6 +128,32 @@ export const facilityTypesFixture = {
   },
   hint: 'Use filters to browse.',
   total: 1753,
+};
+
+export const factionFacilityOwnedFixture = {
+  action: 'faction_owned',
+  faction_id: 'faction-1',
+  facilities: [
+    {
+      facility_id: 'faction-yard-1',
+      type: 'faction_shipyard_berth',
+      name: 'Faction Shipyard Berth',
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      system_id: 'sol',
+      active: true,
+      rent_per_cycle: 1200,
+      missed_rent_cycles: 2,
+      arrears_owed: 2400,
+      labor_per_run: 60,
+      idle_reason: 'awaiting_build_order',
+    },
+  ],
+  total_rent_per_cycle: 1200,
+  arrears_owed: 2400,
+  grace_cycles: 1,
+  note: 'Faction facilities pay rent from the treasury each cycle.',
+  hint: "Use action 'faction_list' while docked for full per-facility detail at that station.",
 };
 
 export const fleetFixture = {
@@ -272,6 +312,7 @@ export const socialFixtureCases = {
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
   facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
+  faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
 };
@@ -280,6 +321,7 @@ export const socialHighValueFixtures = {
   chat: { command: 'chat', fixture: chatSentFixture },
   facility_list: { command: 'facility_list', fixture: facilitiesFixture },
   facility_list_detailed: { command: 'facility_list', fixture: facilityListFixture },
+  faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
