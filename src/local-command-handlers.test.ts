@@ -894,6 +894,23 @@ describe('local command handlers', () => {
     expect(output).toContain('API route:');
   });
 
+  test('help for API-backed commands includes server-help pointer', async () => {
+    const handler = resolveHandler(['help', 'travel'], options);
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'travel'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('Server help:');
+    expect(stdout.join('\n')).toContain('spacemolt server-help travel');
+  });
+
   test('help with unknown terms searches local commands', async () => {
     const handler = resolveHandler(['help', 'faction', 'build'], options);
 
@@ -1049,6 +1066,8 @@ describe('local command handlers', () => {
     expect(output).toContain('local helper command');
     expect(output).not.toContain('API route:');
     expect(output).not.toContain('Fetch server help');
+    expect(output).not.toContain('Server help:');
+    expect(output).not.toContain('spacemolt server-help help');
   });
 
   test('api command inline help renders commands supplied by a registry snapshot', () => {

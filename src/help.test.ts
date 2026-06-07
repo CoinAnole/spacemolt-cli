@@ -434,6 +434,26 @@ describe('help output branches', () => {
     expect(output).not.toContain('Fetch server help');
   });
 
+  test('showCommandSearch suggests server-help for live server lookup', () => {
+    const capture = captureWriter();
+    showCommandSearch('repair modules', capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Commands matching "repair modules"');
+    expect(output).toContain('For live server help, run: spacemolt server-help "repair modules"');
+  });
+
+  test('showCommandSearch suggests server-help even when there are no local matches', () => {
+    const capture = captureWriter();
+    showCommandSearch('definitely-not-a-local-topic', capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('(No local command matches)');
+    expect(output).toContain(
+      'For live server help, run: spacemolt server-help "definitely-not-a-local-topic"',
+    );
+  });
+
   test('parseCommandSearchQuery supports search forms', () => {
     expect(parseCommandSearchQuery(['--search', 'fuel', 'cell'])).toBe('fuel cell');
     expect(parseCommandSearchQuery(['--search=fuel'])).toBe('fuel');

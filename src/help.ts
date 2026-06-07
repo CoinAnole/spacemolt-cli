@@ -312,6 +312,11 @@ export function parseCommandSearchQuery(args: string[]): string {
   return args.join(' ').trim();
 }
 
+function formatServerHelpTopicCommand(query: string): string {
+  const trimmed = query.trim();
+  return trimmed ? `spacemolt server-help "${trimmed.replace(/"/g, '\\"')}"` : 'spacemolt server-help';
+}
+
 export function showCommandSearch(
   query: string,
   writer?: CliWriter,
@@ -328,10 +333,12 @@ export function showCommandSearch(
     write('  (No local command matches)');
     const suggestions = suggestCommands(query, 5, allCommands);
     if (suggestions.length > 0) write(`\nDid you mean: ${suggestions.join(', ')}`);
+    if (query.trim()) write(`\nFor live server help, run: ${formatServerHelpTopicCommand(query)}`);
     return;
   }
   for (const command of results) write(`  ${formatCommandSummary(command, allCommands)}`);
   if (results.length === 30) write(`\nShowing first 30 matches. Use a narrower search term for fewer results.`);
+  if (query.trim()) write(`\nFor live server help, run: ${formatServerHelpTopicCommand(query)}`);
 }
 
 export function showCommandExplanation(
@@ -408,6 +415,11 @@ export function showCommandHelp(
   if ('route' in config && config.route.defaults && Object.keys(config.route.defaults).length > 0) {
     write(`\n${c.bright}Default payload fields:${c.reset}`);
     for (const [key, value] of Object.entries(config.route.defaults)) write(`  ${key}=${value}`);
+  }
+
+  if ('route' in config) {
+    write(`\n${c.bright}Server help:${c.reset}`);
+    write(`  spacemolt server-help ${command}`);
   }
 
   if (config.example) {
