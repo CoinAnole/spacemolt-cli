@@ -449,9 +449,7 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('(No local command matches)');
-    expect(output).toContain(
-      "For live server help, run: spacemolt server-help 'definitely-not-a-local-topic'",
-    );
+    expect(output).toContain("For live server help, run: spacemolt server-help 'definitely-not-a-local-topic'");
   });
 
   test('showCommandSearch shell-quotes server-help topics with special characters', () => {
