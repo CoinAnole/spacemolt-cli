@@ -487,50 +487,57 @@ const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCach
   },
 };
 
-function findStringValue(value: unknown, keys: string[]): string | undefined {
-  if (typeof value === 'string') return undefined;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const record = value as Record<string, unknown>;
+const SERVER_HELP_TOOL_KEYS = ['tool', 'tool_name', 'server_tool'] as const;
+const SERVER_HELP_ACTION_KEYS = ['action', 'action_name', 'command'] as const;
+
+function stringValueForAnyKey(record: Record<string, unknown>, keys: readonly string[]): string | undefined {
   for (const key of keys) {
     const candidate = record[key];
     if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
   }
+  return undefined;
+}
+
+function extractServerHelpTargetFromValue(value: unknown): { tool: string; action: string } | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const tool = stringValueForAnyKey(record, SERVER_HELP_TOOL_KEYS);
+  const action = stringValueForAnyKey(record, SERVER_HELP_ACTION_KEYS);
+  if (tool && action) return { tool, action };
   for (const nested of Object.values(record)) {
-    const found = findStringValue(nested, keys);
-    if (found) return found;
+    const target = extractServerHelpTargetFromValue(nested);
+    if (target) return target;
   }
   return undefined;
 }
 
 function extractServerHelpTarget(result: CommandRunResult): { tool: string; action: string } | undefined {
-  const containers = [result.response.structuredContent, result.response.result].filter(
-    (value): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value)),
+  return (
+    extractServerHelpTargetFromValue(result.response.structuredContent) ??
+    extractServerHelpTargetFromValue(result.response.result)
   );
-  for (const container of containers) {
-    const tool = findStringValue(container, ['tool', 'tool_name', 'server_tool']);
-    const action = findStringValue(container, ['action', 'action_name', 'command']);
-    if (tool && action) return { tool, action };
-  }
-  return undefined;
 }
 
 function findLocalCommandForServerTarget(
   target: { tool: string; action: string },
   commands: Record<string, CommandConfig | LocalCommandConfig>,
 ): string | undefined {
-  return Object.entries(commands)
+  const matches = Object.entries(commands)
     .filter(
       (entry): entry is [string, CommandConfig] =>
         'route' in entry[1] && entry[1].route.tool === target.tool && entry[1].route.action === target.action,
     )
     .map(([command]) => command)
-    .sort((a, b) => a.localeCompare(b))[0];
+    .sort((a, b) => a.localeCompare(b));
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 function shouldPrintServerHelpLocalMapping(options: GlobalOptions): boolean {
   return (
     !options.json &&
     options.format !== 'json' &&
+    options.format !== 'yaml' &&
+    !options.compact &&
     !options.structured &&
     !options.jq &&
     !options.field &&
