@@ -1,0 +1,9 @@
+
+=== Passengers Aboard ===
+Economy: 1/2 | Business: 0/1 | First: 0/0
+
+=== Passengers ===
+
+  Name      | Class   | Destination  | Fare | Ticks | Bio                                                  | ID          
+  ----------+---------+--------------+------+-------+------------------------------------------------------+-------------
+  Lyra Vale | economy | Nova Central | 125  | 8     | A courier with a nervous smile and a sealed satchel. | citizen-lyra
