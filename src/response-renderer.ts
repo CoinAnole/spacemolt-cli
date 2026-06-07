@@ -120,8 +120,6 @@ export async function renderResponse(
     return filteredResponse.error ? 1 : 0;
   }
 
-  warnAboutUnsupportedServerHelpFilters(commandRun, { isJson, hasProjection, writer, plain: options.plain });
-
   const display = prepareHumanDisplay(commandRun, filteredResponse, sessionPath);
   const success = displayResult(
     display.command,
@@ -209,21 +207,6 @@ function enrichCarrierLoadDisplayResponse(
 
 function findCachedShipHint(shipId: string, sessionPath?: string) {
   return loadIdCacheSync(sessionPath).find((hint) => hint.kind === 'ship' && hint.id === shipId);
-}
-
-function warnAboutUnsupportedServerHelpFilters(
-  commandRun: CommandRunResult,
-  options: { isJson: boolean; hasProjection: boolean; writer?: CliRuntimeContext['writer']; plain?: boolean },
-): void {
-  if (options.isJson || options.hasProjection || commandRun.command !== 'help') return;
-  const payload = commandRun.payload ?? {};
-  if (payload.category === undefined && payload.command === undefined) return;
-
-  const warn = options.writer?.err.bind(options.writer) ?? console.error;
-  const colors = colorsForPlain(Boolean(options.plain));
-  warn(
-    `${colors.yellow}Note:${colors.reset} server help returns the full unfiltered list (topic/category/command filters are ignored). Use spacemolt help <command> or spacemolt help <group> for local filtered help.`,
-  );
 }
 
 function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {

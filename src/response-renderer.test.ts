@@ -145,7 +145,7 @@ describe('response renderer', () => {
     expect(capture.stdout.join('\n')).not.toContain('\x1b[');
   });
 
-  test('renderResponse warns when old server help filters are ignored by the API', async () => {
+  test('renderResponse does not warn for legacy server help filter payloads', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -159,14 +159,10 @@ describe('response renderer', () => {
       capture.context,
     );
 
-    const rawStderr = capture.stderr.join('\n');
-    const stderr = rawStderr.replace(ANSI_PATTERN, '');
     expect(exitCode).toBe(0);
     expect(capture.text()).toContain('All server commands');
-    expect(stderr).toContain('server help returns the full unfiltered list');
-    expect(stderr).toContain('topic/category/command filters are ignored');
-    expect(stderr).toContain('spacemolt help <command>');
-    expect(rawStderr).not.toContain('\x1b[');
+    expect(capture.stderr.join('\n')).not.toContain('server help returns the full unfiltered list');
+    expect(capture.stderr.join('\n')).not.toContain('topic/category/command filters are ignored');
   });
 
   test('renderResponse prints JSON error envelopes and exits nonzero', async () => {
