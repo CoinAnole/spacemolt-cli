@@ -1239,4 +1239,34 @@ describe('local command handlers', () => {
     expect(commandsExitCode).toBe(0);
     expect(commandsCapture.stdout.join('\n')).toContain('sync-api');
   });
+
+  test('server-help is discoverable through local help and command search', async () => {
+    const helpHandler = localHandler(['help', 'server-help']);
+    const parsedHelp = helpHandler.parse(['help', 'server-help'], options);
+    expect(parsedHelp.ok).toBe(true);
+    if (!parsedHelp.ok) return;
+    const helpResult = await helpHandler.run(parsedHelp.payload, options);
+    const helpCapture = captureContext();
+    const helpExitCode = await helpHandler.render(helpResult, options, undefined, helpCapture.context);
+
+    expect(helpExitCode).toBe(0);
+    expect(helpCapture.stdout.join('\n')).toContain('Fetch live gameserver help for an action, category, or keyword.');
+    expect(helpCapture.stdout.join('\n')).toContain('spacemolt server-help [topic]');
+
+    const commandsHandler = localHandler(['commands', 'server']);
+    const parsedCommands = commandsHandler.parse(['commands', 'server'], options);
+    expect(parsedCommands.ok).toBe(true);
+    if (!parsedCommands.ok) return;
+    const commandsResult = await commandsHandler.run(parsedCommands.payload, options);
+    const commandsCapture = captureContext();
+    const commandsExitCode = await commandsHandler.render(
+      commandsResult,
+      options,
+      undefined,
+      commandsCapture.context,
+    );
+
+    expect(commandsExitCode).toBe(0);
+    expect(commandsCapture.stdout.join('\n')).toContain('server-help [topic]');
+  });
 });

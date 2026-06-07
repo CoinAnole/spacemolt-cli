@@ -86,6 +86,15 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     required: [],
     seeAlso: ['commands', 'sync-api', 'get_guide'],
   },
+  'server-help': {
+    usage: '[topic]',
+    description: 'Fetch live gameserver help for an action, category, or keyword.',
+    example: 'spacemolt server-help repair',
+    category: 'Reference & Help',
+    args: [{ rest: 'topic' }],
+    required: [],
+    seeAlso: ['help', 'commands', 'sync-api', 'get_commands'],
+  },
   ids: {
     usage: '<poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]',
     description: 'Show recently discovered IDs from cached command output.',

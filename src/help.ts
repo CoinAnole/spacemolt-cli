@@ -665,6 +665,9 @@ ${c.bright}Output Precedence:${c.reset}
 function cacheHelpSections(options?: HelpOutputOptions): string {
   const c = colorsForPlain(Boolean(options?.plain));
   return `
+${c.bright}Live server help:${c.reset}
+  spacemolt server-help [topic]    Live gameserver help for an action, category, or keyword
+
 ${c.bright}Dynamic API Cache:${c.reset}
   spacemolt sync-api              Refresh cached OpenAPI command metadata
   Cached v2 routes appear in help, command search, completion, and dispatch.

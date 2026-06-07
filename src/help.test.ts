@@ -85,6 +85,11 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
     expect(output).toContain('spacemolt help command=<name>   Local command help');
+    expect(output).toContain('Live server help:');
+    expect(output).toContain(
+      'spacemolt server-help [topic]    Live gameserver help for an action, category, or keyword',
+    );
+    expect(output.indexOf('Command Discovery:')).toBeLessThan(output.indexOf('Live server help:'));
     expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
   });
 
@@ -168,6 +173,11 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
     expect(output).toContain('spacemolt help command=<name>   Local command help');
+    expect(output).toContain('Live server help:');
+    expect(output).toContain(
+      'spacemolt server-help [topic]    Live gameserver help for an action, category, or keyword',
+    );
+    expect(output.indexOf('Command Discovery:')).toBeLessThan(output.indexOf('Live server help:'));
     expect(output).not.toContain('spacemolt explain <command>     Local usage, args, route');
   });
 
@@ -466,6 +476,11 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
     expect(output).toContain('spacemolt help command=<name>   Local command help');
+    expect(output).toContain('Live server help:');
+    expect(output).toContain(
+      'spacemolt server-help [topic]    Live gameserver help for an action, category, or keyword',
+    );
+    expect(output.indexOf('Command Discovery:')).toBeLessThan(output.indexOf('Live server help:'));
   });
 
   test('showFullHelp includes cache sections near command discovery', () => {
