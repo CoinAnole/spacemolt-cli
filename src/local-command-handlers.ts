@@ -491,7 +491,8 @@ function createServerHelpHandler(): CommandHandler<ServerHelpPayload, CommandRun
     name: 'server-help',
     requiresNetwork: true,
     parse(argv) {
-      return { ok: true, payload: parseServerHelpTopic(argv, 1) };
+      const startIndex = argv[0] === 'help' && argv[1] === '--server' ? 2 : 1;
+      return { ok: true, payload: parseServerHelpTopic(argv, startIndex) };
     },
     run(payload, options, client) {
       return runCommand('server-help', payload, options, client, SERVER_HELP_COMMAND_CONFIG);
@@ -694,6 +695,10 @@ export function resolveHandler(
   const commandName = argv[0];
   const groupInlineHelp =
     commandName && hasCommandGroup(commandName) && (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
+
+  if (commandName === 'help' && argv[1] === '--server') {
+    return createServerHelpHandler();
+  }
 
   if (
     argv.length === 0 ||

@@ -1027,6 +1027,22 @@ describe('local command handlers', () => {
     expect(output).not.toContain('Commands matching "--help"');
   });
 
+  test('help without --server remains local and network-free', async () => {
+    const handler = resolveHandler(['help', 'repair'], options);
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'repair'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('spacemolt repair');
+  });
+
   test('help -h shows local help overview', async () => {
     const handler = resolveHandler(['help', '-h'], options);
 
@@ -1281,6 +1297,27 @@ describe('local command handlers', () => {
     await handler.run(parsed.payload, { ...options, profile: 'pilot' }, client);
 
     expect(calls).toEqual([{ topic: 'faction build' }]);
+  });
+
+  test('help --server normalizes to server-help topic lookup', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(_command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push(payload);
+        return { result: 'Repair help' };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['help', '--server', 'repair'], options);
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', '--server', 'repair'], { ...options, profile: 'pilot' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    await handler.run(parsed.payload, { ...options, profile: 'pilot' }, client);
+
+    expect(calls).toEqual([{ topic: 'repair' }]);
   });
 
   test('sync-api is discoverable through local help and command search', async () => {
