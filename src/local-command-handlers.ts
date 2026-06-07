@@ -2,6 +2,7 @@ import { ApiCommandHandler, hasApiCommand } from './api-command-handler.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
+import type { CommandConfig } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import {
   type CompletionCandidate,
@@ -41,6 +42,7 @@ import {
   type OpenApiCacheFile,
   refreshOpenApiCache,
 } from './openapi-cache.ts';
+import { runCommand, renderResponse, type CommandRunResult } from './response-renderer.ts';
 import { API_BASE, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import {
@@ -438,6 +440,22 @@ const whereCanIHandler: CommandHandler<{ query: string }, { query: string; match
   },
 };
 
+type ServerHelpPayload = { topic?: string };
+
+const SERVER_HELP_COMMAND_CONFIG: CommandConfig = {
+  route: { tool: 'spacemolt', action: 'help', method: 'POST' },
+  usage: '[topic]',
+  description: 'Fetch live gameserver help for an action, category, or keyword.',
+  category: 'Reference & Help',
+  args: [{ rest: 'topic' }],
+  required: [],
+};
+
+function parseServerHelpTopic(argv: string[], startIndex: number): ServerHelpPayload {
+  const topic = argv.slice(startIndex).join(' ').trim();
+  return topic ? { topic } : {};
+}
+
 const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCacheFile }> = {
   name: 'sync-api',
   requiresNetwork: true,
@@ -467,6 +485,23 @@ const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCach
     return 0;
   },
 };
+
+function createServerHelpHandler(): CommandHandler<ServerHelpPayload, CommandRunResult> {
+  return {
+    name: 'server-help',
+    requiresNetwork: true,
+    parse(argv) {
+      return { ok: true, payload: parseServerHelpTopic(argv, 1) };
+    },
+    run(payload, options, client) {
+      return runCommand('server-help', payload, options, client, SERVER_HELP_COMMAND_CONFIG);
+    },
+    async render(result, options, client, context) {
+      const exitCode = await renderResponse(result, options, client, context);
+      return exitCode;
+    },
+  };
+}
 
 const versionHandler: CommandHandler<Record<string, never>, Record<string, never>> = {
   name: 'version',
@@ -647,6 +682,7 @@ registry.register(doctorHandler);
 registry.register(idsHandler);
 registry.register(whereCanIHandler);
 registry.register(syncApiHandler);
+registry.register(createServerHelpHandler());
 registry.register(versionHandler);
 
 export function resolveHandler(
@@ -674,6 +710,7 @@ export function resolveHandler(
     if (commandName === 'commands') return createCommandsHandler(registrySnapshot);
     if (commandName === 'completion') return createCompletionHandler(registrySnapshot);
     if (commandName === '__complete') return createDynamicCompletionHandler(registrySnapshot);
+    if (commandName === 'server-help') return createServerHelpHandler();
     const handler = registry.get(commandName);
     if (handler) return handler;
   }

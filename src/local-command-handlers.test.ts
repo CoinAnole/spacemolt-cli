@@ -1233,6 +1233,56 @@ describe('local command handlers', () => {
     }
   });
 
+  test('server-help dispatches canonical server help without topic', async () => {
+    const calls: Array<{ command: string; config: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string, config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, config, payload });
+        return { result: 'Server help index' };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help'], options);
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help'], { ...options, profile: 'pilot' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot' }, client);
+    const { context, stdout, stderr } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot', plain: true }, client, context);
+
+    expect(exitCode).toBe(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe('server-help');
+    expect(calls[0]?.payload).toEqual({});
+    expect(calls[0]?.config).toMatchObject({ route: { tool: 'spacemolt', action: 'help', method: 'POST' } });
+    expect(stdout.join('\n')).toContain('Server help index');
+    expect(stderr).toEqual([]);
+  });
+
+  test('server-help joins topic words into one topic payload', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(_command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push(payload);
+        return { result: 'Faction build help' };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'faction', 'build'], options);
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'faction', 'build'], { ...options, profile: 'pilot' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    await handler.run(parsed.payload, { ...options, profile: 'pilot' }, client);
+
+    expect(calls).toEqual([{ topic: 'faction build' }]);
+  });
+
   test('sync-api is discoverable through local help and command search', async () => {
     const helpHandler = localHandler(['help', 'sync-api']);
     const parsedHelp = helpHandler.parse(['help', 'sync-api'], options);
