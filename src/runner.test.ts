@@ -7,7 +7,9 @@ import { SpaceMoltClient as RealSpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
-import { ACTIVE_PROFILE, SessionManager, setActiveProfile, setDefaultProfile } from './session';
+import { VERSION } from './runtime';
+import { ACTIVE_PROFILE, getDefaultProfile, SessionManager, setActiveProfile, setDefaultProfile } from './session';
+import type { JsonRequestOptions } from './types';
 
 async function captureInvocation(
   argv: string[],
@@ -248,6 +250,88 @@ describe('runInvocation option isolation', () => {
     expect(stderr).toEqual([]);
     expect(calls).toEqual([{ command: 'get_empire_info', payload: { id: 'solarian' } }]);
     expect(JSON.parse(stdout.join('\n'))).toEqual({ empires: [{ id: 'solarian', sales_tax_bps: 500 }] });
+  });
+
+  test('server-help renders through a transient anonymous session without a configured profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-server-help-render-'));
+    const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_URL: 'https://game.test/api/v2' };
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const sessionCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const commandCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+
+    const exitCode = await runInvocation(
+      ['--plain', 'server-help', 'faction', 'build'],
+      undefined,
+      fakeContext(stdout, stderr, env),
+      {
+        async checkForUpdates() {},
+        createClient(config) {
+          const sessionManager = new SessionManager({
+            apiBase: config.apiBase,
+            env,
+            transport: (async (url: string, requestOptions?: JsonRequestOptions) => {
+              sessionCalls.push({ url, options: requestOptions });
+              return {
+                status: 200,
+                data: {
+                  session: {
+                    id: 'sess_runner_help',
+                    created_at: '2026-01-01T00:00:00.000Z',
+                    expires_at: '2099-01-01T00:00:00.000Z',
+                  },
+                },
+              };
+            }) as typeof import('./transport').requestJson,
+          });
+          return new RealSpaceMoltClient({
+            config,
+            sessionStore: sessionManager,
+            transport: {
+              async requestJson<T>(url: string, requestOptions?: JsonRequestOptions) {
+                commandCalls.push({ url, options: requestOptions });
+                return {
+                  status: 200,
+                  data: {
+                    result: 'Faction build help',
+                    session: {
+                      id: 'sess_runner_help',
+                      created_at: '2026-01-01T00:00:00.000Z',
+                      expires_at: '2099-01-01T01:00:00.000Z',
+                    },
+                  } as T,
+                };
+              },
+            },
+          });
+        },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).toContain('Faction build help');
+    expect(sessionCalls).toEqual([
+      {
+        url: 'https://game.test/api/v2/session',
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
+        },
+      },
+    ]);
+    expect(commandCalls).toEqual([
+      {
+        url: 'https://game.test/api/v2/spacemolt/help',
+        options: {
+          method: 'POST',
+          sessionId: 'sess_runner_help',
+          payload: { topic: 'faction build' },
+        },
+      },
+    ]);
+    expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+    expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'sessions'))).toBe(false);
   });
 
   test('switch_ship resolves cached ship class names and prints API errors', async () => {

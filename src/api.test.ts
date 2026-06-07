@@ -225,6 +225,85 @@ describe('SpaceMoltClient', () => {
     expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
   });
 
+  test('server-help can run with an anonymous session when no default profile exists', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-server-help-'));
+    const env = { XDG_CONFIG_HOME: tempDir };
+    const sessionCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const commandCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const sessionManager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env,
+      transport: (async (url: string, requestOptions?: JsonRequestOptions) => {
+        sessionCalls.push({ url, options: requestOptions });
+        return {
+          status: 200,
+          data: {
+            session: {
+              id: 'sess_public_help',
+              created_at: '2026-01-01T00:00:00.000Z',
+              expires_at: '2099-01-01T00:00:00.000Z',
+            },
+          },
+        };
+      }) as typeof import('./transport.ts').requestJson,
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: sessionManager,
+      transport: {
+        async requestJson<T>(url: string, requestOptions?: JsonRequestOptions) {
+          commandCalls.push({ url, options: requestOptions });
+          return {
+            status: 200,
+            data: response({
+              result: 'Faction build help',
+              session: {
+                id: 'sess_public_help',
+                created_at: '2026-01-01T00:00:00.000Z',
+                expires_at: '2099-01-01T01:00:00.000Z',
+              },
+            }) as T,
+          };
+        },
+      },
+    });
+    const config: CommandConfig = {
+      route: { tool: 'spacemolt', action: 'help', method: 'POST' },
+    };
+
+    await client.executeCommandConfig('server-help', config, { topic: 'faction build' });
+
+    expect(sessionCalls).toEqual([
+      {
+        url: 'https://game.test/api/v2/session',
+        options: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
+        },
+      },
+    ]);
+    expect(commandCalls).toEqual([
+      {
+        url: 'https://game.test/api/v2/spacemolt/help',
+        options: {
+          method: 'POST',
+          sessionId: 'sess_public_help',
+          payload: { topic: 'faction build' },
+        },
+      },
+    ]);
+    expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+    expect(fs.existsSync(path.join(tempDir, 'spacemolt-cli', 'sessions'))).toBe(false);
+  });
+
   test('executes a registry command config without static route metadata', async () => {
     const { client, calls } = createClient([response()]);
     const config: CommandConfig = {

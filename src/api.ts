@@ -25,7 +25,7 @@ const SESSION_BOOTSTRAP_ERROR_CODES = new Set([
   'invalid_session',
 ]);
 
-const PUBLIC_SESSION_COMMANDS = new Set(['get_empire_info']);
+const PUBLIC_SESSION_COMMANDS = new Set(['get_empire_info', 'server-help']);
 
 function isMissingDefaultProfileError(error: unknown): boolean {
   return error instanceof Error && error.message.startsWith('No default profile set.');
