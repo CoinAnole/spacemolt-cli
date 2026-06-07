@@ -57,6 +57,41 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_nearby',
   },
+  list_passengers: {
+    description: 'List passengers currently aboard your ship.',
+    category: 'Passenger Transport',
+    apiRoute: 'POST /api/v2/spacemolt/list_passengers',
+  },
+  list_station_passengers: {
+    usage: '[station_id_or_name]',
+    description: 'List citizens waiting for transport at a station',
+    category: 'Passenger Transport',
+    apiRoute: 'POST /api/v2/spacemolt/list_station_passengers',
+    positionals: ['station_id'],
+    aliases: {
+      station_id: 'id',
+    },
+  },
+  load_passenger: {
+    usage: '<destination_station_id_or_name>',
+    description: 'Load waiting passengers bound for a destination into your passenger berths.',
+    category: 'Passenger Transport',
+    apiRoute: 'POST /api/v2/spacemolt/load_passenger',
+    positionals: ['destination'],
+    aliases: {
+      destination: 'id',
+    },
+  },
+  unload_passenger: {
+    usage: '<passenger_name_or_id>',
+    description: 'Put one passenger off the ship at the current station.',
+    category: 'Passenger Transport',
+    apiRoute: 'POST /api/v2/spacemolt/unload_passenger',
+    positionals: ['passenger'],
+    aliases: {
+      passenger: 'id',
+    },
+  },
   get_skills: {
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_skills',

@@ -402,6 +402,8 @@ export const genericFormatters = [
           ['Tier', ['tier']],
           ['Empire', ['empire']],
           ['Yard', ['shipyard_tier']],
+          ['Pilot', ['piloting_required']],
+          ['Rep', ['required_reputation']],
           ['Passive Recipes', ['passive_recipes_summary']],
         ],
         { maxCellWidth: 72 },

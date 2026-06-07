@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "class": "capital_refinery",
+      "empire": "outerrim",
+      "id": "money_pit",
+      "name": "Money Pit",
+      "passive_recipes": [
+        "refine_ore_iron"
+      ],
+      "piloting_required": 5,
+      "required_reputation": 60,
+      "shipyard_tier": 5,
+      "tier": 5
+    }
+  ],
+  "message": "Ships: showing 1 of 21",
+  "page": 1,
+  "page_size": 20,
+  "total": 21,
+  "total_pages": 1,
+  "type": "ships"
+}

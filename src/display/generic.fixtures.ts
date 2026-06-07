@@ -72,6 +72,28 @@ export const catalogRecipesFixture = {
   type: 'recipes',
 };
 
+export const catalogShipsFixture = {
+  items: [
+    {
+      class: 'capital_refinery',
+      empire: 'outerrim',
+      id: 'money_pit',
+      name: 'Money Pit',
+      passive_recipes: ['refine_ore_iron'],
+      piloting_required: 5,
+      required_reputation: 60,
+      shipyard_tier: 5,
+      tier: 5,
+    },
+  ],
+  message: 'Ships: showing 1 of 21',
+  page: 1,
+  page_size: 20,
+  total: 21,
+  total_pages: 1,
+  type: 'ships',
+};
+
 export const missionsFixture = {
   base_id: 'nova_terra_central',
   base_name: 'Nova Terra Central',
@@ -307,6 +329,7 @@ export const genericHighValueFixtures = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
+  catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
