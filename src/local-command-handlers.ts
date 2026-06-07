@@ -2,7 +2,7 @@ import { ApiCommandHandler, hasApiCommand } from './api-command-handler.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
-import type { CommandConfig } from './commands.ts';
+import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import { generateCompletion } from './completion.ts';
 import {
   type CompletionCandidate,
@@ -14,6 +14,7 @@ import { type DoctorResult, printDoctorResult, runDoctor } from './doctor.ts';
 import { GENERATED_API_GAMESERVER_VERSION } from './generated/api-commands.ts';
 import {
   displayUnknownCommand,
+  getUsageLine,
   hasCommandGroup,
   parseCommandSearchQuery,
   printJsonError,
@@ -42,7 +43,7 @@ import {
   type OpenApiCacheFile,
   refreshOpenApiCache,
 } from './openapi-cache.ts';
-import { runCommand, renderResponse, type CommandRunResult } from './response-renderer.ts';
+import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { API_BASE, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import {
@@ -486,7 +487,84 @@ const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCach
   },
 };
 
-function createServerHelpHandler(): CommandHandler<ServerHelpPayload, CommandRunResult> {
+function findStringValue(value: unknown, keys: string[]): string | undefined {
+  if (typeof value === 'string') return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  }
+  for (const nested of Object.values(record)) {
+    const found = findStringValue(nested, keys);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function extractServerHelpTarget(result: CommandRunResult): { tool: string; action: string } | undefined {
+  const containers = [result.response.structuredContent, result.response.result].filter(
+    (value): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value)),
+  );
+  for (const container of containers) {
+    const tool = findStringValue(container, ['tool', 'tool_name', 'server_tool']);
+    const action = findStringValue(container, ['action', 'action_name', 'command']);
+    if (tool && action) return { tool, action };
+  }
+  return undefined;
+}
+
+function findLocalCommandForServerTarget(
+  target: { tool: string; action: string },
+  commands: Record<string, CommandConfig | LocalCommandConfig>,
+): string | undefined {
+  const routeCommands = Object.entries(commands).filter(
+    (entry): entry is [string, CommandConfig] => 'route' in entry[1],
+  );
+  const exactCommand = routeCommands
+    .filter(([, config]) => config.route.tool === target.tool && config.route.action === target.action)
+    .map(([command]) => command)
+    .sort((a, b) => a.localeCompare(b))[0];
+  if (exactCommand) return exactCommand;
+
+  const actionCommands = routeCommands
+    .filter(([, config]) => config.route.action === target.action)
+    .map(([command]) => command)
+    .sort((a, b) => a.localeCompare(b));
+  return actionCommands.length === 1 ? actionCommands[0] : undefined;
+}
+
+function shouldPrintServerHelpLocalMapping(options: GlobalOptions): boolean {
+  return (
+    !options.json &&
+    options.format !== 'json' &&
+    !options.structured &&
+    !options.jq &&
+    !options.field &&
+    !options.fields?.length
+  );
+}
+
+function printServerHelpLocalMapping(
+  result: CommandRunResult,
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> & Partial<Pick<CommandRegistrySnapshot, 'allCommands'>>,
+  context?: CliRuntimeContext,
+): void {
+  const target = extractServerHelpTarget(result);
+  if (!target) return;
+  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  const localCommand = findLocalCommandForServerTarget(target, allCommands);
+  if (!localCommand) return;
+  const writer = context?.writer.out.bind(context.writer) ?? console.log;
+  writer('');
+  writer('CLI command:');
+  writer(`  ${getUsageLine(localCommand, allCommands)}`);
+}
+
+function createServerHelpHandler(
+  registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+): CommandHandler<ServerHelpPayload, CommandRunResult> {
   return {
     name: 'server-help',
     requiresNetwork: true,
@@ -499,6 +577,9 @@ function createServerHelpHandler(): CommandHandler<ServerHelpPayload, CommandRun
     },
     async render(result, options, client, context) {
       const exitCode = await renderResponse(result, options, client, context);
+      if (exitCode === 0 && shouldPrintServerHelpLocalMapping(options)) {
+        printServerHelpLocalMapping(result, registrySnapshot, context);
+      }
       return exitCode;
     },
   };
@@ -697,7 +778,7 @@ export function resolveHandler(
     commandName && hasCommandGroup(commandName) && (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
 
   if (commandName === 'help' && argv[1] === '--server') {
-    return createServerHelpHandler();
+    return createServerHelpHandler(registrySnapshot);
   }
 
   if (
@@ -715,7 +796,7 @@ export function resolveHandler(
     if (commandName === 'commands') return createCommandsHandler(registrySnapshot);
     if (commandName === 'completion') return createCompletionHandler(registrySnapshot);
     if (commandName === '__complete') return createDynamicCompletionHandler(registrySnapshot);
-    if (commandName === 'server-help') return createServerHelpHandler();
+    if (commandName === 'server-help') return createServerHelpHandler(registrySnapshot);
     const handler = registry.get(commandName);
     if (handler) return handler;
   }

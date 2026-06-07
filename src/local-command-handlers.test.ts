@@ -1278,6 +1278,83 @@ describe('local command handlers', () => {
     expect(stderr).toEqual([]);
   });
 
+  test('server-help human output maps server tool and action to local command', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          result: 'Buy command help',
+          structuredContent: {
+            tool: 'spacemolt_market',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, plain: true });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], { ...options, profile: 'pilot', plain: true });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot', plain: true }, client);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot', plain: true }, client, context);
+
+    expect(exitCode).toBe(0);
+    const output = stdout.join('\n');
+    expect(output).toContain('CLI command:');
+    expect(output).toContain('spacemolt buy');
+  });
+
+  test('server-help JSON output does not append human local command mapping', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            tool: 'spacemolt_market',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, json: true, format: 'json' });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], {
+      ...options,
+      json: true,
+      format: 'json',
+      profile: 'pilot',
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(
+      parsed.payload,
+      { ...options, json: true, format: 'json', profile: 'pilot' },
+      client,
+    );
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(
+      result,
+      { ...options, json: true, format: 'json', profile: 'pilot' },
+      client,
+      context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).not.toContain('CLI command:');
+    expect(JSON.parse(stdout.join('\n'))).toEqual({
+      structuredContent: {
+        tool: 'spacemolt_market',
+        action: 'buy',
+      },
+    });
+  });
+
   test('server-help joins topic words into one topic payload', async () => {
     const calls: Array<Record<string, unknown>> = [];
     const client = {
@@ -1365,12 +1442,7 @@ describe('local command handlers', () => {
     if (!parsedCommands.ok) return;
     const commandsResult = await commandsHandler.run(parsedCommands.payload, options);
     const commandsCapture = captureContext();
-    const commandsExitCode = await commandsHandler.render(
-      commandsResult,
-      options,
-      undefined,
-      commandsCapture.context,
-    );
+    const commandsExitCode = await commandsHandler.render(commandsResult, options, undefined, commandsCapture.context);
 
     expect(commandsExitCode).toBe(0);
     expect(commandsCapture.stdout.join('\n')).toContain('server-help [topic]');
