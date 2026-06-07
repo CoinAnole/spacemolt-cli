@@ -56,6 +56,22 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: [],
   },
+  persist_failed: {
+    code: 'persist_failed',
+    message: 'Persistence confirmation failed.',
+    suggestion: 'Verify your state with "spacemolt get_status" before retrying the transaction.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status'],
+  },
+  persist_timeout: {
+    code: 'persist_timeout',
+    message: 'Persistence confirmation timed out.',
+    suggestion: 'Verify your state with "spacemolt get_status" before retrying the transaction.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status'],
+  },
   invalid_payload: {
     code: 'invalid_payload',
     message: 'Invalid command payload.',
