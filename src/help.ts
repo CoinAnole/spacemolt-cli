@@ -314,7 +314,7 @@ export function parseCommandSearchQuery(args: string[]): string {
 
 function formatServerHelpTopicCommand(query: string): string {
   const trimmed = query.trim();
-  return trimmed ? `spacemolt server-help "${trimmed.replace(/"/g, '\\"')}"` : 'spacemolt server-help';
+  return trimmed ? `spacemolt server-help '${trimmed.replace(/'/g, "'\\''")}'` : 'spacemolt server-help';
 }
 
 export function showCommandSearch(

@@ -440,7 +440,7 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('Commands matching "repair modules"');
-    expect(output).toContain('For live server help, run: spacemolt server-help "repair modules"');
+    expect(output).toContain("For live server help, run: spacemolt server-help 'repair modules'");
   });
 
   test('showCommandSearch suggests server-help even when there are no local matches', () => {
@@ -450,8 +450,49 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('(No local command matches)');
     expect(output).toContain(
-      'For live server help, run: spacemolt server-help "definitely-not-a-local-topic"',
+      "For live server help, run: spacemolt server-help 'definitely-not-a-local-topic'",
     );
+  });
+
+  test('showCommandSearch shell-quotes server-help topics with special characters', () => {
+    const cases = [
+      {
+        query: 'repair $(touch /tmp/x)',
+        expected: "For live server help, run: spacemolt server-help 'repair $(touch /tmp/x)'",
+      },
+      {
+        query: 'repair `touch /tmp/x`',
+        expected: "For live server help, run: spacemolt server-help 'repair `touch /tmp/x`'",
+      },
+      {
+        query: 'repair "modules"',
+        expected: 'For live server help, run: spacemolt server-help \'repair "modules"\'',
+      },
+      {
+        query: "pilot's fuel",
+        expected: "For live server help, run: spacemolt server-help 'pilot'\\''s fuel'",
+      },
+      {
+        query: 'repair \\modules',
+        expected: "For live server help, run: spacemolt server-help 'repair \\modules'",
+      },
+    ];
+
+    for (const { query, expected } of cases) {
+      const capture = captureWriter();
+      showCommandSearch(query, capture.writer);
+
+      expect(capture.stdout.join('\n')).toContain(expected);
+    }
+  });
+
+  test('showCommandSearch does not suggest server-help for all commands output', () => {
+    const capture = captureWriter();
+    showCommandSearch('', capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('All Commands');
+    expect(output).not.toContain('For live server help');
   });
 
   test('parseCommandSearchQuery supports search forms', () => {
