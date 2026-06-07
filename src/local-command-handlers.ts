@@ -518,20 +518,13 @@ function findLocalCommandForServerTarget(
   target: { tool: string; action: string },
   commands: Record<string, CommandConfig | LocalCommandConfig>,
 ): string | undefined {
-  const routeCommands = Object.entries(commands).filter(
-    (entry): entry is [string, CommandConfig] => 'route' in entry[1],
-  );
-  const exactCommand = routeCommands
-    .filter(([, config]) => config.route.tool === target.tool && config.route.action === target.action)
+  return Object.entries(commands)
+    .filter(
+      (entry): entry is [string, CommandConfig] =>
+        'route' in entry[1] && entry[1].route.tool === target.tool && entry[1].route.action === target.action,
+    )
     .map(([command]) => command)
     .sort((a, b) => a.localeCompare(b))[0];
-  if (exactCommand) return exactCommand;
-
-  const actionCommands = routeCommands
-    .filter(([, config]) => config.route.action === target.action)
-    .map(([command]) => command)
-    .sort((a, b) => a.localeCompare(b));
-  return actionCommands.length === 1 ? actionCommands[0] : undefined;
 }
 
 function shouldPrintServerHelpLocalMapping(options: GlobalOptions): boolean {

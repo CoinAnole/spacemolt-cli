@@ -1285,7 +1285,7 @@ describe('local command handlers', () => {
         return {
           result: 'Buy command help',
           structuredContent: {
-            tool: 'spacemolt_market',
+            tool: 'spacemolt',
             action: 'buy',
           },
         };
@@ -1306,6 +1306,38 @@ describe('local command handlers', () => {
     const output = stdout.join('\n');
     expect(output).toContain('CLI command:');
     expect(output).toContain('spacemolt buy');
+  });
+
+  test('server-help human output does not map mismatched server tool and action', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          result: 'Market buy command help',
+          structuredContent: {
+            tool: 'spacemolt_market',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, plain: true });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], { ...options, profile: 'pilot', plain: true });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot', plain: true }, client);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot', plain: true }, client, context);
+
+    expect(exitCode).toBe(0);
+    const output = stdout.join('\n');
+    expect(output).toContain('Tool: spacemolt_market');
+    expect(output).toContain('Action: buy');
+    expect(output).not.toContain('CLI command:');
+    expect(output).not.toContain('spacemolt buy');
   });
 
   test('server-help JSON output does not append human local command mapping', async () => {
