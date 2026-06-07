@@ -91,7 +91,7 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     description: 'Fetch live gameserver help for an action, category, or keyword.',
     example: 'spacemolt server-help repair',
     category: 'Reference & Help',
-    args: [{ rest: 'topic' }],
+    args: [],
     required: [],
     seeAlso: ['help', 'commands', 'sync-api', 'get_commands'],
   },
