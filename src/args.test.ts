@@ -855,6 +855,19 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['faction_withdraw_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
   });
 
+  test('passenger transport commands parse positional payloads and normalize API fields', () => {
+    expect(parseOk(['list_passengers']).payload).toEqual({});
+    expect(parseOk(['list_station_passengers', 'nova_central']).payload.station_id).toBe('nova_central');
+
+    const load = parseOk(['load_passenger', 'sol_central']);
+    expect(load.payload.destination).toBe('sol_central');
+    expect(normalizeParsedPayload('load_passenger', load.payload)).toEqual({ id: 'sol_central' });
+
+    const unload = parseOk(['unload_passenger', 'Lyra Vale']);
+    expect(unload.payload.passenger).toBe('Lyra Vale');
+    expect(normalizeParsedPayload('unload_passenger', unload.payload)).toEqual({ id: 'Lyra Vale' });
+  });
+
   test('citizenship commands parse positional payloads', () => {
     expect(parseOk(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
     expect(parseOk(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
