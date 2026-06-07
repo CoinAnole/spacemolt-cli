@@ -498,23 +498,19 @@ function stringValueForAnyKey(record: Record<string, unknown>, keys: readonly st
   return undefined;
 }
 
-function extractServerHelpTargetFromValue(value: unknown): { tool: string; action: string } | undefined {
+function extractDirectServerHelpTarget(value: unknown): { tool: string; action: string } | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
   const tool = stringValueForAnyKey(record, SERVER_HELP_TOOL_KEYS);
   const action = stringValueForAnyKey(record, SERVER_HELP_ACTION_KEYS);
   if (tool && action) return { tool, action };
-  for (const nested of Object.values(record)) {
-    const target = extractServerHelpTargetFromValue(nested);
-    if (target) return target;
-  }
   return undefined;
 }
 
 function extractServerHelpTarget(result: CommandRunResult): { tool: string; action: string } | undefined {
   return (
-    extractServerHelpTargetFromValue(result.response.structuredContent) ??
-    extractServerHelpTargetFromValue(result.response.result)
+    extractDirectServerHelpTarget(result.response.structuredContent) ??
+    extractDirectServerHelpTarget(result.response.result)
   );
 }
 

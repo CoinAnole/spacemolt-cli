@@ -1346,7 +1346,7 @@ describe('local command handlers', () => {
       async executeCommandConfig() {
         return {
           structuredContent: {
-            tool: 'spacemolt_market',
+            tool: 'spacemolt',
             action: 'buy',
           },
         };
@@ -1381,7 +1381,7 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).not.toContain('CLI command:');
     expect(JSON.parse(stdout.join('\n'))).toEqual({
       structuredContent: {
-        tool: 'spacemolt_market',
+        tool: 'spacemolt',
         action: 'buy',
       },
     });
@@ -1441,6 +1441,127 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).not.toContain('CLI command:');
   });
 
+  test('server-help structured output does not append human local command mapping', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            tool: 'spacemolt',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, structured: true });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], { ...options, structured: true, profile: 'pilot' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, structured: true, profile: 'pilot' }, client);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, structured: true, profile: 'pilot' }, client, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).not.toContain('CLI command:');
+  });
+
+  test('server-help jq output does not append human local command mapping', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            tool: 'spacemolt',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, jq: '.tool' });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], { ...options, jq: '.tool', profile: 'pilot' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, jq: '.tool', profile: 'pilot' }, client);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, jq: '.tool', profile: 'pilot' }, client, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).not.toContain('CLI command:');
+  });
+
+  test('server-help field output does not append human local command mapping', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            tool: 'spacemolt',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, field: 'tool' });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], { ...options, field: 'tool', profile: 'pilot' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, field: 'tool', profile: 'pilot' }, client);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, field: 'tool', profile: 'pilot' }, client, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).not.toContain('CLI command:');
+  });
+
+  test('server-help fields output does not append human local command mapping', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            tool: 'spacemolt',
+            action: 'buy',
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, fields: ['tool', 'action'] });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], {
+      ...options,
+      fields: ['tool', 'action'],
+      profile: 'pilot',
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(
+      parsed.payload,
+      { ...options, fields: ['tool', 'action'], profile: 'pilot' },
+      client,
+    );
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(
+      result,
+      { ...options, fields: ['tool', 'action'], profile: 'pilot' },
+      client,
+      context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).not.toContain('CLI command:');
+  });
+
   test('server-help suppresses mapping for ambiguous duplicate exact route matches', async () => {
     const registry = {
       commands: {
@@ -1493,6 +1614,35 @@ describe('local command handlers', () => {
               tool: 'spacemolt',
             },
             example: {
+              action: 'buy',
+            },
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const handler = resolveHandler(['server-help', 'buy'], { ...options, plain: true });
+    expect(handler?.name).toBe('server-help');
+    if (!handler) return;
+    const parsed = handler.parse(['server-help', 'buy'], { ...options, profile: 'pilot', plain: true });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, { ...options, profile: 'pilot', plain: true }, client);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, { ...options, profile: 'pilot', plain: true }, client, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).not.toContain('CLI command:');
+  });
+
+  test('server-help does not map arbitrary nested related target-looking values', async () => {
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            related: {
+              tool: 'spacemolt',
               action: 'buy',
             },
           },
