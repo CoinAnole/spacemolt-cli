@@ -325,6 +325,16 @@ describe('help output branches', () => {
     expect(output).toContain('search');
   });
 
+  test('showCommandHelp documents payload-json for bulk storage item arrays', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('storage', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Use --payload-json for array/object fields: items.');
+    expect(output).toContain('spacemolt storage --payload-json \'{"items":[{"item_id":"ore_iron","quantity":1}]}\'');
+  });
+
   test('showCommandGroup omits duplicate command-name descriptions', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {

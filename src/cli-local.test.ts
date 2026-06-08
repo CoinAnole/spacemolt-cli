@@ -172,6 +172,26 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('"quantity": 25');
   });
 
+  test('storage bulk items array is accepted without raw mode', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      'storage',
+      'target=faction',
+      '--payload-json',
+      '{"items":[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]}',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
+    expect(result.stdout).toContain('"target": "faction"');
+    expect(result.stdout).toContain('"items": [');
+    expect(result.stdout).toContain('"item_id": "ore_iron"');
+    expect(result.stdout).toContain('"quantity": 1');
+    expect(result.stdout).toContain('"item_id": "ore_copper"');
+    expect(result.stdout).toContain('"quantity": 2');
+  });
+
   test('patch-note set_drone_name command maps to drone rename route', async () => {
     const result = await runDirect(['--dry-run', 'set_drone_name', 'drone_1', 'Miner-1']);
 

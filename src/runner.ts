@@ -13,17 +13,17 @@ import {
   resolveHandler,
 } from './command-handlers.ts';
 import { buildCommandRegistrySnapshot } from './command-registry.ts';
-import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
+import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
-import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
+import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes, loadOpenApiCacheVersion } from './openapi-cache.ts';
 import { outputStateFromGlobalOptionError } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
 import { API_BASE } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
-import { checkForUpdates } from './update.ts';
+import { checkForUpdates, compareVersions } from './update.ts';
 
 export interface Invocation {
   options: GlobalOptions;
@@ -32,6 +32,7 @@ export interface Invocation {
 
 export interface RunnerDependencies {
   loadCachedGeneratedRoutes?: typeof loadCachedGeneratedRoutes;
+  loadOpenApiCacheVersion?: typeof loadOpenApiCacheVersion;
   defaultOpenApiCacheDir?: typeof defaultOpenApiCacheDir;
   checkForUpdates?: typeof checkForUpdates;
   getDefaultProfile?: typeof getDefaultProfile;
@@ -41,6 +42,7 @@ export interface RunnerDependencies {
 
 const defaultRunnerDependencies: Required<RunnerDependencies> = {
   loadCachedGeneratedRoutes,
+  loadOpenApiCacheVersion,
   defaultOpenApiCacheDir,
   checkForUpdates,
   getDefaultProfile,
@@ -161,7 +163,16 @@ async function runInvocationWithContext(
   const cachedGeneratedRoutes = deps.loadCachedGeneratedRoutes(
     deps.defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
   );
-  const generatedRoutes = cachedGeneratedRoutes ? { ...GENERATED_API_ROUTES, ...cachedGeneratedRoutes } : undefined;
+  const cacheVersion = deps.loadOpenApiCacheVersion(
+    deps.defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
+  );
+  const cacheCanOverrideBundled =
+    cacheVersion.status === 'valid' &&
+    compareVersions(GENERATED_API_GAMESERVER_VERSION, cacheVersion.gameserverVersion) >= 0;
+  const generatedRoutes =
+    cachedGeneratedRoutes && cacheCanOverrideBundled
+      ? { ...GENERATED_API_ROUTES, ...cachedGeneratedRoutes }
+      : undefined;
   const commandRegistry = buildCommandRegistrySnapshot({
     generatedRoutes,
     dynamicGeneratedRoutes: cachedGeneratedRoutes,

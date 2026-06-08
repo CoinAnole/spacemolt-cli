@@ -111,6 +111,18 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
   return registry.allCommands ?? (source as CommandHelpMap);
 }
 
+function structuredPayloadFields(config: CommandConfig | LocalCommandConfig): string[] {
+  if (!('schema' in config) || !config.schema) return [];
+  return Object.entries(config.schema)
+    .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
+    .map(([field]) => field);
+}
+
+function structuredPayloadExample(command: string, field: string): string {
+  const value = field === 'items' ? '[{"item_id":"ore_iron","quantity":1}]' : field.endsWith('s') ? '[]' : '{}';
+  return `spacemolt ${command} --payload-json '{"${field}":${value}}'`;
+}
+
 export function getUsageHint(command: string, commands?: CommandHelpSource): string {
   const config = commandHelpMap(commands)[command];
   if (config?.usage !== undefined) return config.usage;
@@ -409,6 +421,12 @@ export function showCommandHelp(
       const values = schema.enum?.length ? ` (${schema.enum.join('|')})` : '';
       const description = schema.description ? ` - ${schema.description}` : '';
       write(`  ${field}${values}${description}`);
+    }
+    const structuredFields = structuredPayloadFields(config);
+    if (structuredFields.length > 0) {
+      write(`\n${c.bright}Structured payloads:${c.reset}`);
+      write(`  Use --payload-json for array/object fields: ${structuredFields.join(', ')}.`);
+      write(`  ${structuredPayloadExample(command, structuredFields[0] as string)}`);
     }
   }
 

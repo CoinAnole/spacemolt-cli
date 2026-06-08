@@ -152,6 +152,71 @@ describe('runInvocation option isolation', () => {
     ]);
   });
 
+  test('stale cached OpenAPI routes do not override bundled curated command schemas', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-stale-openapi-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      `${JSON.stringify({
+        fetchedAt: '2026-05-20T00:00:00.000Z',
+        gameserverVersion: 'v0.366.0',
+        routes: {
+          'POST /api/v2/spacemolt_storage/deposit': {
+            operationId: 'spacemolt_storage_deposit',
+            summary: 'stale storage deposit',
+            route: {
+              tool: 'spacemolt_storage',
+              action: 'deposit',
+              method: 'POST',
+            },
+            schema: {
+              item_id: { type: 'string' },
+              quantity: { type: 'integer' },
+              target: { type: 'string' },
+            },
+          },
+        },
+      })}\n`,
+    );
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      [
+        '--dry-run',
+        'storage',
+        'target=faction',
+        '--payload-json',
+        '{"items":[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]}',
+      ],
+      client,
+      fakeContext(stdout, stderr, {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_PROFILE: 'pilot',
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const rendered = stdout.join('\n');
+    expect(rendered).toContain('"command": "storage"');
+    expect(rendered).toContain('"items": [');
+    expect(rendered).toContain('"item_id": "ore_iron"');
+    expect(rendered).toContain('"quantity": 1');
+    expect(rendered).toContain('"item_id": "ore_copper"');
+    expect(rendered).toContain('"quantity": 2');
+  });
+
   test('facility_upgrade flag syntax prints structured API errors', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

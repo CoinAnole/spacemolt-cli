@@ -105,7 +105,7 @@ function resolveCachedIdsForPayload(
     if (!kind) continue;
 
     if (Array.isArray(value)) {
-      const resolvedArray: string[] = [];
+      const resolvedArray: unknown[] = [];
       for (const item of value) {
         if (typeof item === 'string') {
           const resolved = resolveCachedId(kind, item, hints);
@@ -113,7 +113,7 @@ function resolveCachedIdsForPayload(
           if (resolved.type === 'resolved') resolvedArray.push(resolved.value);
           else resolvedArray.push(item);
         } else {
-          resolvedArray.push(String(item));
+          resolvedArray.push(item);
         }
       }
       resolvedPayload[field] = resolvedArray;

@@ -401,6 +401,34 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('preserves bulk gift item objects while resolving recipient alias', () => {
+    const sessionPath = useTempSession();
+
+    expect(
+      preparePayload(
+        'send_gift',
+        {
+          recipient: 'Marlowe',
+          items: [
+            { item_id: 'ore_iron', quantity: 1 },
+            { item_id: 'ore_copper', quantity: 2 },
+          ],
+        },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: {
+        target: 'Marlowe',
+        items: [
+          { item_id: 'ore_iron', quantity: 1 },
+          { item_id: 'ore_copper', quantity: 2 },
+        ],
+      },
+    });
+  });
+
   test('resolves faction diplomacy targets from cached faction tags after alias normalization', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
