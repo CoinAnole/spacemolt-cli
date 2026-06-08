@@ -191,6 +191,11 @@ describe('command metadata', () => {
     expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['top', 'show_empty']));
     expect(config.aliases).toMatchObject({ limit: 'top' });
   });
+
+  test('removed alliance alias is not registered as a command', () => {
+    expect(COMMANDS).not.toHaveProperty('faction_set_ally');
+    expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty('faction_set_ally');
+  });
 });
 
 describe('normalizeParsedPayload', () => {
@@ -229,7 +234,6 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeParsedPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
     expect(normalizeParsedPayload('faction_propose_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
-    expect(normalizeParsedPayload('faction_set_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeParsedPayload('faction_accept_invite', { faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
@@ -849,7 +853,6 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
     expect(parseOk(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
     expect(parseOk(['faction_propose_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
-    expect(parseOk(['faction_set_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseOk(['faction_accept_invite', 'fac_1']).payload.faction_id).toBe('fac_1');
     expect(parseOk(['faction_withdraw_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
