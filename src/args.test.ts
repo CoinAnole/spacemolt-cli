@@ -864,8 +864,13 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(normalizeParsedPayload('load_passenger', load.payload)).toEqual({ id: 'sol_central' });
 
     const unload = parseOk(['unload_passenger', 'Lyra Vale']);
-    expect(unload.payload.passenger).toBe('Lyra Vale');
+    expect(unload.payload.id).toBe('Lyra Vale');
     expect(normalizeParsedPayload('unload_passenger', unload.payload)).toEqual({ id: 'Lyra Vale' });
+    expect(normalizeParsedPayload('unload_passenger', parseOk(['unload_passenger', 'all']).payload)).toEqual({
+      id: 'all',
+    });
+    expect(parseArgs(['unload_passenger', 'name=Lyra Vale']).ok).toBe(false);
+    expect(parseArgs(['unload_passenger', 'passenger=Lyra Vale']).ok).toBe(false);
   });
 
   test('citizenship commands parse positional payloads', () => {

@@ -83,14 +83,11 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   unload_passenger: {
-    usage: '<passenger_name_or_id>',
-    description: 'Put one passenger off the ship at the current station.',
+    usage: '<passenger_name_or_id_or_all>',
+    description: 'Put one passenger, or every passenger with "all", off the ship at the current station.',
     category: 'Passenger Transport',
     apiRoute: 'POST /api/v2/spacemolt/unload_passenger',
-    positionals: ['passenger'],
-    aliases: {
-      passenger: 'id',
-    },
+    positionals: ['id'],
   },
   get_skills: {
     category: 'Query commands',

@@ -12,6 +12,8 @@ import {
   getLocationFixture,
   getStatusFixture,
   highValueCommandFixtures,
+  listPassengersFixture,
+  listStationPassengersFixture,
   missionsFixture,
   poiInfoFixture,
   storageFixture,
@@ -1537,6 +1539,24 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('policy-1');
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('OK: Active policies');
+  });
+
+  test('passenger tables expose destination system and fare breakdowns', () => {
+    const aboard = captureStructuredOutput('list_passengers', listPassengersFixture);
+    expect(aboard.stderr).toBe('');
+    expect(aboard.stdout).toContain('System');
+    expect(aboard.stdout).toContain('Nova');
+    expect(aboard.stdout).toContain('Base');
+    expect(aboard.stdout).toContain('Bonus');
+    expect(aboard.stdout).toContain('100');
+    expect(aboard.stdout).toContain('25');
+
+    const waiting = captureStructuredOutput('list_station_passengers', listStationPassengersFixture);
+    expect(waiting.stderr).toBe('');
+    expect(waiting.stdout).toContain('System');
+    expect(waiting.stdout).toContain('Nova');
+    expect(waiting.stdout).toContain('Est. Fare');
+    expect(waiting.stdout).toContain('240');
   });
 
   test('catalog list responses do not drift against market formatter', () => {

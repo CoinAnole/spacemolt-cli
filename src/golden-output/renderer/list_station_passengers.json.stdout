@@ -9,7 +9,9 @@
       "class": "business",
       "citizenship": "solarian",
       "destination": "nova_central",
-      "destination_name": "Nova Central"
+      "destination_name": "Nova Central",
+      "destination_system": "Nova",
+      "estimated_fare": 240
     }
   ]
 }
