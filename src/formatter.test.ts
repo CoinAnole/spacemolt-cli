@@ -1061,6 +1061,30 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Ship fuel: 3046/4000 (-697)');
     expect(stdout).toContain('Target: Fabrini (9c8913b2cf825728a2404c9e4c4d7afb)');
     expect(stdout).toContain('Target fuel: 700/700');
+    expect(stdout).not.toContain('Fuel cost:');
+    expect(stdout).not.toContain('Fuel tax:');
+    expect(stdout).not.toContain('Total spent:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats station refuel cost and tax when present', () => {
+    const { stdout, stderr } = captureStructuredOutput('refuel', {
+      action: 'refuel',
+      source: 'station',
+      fuel: 3998,
+      fuel_now: 4000,
+      fuel_max: 4000,
+      cost: 7996,
+      tax_amount: 7996,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Refuel Complete ===');
+    expect(stdout).toContain('Source: station');
+    expect(stdout).toContain('Ship fuel: 4000/4000 (+3998)');
+    expect(stdout).toContain('Fuel cost: 7,996 cr');
+    expect(stdout).toContain('Fuel tax: 7,996 cr');
+    expect(stdout).toContain('Total spent: 15,992 cr (4 cr/fuel)');
     expect(stdout).not.toContain('=== Response ===');
   });
 

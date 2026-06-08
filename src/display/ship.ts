@@ -65,6 +65,21 @@ function formatFuelDelta(value: unknown): string | undefined {
   return value > 0 ? `+${value}` : String(value);
 }
 
+function optionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  return finiteNumber(value);
+}
+
+function formatCredits(value: number): string {
+  return `${value.toLocaleString()} cr`;
+}
+
+function formatPerFuel(value: number): string {
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+}
+
 function formatShipLabel(result: Record<string, unknown>): string {
   const shipId = result.ship_id ?? result.item_id;
   const name = result.ship_name ?? result.custom_name ?? result.name ?? result.class_name;
@@ -260,6 +275,19 @@ export const shipFormatters = [
       if (r.target_fuel_now !== undefined || r.target_fuel_max !== undefined) {
         emitLine(`Target fuel: ${r.target_fuel_now ?? '?'}/${r.target_fuel_max ?? '?'}`);
       }
+
+      const fuelCost = optionalNumber(r.cost);
+      const fuelTax = optionalNumber(r.tax_amount);
+      if (fuelCost !== undefined) emitLine(`Fuel cost: ${formatCredits(fuelCost)}`);
+      if (fuelTax !== undefined) emitLine(`Fuel tax: ${formatCredits(fuelTax)}`);
+      if (fuelCost !== undefined || fuelTax !== undefined) {
+        const totalSpent = (fuelCost ?? 0) + (fuelTax ?? 0);
+        const fuelAmount = optionalNumber(r.fuel);
+        const unitText =
+          fuelAmount !== undefined && fuelAmount > 0 ? ` (${formatPerFuel(totalSpent / fuelAmount)} cr/fuel)` : '';
+        emitLine(`Total spent: ${formatCredits(totalSpent)}${unitText}`);
+      }
+
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },

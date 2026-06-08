@@ -220,6 +220,16 @@ export const refuelFixture = {
   target_player_name: 'Fabrini',
 };
 
+export const stationRefuelFixture = {
+  action: 'refuel',
+  source: 'station',
+  fuel: 3998,
+  fuel_now: 4000,
+  fuel_max: 4000,
+  cost: 7996,
+  tax_amount: 7996,
+};
+
 export const salvageWreckFixture = {
   metal_scrap: 14,
   rare_materials: 2,
@@ -243,6 +253,7 @@ export const shipHighValueFixtures = {
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
   refuel: { command: 'refuel', fixture: refuelFixture },
+  refuel_station: { command: 'refuel', fixture: stationRefuelFixture },
   reload: { command: 'reload', fixture: reloadFixture },
   salvage_wreck: { command: 'salvage_wreck', fixture: salvageWreckFixture },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
