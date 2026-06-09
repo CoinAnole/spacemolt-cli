@@ -27,6 +27,7 @@ export interface GlobalOptions {
   debug?: boolean;
   allowUnknown: boolean;
   dryRun: boolean;
+  fuzzy?: boolean;
   profile?: string;
   field?: string;
   fields?: string[];

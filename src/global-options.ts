@@ -83,6 +83,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     debug: false,
     allowUnknown: false,
     dryRun: false,
+    fuzzy: false,
     fields: undefined,
     noTimestamp: false,
     compact: false,
@@ -111,6 +112,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     } else if (arg.startsWith('--dry-run=') || arg.startsWith('--preview=')) {
       const value = arg.substring(arg.indexOf('=') + 1).toLowerCase();
       result.dryRun = value !== 'false' && value !== '0';
+    } else if (arg === '--fuzzy') {
+      result.fuzzy = true;
     } else if (arg === '--no-timestamp') {
       result.noTimestamp = true;
     } else if (arg === '--compact') {

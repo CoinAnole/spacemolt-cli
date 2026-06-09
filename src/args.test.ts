@@ -1064,13 +1064,14 @@ describe('CLI output modes', () => {
     }
   });
 
-  test('global option parser handles watch, format, jq, profile, and dry-run values', () => {
+  test('global option parser handles watch, format, jq, profile, fuzzy, and dry-run values', () => {
     const result = parseGlobalOptions([
       '--watch',
       '2.5',
       '--debug',
       '--format=yaml',
       '--jq=.items[].id',
+      '--fuzzy',
       '--extract',
       'ship.fuel',
       '--profile=pilot',
@@ -1084,6 +1085,7 @@ describe('CLI output modes', () => {
     expect(result.options.debug).toBe(true);
     expect(result.options.format).toBe('yaml');
     expect(result.options.jq).toBe('.items[].id');
+    expect(result.options.fuzzy).toBe(true);
     expect(result.options.field).toBe('ship.fuel');
     expect(result.options.profile).toBe('pilot');
     expect(result.options.dryRun).toBe(false);
