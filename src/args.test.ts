@@ -188,8 +188,19 @@ describe('command metadata', () => {
       throw new Error('get_cargo command metadata is missing');
     }
 
-    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['top', 'show_empty']));
+    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['top', 'show_empty', 'items']));
     expect(config.aliases).toMatchObject({ limit: 'top' });
+  });
+
+  test('view_storage items filter is client-only metadata', () => {
+    const personalConfig = BUNDLED_COMMAND_REGISTRY.commands.view_storage;
+    const factionConfig = BUNDLED_COMMAND_REGISTRY.commands.view_faction_storage;
+    if (!personalConfig || !factionConfig) {
+      throw new Error('storage command metadata is missing');
+    }
+
+    expect(personalConfig.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
+    expect(factionConfig.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
   });
 
   test('removed alliance alias is not registered as a command', () => {
@@ -662,6 +673,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(normalizeParsedPayload('get_cargo', payload)).toMatchObject({ top: '5' });
   });
 
+  test('get_cargo accepts display-only items filter', () => {
+    const { payload } = parseOk(['get_cargo', '--items', 'aluminum_ore,steel_plate,aluminum_sheet']);
+
+    expect(normalizeParsedPayload('get_cargo', payload)).toMatchObject({
+      items: 'aluminum_ore,steel_plate,aluminum_sheet',
+    });
+  });
+
   test('completed_missions - no args', () => {
     const { command, payload } = parseOk(['completed_missions']);
     expect(command).toBe('completed_missions');
@@ -760,12 +779,24 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(search.payload.search).toBe('iron');
   });
 
+  test('view_storage accepts items filter', () => {
+    const { payload } = parseOk(['view_storage', '--items=iron_ore,fuel_cell']);
+
+    expect(normalizeParsedPayload('view_storage', payload)).toMatchObject({ items: 'iron_ore,fuel_cell' });
+  });
+
   test('view_faction_storage accepts item and search filters', () => {
     const item = parseOk(['view_faction_storage', '--item', 'iron_ore']);
     expect(normalizeParsedPayload('view_faction_storage', item.payload)).toMatchObject({ item_id: 'iron_ore' });
 
     const search = parseOk(['view_faction_storage', '--search=iron']);
     expect(search.payload.search).toBe('iron');
+  });
+
+  test('view_faction_storage accepts items filter', () => {
+    const { payload } = parseOk(['view_faction_storage', '--items', 'iron_ore,fuel_cell']);
+
+    expect(normalizeParsedPayload('view_faction_storage', payload)).toMatchObject({ items: 'iron_ore,fuel_cell' });
   });
 
   test('send_gift with ship_id', () => {

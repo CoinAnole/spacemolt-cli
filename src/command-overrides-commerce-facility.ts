@@ -88,9 +88,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   view_storage: {
-    usage: '[station_id] [--item item_id] [--search text]',
+    usage: '[station_id] [--item item_id] [--items item_id,item_id] [--search text]',
     description: 'Show personal station storage. Omit station_id for the current station.',
-    example: 'spacemolt view_storage --item iron_ore',
+    example: 'spacemolt view_storage --items iron_ore,fuel_cell',
     discoverWith: ['get_status'],
     seeAlso: ['deposit_items', 'withdraw_items'],
     category: 'Station storage',
@@ -105,11 +105,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
         description:
           'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
       },
+      items: {
+        type: 'string',
+        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
+      },
     },
-    clientOnlyFields: ['search'],
+    clientOnlyFields: ['search', 'items'],
   },
   view_faction_storage: {
-    usage: '[station_id] [--item item_id] [--search text]  (view faction storage, omit for current station)',
+    usage:
+      '[station_id] [--item item_id] [--items item_id,item_id] [--search text]  (view faction storage, omit for current station)',
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
     positionals: ['station_id'],
@@ -122,8 +127,12 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
         description:
           'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
       },
+      items: {
+        type: 'string',
+        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
+      },
     },
-    clientOnlyFields: ['search'],
+    clientOnlyFields: ['search', 'items'],
     defaults: {
       target: 'faction',
     },

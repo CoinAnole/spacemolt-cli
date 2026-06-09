@@ -31,10 +31,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_ship',
   },
   get_cargo: {
-    usage: '[--top N|--limit N] [--show-empty]',
+    usage: '[--items item_id,item_id] [--top N|--limit N] [--show-empty]',
     description:
       'List cargo item IDs, quantities, and cargo capacity. Table output hides empty stacks and sorts by quantity.',
-    example: 'spacemolt get_cargo --top 10',
+    example: 'spacemolt get_cargo --items aluminum_ore,steel_plate --top 10',
     seeAlso: ['sell', 'jettison', 'deposit_items'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_cargo',
@@ -50,8 +50,12 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
         type: 'boolean',
         description: 'Client-side display flag to include zero-quantity cargo stacks.',
       },
+      items: {
+        type: 'string',
+        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
+      },
     },
-    clientOnlyFields: ['top', 'show_empty'],
+    clientOnlyFields: ['top', 'show_empty', 'items'],
   },
   get_nearby: {
     category: 'Query commands',

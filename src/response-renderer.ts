@@ -214,7 +214,8 @@ function applyDisplayFilters(command: string, response: APIResponse, payload?: R
   if (!payload || !['view_storage', 'view_faction_storage', 'view_market'].includes(command)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const searchFilter = typeof payload.search === 'string' ? payload.search : undefined;
-  if (!itemFilter && !searchFilter) return response;
+  const itemsFilter = parseItemIdFilter(payload.items);
+  if (!itemFilter && !searchFilter && !itemsFilter) return response;
 
   const structuredContent = response.structuredContent;
   if (!structuredContent || !Array.isArray(structuredContent.items)) return response;
@@ -222,8 +223,25 @@ function applyDisplayFilters(command: string, response: APIResponse, payload?: R
   const nextStructuredContent = structuredClone(structuredContent);
   const items = nextStructuredContent.items as Array<Record<string, unknown>>;
   if (nextStructuredContent.total_items === undefined) nextStructuredContent.total_items = items.length;
-  nextStructuredContent.items = items.filter((item) => storageItemMatches(item, itemFilter, searchFilter));
+  nextStructuredContent.items = items.filter(
+    (item) => itemIdMatches(item, itemsFilter) && storageItemMatches(item, itemFilter, searchFilter),
+  );
   return { ...response, structuredContent: nextStructuredContent };
+}
+
+function parseItemIdFilter(value: unknown): Set<string> | undefined {
+  if (typeof value !== 'string') return undefined;
+  const itemIds = value
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  return itemIds.length ? new Set(itemIds) : undefined;
+}
+
+function itemIdMatches(item: Record<string, unknown>, itemFilter?: Set<string>): boolean {
+  if (!itemFilter) return true;
+  const itemId = item.item_id ?? item.id;
+  return typeof itemId === 'string' && itemFilter.has(itemId.toLowerCase());
 }
 
 function storageItemMatches(item: Record<string, unknown>, itemFilter?: string, searchFilter?: string): boolean {
@@ -264,9 +282,11 @@ function applyCargoDisplayFilters(response: APIResponse, payload: Record<string,
 
   const showEmpty = parseBooleanFlag(payload.show_empty);
   const top = parsePositiveInteger(payload.top);
+  const itemsFilter = parseItemIdFilter(payload.items);
   const nextStructuredContent = structuredClone(structuredContent);
   const cargo = nextStructuredContent.cargo as Array<Record<string, unknown>>;
-  const visibleCargo = showEmpty ? cargo : cargo.filter((item) => numericQuantity(item) > 0);
+  const matchingCargo = itemsFilter ? cargo.filter((item) => itemIdMatches(item, itemsFilter)) : cargo;
+  const visibleCargo = showEmpty ? matchingCargo : matchingCargo.filter((item) => numericQuantity(item) > 0);
   const sortedCargo = [...visibleCargo].sort((left, right) => numericQuantity(right) - numericQuantity(left));
 
   nextStructuredContent.cargo = top === undefined ? sortedCargo : sortedCargo.slice(0, top);

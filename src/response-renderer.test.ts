@@ -85,7 +85,7 @@ describe('response renderer', () => {
 
     await runCommand(
       'get_cargo',
-      { top: '10', show_empty: 'true' },
+      { top: '10', show_empty: 'true', items: 'ore_iron,fuel_cell' },
       baseOptions,
       client,
       BUNDLED_COMMAND_REGISTRY.commands.get_cargo,
@@ -596,6 +596,70 @@ describe('response renderer', () => {
     expect(parsed.items).toEqual([expect.objectContaining({ item_id: 'fuel_cell' })]);
   });
 
+  test('renderResponse applies view_storage items filter to --structured output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_storage',
+        displayCommand: 'view_storage',
+        payload: { items: 'iron_ore,steel_plate' },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
+              { item_id: 'steel_plate', item_name: 'Steel Plate', quantity: 7 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.total_items).toBe(3);
+    expect(parsed.items).toEqual([
+      expect.objectContaining({ item_id: 'iron_ore' }),
+      expect.objectContaining({ item_id: 'steel_plate' }),
+    ]);
+  });
+
+  test('renderResponse applies view_storage items filter for faction target table output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'view_storage',
+        displayCommand: 'view_storage',
+        payload: { target: 'faction', items: 'fuel_cell,steel_plate' },
+        response: {
+          structuredContent: {
+            base_id: 'nova_terra_central',
+            target: 'faction',
+            items: [
+              { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
+              { item_id: 'steel_plate', item_name: 'Steel Plate', quantity: 7 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('=== Faction Storage at nova_terra_central ===');
+    expect(output).toContain('Items (2):');
+    expect(output).toContain('Fuel Cell');
+    expect(output).toContain('Steel Plate');
+    expect(output).not.toContain('Iron Ore');
+  });
+
   test('renderResponse treats comma-separated storage search terms as alternatives', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
@@ -835,5 +899,69 @@ describe('response renderer', () => {
     const parsed = JSON.parse(capture.text());
     expect(parsed.structuredContent.cargo).toHaveLength(1);
     expect(parsed.structuredContent.cargo[0].item_id).toBe('ore_iron');
+  });
+
+  test('renderResponse applies get_cargo items filter to table output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: { items: 'ore_copper,fuel_cell', show_empty: 'true' },
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 0, size: 1 },
+            ],
+            used: 730,
+            capacity: 1000,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Cargo (2):');
+    expect(output).toContain('Copper Ore');
+    expect(output).toContain('Fuel Cell');
+    expect(output).not.toContain('Iron Ore');
+  });
+
+  test('renderResponse applies get_cargo items filter to JSON output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        payload: { items: 'ore_copper,fuel_cell', show_empty: 'true' },
+        response: {
+          structuredContent: {
+            cargo: [
+              { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+              { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 0, size: 1 },
+            ],
+            used: 730,
+            capacity: 1000,
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, json: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.structuredContent.cargo).toEqual([
+      expect.objectContaining({ item_id: 'ore_copper' }),
+      expect.objectContaining({ item_id: 'fuel_cell' }),
+    ]);
   });
 });
