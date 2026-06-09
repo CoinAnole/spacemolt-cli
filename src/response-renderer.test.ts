@@ -515,7 +515,7 @@ describe('response renderer', () => {
     expect(typoExitCode).toBe(1);
     expect(typoCapture.text()).toBe('');
     expect(typoCapture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
-      'Error: Path not found: ".ship.fule"\nSimilar keys: .ship.fuel (13)',
+      'Error: Path not found: ".ship.fule"\nSimilar keys: .ship.fuel (13)\nAvailable keys: ship',
     );
 
     const capacityCapture = fakeContext();
@@ -533,7 +533,7 @@ describe('response renderer', () => {
     expect(capacityExitCode).toBe(1);
     expect(capacityCapture.text()).toBe('');
     expect(capacityCapture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
-      'Error: Path not found: ".ship.fuel_capacity"\nSimilar keys: .ship.fuel (13), .ship.max_fuel (700)',
+      'Error: Path not found: ".ship.fuel_capacity"\nSimilar keys: .ship.fuel (13), .ship.max_fuel (700)\nAvailable keys: ship',
     );
   });
 
@@ -588,7 +588,7 @@ describe('response renderer', () => {
     expect(exitCode).toBe(1);
     expect(capture.text()).toBe('');
     expect(capture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
-      'Error: Path not found: ".ships[].fule"\nSimilar keys: .ships.fuel (13)',
+      'Error: Path not found: ".ships[].fule"\nSimilar keys: .ships.fuel (13)\nAvailable keys: ships',
     );
   });
 

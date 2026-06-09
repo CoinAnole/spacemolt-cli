@@ -385,7 +385,7 @@ function formatPathNotFoundError(expr: string, data: unknown, missing?: MissingP
   const base = `Path not found: "${expr}"`;
   const similarKeys = formatSimilarKeys(missing);
   const prefix = '.structuredContent.';
-  const availableKeys = similarKeys && !expr.startsWith(prefix) ? undefined : formatAvailableKeys(data);
+  const availableKeys = formatAvailableKeys(data);
   if (!expr.startsWith(prefix)) return [base, similarKeys, availableKeys].filter(Boolean).join('\n');
 
   const suggestedPath = `.${expr.slice(prefix.length)}`;
