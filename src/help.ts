@@ -677,6 +677,7 @@ ${c.bright}Global Flags:${c.reset}
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
+  --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
@@ -764,6 +765,7 @@ ${c.bright}Global Flags:${c.reset}
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
+  --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
@@ -845,6 +847,7 @@ ${c.bright}Usage:${c.reset}
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
       --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)
+      --fuzzy             Auto-resolve simple --jq paths to similar keys
       --keys [path]       List available keys at a JSON dotpath
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them

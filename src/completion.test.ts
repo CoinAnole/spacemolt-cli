@@ -263,6 +263,11 @@ describe('shell completion generation', () => {
         (candidate) => candidate.value,
       ),
     ).toContain('--plain');
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--fu'], current: '--fu' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toContain('--fuzzy');
   });
 
   test('runtime completion describes help using local help metadata', () => {

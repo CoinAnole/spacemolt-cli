@@ -117,6 +117,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('--json, -j        Full API response as JSON');
     expect(output).toContain('--jq              Extract with path syntax');
+    expect(output).toContain('--fuzzy           Auto-resolve simple --jq paths to similar keys');
     expect(output).toContain('--keys [path]     List available keys at a JSON dotpath');
     expect(output).toContain('.key[0].field');
     expect(output).toContain('Projections read from structuredContent when present.');
@@ -579,6 +580,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('--json, -j          Full API response as JSON');
     expect(output).toContain('--jq <expr>         Extract with path syntax');
+    expect(output).toContain('--fuzzy             Auto-resolve simple --jq paths to similar keys');
     expect(output).toContain('--keys [path]       List available keys at a JSON dotpath');
     expect(output).toContain('.key[0].field');
     expect(output).toContain('--field/--fields output only the selected projection, even with --json/--format=json.');

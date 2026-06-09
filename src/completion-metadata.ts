@@ -47,6 +47,7 @@ export const GLOBAL_COMPLETION_OPTIONS: CompletionOption[] = [
     takesValue: true,
   },
   { long: '--jq', description: 'Extract a JSON path expression', takesValue: true },
+  { long: '--fuzzy', description: 'Auto-resolve simple --jq paths to similar keys' },
   { long: '--keys', description: 'List keys at a JSON dotpath', takesValue: true },
   { long: '--profile', description: 'Use a named profile', takesValue: true },
   { long: '--field', description: 'Extract one response field, or comma-separated fields', takesValue: true },

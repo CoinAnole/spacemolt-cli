@@ -197,7 +197,7 @@ function resolvePathTokens(
     for (const item of value) {
       const resolved = resolvePathTokens(item, rest, appendArrayEachPath(path), options);
       if (!resolved.found) return resolved;
-      mapped.push(resolved.value);
+      mapped.push(jqResultValue(resolved.value));
     }
     return { found: true, value: mapped };
   }
@@ -454,13 +454,25 @@ function sharesDomain(requestedWords: string[], suggestion: KeySuggestion): bool
   return commonWordCount(requestedDomainWords, domainWords(keyWords(suggestion.key))) > 0;
 }
 
+function isCapacityResultSuggestion(requestedWords: string[], suggestion: KeySuggestion): boolean {
+  const requestedDomainWords = domainWords(requestedWords);
+  const suggestionWords = keyWords(suggestion.key);
+  const suggestionDomainWords = domainWords(suggestionWords);
+  if (requestedDomainWords.length === 0) return false;
+  if (requestedDomainWords.join('_') !== suggestionDomainWords.join('_')) return false;
+  return suggestionDomainWords.length === suggestionWords.length || suggestionWords.some(isCapacityWord);
+}
+
 function selectFuzzySuggestions(missing: MissingPathContext, suggestions: KeySuggestion[]): KeySuggestion[] {
   if (suggestions.length === 0) return [];
 
   const requestedWords = keyWords(missing.requestedKey);
   if (containsCapacityIntent(requestedWords)) {
     const domainSuggestions = suggestions.filter(
-      (suggestion) => suggestion.semantic && sharesDomain(requestedWords, suggestion),
+      (suggestion) =>
+        suggestion.semantic &&
+        sharesDomain(requestedWords, suggestion) &&
+        isCapacityResultSuggestion(requestedWords, suggestion),
     );
     if (domainSuggestions.length > 0) return domainSuggestions;
   }

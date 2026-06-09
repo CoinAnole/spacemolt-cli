@@ -552,6 +552,8 @@ describe('response renderer', () => {
               name: 'Wayfarer',
               fuel: 13,
               max_fuel: 700,
+              fuel_type: 'plasma',
+              fuel_efficiency: 0.8,
             },
           },
         },
@@ -563,6 +565,43 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(0);
     expect(capture.text()).toBe('.fuel=13 .max_fuel=700');
+    expect(capture.stderr).toEqual([]);
+  });
+
+  test('renderResponse unwraps fuzzy jq result sets under array traversal', async () => {
+    const response = {
+      structuredContent: {
+        ships: [
+          {
+            name: 'Wayfarer',
+            fuel: 13,
+            max_fuel: 700,
+          },
+          {
+            name: 'Courier',
+            fuel: 22,
+            max_fuel: 400,
+          },
+        ],
+      },
+    };
+
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'list_ships',
+        displayCommand: 'list_ships',
+        response,
+      },
+      { ...baseOptions, fuzzy: true, jq: '.ships[].fuel_cap' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(capture.text()).toBe(
+      '[\n  {\n    ".fuel": 13,\n    ".max_fuel": 700\n  },\n  {\n    ".fuel": 22,\n    ".max_fuel": 400\n  }\n]',
+    );
     expect(capture.stderr).toEqual([]);
   });
 
