@@ -592,6 +592,47 @@ describe('response renderer', () => {
     expect(capture.stderr).toEqual([]);
   });
 
+  test('renderResponse formats fuzzy jq result sets for json and yaml output', async () => {
+    const response = {
+      structuredContent: {
+        ship: {
+          fuel: 13,
+          max_fuel: 700,
+        },
+      },
+    };
+
+    const jsonCapture = fakeContext();
+    const jsonExitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response,
+      },
+      { ...baseOptions, fuzzy: true, jq: '.ship.fuel_cap', format: 'json' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      jsonCapture.context,
+    );
+
+    expect(jsonExitCode).toBe(0);
+    expect(jsonCapture.text()).toBe('{\n  ".fuel": 13,\n  ".max_fuel": 700\n}');
+
+    const yamlCapture = fakeContext();
+    const yamlExitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response,
+      },
+      { ...baseOptions, fuzzy: true, jq: '.ship.fuel_cap', format: 'yaml' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      yamlCapture.context,
+    );
+
+    expect(yamlExitCode).toBe(0);
+    expect(yamlCapture.text()).toBe('\n.fuel: 13\n.max_fuel: 700');
+  });
+
   test('renderResponse does not fuzzy-resolve jq object construction', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(

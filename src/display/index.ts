@@ -1,5 +1,5 @@
 import type { CliRuntimeContext } from '../cli-context.ts';
-import { evaluateJq, formatJqResult } from '../jq.ts';
+import { evaluateJq, formatJqResult, jqResultValue } from '../jq.ts';
 import {
   extractFields,
   getFieldValue,
@@ -75,14 +75,14 @@ function formatProjection(
   compact: boolean,
   projection: 'jq' | 'fields' | 'field',
 ): string {
-  if (format === 'yaml') return toYaml(value);
+  if (format === 'yaml') return toYaml(projection === 'jq' ? jqResultValue(value) : value);
   if (format === 'text') {
     if (projection === 'jq') return formatJqResult(value, compact);
     if (typeof value === 'string') return value;
     if (value === undefined) return 'null';
     return stringifyJson(value, compact);
   }
-  if (format === 'json') return stringifyJson(value, compact);
+  if (format === 'json') return stringifyJson(projection === 'jq' ? jqResultValue(value) : value, compact);
   if (projection === 'field') {
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
