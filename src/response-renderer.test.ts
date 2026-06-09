@@ -73,6 +73,30 @@ function nearbyNpcs(count: number): Array<Record<string, unknown>> {
   }));
 }
 
+const getStatusSummaryFixture = {
+  player: {
+    username: 'Marlowe',
+    credits: 1853248,
+  },
+  system: {
+    name: 'Nova Terra',
+  },
+  station: {
+    name: 'Nova Terra Central',
+  },
+  ship: {
+    name: 'Wayfarer',
+    class_name: 'Dust Devil',
+  },
+  skills: {
+    crafting: { name: 'Crafting', level: 11, xp: 4000, next_level_xp: 5000 },
+    engineering: { name: 'Engineering', level: 0, xp: 0, next_level_xp: 100 },
+    mining: { name: 'Mining', level: 21, xp: 18000, next_level_xp: 20000 },
+    piloting: { name: 'Piloting', level: 14, xp: 9000, next_level_xp: 10000 },
+    trading: { name: 'Trading', level: 15, xp: 12000, next_level_xp: 13000 },
+  },
+};
+
 describe('response renderer', () => {
   test('runCommand strips get_cargo display-only fields before API execution', async () => {
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
@@ -92,6 +116,69 @@ describe('response renderer', () => {
     );
 
     expect(calls).toEqual([{ command: 'get_cargo', payload: {} }]);
+  });
+
+  test('runCommand strips get_status summary before API execution', async () => {
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return { structuredContent: getStatusSummaryFixture };
+      },
+    } as unknown as SpaceMoltClient;
+
+    await runCommand(
+      'get_status',
+      { summary: true },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.get_status,
+    );
+
+    expect(calls).toEqual([{ command: 'get_status', payload: {} }]);
+  });
+
+  test('renderResponse prints compact get_status summary only for default human output', async () => {
+    const summaryCapture = fakeContext();
+    const summaryExitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        payload: { summary: true },
+        response: { structuredContent: getStatusSummaryFixture },
+      },
+      { ...baseOptions, format: 'table' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      summaryCapture.context,
+    );
+
+    expect(summaryExitCode).toBe(0);
+    expect(summaryCapture.text()).toBe(
+      [
+        'Player:    Marlowe',
+        'Credits:   1,853,248',
+        'System:    Nova Terra',
+        'Docked:    Nova Terra Central',
+        'Ship:      Dust Devil',
+        'Skills:    Crafting 11 | Engineering 0 | Mining 21 | Piloting 14 | Trading 15',
+      ].join('\n'),
+    );
+
+    const fieldCapture = fakeContext();
+    const fieldExitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        payload: { summary: true },
+        response: { structuredContent: getStatusSummaryFixture },
+      },
+      { ...baseOptions, field: 'ship.class_name' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      fieldCapture.context,
+    );
+
+    expect(fieldExitCode).toBe(0);
+    expect(fieldCapture.text()).toBe('Dust Devil');
   });
 
   test('runCommand uses server preview command for supported dry-run previews', async () => {

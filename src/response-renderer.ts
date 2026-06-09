@@ -120,29 +120,55 @@ export async function renderResponse(
     return filteredResponse.error ? 1 : 0;
   }
 
-  const display = prepareHumanDisplay(commandRun, filteredResponse, sessionPath);
+  const display = prepareHumanDisplay(commandRun, filteredResponse, {
+    sessionPath,
+    options,
+    hasProjection,
+    isJson,
+  });
   const success = displayResult(
     display.command,
     display.response,
-    hasProjection ? { ...options, noTimestamp: true } : options,
+    display.noTimestamp || hasProjection ? { ...options, noTimestamp: true } : options,
     context,
   );
   return success === false ? 1 : 0;
 }
 
+interface HumanDisplayOptions {
+  sessionPath?: string;
+  options: GlobalOptions;
+  hasProjection: boolean;
+  isJson: boolean;
+}
+
 function prepareHumanDisplay(
   commandRun: CommandRunResult,
   response: APIResponse,
-  sessionPath?: string,
-): { command: string; response: APIResponse } {
+  displayOptions: HumanDisplayOptions,
+): { command: string; response: APIResponse; noTimestamp?: boolean } {
+  if (shouldUseGetStatusSummary(commandRun, displayOptions)) {
+    return { command: 'get_status_summary', response, noTimestamp: true };
+  }
+
   if (!isDepositItemsCarrierLoad(commandRun, response)) {
     return { command: commandRun.displayCommand, response };
   }
 
   return {
     command: 'deposit_items_carrier_load',
-    response: enrichCarrierLoadDisplayResponse(commandRun, response, sessionPath),
+    response: enrichCarrierLoadDisplayResponse(commandRun, response, displayOptions.sessionPath),
   };
+}
+
+function shouldUseGetStatusSummary(commandRun: CommandRunResult, displayOptions: HumanDisplayOptions): boolean {
+  if (commandRun.command !== 'get_status') return false;
+  if (commandRun.payload?.summary !== true) return false;
+  if (displayOptions.isJson || displayOptions.options.structured || displayOptions.hasProjection) return false;
+  if (displayOptions.options.compact) return false;
+
+  const format = displayOptions.options.format ?? 'table';
+  return format === 'table' || format === 'text';
 }
 
 function isDepositItemsCarrierLoad(commandRun: CommandRunResult, response: APIResponse): boolean {

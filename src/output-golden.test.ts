@@ -253,6 +253,30 @@ const rendererProjectionCases: RendererGoldenCase[] = [
   },
 ];
 
+const getStatusSummaryFixture = {
+  player: {
+    username: 'Marlowe',
+    credits: 1853248,
+  },
+  system: {
+    name: 'Nova Terra',
+  },
+  station: {
+    name: 'Nova Terra Central',
+  },
+  ship: {
+    name: 'Wayfarer',
+    class_name: 'Dust Devil',
+  },
+  skills: {
+    crafting: { name: 'Crafting', level: 11, xp: 4000, next_level_xp: 5000 },
+    engineering: { name: 'Engineering', level: 0, xp: 0, next_level_xp: 100 },
+    mining: { name: 'Mining', level: 21, xp: 18000, next_level_xp: 20000 },
+    piloting: { name: 'Piloting', level: 14, xp: 9000, next_level_xp: 10000 },
+    trading: { name: 'Trading', level: 15, xp: 12000, next_level_xp: 13000 },
+  },
+};
+
 const cliCases: CliGoldenCase[] = [
   {
     name: 'get_status.--json',
@@ -272,6 +296,12 @@ const cliCases: CliGoldenCase[] = [
     response: { structuredContent: getStatusFixture },
     stdoutFormat: 'yaml',
     expectedYamlKeys: Object.keys(getStatusFixture),
+  },
+  {
+    name: 'get_status.--summary',
+    argv: ['--plain', 'get_status', '--summary'],
+    response: { structuredContent: getStatusSummaryFixture },
+    stdoutFormat: 'text',
   },
   {
     name: 'validation-error.table',

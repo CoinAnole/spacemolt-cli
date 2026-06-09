@@ -16,6 +16,7 @@ const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   get_notifications: 'Notification output has separate formatter tests and needs promotion later.',
   get_player: 'Player profile output needs a representative fixture before snapshotting.',
   get_queue: 'Queue output needs empty and active queue fixtures before snapshotting.',
+  get_status_summary: 'Internal display variant selected from get_status --summary; covered by CLI golden output.',
   jump: 'Jump success response needs a representative fixture before snapshotting.',
   notifications: 'Notification polling route is covered separately from command goldens.',
   sell: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',

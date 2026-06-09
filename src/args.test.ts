@@ -681,6 +681,15 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('get_status accepts summary as a display-only boolean flag', () => {
+    const { command, payload } = parseOk(['get_status', '--summary']);
+
+    expect(command).toBe('get_status');
+    expect(payload).toEqual({ summary: 'true' });
+    expect(convertPayloadTypes(payload, 'get_status')).toEqual({ summary: true });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.get_status?.clientOnlyFields).toContain('summary');
+  });
+
   test('completed_missions - no args', () => {
     const { command, payload } = parseOk(['completed_missions']);
     expect(command).toBe('completed_missions');

@@ -24,6 +24,101 @@ function formatDisplayValue(value: unknown): string {
   return String(value);
 }
 
+function formatSummaryLine(label: string, value: unknown): string {
+  return `${label.padEnd(11)}${value === undefined || value === null || value === '' ? 'unknown' : String(value)}`;
+}
+
+function textFromRecord(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
+  if (!record) return undefined;
+  for (const key of keys) {
+    const value = record[key];
+    if (value === undefined || value === null || value === '') continue;
+    if (isRecord(value)) {
+      const nested = textFromRecord(value, ['name', 'display_name', 'class_name', 'id']);
+      if (nested) return nested;
+      continue;
+    }
+    return String(value);
+  }
+  return undefined;
+}
+
+function titleFromId(value: string): string {
+  return value
+    .replace(/_level$/, '')
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function compactSkillEntries(source: unknown): string[] {
+  if (!isRecord(source)) return [];
+  const entries: string[] = [];
+  const seen = new Set<string>();
+
+  for (const [id, value] of Object.entries(source)) {
+    if (isRecord(value)) {
+      const level = value.level ?? value.current_level;
+      if (level === undefined || level === null || level === '') continue;
+      const name = textFromRecord(value, ['name', 'display_name', 'title']) ?? titleFromId(id);
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      entries.push(`${name} ${level}`);
+      continue;
+    }
+
+    if (!id.endsWith('_level') || value === undefined || value === null || value === '') continue;
+    const name = titleFromId(id);
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push(`${name} ${value}`);
+  }
+
+  return entries.sort((left, right) => left.localeCompare(right));
+}
+
+function formatStatusSummary(r: Record<string, unknown>): string[] | undefined {
+  if (!isRecord(r.player) || !isRecord(r.ship)) return undefined;
+  const player = r.player;
+  const ship = r.ship;
+  const system = isRecord(r.system) ? r.system : undefined;
+  const station = isRecord(r.station) ? r.station : isRecord(r.base) ? r.base : undefined;
+  const location = isRecord(r.location) ? r.location : undefined;
+
+  const playerName = textFromRecord(player, ['username', 'name', 'player_name']);
+  const credits = player.credits ?? r.credits;
+  const systemName =
+    textFromRecord(system, ['name', 'system_name', 'id', 'system_id']) ??
+    textFromRecord(location, ['system_name', 'system_id']) ??
+    textFromRecord(player, ['current_system_name', 'current_system']);
+  const docked =
+    textFromRecord(station, ['name', 'station_name', 'base_name', 'id', 'station_id', 'base_id']) ??
+    textFromRecord(location, ['docked_station_name', 'station_name', 'base_name', 'docked_at_name', 'docked_at']) ??
+    textFromRecord(player, [
+      'docked_station_name',
+      'station_name',
+      'base_name',
+      'docked_at_base_name',
+      'docked_at_base',
+    ]) ??
+    'in space';
+  const shipClass =
+    textFromRecord(ship, ['class_name', 'ship_class_name', 'class', 'ship_class', 'class_id', 'name']) ?? 'unknown';
+  const skills = compactSkillEntries(r.skills ?? player.skills ?? player.stats);
+
+  return [
+    formatSummaryLine('Player:', playerName),
+    formatSummaryLine('Credits:', typeof credits === 'number' ? formatNumber(credits) : credits),
+    formatSummaryLine('System:', systemName),
+    formatSummaryLine('Docked:', docked),
+    formatSummaryLine('Ship:', shipClass),
+    formatSummaryLine('Skills:', skills.length ? skills.join(' | ') : 'None'),
+  ];
+}
+
 function rowsHaveValue(rows: Array<Record<string, unknown>>, keys: string[]): boolean {
   return rows.some((row) => keys.some((key) => row[key] !== undefined && row[key] !== null && row[key] !== ''));
 }
@@ -226,6 +321,17 @@ export const statusFormatters = [
       return true;
     },
     { commands: ['get_player'] },
+  ),
+
+  // Compact player status summary
+  formatter(
+    (r) => {
+      const lines = formatStatusSummary(r);
+      if (!lines) return false;
+      for (const line of lines) emitLine(line);
+      return true;
+    },
+    { commands: ['get_status_summary'] },
   ),
 
   // Player status

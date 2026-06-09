@@ -2,11 +2,19 @@ import type { CommandOverride } from './commands';
 
 export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_status: {
+    usage: '[--summary]',
     description: 'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.',
-    example: 'spacemolt get_status',
+    example: 'spacemolt get_status --summary',
     seeAlso: ['get_system', 'get_cargo', 'get_ship'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_status',
+    schemaExtensions: {
+      summary: {
+        type: 'boolean',
+        description: 'Client-side display flag to print a compact player summary in default text output.',
+      },
+    },
+    clientOnlyFields: ['summary'],
   },
   get_system: {
     description: 'List current-system POIs and connected systems. Use IDs from this output for travel and jump.',
