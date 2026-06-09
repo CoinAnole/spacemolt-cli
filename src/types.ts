@@ -36,6 +36,7 @@ export interface GlobalOptions {
   structured?: boolean;
   watch?: number;
   jq?: string;
+  keys?: string;
   args: string[];
 }
 

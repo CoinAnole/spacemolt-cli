@@ -181,6 +181,133 @@ describe('response renderer', () => {
     expect(fieldCapture.text()).toBe('Dust Devil');
   });
 
+  test('renderResponse prints top-level and nested keys from structured output', async () => {
+    const response = {
+      structuredContent: {
+        player: {
+          username: 'Marlowe',
+          credits: 1853248,
+        },
+        location: {
+          system_id: 'nova_terra',
+          poi_id: 'nova_terra_central',
+        },
+        ship: {
+          id: 'ship_123',
+          class_name: 'Prospector',
+        },
+      },
+    };
+
+    const topLevelCapture = fakeContext();
+    const topLevelExitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        response,
+      },
+      { ...baseOptions, keys: '' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      topLevelCapture.context,
+    );
+
+    expect(topLevelExitCode).toBe(0);
+    expect(topLevelCapture.text()).toBe(['player', 'location', 'ship'].join('\n'));
+    expect(topLevelCapture.stderr).toEqual([]);
+
+    const nestedCapture = fakeContext();
+    const nestedExitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        response,
+      },
+      { ...baseOptions, keys: 'player' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      nestedCapture.context,
+    );
+
+    expect(nestedExitCode).toBe(0);
+    expect(nestedCapture.text()).toBe(['username', 'credits'].join('\n'));
+    expect(nestedCapture.stderr).toEqual([]);
+  });
+
+  test('renderResponse supports structuredContent-prefixed keys paths for structured output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_cargo',
+        displayCommand: 'get_cargo',
+        response: {
+          structuredContent: {
+            cargo: [],
+            ship: {
+              id: 'ship_123',
+              cargo_capacity: 100,
+            },
+          },
+        },
+      },
+      { ...baseOptions, keys: 'structuredContent.ship' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(capture.text()).toBe(['id', 'cargo_capacity'].join('\n'));
+    expect(capture.stderr).toEqual([]);
+  });
+
+  test('renderResponse reports missing and scalar keys paths', async () => {
+    const response = {
+      structuredContent: {
+        player: {
+          username: 'Marlowe',
+          credits: 1853248,
+        },
+        location: {
+          system_id: 'nova_terra',
+        },
+      },
+    };
+
+    const missingCapture = fakeContext();
+    const missingExitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        response,
+      },
+      { ...baseOptions, keys: 'foo.bar' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      missingCapture.context,
+    );
+
+    expect(missingExitCode).toBe(1);
+    expect(missingCapture.text()).toBe('');
+    expect(missingCapture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path "foo.bar" not found. Available top-level keys: player, location',
+    );
+
+    const scalarCapture = fakeContext();
+    const scalarExitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        response,
+      },
+      { ...baseOptions, keys: 'player.credits' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      scalarCapture.context,
+    );
+
+    expect(scalarExitCode).toBe(1);
+    expect(scalarCapture.text()).toBe('');
+    expect(scalarCapture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: "player.credits" is a scalar (number), not an object.',
+    );
+  });
+
   test('runCommand uses server preview command for supported dry-run previews', async () => {
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
     const client = {

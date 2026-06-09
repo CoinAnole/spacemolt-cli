@@ -117,6 +117,16 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       result.compact = true;
     } else if (arg === '--structured') {
       result.structured = true;
+    } else if (arg === '--keys') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-') && filteredArgs.length > 0) {
+        result.keys = nextArg.trim();
+        i++;
+      } else {
+        result.keys = '';
+      }
+    } else if (arg.startsWith('--keys=')) {
+      result.keys = arg.slice('--keys='.length).trim();
     } else if (arg === '--watch' || arg === '-w') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
@@ -200,6 +210,10 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     } else {
       filteredArgs.push(arg);
     }
+  }
+
+  if (result.keys !== undefined && result.jq) {
+    return parseError('--keys', '--keys and --jq are mutually exclusive.', outputState(result));
   }
 
   return {

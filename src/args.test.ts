@@ -1090,6 +1090,26 @@ describe('CLI output modes', () => {
     expect(result.options.args).toEqual(['get_status']);
   });
 
+  test('global option parser handles keys with optional dotpaths', () => {
+    const topLevel = parseGlobalOptions(['get_status', '--keys']);
+    expect(topLevel.ok).toBe(true);
+    if (!topLevel.ok) throw new Error(topLevel.error.message);
+    expect(topLevel.options.keys).toBe('');
+    expect(topLevel.options.args).toEqual(['get_status']);
+
+    const nested = parseGlobalOptions(['get_status', '--keys', 'player']);
+    expect(nested.ok).toBe(true);
+    if (!nested.ok) throw new Error(nested.error.message);
+    expect(nested.options.keys).toBe('player');
+    expect(nested.options.args).toEqual(['get_status']);
+
+    const equals = parseGlobalOptions(['--keys=structuredContent.ship', 'get_cargo']);
+    expect(equals.ok).toBe(true);
+    if (!equals.ok) throw new Error(equals.error.message);
+    expect(equals.options.keys).toBe('structuredContent.ship');
+    expect(equals.options.args).toEqual(['get_cargo']);
+  });
+
   test('global option parser handles equals shorthands and default watch interval', () => {
     const result = parseGlobalOptions(['--watch', '-fmt=text', '-f=id,name', '--preview=1', 'get_status']);
 
@@ -1125,6 +1145,14 @@ describe('CLI output modes', () => {
         code: 'invalid_global_option',
         option: '--jq',
         message: '--jq requires a path expression.',
+      },
+    });
+    expect(parseGlobalOptions(['get_status', '--keys', 'player', '--jq=.player'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--keys',
+        message: '--keys and --jq are mutually exclusive.',
       },
     });
   });

@@ -536,6 +536,7 @@ function shouldPrintServerHelpLocalMapping(options: GlobalOptions): boolean {
     !options.compact &&
     !options.structured &&
     !options.jq &&
+    options.keys === undefined &&
     !options.field &&
     !options.fields?.length
   );

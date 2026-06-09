@@ -64,7 +64,9 @@ export async function renderResponse(
 ): Promise<number> {
   const { command, displayCommand, response } = commandRun;
   const isJson = options.json || options.format === 'json';
-  const hasProjection = Boolean(options.jq || options.field || (options.fields && options.fields.length > 0));
+  const hasProjection = Boolean(
+    options.jq || options.keys !== undefined || options.field || (options.fields && options.fields.length > 0),
+  );
   const writer = context?.writer;
 
   if ((isJson || options.structured) && response.error) {

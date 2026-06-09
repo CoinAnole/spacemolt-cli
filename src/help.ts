@@ -677,12 +677,13 @@ ${c.bright}Global Flags:${c.reset}
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
+  --keys [path]     List available keys at a JSON dotpath
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
-  --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
+  --keys and --jq are mutually exclusive; projections run before --json/--format; --compact and --plain apply last.
   Projections read from structuredContent when present.
   --field/--fields output only the selected projection, even with --json/--format=json.
 `);
@@ -763,12 +764,13 @@ ${c.bright}Global Flags:${c.reset}
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
+  --keys [path]     List available keys at a JSON dotpath
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
 
 ${c.bright}Output Precedence:${c.reset}
-  --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
+  --keys and --jq are mutually exclusive; projections run before --json/--format; --compact and --plain apply last.
   Projections read from structuredContent when present.
   --field/--fields output only the selected projection, even with --json/--format=json.
 `);
@@ -843,13 +845,14 @@ ${c.bright}Usage:${c.reset}
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
       --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)
+      --keys [path]       List available keys at a JSON dotpath
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them
       --allow-unknown     Allow unknown command fields to pass through
       --debug             Print verbose diagnostics for this command
 
     Output precedence:
-      --jq overrides --field/--fields; projections run before --json/--format; --compact and --plain apply last.
+      --keys and --jq are mutually exclusive; projections run before --json/--format; --compact and --plain apply last.
       Projections read from structuredContent when present.
       --field/--fields output only the selected projection, even with --json/--format=json.
       JSON errors remain full response envelopes for compatibility.
@@ -1063,6 +1066,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Auto-dock/undock handles dock state automatically
    - Your session auto-renews; credentials are saved in sessions/<profile>.json
    - Speak English in all chat and forum messages
+    - Use '--keys [path]' to inspect available structured response keys before writing projections
     - Use '--field key.path' for one value, '--field key1,key2', or '--jq .array[0].field' / '.array[].field' for extraction
     - Use '--fields key1,key2' to extract specific values from structured responses
     - Choose '--format json|yaml|text' after selecting fields or jq projections

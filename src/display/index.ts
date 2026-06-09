@@ -31,6 +31,10 @@ function hasField(field: string | undefined): field is string {
   return Boolean(field && field.length > 0);
 }
 
+function hasKeys(keys: string | undefined): keys is string {
+  return keys !== undefined;
+}
+
 function fieldPaths(field: string): string[] {
   return field
     .split(',')
@@ -89,6 +93,7 @@ function formatProjection(
 }
 
 type FieldProjectionResult = { success: true; value: unknown } | { success: false; message: string; fatal: boolean };
+type KeysProjectionResult = { success: true; keys: string[] } | { success: false; message: string; fatal: boolean };
 
 function formatAvailableKeys(result: Record<string, unknown>): string | undefined {
   const keys = Object.keys(result);
@@ -104,6 +109,77 @@ function formatFieldsNotFoundMessage(result: Record<string, unknown>, fields: st
   const availableKeys = formatAvailableKeys(result);
   if (!availableKeys) return undefined;
   return [`Fields not found: ${fields.join(', ')}`, availableKeys].join('\n');
+}
+
+function formatAvailableTopLevelKeys(result: Record<string, unknown>): string {
+  const keys = Object.keys(result);
+  return keys.length > 0 ? `Available top-level keys: ${keys.join(', ')}` : 'Available top-level keys:';
+}
+
+function normalizeKeysPath(result: Record<string, unknown>, path: string): string {
+  const normalized = path.trim().replace(/^\./, '');
+  if (normalized === 'structuredContent' && !Object.hasOwn(result, 'structuredContent')) return '';
+  if (normalized.startsWith('structuredContent.') && !Object.hasOwn(result, 'structuredContent')) {
+    return normalized.slice('structuredContent.'.length);
+  }
+  return normalized;
+}
+
+function resolveKeysValue(
+  result: Record<string, unknown>,
+  path: string,
+): { found: true; value: unknown } | { found: false } {
+  const normalized = normalizeKeysPath(result, path);
+  if (!normalized) return { found: true, value: result };
+
+  let current: unknown = result;
+  for (const part of normalized.split('.')) {
+    if (!part) continue;
+    if (Array.isArray(current)) {
+      const index = Number.parseInt(part, 10);
+      if (Number.isNaN(index) || !Object.hasOwn(current, index)) return { found: false };
+      current = current[index];
+    } else if (isRecord(current)) {
+      if (!Object.hasOwn(current, part)) return { found: false };
+      current = current[part];
+    } else {
+      return { found: false };
+    }
+  }
+
+  return { found: true, value: current };
+}
+
+function jsonValueKind(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function formatNotObjectMessage(path: string, value: unknown): string {
+  const displayPath = path.trim().replace(/^\./, '') || '.';
+  const kind = jsonValueKind(value);
+  if (kind === 'string' || kind === 'number' || kind === 'boolean') {
+    return `"${displayPath}" is a scalar (${kind}), not an object.`;
+  }
+  const article = kind === 'array' || kind === 'object' ? 'an' : 'a';
+  return `"${displayPath}" is ${article} ${kind}, not an object.`;
+}
+
+function resolveKeysProjection(result: Record<string, unknown>, path: string): KeysProjectionResult {
+  const resolved = resolveKeysValue(result, path);
+  if (!resolved.found) {
+    const displayPath = path.trim().replace(/^\./, '');
+    return {
+      success: false,
+      message: `Path "${displayPath}" not found. ${formatAvailableTopLevelKeys(result)}`,
+      fatal: true,
+    };
+  }
+  if (!isRecord(resolved.value)) {
+    return { success: false, message: formatNotObjectMessage(path, resolved.value), fatal: true };
+  }
+  return { success: true, keys: Object.keys(resolved.value) };
 }
 
 function resolveFieldProjection(result: Record<string, unknown>, field: string): FieldProjectionResult {
@@ -169,7 +245,22 @@ function displayStructuredResultInternal(
   const format = getOutputFormat(options, context);
   const compact = isCompact(options, context);
   const jqExpr = options?.jq;
+  const keysPath = options?.keys;
   const structuredOutputResult = normalizeStructuredResultForOutput(command, result);
+
+  if (hasKeys(keysPath)) {
+    if (jqExpr) {
+      emitError(`${c.red}Error:${c.reset} --keys and --jq are mutually exclusive.`);
+      return false;
+    }
+    const resolved = resolveKeysProjection(structuredOutputResult, keysPath);
+    if (!resolved.success) {
+      emitError(`${c.red}Error:${c.reset} ${resolved.message}`);
+      return !resolved.fatal;
+    }
+    for (const key of resolved.keys) emitLine(key);
+    return true;
+  }
 
   if (jqExpr) {
     try {
