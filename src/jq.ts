@@ -166,7 +166,9 @@ function resolvePathTokens(
           return {
             found: true,
             value: makeFuzzyJqResult(
-              Object.fromEntries(selectedSuggestions.map((suggestion) => [suggestionPath('', suggestion.key), suggestion.value])),
+              Object.fromEntries(
+                selectedSuggestions.map((suggestion) => [suggestionPath('', suggestion.key), suggestion.value]),
+              ),
             ),
           };
         }
@@ -179,7 +181,12 @@ function resolvePathTokens(
         missing,
       };
     }
-    return resolvePathTokens((value as Record<string, unknown>)[token.name], rest, appendPath(path, token.name), options);
+    return resolvePathTokens(
+      (value as Record<string, unknown>)[token.name],
+      rest,
+      appendPath(path, token.name),
+      options,
+    );
   }
 
   if (token.kind === 'each') {
@@ -452,7 +459,9 @@ function selectFuzzySuggestions(missing: MissingPathContext, suggestions: KeySug
 
   const requestedWords = keyWords(missing.requestedKey);
   if (containsCapacityIntent(requestedWords)) {
-    const domainSuggestions = suggestions.filter((suggestion) => suggestion.semantic && sharesDomain(requestedWords, suggestion));
+    const domainSuggestions = suggestions.filter(
+      (suggestion) => suggestion.semantic && sharesDomain(requestedWords, suggestion),
+    );
     if (domainSuggestions.length > 0) return domainSuggestions;
   }
 
