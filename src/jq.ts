@@ -494,7 +494,15 @@ function previewValue(value: unknown): string {
 
 function formatSimilarKeys(missing?: MissingPathContext): string | undefined {
   if (!missing) return undefined;
-  const suggestions = findKeySuggestions(missing);
+  const requestedWords = keyWords(missing.requestedKey);
+  const suggestions = findKeySuggestions(missing, Number.MAX_SAFE_INTEGER)
+    .filter(
+      (suggestion) =>
+        !containsCapacityIntent(requestedWords) ||
+        !suggestion.semantic ||
+        isCapacityResultSuggestion(requestedWords, suggestion),
+    )
+    .slice(0, 3);
   if (suggestions.length === 0) return undefined;
   return `Similar keys: ${suggestions.map((suggestion) => `${suggestion.path} (${previewValue(suggestion.value)})`).join(', ')}`;
 }

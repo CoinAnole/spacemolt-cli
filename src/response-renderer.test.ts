@@ -499,6 +499,8 @@ describe('response renderer', () => {
           cargo_capacity: 90,
           cpu_capacity: 20,
           power_capacity: 35,
+          fuel_type: 'plasma',
+          fuel_efficiency: 0.8,
         },
       },
     };
