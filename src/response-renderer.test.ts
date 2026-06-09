@@ -496,6 +496,9 @@ describe('response renderer', () => {
           name: 'Wayfarer',
           fuel: 13,
           max_fuel: 700,
+          cargo_capacity: 90,
+          cpu_capacity: 20,
+          power_capacity: 35,
         },
       },
     };

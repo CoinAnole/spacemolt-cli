@@ -294,8 +294,12 @@ function containsCapacityIntent(words: string[]): boolean {
   return words.some((word) => CAPACITY_WORDS.has(word) || word.includes('cap'));
 }
 
-function hasCapacityKey(words: string[]): boolean {
-  return words.some((word) => CAPACITY_KEY_WORDS.has(word) || word.includes('cap'));
+function isCapacityWord(word: string): boolean {
+  return CAPACITY_KEY_WORDS.has(word) || word.includes('cap');
+}
+
+function domainWords(words: string[]): string[] {
+  return words.filter((word) => !isCapacityWord(word));
 }
 
 function commonWordCount(left: string[], right: string[]): number {
@@ -310,7 +314,12 @@ function hasSubstringMatch(
   candidateWords: string[],
 ): boolean {
   if (requested.includes(candidate) || candidate.includes(requested)) return true;
-  return requestedWords.some((left) => candidateWords.some((right) => left.includes(right) || right.includes(left)));
+  return requestedWords.some((left) =>
+    candidateWords.some((right) => {
+      if (isCapacityWord(left) && isCapacityWord(right)) return false;
+      return left.includes(right) || right.includes(left);
+    }),
+  );
 }
 
 function levenshtein(left: string, right: string): number {
@@ -329,6 +338,7 @@ function levenshtein(left: string, right: string): number {
 function findKeySuggestions(missing: MissingPathContext, limit = 3): KeySuggestion[] {
   const requested = normalizeKey(missing.requestedKey);
   const requestedWords = keyWords(missing.requestedKey);
+  const requestedDomainWords = domainWords(requestedWords);
   const capacityIntent = containsCapacityIntent(requestedWords);
 
   return Object.entries(missing.parent)
@@ -337,7 +347,8 @@ function findKeySuggestions(missing: MissingPathContext, limit = 3): KeySuggesti
       const candidateWords = keyWords(key);
       const distance = levenshtein(requested, candidate);
       const commonWords = commonWordCount(requestedWords, candidateWords);
-      const semantic = capacityIntent && (hasCapacityKey(candidateWords) || commonWords > 0);
+      const commonDomainWords = commonWordCount(requestedDomainWords, domainWords(candidateWords));
+      const semantic = capacityIntent && commonDomainWords > 0;
       const substring = hasSubstringMatch(requested, candidate, requestedWords, candidateWords);
       const eligible = substring || distance <= 2 || semantic;
       if (!eligible) return undefined;
