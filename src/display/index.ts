@@ -77,6 +77,7 @@ function formatProjection(
 ): string {
   if (format === 'yaml') return toYaml(value);
   if (format === 'text') {
+    if (projection === 'jq') return formatJqResult(value, compact);
     if (typeof value === 'string') return value;
     if (value === undefined) return 'null';
     return stringifyJson(value, compact);

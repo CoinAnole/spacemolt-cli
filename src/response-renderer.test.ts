@@ -566,6 +566,32 @@ describe('response renderer', () => {
     expect(capture.stderr).toEqual([]);
   });
 
+  test('renderResponse auto-resolves fuzzy jq capacity queries for text output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response: {
+          structuredContent: {
+            ship: {
+              name: 'Wayfarer',
+              fuel: 13,
+              max_fuel: 700,
+            },
+          },
+        },
+      },
+      { ...baseOptions, fuzzy: true, jq: '.ship.fuel_cap', format: 'text' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(capture.text()).toBe('.fuel=13 .max_fuel=700');
+    expect(capture.stderr).toEqual([]);
+  });
+
   test('renderResponse does not fuzzy-resolve jq object construction', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
