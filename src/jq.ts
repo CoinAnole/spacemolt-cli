@@ -5,6 +5,21 @@ interface MissingPathContext {
   parent: Record<string, unknown>;
 }
 
+export interface JqOptions {
+  fuzzy?: boolean;
+}
+
+interface ResolvePathOptions extends JqOptions {
+  fuzzyUsed?: boolean;
+}
+
+const FUZZY_JQ_RESULT = Symbol('fuzzyJqResult');
+
+interface FuzzyJqResult {
+  readonly [FUZZY_JQ_RESULT]: true;
+  values: Record<string, unknown>;
+}
+
 type PathResolution = { found: true; value: unknown } | { found: false; missing?: MissingPathContext };
 type PathToken =
   | { kind: 'field'; name: string }
@@ -12,7 +27,19 @@ type PathToken =
   | { kind: 'index'; index: number; raw: string }
   | { kind: 'slice'; start: number; end: number; raw: string };
 
-export function evaluateJq(data: unknown, expr: string): unknown {
+function makeFuzzyJqResult(values: Record<string, unknown>): FuzzyJqResult {
+  return { [FUZZY_JQ_RESULT]: true, values };
+}
+
+function isFuzzyJqResult(value: unknown): value is FuzzyJqResult {
+  return typeof value === 'object' && value !== null && (value as FuzzyJqResult)[FUZZY_JQ_RESULT] === true;
+}
+
+export function jqResultValue(value: unknown): unknown {
+  return isFuzzyJqResult(value) ? value.values : value;
+}
+
+export function evaluateJq(data: unknown, expr: string, options: JqOptions = {}): unknown {
   const trimmed = expr.trim();
 
   if (trimmed === '.') return data;
@@ -25,7 +52,7 @@ export function evaluateJq(data: unknown, expr: string): unknown {
 
   if (isObjectConstruction(trimmed)) return evalObjectConstruction(data, trimmed);
 
-  if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed);
+  if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed, options);
 
   throw new Error(`Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field`);
 }
@@ -47,10 +74,10 @@ function evalPipe(data: unknown, parts: string[]): unknown {
   return current;
 }
 
-function evalPath(data: unknown, expr: string): unknown {
+function evalPath(data: unknown, expr: string, options: JqOptions = {}): unknown {
   const withoutDot = expr.slice(1);
   const tokens = parsePathTokens(withoutDot);
-  const resolved = resolvePathTokens(data, tokens);
+  const resolved = resolvePathTokens(data, tokens, '', options);
   if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data, resolved.missing));
   return resolved.value;
 }
@@ -105,7 +132,12 @@ function parseBracketToken(content: string): PathToken {
   throw new Error(`Unsupported bracket content: "[${content}]"`);
 }
 
-function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): PathResolution {
+function resolvePathTokens(
+  value: unknown,
+  tokens: PathToken[],
+  path = '',
+  options: ResolvePathOptions = {},
+): PathResolution {
   if (tokens.length === 0) return { found: true, value };
 
   const [token, ...rest] = tokens;
@@ -114,20 +146,40 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
   if (token.kind === 'field') {
     if (!token.name || typeof value !== 'object' || value === null || Array.isArray(value)) return { found: false };
     if (!Object.hasOwn(value, token.name)) {
+      const missing = {
+        expr: `.${appendPath(path, token.name)}`,
+        requestedKey: token.name,
+        parentPath: path,
+        parent: value as Record<string, unknown>,
+      };
+      if (options.fuzzy && !options.fuzzyUsed) {
+        const suggestions = findKeySuggestions(missing, Number.MAX_SAFE_INTEGER);
+        const selectedSuggestions = selectFuzzySuggestions(missing, suggestions);
+        const nextOptions = { ...options, fuzzyUsed: true };
+        if (selectedSuggestions.length === 1) {
+          const [selected] = selectedSuggestions;
+          if (selected) {
+            return resolvePathTokens(selected.value, rest, appendPath(path, selected.key), nextOptions);
+          }
+        }
+        if (selectedSuggestions.length > 1 && rest.length === 0) {
+          return {
+            found: true,
+            value: makeFuzzyJqResult(
+              Object.fromEntries(selectedSuggestions.map((suggestion) => [suggestionPath('', suggestion.key), suggestion.value])),
+            ),
+          };
+        }
+      }
       if (rest[0]?.kind && rest[0].kind !== 'field') {
         throw new Error(formatExpectedArrayError(appendPath(path, token.name), undefined));
       }
       return {
         found: false,
-        missing: {
-          expr: `.${appendPath(path, token.name)}`,
-          requestedKey: token.name,
-          parentPath: path,
-          parent: value as Record<string, unknown>,
-        },
+        missing,
       };
     }
-    return resolvePathTokens((value as Record<string, unknown>)[token.name], rest, appendPath(path, token.name));
+    return resolvePathTokens((value as Record<string, unknown>)[token.name], rest, appendPath(path, token.name), options);
   }
 
   if (token.kind === 'each') {
@@ -136,7 +188,7 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
 
     const mapped: unknown[] = [];
     for (const item of value) {
-      const resolved = resolvePathTokens(item, rest, appendArrayEachPath(path));
+      const resolved = resolvePathTokens(item, rest, appendArrayEachPath(path), options);
       if (!resolved.found) return resolved;
       mapped.push(resolved.value);
     }
@@ -147,11 +199,11 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
     if (!Array.isArray(value)) throw new Error(formatExpectedArrayError(path, value));
     const normalizedIndex = token.index < 0 ? value.length + token.index : token.index;
     if (!Object.hasOwn(value, normalizedIndex)) return { found: false };
-    return resolvePathTokens(value[normalizedIndex], rest, appendArrayIndexPath(path, token.index));
+    return resolvePathTokens(value[normalizedIndex], rest, appendArrayIndexPath(path, token.index), options);
   }
 
   if (typeof value === 'string') {
-    return resolvePathTokens(value.slice(token.start, token.end), rest, path);
+    return resolvePathTokens(value.slice(token.start, token.end), rest, path, options);
   }
   if (Array.isArray(value)) throw new Error(`Unsupported bracket content: "[${token.raw}]"`);
   throw new Error(formatExpectedArrayError(path, value));
@@ -385,6 +437,32 @@ function compareSuggestions(left: KeySuggestion, right: KeySuggestion): number {
   return left.path.localeCompare(right.path);
 }
 
+function suggestionRankKey(suggestion: KeySuggestion): string {
+  return suggestion.rank.join(':');
+}
+
+function sharesDomain(requestedWords: string[], suggestion: KeySuggestion): boolean {
+  const requestedDomainWords = domainWords(requestedWords);
+  if (requestedDomainWords.length === 0) return false;
+  return commonWordCount(requestedDomainWords, domainWords(keyWords(suggestion.key))) > 0;
+}
+
+function selectFuzzySuggestions(missing: MissingPathContext, suggestions: KeySuggestion[]): KeySuggestion[] {
+  if (suggestions.length === 0) return [];
+
+  const requestedWords = keyWords(missing.requestedKey);
+  if (containsCapacityIntent(requestedWords)) {
+    const domainSuggestions = suggestions.filter((suggestion) => suggestion.semantic && sharesDomain(requestedWords, suggestion));
+    if (domainSuggestions.length > 0) return domainSuggestions;
+  }
+
+  const [best] = suggestions;
+  if (!best) return [];
+  const bestRankKey = suggestionRankKey(best);
+  const bestRankedSuggestions = suggestions.filter((suggestion) => suggestionRankKey(suggestion) === bestRankKey);
+  return bestRankedSuggestions.length === 1 ? bestRankedSuggestions : [];
+}
+
 function previewValue(value: unknown): string {
   if (value === undefined) return 'null';
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -435,6 +513,11 @@ function hasUnsupportedWhitespace(expr: string): boolean {
 }
 
 export function formatJqResult(value: unknown, compact = false): string {
+  if (isFuzzyJqResult(value)) {
+    return Object.entries(value.values)
+      .map(([path, item]) => `${path}=${previewValue(item)}`)
+      .join(' ');
+  }
   if (value === undefined) return 'null';
   if (typeof value === 'object' && value !== null) {
     return JSON.stringify(value, null, compact ? 0 : 2);

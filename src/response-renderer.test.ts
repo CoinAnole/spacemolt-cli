@@ -540,6 +540,58 @@ describe('response renderer', () => {
     );
   });
 
+  test('renderResponse auto-resolves fuzzy jq capacity queries', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response: {
+          structuredContent: {
+            ship: {
+              name: 'Wayfarer',
+              fuel: 13,
+              max_fuel: 700,
+            },
+          },
+        },
+      },
+      { ...baseOptions, fuzzy: true, jq: '.ship.fuel_cap' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(capture.text()).toBe('.fuel=13 .max_fuel=700');
+    expect(capture.stderr).toEqual([]);
+  });
+
+  test('renderResponse does not fuzzy-resolve jq object construction', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response: {
+          structuredContent: {
+            ship: {
+              fuel: 13,
+            },
+          },
+        },
+      },
+      { ...baseOptions, fuzzy: true, jq: '{fuel: .ship.fule}' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(capture.text()).toBe('');
+    expect(capture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path not found: ".ship.fule"\nSimilar keys: .ship.fuel (13)\nAvailable keys: ship',
+    );
+  });
+
   test('renderResponse preserves structuredContent hint for missing jq paths', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(

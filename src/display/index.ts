@@ -264,7 +264,7 @@ function displayStructuredResultInternal(
 
   if (jqExpr) {
     try {
-      const jqResult = evaluateJq(structuredOutputResult, jqExpr);
+      const jqResult = evaluateJq(structuredOutputResult, jqExpr, { fuzzy: options?.fuzzy });
       emitLine(formatProjection(jqResult, format, compact, 'jq'));
       return true;
     } catch (err) {
