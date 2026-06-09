@@ -489,6 +489,80 @@ describe('response renderer', () => {
     expect(output).not.toContain('2026-05-20T00:00:00.000Z');
   });
 
+  test('renderResponse suggests sibling keys with previews for missing jq paths', async () => {
+    const response = {
+      structuredContent: {
+        ship: {
+          name: 'Wayfarer',
+          fuel: 13,
+          max_fuel: 700,
+        },
+      },
+    };
+
+    const typoCapture = fakeContext();
+    const typoExitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response,
+      },
+      { ...baseOptions, jq: '.ship.fule' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      typoCapture.context,
+    );
+
+    expect(typoExitCode).toBe(1);
+    expect(typoCapture.text()).toBe('');
+    expect(typoCapture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path not found: ".ship.fule"\nSimilar keys: .ship.fuel (13)',
+    );
+
+    const capacityCapture = fakeContext();
+    const capacityExitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response,
+      },
+      { ...baseOptions, jq: '.ship.fuel_capacity' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capacityCapture.context,
+    );
+
+    expect(capacityExitCode).toBe(1);
+    expect(capacityCapture.text()).toBe('');
+    expect(capacityCapture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path not found: ".ship.fuel_capacity"\nSimilar keys: .ship.fuel (13), .ship.max_fuel (700)',
+    );
+  });
+
+  test('renderResponse preserves structuredContent hint for missing jq paths', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_ship',
+        displayCommand: 'get_ship',
+        response: {
+          structuredContent: {
+            ship: {
+              fuel: 13,
+            },
+          },
+        },
+      },
+      { ...baseOptions, jq: '.structuredContent.ship.fule' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(capture.text()).toBe('');
+    expect(capture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path not found: ".structuredContent.ship.fule"\nHint: --jq operates on structuredContent (not the full API response). Try: .ship.fule\nAvailable keys: ship',
+    );
+  });
+
   test('renderResponse prints active ship combat effects in status tables', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(

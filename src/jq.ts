@@ -1,4 +1,11 @@
-type PathResolution = { found: true; value: unknown } | { found: false };
+interface MissingPathContext {
+  expr: string;
+  requestedKey: string;
+  parentPath: string;
+  parent: Record<string, unknown>;
+}
+
+type PathResolution = { found: true; value: unknown } | { found: false; missing?: MissingPathContext };
 type PathToken =
   | { kind: 'field'; name: string }
   | { kind: 'each'; raw: string }
@@ -44,7 +51,7 @@ function evalPath(data: unknown, expr: string): unknown {
   const withoutDot = expr.slice(1);
   const tokens = parsePathTokens(withoutDot);
   const resolved = resolvePathTokens(data, tokens);
-  if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data));
+  if (!resolved.found) throw new Error(formatPathNotFoundError(expr, data, resolved.missing));
   return resolved.value;
 }
 
@@ -110,7 +117,15 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
       if (rest[0]?.kind && rest[0].kind !== 'field') {
         throw new Error(formatExpectedArrayError(appendPath(path, token.name), undefined));
       }
-      return { found: false };
+      return {
+        found: false,
+        missing: {
+          expr: `.${appendPath(path, token.name)}`,
+          requestedKey: token.name,
+          parentPath: path,
+          parent: value as Record<string, unknown>,
+        },
+      };
     }
     return resolvePathTokens((value as Record<string, unknown>)[token.name], rest, appendPath(path, token.name));
   }
@@ -246,15 +261,136 @@ function unquote(value: string): string {
   return value.slice(1, -1).replace(/\\(["'\\])/g, '$1');
 }
 
-function formatPathNotFoundError(expr: string, data: unknown): string {
+interface KeySuggestion {
+  key: string;
+  path: string;
+  value: unknown;
+  semantic: boolean;
+  substring: boolean;
+  distance: number;
+  commonWords: number;
+  rank: number[];
+}
+
+const CAPACITY_WORDS = new Set(['cap', 'capacity', 'max', 'total']);
+const CAPACITY_KEY_WORDS = new Set(['cap', 'capacity', 'max', 'total', 'limit', 'size']);
+
+function suggestionPath(parentPath: string, key: string): string {
+  return `.${appendPath(parentPath, key)}`;
+}
+
+function normalizeKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function keyWords(value: string): string[] {
+  return normalizeKey(value).split('_').filter(Boolean);
+}
+
+function containsCapacityIntent(words: string[]): boolean {
+  return words.some((word) => CAPACITY_WORDS.has(word) || word.includes('cap'));
+}
+
+function hasCapacityKey(words: string[]): boolean {
+  return words.some((word) => CAPACITY_KEY_WORDS.has(word) || word.includes('cap'));
+}
+
+function commonWordCount(left: string[], right: string[]): number {
+  const rightSet = new Set(right);
+  return left.filter((word) => rightSet.has(word)).length;
+}
+
+function hasSubstringMatch(
+  requested: string,
+  candidate: string,
+  requestedWords: string[],
+  candidateWords: string[],
+): boolean {
+  if (requested.includes(candidate) || candidate.includes(requested)) return true;
+  return requestedWords.some((left) => candidateWords.some((right) => left.includes(right) || right.includes(left)));
+}
+
+function levenshtein(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= right.length; j++) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      current[j] = Math.min((current[j - 1] ?? 0) + 1, (previous[j] ?? 0) + 1, (previous[j - 1] ?? 0) + cost);
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length] ?? 0;
+}
+
+function findKeySuggestions(missing: MissingPathContext, limit = 3): KeySuggestion[] {
+  const requested = normalizeKey(missing.requestedKey);
+  const requestedWords = keyWords(missing.requestedKey);
+  const capacityIntent = containsCapacityIntent(requestedWords);
+
+  return Object.entries(missing.parent)
+    .map(([key, value]) => {
+      const candidate = normalizeKey(key);
+      const candidateWords = keyWords(key);
+      const distance = levenshtein(requested, candidate);
+      const commonWords = commonWordCount(requestedWords, candidateWords);
+      const semantic = capacityIntent && (hasCapacityKey(candidateWords) || commonWords > 0);
+      const substring = hasSubstringMatch(requested, candidate, requestedWords, candidateWords);
+      const eligible = substring || distance <= 2 || semantic;
+      if (!eligible) return undefined;
+      const rank = [semantic ? 0 : 1, substring ? 0 : 1, distance <= 2 ? 0 : 1, distance, -commonWords];
+      return {
+        key,
+        path: suggestionPath(missing.parentPath, key),
+        value,
+        semantic,
+        substring,
+        distance,
+        commonWords,
+        rank,
+      };
+    })
+    .filter((suggestion): suggestion is KeySuggestion => Boolean(suggestion))
+    .sort(compareSuggestions)
+    .slice(0, limit);
+}
+
+function compareSuggestions(left: KeySuggestion, right: KeySuggestion): number {
+  for (let index = 0; index < left.rank.length; index++) {
+    const delta = (left.rank[index] ?? 0) - (right.rank[index] ?? 0);
+    if (delta !== 0) return delta;
+  }
+  return left.path.localeCompare(right.path);
+}
+
+function previewValue(value: unknown): string {
+  if (value === undefined) return 'null';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  const rendered = JSON.stringify(value);
+  if (!rendered) return String(value);
+  return rendered.length > 80 ? `${rendered.slice(0, 77)}...` : rendered;
+}
+
+function formatSimilarKeys(missing?: MissingPathContext): string | undefined {
+  if (!missing) return undefined;
+  const suggestions = findKeySuggestions(missing);
+  if (suggestions.length === 0) return undefined;
+  return `Similar keys: ${suggestions.map((suggestion) => `${suggestion.path} (${previewValue(suggestion.value)})`).join(', ')}`;
+}
+
+function formatPathNotFoundError(expr: string, data: unknown, missing?: MissingPathContext): string {
   const base = `Path not found: "${expr}"`;
-  const availableKeys = formatAvailableKeys(data);
+  const similarKeys = formatSimilarKeys(missing);
   const prefix = '.structuredContent.';
-  if (!expr.startsWith(prefix)) return availableKeys ? `${base}\n${availableKeys}` : base;
+  const availableKeys = similarKeys && !expr.startsWith(prefix) ? undefined : formatAvailableKeys(data);
+  if (!expr.startsWith(prefix)) return [base, similarKeys, availableKeys].filter(Boolean).join('\n');
 
   const suggestedPath = `.${expr.slice(prefix.length)}`;
   const structuredContentHint = `Hint: --jq operates on structuredContent (not the full API response). Try: ${suggestedPath}`;
-  return [base, structuredContentHint, availableKeys].filter(Boolean).join('\n');
+  return [base, structuredContentHint, similarKeys, availableKeys].filter(Boolean).join('\n');
 }
 
 function formatAvailableKeys(data: unknown): string | undefined {
