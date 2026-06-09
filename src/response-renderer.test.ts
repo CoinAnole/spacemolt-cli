@@ -591,7 +591,36 @@ describe('response renderer', () => {
     expect(exitCode).toBe(1);
     expect(capture.text()).toBe('');
     expect(capture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
-      'Error: Path not found: ".ships[].fule"\nSimilar keys: .ships.fuel (13)\nAvailable keys: ships',
+      'Error: Path not found: ".ships[].fule"\nSimilar keys: .ships[].fuel (13)\nAvailable keys: ships',
+    );
+  });
+
+  test('renderResponse suggests sibling keys for missing jq paths under array index traversal', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'list_ships',
+        displayCommand: 'list_ships',
+        response: {
+          structuredContent: {
+            ships: [
+              {
+                name: 'Wayfarer',
+                fuel: 13,
+              },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, jq: '.ships[0].fule' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(capture.text()).toBe('');
+    expect(capture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path not found: ".ships[0].fule"\nSimilar keys: .ships[0].fuel (13)\nAvailable keys: ships',
     );
   });
 

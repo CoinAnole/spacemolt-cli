@@ -136,7 +136,7 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
 
     const mapped: unknown[] = [];
     for (const item of value) {
-      const resolved = resolvePathTokens(item, rest, path);
+      const resolved = resolvePathTokens(item, rest, appendArrayEachPath(path));
       if (!resolved.found) return resolved;
       mapped.push(resolved.value);
     }
@@ -147,7 +147,7 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
     if (!Array.isArray(value)) throw new Error(formatExpectedArrayError(path, value));
     const normalizedIndex = token.index < 0 ? value.length + token.index : token.index;
     if (!Object.hasOwn(value, normalizedIndex)) return { found: false };
-    return resolvePathTokens(value[normalizedIndex], rest, appendPath(path, String(token.index)));
+    return resolvePathTokens(value[normalizedIndex], rest, appendArrayIndexPath(path, token.index));
   }
 
   if (typeof value === 'string') {
@@ -159,6 +159,14 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
 
 function appendPath(path: string, part: string): string {
   return path ? `${path}.${part}` : part;
+}
+
+function appendArrayEachPath(path: string): string {
+  return `${path}[]`;
+}
+
+function appendArrayIndexPath(path: string, index: number): string {
+  return `${path}[${index}]`;
 }
 
 function isObjectConstruction(expr: string): boolean {
