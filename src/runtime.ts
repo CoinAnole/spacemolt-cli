@@ -4,7 +4,7 @@
 
 export const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 export const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
-export const VERSION = '2.3.0';
+export const VERSION = '2.4.0';
 
 export interface SpaceMoltConfig {
   apiBase: string;
