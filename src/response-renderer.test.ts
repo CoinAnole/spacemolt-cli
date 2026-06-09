@@ -563,6 +563,35 @@ describe('response renderer', () => {
     );
   });
 
+  test('renderResponse suggests sibling keys for missing jq paths under array iteration', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'list_ships',
+        displayCommand: 'list_ships',
+        response: {
+          structuredContent: {
+            ships: [
+              {
+                name: 'Wayfarer',
+                fuel: 13,
+              },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, jq: '.ships[].fule' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(capture.text()).toBe('');
+    expect(capture.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      'Error: Path not found: ".ships[].fule"\nSimilar keys: .ships.fuel (13)',
+    );
+  });
+
   test('renderResponse prints active ship combat effects in status tables', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(

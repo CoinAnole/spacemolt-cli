@@ -137,7 +137,7 @@ function resolvePathTokens(value: unknown, tokens: PathToken[], path = ''): Path
     const mapped: unknown[] = [];
     for (const item of value) {
       const resolved = resolvePathTokens(item, rest, path);
-      if (!resolved.found) return { found: false };
+      if (!resolved.found) return resolved;
       mapped.push(resolved.value);
     }
     return { found: true, value: mapped };
