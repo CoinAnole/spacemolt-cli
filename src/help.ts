@@ -679,6 +679,10 @@ ${c.bright}Global Flags:${c.reset}
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
   --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
+  --search          Search structured output keys and values
+  --search-keys     Search structured output keys only
+  --search-values   Search structured output scalar values only
+  --search-regex    Regex search structured output keys and values
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
@@ -686,6 +690,7 @@ ${c.bright}Global Flags:${c.reset}
 ${c.bright}Output Precedence:${c.reset}
   --keys and --jq are mutually exclusive; projections run before --json/--format; --compact and --plain apply last.
   Projections read from structuredContent when present.
+  Search projections print jq paths and values.
   --field/--fields output only the selected projection, even with --json/--format=json.
 `);
 }
@@ -767,6 +772,10 @@ ${c.bright}Global Flags:${c.reset}
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
   --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
+  --search          Search structured output keys and values
+  --search-keys     Search structured output keys only
+  --search-values   Search structured output scalar values only
+  --search-regex    Regex search structured output keys and values
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
@@ -774,6 +783,7 @@ ${c.bright}Global Flags:${c.reset}
 ${c.bright}Output Precedence:${c.reset}
   --keys and --jq are mutually exclusive; projections run before --json/--format; --compact and --plain apply last.
   Projections read from structuredContent when present.
+  Search projections print jq paths and values.
   --field/--fields output only the selected projection, even with --json/--format=json.
 `);
 }
@@ -849,6 +859,10 @@ ${c.bright}Usage:${c.reset}
       --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)
       --fuzzy             Auto-resolve simple --jq paths to similar keys
       --keys [path]       List available keys at a JSON dotpath
+      --search <text>      Search structured output keys and values
+      --search-keys <text> Search structured output keys only
+      --search-values <t>  Search structured output scalar values only
+      --search-regex <rx>  Regex search structured output keys and values
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them
       --allow-unknown     Allow unknown command fields to pass through
@@ -857,6 +871,7 @@ ${c.bright}Usage:${c.reset}
     Output precedence:
       --keys and --jq are mutually exclusive; projections run before --json/--format; --compact and --plain apply last.
       Projections read from structuredContent when present.
+      Search projections print jq paths and values.
       --field/--fields output only the selected projection, even with --json/--format=json.
       JSON errors remain full response envelopes for compatibility.
 
