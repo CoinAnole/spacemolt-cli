@@ -383,13 +383,14 @@ const idsHandler: CommandHandler<
     }
     return { ok: true, payload: { kind, search: parseSearchArg(argv, 2) } };
   },
-  run(payload, _options, client, context) {
+  run(payload, options, client, context) {
     const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
     const hints = loadIdCacheSync(sessionPath);
+    const search = payload.search ?? options.outputSearch;
     return {
       kind: payload.kind,
-      search: payload.search,
-      hints: payload.search ? searchIdHints(payload.kind, payload.search, hints) : hintsForKind(payload.kind, hints),
+      search,
+      hints: search ? searchIdHints(payload.kind, search, hints) : hintsForKind(payload.kind, hints),
     };
   },
   render(result, options, client, context) {
