@@ -86,6 +86,16 @@ function parseRequiredPatternValue(
   return value.trim();
 }
 
+function parseRequiredSeparatedPatternValue(
+  option: string,
+  args: string[],
+  index: number,
+  state: PartialOutputState,
+): string | GlobalOptionParseResult {
+  const value = args[index + 1];
+  return parseRequiredPatternValue(option, value !== undefined && !value.startsWith('-') ? value : undefined, state);
+}
+
 export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
   const result: Omit<GlobalOptions, 'args'> = {
     json: false,
@@ -142,7 +152,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     } else if (arg.startsWith('--keys=')) {
       result.keys = arg.slice('--keys='.length).trim();
     } else if (arg === '--search') {
-      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      const parsed = parseRequiredSeparatedPatternValue(arg, args, i, outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.outputSearch = parsed;
       i++;
@@ -151,7 +161,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       if (typeof parsed !== 'string') return parsed;
       result.outputSearch = parsed;
     } else if (arg === '--search-keys') {
-      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      const parsed = parseRequiredSeparatedPatternValue(arg, args, i, outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.outputSearchKeys = parsed;
       i++;
@@ -164,7 +174,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       if (typeof parsed !== 'string') return parsed;
       result.outputSearchKeys = parsed;
     } else if (arg === '--search-values') {
-      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      const parsed = parseRequiredSeparatedPatternValue(arg, args, i, outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.outputSearchValues = parsed;
       i++;
@@ -177,7 +187,7 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       if (typeof parsed !== 'string') return parsed;
       result.outputSearchValues = parsed;
     } else if (arg === '--search-regex') {
-      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      const parsed = parseRequiredSeparatedPatternValue(arg, args, i, outputState(result));
       if (typeof parsed !== 'string') return parsed;
       result.outputSearchRegex = parsed;
       i++;

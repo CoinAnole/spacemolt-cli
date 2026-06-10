@@ -1114,8 +1114,44 @@ describe('CLI output modes', () => {
     expect(result.options.args).toEqual(['get_status', 'search=server_payload']);
   });
 
+  test('global option parser handles separated and equals output search flag values', () => {
+    const cases = [
+      { flag: '--search', property: 'outputSearch' as const, separated: 'fuel', equalsValue: '-fuel' },
+      { flag: '--search-keys', property: 'outputSearchKeys' as const, separated: 'max_.*', equalsValue: '-max_.*' },
+      { flag: '--search-values', property: 'outputSearchValues' as const, separated: '700', equalsValue: '-700' },
+      {
+        flag: '--search-regex',
+        property: 'outputSearchRegex' as const,
+        separated: 'hull|armor',
+        equalsValue: '-hull|armor',
+      },
+    ];
+
+    for (const { flag, property, separated, equalsValue } of cases) {
+      const separatedResult = parseGlobalOptions([flag, separated, 'get_status']);
+      expect(separatedResult.ok).toBe(true);
+      if (!separatedResult.ok) throw new Error(separatedResult.error.message);
+      expect(separatedResult.options[property]).toBe(separated);
+      expect(separatedResult.options.args).toEqual(['get_status']);
+
+      const equalsResult = parseGlobalOptions([`${flag}=${equalsValue}`, 'get_status']);
+      expect(equalsResult.ok).toBe(true);
+      if (!equalsResult.ok) throw new Error(equalsResult.error.message);
+      expect(equalsResult.options[property]).toBe(equalsValue);
+      expect(equalsResult.options.args).toEqual(['get_status']);
+    }
+  });
+
   test('global option parser rejects missing output search values', () => {
     expect(parseGlobalOptions(['--search'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--search',
+        message: '--search requires a pattern.',
+      },
+    });
+    expect(parseGlobalOptions(['--search='])).toEqual({
       ok: false,
       error: {
         code: 'invalid_global_option',
@@ -1147,6 +1183,19 @@ describe('CLI output modes', () => {
         message: '--search-regex requires a pattern.',
       },
     });
+  });
+
+  test('global option parser rejects output search values that are another option', () => {
+    for (const flag of ['--search', '--search-keys', '--search-values', '--search-regex']) {
+      expect(parseGlobalOptions([flag, '--json', 'get_status'])).toEqual({
+        ok: false,
+        error: {
+          code: 'invalid_global_option',
+          option: flag,
+          message: `${flag} requires a pattern.`,
+        },
+      });
+    }
   });
 
   test('global option parser handles keys with optional dotpaths', () => {
