@@ -6,6 +6,7 @@ import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
+import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { getStructuredResult, isRecord, normalizeStructuredResultForOutput } from './response.ts';
@@ -65,7 +66,11 @@ export async function renderResponse(
   const { command, displayCommand, response } = commandRun;
   const isJson = options.json || options.format === 'json';
   const hasProjection = Boolean(
-    options.jq || options.keys !== undefined || options.field || (options.fields && options.fields.length > 0),
+    options.jq ||
+      options.keys !== undefined ||
+      options.field ||
+      (options.fields && options.fields.length > 0) ||
+      hasOutputSearch(options),
   );
   const writer = context?.writer;
 

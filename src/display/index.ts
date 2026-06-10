@@ -9,6 +9,7 @@ import {
   normalizeStructuredResultForDisplay,
   normalizeStructuredResultForOutput,
 } from '../response.ts';
+import { findOutputSearchMatches, formatOutputSearchLine, hasOutputSearch } from '../output-search.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
 import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
@@ -246,6 +247,7 @@ function displayStructuredResultInternal(
   const format = getOutputFormat(options, context);
   const compact = isCompact(options, context);
   const jqExpr = options?.jq;
+  const outputSearch = hasOutputSearch(options);
   const keysPath = options?.keys;
   const structuredOutputResult = normalizeStructuredResultForOutput(command, result);
 
@@ -266,12 +268,31 @@ function displayStructuredResultInternal(
   if (jqExpr) {
     try {
       const jqResult = evaluateJq(structuredOutputResult, jqExpr, { fuzzy: options?.fuzzy });
+      if (outputSearch) {
+        const searchResult = findOutputSearchMatches(jqResultValue(jqResult), options ?? ({} as GlobalOptions));
+        if (!searchResult.ok) {
+          emitError(`${c.red}Error:${c.reset} ${searchResult.message}`);
+          return false;
+        }
+        for (const match of searchResult.matches) emitLine(formatOutputSearchLine(match));
+        return true;
+      }
       emitLine(formatProjection(jqResult, format, compact, 'jq'));
       return true;
     } catch (err) {
       emitError(`${c.red}Error:${c.reset} ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
+  }
+
+  if (outputSearch) {
+    const searchResult = findOutputSearchMatches(structuredOutputResult, options ?? ({} as GlobalOptions));
+    if (!searchResult.ok) {
+      emitError(`${c.red}Error:${c.reset} ${searchResult.message}`);
+      return false;
+    }
+    for (const match of searchResult.matches) emitLine(formatOutputSearchLine(match));
+    return true;
   }
 
   if (hasField(field)) {

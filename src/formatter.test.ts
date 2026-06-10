@@ -307,6 +307,74 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toBe('42');
   });
 
+  test('--search prints matching jq paths and values', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_status',
+      {
+        ship: { fuel: 13, max_fuel: 700, name: 'Fuel Runner' },
+        player: { username: 'Marlowe' },
+      },
+      { outputSearch: 'fuel' },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe(['.ship.fuel = 13', '.ship.max_fuel = 700', '.ship.name = Fuel Runner'].join('\n'));
+  });
+
+  test('--search-keys and --search-values restrict match scopes', () => {
+    const keyOnly = captureStructuredOutput(
+      'get_status',
+      { ship: { fuel: 13, name: 'Fuel Runner', max_fuel: 700 } },
+      { outputSearchKeys: 'fuel' },
+    );
+    const valueOnly = captureStructuredOutput(
+      'get_status',
+      { ship: { fuel: 13, name: 'Fuel Runner', max_fuel: 700 } },
+      { outputSearchValues: '700' },
+    );
+
+    expect(keyOnly.stderr).toBe('');
+    expect(keyOnly.stdout).toBe(['.ship.fuel = 13', '.ship.max_fuel = 700'].join('\n'));
+    expect(valueOnly.stderr).toBe('');
+    expect(valueOnly.stdout).toBe('.ship.max_fuel = 700');
+  });
+
+  test('--search-regex prints matches or exits nonzero for invalid regex', () => {
+    const valid = renderStructuredResult(
+      'get_status',
+      { ship: { hull: 480, max_hull: 480, armor: 0, fuel: 13 } },
+      globalOptions({ outputSearchRegex: '^(max_)?hull$|^armor$' }),
+    );
+
+    expect(valid.success).toBe(true);
+    expect(valid.stderr).toEqual([]);
+    expect(valid.stdout).toEqual(['.ship.hull = 480', '.ship.max_hull = 480', '.ship.armor = 0']);
+
+    const invalid = renderStructuredResult(
+      'get_status',
+      { ship: { fuel: 13 } },
+      globalOptions({ outputSearchRegex: '[' }),
+    );
+
+    expect(invalid.success).toBe(false);
+    expect(invalid.stdout).toEqual([]);
+    expect(invalid.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('Invalid --search-regex pattern');
+  });
+
+  test('--jq scopes output search to the selected subtree', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_status',
+      {
+        ship: { fuel: 13, max_fuel: 700 },
+        station: { fuel: 999 },
+      },
+      { jq: '.ship', outputSearch: 'fuel' },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe(['.fuel = 13', '.max_fuel = 700'].join('\n'));
+  });
+
   test('--field extracts one scalar without a JSON object wrapper', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       field: 'ship.fuel',
