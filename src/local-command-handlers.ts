@@ -141,8 +141,9 @@ function createCommandsHandler(
     parse(argv) {
       return { ok: true, payload: { args: argv.slice(1) } };
     },
-    run(payload) {
-      return { query: parseCommandSearchQuery(payload.args) };
+    run(payload, options) {
+      const argsQuery = parseCommandSearchQuery(payload.args);
+      return { query: argsQuery || options.outputSearch || '' };
     },
     render(result, options, _client, context) {
       showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));

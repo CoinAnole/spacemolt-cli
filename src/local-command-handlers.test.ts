@@ -429,6 +429,23 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('Generated API');
   });
 
+  test('commands --search filters through runInvocation global parsing', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['commands', '--search', 'shipyard'],
+      undefined,
+      fakeContext(stdout, stderr, { HOME: '/tmp/spacemolt-test-home' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).toContain('Commands matching "shipyard"');
+    expect(stdout.join('\n')).toContain('commission_ship');
+    expect(stdout.join('\n')).not.toContain('All Commands');
+  });
+
   test('completion includes commands supplied only by a registry snapshot', async () => {
     const registry = dynamicRegistry();
     const handler = resolveHandler(['completion', 'fish'], options, registry);
