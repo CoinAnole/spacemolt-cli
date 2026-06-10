@@ -243,6 +243,21 @@ describe('local command handlers', () => {
     ]);
   });
 
+  test('API command local search restoration does not mutate global output search options', () => {
+    const handler = new ApiCommandHandler('view_market');
+    const parseOptions: GlobalOptions = { ...options, outputSearch: 'iron' };
+
+    const first = handler.parse(['view_market'], parseOptions, fakeContext([], []));
+    const second = handler.parse(['view_market'], parseOptions, fakeContext([], []));
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(first.payload.search).toBe('iron');
+    expect(second.payload.search).toBe('iron');
+    expect(parseOptions.outputSearch).toBe('iron');
+  });
+
   test('completion renders through CliRuntimeContext writer', async () => {
     const handler = localHandler(['completion', 'fish']);
     expect(handler.name).toBe('completion');
@@ -446,6 +461,21 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).not.toContain('All Commands');
   });
 
+  test('commands --search preserves multi-word queries through runInvocation global parsing', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['commands', '--search', 'fuel', 'cell'],
+      undefined,
+      fakeContext(stdout, stderr, { HOME: '/tmp/spacemolt-test-home' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).toContain('Commands matching "fuel cell"');
+  });
+
   test('completion includes commands supplied only by a registry snapshot', async () => {
     const registry = dynamicRegistry();
     const handler = resolveHandler(['completion', 'fish'], options, registry);
@@ -570,6 +600,50 @@ describe('local command handlers', () => {
       const ids = JSON.parse(stdout.join('\n')).structuredContent.ids;
       expect(ids.map((hint: { id: string }) => hint.id)).toEqual(['fuel_cell']);
     }
+  });
+
+  test('ids command preserves multi-word dashed search through runInvocation global parsing', async () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.ids.json'),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'fuel_cell',
+            name: 'Fuel Cell',
+            sourceCommand: 'view_market',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'item',
+            id: 'fuel_rod',
+            name: 'Fuel Rod',
+            sourceCommand: 'view_market',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const client = { config: { profile: 'pilot' } } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--json', 'ids', 'item', '--search', 'fuel', 'cell'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const body = JSON.parse(stdout.join('\n')).structuredContent;
+    expect(body.search).toBe('fuel cell');
+    expect(body.ids.map((hint: { id: string }) => hint.id)).toEqual(['fuel_cell']);
   });
 
   test('ids command filters text output with search', async () => {

@@ -143,7 +143,7 @@ function createCommandsHandler(
     },
     run(payload, options) {
       const argsQuery = parseCommandSearchQuery(payload.args);
-      return { query: argsQuery || options.outputSearch || '' };
+      return { query: outputSearchWithTrailingArgs(options.outputSearch, payload.args) || argsQuery || '' };
     },
     render(result, options, _client, context) {
       showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
@@ -361,8 +361,21 @@ function parseSearchArg(argv: string[], startIndex: number): string | undefined 
   return undefined;
 }
 
+function hasLocalSearchArg(args: string[]): boolean {
+  return args.some((arg) => {
+    if (!arg) return false;
+    return arg === '--search' || arg === '-s' || arg.startsWith('--search=') || arg.startsWith('search=');
+  });
+}
+
+function outputSearchWithTrailingArgs(outputSearch: string | undefined, args: string[]): string | undefined {
+  if (!outputSearch || hasLocalSearchArg(args)) return undefined;
+  const trailing = args.join(' ').trim();
+  return trailing ? `${outputSearch} ${trailing}` : outputSearch;
+}
+
 const idsHandler: CommandHandler<
-  { kind: IdKind; search?: string },
+  { kind: IdKind; args: string[]; search?: string },
   { kind: IdKind; hints: IdHint[]; search?: string }
 > = {
   name: 'ids',
@@ -382,12 +395,13 @@ const idsHandler: CommandHandler<
         },
       };
     }
-    return { ok: true, payload: { kind, search: parseSearchArg(argv, 2) } };
+    const args = argv.slice(2);
+    return { ok: true, payload: { kind, args, search: parseSearchArg(argv, 2) } };
   },
   run(payload, options, client, context) {
     const sessionPath = client ? tryGetSessionPath(client.config, context?.env) : undefined;
     const hints = loadIdCacheSync(sessionPath);
-    const search = payload.search ?? options.outputSearch;
+    const search = payload.search ?? outputSearchWithTrailingArgs(options.outputSearch, payload.args);
     return {
       kind: payload.kind,
       search,

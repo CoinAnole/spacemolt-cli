@@ -16,6 +16,7 @@ import type { APIResponse, GlobalOptions } from './types.ts';
 export interface CommandRunResult {
   command: string;
   displayCommand: string;
+  commandConfig?: CommandConfig;
   payload?: Record<string, unknown>;
   response: APIResponse;
 }
@@ -52,6 +53,7 @@ export async function runCommand(
   return {
     command,
     displayCommand: serverPreviewCommand || command,
+    commandConfig,
     payload,
     response,
   };
@@ -64,36 +66,46 @@ export async function renderResponse(
   context?: CliRuntimeContext,
 ): Promise<number> {
   const { command, displayCommand, response } = commandRun;
-  const isJson = options.json || options.format === 'json';
+  const renderOptions = optionsForCommandLocalSearch(commandRun, options);
+  const isJson = renderOptions.json || renderOptions.format === 'json';
   const hasProjection = Boolean(
-    options.jq ||
-      options.keys !== undefined ||
-      options.field ||
-      (options.fields && options.fields.length > 0) ||
-      hasOutputSearch(options),
+    renderOptions.jq ||
+      renderOptions.keys !== undefined ||
+      renderOptions.field ||
+      (renderOptions.fields && renderOptions.fields.length > 0) ||
+      hasOutputSearch(renderOptions),
   );
   const writer = context?.writer;
 
-  if ((isJson || options.structured) && response.error) {
+  if ((isJson || renderOptions.structured) && response.error) {
     printJsonResponse(response, false, writer);
     return 1;
   }
 
-  if (!isJson && !options.structured && !hasProjection && response.notifications?.length && !options.quiet) {
-    const colors = colorsForPlain(Boolean(options.plain));
+  if (
+    !isJson &&
+    !renderOptions.structured &&
+    !hasProjection &&
+    response.notifications?.length &&
+    !renderOptions.quiet
+  ) {
+    const colors = colorsForPlain(Boolean(renderOptions.plain));
     const header = `${colors.dim}--- Notifications (${response.notifications.length}) ---${colors.reset}`;
     if (writer) writer.out(header);
     else console.log(header);
-    displayNotifications(response.notifications, writer, options.quiet, { plain: options.plain });
+    displayNotifications(response.notifications, writer, renderOptions.quiet, { plain: renderOptions.plain });
     if (writer) writer.out('');
     else console.log('');
   }
 
   if (!isJson && response.error) {
-    displayError(displayCommand, response.error, { noTimestamp: options.noTimestamp, context });
+    displayError(displayCommand, response.error, { noTimestamp: renderOptions.noTimestamp, context });
     const sessionPath = tryGetSessionPath(client.config, context?.env);
-    if (!options.quiet && shouldShowCachedIdSuggestions(command, response.error)) {
-      printCachedIdSuggestions(command, undefined, sessionPath, writer, { quiet: options.quiet, plain: options.plain });
+    if (!renderOptions.quiet && shouldShowCachedIdSuggestions(command, response.error)) {
+      printCachedIdSuggestions(command, undefined, sessionPath, writer, {
+        quiet: renderOptions.quiet,
+        plain: renderOptions.plain,
+      });
     }
     return 1;
   }
@@ -103,11 +115,11 @@ export async function renderResponse(
 
   const filteredResponse = applyDisplayFilters(command, response, commandRun.payload);
 
-  if ((isJson || options.structured) && !hasProjection) {
-    if (options.structured && filteredResponse.structuredContent) {
+  if ((isJson || renderOptions.structured) && !hasProjection) {
+    if (renderOptions.structured && filteredResponse.structuredContent) {
       const out = writer?.out.bind(writer) ?? console.log;
       const warning =
-        options.quiet || isJson
+        renderOptions.quiet || isJson
           ? undefined
           : catalogTruncationWarning(displayCommand, filteredResponse.structuredContent);
       if (warning) {
@@ -118,28 +130,38 @@ export async function renderResponse(
         JSON.stringify(
           normalizeStructuredResultForOutput(displayCommand, filteredResponse.structuredContent),
           null,
-          options.compact ? 0 : 2,
+          renderOptions.compact ? 0 : 2,
         ),
       );
       return 0;
     }
-    printJsonResponse(filteredResponse, options.compact, writer);
+    printJsonResponse(filteredResponse, renderOptions.compact, writer);
     return filteredResponse.error ? 1 : 0;
   }
 
   const display = prepareHumanDisplay(commandRun, filteredResponse, {
     sessionPath,
-    options,
+    options: renderOptions,
     hasProjection,
     isJson,
   });
   const success = displayResult(
     display.command,
     display.response,
-    display.noTimestamp || hasProjection ? { ...options, noTimestamp: true } : options,
+    display.noTimestamp || hasProjection ? { ...renderOptions, noTimestamp: true } : renderOptions,
     context,
   );
   return success === false ? 1 : 0;
+}
+
+function optionsForCommandLocalSearch(commandRun: CommandRunResult, options: GlobalOptions): GlobalOptions {
+  const outputSearch = options.outputSearch;
+  if (!outputSearch || commandRun.payload?.search !== outputSearch) return options;
+
+  const config = commandRun.commandConfig;
+  const declaresSearch =
+    Boolean(config?.schema?.search) || Boolean(config?.clientOnlyFields?.includes('search'));
+  return declaresSearch ? { ...options, outputSearch: undefined } : options;
 }
 
 interface HumanDisplayOptions {

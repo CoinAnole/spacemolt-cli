@@ -84,6 +84,70 @@ afterEach(() => {
 });
 
 describe('runInvocation option isolation', () => {
+  test('passes documented API --search filters through runInvocation payload parsing', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-search-filter-'));
+    const configHome = path.join(tempDir, 'config');
+    const capturedPayloads: Array<Record<string, unknown>> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(_command: string, _config: unknown, payload: Record<string, unknown>) {
+        capturedPayloads.push(payload);
+        return {
+          structuredContent: {
+            action: 'view_market',
+            items: [
+              { item_id: 'ore_iron', item_name: 'Iron Ore' },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell' },
+            ],
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['view_market', '--search', 'iron'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(capturedPayloads).toEqual([{ search: 'iron' }]);
+  });
+
+  test('documented API --search filters JSON response output instead of projecting matches', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-search-json-'));
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        return {
+          structuredContent: {
+            action: 'view_market',
+            items: [
+              { item_id: 'ore_iron', item_name: 'Iron Ore' },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell' },
+            ],
+          },
+        };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--json', 'view_market', '--search', 'iron'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const body = JSON.parse(stdout.join('\n'));
+    expect(body.structuredContent.items.map((item: { item_id: string }) => item.item_id)).toEqual(['ore_iron']);
+  });
+
   test('loads cached OpenAPI routes when resolving dynamic commands', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-openapi-cache-'));
     const configHome = path.join(tempDir, 'config');
@@ -257,6 +321,7 @@ describe('runInvocation option isolation', () => {
   });
 
   test('buy accepts delivery alias for the market delivery target', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-buy-alias-'));
     const stdout: string[] = [];
     const stderr: string[] = [];
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
@@ -271,7 +336,7 @@ describe('runInvocation option isolation', () => {
     const exitCode = await runInvocation(
       ['--structured', 'buy', 'item_id=iron_ore', 'quantity=76270', 'delivery=cargo'],
       client,
-      fakeContext(stdout, stderr, { SPACEMOLT_PROFILE: 'pilot' }),
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
     );
 
     expect(exitCode).toBe(0);

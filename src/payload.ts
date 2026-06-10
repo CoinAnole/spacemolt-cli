@@ -69,7 +69,12 @@ export function preparePayload(
     return { type: 'exit', exitCode: 1 };
   }
 
-  const requestPayload = normalizeParsedPayload(command, rawPayload, registry);
+  const requestPayload = restoreCommandLocalSearch(
+    command,
+    normalizeParsedPayload(command, rawPayload, registry),
+    options,
+    registry,
+  );
   const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath);
   if (resolvedPayload.type === 'ambiguous') {
     if (options.json) {
@@ -90,6 +95,23 @@ export function preparePayload(
       ? convertPayloadTypes(resolvedPayload.payload, command, registry)
       : {};
   return { type: 'payload', payload };
+}
+
+function restoreCommandLocalSearch(
+  command: string,
+  payload: Record<string, unknown>,
+  options: GlobalOptions,
+  registry: Pick<CommandRegistrySnapshot, 'commands'>,
+): Record<string, unknown> {
+  const search = options.outputSearch;
+  if (!search || payload.search !== undefined) return payload;
+
+  const config = registry.commands[command];
+  const declaresSearch =
+    Boolean(config?.schema?.search) || Boolean(config?.clientOnlyFields?.includes('search'));
+  if (!declaresSearch) return payload;
+
+  return { ...payload, search };
 }
 
 function resolveCachedIdsForPayload(
