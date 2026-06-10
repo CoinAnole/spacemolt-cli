@@ -75,6 +75,17 @@ function parseProfileValue(option: string, value: string, state: PartialOutputSt
   }
 }
 
+function parseRequiredPatternValue(
+  option: string,
+  value: string | undefined,
+  state: PartialOutputState,
+): string | GlobalOptionParseResult {
+  if (value === undefined || value.trim() === '') {
+    return parseError(option, `${option} requires a pattern.`, state);
+  }
+  return value.trim();
+}
+
 export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
   const result: Omit<GlobalOptions, 'args'> = {
     json: false,
@@ -130,6 +141,54 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       }
     } else if (arg.startsWith('--keys=')) {
       result.keys = arg.slice('--keys='.length).trim();
+    } else if (arg === '--search') {
+      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearch = parsed;
+      i++;
+    } else if (arg.startsWith('--search=')) {
+      const parsed = parseRequiredPatternValue('--search', arg.slice('--search='.length), outputState(result));
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearch = parsed;
+    } else if (arg === '--search-keys') {
+      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearchKeys = parsed;
+      i++;
+    } else if (arg.startsWith('--search-keys=')) {
+      const parsed = parseRequiredPatternValue(
+        '--search-keys',
+        arg.slice('--search-keys='.length),
+        outputState(result),
+      );
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearchKeys = parsed;
+    } else if (arg === '--search-values') {
+      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearchValues = parsed;
+      i++;
+    } else if (arg.startsWith('--search-values=')) {
+      const parsed = parseRequiredPatternValue(
+        '--search-values',
+        arg.slice('--search-values='.length),
+        outputState(result),
+      );
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearchValues = parsed;
+    } else if (arg === '--search-regex') {
+      const parsed = parseRequiredPatternValue(arg, args[i + 1], outputState(result));
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearchRegex = parsed;
+      i++;
+    } else if (arg.startsWith('--search-regex=')) {
+      const parsed = parseRequiredPatternValue(
+        '--search-regex',
+        arg.slice('--search-regex='.length),
+        outputState(result),
+      );
+      if (typeof parsed !== 'string') return parsed;
+      result.outputSearchRegex = parsed;
     } else if (arg === '--watch' || arg === '-w') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {

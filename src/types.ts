@@ -38,6 +38,10 @@ export interface GlobalOptions {
   watch?: number;
   jq?: string;
   keys?: string;
+  outputSearch?: string;
+  outputSearchKeys?: string;
+  outputSearchValues?: string;
+  outputSearchRegex?: string;
   args: string[];
 }
 

@@ -1092,6 +1092,63 @@ describe('CLI output modes', () => {
     expect(result.options.args).toEqual(['get_status']);
   });
 
+  test('global option parser handles output search flags', () => {
+    const result = parseGlobalOptions([
+      '--search',
+      'fuel',
+      '--search-keys=max_.*',
+      '--search-values',
+      '700',
+      '--search-regex',
+      'hull|armor',
+      'get_status',
+      'search=server_payload',
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.options.outputSearch).toBe('fuel');
+    expect(result.options.outputSearchKeys).toBe('max_.*');
+    expect(result.options.outputSearchValues).toBe('700');
+    expect(result.options.outputSearchRegex).toBe('hull|armor');
+    expect(result.options.args).toEqual(['get_status', 'search=server_payload']);
+  });
+
+  test('global option parser rejects missing output search values', () => {
+    expect(parseGlobalOptions(['--search'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--search',
+        message: '--search requires a pattern.',
+      },
+    });
+    expect(parseGlobalOptions(['--search-keys'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--search-keys',
+        message: '--search-keys requires a pattern.',
+      },
+    });
+    expect(parseGlobalOptions(['--search-values'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--search-values',
+        message: '--search-values requires a pattern.',
+      },
+    });
+    expect(parseGlobalOptions(['--search-regex'])).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid_global_option',
+        option: '--search-regex',
+        message: '--search-regex requires a pattern.',
+      },
+    });
+  });
+
   test('global option parser handles keys with optional dotpaths', () => {
     const topLevel = parseGlobalOptions(['get_status', '--keys']);
     expect(topLevel.ok).toBe(true);
