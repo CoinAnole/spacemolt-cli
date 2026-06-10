@@ -60,7 +60,7 @@ describe('output search', () => {
   });
 
   test('--search-regex matches keys and values with a regex', () => {
-    const result = findOutputSearchMatches(fixture, { outputSearchRegex: '^(max_)?hull$|^armor$' });
+    const result = findOutputSearchMatches(fixture, { outputSearchRegex: '^(max_)?hull$|^armor$|^fuel runner$' });
 
     expect(result).toEqual({
       ok: true,
@@ -68,6 +68,7 @@ describe('output search', () => {
         { path: '.ship.hull', value: 480 },
         { path: '.ship.max_hull', value: 480 },
         { path: '.ship.armor', value: 0 },
+        { path: '.ship.name', value: 'Fuel Runner' },
       ],
     });
   });
