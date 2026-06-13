@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
 import { colorsForPlain } from './output-style.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
-import { API_BASE, VERSION } from './runtime.ts';
+import { API_BASE, DEFAULT_USER_AGENT, userAgentFromConfigValue } from './runtime.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, Session } from './types.ts';
 
@@ -29,6 +29,7 @@ export function getSpacemoltHome(
 
 export interface CliConfig {
   defaultProfile?: string;
+  userAgent?: string;
   [key: string]: unknown;
 }
 
@@ -228,9 +229,17 @@ export function loadCliConfig(homeDir?: string, platform?: string, env?: EnvLike
   try {
     const config = JSON.parse(fs.readFileSync(getCliConfigPath(homeDir, platform, env), 'utf-8'));
     if (!isRecord(config)) return {};
-    if (config.defaultProfile === undefined) return { ...config };
-    if (typeof config.defaultProfile !== 'string') return {};
-    return { ...config, defaultProfile: normalizeProfileName(config.defaultProfile) };
+    const loaded: CliConfig = { ...config };
+    if (config.defaultProfile !== undefined) {
+      if (typeof config.defaultProfile !== 'string') return {};
+      loaded.defaultProfile = normalizeProfileName(config.defaultProfile);
+    }
+    if (config.userAgent !== undefined) {
+      const userAgent = userAgentFromConfigValue(config.userAgent);
+      if (userAgent) loaded.userAgent = userAgent;
+      else delete loaded.userAgent;
+    }
+    return loaded;
   } catch {
     return {};
   }
@@ -279,6 +288,7 @@ export interface SessionManagerOptions {
   profileIsExplicit?: boolean;
   debug?: boolean;
   plain?: boolean;
+  userAgent?: string;
   logger?: { log(message: string): void };
   transport?: typeof requestJson;
   clock?: () => number;
@@ -292,6 +302,7 @@ export class SessionManager {
   private readonly _useActiveProfileFallback: boolean;
   private readonly _debug?: boolean;
   private readonly _plain: boolean;
+  private readonly _userAgent?: string;
   private readonly _logger: { log(message: string): void };
   private readonly _transport: typeof requestJson;
   private readonly _clock: () => number;
@@ -304,6 +315,7 @@ export class SessionManager {
     this._useActiveProfileFallback = options === undefined;
     this._debug = options?.debug;
     this._plain = Boolean(options?.plain);
+    this._userAgent = options?.userAgent;
     this._logger = options?.logger ?? { log: (message) => console.log(message) };
     this._transport = options?.transport ?? requestJson;
     this._clock = options?.clock ?? Date.now;
@@ -400,7 +412,8 @@ export class SessionManager {
     if (this.debug) this._logger.log(`${colors.dim}[DEBUG] Creating new session...${colors.reset}`);
     const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
+      headers: { 'Content-Type': 'application/json' },
+      userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
     });
     const data = response.data;
     if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
@@ -456,6 +469,7 @@ export class SessionManager {
       method: 'POST',
       sessionId: session.id,
       payload: { username: session.username, password: session.password },
+      userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
     });
     const data = response.data;
     if (data.error) return data;

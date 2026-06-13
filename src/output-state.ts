@@ -1,6 +1,7 @@
 import type { CliEnv } from './cli-context.ts';
 import type { GlobalOptionParseError } from './global-options.ts';
-import { DEFAULT_V2_API_BASE, type SpaceMoltConfig } from './runtime.ts';
+import { DEFAULT_USER_AGENT, DEFAULT_V2_API_BASE, type SpaceMoltConfig } from './runtime.ts';
+import { loadCliConfig } from './session.ts';
 import type { GlobalOptions, OutputFormat } from './types.ts';
 
 export type ImmutableSpaceMoltConfig = Readonly<SpaceMoltConfig>;
@@ -47,6 +48,7 @@ export function createDefaultConfig(
   env: CliEnv = process.env,
 ): ImmutableSpaceMoltConfig {
   const jsonOutput = overrides.jsonOutput ?? env.SPACEMOLT_OUTPUT === 'json';
+  const cliConfig = loadCliConfig(undefined, undefined, env);
   return Object.freeze({
     apiBase: overrides.apiBase ?? env.SPACEMOLT_URL ?? DEFAULT_V2_API_BASE,
     jsonOutput,
@@ -57,5 +59,6 @@ export function createDefaultConfig(
     compact: overrides.compact ?? false,
     profile: overrides.profile ?? env.SPACEMOLT_PROFILE,
     profileIsExplicit: overrides.profileIsExplicit ?? false,
+    userAgent: overrides.userAgent ?? cliConfig.userAgent ?? DEFAULT_USER_AGENT,
   });
 }

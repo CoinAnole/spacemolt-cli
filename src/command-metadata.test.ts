@@ -272,8 +272,10 @@ function zshCommandCompletionWords(completion: string, command: string): string[
 
 function fishCommandCompletionWords(completion: string, command: string): string[] {
   const words: string[] = [];
+  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const commandMatcher = new RegExp(`__fish_seen_subcommand_from ${escapedCommand}(?:"|\\s|$)`);
   for (const line of completion.split('\n')) {
-    if (!line.includes(`__fish_seen_subcommand_from ${command}`)) continue;
+    if (!commandMatcher.test(line)) continue;
     const word = line.match(/(?:^|\s)-a\s+(\S+)/)?.[1];
     if (word) words.push(word.replace(/^"|"$/g, ''));
   }
@@ -669,7 +671,7 @@ describe('command metadata', () => {
   });
 
   test('shell completions include local top-level commands', () => {
-    const expectedCommands = ['doctor', 'version', 'profile', 'ids', 'where-can-i', 'sync-api'];
+    const expectedCommands = ['config', 'doctor', 'version', 'profile', 'ids', 'where-can-i', 'sync-api'];
 
     for (const shell of ['bash', 'zsh', 'fish']) {
       const completion = generateCompletion(shell);
@@ -687,6 +689,7 @@ describe('command metadata', () => {
 
   test('shell completions include local subcommand values', () => {
     const expectedValues = {
+      config: ['user-agent'],
       completion: ['bash', 'zsh', 'fish'],
       ids: ['poi', 'system', 'item', 'player'],
       profile: ['list', 'default'],

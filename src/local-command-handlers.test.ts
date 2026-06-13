@@ -147,7 +147,7 @@ function specialCompletionWords(shell: string, completion: string, command: stri
 
   return completion
     .split('\n')
-    .filter((line) => line.includes(`__fish_seen_subcommand_from ${command}`))
+    .filter((line) => new RegExp(`__fish_seen_subcommand_from ${escapedCommand}(?:"|\\s|$)`).test(line))
     .map((line) => line.match(/(?:^|\s)-a\s+(\S+)/)?.[1]?.replace(/^"|"$/g, ''))
     .filter(Boolean) as string[];
 }
@@ -493,8 +493,9 @@ describe('local command handlers', () => {
   });
 
   test('completion handler includes local command and subcommand completions for every shell', async () => {
-    const expectedCommands = ['doctor', 'version', 'profile', 'ids', 'where-can-i', 'sync-api'];
+    const expectedCommands = ['config', 'doctor', 'version', 'profile', 'ids', 'where-can-i', 'sync-api'];
     const expectedSubcommands = {
+      config: ['user-agent'],
       completion: ['bash', 'zsh', 'fish'],
       ids: ['poi', 'system', 'item', 'player'],
       profile: ['list', 'default'],
@@ -515,6 +516,56 @@ describe('local command handlers', () => {
         expect(specialCompletionWords(shell, result.completion, command), `${shell} ${command} values`).toEqual(values);
       }
     }
+  });
+
+  test('config user-agent shows the default when no custom value is saved', async () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const handler = localHandler(['config', 'user-agent']);
+    const parsed = handler.parse(['config', 'user-agent'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const { context, stdout } = captureContext({ XDG_CONFIG_HOME: configHome });
+
+    const result = await handler.run(parsed.payload, options, undefined, context);
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toMatch(/^User agent: SpaceMolt-Client\/\d+\.\d+\.\d+$/);
+  });
+
+  test('config user-agent saves, shows, and resets a custom user agent', async () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const env = { XDG_CONFIG_HOME: configHome };
+    const setHandler = localHandler(['config', 'user-agent', 'ENDL-TradeBot/1.0']);
+    const showHandler = localHandler(['config', 'user-agent']);
+    const resetHandler = localHandler(['config', 'user-agent', '--reset']);
+
+    const setParsed = setHandler.parse(['config', 'user-agent', 'ENDL-TradeBot/1.0'], options);
+    expect(setParsed.ok).toBe(true);
+    if (!setParsed.ok) return;
+    const setCapture = captureContext(env);
+    const setResult = await setHandler.run(setParsed.payload, options, undefined, setCapture.context);
+    expect(await setHandler.render(setResult, options, undefined, setCapture.context)).toBe(0);
+    expect(setCapture.stdout.join('\n')).toBe('User agent: ENDL-TradeBot/1.0');
+
+    const showParsed = showHandler.parse(['config', 'user-agent'], options);
+    expect(showParsed.ok).toBe(true);
+    if (!showParsed.ok) return;
+    const showCapture = captureContext(env);
+    const showResult = await showHandler.run(showParsed.payload, options, undefined, showCapture.context);
+    expect(await showHandler.render(showResult, options, undefined, showCapture.context)).toBe(0);
+    expect(showCapture.stdout.join('\n')).toBe('User agent: ENDL-TradeBot/1.0');
+
+    const resetParsed = resetHandler.parse(['config', 'user-agent', '--reset'], options);
+    expect(resetParsed.ok).toBe(true);
+    if (!resetParsed.ok) return;
+    const resetCapture = captureContext(env);
+    const resetResult = await resetHandler.run(resetParsed.payload, options, undefined, resetCapture.context);
+    expect(await resetHandler.render(resetResult, options, undefined, resetCapture.context)).toBe(0);
+    expect(resetCapture.stdout.join('\n')).toMatch(/^User agent: SpaceMolt-Client\/\d+\.\d+\.\d+$/);
+    expect(fs.readFileSync(path.join(configHome, 'spacemolt-cli', 'config.json'), 'utf-8')).not.toContain('userAgent');
   });
 
   test('ids command renders JSON with cached hints', async () => {

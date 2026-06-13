@@ -1,4 +1,4 @@
-import { FETCH_TIMEOUT_MS, VERSION } from './runtime.ts';
+import { DEFAULT_USER_AGENT, FETCH_TIMEOUT_MS } from './runtime.ts';
 import type { APIResponse, JsonRequestOptions, JsonResponse } from './types.ts';
 
 export async function requestJson<T = APIResponse>(
@@ -9,7 +9,7 @@ export async function requestJson<T = APIResponse>(
   const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
   const headers: Record<string, string> = {
     'Accept-Encoding': 'gzip',
-    'User-Agent': `SpaceMolt-Client/${VERSION}`,
+    'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
     ...options.headers,
   };
 

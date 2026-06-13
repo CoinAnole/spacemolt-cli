@@ -97,6 +97,7 @@ export class SpaceMoltClient {
         profileIsExplicit: this.config.profileIsExplicit,
         debug: this.config.debug,
         plain: this.config.plain,
+        userAgent: this.config.userAgent,
       });
     this.clock = options.clock ?? { now: Date.now };
     this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
@@ -240,6 +241,7 @@ export class SpaceMoltClient {
       method: requestMethod,
       sessionId: currentSession.id,
       payload: requestMethod === 'POST' && requestPayload ? requestPayload : undefined,
+      userAgent: this.config.userAgent,
     });
     const elapsed = this.clock.now() - startTime;
 

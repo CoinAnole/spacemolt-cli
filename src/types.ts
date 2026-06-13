@@ -60,6 +60,7 @@ export interface JsonRequestOptions {
   sessionId?: string;
   payload?: Record<string, unknown>;
   timeoutMs?: number;
+  userAgent?: string;
 }
 
 export interface JsonResponse<T> {

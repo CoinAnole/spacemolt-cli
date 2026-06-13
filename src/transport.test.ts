@@ -32,7 +32,28 @@ describe('requestJson', () => {
     expect(calls[0]?.init?.headers).toMatchObject({
       'Accept-Encoding': 'gzip',
       'Content-Type': 'application/json',
+      'User-Agent': expect.stringMatching(/^SpaceMolt-Client\/\d+\.\d+\.\d+$/),
       'X-Session-Id': 'sess_123',
+    });
+  });
+
+  test('uses a configured user agent when provided', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (url, init) => {
+      calls.push({ url: String(url), init });
+      return new Response('{"ok":true}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+
+    await requestJson('https://example.test/api', {
+      userAgent: 'ENDL-TradeBot/1.0',
+    });
+
+    expect(calls[0]?.init?.headers).toMatchObject({
+      'Accept-Encoding': 'gzip',
+      'User-Agent': 'ENDL-TradeBot/1.0',
     });
   });
 

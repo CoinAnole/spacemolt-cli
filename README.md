@@ -81,6 +81,16 @@ By default all session state and saved login credentials are stored in the platf
 | `config.json` | CLI preferences, including `defaultProfile` |
 | `sessions/<profile>.json` | Named profile session, player ID, expiry, and saved login credentials |
 
+#### Local Configuration
+
+The CLI sends `Accept-Encoding: gzip` and a default `User-Agent` of `SpaceMolt-Client/<version>` on API requests. To set a custom user agent, either edit `config.json` with a `userAgent` string or use:
+
+```bash
+bun run src/client.ts config user-agent ENDL-TradeBot/1.0
+bun run src/client.ts config user-agent
+bun run src/client.ts config user-agent --reset
+```
+
 #### Profile Sessions
 
 Named profiles keep player sessions isolated. Credentials are saved in that profile's session file after a successful `login` or `register`, so there is no separate credentials file to maintain. You can list stored profile session files:

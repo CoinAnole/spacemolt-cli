@@ -44,11 +44,13 @@ import {
   refreshOpenApiCache,
 } from './openapi-cache.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
-import { API_BASE, VERSION } from './runtime.ts';
+import { API_BASE, DEFAULT_USER_AGENT, normalizeUserAgent, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import {
   getSessionPath,
   listProfileNames,
+  loadCliConfig,
+  saveCliConfig,
   setDefaultProfile,
   showDefaultProfile,
   showProfiles,
@@ -94,8 +96,72 @@ function describeOpenApiCacheState(cachedVersion: string, bundledVersion: string
 }
 
 type ProfilePayload = { action: 'list' } | { action: 'default'; name?: string };
+type ConfigPayload = { action: 'user-agent'; mode: 'show' | 'set' | 'reset'; value?: string };
 
 const PROFILE_USAGE = 'spacemolt profile [list|default [name]]';
+const CONFIG_USAGE = 'spacemolt config user-agent [value|--reset]';
+
+const configHandler: CommandHandler<ConfigPayload, { userAgent: string; custom: boolean }> = {
+  name: 'config',
+  requiresNetwork: false,
+  parse(argv) {
+    const action = argv[1];
+    if (action !== 'user-agent') {
+      return {
+        ok: false,
+        error: {
+          code: 'unknown_command',
+          message: `Unknown config command: ${action || ''}`,
+          customStderr: `Error: Unknown config command "${action || ''}"\nUsage: ${CONFIG_USAGE}`,
+          exitCode: 1,
+        },
+      };
+    }
+
+    const value = argv.slice(2).join(' ').trim();
+    if (!value) return { ok: true, payload: { action, mode: 'show' } };
+    if (value === '--reset') return { ok: true, payload: { action, mode: 'reset' } };
+
+    try {
+      return { ok: true, payload: { action, mode: 'set', value: normalizeUserAgent(value) } };
+    } catch (err) {
+      return {
+        ok: false,
+        error: {
+          code: 'validation_error',
+          message: err instanceof Error ? err.message : 'Invalid user agent.',
+          customStderr: `Error: ${err instanceof Error ? err.message : 'Invalid user agent.'}\nUsage: ${CONFIG_USAGE}`,
+          exitCode: 1,
+        },
+      };
+    }
+  },
+  run(payload, _options, _client, context) {
+    const config = loadCliConfig(context?.env.HOME, undefined, context?.env);
+    if (payload.mode === 'set') {
+      config.userAgent = payload.value;
+      saveCliConfig(config, context?.env.HOME, undefined, context?.env);
+    }
+    if (payload.mode === 'reset') {
+      delete config.userAgent;
+      saveCliConfig(config, context?.env.HOME, undefined, context?.env);
+    }
+
+    return {
+      userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
+      custom: Boolean(config.userAgent),
+    };
+  },
+  render(result, options, _client, context) {
+    if (options.json) {
+      writeJson(context, { structuredContent: { userAgent: result.userAgent, custom: result.custom } });
+    } else {
+      const out = context?.writer.out.bind(context.writer) ?? console.log;
+      out(`User agent: ${result.userAgent}`);
+    }
+    return 0;
+  },
+};
 
 const profileHandler: CommandHandler<ProfilePayload, ProfilePayload> = {
   name: 'profile',
@@ -484,6 +550,7 @@ const syncApiHandler: CommandHandler<Record<string, never>, { cache: OpenApiCach
     const cache = await refreshOpenApiCache({
       apiBase: config.apiBase,
       cacheDir: defaultOpenApiCacheDir(context?.env),
+      userAgent: config.userAgent,
     });
     return { cache };
   },
@@ -768,6 +835,7 @@ class CommandRegistry {
 }
 
 export const registry = new CommandRegistry();
+registry.register(configHandler);
 registry.register(profileHandler);
 registry.register(commandsHandler);
 registry.register(explainHandler);

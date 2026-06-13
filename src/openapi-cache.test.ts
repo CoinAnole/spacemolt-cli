@@ -25,13 +25,14 @@ describe('OpenAPI cache', () => {
 
   test('refreshes OpenAPI cache, writes pretty JSON, and returns generated routes', async () => {
     const dir = tempDir();
-    const requestedUrls: string[] = [];
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
 
     const result = await refreshOpenApiCache({
       apiBase: 'https://example.test/api/v2/',
       cacheDir: dir,
-      fetch: async (url) => {
-        requestedUrls.push(String(url));
+      userAgent: 'ENDL-TradeBot/1.0',
+      fetch: async (url, init) => {
+        requests.push({ url: String(url), init });
         return new Response(
           JSON.stringify({
             openapi: '3.0.3',
@@ -60,7 +61,12 @@ describe('OpenAPI cache', () => {
       },
     });
 
-    expect(requestedUrls).toEqual(['https://example.test/api/v2/openapi.json']);
+    expect(requests).toEqual([
+      {
+        url: 'https://example.test/api/v2/openapi.json',
+        init: { headers: { Accept: 'application/json', 'Accept-Encoding': 'gzip', 'User-Agent': 'ENDL-TradeBot/1.0' } },
+      },
+    ]);
     expect(result.etag).toBe('"abc"');
     expect(result.gameserverVersion).toBe('v0.324.1');
     expect(result.routes['POST /api/v2/spacemolt_shipyard/repair']).toEqual({

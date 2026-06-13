@@ -6,20 +6,31 @@ import { SpaceMoltClient } from './api.ts';
 import * as clientEntrypoint from './client.ts';
 import { getRuntimeConfig } from './main.ts';
 import { createDefaultConfig, createRuntimeState, type SpaceMoltConfig } from './runtime.ts';
-import { SessionManager, setDefaultProfile } from './session.ts';
+import {
+  getCliConfigPath,
+  loadCliConfig,
+  SessionManager,
+  saveCliConfig,
+  setActiveProfile,
+  setDefaultProfile,
+} from './session.ts';
 
 describe('Explicit Runtime Configuration', () => {
   test('createDefaultConfig returns a frozen env-backed snapshot', () => {
-    const env = {
+    const env: Record<string, string | undefined> = {
       SPACEMOLT_URL: 'https://env-test.spacemolt.com/api/v2',
       SPACEMOLT_OUTPUT: 'json',
       DEBUG: 'true',
       SPACEMOLT_PROFILE: 'env-pilot',
     };
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-user-agent-config-'));
+    env.XDG_CONFIG_HOME = configHome;
+    saveCliConfig({ userAgent: 'ENDL-TradeBot/1.0' }, undefined, undefined, env);
     const config = createDefaultConfig({}, env);
     const configWithOverrides = createDefaultConfig({
       apiBase: 'https://custom-test.spacemolt.com/api/v2',
       jsonOutput: true,
+      userAgent: 'OverrideBot/2.0',
     });
 
     expect(config).toMatchObject({
@@ -28,10 +39,13 @@ describe('Explicit Runtime Configuration', () => {
       debug: true,
       format: 'json',
       profile: 'env-pilot',
+      userAgent: 'ENDL-TradeBot/1.0',
     });
     expect(Object.isFrozen(config)).toBe(true);
     expect(configWithOverrides.apiBase).toBe('https://custom-test.spacemolt.com/api/v2');
     expect(configWithOverrides.jsonOutput).toBe(true);
+    expect(configWithOverrides.userAgent).toBe('OverrideBot/2.0');
+    fs.rmSync(configHome, { recursive: true, force: true });
   });
 
   test('client entrypoint omits removed legacy runtime exports', () => {
@@ -45,6 +59,7 @@ describe('Explicit Runtime Configuration', () => {
     const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-config-test-'));
     process.env.XDG_CONFIG_HOME = configHome;
     try {
+      setActiveProfile(undefined);
       setDefaultProfile('default-pilot');
 
       const defaultManager = new SessionManager();
@@ -53,6 +68,7 @@ describe('Explicit Runtime Configuration', () => {
       const profileManager = new SessionManager({ profile: 'test-profile-123' });
       expect(profileManager.getSessionPath()).toContain('sessions/test-profile-123.json');
     } finally {
+      setActiveProfile(undefined);
       if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
       else process.env.XDG_CONFIG_HOME = originalConfigHome;
       fs.rmSync(configHome, { recursive: true, force: true });
@@ -86,14 +102,37 @@ describe('Explicit Runtime Configuration', () => {
       format: 'json' as const,
       profile: 'my-custom-profile',
     };
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runtime-config-user-agent-'));
+    fs.mkdirSync(path.join(configHome, 'spacemolt-cli'), { recursive: true });
+    fs.writeFileSync(
+      getCliConfigPath(undefined, undefined, { XDG_CONFIG_HOME: configHome }),
+      `${JSON.stringify({ userAgent: 'ConfigBot/1.0' }, null, 2)}\n`,
+    );
 
-    const config = getRuntimeConfig(options);
+    const config = getRuntimeConfig(options, { XDG_CONFIG_HOME: configHome });
     expect(config.jsonOutput).toBe(true);
     expect(config.plain).toBe(true);
     expect(config.quiet).toBe(true);
     expect(config.compact).toBe(true);
     expect(config.debug).toBe(true);
     expect(config.profile).toBe('my-custom-profile');
+    expect(config.userAgent).toBe('ConfigBot/1.0');
+    fs.rmSync(configHome, { recursive: true, force: true });
+  });
+
+  test('loadCliConfig ignores invalid user agent values from config.json', () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-invalid-user-agent-'));
+    fs.mkdirSync(path.join(configHome, 'spacemolt-cli'), { recursive: true });
+    fs.writeFileSync(
+      getCliConfigPath(undefined, undefined, { XDG_CONFIG_HOME: configHome }),
+      `${JSON.stringify({ defaultProfile: 'pilot', userAgent: 'bad\nagent' }, null, 2)}\n`,
+    );
+
+    expect(loadCliConfig(undefined, undefined, { XDG_CONFIG_HOME: configHome })).toEqual({
+      defaultProfile: 'pilot',
+    });
+
+    fs.rmSync(configHome, { recursive: true, force: true });
   });
 
   test('createRuntimeState maps config into output flags without reading globals', () => {
@@ -106,6 +145,7 @@ describe('Explicit Runtime Configuration', () => {
       format: 'yaml',
       compact: true,
       profile: 'pilot',
+      userAgent: 'StateBot/1.0',
     };
 
     expect(createRuntimeState(config)).toEqual({
@@ -118,6 +158,7 @@ describe('Explicit Runtime Configuration', () => {
       compact: true,
       profile: 'pilot',
       profileIsExplicit: false,
+      userAgent: 'StateBot/1.0',
     });
   });
 

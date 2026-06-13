@@ -208,7 +208,8 @@ describe('SpaceMoltClient', () => {
         url: 'https://game.test/api/v2/session',
         options: {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
+          headers: { 'Content-Type': 'application/json' },
+          userAgent: `SpaceMolt-Client/${VERSION}`,
         },
       },
     ]);
@@ -286,7 +287,8 @@ describe('SpaceMoltClient', () => {
         url: 'https://game.test/api/v2/session',
         options: {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'User-Agent': `SpaceMolt-Client/${VERSION}` },
+          headers: { 'Content-Type': 'application/json' },
+          userAgent: `SpaceMolt-Client/${VERSION}`,
         },
       },
     ]);

@@ -5,6 +5,26 @@
 export const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 export const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 export const VERSION = '2.4.0';
+export const DEFAULT_USER_AGENT = `SpaceMolt-Client/${VERSION}`;
+
+export function normalizeUserAgent(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) throw new Error('User agent cannot be empty.');
+  for (const char of normalized) {
+    const code = char.charCodeAt(0);
+    if (code < 32 || code === 127) throw new Error('User agent cannot contain control characters.');
+  }
+  return normalized;
+}
+
+export function userAgentFromConfigValue(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  try {
+    return normalizeUserAgent(value);
+  } catch {
+    return undefined;
+  }
+}
 
 export interface SpaceMoltConfig {
   apiBase: string;
@@ -16,10 +36,11 @@ export interface SpaceMoltConfig {
   compact: boolean;
   profile?: string;
   profileIsExplicit?: boolean;
+  userAgent?: string;
 }
 
-export type RuntimeState = Required<Omit<SpaceMoltConfig, 'profile' | 'profileIsExplicit'>> &
-  Pick<SpaceMoltConfig, 'profile'> & { profileIsExplicit: boolean };
+export type RuntimeState = Required<Omit<SpaceMoltConfig, 'profile' | 'profileIsExplicit' | 'userAgent'>> &
+  Pick<SpaceMoltConfig, 'profile'> & { profileIsExplicit: boolean; userAgent: string };
 
 export function createRuntimeState(config: SpaceMoltConfig): RuntimeState {
   return {
@@ -32,6 +53,7 @@ export function createRuntimeState(config: SpaceMoltConfig): RuntimeState {
     compact: config.compact,
     profile: config.profile,
     profileIsExplicit: Boolean(config.profileIsExplicit),
+    userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
   };
 }
 

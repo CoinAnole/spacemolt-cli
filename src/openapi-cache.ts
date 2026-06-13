@@ -6,6 +6,7 @@ import {
   generateApiRoutes,
   type OpenApiSpec,
 } from './openapi-metadata.ts';
+import { DEFAULT_USER_AGENT } from './runtime.ts';
 import { getSpacemoltHome } from './session.ts';
 
 export interface OpenApiCacheFile {
@@ -63,10 +64,17 @@ export async function refreshOpenApiCache(options: {
   apiBase: string;
   cacheDir?: string;
   fetch?: OpenApiFetch;
+  userAgent?: string;
 }): Promise<OpenApiCacheFile> {
   const fetchImpl = options.fetch || fetch;
   const url = `${options.apiBase.replace(/\/$/, '')}/openapi.json`;
-  const response = await fetchImpl(url);
+  const response = await fetchImpl(url, {
+    headers: {
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      'User-Agent': options.userAgent ?? DEFAULT_USER_AGENT,
+    },
+  });
   if (!response.ok) throw new Error(`OpenAPI refresh failed: HTTP ${response.status}`);
 
   const spec = (await response.json()) as OpenApiSpec;

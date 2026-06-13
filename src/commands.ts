@@ -113,6 +113,15 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     required: ['item'],
     seeAlso: ['ids', 'catalog', 'view_market'],
   },
+  config: {
+    usage: 'user-agent [value|--reset]',
+    description: 'Show or change local CLI preferences such as the API User-Agent header.',
+    example: 'spacemolt config user-agent ENDL-TradeBot/1.0',
+    category: 'Configuration',
+    args: ['action'],
+    required: ['action'],
+    seeAlso: ['profile', 'doctor'],
+  },
   profile: {
     usage: '[list|default [name]]',
     description: 'List saved named profile sessions or show/change the default profile.',

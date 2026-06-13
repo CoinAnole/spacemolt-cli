@@ -97,6 +97,7 @@ describe('explicit output state', () => {
       compact: false,
       profile: 'pilot',
       profileIsExplicit: false,
+      userAgent: expect.stringMatching(/^SpaceMolt-Client\/\d+\.\d+\.\d+$/),
     });
     expect(Object.isFrozen(config)).toBe(true);
     void assertImmutableConfigType;
