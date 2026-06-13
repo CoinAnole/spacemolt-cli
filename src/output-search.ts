@@ -5,9 +5,7 @@ export interface OutputSearchMatch {
   value: unknown;
 }
 
-export type OutputSearchResult =
-  | { ok: true; matches: OutputSearchMatch[] }
-  | { ok: false; message: string };
+export type OutputSearchResult = { ok: true; matches: OutputSearchMatch[] } | { ok: false; message: string };
 
 type SearchScope = 'key' | 'value';
 type OutputSearchOptions = Pick<
@@ -26,10 +24,7 @@ const SIMPLE_JQ_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export function hasOutputSearch(options?: GlobalOptions): boolean {
   return Boolean(
-    options?.outputSearch ||
-      options?.outputSearchKeys ||
-      options?.outputSearchValues ||
-      options?.outputSearchRegex,
+    options?.outputSearch || options?.outputSearchKeys || options?.outputSearchValues || options?.outputSearchRegex,
   );
 }
 
@@ -113,7 +108,9 @@ function visitOutputValue(
   }
 
   if (Array.isArray(value)) {
-    value.forEach((item, index) => visitOutputValue(item, `${path}[${index}]`, matchers, emit));
+    value.forEach((item, index) => {
+      visitOutputValue(item, `${path}[${index}]`, matchers, emit);
+    });
     return;
   }
 

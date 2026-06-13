@@ -1,5 +1,6 @@
 import type { CliRuntimeContext } from '../cli-context.ts';
 import { evaluateJq, formatJqResult, jqResultValue } from '../jq.ts';
+import { findOutputSearchMatches, formatOutputSearchLine, hasOutputSearch } from '../output-search.ts';
 import {
   extractFields,
   getFieldValue,
@@ -9,7 +10,6 @@ import {
   normalizeStructuredResultForDisplay,
   normalizeStructuredResultForOutput,
 } from '../response.ts';
-import { findOutputSearchMatches, formatOutputSearchLine, hasOutputSearch } from '../output-search.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
 import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';

@@ -159,8 +159,7 @@ function optionsForCommandLocalSearch(commandRun: CommandRunResult, options: Glo
   if (!outputSearch || commandRun.payload?.search !== outputSearch) return options;
 
   const config = commandRun.commandConfig;
-  const declaresSearch =
-    Boolean(config?.schema?.search) || Boolean(config?.clientOnlyFields?.includes('search'));
+  const declaresSearch = Boolean(config?.schema?.search) || Boolean(config?.clientOnlyFields?.includes('search'));
   return declaresSearch ? { ...options, outputSearch: undefined } : options;
 }
 

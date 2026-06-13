@@ -107,8 +107,7 @@ function restoreCommandLocalSearch(
   if (!search || payload.search !== undefined) return payload;
 
   const config = registry.commands[command];
-  const declaresSearch =
-    Boolean(config?.schema?.search) || Boolean(config?.clientOnlyFields?.includes('search'));
+  const declaresSearch = Boolean(config?.schema?.search) || Boolean(config?.clientOnlyFields?.includes('search'));
   if (!declaresSearch) return payload;
 
   return { ...payload, search };

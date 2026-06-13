@@ -89,9 +89,9 @@ describe('output search', () => {
       matches: [{ path: '.ship.modules', value: [{ slot: 'utility', item_id: 'fuel_scoop' }] }],
     });
     if (!result.ok) throw new Error(result.message);
-    expect(formatOutputSearchLine(result.matches[0]!)).toBe(
-      '.ship.modules = [{"slot":"utility","item_id":"fuel_scoop"}]',
-    );
+    const match = result.matches[0];
+    if (!match) throw new Error('expected at least one match');
+    expect(formatOutputSearchLine(match)).toBe('.ship.modules = [{"slot":"utility","item_id":"fuel_scoop"}]');
   });
 
   test('root scalar search emits dot path', () => {
