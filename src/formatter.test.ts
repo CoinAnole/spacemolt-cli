@@ -649,6 +649,21 @@ describe('structuredContent output mode precedence', () => {
     expect(existingNull.stdout).toEqual(['null']);
   });
 
+  test('--jq warns when projection output is empty', () => {
+    const rendered = renderStructuredResult(
+      'get_status',
+      { ...outputModeFixture, items: [] },
+      globalOptions({ jq: '.items[]' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toBe(
+      '[warning] --jq produced no output. Path may not exist in structuredContent.\n' +
+        'Use --keys to explore available fields, or add --fuzzy for auto-resolution.',
+    );
+  });
+
   test('--jq hints when user starts from structuredContent', () => {
     const rendered = renderStructuredResult(
       'get_status',

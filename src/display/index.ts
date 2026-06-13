@@ -94,6 +94,18 @@ function formatProjection(
   return JSON.stringify(value);
 }
 
+function isEmptyJqOutput(value: unknown): boolean {
+  const output = jqResultValue(value);
+  return output === undefined || output === '' || (Array.isArray(output) && output.length === 0);
+}
+
+function formatEmptyJqOutputWarning(): string {
+  return [
+    `${c.yellow}[warning]${c.reset} --jq produced no output. Path may not exist in structuredContent.`,
+    'Use --keys to explore available fields, or add --fuzzy for auto-resolution.',
+  ].join('\n');
+}
+
 type FieldProjectionResult = { success: true; value: unknown } | { success: false; message: string; fatal: boolean };
 type KeysProjectionResult = { success: true; keys: string[] } | { success: false; message: string; fatal: boolean };
 
@@ -268,6 +280,10 @@ function displayStructuredResultInternal(
   if (jqExpr) {
     try {
       const jqResult = evaluateJq(structuredOutputResult, jqExpr, { fuzzy: options?.fuzzy });
+      if (isEmptyJqOutput(jqResult)) {
+        emitError(formatEmptyJqOutputWarning());
+        return false;
+      }
       if (outputSearch) {
         const searchResult = findOutputSearchMatches(jqResultValue(jqResult), options ?? ({} as GlobalOptions));
         if (!searchResult.ok) {
