@@ -674,49 +674,46 @@ export const statusFormatters = [
   // the response has both r.location and r.message, which the simple formatter swallows
   formatter(
     (r) => {
-      if (!r.location || typeof r.location !== 'object') return false;
-      const loc = r.location as {
-        system_id: string;
-        system_name: string;
-        empire: string;
-        security_status: string;
-        connections: string[];
-        poi_id: string;
-        poi_name: string;
-        poi_type: string;
-        docked_at?: string;
-        nearby_players: Array<Record<string, unknown>>;
-        nearby_player_count: number;
-        nearby_pirates: Array<Record<string, unknown>>;
-        nearby_pirate_count: number;
-        nearby_empire_npcs?: Array<Record<string, unknown>>;
-        nearby_empire_npc_count?: number;
-      };
+      if (!isRecord(r.location)) return false;
+      const loc = r.location;
+      if (!loc.system_id && !loc.system_name && !loc.poi_id && !loc.poi_name) return false;
+      const connections = Array.isArray(loc.connections) ? loc.connections : [];
+      const nearbyPlayers = Array.isArray(loc.nearby_players) ? loc.nearby_players.filter(isRecord) : [];
+      const nearbyPlayerCount = numberOrDefault(loc.nearby_player_count, nearbyPlayers.length);
+      const nearbyPirateCount = numberOrDefault(loc.nearby_pirate_count, 0);
+      const nearbyEmpireNpcCount = numberOrDefault(loc.nearby_empire_npc_count, 0);
+
       emitLine(`\n${c.bright}=== Location ===${c.reset}`);
-      emitLine(`${c.cyan}System:${c.reset} ${loc.system_name} (${loc.system_id})`);
-      emitLine(`${c.cyan}Empire:${c.reset} ${loc.empire}`);
-      emitLine(`${c.cyan}Security:${c.reset} ${loc.security_status}`);
-      if (loc.connections.length > 0) {
-        emitLine(`${c.cyan}Connections:${c.reset} ${loc.connections.join(', ')}`);
+      if (loc.system_id || loc.system_name) {
+        const idText = loc.system_id && loc.system_name ? ` (${loc.system_id})` : '';
+        emitLine(`${c.cyan}System:${c.reset} ${loc.system_name ?? loc.system_id}${idText}`);
       }
-      emitLine(`${c.cyan}POI:${c.reset} ${loc.poi_name} (${loc.poi_type})`);
+      if (loc.empire) emitLine(`${c.cyan}Empire:${c.reset} ${loc.empire}`);
+      if (loc.security_status) emitLine(`${c.cyan}Security:${c.reset} ${loc.security_status}`);
+      if (connections.length > 0) {
+        emitLine(`${c.cyan}Connections:${c.reset} ${connections.join(', ')}`);
+      }
+      if (loc.poi_id || loc.poi_name || loc.poi_type) {
+        const typeText = loc.poi_type ? ` (${loc.poi_type})` : loc.poi_id && loc.poi_name ? ` (${loc.poi_id})` : '';
+        emitLine(`${c.cyan}POI:${c.reset} ${loc.poi_name ?? loc.poi_id}${typeText}`);
+      }
       if (loc.docked_at) {
         emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
       }
-      if (loc.nearby_player_count > 0) {
-        emitLine(`\n${c.bright}Nearby Players (${loc.nearby_player_count}):${c.reset}`);
-        for (const player of loc.nearby_players.slice(0, NEARBY_TABLE_LIMIT)) {
+      if (nearbyPlayerCount > 0) {
+        emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
+        for (const player of nearbyPlayers.slice(0, NEARBY_TABLE_LIMIT)) {
           emitLine(`  ${formatPlayer(player)}`);
         }
-        if (loc.nearby_player_count > NEARBY_TABLE_LIMIT) {
-          emitLine(`  ... and ${loc.nearby_player_count - NEARBY_TABLE_LIMIT} more`);
+        if (nearbyPlayerCount > NEARBY_TABLE_LIMIT) {
+          emitLine(`  ... and ${nearbyPlayerCount - NEARBY_TABLE_LIMIT} more`);
         }
       }
-      if (loc.nearby_pirate_count > 0) {
-        emitLine(`\n${c.red}Nearby Pirates: ${loc.nearby_pirate_count}${c.reset}`);
+      if (nearbyPirateCount > 0) {
+        emitLine(`\n${c.red}Nearby Pirates: ${nearbyPirateCount}${c.reset}`);
       }
-      if (loc.nearby_empire_npc_count && loc.nearby_empire_npc_count > 0) {
-        emitLine(`\n${c.dim}Nearby NPCs: ${loc.nearby_empire_npc_count}${c.reset}`);
+      if (nearbyEmpireNpcCount > 0) {
+        emitLine(`\n${c.dim}Nearby NPCs: ${nearbyEmpireNpcCount}${c.reset}`);
       }
       return true;
     },
@@ -802,3 +799,8 @@ export const statusFormatters = [
     { commands: ['travel', 'jump'], shapeFallback: true },
   ),
 ];
+
+function numberOrDefault(value: unknown, fallback: number): number {
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}

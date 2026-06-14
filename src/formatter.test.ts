@@ -1489,6 +1489,61 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats v0.372 post-action sell envelopes from nested details', () => {
+    const { stdout, stderr } = captureStructuredOutput('sell', {
+      details: {
+        action: 'sell',
+        item: 'Iron Ore',
+        item_id: 'iron_ore',
+        quantity_sold: 6,
+        total_earned: 90,
+        unsold: 0,
+        fills: [{ quantity: 6, price_each: 15, subtotal: 90, source: 'station' }],
+      },
+      ship: { cargo_used: 4, cargo_capacity: 50 },
+      cargo: { items: [{ item_id: 'copper_ore', quantity: 4 }] },
+      location: { system_id: 'sol', system_name: 'Sol', poi_id: 'sol_earth', poi_name: 'Earth' },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Complete ===');
+    expect(stdout).toContain('Item: Iron Ore (iron_ore)');
+    expect(stdout).toContain('Instant fills: 6 (earned: 90 cr)');
+    expect(stdout).not.toContain('=== Location ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats v0.372 post-action jump envelopes from nested details', () => {
+    const { stdout, stderr } = captureStructuredOutput('jump', {
+      details: {
+        action: 'jump',
+        message: 'Jumped to Alpha Centauri.',
+        fuel_now: 72,
+        fuel_max: 100,
+        system_id: 'alpha_centauri',
+        system_name: 'Alpha Centauri',
+        poi_id: 'alpha_beacon',
+        poi: 'Beacon',
+        online_players: [],
+        online_players_count: 0,
+      },
+      ship: { fuel: 72, max_fuel: 100 },
+      cargo: { items: [] },
+      location: {
+        system_id: 'alpha_centauri',
+        system_name: 'Alpha Centauri',
+        poi_id: 'alpha_beacon',
+        poi_name: 'Beacon',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arrived at Beacon');
+    expect(stdout).toContain('(No other players here)');
+    expect(stdout).not.toContain('=== Location ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('does not format sparse sell messages as direct market sells', () => {
     const { stdout, stderr } = captureStructuredOutput('sell', {
       message: 'Sold items.',

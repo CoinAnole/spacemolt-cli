@@ -357,6 +357,7 @@ function displayStructuredResultInternal(
   }
 
   const viewModel = normalizeStructuredResultForDisplay(result);
+  const detailsViewModel = postActionDetailsViewModel(viewModel);
 
   if (!isQuiet(options, context)) {
     if (viewModel.auto_docked)
@@ -365,15 +366,21 @@ function displayStructuredResultInternal(
       emitLine(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
   }
 
-  for (const formatter of commandScopedFormatters(resultFormatters, command)) {
-    if (formatter(viewModel, command)) return true;
+  const commandFormatterInputs = detailsViewModel ? [detailsViewModel, viewModel] : [viewModel];
+  for (const input of commandFormatterInputs) {
+    for (const formatter of commandScopedFormatters(resultFormatters, command)) {
+      if (formatter(input, command)) return true;
+    }
   }
 
-  for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
-    if (formatter(viewModel, command)) return true;
+  const fallbackFormatterInputs = detailsViewModel ? [detailsViewModel] : [viewModel];
+  for (const input of fallbackFormatterInputs) {
+    for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
+      if (formatter(input, command)) return true;
+    }
   }
 
-  const resultKeys = Object.keys(viewModel);
+  const resultKeys = Object.keys(detailsViewModel ?? viewModel);
   const nearMisses = resultFormatters.filter(
     (formatter) => formatter.hintKeys?.length && formatter.hintKeys.every((key) => resultKeys.includes(key)),
   );
@@ -390,6 +397,40 @@ function displayStructuredResultInternal(
   emitLine(`\n${c.bright}=== Response ===${c.reset}`);
   emitLine(JSON.stringify(viewModel, null, 2));
   return true;
+}
+
+function postActionDetailsViewModel(viewModel: Record<string, unknown>): Record<string, unknown> | undefined {
+  const details = viewModel.details;
+  if (!isRecord(details)) return undefined;
+
+  const actionViewModel = structuredClone(details);
+  addLocationAliases(actionViewModel, viewModel.location);
+  addShipAliases(actionViewModel, viewModel.ship);
+  return actionViewModel;
+}
+
+function addLocationAliases(actionViewModel: Record<string, unknown>, location: unknown): void {
+  if (!isRecord(location)) return;
+
+  copyIfMissing(actionViewModel, 'system_id', location.system_id);
+  copyIfMissing(actionViewModel, 'system_name', location.system_name);
+  copyIfMissing(actionViewModel, 'poi_id', location.poi_id);
+  copyIfMissing(actionViewModel, 'poi', location.poi_name);
+  copyIfMissing(actionViewModel, 'poi_name', location.poi_name);
+  copyIfMissing(actionViewModel, 'online_players', location.nearby_players);
+  copyIfMissing(actionViewModel, 'online_players_count', location.nearby_player_count);
+}
+
+function addShipAliases(actionViewModel: Record<string, unknown>, ship: unknown): void {
+  if (!isRecord(ship)) return;
+
+  copyIfMissing(actionViewModel, 'fuel_now', ship.fuel);
+  copyIfMissing(actionViewModel, 'fuel_max', ship.max_fuel);
+}
+
+function copyIfMissing(target: Record<string, unknown>, key: string, value: unknown): void {
+  if (target[key] !== undefined || value === undefined) return;
+  target[key] = value;
 }
 
 export function displayResult(

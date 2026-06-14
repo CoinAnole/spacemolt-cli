@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
   createDefaultConfig,
   type ImmutableSpaceMoltConfig,
@@ -84,7 +87,12 @@ describe('explicit output state', () => {
   test('createDefaultConfig returns an immutable env-backed snapshot', () => {
     const config = createDefaultConfig(
       { plain: true, profile: 'pilot' },
-      { SPACEMOLT_URL: 'https://example.test/api/v2', DEBUG: 'true', SPACEMOLT_OUTPUT: 'json' },
+      {
+        SPACEMOLT_URL: 'https://example.test/api/v2',
+        DEBUG: 'true',
+        SPACEMOLT_OUTPUT: 'json',
+        XDG_CONFIG_HOME: fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-output-state-')),
+      },
     );
 
     expect(config).toEqual({
