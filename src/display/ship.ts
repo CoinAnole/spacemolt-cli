@@ -277,7 +277,8 @@ export const shipFormatters = [
         emitLine(`Target fuel: ${r.target_fuel_now ?? '?'}/${r.target_fuel_max ?? '?'}`);
       }
 
-      const fuelCost = optionalNumber(r.cost);
+      const totalCost = optionalNumber(r.cost);
+      const marketCost = optionalNumber(r.market_cost);
       const fuelTax = optionalNumber(r.tax_amount);
       const fuelAmount = optionalNumber(r.fuel);
       const isStationRefuel = r.source === 'station';
@@ -285,13 +286,18 @@ export const shipFormatters = [
         fuelAmount !== undefined && fuelAmount > 0 ? ` (${formatPerFuel(amount / fuelAmount)} cr/fuel)` : '';
       if (isStationRefuel && fuelAmount !== undefined && fuelAmount > 0)
         emitLine(`Fuel added: ${fuelAmount.toLocaleString()}`);
-      if (fuelCost !== undefined) {
-        const label = isStationRefuel ? 'Market cost' : 'Fuel cost';
-        emitLine(`${label}: ${formatCredits(fuelCost)}${perFuelText(fuelCost)}`);
+      if (isStationRefuel) {
+        const displayedMarketCost = marketCost ?? (fuelTax === undefined ? totalCost : undefined);
+        if (displayedMarketCost !== undefined)
+          emitLine(`Market cost: ${formatCredits(displayedMarketCost)}${perFuelText(displayedMarketCost)}`);
+      } else if (totalCost !== undefined) {
+        emitLine(`Fuel cost: ${formatCredits(totalCost)}${perFuelText(totalCost)}`);
       }
       if (fuelTax !== undefined) emitLine(`Fuel tax: ${formatCredits(fuelTax)}${perFuelText(fuelTax)}`);
-      if (fuelCost !== undefined || fuelTax !== undefined) {
-        const totalSpent = (fuelCost ?? 0) + (fuelTax ?? 0);
+      const totalSpent =
+        totalCost ??
+        (marketCost !== undefined || fuelTax !== undefined ? (marketCost ?? 0) + (fuelTax ?? 0) : undefined);
+      if (totalSpent !== undefined) {
         const unitText =
           fuelAmount !== undefined && fuelAmount > 0 ? ` (${formatPerFuel(totalSpent / fuelAmount)} cr/fuel)` : '';
         emitLine(`Total spent: ${formatCredits(totalSpent)}${unitText}`);

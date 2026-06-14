@@ -226,8 +226,9 @@ export const stationRefuelFixture = {
   fuel: 3998,
   fuel_now: 4000,
   fuel_max: 4000,
-  cost: 7996,
+  market_cost: 7996,
   tax_amount: 7996,
+  cost: 15992,
 };
 
 export const salvageWreckFixture = {
