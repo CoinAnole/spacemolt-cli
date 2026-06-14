@@ -283,6 +283,9 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
     const usageText = (config?.usage || '').toLowerCase();
     const exampleText = (config?.example || '').toLowerCase();
     const relatedText = [...(config?.discoverWith || []), ...(config?.seeAlso || [])].join(' ').toLowerCase();
+    const routeText = config?.route
+      ? [config.route.tool, config.route.action, config.route.method].filter(Boolean).join(' ').toLowerCase()
+      : '';
     const argText = config ? getArgNames(config).join(' ').toLowerCase() : '';
     let score = 0;
     for (const term of terms) {
@@ -296,6 +299,7 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
       if (exampleText.includes(term)) score += 30;
       if (usageText.includes(term)) score += 20;
       if (argText.includes(term)) score += 15;
+      if (routeText.includes(term)) score += 15;
       if (relatedText.includes(term)) score += 10;
     }
     if (terms.length > 1 && terms.every((term) => descriptionText.includes(term))) score += 100;

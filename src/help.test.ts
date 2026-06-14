@@ -439,6 +439,25 @@ describe('help output branches', () => {
     expect(categoryIndex).toBeLessThan(exampleIndex);
   });
 
+  test('showCommandSearch matches command API route metadata', () => {
+    const capture = captureWriter();
+
+    showCommandSearch('commerce', capture.writer, {
+      faction_create_buy_order: {
+        description: 'Create a buy order on behalf of your faction.',
+        usage: 'faction_create_buy_order <item_id> <quantity> <price_each>',
+        category: 'Factions',
+        args: ['item_id', 'quantity', 'price_each'],
+        required: ['item_id', 'quantity', 'price_each'],
+        route: { tool: 'spacemolt_faction_commerce', action: 'create_buy_order', method: 'POST' },
+      },
+    });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Commands matching "commerce"');
+    expect(output).toContain('faction_create_buy_order');
+  });
+
   test('showCommandSearch uses local help metadata for help command', () => {
     const capture = captureWriter();
 
