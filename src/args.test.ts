@@ -437,6 +437,13 @@ describe('dry-run previews', () => {
     expect(getServerPreviewCommand('buy', { item_id: 'ore_iron', quantity: 50 })).toBe('estimate_purchase');
     expect(getServerPreviewCommand('buy', { item_id: 'ore_iron' })).toBeNull();
   });
+
+  test('refuel dry-run notes explain station top-off quantity semantics', () => {
+    const response = createDryRunResponse('refuel', { quantity: 3 });
+
+    expect(response.result).toContain('Station credit refueling ignores quantity and fills the tank to full.');
+    expect(response.result).toContain('quantity applies only to fuel cells or ship-to-ship transfers.');
+  });
 });
 
 describe('parseArgs - rest args', () => {

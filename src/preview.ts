@@ -27,6 +27,10 @@ const RISK_NOTES: Record<string, string[]> = {
   faction_facility_build: ['Builds a faction facility and spends faction resources/credits.'],
   faction_facility_upgrade: ['Upgrades a faction facility and spends faction resources/credits.'],
   faction_facility_toggle: ['Changes whether a faction facility is enabled.'],
+  refuel: [
+    'Station credit refueling ignores quantity and fills the tank to full.',
+    'quantity applies only to fuel cells or ship-to-ship transfers.',
+  ],
 };
 
 export function getRoutePreview(command: string, payload: Record<string, unknown>): Record<string, unknown> {

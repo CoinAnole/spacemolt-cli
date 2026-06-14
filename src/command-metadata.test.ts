@@ -343,6 +343,17 @@ describe('command metadata', () => {
     expect(help).not.toContain('spacemolt repair modules');
   });
 
+  test('refuel help documents station top-off and limited quantity semantics', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.refuel;
+    expect(config?.description).toContain('station credit refuel fills to full');
+    expect(config?.usage).toContain('fuel_cell_id');
+    expect(config?.usage).toContain('quantity=units');
+
+    const help = captureHelp('refuel');
+    expect(help).toContain('station credit refuel fills to full');
+    expect(help).toContain('quantity applies only to fuel cells and transfers');
+  });
+
   test('craft help does not advertise a fixed batch quantity limit', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     // usage is now auto-generated from the spec; the key protection is that the bad

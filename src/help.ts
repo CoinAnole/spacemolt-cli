@@ -920,7 +920,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     mine                      Mine at asteroid belt
     sell <item_id> <qty>      Sell to NPC market
     buy <item_id> [qty]       Buy from market
-    refuel [id] [qty]         Refuel at station or use fuel cells
+    refuel [fuel_cell_id]     Refuel at station to full or use fuel cells
     repair                    Repair at station
 
   ${c.cyan}Combat:${c.reset}

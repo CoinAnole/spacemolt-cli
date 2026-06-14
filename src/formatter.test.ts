@@ -1192,8 +1192,9 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Refuel Complete ===');
     expect(stdout).toContain('Source: station');
     expect(stdout).toContain('Ship fuel: 4000/4000 (+3998)');
-    expect(stdout).toContain('Fuel cost: 7,996 cr');
-    expect(stdout).toContain('Fuel tax: 7,996 cr');
+    expect(stdout).toContain('Fuel added: 3,998');
+    expect(stdout).toContain('Market cost: 7,996 cr (2 cr/fuel)');
+    expect(stdout).toContain('Fuel tax: 7,996 cr (2 cr/fuel)');
     expect(stdout).toContain('Total spent: 15,992 cr (4 cr/fuel)');
     expect(stdout).not.toContain('=== Response ===');
   });

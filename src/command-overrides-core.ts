@@ -295,8 +295,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   refuel: {
     usage:
-      '[id] [quantity] [target=player|fleet]  (station fuel uses dynamic reserve pricing; fuel cells can be selected by id)',
-    description: 'Refuel from a station or fuel cell. Usually dock first, then run refuel.',
+      '[fuel_cell_id [cell_count] | target=player|fleet quantity=units]  (station credit refuel fills to full; quantity applies only to fuel cells and transfers)',
+    description:
+      'Refuel from a station, fuel cell, or tanker ship. A station credit refuel fills to full and ignores quantity.',
     example: 'spacemolt refuel',
     discoverWith: ['get_status', 'get_cargo'],
     seeAlso: ['dock', 'get_status'],
