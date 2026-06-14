@@ -334,7 +334,9 @@ export const marketFormatters = [
       if (typeof r.hint === 'string' && r.hint) emitLine(`${c.dim}${formatStorageHint(r.hint)}${c.reset}\n`);
       printItemTable(items);
       if (ships.length) {
-        const nameW = Math.max(9, ...ships.map((s) => String(s.class_name || s.class_id || '').length));
+        const shipDisplayName = (ship: Record<string, unknown>) =>
+          String(ship.custom_name || ship.ship_name || ship.class_name || ship.class_id || '');
+        const nameW = Math.max(9, ...ships.map((s) => shipDisplayName(s).length));
         const classW = Math.max(5, ...ships.map((s) => String(s.class_id || '').length));
         const idW = Math.max(2, ...ships.map((s) => String(s.ship_id || '').length));
         const modsW = Math.max(4, ...ships.map((s) => String(s.modules ?? '').length));
@@ -347,7 +349,7 @@ export const marketFormatters = [
           `  ${'-'.repeat(nameW)}-+-${'-'.repeat(classW)}-+-${'-'.repeat(modsW)}-+-${'-'.repeat(cargoW)}-+-${'-'.repeat(idW)}`,
         );
         for (const s of ships) {
-          const name = String(s.class_name || s.class_id || '').padEnd(nameW);
+          const name = shipDisplayName(s).padEnd(nameW);
           const cls = String(s.class_id || '').padEnd(classW);
           const mods = String(s.modules ?? '').padStart(modsW);
           const cargo = String(s.cargo_used ?? '').padStart(cargoW);

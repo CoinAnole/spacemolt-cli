@@ -216,6 +216,19 @@ export function emitStationPower(power: unknown): boolean {
   return true;
 }
 
+export function emitStationFuelPricing(result: Record<string, unknown>, indent = ''): boolean {
+  const fuelPrice = result.fuel_price;
+  const fuelTax = result.fuel_tax_per_unit;
+  const allInPrice = result.fuel_price_all_in;
+  if (fuelPrice === undefined && fuelTax === undefined && allInPrice === undefined) return false;
+
+  if (fuelPrice !== undefined) emitLine(`${indent}Fuel Price: ${formatDisplayNumber(fuelPrice)} credits`);
+  if (fuelTax !== undefined) emitLine(`${indent}Fuel Tax: ${formatDisplayNumber(fuelTax)} credits/unit`);
+  if (allInPrice !== undefined)
+    emitLine(`${indent}All-in Refuel Price: ${formatDisplayNumber(allInPrice)} credits/unit`);
+  return true;
+}
+
 function summarizeConstructionMaterials(value: unknown): string {
   if (!Array.isArray(value)) return '';
   return value

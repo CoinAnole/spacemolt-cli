@@ -829,6 +829,33 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Fuel Cell');
   });
 
+  test('view_storage displays stored ship custom names', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageFixture,
+          ships: [
+            {
+              ship_id: 'ship-1',
+              class_id: 'prospector',
+              class_name: 'Prospector',
+              custom_name: 'Rock Skipper',
+              modules: 3,
+              cargo_used: 10,
+            },
+          ],
+        },
+      },
+      {},
+      { command: 'view_storage', displayCommand: 'view_storage' },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Rock Skipper');
+    expect(stdout).toContain('prospector');
+  });
+
   test('deposit_items with a ship UUID and self target renders carrier bay load confirmation', async () => {
     const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
@@ -2102,9 +2129,15 @@ describe('structuredContent formatters', () => {
           },
         ],
       },
+      fuel_price: 20,
+      fuel_price_all_in: 26,
+      fuel_tax_per_unit: 6,
     });
 
     expect(stderr).toBe('');
+    expect(stdout).toContain('Fuel Price: 20 credits');
+    expect(stdout).toContain('Fuel Tax: 6 credits/unit');
+    expect(stdout).toContain('All-in Refuel Price: 26 credits/unit');
     expect(stdout).toContain('Power: 150/200 draw (92% efficiency)');
     expect(stdout).toContain('Battery: 900/1,000');
     expect(stdout).toContain('=== Construction ===');
@@ -2146,12 +2179,16 @@ describe('structuredContent formatters', () => {
         max_fuel: 0,
       },
       fuel_price: 20,
+      fuel_price_all_in: 23,
+      fuel_tax_per_unit: 3,
       services: ['refuel'],
     });
 
     expect(stderr).toBe('');
     expect(stdout).toContain('Fuel: 20920/0');
     expect(stdout).toContain('Fuel Price: 20 credits');
+    expect(stdout).toContain('Fuel Tax: 3 credits/unit');
+    expect(stdout).toContain('All-in Refuel Price: 23 credits/unit');
   });
 
   test('faction_info lists faction facilities', () => {

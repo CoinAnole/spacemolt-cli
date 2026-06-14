@@ -3,6 +3,7 @@ import {
   c,
   emitLine,
   emitStationConstruction,
+  emitStationFuelPricing,
   emitStationPower,
   finiteNumber,
   firstArray,
@@ -222,7 +223,7 @@ export const shipFormatters = [
       emitLine(`Defense: ${base.defense_level ?? '?'}`);
       if (base.fuel !== undefined || base.max_fuel !== undefined)
         emitLine(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
-      if (r.fuel_price !== undefined) emitLine(`Fuel Price: ${r.fuel_price} credits`);
+      emitStationFuelPricing(r);
       emitStationPower(r.power);
 
       const condition = r.condition as Record<string, unknown> | undefined;

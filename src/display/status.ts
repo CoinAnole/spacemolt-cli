@@ -1,5 +1,14 @@
 import { emitShipCombatEffects } from './combat-effects.ts';
-import { c, emitLine, formatPlayer, formatter, isRecord, namedFormatter, printCompactTable } from './helpers.ts';
+import {
+  c,
+  emitLine,
+  emitStationFuelPricing,
+  formatPlayer,
+  formatter,
+  isRecord,
+  namedFormatter,
+  printCompactTable,
+} from './helpers.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
 
@@ -565,7 +574,7 @@ export const statusFormatters = [
         emitLine(`  Defense: ${base.defense_level}`);
         if (base.fuel !== undefined || base.max_fuel !== undefined)
           emitLine(`  Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
-        if (r.fuel_price !== undefined) emitLine(`  Fuel Price: ${r.fuel_price} credits`);
+        emitStationFuelPricing(r, '  ');
       }
 
       const services = r.services as string[] | undefined;
