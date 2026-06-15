@@ -260,6 +260,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
         description: 'Filter by substring match on item IDs or names. Comma-separated terms match any.',
       },
     },
+    clientOnlyFields: ['search'],
   },
   view_orders: {
     usage:

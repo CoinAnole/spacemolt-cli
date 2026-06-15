@@ -203,6 +203,15 @@ describe('command metadata', () => {
     expect(factionConfig.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
   });
 
+  test('view_market search filter is client-only metadata', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.view_market;
+    if (!config) {
+      throw new Error('view_market command metadata is missing');
+    }
+
+    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['search']));
+  });
+
   test('removed alliance alias is not registered as a command', () => {
     expect(COMMANDS).not.toHaveProperty('faction_set_ally');
     expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty('faction_set_ally');

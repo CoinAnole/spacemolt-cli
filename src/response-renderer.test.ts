@@ -138,6 +138,26 @@ describe('response renderer', () => {
     expect(calls).toEqual([{ command: 'get_status', payload: {} }]);
   });
 
+  test('runCommand strips view_market search before API execution', async () => {
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push({ command, payload });
+        return { structuredContent: { items: [] } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    await runCommand(
+      'view_market',
+      { category: 'ore', search: 'iron' },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.view_market,
+    );
+
+    expect(calls).toEqual([{ command: 'view_market', payload: { category: 'ore' } }]);
+  });
+
   test('renderResponse prints compact get_status summary only for default human output', async () => {
     const summaryCapture = fakeContext();
     const summaryExitCode = await renderResponse(

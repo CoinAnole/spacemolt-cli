@@ -84,7 +84,7 @@ afterEach(() => {
 });
 
 describe('runInvocation option isolation', () => {
-  test('passes documented API --search filters through runInvocation payload parsing', async () => {
+  test('keeps documented view_market --search out of the API payload', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-search-filter-'));
     const configHome = path.join(tempDir, 'config');
     const capturedPayloads: Array<Record<string, unknown>> = [];
@@ -114,7 +114,7 @@ describe('runInvocation option isolation', () => {
 
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
-    expect(capturedPayloads).toEqual([{ search: 'iron' }]);
+    expect(capturedPayloads).toEqual([{}]);
   });
 
   test('documented API --search filters JSON response output instead of projecting matches', async () => {
