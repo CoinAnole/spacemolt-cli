@@ -192,6 +192,45 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('"quantity": 2');
   });
 
+  test('patch-note storage loot command routes through storage loot', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      'storage',
+      'action=loot',
+      'wreck_id=wreck_1',
+      'item_id=ore_iron',
+      'quantity=2',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/loot"');
+    expect(result.stdout).toContain('"action": "loot"');
+    expect(result.stdout).toContain('"wreck_id": "wreck_1"');
+    expect(result.stdout).toContain('"item_id": "ore_iron"');
+    expect(result.stdout).toContain('"quantity": 2');
+  });
+
+  test('patch-note storage loot accepts towing default without wreck_id', async () => {
+    const result = await runDirect(['--dry-run', 'storage', 'action=loot']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/loot"');
+    expect(result.stdout).toContain('"action": "loot"');
+    expect(result.stdout).not.toContain('"wreck_id"');
+  });
+
+  test('patch-note storage jettison command routes through storage jettison', async () => {
+    const result = await runDirect(['--dry-run', 'storage', 'action=jettison', 'item_id=ore_iron', 'quantity=2']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/jettison"');
+    expect(result.stdout).toContain('"action": "jettison"');
+    expect(result.stdout).toContain('"item_id": "ore_iron"');
+    expect(result.stdout).toContain('"quantity": 2');
+  });
+
   test('patch-note set_drone_name command maps to drone rename route', async () => {
     const result = await runDirect(['--dry-run', 'set_drone_name', 'drone_1', 'Miner-1']);
 

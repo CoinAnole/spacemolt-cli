@@ -39,23 +39,41 @@ export async function runCommand(
   commandConfig?: CommandConfig,
 ): Promise<CommandRunResult> {
   const requestPayload = stripClientOnlyFields(payload, commandConfig);
+  const requestCommandConfig = routeCommandConfigForPayload(command, commandConfig, requestPayload);
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, requestPayload) : null;
   const response = options.dryRun
     ? serverPreviewCommand
       ? await client.execute(serverPreviewCommand, requestPayload)
-      : commandConfig
-        ? createCommandConfigDryRunResponse(command, commandConfig, requestPayload)
+      : requestCommandConfig
+        ? createCommandConfigDryRunResponse(command, requestCommandConfig, requestPayload)
         : createDryRunResponse(command, requestPayload)
-    : commandConfig && typeof client.executeCommandConfig === 'function'
-      ? await client.executeCommandConfig(command, commandConfig, requestPayload)
+    : requestCommandConfig && typeof client.executeCommandConfig === 'function'
+      ? await client.executeCommandConfig(command, requestCommandConfig, requestPayload)
       : await client.execute(command, requestPayload);
 
   return {
     command,
     displayCommand: serverPreviewCommand || command,
-    commandConfig,
+    commandConfig: requestCommandConfig ?? commandConfig,
     payload,
     response,
+  };
+}
+
+function routeCommandConfigForPayload(
+  command: string,
+  commandConfig: CommandConfig | undefined,
+  payload: Record<string, unknown>,
+): CommandConfig | undefined {
+  if (command !== 'storage' || !commandConfig) return commandConfig;
+  const action = typeof payload.action === 'string' ? payload.action : undefined;
+  if (action !== 'loot' && action !== 'jettison') return commandConfig;
+  return {
+    ...commandConfig,
+    route: {
+      ...commandConfig.route,
+      action,
+    },
   };
 }
 
