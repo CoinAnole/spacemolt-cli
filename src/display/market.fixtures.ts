@@ -115,15 +115,66 @@ export const marketOrdersFixture = {
 };
 
 export const createSellOrderFixture = {
-  action: 'create_sell_order',
-  item: 'Iron Ore',
-  item_id: 'iron_ore',
-  quantity: 1,
-  price_each: 999999,
-  quantity_listed: 1,
-  listing_fee: 19999,
-  order_id: 'order-sell-1',
-  message: 'Created sell order for 1 Iron Ore at 999999 credits each.',
+  details: {
+    action: 'create_sell_order',
+    from_storage: 1,
+    item: 'Nickel Ore',
+    item_id: 'nickel_ore',
+    quantity: 1,
+    price_each: 999999,
+    listing_fee: 10000,
+    order_id: 'order-sell-1',
+    message: 'Sell order created. 1x Nickel Ore listed at 999999 credits each. Listing fee: 10000 credits.',
+  },
+};
+
+export const createBuyOrderFixture = {
+  details: {
+    action: 'create_buy_order',
+    item: 'Nickel Ore',
+    item_id: 'nickel_ore',
+    quantity: 1,
+    price_each: 1,
+    total_escrowed: 1,
+    remaining_escrowed: 1,
+    listing_fee: 1,
+    order_id: 'order-buy-1',
+    message: 'Buy order created. Offering 1 credits each for 1x Nickel Ore. 1 credits escrowed. Listing fee: 1 credits.',
+  },
+};
+
+export const factionCreateBuyOrderFixture = {
+  details: {
+    action: 'create_buy_order',
+    item: 'Nickel Ore',
+    item_id: 'nickel_ore',
+    quantity: 25,
+    price_each: 2,
+    quantity_filled: 0,
+    quantity_listed: 25,
+    total_spent: 0,
+    total_escrowed: 50,
+    remaining_escrowed: 50,
+    listing_fee: 1,
+    order_id: 'faction-buy-1',
+    message: 'Created faction buy order.',
+  },
+};
+
+export const factionCreateSellOrderFixture = {
+  details: {
+    action: 'create_sell_order',
+    item: 'Nickel Ore',
+    item_id: 'nickel_ore',
+    quantity: 25,
+    price_each: 4,
+    quantity_filled: 10,
+    quantity_listed: 15,
+    total_earned: 40,
+    listing_fee: 2,
+    order_id: 'faction-sell-1',
+    message: 'Created faction sell order.',
+  },
 };
 
 export const commissionStatusFixture = {
@@ -179,6 +230,7 @@ export const marketFixtureCases = {
 
 export const marketHighValueFixtures = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
+  create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   storage: { command: 'storage', fixture: storageFixture },
@@ -187,5 +239,7 @@ export const marketHighValueFixtures = {
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   view_storage: { command: 'view_storage', fixture: storageFixture },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
+  faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },
+  faction_create_sell_order: { command: 'faction_create_sell_order', fixture: factionCreateSellOrderFixture },
   get_trades: { command: 'get_trades', fixture: marketListingsFixture },
 };

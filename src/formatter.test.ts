@@ -1355,11 +1355,10 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Sell Order Created ===');
-    expect(stdout).toContain('Item: Iron Ore (iron_ore)');
+    expect(stdout).toContain('Item: Nickel Ore (nickel_ore)');
     expect(stdout).toContain('Requested: 1');
-    expect(stdout).toContain('Remaining listed: 1');
     expect(stdout).toContain('Price each: 999,999 cr');
-    expect(stdout).toContain('Listing fee: 19,999 cr');
+    expect(stdout).toContain('Listing fee: 10,000 cr');
     expect(stdout).toContain('Order ID: order-sell-1');
   });
 

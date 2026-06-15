@@ -60,6 +60,30 @@ export const getStatusFixture = {
   },
 };
 
+export const playerProfileFixture = {
+  player: {
+    username: 'Marlowe',
+    credits: 4242,
+    empire: 'Terran',
+    citizenships: {
+      solarian: { empire_id: 'solarian', granted_by: 'origin', granted_at: '2026-05-13T00:00:00.000Z' },
+      nebula: { empire_id: 'nebula', granted_by: 'petition:cit-1', granted_at: '2026-05-14T00:00:00.000Z' },
+    },
+    faction_id: 'smc',
+    clan_tag: 'SMC',
+    home_base: 'earth_station',
+    standings: {
+      crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
+      nebula: { baseline: 20, outstanding_bounty: 0, reputation: 20 },
+      pirates: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+    },
+    stats: {
+      piloting: { level: 5, xp: 1200 },
+      crafting: { level: 2, xp: 175 },
+    },
+  },
+};
+
 export const systemInfoFixture = {
   system: {
     id: 'sol',
@@ -117,6 +141,16 @@ export const arrivalFixture = {
   poi: 'Earth',
   online_players: [{ username: 'Ibis', ship_class: 'hauler' }],
   online_players_count: 1,
+};
+
+export const jumpFixture = {
+  action: 'jumped',
+  from_system: 'Nova Terra',
+  navigation_xp: 3,
+  piloting_xp: 6,
+  poi: 'procyon_a',
+  system: 'Procyon',
+  system_id: 'procyon',
 };
 
 export const scanFixture = {
@@ -238,6 +272,7 @@ export const statusFixtureCases = {
 
 export const statusHighValueFixtures = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
+  get_player: { command: 'get_player', fixture: playerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
@@ -249,5 +284,6 @@ export const statusHighValueFixtures = {
   scan: { command: 'scan', fixture: scanFixture },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
+  jump: { command: 'jump', fixture: jumpFixture },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
 };

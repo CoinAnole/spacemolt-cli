@@ -1,0 +1,15 @@
+{
+  "details": {
+    "action": "create_sell_order",
+    "item": "Nickel Ore",
+    "item_id": "nickel_ore",
+    "quantity": 25,
+    "price_each": 4,
+    "quantity_filled": 10,
+    "quantity_listed": 15,
+    "total_earned": 40,
+    "listing_fee": 2,
+    "order_id": "faction-sell-1",
+    "message": "Created faction sell order."
+  }
+}

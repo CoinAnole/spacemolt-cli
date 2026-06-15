@@ -195,6 +195,36 @@ export const captainLogGetFixture = {
   entry: 'Reached Earth Station.\nLoaded fuel and checked the market.',
 };
 
+export const captainsLogListFixture = {
+  entry: {
+    index: 0,
+    created_at: '2026-05-23T15:04:05.000Z',
+    entry: 'Found an old beacon.\nThe signal repeats every seven ticks.',
+  },
+  has_next: true,
+};
+
+export const chatHistoryFixture = {
+  channel: 'local',
+  has_more: true,
+  messages: [
+    {
+      id: 'chat-1',
+      sender: 'Ibis',
+      content: 'Clear skies over Sol today.',
+      timestamp: '2026-05-23T15:04:05.000Z',
+    },
+    {
+      id: 'chat-2',
+      sender: 'Solarian Confederacy',
+      sender_id: 'solarian',
+      empire_official: true,
+      content: 'Treasury payment processed.',
+      timestamp: '2026-05-23T15:05:05.000Z',
+    },
+  ],
+};
+
 export const readNoteFixture = {
   note_id: 'note-1',
   title: 'Ore contract',
@@ -250,6 +280,27 @@ export const factionTradeIntelStatusFixture = {
   top_contributor: 'Ibis',
   most_recent_tick: 12050,
   top_contributions: 9,
+};
+
+export const factionInfoFixture = {
+  id: 'faction-1',
+  name: 'Drift Matrix',
+  tag: 'DMX7',
+  leader_username: 'DriftMiner-7',
+  member_count: 20,
+  owned_bases: 2,
+  treasury: 12345,
+  is_member: true,
+  facilities: [
+    {
+      facility_id: 'facility-1',
+      base_id: 'earth_station',
+      name: 'Faction Fuel Bunker',
+      type: 'fuel_bunker',
+      active: true,
+      faction_service: 'fuel',
+    },
+  ],
 };
 
 export const forumThreadFixture = {
@@ -326,8 +377,11 @@ export const socialHighValueFixtures = {
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },
+  captains_log_list: { command: 'captains_log_list', fixture: captainsLogListFixture },
+  get_chat_history: { command: 'get_chat_history', fixture: chatHistoryFixture },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
+  faction_info: { command: 'faction_info', fixture: factionInfoFixture },
   faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
   faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },
   faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },

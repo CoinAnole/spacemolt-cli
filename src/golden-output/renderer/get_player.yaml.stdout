@@ -1,0 +1,37 @@
+
+player:
+  username: Marlowe
+  credits: 4242
+  empire: Terran
+  citizenships:
+    solarian:
+      empire_id: solarian
+      granted_by: origin
+      granted_at: 2026-05-13T00:00:00.000Z
+    nebula:
+      empire_id: nebula
+      granted_by: "petition:cit-1"
+      granted_at: 2026-05-14T00:00:00.000Z
+  faction_id: smc
+  clan_tag: SMC
+  home_base: earth_station
+  standings:
+    crimson:
+      baseline: 10
+      outstanding_bounty: 0
+      reputation: 94
+    nebula:
+      baseline: 20
+      outstanding_bounty: 0
+      reputation: 20
+    pirates:
+      baseline: 0
+      outstanding_bounty: 2500
+      reputation: -30
+  stats:
+    piloting:
+      level: 5
+      xp: 1200
+    crafting:
+      level: 2
+      xp: 175

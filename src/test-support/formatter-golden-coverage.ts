@@ -4,20 +4,12 @@ import { renderStructuredResult } from '../display/index.ts';
 
 const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   buy: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',
-  captains_log_list: 'Captain log response shape needs a representative fixture before snapshotting.',
-  create_buy_order: 'Buy-order success response needs a representative fixture before snapshotting.',
   deposit_items_carrier_load:
     'Internal display variant selected from deposit_items payload context; covered by renderResponse behavior tests.',
-  faction_create_buy_order: 'Faction buy-order success response needs a representative fixture before snapshotting.',
-  faction_create_sell_order: 'Faction sell-order success response needs a representative fixture before snapshotting.',
-  faction_info: 'Faction profile response needs a representative fixture before snapshotting.',
   get_action_log: 'Action log output is not currently part of the high-value golden matrix.',
-  get_chat_history: 'Chat history output needs a stable multi-message fixture before snapshotting.',
   get_notifications: 'Notification output has separate formatter tests and needs promotion later.',
-  get_player: 'Player profile output needs a representative fixture before snapshotting.',
   get_queue: 'Queue output needs empty and active queue fixtures before snapshotting.',
   get_status_summary: 'Internal display variant selected from get_status --summary; covered by CLI golden output.',
-  jump: 'Jump success response needs a representative fixture before snapshotting.',
   notifications: 'Notification polling route is covered separately from command goldens.',
   sell: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',
   view_faction_storage: 'Faction storage output needs a separate target=faction fixture before snapshotting.',

@@ -1,0 +1,20 @@
+{
+  "id": "faction-1",
+  "name": "Drift Matrix",
+  "tag": "DMX7",
+  "leader_username": "DriftMiner-7",
+  "member_count": 20,
+  "owned_bases": 2,
+  "treasury": 12345,
+  "is_member": true,
+  "facilities": [
+    {
+      "facility_id": "facility-1",
+      "base_id": "earth_station",
+      "name": "Faction Fuel Bunker",
+      "type": "fuel_bunker",
+      "active": true,
+      "faction_service": "fuel"
+    }
+  ]
+}

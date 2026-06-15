@@ -1,0 +1,13 @@
+
+=== Faction: Drift Matrix [DMX7] ===
+ID: faction-1
+Leader: DriftMiner-7
+Members: 20
+Owned Bases: 2
+Treasury: 12345
+
+=== Faction Facilities ===
+
+  Name                | ID         | Base          | Service | Active
+  --------------------+------------+---------------+---------+-------
+  Faction Fuel Bunker | facility-1 | earth_station | fuel    | true  

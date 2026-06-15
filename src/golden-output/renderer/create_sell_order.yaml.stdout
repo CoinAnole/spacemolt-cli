@@ -1,10 +1,11 @@
 
-action: create_sell_order
-item: "Iron Ore"
-item_id: iron_ore
-quantity: 1
-price_each: 999999
-quantity_listed: 1
-listing_fee: 19999
-order_id: "order-sell-1"
-message: "Created sell order for 1 Iron Ore at 999999 credits each."
+details:
+  action: create_sell_order
+  from_storage: 1
+  item: "Nickel Ore"
+  item_id: nickel_ore
+  quantity: 1
+  price_each: 999999
+  listing_fee: 10000
+  order_id: "order-sell-1"
+  message: "Sell order created. 1x Nickel Ore listed at 999999 credits each. Listing fee: 10000 credits."

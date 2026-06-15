@@ -1,0 +1,15 @@
+
+details:
+  action: create_buy_order
+  item: "Nickel Ore"
+  item_id: nickel_ore
+  quantity: 25
+  price_each: 2
+  quantity_filled: 0
+  quantity_listed: 25
+  total_spent: 0
+  total_escrowed: 50
+  remaining_escrowed: 50
+  listing_fee: 1
+  order_id: "faction-buy-1"
+  message: "Created faction buy order."
