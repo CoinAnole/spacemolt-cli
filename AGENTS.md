@@ -44,6 +44,8 @@ The sync test reads `spacemolt-docs/openapi.json` by default. Only use the live 
 LIVE_API_SYNC=1 bun test src/api-sync.test.ts
 ```
 
+Live OpenAPI verification is heavily rate-limited by the server (`spacemolt-docs/limits.md` documents OpenAPI spec fetches as 1/min per IP, with repeated 429s contributing to IP-wide timeout escalation). Treat `LIVE_API_SYNC=1` as an explicit, single-shot check after waiting for the rate-limit window; do not loop or retry it during normal verification. Prefer the cached `spacemolt-docs/openapi.json` for routine local checks.
+
 ## Golden Output Tests
 
 The project uses committed golden files for exact output stability of both human-readable (table/text) and machine-readable (`--json`, `--yaml`, `--structured`, compact, `--field`/`--fields`/`--jq`) rendering.
