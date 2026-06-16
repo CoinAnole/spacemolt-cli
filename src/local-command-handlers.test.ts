@@ -815,9 +815,10 @@ describe('local command handlers', () => {
 
     expect(exitCode).toBe(0);
     expect(stdout[0]).toMatch(/^SpaceMolt Client v/);
-    expect(stdout[1]).toMatch(/^API: /);
-    expect(stdout[2]).toBe(`Bundled OpenAPI metadata: gameserver ${GENERATED_API_GAMESERVER_VERSION}`);
-    expect(stdout[3]).toBe('Cached OpenAPI metadata: not synced');
+    expect(stdout[1]).toMatch(/^Commit: [0-9a-f]{7,40}$/);
+    expect(stdout[2]).toMatch(/^API: /);
+    expect(stdout[3]).toBe(`Bundled OpenAPI metadata: gameserver ${GENERATED_API_GAMESERVER_VERSION}`);
+    expect(stdout[4]).toBe('Cached OpenAPI metadata: not synced');
   });
 
   test('version renders cached OpenAPI metadata as current when versions match', async () => {

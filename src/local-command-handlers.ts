@@ -44,7 +44,7 @@ import {
   refreshOpenApiCache,
 } from './openapi-cache.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
-import { API_BASE, DEFAULT_USER_AGENT, normalizeUserAgent, VERSION } from './runtime.ts';
+import { API_BASE, DEFAULT_USER_AGENT, getBuildCommit, normalizeUserAgent, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import {
   getSessionPath,
@@ -679,6 +679,7 @@ const versionHandler: CommandHandler<Record<string, never>, Record<string, never
     const out = context?.writer.out.bind(context.writer) ?? console.log;
     const cachedVersion = loadOpenApiCacheVersion(defaultOpenApiCacheDir(context?.env));
     out(`SpaceMolt Client v${VERSION}`);
+    out(`Commit: ${getBuildCommit()}`);
     out(`API: ${API_BASE}`);
     out(`Bundled OpenAPI metadata: gameserver ${GENERATED_API_GAMESERVER_VERSION}`);
     if (cachedVersion.status === 'not_synced') {

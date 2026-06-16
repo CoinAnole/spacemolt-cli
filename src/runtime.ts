@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 // =============================================================================
 // Configuration
 // =============================================================================
@@ -5,7 +7,30 @@
 export const DEFAULT_V2_API_BASE = 'https://game.spacemolt.com/api/v2';
 export const API_BASE = process.env.SPACEMOLT_URL || DEFAULT_V2_API_BASE;
 export const VERSION = '2.4.0';
+const EMBEDDED_BUILD_COMMIT = process.env.SPACEMOLT_BUILD_COMMIT?.trim() ?? '';
 export const DEFAULT_USER_AGENT = `SpaceMolt-Client/${VERSION}`;
+
+export function getBuildCommit(options: { cwd?: string; embeddedCommit?: string } = {}): string {
+  const embeddedCommit = options.embeddedCommit ?? EMBEDDED_BUILD_COMMIT;
+  if (embeddedCommit) return embeddedCommit;
+
+  try {
+    const result = spawnSync('git', ['rev-parse', 'HEAD'], {
+      cwd: options.cwd ?? process.cwd(),
+      encoding: 'utf8',
+      timeout: 1_000,
+      windowsHide: true,
+    });
+    if (result.status === 0) {
+      const commit = result.stdout.trim();
+      if (commit) return commit;
+    }
+  } catch {
+    // Git metadata is best-effort for source runs outside a checkout.
+  }
+
+  return 'unknown';
+}
 
 export function normalizeUserAgent(value: string): string {
   const normalized = value.trim();
