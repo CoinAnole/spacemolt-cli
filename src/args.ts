@@ -51,6 +51,7 @@ export function getValidArgNames(
 export interface ParsedArgs {
   command: string;
   payload: Record<string, unknown>;
+  errors?: ValidationError[];
 }
 
 export type FileResolveResult = { ok: true; value: string } | { ok: false; error: string };
@@ -72,6 +73,7 @@ export type CommandParseResult =
 function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedArgs {
   const command = args[0] || '';
   const payload: Record<string, unknown> = {};
+  const errors: ValidationError[] = [];
   const config = commandConfig(command, registry);
   const argDefs = config?.args || [];
   let positionalIndex = 0;
@@ -90,7 +92,34 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
     }
   };
 
+  const isPrivateChat = () => command === 'chat' && (payload.channel === 'private' || payload.target === 'private');
+  const looksLikeNamedArgument = (value: string) =>
+    value.startsWith('-') || parseKeyValue(value) !== null || value === '--';
+  const hasNamedContentAfter = (startIndex: number) =>
+    args.slice(startIndex).some((value) => {
+      const flag = parseCliFlag(value);
+      if (flag?.key === 'content') return true;
+      const keyValue = parseKeyValue(value);
+      return keyValue?.key === 'content';
+    });
+  const pushPrivateChatMissingContentError = () => {
+    errors.push({
+      field: 'content',
+      message: 'Private chat requires both a target and message. Use: spacemolt chat private "Player Name" "Message"',
+      code: 'missing_private_chat_content',
+    });
+  };
+  const pushAmbiguousPrivateChatTargetError = (targetPrefix: string, nextToken: string) => {
+    errors.push({
+      field: 'target_id',
+      message: `Ambiguous private chat target "${targetPrefix} ${nextToken}". Quote multi-word player names, or use: spacemolt chat private "Player Name" "Message"`,
+      code: 'ambiguous_private_chat_target',
+    });
+  };
+
   for (let i = 1; i < args.length; i++) {
+    if (errors.length > 0) break;
+
     const arg = args[i];
     if (!arg) continue;
 
@@ -110,6 +139,16 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
       const fieldType = getCommandFieldType(command, flag.key, registry);
       if (fieldType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
         setPayloadField(flag.key, nextArg);
+        const tokenAfterValue = args[i + 2];
+        if (
+          command === 'chat' &&
+          flag.key === 'target_id' &&
+          isPrivateChat() &&
+          tokenAfterValue &&
+          !looksLikeNamedArgument(tokenAfterValue)
+        ) {
+          pushAmbiguousPrivateChatTargetError(nextArg, tokenAfterValue);
+        }
         i++;
       } else {
         setPayloadField(flag.key, 'true');
@@ -120,6 +159,32 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
     const argDef = argDefs[positionalIndex];
     const keyValue = !inPositionalOnlyMode ? parseKeyValue(arg) : null;
     if (argDef && typeof argDef === 'object' && argDef.rest && (!keyValue || keyValue.key !== argDef.rest)) {
+      if (isPrivateChat()) {
+        if (payload.target_id === undefined) {
+          const nextArg = args[i + 1];
+          setPayloadField('target_id', arg);
+          if (!nextArg) {
+            pushPrivateChatMissingContentError();
+            break;
+          }
+          if (hasNamedContentAfter(i + 1) && !looksLikeNamedArgument(nextArg)) {
+            pushAmbiguousPrivateChatTargetError(arg, nextArg);
+            break;
+          }
+          if (looksLikeNamedArgument(nextArg)) {
+            positionalIndex++;
+            continue;
+          }
+          payload[argDef.rest] = args.slice(i + 1).join(' ');
+          break;
+        }
+
+        if (hasNamedContentAfter(i + 1) && !looksLikeNamedArgument(arg)) {
+          const targetId = Array.isArray(payload.target_id) ? String(payload.target_id[0]) : String(payload.target_id);
+          pushAmbiguousPrivateChatTargetError(targetId, arg);
+          break;
+        }
+      }
       payload[argDef.rest] = args.slice(i).join(' ');
       break;
     }
@@ -141,7 +206,7 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
     }
   }
 
-  return { command, payload };
+  return errors.length > 0 ? { command, payload, errors } : { command, payload };
 }
 
 function defaultResolveFile(filePath: string): FileResolveResult {
@@ -265,6 +330,7 @@ export function parseArgs(args: string[], options: ParseArgsOptions = {}): Comma
   }
 
   const errors = [
+    ...(parsed.errors ?? []),
     ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, payload, registry)),
     ...validatePayloadAgainstSchema(parsed.command, payload, registry),
   ];
@@ -317,7 +383,9 @@ export interface ValidationError {
     | 'invalid_number'
     | 'invalid_boolean'
     | 'invalid_field_type'
-    | 'file_read_error';
+    | 'file_read_error'
+    | 'missing_private_chat_content'
+    | 'ambiguous_private_chat_target';
 }
 
 export function validateKnownPayloadFields(

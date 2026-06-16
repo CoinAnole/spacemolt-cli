@@ -469,6 +469,43 @@ describe('parseArgs - rest args', () => {
     expect(payload.content).toBe('hello');
   });
 
+  test('private chat positional form treats target and content as separate arguments', () => {
+    const { payload } = parseOk(['chat', 'private', 'Vex Nebulon', 'Hello, wanted to reach out about the intel pact.']);
+    expect(payload.channel).toBe('private');
+    expect(payload.target_id).toBe('Vex Nebulon');
+    expect(payload.content).toBe('Hello, wanted to reach out about the intel pact.');
+  });
+
+  test('private chat positional form requires message content', () => {
+    const result = parseArgs(['chat', 'private', 'Vex Nebulon']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'content',
+          message:
+            'Private chat requires both a target and message. Use: spacemolt chat private "Player Name" "Message"',
+          code: 'missing_private_chat_content',
+        },
+      ],
+    });
+  });
+
+  test('private chat rejects split --target-id values before --content', () => {
+    const result = parseArgs(['chat', 'private', '--target-id', 'Vex', 'Nebulon', '--content', 'Hello']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'target_id',
+          message:
+            'Ambiguous private chat target "Vex Nebulon". Quote multi-word player names, or use: spacemolt chat private "Player Name" "Message"',
+          code: 'ambiguous_private_chat_target',
+        },
+      ],
+    });
+  });
+
   test('rest arg via all key=value', () => {
     const { payload } = parseOk(['chat', 'channel=system', 'content=this is a message']);
     expect(payload.channel).toBe('system');

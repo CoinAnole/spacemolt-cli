@@ -965,6 +965,30 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).not.toContain('\x1b[');
   });
 
+  test('ambiguous private chat target is rejected before sending a request', async () => {
+    let requestSent = false;
+    const result = await captureInvocation(
+      ['--plain', 'chat', 'private', '--target-id', 'Vex', 'Nebulon', '--content', 'Hello'],
+      process.env,
+      {
+        createClient(config) {
+          return {
+            config,
+            async execute() {
+              requestSent = true;
+              return { structuredContent: { ok: true } };
+            },
+          } as unknown as SpaceMoltClient;
+        },
+      },
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(requestSent).toBe(false);
+    expect(result.stderr).toContain('Ambiguous private chat target "Vex Nebulon"');
+    expect(result.stderr).toContain('Quote multi-word player names');
+  });
+
   test('quiet command parse errors suppress cached ID suggestions but keep required diagnostics', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-id-cache-'));
     const configHome = path.join(tempDir, 'config');
