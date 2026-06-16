@@ -139,7 +139,8 @@ export const createBuyOrderFixture = {
     remaining_escrowed: 1,
     listing_fee: 1,
     order_id: 'order-buy-1',
-    message: 'Buy order created. Offering 1 credits each for 1x Nickel Ore. 1 credits escrowed. Listing fee: 1 credits.',
+    message:
+      'Buy order created. Offering 1 credits each for 1x Nickel Ore. 1 credits escrowed. Listing fee: 1 credits.',
   },
 };
 
