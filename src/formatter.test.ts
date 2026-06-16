@@ -1632,6 +1632,198 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test.each([
+    [
+      'travel',
+      {
+        details: {
+          action: 'travel',
+          poi_id: 'sol_earth',
+          poi: 'Earth',
+          online_players: [],
+          online_players_count: 0,
+          online_players_truncated: false,
+          offline_collapsed: 0,
+          message: 'Arrived.',
+        },
+        ship: { fuel: 92, max_fuel: 100 },
+        location: { system_id: 'sol', system_name: 'Sol', poi_id: 'sol_earth', poi_name: 'Earth' },
+      },
+      'Arrived at Earth',
+    ],
+    [
+      'reload',
+      {
+        details: {
+          action: 'reload',
+          weapon_id: 'weapon-1',
+          weapon_name: 'Pulse Laser',
+          ammo_id: 'ammo-cell',
+          ammo_name: 'Laser Cell',
+          current_ammo: 8,
+          magazine_size: 8,
+        },
+        cargo: [{ item_id: 'ammo-cell', item_name: 'Laser Cell', quantity: 2 }],
+        ship: { fuel: 92, max_fuel: 100 },
+      },
+      '=== Reloaded ===',
+    ],
+    [
+      'tow_wreck',
+      {
+        details: {
+          action: 'tow_wreck',
+          wreck_id: 'wreck-1',
+          message: 'Tow line attached.',
+          insured: false,
+          cargo_count: 2,
+          module_count: 1,
+          salvage_value: 1250,
+          ship_class: 'skiff',
+          speed_penalty: '25%',
+        },
+        ship: { fuel: 92, max_fuel: 100 },
+        location: { system_id: 'sol', system_name: 'Sol', poi_id: 'sol_belt', poi_name: 'Belt' },
+      },
+      'Wreck Id: wreck-1',
+    ],
+    [
+      'release_tow',
+      {
+        details: {
+          action: 'release_tow',
+          wreck_id: 'wreck-1',
+          message: 'Tow released.',
+        },
+        ship: { fuel: 92, max_fuel: 100 },
+      },
+      'Wreck Id: wreck-1',
+    ],
+    [
+      'sell_wreck',
+      {
+        details: {
+          action: 'sell_wreck',
+          wreck_id: 'wreck-1',
+          message: 'Sold wreck.',
+          new_balance: 2400,
+          total_payout: 500,
+          salvage_value: 400,
+          cargo_value: 100,
+          ship_class: 'skiff',
+        },
+        player: { credits: 2400 },
+      },
+      'Total Payout: 500',
+    ],
+    [
+      'scrap_wreck',
+      {
+        details: {
+          action: 'scrap_wreck',
+          wreck_id: 'wreck-1',
+          message: 'Scrapped wreck.',
+          materials: [{ item_id: 'scrap_metal', quantity: 4 }],
+          total_value: 1250,
+          stored_at: 'sol_yard',
+          ship_class: 'skiff',
+        },
+        cargo: [{ item_id: 'scrap_metal', item_name: 'Scrap Metal', quantity: 4 }],
+        skills: { salvaging: { level: 2, xp: 140 } },
+      },
+      'Materials: 1 item(s)',
+    ],
+    [
+      'commission_ship',
+      {
+        details: {
+          commission_id: 'commission-1',
+          ship_class: 'prospector',
+          ship_name: 'Prospector',
+          status: 'pending',
+          credits_paid: 15000,
+          credits_left: 5000,
+          material_cost: 12000,
+          labor_cost: 3000,
+          build_time: 18,
+          message: 'Commission created.',
+        },
+        player: { credits: 5000 },
+      },
+      'Commission Id: commission-1',
+    ],
+    [
+      'cancel_commission',
+      {
+        details: {
+          refund: 7500,
+          credits_total: 12500,
+          materials_returned: [{ item_id: 'steel_plate', quantity: 12 }],
+          materials_note: 'Materials returned to storage.',
+          message: 'Commission cancelled.',
+        },
+        player: { credits: 12500 },
+      },
+      'Refund: 7500',
+    ],
+    [
+      'supply_commission',
+      {
+        details: {
+          commission_id: 'commission-1',
+          commission_status: 'pending',
+          item_id: 'steel_plate',
+          item_name: 'Steel Plate',
+          supplied: 12,
+          materials: [{ item_id: 'steel_plate', required: 12, supplied: 12 }],
+          all_sourced: true,
+          credits: 5000,
+          message: 'Materials supplied.',
+        },
+        player: { credits: 5000 },
+        cargo: [],
+      },
+      'Commission Id: commission-1',
+    ],
+    [
+      'list_ship_for_sale',
+      {
+        details: {
+          listing_id: 'listing-1',
+          ship_id: 'ship-1',
+          price: 20000,
+          fee: 200,
+          credits_left: 4800,
+          message: 'Ship listed.',
+        },
+        player: { credits: 4800 },
+      },
+      'Listing Id: listing-1',
+    ],
+    [
+      'buy_listed_ship',
+      {
+        details: {
+          ship_id: 'ship-2',
+          old_ship_id: 'ship-1',
+          class_id: 'prospector',
+          price: 20000,
+          credits_left: 30000,
+          message: 'Ship purchased.',
+        },
+        player: { credits: 30000 },
+        ship: { id: 'ship-2', class_id: 'prospector', fuel: 100, max_fuel: 100 },
+      },
+      'Ship Id: ship-2',
+    ],
+  ] as const)('formats v0.378 post-action %s envelopes without raw JSON fallback', (command, fixture, expected) => {
+    const { stdout, stderr } = captureStructuredOutput(command, fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(expected);
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('does not format sparse sell messages as direct market sells', () => {
     const { stdout, stderr } = captureStructuredOutput('sell', {
       message: 'Sold items.',
@@ -2431,7 +2623,7 @@ describe('structuredContent formatters', () => {
       Arrived at Earth
 
       Players here (1):
-        Ibis (hauler)"
+        Ibis"
       ,
         "base": 
       "

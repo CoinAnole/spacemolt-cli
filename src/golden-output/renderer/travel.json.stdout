@@ -1,11 +1,26 @@
 {
-  "poi_id": "sol_earth",
-  "poi": "Earth",
-  "online_players": [
-    {
-      "username": "Ibis",
-      "ship_class": "hauler"
-    }
-  ],
-  "online_players_count": 1
+  "details": {
+    "action": "travel",
+    "poi_id": "sol_earth",
+    "poi": "Earth",
+    "online_players": [
+      {
+        "username": "Ibis"
+      }
+    ],
+    "online_players_count": 1,
+    "online_players_truncated": false,
+    "offline_collapsed": 0,
+    "message": "Arrived at Earth."
+  },
+  "ship": {
+    "fuel": 80,
+    "max_fuel": 100
+  },
+  "location": {
+    "system_id": "sol",
+    "system_name": "Sol",
+    "poi_id": "sol_earth",
+    "poi_name": "Earth"
+  }
 }

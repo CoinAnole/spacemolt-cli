@@ -1,1 +1,1 @@
-{"action":"jumped","from_system":"Nova Terra","navigation_xp":3,"piloting_xp":6,"poi":"procyon_a","system":"Procyon","system_id":"procyon"}
+{"details":{"action":"jump","poi_id":"procyon_a","poi":"Procyon A","online_players":[],"online_players_count":0,"online_players_truncated":false,"offline_collapsed":0,"message":"Jumped to Procyon.","xp_gained":{"navigation":3,"piloting":6}},"ship":{"fuel":72,"max_fuel":100},"location":{"system_id":"procyon","system_name":"Procyon","poi_id":"procyon_a","poi_name":"Procyon A"}}

@@ -137,20 +137,53 @@ export const nearbyFixture = {
 };
 
 export const arrivalFixture = {
-  poi_id: 'sol_earth',
-  poi: 'Earth',
-  online_players: [{ username: 'Ibis', ship_class: 'hauler' }],
-  online_players_count: 1,
+  details: {
+    action: 'travel',
+    poi_id: 'sol_earth',
+    poi: 'Earth',
+    online_players: [{ username: 'Ibis' }],
+    online_players_count: 1,
+    online_players_truncated: false,
+    offline_collapsed: 0,
+    message: 'Arrived at Earth.',
+  },
+  ship: {
+    fuel: 80,
+    max_fuel: 100,
+  },
+  location: {
+    system_id: 'sol',
+    system_name: 'Sol',
+    poi_id: 'sol_earth',
+    poi_name: 'Earth',
+  },
 };
 
 export const jumpFixture = {
-  action: 'jumped',
-  from_system: 'Nova Terra',
-  navigation_xp: 3,
-  piloting_xp: 6,
-  poi: 'procyon_a',
-  system: 'Procyon',
-  system_id: 'procyon',
+  details: {
+    action: 'jump',
+    poi_id: 'procyon_a',
+    poi: 'Procyon A',
+    online_players: [],
+    online_players_count: 0,
+    online_players_truncated: false,
+    offline_collapsed: 0,
+    message: 'Jumped to Procyon.',
+    xp_gained: {
+      navigation: 3,
+      piloting: 6,
+    },
+  },
+  ship: {
+    fuel: 72,
+    max_fuel: 100,
+  },
+  location: {
+    system_id: 'procyon',
+    system_name: 'Procyon',
+    poi_id: 'procyon_a',
+    poi_name: 'Procyon A',
+  },
 };
 
 export const scanFixture = {

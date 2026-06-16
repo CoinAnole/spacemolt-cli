@@ -487,17 +487,18 @@ export const genericFormatters = [
 
   // Conservative fallback for scalar-only action responses.
   formatter(
-    (r) => {
+    (r, command) => {
       const entries = Object.entries(r).filter(([, value]) => value !== undefined && value !== null && value !== '');
-      if (!entries.length || entries.length > 8) return false;
+      if (!entries.length || entries.length > 16) return false;
       if (entries.some(([, value]) => !isScalarDisplayValue(value) && !Array.isArray(value))) return false;
       const hasActionMarker =
         typeof r.action === 'string' ||
         typeof r.success === 'boolean' ||
+        typeof r.message === 'string' ||
         entries.some(([key]) => key.endsWith('_id') || key === 'id');
       if (!hasActionMarker) return false;
 
-      emitLine(`\n${c.bright}=== ${titleForScalarAction(r.action)} ===${c.reset}`);
+      emitLine(`\n${c.bright}=== ${titleForScalarAction(r.action ?? command)} ===${c.reset}`);
       for (const [key, value] of entries) {
         if (Array.isArray(value)) {
           emitLine(`${labelForScalarKey(key)}: ${value.length} item(s)`);

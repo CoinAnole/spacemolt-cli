@@ -1,10 +1,20 @@
 
-action: reload
-weapon_id: "weapon-1"
-weapon_name: "Pulse Laser"
-ammo_id: "ammo-cell"
-ammo_name: "Laser Cell"
-previous_ammo: empty
-current_ammo: 8
-magazine_size: 8
-rounds_discarded: 0
+details:
+  action: reload
+  weapon_id: "weapon-1"
+  weapon_name: "Pulse Laser"
+  ammo_id: "ammo-cell"
+  ammo_name: "Laser Cell"
+  previous_ammo: empty
+  current_ammo: 8
+  magazine_size: 8
+  rounds_discarded: 0
+cargo:
+  - item_id: "ammo-cell"
+    item_name: "Laser Cell"
+    quantity: 2
+ship:
+  fuel: 80
+  max_fuel: 100
+  cargo_used: 2
+  cargo_capacity: 60
