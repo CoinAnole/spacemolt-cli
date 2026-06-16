@@ -956,4 +956,34 @@ describe('SpaceMoltClient', () => {
       'https://game.test/api/v2/spacemolt/mine',
     ]);
   });
+
+  test('does not recover credential errors with extra session or login requests', async () => {
+    const store = createStore(session({ username: 'Pilot', password: 'wrong' }));
+    const { client, calls } = createClient(
+      [response({ error: { code: 'invalid_credentials', message: 'bad credentials' } })],
+      store,
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('invalid_credentials');
+    expect(calls.map((call) => call.url)).toEqual(['https://game.test/api/v2/spacemolt/mine']);
+    expect(store.current?.id).toBe('sess_old');
+    expect(store.saved).toEqual([]);
+  });
+
+  test('does not create and retry anonymous sessions for auth-required commands without saved credentials', async () => {
+    const store = createStore(session({ player_id: 'player_without_saved_credentials' }));
+    const { client, calls } = createClient(
+      [response({ error: { code: 'session_expired', message: 'expired' } })],
+      store,
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('session_expired');
+    expect(calls.map((call) => call.url)).toEqual(['https://game.test/api/v2/spacemolt/mine']);
+    expect(store.current?.id).toBe('sess_old');
+    expect(store.saved).toEqual([]);
+  });
 });

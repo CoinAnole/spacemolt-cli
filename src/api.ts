@@ -1,6 +1,5 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
 import { type CommandConfig, routeToPath, V2_TOOL_MAP, type V2Route } from './commands.ts';
-import { ERROR_REGISTRY } from './errors.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import {
   createDefaultConfig,
@@ -12,13 +11,14 @@ import { profileNameForUsername, SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
 
-const SESSION_ERROR_CODES = new Set(
-  Object.entries(ERROR_REGISTRY)
-    .filter(([, entry]) => entry.auth && entry.retryable)
-    .map(([code]) => code),
-);
-
 const SESSION_BOOTSTRAP_ERROR_CODES = new Set([
+  'not_authenticated',
+  'session_expired',
+  'session_invalid',
+  'invalid_session',
+]);
+
+const SESSION_RECOVERY_ERROR_CODES = new Set([
   'not_authenticated',
   'session_expired',
   'session_invalid',
@@ -170,7 +170,7 @@ export class SpaceMoltClient {
         persistSession: !transientSession,
       });
 
-      if (data.error && SESSION_ERROR_CODES.has(data.error.code)) {
+      if (data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
         if (
           (command === 'login' || command === 'register') &&
           SESSION_BOOTSTRAP_ERROR_CODES.has(data.error.code) &&
@@ -340,23 +340,26 @@ export class SpaceMoltClient {
   private async recoverSession(): Promise<Session | null> {
     if (this.debug) this.logger.debug(`Session expired, creating new session...`);
     const oldSession = await this.sessionStore.loadSession();
+    if (!oldSession?.username || !oldSession?.password) {
+      if (this.debug) this.logger.debug(`Session recovery skipped: no saved credentials`);
+      return null;
+    }
+
     const newSession = await this.sessionStore.createSession();
-    if (oldSession?.username && oldSession?.password) {
-      newSession.username = oldSession.username;
-      newSession.password = oldSession.password;
-      await this.sessionStore.saveSession(newSession);
-      if (this.debug) this.logger.debug(`Re-authenticating as ${oldSession.username}...`);
-      const loginResp = await this.loginWithSession(newSession, oldSession.username, oldSession.password);
-      if (loginResp.error) {
-        if (!this.jsonOutput) {
-          this.logger.error(`[SESSION] Session expired and auto-login failed: ${loginResp.error.message}`);
-          this.logger.error(`Run "spacemolt login <username> <password>" to re-authenticate.`);
-        }
-        return null;
-      }
+    newSession.username = oldSession.username;
+    newSession.password = oldSession.password;
+    await this.sessionStore.saveSession(newSession);
+    if (this.debug) this.logger.debug(`Re-authenticating as ${oldSession.username}...`);
+    const loginResp = await this.loginWithSession(newSession, oldSession.username, oldSession.password);
+    if (loginResp.error) {
       if (!this.jsonOutput) {
-        this.logger.debug(`[SESSION] Session recovered, re-authenticated as ${oldSession.username}`);
+        this.logger.error(`[SESSION] Session expired and auto-login failed: ${loginResp.error.message}`);
+        this.logger.error(`Run "spacemolt login <username> <password>" to re-authenticate.`);
       }
+      return null;
+    }
+    if (!this.jsonOutput) {
+      this.logger.debug(`[SESSION] Session recovered, re-authenticated as ${oldSession.username}`);
     }
     return newSession;
   }
