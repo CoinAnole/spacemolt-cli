@@ -158,6 +158,11 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
       loadCachedGeneratedRoutes() {
         return testCase.generatedRoutes;
       },
+      loadOpenApiCacheVersion() {
+        return testCase.generatedRoutes
+          ? { status: 'valid', gameserverVersion: 'v999.0.0', fetchedAt: '2026-01-01T00:00:00.000Z' }
+          : { status: 'not_synced' };
+      },
       defaultOpenApiCacheDir() {
         return path.join(tempDir, 'openapi-cache');
       },

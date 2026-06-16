@@ -85,15 +85,6 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_ship/commission_status',
     positionals: ['base_id'],
   },
-  claim_commission: {
-    usage: '<commission_id>',
-    category: 'Shipyard',
-    apiRoute: 'POST /api/v2/spacemolt_ship/claim_commission',
-    positionals: ['commission_id'],
-    aliases: {
-      commission_id: 'id',
-    },
-  },
   cancel_commission: {
     usage: '<commission_id>',
     category: 'Shipyard',

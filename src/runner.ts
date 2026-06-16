@@ -166,17 +166,18 @@ async function runInvocationWithContext(
   const cacheVersion = deps.loadOpenApiCacheVersion(
     deps.defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
   );
-  const cacheCanOverrideBundled =
+  const cacheCanExtendBundled =
     cacheVersion.status === 'valid' &&
     compareVersions(GENERATED_API_GAMESERVER_VERSION, cacheVersion.gameserverVersion) >= 0;
-  const generatedRoutes =
-    cachedGeneratedRoutes && cacheCanOverrideBundled
-      ? { ...GENERATED_API_ROUTES, ...cachedGeneratedRoutes }
-      : undefined;
+  const usableCachedGeneratedRoutes =
+    cachedGeneratedRoutes && cacheCanExtendBundled ? cachedGeneratedRoutes : undefined;
+  const generatedRoutes = usableCachedGeneratedRoutes
+    ? { ...GENERATED_API_ROUTES, ...usableCachedGeneratedRoutes }
+    : undefined;
   const commandRegistry = buildCommandRegistrySnapshot({
     generatedRoutes,
-    dynamicGeneratedRoutes: cachedGeneratedRoutes,
-    includeDynamic: Boolean(cachedGeneratedRoutes),
+    dynamicGeneratedRoutes: usableCachedGeneratedRoutes,
+    includeDynamic: Boolean(usableCachedGeneratedRoutes),
   });
   const isDynamicCompletion = invocation.args[0] === '__complete';
 

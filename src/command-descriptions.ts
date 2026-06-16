@@ -13,7 +13,6 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   captains_log_get: 'Get a specific entry from your captain log.',
   captains_log_list: 'List all entries in your captain log.',
   claim: 'Link your player to your website account using a registration code',
-  claim_commission: 'Claim a completed ship from a commission',
   claim_insurance: 'View your active insurance policies',
   cloak: 'Toggle cloaking device',
   commission_quote: 'Get a cost estimate for commissioning a ship',

@@ -957,7 +957,6 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     commission_ship <class>   Order a custom ship build
     commission_quote <class>  Get build quote
     commission_status         Check build progress
-    claim_commission <id>     Pick up completed ship
     cancel_commission <id>    Cancel active commission
     scrap_ship <ship_id>      Permanently destroy a stored ship
 

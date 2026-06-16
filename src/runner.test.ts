@@ -157,7 +157,7 @@ describe('runInvocation option isolation', () => {
       path.join(cacheDir, 'openapi-cache.json'),
       `${JSON.stringify({
         fetchedAt: '2026-05-20T00:00:00.000Z',
-        gameserverVersion: 'v0.324.1',
+        gameserverVersion: 'v999.0.0',
         routes: {
           'POST /api/v2/runner_dynamic/invoke': {
             operationId: 'runnerDynamicInvoke',
@@ -279,6 +279,54 @@ describe('runInvocation option isolation', () => {
     expect(rendered).toContain('"quantity": 1');
     expect(rendered).toContain('"item_id": "ore_copper"');
     expect(rendered).toContain('"quantity": 2');
+  });
+
+  test('stale cached OpenAPI routes do not expose removed dynamic commands', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-stale-openapi-dynamic-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      `${JSON.stringify({
+        fetchedAt: '2026-05-20T00:00:00.000Z',
+        gameserverVersion: 'v0.366.0',
+        routes: {
+          'POST /api/v2/spacemolt_ship/claim_commission': {
+            operationId: 'spacemolt_ship_claim_commission',
+            summary: 'Claim a completed ship from a commission',
+            route: {
+              tool: 'spacemolt_ship',
+              action: 'claim_commission',
+              method: 'POST',
+            },
+            required: ['id'],
+            schema: {
+              id: {
+                type: 'string',
+                positionalIndex: 0,
+              },
+            },
+          },
+        },
+      })}\n`,
+    );
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--plain', 'commands', '--search', 'claim_commission'],
+      undefined,
+      fakeContext(stdout, stderr, {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('\n')).not.toContain('ship_claim_commission');
   });
 
   test('facility_upgrade flag syntax prints structured API errors', async () => {
@@ -1161,6 +1209,9 @@ describe('runInvocation watch cleanup', () => {
               cli: { command: 'deps_dynamic' },
             },
           };
+        },
+        loadOpenApiCacheVersion() {
+          return { status: 'valid', gameserverVersion: 'v999.0.0', fetchedAt: '2026-01-01T00:00:00.000Z' };
         },
       },
     );

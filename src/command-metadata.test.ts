@@ -22,7 +22,7 @@ import {
 import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
-import { showCommandHelp } from './help';
+import { showCommandHelp, showFullHelp } from './help';
 import { createCommandConfigDryRunResponse } from './preview';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
@@ -47,6 +47,23 @@ function captureHelp(command: string): string {
       err() {},
     }),
   ).toBe(true);
+
+  return stdout.join('\n').replace(ANSI_PATTERN, '');
+}
+
+function captureFullHelp(): string {
+  const stdout: string[] = [];
+
+  showFullHelp(
+    {
+      out(message = '') {
+        stdout.push(message);
+      },
+      err() {},
+    },
+    undefined,
+    { plain: true },
+  );
 
   return stdout.join('\n').replace(ANSI_PATTERN, '');
 }
@@ -429,6 +446,7 @@ describe('command metadata', () => {
   test('command registry does not expose duplicate v2-prefixed state commands', () => {
     const snapshot = buildCommandRegistrySnapshot();
     const removedCommands = [
+      'claim_commission',
       'v2_get_cargo',
       'v2_get_missions',
       'v2_get_player',
@@ -446,6 +464,12 @@ describe('command metadata', () => {
     for (const command of ['get_cargo', 'get_missions', 'get_player', 'get_queue', 'get_ship', 'get_skills']) {
       expect(snapshot.commands[command]).toBeDefined();
     }
+  });
+
+  test('full help does not advertise removed commands', () => {
+    const help = captureFullHelp();
+
+    expect(help).not.toContain('claim_commission');
   });
 
   test('notifications is curated instead of exposed as a generated fallback', () => {
