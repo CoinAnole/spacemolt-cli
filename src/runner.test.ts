@@ -989,6 +989,25 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).toContain('Quote multi-word player names');
   });
 
+  test('unquoted chat message is rejected before sending a request', async () => {
+    let requestSent = false;
+    const result = await captureInvocation(['--plain', 'chat', 'local', 'hello', 'world'], process.env, {
+      createClient(config) {
+        return {
+          config,
+          async execute() {
+            requestSent = true;
+            return { structuredContent: { ok: true } };
+          },
+        } as unknown as SpaceMoltClient;
+      },
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(requestSent).toBe(false);
+    expect(result.stderr).toContain('Chat message must be quoted or passed with --content.');
+  });
+
   test('quiet command parse errors suppress cached ID suggestions but keep required diagnostics', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-id-cache-'));
     const configHome = path.join(tempDir, 'config');

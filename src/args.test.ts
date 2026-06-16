@@ -456,17 +456,56 @@ describe('dry-run previews', () => {
 });
 
 describe('parseArgs - rest args', () => {
-  test('rest arg captures all remaining tokens', () => {
-    const { command, payload } = parseOk(['chat', 'local', 'hello', 'world', 'how', 'are', 'you']);
-    expect(command).toBe('chat');
-    expect(payload.channel).toBe('local');
-    expect(payload.content).toBe('hello world how are you');
+  test('rest arg captures all remaining tokens for non-chat commands', () => {
+    const { command, payload } = parseOk(['captains_log_add', 'hello', 'world', 'how', 'are', 'you']);
+    expect(command).toBe('captains_log_add');
+    expect(payload.entry).toBe('hello world how are you');
   });
 
-  test('rest arg with single word', () => {
+  test('chat rest arg with single word', () => {
     const { payload } = parseOk(['chat', 'faction', 'hello']);
     expect(payload.channel).toBe('faction');
     expect(payload.content).toBe('hello');
+  });
+
+  test('chat positional message accepts one quoted argument', () => {
+    const { payload } = parseOk(['chat', 'local', 'hello world']);
+    expect(payload.channel).toBe('local');
+    expect(payload.content).toBe('hello world');
+  });
+
+  test('chat positional message rejects multiple unquoted arguments', () => {
+    const result = parseArgs(['chat', 'local', 'hello', 'world']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'content',
+          message: 'Chat message must be quoted or passed with --content.',
+          code: 'ambiguous_chat_content',
+        },
+      ],
+    });
+  });
+
+  test('chat --content rejects trailing unquoted message tokens', () => {
+    const result = parseArgs(['chat', 'local', '--content', 'hello', 'world']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'content',
+          message: 'Chat message must be quoted or passed with --content.',
+          code: 'ambiguous_chat_content',
+        },
+      ],
+    });
+  });
+
+  test('chat --content accepts one quoted argument', () => {
+    const { payload } = parseOk(['chat', 'local', '--content', 'hello world']);
+    expect(payload.channel).toBe('local');
+    expect(payload.content).toBe('hello world');
   });
 
   test('private chat positional form treats target and content as separate arguments', () => {
@@ -506,6 +545,20 @@ describe('parseArgs - rest args', () => {
     });
   });
 
+  test('private chat rejects unquoted positional message after a quoted target', () => {
+    const result = parseArgs(['chat', 'private', 'Vex Nebulon', 'Hello', 'there']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'content',
+          message: 'Chat message must be quoted or passed with --content.',
+          code: 'ambiguous_chat_content',
+        },
+      ],
+    });
+  });
+
   test('rest arg via all key=value', () => {
     const { payload } = parseOk(['chat', 'channel=system', 'content=this is a message']);
     expect(payload.channel).toBe('system');
@@ -537,11 +590,18 @@ describe('parseArgs - rest args', () => {
 });
 
 describe('parseArgs - tightened semantics', () => {
-  test('-- terminator stops flag parsing and treats remaining as positional', () => {
-    const { command, payload } = parseOk(['chat', 'local', '--', '--flag-like-message', 'hello']);
-    expect(command).toBe('chat');
-    expect(payload.channel).toBe('local');
-    expect(payload.content).toBe('--flag-like-message hello');
+  test('-- terminator stops flag parsing but chat still requires one message token', () => {
+    const result = parseArgs(['chat', 'local', '--', '--flag-like-message', 'hello']);
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'content',
+          message: 'Chat message must be quoted or passed with --content.',
+          code: 'ambiguous_chat_content',
+        },
+      ],
+    });
   });
 
   test('-- terminator handles empty after it', () => {

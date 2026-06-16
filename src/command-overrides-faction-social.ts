@@ -2,8 +2,9 @@ import type { CommandOverride } from './commands';
 
 export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   chat: {
-    usage: '<channel> <message>  (channels: local, system, faction, private)',
-    description: 'Send a chat message to a local, system, faction, or private channel.',
+    usage: '<channel> "message" | --content "message"  (private: chat private "player" "message")',
+    description:
+      'Send a chat message to a local, system, faction, or private channel. Quote messages with spaces or pass --content.',
     example: 'spacemolt chat local "Hello from orbit"',
     seeAlso: ['get_chat_history'],
     category: 'Chat - rest captures remaining args as content',

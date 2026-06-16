@@ -367,6 +367,18 @@ describe('command metadata', () => {
     expect(help).not.toContain('1-10');
   });
 
+  test('chat help advertises quoted messages and explicit content', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.chat;
+    expect(config?.usage).toContain('"message"');
+    expect(config?.usage).toContain('--content');
+    expect(config?.description).toContain('Quote messages with spaces');
+
+    const help = captureHelp('chat');
+    expect(help).toContain('"message"');
+    expect(help).toContain('--content');
+    expect(help).toContain('Quote messages with spaces');
+  });
+
   test('buy help advertises storage delivery as the default and cargo as an override', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.buy;
     expect(config?.route.defaults).toMatchObject({ deliver_to: 'storage' });

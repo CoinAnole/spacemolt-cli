@@ -116,6 +116,13 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
       code: 'ambiguous_private_chat_target',
     });
   };
+  const pushAmbiguousChatContentError = () => {
+    errors.push({
+      field: 'content',
+      message: 'Chat message must be quoted or passed with --content.',
+      code: 'ambiguous_chat_content',
+    });
+  };
 
   for (let i = 1; i < args.length; i++) {
     if (errors.length > 0) break;
@@ -149,6 +156,14 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
         ) {
           pushAmbiguousPrivateChatTargetError(nextArg, tokenAfterValue);
         }
+        if (
+          command === 'chat' &&
+          flag.key === 'content' &&
+          tokenAfterValue &&
+          !looksLikeNamedArgument(tokenAfterValue)
+        ) {
+          pushAmbiguousChatContentError();
+        }
         i++;
       } else {
         setPayloadField(flag.key, 'true');
@@ -175,7 +190,12 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
             positionalIndex++;
             continue;
           }
-          payload[argDef.rest] = args.slice(i + 1).join(' ');
+          const contentTokens = args.slice(i + 1);
+          if (contentTokens.length > 1) {
+            pushAmbiguousChatContentError();
+            break;
+          }
+          payload[argDef.rest] = nextArg;
           break;
         }
 
@@ -184,6 +204,10 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
           pushAmbiguousPrivateChatTargetError(targetId, arg);
           break;
         }
+      }
+      if (command === 'chat' && args.slice(i).length > 1) {
+        pushAmbiguousChatContentError();
+        break;
       }
       payload[argDef.rest] = args.slice(i).join(' ');
       break;
@@ -385,7 +409,8 @@ export interface ValidationError {
     | 'invalid_field_type'
     | 'file_read_error'
     | 'missing_private_chat_content'
-    | 'ambiguous_private_chat_target';
+    | 'ambiguous_private_chat_target'
+    | 'ambiguous_chat_content';
 }
 
 export function validateKnownPayloadFields(
