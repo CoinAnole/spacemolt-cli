@@ -262,6 +262,18 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
     clientOnlyFields: ['search'],
   },
+  subscribe_market: {
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/subscribe_market',
+    discoverWith: ['view_market'],
+    seeAlso: ['view_market', 'unsubscribe_market'],
+  },
+  unsubscribe_market: {
+    category: 'Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_market/unsubscribe_market',
+    discoverWith: ['view_market'],
+    seeAlso: ['view_market', 'subscribe_market'],
+  },
   view_orders: {
     usage:
       '[station_id] [--item item_id] [--search text] [order_type=buy|sell] [scope=personal|faction] [page=1] [page_size=20] [sort_by=newest|oldest|price_asc|price_desc]',

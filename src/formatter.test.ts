@@ -1572,6 +1572,66 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats post-action accept mission envelopes from returned mission state', () => {
+    const { stdout, stderr } = captureStructuredOutput('accept_mission', {
+      details: {
+        mission_id: 'mission-delivery-1',
+        template_id: 'delivery-food',
+        title: 'Food Delivery',
+        type: 'delivery',
+        expires_at: '2026-06-16T18:00:00Z',
+        message: 'Mission accepted.',
+      },
+      player: { credits: 975 },
+      cargo: [{ item_id: 'food_rations', item_name: 'Food Rations', quantity: 5 }],
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-delivery-1',
+            title: 'Food Delivery',
+            type: 'delivery',
+            objectives: [{ description: 'Deliver Food Rations', item_id: 'food_rations', quantity: 5 }],
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout).toContain('mission-delivery-1');
+    expect(stdout).toContain('missions 1/5');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats post-action abandon mission envelopes from returned mission state', () => {
+    const { stdout, stderr } = captureStructuredOutput('abandon_mission', {
+      details: {
+        mission_id: 'mission-delivery-1',
+        title: 'Food Delivery',
+        message: 'Mission abandoned.',
+      },
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-survey-2',
+            title: 'Survey Run',
+            type: 'survey',
+          },
+        ],
+        max_missions: 5,
+      },
+      queue: { has_pending: false },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout).toContain('mission-survey-2');
+    expect(stdout).toContain('missions 1/5');
+    expect(stdout).not.toContain('mission-delivery-1');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('does not format sparse sell messages as direct market sells', () => {
     const { stdout, stderr } = captureStructuredOutput('sell', {
       message: 'Sold items.',

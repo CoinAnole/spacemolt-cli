@@ -382,7 +382,7 @@ export const genericFormatters = [
       if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);
       return true;
     },
-    { commands: ['get_active_missions'] },
+    { commands: ['get_active_missions', 'accept_mission', 'abandon_mission'] },
   ),
 
   formatter(

@@ -159,6 +159,49 @@ export const activeMissionsFixture = {
   },
 };
 
+export const acceptMissionPostActionFixture = {
+  details: {
+    mission_id: 'mission-delivery-1',
+    template_id: 'delivery-food',
+    title: 'Food Delivery',
+    type: 'delivery',
+    expires_at: '2026-06-16T18:00:00Z',
+    message: 'Mission accepted.',
+  },
+  player: { credits: 975 },
+  cargo: [{ item_id: 'food_rations', item_name: 'Food Rations', quantity: 5 }],
+  missions: {
+    active: [
+      {
+        mission_id: 'mission-delivery-1',
+        title: 'Food Delivery',
+        type: 'delivery',
+        objectives: [{ description: 'Deliver Food Rations', item_id: 'food_rations', quantity: 5 }],
+      },
+    ],
+    max_missions: 5,
+  },
+};
+
+export const abandonMissionPostActionFixture = {
+  details: {
+    mission_id: 'mission-delivery-1',
+    title: 'Food Delivery',
+    message: 'Mission abandoned.',
+  },
+  missions: {
+    active: [
+      {
+        mission_id: 'mission-survey-2',
+        title: 'Survey Run',
+        type: 'survey',
+      },
+    ],
+    max_missions: 5,
+  },
+  queue: { has_pending: false },
+};
+
 export const factionsFixture = {
   factions: [
     {
@@ -327,6 +370,8 @@ export const genericFixtureCases = {};
 
 export const genericHighValueFixtures = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
+  accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
+  abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },

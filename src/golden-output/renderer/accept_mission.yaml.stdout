@@ -1,0 +1,21 @@
+
+details:
+  mission_id: "mission-delivery-1"
+  template_id: "delivery-food"
+  title: "Food Delivery"
+  type: delivery
+  expires_at: 2026-06-16T18:00:00Z
+  message: "Mission accepted."
+player:
+  credits: 975
+cargo:
+  - item_id: food_rations
+    item_name: "Food Rations"
+    quantity: 5
+missions:
+  active:
+    - mission_id: "mission-delivery-1"
+      title: "Food Delivery"
+      type: delivery
+      objectives: [{description: "Deliver Food Rations", item_id: food_rations, quantity: 5}]
+  max_missions: 5
