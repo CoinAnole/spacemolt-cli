@@ -66,6 +66,43 @@ describe('notification formatting', () => {
       snippets: ['[ACTION FAILED]', 'travel failed (tick 77): drive offline'],
     },
     {
+      name: 'market update',
+      notification: {
+        type: 'market',
+        msg_type: 'market_update',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          base_id: 'haven_exchange',
+          base_name: 'Haven Exchange',
+          tick: 901337,
+          items: [
+            {
+              item_id: 'ore_iron',
+              item_name: 'Iron Ore',
+              sell_orders: [{ price_each: 12, quantity: 40, source: 'station' }],
+              buy_orders: [{ price_each: 9, quantity: 25 }],
+            },
+            {
+              item_id: 'ore_copper',
+              sell_orders: [],
+              buy_orders: [],
+            },
+          ],
+        },
+      },
+      snippets: [
+        '[MARKET]',
+        'Haven Exchange',
+        'tick 901337',
+        '2 item updates',
+        'Iron Ore',
+        'sell 40 @ 12',
+        'buy 25 @ 9',
+        'ore_copper',
+        'book emptied',
+      ],
+    },
+    {
       name: 'unknown with message',
       notification: {
         type: 'mystery',
@@ -178,6 +215,23 @@ describe('notification formatting', () => {
       snippets: ['[FRIEND]', 'Marlowe accepted your friend request'],
     },
     { msgType: 'mining_yield', data: { quantity: 2, resource_id: 'ore_iron' }, snippets: ['[MINED]', '+2x ore_iron'] },
+    {
+      msgType: 'market_update',
+      data: {
+        base_id: 'haven_exchange',
+        base_name: 'Haven Exchange',
+        tick: 901337,
+        items: [
+          {
+            item_id: 'ore_iron',
+            item_name: 'Iron Ore',
+            sell_orders: [{ price_each: 12, quantity: 40 }],
+            buy_orders: [{ price_each: 9, quantity: 25 }],
+          },
+        ],
+      },
+      snippets: ['[MARKET]', 'Haven Exchange', '1 item update', 'Iron Ore', 'sell 40 @ 12', 'buy 25 @ 9'],
+    },
     {
       msgType: 'pilotless_ship',
       data: { player_username: 'Marlowe', ship_class: 'hauler', ticks_remaining: 3 },

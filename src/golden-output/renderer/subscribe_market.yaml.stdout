@@ -1,0 +1,10 @@
+
+action: subscribe_market
+base_id: haven_exchange
+base_name: "Haven Exchange"
+message: "Subscribed to market updates."
+items:
+  - item_id: ore_iron
+    item_name: "Iron Ore"
+    sell_orders: [{price_each: 12, quantity: 40, source: station}]
+    buy_orders: [{price_each: 9, quantity: 25}]

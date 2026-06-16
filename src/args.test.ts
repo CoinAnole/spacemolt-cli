@@ -106,6 +106,12 @@ describe('convertPayloadTypes', () => {
     });
   });
 
+  test('notification type validation accepts market subscriptions', () => {
+    const { payload } = parseOk(['get_notifications', 'types=market']);
+    const typed = convertPayloadTypes(payload, 'get_notifications');
+    expect(applyPayloadTransforms('get_notifications', typed)).toEqual({ types: ['market'] });
+  });
+
   test('payload transforms do not mutate the original payload', () => {
     const original = { types: 'chat, combat', limit: 10, clear: false };
     const result = applyPayloadTransforms('get_notifications', original);

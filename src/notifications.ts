@@ -7,6 +7,44 @@ type Notification = NonNullable<APIResponse['notifications']>[number];
 type NotificationColors = ReturnType<typeof colorsForPlain>;
 type NotificationHandler = (data: NotificationData, time: string, writeLine: (message?: string) => void) => void;
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+function orderLevels(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value)
+    ? value.map(asRecord).filter((record): record is Record<string, unknown> => Boolean(record))
+    : [];
+}
+
+function formatOrderLevels(label: string, value: unknown): string | undefined {
+  const levels = orderLevels(value);
+  if (!levels.length) return undefined;
+  const preview = levels
+    .slice(0, 3)
+    .map((level) => {
+      const source = level.source ? ` (${level.source})` : '';
+      return `${level.quantity ?? '?'} @ ${level.price_each ?? '?'}${source}`;
+    })
+    .join(', ');
+  const suffix = levels.length > 3 ? `, +${levels.length - 3} more` : '';
+  return `${label} ${preview}${suffix}`;
+}
+
+function marketItemLabel(item: Record<string, unknown>): string {
+  const name = item.item_name ?? item.item_id ?? 'unknown item';
+  return item.item_name && item.item_id ? `${name} (${item.item_id})` : String(name);
+}
+
+function marketUpdateSummary(data: NotificationData): string {
+  const station = data.base_name ?? data.base_id ?? 'current station';
+  const items = Array.isArray(data.items) ? data.items.filter(asRecord) : [];
+  const count = items.length;
+  const plural = count === 1 ? '' : 's';
+  const tick = data.tick === undefined || data.tick === null ? '' : ` (tick ${data.tick})`;
+  return `${station} market update${tick}: ${count} item update${plural}`;
+}
+
 function createNotificationHandlers(c: NotificationColors): Record<string, NotificationHandler> {
   return {
     chat_message: (d, t, writeLine) => {
@@ -61,6 +99,18 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       writeLine(
         `${c.dim}[${t}]${c.reset} ${c.green}[MINED]${c.reset} +${d.quantity || 0}x ${d.resource_id || 'ore'}${remainingMsg}`,
       );
+    },
+
+    market_update: (d, t, writeLine) => {
+      const items = Array.isArray(d.items) ? d.items.filter(asRecord) : [];
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[MARKET]${c.reset} ${marketUpdateSummary(d)}`);
+      for (const item of items.slice(0, 5)) {
+        const sell = formatOrderLevels('sell', item.sell_orders);
+        const buy = formatOrderLevels('buy', item.buy_orders);
+        const depth = [sell, buy].filter(Boolean).join('; ') || 'book emptied';
+        writeLine(`  ${marketItemLabel(item)}: ${depth}`);
+      }
+      if (items.length > 5) writeLine(`  +${items.length - 5} more item update${items.length === 6 ? '' : 's'}`);
     },
 
     trade_offer_received: (d, t, writeLine) => {

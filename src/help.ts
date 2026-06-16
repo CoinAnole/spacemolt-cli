@@ -1014,6 +1014,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Market / Exchange:${c.reset}
     view_market [item_id] [category]  Order book (use item_id for depth, category for filter)
+    subscribe_market                  Snapshot order book, then receive market_update notifications
+    unsubscribe_market                Stop live market updates
     view_orders [station_id]          Your orders at station
     create_sell_order <item> <qty> <price>  List items for sale
     create_buy_order <item> <qty> <price>   Place a buy offer

@@ -206,7 +206,7 @@ export const marketFormatters = [
     'view_market',
     ['items'],
     (r) => {
-      if (r.action !== 'view_market' || !r.base_id) return false;
+      if (!['view_market', 'subscribe_market'].includes(String(r.action)) || !r.base_id) return false;
       const items = r.items as Array<Record<string, unknown>>;
       if (!items || items.length === 0) {
         emitLine(`\n${c.bright}=== Market at ${r.base_id} ===${c.reset}\n  (empty)`);
@@ -256,7 +256,7 @@ export const marketFormatters = [
       }
       return true;
     },
-    { commands: ['view_market'], shapeFallback: true },
+    { commands: ['view_market', 'subscribe_market'], shapeFallback: true },
   ),
 
   // Market order creation

@@ -19,6 +19,37 @@ function firstLinePreview(value: unknown): string {
   return String(value).split(/\r?\n/, 1)[0]?.trim() ?? '';
 }
 
+function records(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function formatDepth(label: string, value: unknown): string | undefined {
+  const levels = records(value);
+  if (!levels.length) return undefined;
+  const preview = levels
+    .slice(0, 2)
+    .map((level) => `${level.quantity ?? '?'} @ ${level.price_each ?? '?'}`)
+    .join(', ');
+  const suffix = levels.length > 2 ? `, +${levels.length - 2} more` : '';
+  return `${label} ${preview}${suffix}`;
+}
+
+function formatMarketUpdate(data: Record<string, unknown>): string {
+  const station = data.base_name ?? data.base_id ?? 'current station';
+  const items = records(data.items);
+  const plural = items.length === 1 ? '' : 's';
+  const tick = data.tick === undefined || data.tick === null ? '' : ` tick ${data.tick}`;
+  const firstItem = items[0];
+  if (!firstItem) return `${station}${tick}: 0 item updates`;
+
+  const itemName = firstItem.item_name ?? firstItem.item_id ?? 'unknown item';
+  const sell = formatDepth('sell', firstItem.sell_orders);
+  const buy = formatDepth('buy', firstItem.buy_orders);
+  const depth = [sell, buy].filter(Boolean).join(', ') || 'book emptied';
+  const remaining = items.length > 1 ? `; +${items.length - 1} more` : '';
+  return `${station}${tick}: ${items.length} item update${plural}; ${itemName} ${depth}${remaining}`;
+}
+
 function formatNotificationType(notification: Record<string, unknown>): string {
   const data = isRecord(notification.data) ? notification.data : undefined;
   const type = notification.msg_type ?? notification.type ?? data?.type;
@@ -29,6 +60,9 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
   const data = notification.data;
   if (typeof data === 'string') return firstLinePreview(data);
   if (!isRecord(data)) return data === undefined || data === null ? '' : JSON.stringify(data);
+
+  const type = formatNotificationType(notification);
+  if (type === 'market_update') return formatMarketUpdate(data);
 
   const sender = data.sender ?? data.sender_name ?? data.from_name ?? data.username;
   const content = data.content ?? data.message ?? data.summary ?? data.text ?? data.description;

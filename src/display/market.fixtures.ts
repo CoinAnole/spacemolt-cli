@@ -72,6 +72,21 @@ export const viewMarketSingleItemFixture = {
   items: [viewMarketFixture.items[0]],
 };
 
+export const subscribeMarketFixture = {
+  action: 'subscribe_market',
+  base_id: 'haven_exchange',
+  base_name: 'Haven Exchange',
+  message: 'Subscribed to market updates.',
+  items: [
+    {
+      item_id: 'ore_iron',
+      item_name: 'Iron Ore',
+      sell_orders: [{ price_each: 12, quantity: 40, source: 'station' }],
+      buy_orders: [{ price_each: 9, quantity: 25 }],
+    },
+  ],
+};
+
 export const storageFixture = {
   base_id: 'earth_station',
   items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 }],
@@ -233,6 +248,7 @@ export const marketHighValueFixtures = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
   create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
+  subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   storage: { command: 'storage', fixture: storageFixture },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },

@@ -17,6 +17,7 @@ import {
   missionsFixture,
   poiInfoFixture,
   storageFixture,
+  subscribeMarketFixture,
   viewMarketFixture,
   viewMarketSingleItemFixture,
 } from './display/formatter-fixtures';
@@ -220,6 +221,33 @@ const notificationsFixture = {
   ],
   remaining: 0,
   timestamp: 1779562862,
+};
+
+const marketNotificationsFixture = {
+  count: 1,
+  current_tick: 901337,
+  notifications: [
+    {
+      type: 'market',
+      msg_type: 'market_update',
+      data: {
+        base_id: 'haven_exchange',
+        base_name: 'Haven Exchange',
+        tick: 901337,
+        items: [
+          {
+            item_id: 'ore_iron',
+            item_name: 'Iron Ore',
+            sell_orders: [{ price_each: 12, quantity: 40, source: 'station' }],
+            buy_orders: [{ price_each: 9, quantity: 25 }],
+          },
+        ],
+      },
+      timestamp: '2026-05-23T19:03:02.000Z',
+    },
+  ],
+  remaining: 0,
+  timestamp: 1779562982,
 };
 
 function nearbyPlayers(count: number): Array<Record<string, unknown>> {
@@ -1269,6 +1297,18 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats market update notifications as a readable summary', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', marketNotificationsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('market_update');
+    expect(stdout).toContain('Haven Exchange');
+    expect(stdout).toContain('1 item update');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).not.toContain('"sell_orders"');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats ship listings before generic market listings', () => {
     const { stdout, stderr } = captureStructuredOutput('browse_ships', browseShipsFixture);
 
@@ -1326,6 +1366,19 @@ describe('structuredContent formatters', () => {
           75 cr x 1,000
       "
     `);
+  });
+
+  test('formats subscribe_market snapshots with market depth', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_market', subscribeMarketFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Market at haven_exchange ===');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).toContain('Buy orders (1):');
+    expect(stdout).toContain('9 cr');
+    expect(stdout).toContain('Sell orders (1):');
+    expect(stdout).toContain('12 cr');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('omits malformed single-item market depth numbers instead of printing NaN', () => {

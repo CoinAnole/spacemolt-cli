@@ -136,14 +136,21 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_location',
   },
   get_notifications: {
-    usage: '[clear=true/false] [limit=50] [types=chat,combat]',
+    usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
     description: 'Poll queued game events such as chat, combat, trade, and faction updates.',
-    example: 'spacemolt get_notifications limit=10 types=chat,combat',
+    example: 'spacemolt get_notifications limit=10 types=chat,market',
     seeAlso: ['get_status', 'get_action_log'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_notifications',
     positionals: ['clear', 'limit', 'types'],
     arrayFields: ['types'],
+    schemaExtensions: {
+      types: {
+        type: 'array',
+        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'tip', 'system', 'market'],
+        description: 'Filter by notification types. Omit for all types.',
+      },
+    },
   },
   notifications: {
     description: 'Poll pending notifications',

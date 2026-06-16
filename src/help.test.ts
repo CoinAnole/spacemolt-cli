@@ -578,6 +578,17 @@ describe('help output branches', () => {
     expect(output.indexOf('Command Discovery:')).toBeLessThan(output.indexOf('Live server help:'));
   });
 
+  test('showFullHelp documents market subscription commands', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('subscribe_market');
+    expect(output).toContain('unsubscribe_market');
+    expect(output).toContain('market_update');
+  });
+
   test('showFullHelp includes cache sections near command discovery', () => {
     const capture = captureWriter();
 
