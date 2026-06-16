@@ -699,6 +699,24 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError renders malformed API errors without undefined placeholders', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('get_status', { detail: 'temporarily unavailable' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [api_error]: temporarily unavailable');
+    expect(output).not.toContain('undefined');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
   test('displayError gives transit and fleet movement errors actionable suggestions', () => {
     const baseContext: CliRuntimeContext = {
       env: {},

@@ -1118,7 +1118,14 @@ ${c.bright}Documentation:${c.reset}
 
 export function displayError(
   command: string,
-  error: { code: string; message: string; wait_seconds?: number; retry_after?: number },
+  error: {
+    code?: unknown;
+    message?: unknown;
+    detail?: unknown;
+    error?: unknown;
+    wait_seconds?: unknown;
+    retry_after?: unknown;
+  },
   options?: { noTimestamp?: boolean; context?: CliRuntimeContext },
 ): void {
   const writer = options?.context?.writer;
@@ -1130,18 +1137,34 @@ export function displayError(
   if (!quiet && !options?.noTimestamp) {
     out(`${colors.dim}[${(options?.context?.clock.now() ?? new Date()).toISOString()}]${colors.reset}`);
   }
-  err(`${colors.red}Error [${error.code}]:${colors.reset} ${error.message}`);
-  const retryAfter = error.retry_after ?? error.wait_seconds;
+  const code = typeof error.code === 'string' && error.code.trim() ? error.code : 'api_error';
+  const message =
+    typeof error.message === 'string' && error.message.trim()
+      ? error.message
+      : typeof error.detail === 'string' && error.detail.trim()
+        ? error.detail
+        : typeof error.error === 'string' && error.error.trim()
+          ? error.error
+          : 'The API returned an error without details.';
+  const retryAfter =
+    typeof error.retry_after === 'number' && Number.isFinite(error.retry_after)
+      ? error.retry_after
+      : typeof error.wait_seconds === 'number' && Number.isFinite(error.wait_seconds)
+        ? error.wait_seconds
+        : undefined;
+  const hasServerCode = typeof error.code === 'string' && error.code.trim() !== '';
+
+  err(`${colors.red}Error [${code}]:${colors.reset} ${message}`);
   if (retryAfter !== undefined) {
     err(`${colors.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${colors.reset}`);
   }
   if (!quiet) {
-    const help = getErrorSuggestion(error.code);
+    const help = hasServerCode ? getErrorSuggestion(code) : undefined;
     if (help) err(`\n${colors.cyan}Suggestion:${colors.reset} ${help}`);
-    if (isRetryableError(error.code) && retryAfter === undefined) {
+    if (hasServerCode && isRetryableError(code) && retryAfter === undefined) {
       err(`${colors.dim}This error may be retryable.${colors.reset}`);
     }
-    if (isAuthError(error.code)) {
+    if (hasServerCode && isAuthError(code)) {
       err(`${colors.yellow}This is an authentication error. Run "spacemolt login" if retries fail.${colors.reset}`);
     }
     if (BUNDLED_COMMAND_REGISTRY.allCommands[command]) {
