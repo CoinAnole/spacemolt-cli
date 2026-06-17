@@ -26,7 +26,7 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$ROOT_DIR"
-"$BUN_BIN" build src/client.ts --compile --outfile spacemolt
+"$BUN_BIN" scripts/build.ts
 
 if [ ! -f "$ROOT_DIR/spacemolt" ]; then
   echo "error: build did not create $ROOT_DIR/spacemolt" >&2

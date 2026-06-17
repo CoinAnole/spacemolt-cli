@@ -26,7 +26,7 @@ if (-not $Bun) {
 
 Push-Location $RootDir
 try {
-  & $Bun build src/client.ts --compile --outfile spacemolt
+  & $Bun scripts/build.ts
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }

@@ -9,7 +9,7 @@ describe('local install scripts', () => {
     const script = fs.readFileSync(path.join(scriptsDir, 'install-local.sh'), 'utf-8');
 
     expect(script).toContain('TMP="$(mktemp "$INSTALL_DIR/.${TARGET_NAME}.tmp.XXXXXX")"');
-    expect(script).toContain('"$BUN_BIN" build src/client.ts --compile --outfile spacemolt');
+    expect(script).toContain('"$BUN_BIN" scripts/build.ts');
     expect(script).toContain('cp "$ROOT_DIR/spacemolt" "$TMP"');
     expect(script).toContain('chmod 755 "$TMP"');
     expect(script).toContain('mv -f "$TMP" "$TARGET"');
@@ -20,7 +20,7 @@ describe('local install scripts', () => {
 
     expect(script).toContain("$BinDir = Join-Path $InstallDir 'bin'");
     expect(script).toContain("$VersionsDir = Join-Path $InstallDir 'versions'");
-    expect(script).toContain('& $Bun build src/client.ts --compile --outfile spacemolt');
+    expect(script).toContain('& $Bun scripts/build.ts');
     expect(script).toContain("$Shim = Join-Path $BinDir 'spacemolt.cmd'");
     expect(script).toContain('"%~dp0$RelativeExe" %*');
   });
