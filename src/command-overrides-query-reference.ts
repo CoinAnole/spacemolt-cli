@@ -105,6 +105,20 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_skills',
   },
+  get_achievements: {
+    description: 'Show personal achievement progress, earned entries, points, titles, emblems, and share URLs.',
+    example: 'spacemolt get_achievements',
+    seeAlso: ['get_faction_achievements', 'get_player'],
+    category: 'Query commands',
+    apiRoute: 'POST /api/v2/spacemolt/get_achievements',
+  },
+  get_faction_achievements: {
+    description: 'Show faction achievement progress and earned faction entries.',
+    example: 'spacemolt get_faction_achievements',
+    seeAlso: ['get_achievements', 'faction_info'],
+    category: 'Faction',
+    apiRoute: 'POST /api/v2/spacemolt/get_faction_achievements',
+  },
   get_map: {
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_map',

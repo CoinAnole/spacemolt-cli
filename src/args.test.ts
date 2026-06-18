@@ -881,6 +881,16 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(search.payload.search).toBe('iron');
   });
 
+  test('view_market accepts incremental market cursor', () => {
+    const { payload } = parseOk(['view_market', '--since', '900683']);
+    expect(convertPayloadTypes(payload, 'view_market')).toMatchObject({ since: 900683 });
+  });
+
+  test('achievement queries require no arguments', () => {
+    expect(parseOk(['get_achievements']).payload).toEqual({});
+    expect(parseOk(['get_faction_achievements']).payload).toEqual({});
+  });
+
   test('view_orders with station_id', () => {
     const { payload } = parseOk(['view_orders', 'sol_central']);
     expect(payload.station_id).toBe('sol_central');
