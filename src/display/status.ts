@@ -1,6 +1,7 @@
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
+  emitCreditBalance,
   emitLine,
   emitStationFuelPricing,
   formatPlayer,
@@ -693,6 +694,7 @@ export const statusFormatters = [
       const nearbyEmpireNpcCount = numberOrDefault(loc.nearby_empire_npc_count, 0);
 
       emitLine(`\n${c.bright}=== Location ===${c.reset}`);
+      emitCreditBalance(r);
       if (loc.system_id || loc.system_name) {
         const idText = loc.system_id && loc.system_name ? ` (${loc.system_id})` : '';
         emitLine(`${c.cyan}System:${c.reset} ${loc.system_name ?? loc.system_id}${idText}`);

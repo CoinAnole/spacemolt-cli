@@ -1,6 +1,7 @@
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
+  emitCreditBalance,
   emitLine,
   emitStationConstruction,
   emitStationFuelPricing,
@@ -147,6 +148,7 @@ export const shipFormatters = [
       }
       const cargo = Array.isArray(r.cargo) ? (r.cargo as Array<Record<string, unknown>>) : [];
       emitLine(`\n${c.bright}=== Cargo ===${c.reset}`);
+      emitCreditBalance(r);
       const used = r.used ?? r.cargo_used ?? (r.ship as Record<string, unknown> | undefined)?.cargo_used;
       const capacity =
         r.capacity ?? r.cargo_capacity ?? (r.ship as Record<string, unknown> | undefined)?.cargo_capacity;
@@ -170,6 +172,7 @@ export const shipFormatters = [
       if (!ship || !isRecord(ship)) return false;
 
       emitLine(`\n${c.bright}=== Ship: ${ship.name || ship.custom_name || ship.class_name || ship.id} ===${c.reset}`);
+      emitCreditBalance(r);
       emitLine(`ID: ${ship.id || ship.ship_id || 'unknown'}`);
       emitLine(`Class: ${ship.class_name || ship.class_id || 'unknown'}`);
       if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);

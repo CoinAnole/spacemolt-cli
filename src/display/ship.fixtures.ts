@@ -1,4 +1,5 @@
 export const cargoFixture = {
+  credits: 12345,
   cargo: [{ item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 50 }],
   used: 50,
   capacity: 100,
@@ -7,6 +8,7 @@ export const cargoFixture = {
 
 export const emptyCargoFixture = {
   message: 'Cargo contents',
+  credits: 12345,
   ship: {
     cargo_capacity: 385,
     cargo_used: 0,
@@ -15,6 +17,7 @@ export const emptyCargoFixture = {
 
 export const shipFixture = {
   message: 'Ship status',
+  credits: 12345,
   modules: [
     {
       cpu_usage: 2,

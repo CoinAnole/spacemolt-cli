@@ -1,5 +1,6 @@
 export const getLocationFixture = {
   message: 'Location retrieved',
+  credits: 12345,
   location: {
     system_id: 'sol',
     system_name: 'Sol',

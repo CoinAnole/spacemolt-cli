@@ -1,4 +1,5 @@
 {
+  "credits": 12345,
   "cargo": [
     {
       "item_id": "ore_iron",

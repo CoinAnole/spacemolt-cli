@@ -1,5 +1,6 @@
 
 message: "Cargo contents"
+credits: 12345
 ship:
   cargo_capacity: 385
   cargo_used: 0

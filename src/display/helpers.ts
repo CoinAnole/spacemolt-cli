@@ -182,6 +182,12 @@ function formatDisplayNumber(value: unknown): string {
   return number === undefined ? String(value) : number.toLocaleString();
 }
 
+export function emitCreditBalance(result: Record<string, unknown>): boolean {
+  if (result.credits === undefined || result.credits === null || result.credits === '') return false;
+  emitLine(`Credits: ${formatDisplayNumber(result.credits)}`);
+  return true;
+}
+
 function formatPercent(value: unknown): string {
   const number = finiteNumber(value);
   if (number === undefined) return String(value);

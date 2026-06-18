@@ -1,5 +1,6 @@
 {
   "message": "Ship status",
+  "credits": 12345,
   "modules": [
     {
       "cpu_usage": 2,

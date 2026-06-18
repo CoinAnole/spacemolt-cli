@@ -1131,6 +1131,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toMatchInlineSnapshot(`
       "
       === Location ===
+      Credits: 12,345
       System: Sol (sol)
       Empire: Terran
       Security: high security
@@ -1145,6 +1146,44 @@ describe('structuredContent formatters', () => {
 
       Nearby NPCs: 1"
     `);
+  });
+
+  test('lean query formatters show current credit balance', () => {
+    const cargo = captureStructuredOutput('get_cargo', {
+      cargo: [],
+      used: 0,
+      capacity: 100,
+      credits: 12345,
+    });
+    const ship = captureStructuredOutput('get_ship', {
+      credits: 12345,
+      ship: {
+        id: 'ship-1',
+        class_id: 'skiff',
+        hull: 100,
+        max_hull: 100,
+        shield: 50,
+        max_shield: 50,
+        fuel: 80,
+        max_fuel: 100,
+        cargo_used: 0,
+        cargo_capacity: 100,
+        cpu_used: 0,
+        cpu_capacity: 10,
+        power_used: 0,
+        power_capacity: 10,
+      },
+    });
+    const location = captureStructuredOutput('get_location', {
+      credits: 12345,
+      location: {
+        system_id: 'sol',
+      },
+    });
+
+    expect(cargo.stdout).toContain('Credits: 12,345');
+    expect(ship.stdout).toContain('Credits: 12,345');
+    expect(location.stdout).toContain('Credits: 12,345');
   });
 
   test('formats queue state without raw JSON fallback', () => {
@@ -2728,6 +2767,7 @@ describe('structuredContent formatters', () => {
         "cargo": 
       "
       === Cargo ===
+      Credits: 12,345
       Used: 50/100 (50 available)
 
       Cargo (1):
@@ -2889,6 +2929,7 @@ describe('structuredContent formatters', () => {
         "ship": 
       "
       === Ship: Deep Survey ===
+      Credits: 12,345
       ID: ship-1
       Class: Deep Survey
       Custom Name: Asteroid Accessory
