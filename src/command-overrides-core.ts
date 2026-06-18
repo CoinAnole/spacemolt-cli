@@ -164,7 +164,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       'Buy an item from the current market. Purchases deliver to station storage by default; pass delivery=cargo to use ship cargo.',
     example: 'spacemolt buy fuel 10 delivery=cargo',
     discoverWith: ['view_market', 'get_status'],
-    seeAlso: ['view_market', 'view_storage', 'get_cargo'],
+    seeAlso: ['view_market', 'storage', 'get_cargo'],
     category: 'Trading',
     apiRoute: 'POST /api/v2/spacemolt/buy',
     positionals: ['item_id', 'quantity', 'auto_list', 'delivery'],

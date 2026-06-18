@@ -279,6 +279,31 @@ describe('help output branches', () => {
     expect(output).toContain('faction_facility_list <args...> - List faction facilities at the current base.');
   });
 
+  test('storage group includes unified and standalone storage workflows', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('storage', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Storage Commands');
+    expect(output).toContain('storage <view|deposit|withdraw|loot|jettison>');
+    expect(output).toContain('jettison <item_id> <quantity>');
+    expect(output).toContain('loot_wreck <wreck_id> <item_id> [quantity]');
+    expect(output).toContain('salvage_wreck <wreck_id>');
+  });
+
+  test('full help storage section includes standalone storage workflows', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('storage view [station_id] [target=self|faction]');
+    expect(output).toContain('jettison <item_id> <qty>     Standalone cargo jettison');
+    expect(output).toContain('loot_wreck <wreck_id> <item_id> [quantity]');
+    expect(output).toContain('salvage_wreck <wreck_id>');
+  });
+
   test('showCommandHelp renders no-arg commands without args placeholder', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {

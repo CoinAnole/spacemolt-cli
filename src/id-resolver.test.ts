@@ -73,7 +73,7 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: '90' } });
   });
 
-  test('resolves view_storage station_id from cached station POI prefix', () => {
+  test('resolves storage view station_id from cached station POI prefix', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -91,11 +91,11 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = preparePayload('view_storage', { station_id: 'node_beta' }, options(), sessionPath);
+    const prepared = preparePayload('storage', { action: 'view', station_id: 'node_beta' }, options(), sessionPath);
 
     expect(prepared).toEqual({
       type: 'payload',
-      payload: { station_id: 'node_beta_industrial_station' },
+      payload: { action: 'view', station_id: 'node_beta_industrial_station', target: 'self' },
     });
   });
 
@@ -133,7 +133,7 @@ describe('cached ID payload resolver', () => {
     expect(tankFuel).toEqual({ type: 'payload', payload: { id: 'fuel', quantity: 100 } });
   });
 
-  test('keeps real fuel item IDs reserved for fuel market and gift commands', () => {
+  test('keeps real fuel item IDs reserved for fuel market and storage gift commands', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -175,14 +175,64 @@ describe('cached ID payload resolver', () => {
     });
     expect(
       preparePayload(
-        'send_gift',
-        { recipient: 'empire:crimson', item_id: 'fuel', quantity: '50' },
+        'storage',
+        { action: 'deposit', target: 'empire:crimson', item_id: 'fuel', quantity: '50' },
         options(),
         sessionPath,
       ),
     ).toEqual({
       type: 'payload',
-      payload: { target: 'empire:crimson', item_id: 'fuel', quantity: 50 },
+      payload: { action: 'deposit', target: 'empire:crimson', item_id: 'fuel', quantity: 50 },
+    });
+  });
+
+  test('resolves storage action item aliases from cached item names', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    for (const action of ['deposit', 'withdraw', 'loot', 'jettison']) {
+      expect(preparePayload('storage', { action, item_id: 'iron', quantity: '2' }, options(), sessionPath)).toEqual({
+        type: 'payload',
+        payload: { action, item_id: 'ore_iron', quantity: 2 },
+      });
+    }
+  });
+
+  test('resolves storage loot wreck aliases from cached wreck names', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'wreck',
+            id: 'wreck_iron',
+            name: 'Iron Wreck',
+            sourceCommand: 'get_wrecks',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(preparePayload('storage', { action: 'loot', wreck_id: 'iron' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { action: 'loot', wreck_id: 'wreck_iron' },
     });
   });
 
@@ -395,20 +445,38 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { target: 'solarian' },
     });
-    expect(preparePayload('send_gift', { recipient: 'solarian', credits: '200' }, options(), sessionPath)).toEqual({
+    expect(
+      preparePayload('storage', { action: 'deposit', target: 'solarian', credits: '200' }, options(), sessionPath),
+    ).toEqual({
       type: 'payload',
-      payload: { target: 'solarian', credits: 200 },
+      payload: { action: 'deposit', target: 'solarian', credits: 200 },
     });
   });
 
-  test('preserves bulk gift item objects while resolving recipient alias', () => {
+  test('preserves storage bulk gift item objects while resolving player target', () => {
     const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-marlowe',
+            name: 'Marlowe',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
 
     expect(
       preparePayload(
-        'send_gift',
+        'storage',
         {
-          recipient: 'Marlowe',
+          action: 'deposit',
+          target: 'Marlowe',
           items: [
             { item_id: 'ore_iron', quantity: 1 },
             { item_id: 'ore_copper', quantity: 2 },
@@ -420,13 +488,47 @@ describe('cached ID payload resolver', () => {
     ).toEqual({
       type: 'payload',
       payload: {
-        target: 'Marlowe',
+        action: 'deposit',
+        target: 'player-marlowe',
         items: [
           { item_id: 'ore_iron', quantity: 1 },
           { item_id: 'ore_copper', quantity: 2 },
         ],
       },
     });
+  });
+
+  test('preserves storage reserved targets instead of resolving cached players', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-faction',
+            name: 'faction',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-faction-smc',
+            name: 'faction:smc',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    for (const target of ['self', 'faction', 'faction:smc']) {
+      expect(preparePayload('storage', { action: 'deposit', target, credits: '200' }, options(), sessionPath)).toEqual({
+        type: 'payload',
+        payload: { action: 'deposit', target, credits: 200 },
+      });
+    }
   });
 
   test('resolves faction diplomacy targets from cached faction tags after alias normalization', () => {

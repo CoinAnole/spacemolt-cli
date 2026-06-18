@@ -137,53 +137,22 @@ describe('convertPayloadTypes', () => {
   });
 });
 
-describe('send_gift alias normalization', () => {
-  test('send_gift maps ship_id to item_id via aliases when item_id is absent', () => {
-    const normalized = normalizeParsedPayload('send_gift', {
-      recipient: 'PlayerName',
-      ship_id: 'ship_456',
-    });
-    expect(normalized).toEqual({
-      target: 'PlayerName',
-      item_id: 'ship_456',
-    });
-  });
+describe('removed storage command names', () => {
+  const removedStorageCommands = [
+    'view_storage',
+    'view_faction_storage',
+    'deposit_items',
+    'withdraw_items',
+    'send_gift',
+    'storage_loot',
+    'storage_jettison',
+  ];
 
-  test('send_gift keeps explicit item_id unchanged when both item_id and ship_id present', () => {
-    const normalized = normalizeParsedPayload('send_gift', {
-      recipient: 'PlayerName',
-      item_id: 'ore_iron',
-      ship_id: 'ship_456',
-      quantity: '10',
-    });
-    expect(normalized).toEqual({
-      target: 'PlayerName',
-      item_id: 'ore_iron',
-      quantity: '10',
-    });
-  });
-
-  test('send_gift maps recipient to target', () => {
-    const normalized = normalizeParsedPayload('send_gift', {
-      recipient: 'PlayerName',
-      credits: '1000',
-    });
-    expect(normalized).toEqual({
-      target: 'PlayerName',
-      credits: '1000',
-    });
-  });
-
-  test('send_gift converts credits to a number after alias normalization', () => {
-    const normalized = normalizeParsedPayload('send_gift', {
-      recipient: 'solarian',
-      credits: '1000',
-    });
-    const converted = convertPayloadTypes(normalized, 'send_gift');
-    expect(converted).toEqual({
-      target: 'solarian',
-      credits: 1000,
-    });
+  test('legacy storage command names are not bundled curated commands', () => {
+    for (const command of removedStorageCommands) {
+      expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty(command);
+      expect(BUNDLED_COMMAND_REGISTRY.allCommands).not.toHaveProperty(command);
+    }
   });
 });
 
@@ -198,15 +167,19 @@ describe('command metadata', () => {
     expect(config.aliases).toMatchObject({ limit: 'top' });
   });
 
-  test('view_storage items filter is client-only metadata', () => {
-    const personalConfig = BUNDLED_COMMAND_REGISTRY.commands.view_storage;
-    const factionConfig = BUNDLED_COMMAND_REGISTRY.commands.view_faction_storage;
-    if (!personalConfig || !factionConfig) {
+  test('storage view filters are client-only metadata', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.storage;
+    if (!config) {
       throw new Error('storage command metadata is missing');
     }
 
-    expect(personalConfig.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
-    expect(factionConfig.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
+    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
+    expect(config.aliases).toMatchObject({
+      item: 'item_id',
+      recipient: 'target',
+      ship_id: 'item_id',
+    });
+    expect(config.schema?.action?.enum).toEqual(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
   });
 
   test('view_market search filter is client-only metadata', () => {
@@ -904,43 +877,115 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(search.payload.search).toBe('iron');
   });
 
-  test('view_storage with station_id', () => {
-    const { payload } = parseOk(['view_storage', 'nexus_base']);
-    expect(payload.station_id).toBe('nexus_base');
+  test('storage view parses action-specific station positional and filters', () => {
+    const { command, payload } = parseOk(['storage', 'view', 'nexus_base', '--item', 'iron_ore', '--search', 'iron']);
+
+    expect(command).toBe('storage');
+    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
+      action: 'view',
+      station_id: 'nexus_base',
+      item_id: 'iron_ore',
+      search: 'iron',
+    });
   });
 
-  test('view_storage accepts item and search filters', () => {
-    const item = parseOk(['view_storage', '--item', 'iron_ore']);
-    expect(normalizeParsedPayload('view_storage', item.payload)).toMatchObject({ item_id: 'iron_ore' });
+  test('storage view accepts faction target and items filter', () => {
+    const { payload } = parseOk(['storage', 'view', 'nexus_base', 'target=faction', '--items', 'iron_ore,fuel_cell']);
 
-    const search = parseOk(['view_storage', '--search', 'iron']);
-    expect(search.payload.search).toBe('iron');
+    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
+      action: 'view',
+      station_id: 'nexus_base',
+      target: 'faction',
+      items: 'iron_ore,fuel_cell',
+    });
   });
 
-  test('view_storage accepts items filter', () => {
-    const { payload } = parseOk(['view_storage', '--items=iron_ore,fuel_cell']);
+  test('storage deposit parses item quantity target source and gift aliases', () => {
+    const direct = parseOk(['storage', 'deposit', 'ore_iron', '50', 'target=faction', 'source=storage']);
+    expect(normalizeParsedPayload('storage', direct.payload)).toMatchObject({
+      action: 'deposit',
+      item_id: 'ore_iron',
+      quantity: '50',
+      target: 'faction',
+      source: 'storage',
+    });
 
-    expect(normalizeParsedPayload('view_storage', payload)).toMatchObject({ items: 'iron_ore,fuel_cell' });
+    const gift = parseOk(['storage', 'deposit', 'target=PlayerName', 'ship_id=ship_456', 'message=Enjoy']);
+    expect(normalizeParsedPayload('storage', gift.payload)).toMatchObject({
+      action: 'deposit',
+      target: 'PlayerName',
+      item_id: 'ship_456',
+      message: 'Enjoy',
+    });
   });
 
-  test('view_faction_storage accepts item and search filters', () => {
-    const item = parseOk(['view_faction_storage', '--item', 'iron_ore']);
-    expect(normalizeParsedPayload('view_faction_storage', item.payload)).toMatchObject({ item_id: 'iron_ore' });
+  test('storage withdraw parses item and quantity positionals', () => {
+    const { payload } = parseOk(['storage', 'withdraw', 'ore_iron', '50', 'source=faction', 'target=self']);
 
-    const search = parseOk(['view_faction_storage', '--search=iron']);
-    expect(search.payload.search).toBe('iron');
+    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
+      action: 'withdraw',
+      item_id: 'ore_iron',
+      quantity: '50',
+      source: 'faction',
+      target: 'self',
+    });
   });
 
-  test('view_faction_storage accepts items filter', () => {
-    const { payload } = parseOk(['view_faction_storage', '--items', 'iron_ore,fuel_cell']);
+  test('storage loot and jettison parse action-specific positionals', () => {
+    const loot = parseOk(['storage', 'loot', 'wreck_1', 'ore_iron', '2']);
+    expect(normalizeParsedPayload('storage', loot.payload)).toMatchObject({
+      action: 'loot',
+      wreck_id: 'wreck_1',
+      item_id: 'ore_iron',
+      quantity: '2',
+    });
 
-    expect(normalizeParsedPayload('view_faction_storage', payload)).toMatchObject({ items: 'iron_ore,fuel_cell' });
+    const jettison = parseOk(['storage', 'jettison', 'ore_iron', '2']);
+    expect(normalizeParsedPayload('storage', jettison.payload)).toMatchObject({
+      action: 'jettison',
+      item_id: 'ore_iron',
+      quantity: '2',
+    });
   });
 
-  test('send_gift with ship_id', () => {
-    const { payload } = parseOk(['send_gift', 'PlayerName', 'ship_id=ship_456']);
-    expect(payload.recipient).toBe('PlayerName');
-    expect(payload.ship_id).toBe('ship_456');
+  test('storage action key-value form still works with following positionals', () => {
+    const { payload } = parseOk(['storage', 'action=deposit', 'ore_iron', '50']);
+
+    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
+      action: 'deposit',
+      item_id: 'ore_iron',
+      quantity: '50',
+    });
+  });
+
+  test('storage positionals skip action-specific fields already set by key-value args', () => {
+    const deposit = parseOk(['storage', 'deposit', 'item_id=ore_iron', '2']);
+    expect(normalizeParsedPayload('storage', deposit.payload)).toMatchObject({
+      action: 'deposit',
+      item_id: 'ore_iron',
+      quantity: '2',
+    });
+
+    const loot = parseOk(['storage', 'loot', 'wreck_id=wreck_1', 'ore_iron', '2']);
+    expect(normalizeParsedPayload('storage', loot.payload)).toMatchObject({
+      action: 'loot',
+      wreck_id: 'wreck_1',
+      item_id: 'ore_iron',
+      quantity: '2',
+    });
+  });
+
+  test('storage rejects duplicate action declarations', () => {
+    expect(parseArgs(['storage', 'view', 'action=deposit'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'action',
+          message: 'Storage action can only be specified once.',
+          code: 'invalid_field_type',
+        },
+      ],
+    });
   });
 
   test('faction_declare_war with reason', () => {

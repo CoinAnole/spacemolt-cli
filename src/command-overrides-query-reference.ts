@@ -43,7 +43,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'List cargo item IDs, quantities, and cargo capacity. Table output hides empty stacks and sorts by quantity.',
     example: 'spacemolt get_cargo --items aluminum_ore,steel_plate --top 10',
-    seeAlso: ['sell', 'jettison', 'deposit_items'],
+    seeAlso: ['sell', 'jettison', 'storage'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_cargo',
     aliases: {

@@ -96,10 +96,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   faction_accept_peace: { faction: ['target_faction_id', 'id'] },
   sell: { item: ['item_id', 'id'] },
   buy: { item: ['item_id', 'id'] },
-  // Preserve canonical storage item IDs like fuel; cached item names can resolve to different cargo items.
-  storage: {},
-  deposit_items: { item: ['item_id', 'id'] },
-  withdraw_items: { item: ['item_id', 'id'] },
+  // Payload preparation narrows storage resolution by action; these broad fields support completion hints.
+  storage: { poi: ['station_id'], item: ['item_id', 'id'], player: ['target'], wreck: ['wreck_id'] },
   jettison: { item: ['item_id', 'id'] },
   use_item: { item: ['item_id', 'id'] },
   create_sell_order: { item: ['item_id', 'id'] },
@@ -130,8 +128,6 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   sell_ship: { ship: ['ship_id', 'id'] },
   scrap_ship: { ship: ['ship_id', 'id'] },
   list_ship_for_sale: { ship: ['ship_id', 'id'] },
-  view_storage: { poi: ['station_id'] },
-  view_faction_storage: { poi: ['station_id'] },
 };
 
 interface Clock {
@@ -549,7 +545,7 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     system: ['get_system', 'get_map'],
     item: ['get_cargo', 'view_market', 'catalog type=items'],
     player: ['get_nearby', 'get_system_agents'],
-    ship: ['list_ships', 'view_storage'],
+    ship: ['list_ships', 'storage view'],
     faction: ['faction_list', 'faction_info'],
     drone: ['list_drones'],
     wreck: ['get_wrecks'],

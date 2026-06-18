@@ -23,8 +23,10 @@ export interface CommandRunResult {
 
 function stripClientOnlyFields(
   payload: Record<string, unknown>,
+  command?: string,
   commandConfig?: Pick<CommandConfig, 'clientOnlyFields'>,
 ): Record<string, unknown> {
+  if (command === 'storage') return stripStorageClientOnlyFields(payload);
   if (!commandConfig?.clientOnlyFields?.length) return payload;
   const stripped = { ...payload };
   for (const field of commandConfig.clientOnlyFields) delete stripped[field];
@@ -38,7 +40,7 @@ export async function runCommand(
   client: SpaceMoltClient = defaultClient,
   commandConfig?: CommandConfig,
 ): Promise<CommandRunResult> {
-  const requestPayload = stripClientOnlyFields(payload, commandConfig);
+  const requestPayload = stripClientOnlyFields(payload, command, commandConfig);
   const requestCommandConfig = routeCommandConfigForPayload(command, commandConfig, requestPayload);
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, requestPayload) : null;
   const response = options.dryRun
@@ -67,7 +69,7 @@ function routeCommandConfigForPayload(
 ): CommandConfig | undefined {
   if (command !== 'storage' || !commandConfig) return commandConfig;
   const action = typeof payload.action === 'string' ? payload.action : undefined;
-  if (action !== 'loot' && action !== 'jettison') return commandConfig;
+  if (!action || !STORAGE_ROUTE_ACTIONS.has(action)) return commandConfig;
   return {
     ...commandConfig,
     route: {
@@ -75,6 +77,19 @@ function routeCommandConfigForPayload(
       action,
     },
   };
+}
+
+const STORAGE_ROUTE_ACTIONS = new Set(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
+
+function stripStorageClientOnlyFields(payload: Record<string, unknown>): Record<string, unknown> {
+  const action = typeof payload.action === 'string' ? payload.action : undefined;
+  if (action !== 'view') return payload;
+  const stripped = { ...payload };
+  if (stripped.target === undefined) stripped.target = 'self';
+  delete stripped.item_id;
+  delete stripped.search;
+  delete stripped.items;
+  return stripped;
 }
 
 export async function renderResponse(
@@ -197,13 +212,15 @@ function prepareHumanDisplay(
     return { command: 'get_status_summary', response, noTimestamp: true };
   }
 
-  if (!isDepositItemsCarrierLoad(commandRun, response)) {
-    return { command: commandRun.displayCommand, response };
+  const displayResponse = enrichStorageViewDisplayResponse(commandRun, response);
+
+  if (!isDepositItemsCarrierLoad(commandRun, displayResponse)) {
+    return { command: commandRun.displayCommand, response: displayResponse };
   }
 
   return {
     command: 'deposit_items_carrier_load',
-    response: enrichCarrierLoadDisplayResponse(commandRun, response, displayOptions.sessionPath),
+    response: enrichCarrierLoadDisplayResponse(commandRun, displayResponse, displayOptions.sessionPath),
   };
 }
 
@@ -218,14 +235,15 @@ function shouldUseGetStatusSummary(commandRun: CommandRunResult, displayOptions:
 }
 
 function isDepositItemsCarrierLoad(commandRun: CommandRunResult, response: APIResponse): boolean {
-  if (commandRun.command !== 'deposit_items') return false;
+  if (commandRun.command === 'storage' && commandRun.payload?.action !== 'deposit') return false;
+  if (commandRun.command !== 'deposit_items' && commandRun.command !== 'storage') return false;
 
   const payload = commandRun.payload ?? {};
   if (payload.target !== 'self') return false;
   if (Number(payload.quantity) !== 1) return false;
 
   const result = getStructuredResult(response);
-  if (!result || result.action !== 'deposit_items') return false;
+  if (!result || (result.action !== 'deposit_items' && result.action !== 'deposit')) return false;
 
   const payloadItemId = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const responseItemId = typeof result.item_id === 'string' ? result.item_id : undefined;
@@ -234,6 +252,16 @@ function isDepositItemsCarrierLoad(commandRun: CommandRunResult, response: APIRe
   if (payloadItemId && responseItemId && payloadItemId !== responseItemId) return false;
 
   return true;
+}
+
+function enrichStorageViewDisplayResponse(commandRun: CommandRunResult, response: APIResponse): APIResponse {
+  if (commandRun.command !== 'storage') return response;
+  if (commandRun.payload?.action !== 'view') return response;
+  const target = commandRun.payload.target;
+  if (target === undefined) return response;
+  const result = getStructuredResult(response);
+  if (!result || result.target !== undefined) return response;
+  return { ...response, structuredContent: { ...result, target } };
 }
 
 function isUuidLike(value: string): boolean {
@@ -283,7 +311,7 @@ function findCachedShipHint(shipId: string, sessionPath?: string) {
 
 function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {
   if (command === 'get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
-  if (!payload || !['view_storage', 'view_faction_storage', 'view_market'].includes(command)) return response;
+  if (!payload || !shouldApplyItemDisplayFilters(command, payload)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const searchFilter = typeof payload.search === 'string' ? payload.search : undefined;
   const itemsFilter = parseItemIdFilter(payload.items);
@@ -301,10 +329,15 @@ function applyDisplayFilters(command: string, response: APIResponse, payload?: R
   return { ...response, structuredContent: nextStructuredContent };
 }
 
+function shouldApplyItemDisplayFilters(command: string, payload: Record<string, unknown>): boolean {
+  if (command === 'view_market') return true;
+  return command === 'storage' && payload.action === 'view';
+}
+
 function parseItemIdFilter(value: unknown): Set<string> | undefined {
-  if (typeof value !== 'string') return undefined;
-  const itemIds = value
-    .split(',')
+  const values = Array.isArray(value) ? value : [value];
+  const itemIds = values
+    .flatMap((item) => (typeof item === 'string' ? item.split(',') : []))
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
   return itemIds.length ? new Set(itemIds) : undefined;

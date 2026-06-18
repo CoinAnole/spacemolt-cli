@@ -130,27 +130,87 @@ describe('CLI local usability behavior', () => {
   test('storage direct transfer source is accepted without raw mode', async () => {
     const deposit = await runDirect([
       '--dry-run',
-      'deposit_items',
-      'item_id=ore_iron',
-      'quantity=1',
+      'storage',
+      'deposit',
+      'ore_iron',
+      '1',
       'source=faction',
       'target=self',
     ]);
     expect(deposit.exitCode).toBe(0);
+    expect(deposit.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
+    expect(deposit.stdout).toContain('"action": "deposit"');
     expect(deposit.stdout).toContain('"source": "faction"');
     expect(deposit.stdout).toContain('"target": "self"');
 
     const withdraw = await runDirect([
       '--dry-run',
-      'withdraw_items',
-      'item_id=ore_iron',
-      'quantity=1',
+      'storage',
+      'withdraw',
+      'ore_iron',
+      '1',
       'source=faction',
       'target=self',
     ]);
     expect(withdraw.exitCode).toBe(0);
+    expect(withdraw.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/withdraw"');
+    expect(withdraw.stdout).toContain('"action": "withdraw"');
     expect(withdraw.stdout).toContain('"source": "faction"');
     expect(withdraw.stdout).toContain('"target": "self"');
+  });
+
+  test('storage view routes through storage view and strips client-only filters', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      'storage',
+      'view',
+      'nexus_base',
+      '--item',
+      'iron_ore',
+      '--items',
+      'iron_ore,fuel_cell',
+      '--search',
+      'iron',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/view"');
+    expect(result.stdout).toContain('"action": "view"');
+    expect(result.stdout).toContain('"station_id": "nexus_base"');
+    expect(result.stdout).toContain('"target": "self"');
+    expect(result.stdout).not.toContain('"item_id"');
+    expect(result.stdout).not.toContain('"items"');
+    expect(result.stdout).not.toContain('"search"');
+
+    const faction = await runDirect(['--dry-run', 'storage', 'view', 'nexus_base', 'target=faction']);
+    expect(faction.exitCode).toBe(0);
+    expect(faction.stdout).toContain('"target": "faction"');
+  });
+
+  test('storage dry-run routes positional and action forms for all storage actions', async () => {
+    const cases: Array<{ args: string[]; action: string }> = [
+      { args: ['storage', 'view', 'nexus_base'], action: 'view' },
+      { args: ['storage', 'action=view', 'nexus_base'], action: 'view' },
+      { args: ['storage', 'deposit', 'ore_iron', '2'], action: 'deposit' },
+      { args: ['storage', 'action=deposit', 'ore_iron', '2'], action: 'deposit' },
+      { args: ['storage', 'withdraw', 'ore_iron', '2'], action: 'withdraw' },
+      { args: ['storage', 'action=withdraw', 'ore_iron', '2'], action: 'withdraw' },
+      { args: ['storage', 'loot', 'wreck_1', 'ore_iron', '2'], action: 'loot' },
+      { args: ['storage', 'action=loot', 'wreck_1', 'ore_iron', '2'], action: 'loot' },
+      { args: ['storage', 'jettison', 'ore_iron', '2'], action: 'jettison' },
+      { args: ['storage', 'action=jettison', 'ore_iron', '2'], action: 'jettison' },
+    ];
+
+    for (const testCase of cases) {
+      const result = await runDirect(['--dry-run', ...testCase.args]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(
+        `"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/${testCase.action}"`,
+      );
+      expect(result.stdout).toContain(`"action": "${testCase.action}"`);
+    }
   });
 
   test('patch-note storage fuel deposit command is accepted without raw mode', async () => {
@@ -176,6 +236,7 @@ describe('CLI local usability behavior', () => {
     const result = await runDirect([
       '--dry-run',
       'storage',
+      'action=deposit',
       'target=faction',
       '--payload-json',
       '{"items":[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]}',

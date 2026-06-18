@@ -15,5 +15,7 @@
       "modules": 3,
       "cargo_used": 10
     }
-  ]
+  ],
+  "action": "view",
+  "target": "self"
 }

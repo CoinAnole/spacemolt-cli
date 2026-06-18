@@ -67,23 +67,58 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   jettison: {
+    usage: '<item_id> <quantity>',
     category: 'Cargo',
     apiRoute: 'POST /api/v2/spacemolt/jettison',
     positionals: ['item_id', 'quantity'],
   },
   storage: {
-    usage: 'action=deposit|loot|jettison [item_id=...] [quantity=N] [wreck_id=...] [module_id=...]',
-    description: 'Run the unified storage command for deposits, looting wrecks, and jettisoning cargo.',
-    example: 'spacemolt storage action=loot wreck_id=wreck_1 item_id=ore_iron quantity=2',
-    discoverWith: ['view_storage', 'view_faction_storage', 'get_wrecks', 'get_cargo'],
-    seeAlso: ['view_faction_storage', 'deposit_items', 'withdraw_items', 'loot_wreck', 'jettison'],
+    usage:
+      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction]',
+    description: 'Run unified station storage operations: view, deposit, withdraw, loot, or jettison.',
+    example: 'spacemolt storage view target=faction --items iron_ore,fuel_cell',
+    discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
+    seeAlso: ['get_cargo', 'loot_wreck', 'salvage_wreck', 'jettison'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
+    positionals: [
+      'action',
+      'station_id',
+      'item_id',
+      'quantity',
+      'target',
+      'source',
+      'wreck_id',
+      'module_id',
+      'message',
+      'items',
+      'search',
+      'credits',
+    ],
+    aliases: {
+      action: 'action',
+      item: 'item_id',
+      recipient: 'target',
+      ship_id: 'item_id',
+    },
     schemaExtensions: {
       action: {
         type: 'string',
-        enum: ['deposit', 'loot', 'jettison'],
-        description: 'Storage operation. Use loot for wreck cargo/modules or jettison for cargo disposal.',
+        enum: ['view', 'deposit', 'withdraw', 'loot', 'jettison'],
+        description: 'Storage operation to run.',
+      },
+      search: {
+        type: 'string',
+        description:
+          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
+      },
+      items: {
+        type: 'string',
+        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
+      },
+      source: {
+        type: 'string',
+        description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
       },
       wreck_id: {
         type: 'string',
@@ -93,75 +128,12 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
         type: 'string',
         description: 'Optional module instance ID for action=loot.',
       },
-    },
-  },
-  storage_loot: {
-    usage: '[item_id] [quantity] [wreck_id=...] [module_id=...]',
-    description: 'Loot cargo or modules from a wreck through the storage tool.',
-    example: 'spacemolt storage_loot ore_iron 2 wreck_id=wreck_1',
-    discoverWith: ['storage', 'get_wrecks'],
-    seeAlso: ['storage', 'loot_wreck', 'get_wrecks'],
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/loot',
-  },
-  storage_jettison: {
-    usage: '<item_id> <quantity>',
-    description: 'Jettison cargo through the storage tool.',
-    example: 'spacemolt storage_jettison ore_iron 50',
-    discoverWith: ['storage', 'get_cargo'],
-    seeAlso: ['storage', 'jettison', 'get_cargo'],
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/jettison',
-  },
-  view_storage: {
-    usage: '[station_id] [--item item_id] [--items item_id,item_id] [--search text]',
-    description: 'Show personal station storage. Omit station_id for the current station.',
-    example: 'spacemolt view_storage --items iron_ore,fuel_cell',
-    discoverWith: ['get_status'],
-    seeAlso: ['deposit_items', 'withdraw_items'],
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/view',
-    positionals: ['station_id'],
-    aliases: {
-      item: 'item_id',
-    },
-    schemaExtensions: {
-      search: {
-        type: 'string',
-        description:
-          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
-      },
-      items: {
-        type: 'string',
-        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
+      credits: {
+        type: 'integer',
+        description: 'Credits to gift to a player or donate to an empire treasury.',
       },
     },
     clientOnlyFields: ['search', 'items'],
-  },
-  view_faction_storage: {
-    usage:
-      '[station_id] [--item item_id] [--items item_id,item_id] [--search text]  (view faction storage, omit for current station)',
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/view',
-    positionals: ['station_id'],
-    aliases: {
-      item: 'item_id',
-    },
-    schemaExtensions: {
-      search: {
-        type: 'string',
-        description:
-          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
-      },
-      items: {
-        type: 'string',
-        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
-      },
-    },
-    clientOnlyFields: ['search', 'items'],
-    defaults: {
-      target: 'faction',
-    },
   },
   faction_deposit_credits: {
     usage: '<amount>  (deposit credits to faction treasury)',
@@ -181,55 +153,6 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     defaults: {
       source: 'faction',
       item_id: 'credits',
-    },
-  },
-  deposit_items: {
-    usage: '<item_id_or_cached_name> <quantity>  (use get_ship or get_cargo to cache cargo)',
-    description: 'Move cargo into station storage.',
-    example: 'spacemolt deposit_items ore_iron 50',
-    discoverWith: ['get_cargo', 'view_storage'],
-    seeAlso: ['withdraw_items', 'view_storage'],
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
-    positionals: ['item_id', 'quantity'],
-    schemaExtensions: {
-      source: {
-        type: 'string',
-        description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
-      },
-    },
-  },
-  withdraw_items: {
-    usage: '<item_id_or_cached_name> <quantity>  (use view_storage to cache stored items)',
-    description: 'Move station storage items into cargo.',
-    example: 'spacemolt withdraw_items ore_iron 50',
-    discoverWith: ['view_storage', 'get_cargo'],
-    seeAlso: ['deposit_items', 'get_cargo'],
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
-    positionals: ['item_id', 'quantity'],
-    schemaExtensions: {
-      source: {
-        type: 'string',
-        description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
-      },
-    },
-  },
-  send_gift: {
-    usage:
-      '<recipient> [item_id=... quantity=...] [credits=...] [ship_id=...] [message="..."]  (async transfer to their storage here)',
-    category: 'Station storage',
-    apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
-    positionals: ['recipient', 'item_id', 'quantity', 'credits', 'message', 'ship_id'],
-    aliases: {
-      recipient: 'target',
-      ship_id: 'item_id',
-    },
-    schemaExtensions: {
-      credits: {
-        type: 'integer',
-        description: 'Credits to gift to a player or donate to an empire treasury.',
-      },
     },
   },
   create_sell_order: {

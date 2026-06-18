@@ -57,7 +57,14 @@ export function buildGeneratedCommandConfig(generated: GeneratedApiRoute): Comma
   };
 }
 
+const SUPPRESSED_GENERATED_ROUTE_SIGNATURES = new Set([
+  'POST /api/v2/spacemolt_storage/jettison',
+  'POST /api/v2/spacemolt_storage/loot',
+  'POST /api/v2/spacemolt_storage/view',
+]);
+
 function shouldExposeGeneratedRoute(signature: string, generated: GeneratedApiRoute): boolean {
+  if (SUPPRESSED_GENERATED_ROUTE_SIGNATURES.has(signature)) return false;
   if (generated.cli?.hidden) return false;
   if (signature.endsWith('/help')) return false;
   if (generated.route.action === 'help') return false;

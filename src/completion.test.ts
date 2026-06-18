@@ -49,6 +49,13 @@ const cachedIdHints: IdHint[] = [
     sourceCommand: 'get_nearby',
     seenAt: '2026-05-18T00:03:00.000Z',
   },
+  {
+    kind: 'wreck',
+    id: 'wreck_iron',
+    name: 'Iron Wreck',
+    sourceCommand: 'get_wrecks',
+    seenAt: '2026-05-18T00:04:00.000Z',
+  },
 ];
 
 async function tempSessionWithCachedIds(): Promise<string> {
@@ -316,6 +323,53 @@ describe('shell completion generation', () => {
     ).toEqual([]);
     expect(
       completeWords({ shell: 'fish', words: ['spacemolt', 'sell', '--format', 'ir'], current: 'ir' }, { sessionPath }),
+    ).toEqual([]);
+  });
+
+  test('runtime completion uses storage action-specific positional fields', async () => {
+    const sessionPath = await tempSessionWithCachedIds();
+
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'storage', 'deposit', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'storage', 'action=deposit', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'storage', 'view', 'ea'], current: 'ea' }, { sessionPath }),
+    ).toEqual([{ value: 'sol_earth', description: 'Earth' }]);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'storage', 'loot', 'ir'], current: 'ir' }, { sessionPath }),
+    ).toEqual([{ value: 'wreck_iron', description: 'Iron Wreck' }]);
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'storage', 'loot', 'wreck_iron', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'storage', 'loot', 'wreck_id=wreck_1', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'storage', 'action=loot', 'wreck_id=wreck_1', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'storage', 'deposit', 'item_id=ore_iron', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
     ).toEqual([]);
   });
 
@@ -613,9 +667,10 @@ describe('shell completion generation', () => {
     const bash = generateCompletion('bash');
 
     expect(fish).toContain('__fish_seen_subcommand_from analyze_market" -a page=');
-    expect(fish).toContain('__fish_seen_subcommand_from send_gift" -a credits=');
+    expect(fish).toContain('__fish_seen_subcommand_from storage" -a credits=');
     expect(bashCommandCaseBody(bash, 'analyze_market')).toContain('page=');
-    expect(bashCommandCaseBody(bash, 'send_gift')).toContain('credits=');
+    expect(bashCommandCaseBody(bash, 'storage')).toContain('credits=');
+    expect(bashCommandCaseBody(bash, 'storage')).toContain('view deposit withdraw loot jettison');
   });
 
   test('bash and fish suggest boolean fields as key-value inserts instead of bare values', () => {

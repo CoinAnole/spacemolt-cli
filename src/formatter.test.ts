@@ -834,7 +834,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stderr).toContain('Ambiguous field "credits". Use one of: faction.credits, player.credits');
   });
 
-  test('view_storage item filter narrows displayed rows without wrapping output', async () => {
+  test('storage view item filter narrows displayed rows without wrapping output', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
@@ -846,7 +846,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'view_storage', displayCommand: 'view_storage', payload: { item_id: 'iron_ore' } },
+      { command: 'storage', displayCommand: 'storage', payload: { action: 'view', item_id: 'iron_ore' } },
     );
 
     expect(exitCode).toBe(0);
@@ -857,7 +857,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Fuel Cell');
   });
 
-  test('view_storage displays stored ship custom names', async () => {
+  test('storage view displays stored ship custom names', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
@@ -875,7 +875,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'view_storage', displayCommand: 'view_storage' },
+      { command: 'storage', displayCommand: 'storage', payload: { action: 'view' } },
     );
 
     expect(exitCode).toBe(0);
@@ -884,7 +884,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('prospector');
   });
 
-  test('deposit_items with a ship UUID and self target renders carrier bay load confirmation', async () => {
+  test('storage deposit with a ship UUID and self target renders carrier bay load confirmation', async () => {
     const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
@@ -903,9 +903,9 @@ describe('structuredContent output mode precedence', () => {
       },
       {},
       {
-        command: 'deposit_items',
-        displayCommand: 'deposit_items',
-        payload: { item_id: shipId, quantity: 1, target: 'self' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'deposit', item_id: shipId, quantity: 1, target: 'self' },
       },
     );
 
@@ -920,7 +920,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Storage Total: 3');
   });
 
-  test('deposit_items carrier bay load falls back to remaining slots when capacity is absent', async () => {
+  test('storage deposit carrier bay load falls back to remaining slots when capacity is absent', async () => {
     const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
@@ -935,9 +935,9 @@ describe('structuredContent output mode precedence', () => {
       },
       {},
       {
-        command: 'deposit_items',
-        displayCommand: 'deposit_items',
-        payload: { item_id: shipId, quantity: 1, target: 'self' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'deposit', item_id: shipId, quantity: 1, target: 'self' },
       },
     );
 
@@ -949,7 +949,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Storage Total: 3');
   });
 
-  test('deposit_items carrier bay display specialization does not alter structured output', async () => {
+  test('storage deposit carrier bay display specialization does not alter structured output', async () => {
     const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
     const structuredContent = {
       action: 'deposit_items',
@@ -963,9 +963,9 @@ describe('structuredContent output mode precedence', () => {
       { structuredContent },
       { structured: true },
       {
-        command: 'deposit_items',
-        displayCommand: 'deposit_items',
-        payload: { item_id: shipId, quantity: 1, target: 'self' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'deposit', item_id: shipId, quantity: 1, target: 'self' },
       },
     );
 
@@ -974,7 +974,7 @@ describe('structuredContent output mode precedence', () => {
     expect(JSON.parse(stdout)).toEqual(structuredContent);
   });
 
-  test('view_faction_storage search filter narrows displayed rows', async () => {
+  test('storage view faction search filter narrows displayed rows', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
@@ -986,7 +986,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'view_faction_storage', displayCommand: 'view_faction_storage', payload: { search: 'iron' } },
+      { command: 'storage', displayCommand: 'storage', payload: { action: 'view', target: 'faction', search: 'iron' } },
     );
 
     expect(exitCode).toBe(0);
@@ -995,7 +995,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Copper Ore');
   });
 
-  test('view_faction_storage prints bunker fuel and storage hint', async () => {
+  test('storage view faction prints bunker fuel and storage hint', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
@@ -1008,7 +1008,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'view_faction_storage', displayCommand: 'view_faction_storage' },
+      { command: 'storage', displayCommand: 'storage', payload: { action: 'view', target: 'faction' } },
     );
 
     expect(exitCode).toBe(0);

@@ -47,6 +47,20 @@ function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help');
 }
 
+const UNIFIED_STORAGE_DYNAMIC_ACTIONS = ['view', 'loot', 'jettison'] as const;
+
+function unifiedStorageDynamicRoutes(): string[] {
+  const storageRoute = V2_TOOL_MAP.storage;
+  const storageActionEnum = COMMANDS.storage?.schema?.action?.enum || [];
+  if (!storageRoute || storageRoute.tool !== 'spacemolt_storage' || (storageRoute.method || 'POST') !== 'POST') {
+    return [];
+  }
+
+  return UNIFIED_STORAGE_DYNAMIC_ACTIONS.filter((action) => storageActionEnum.includes(action)).map(
+    (action) => `POST /api/v2/spacemolt_storage/${action}`,
+  );
+}
+
 async function fetchLiveOpenApiSpec(options: FetchLiveOpenApiSpecOptions = {}): Promise<OpenApiSpec> {
   const fetchImpl = options.fetchImpl || fetch;
   const fetchLiveEtagFallback = options.fetchLiveEtagFallback || fetchLiveOpenApiEtagWithCurl;
@@ -303,7 +317,17 @@ describe('api sync', () => {
         `Stale V2 mappings in client.ts (not in v2 OpenAPI):\n  ${staleMappings.join('\n  ')}\n\nFix the tool/action pair or move the route to UNDOCUMENTED_IN_SPEC if the spec is behind.`,
       ).toEqual([]);
 
-      const mappedRoutes = new Set(Object.values(v2ToolMap).map((mapping) => `${mapping.method} ${mapping.route}`));
+      const dynamicStorageRoutes = unifiedStorageDynamicRoutes();
+      const staleDynamicStorageRoutes = dynamicStorageRoutes.filter((route) => !v2Routes.has(route));
+      expect(
+        staleDynamicStorageRoutes,
+        `Unified storage dynamic route coverage references routes missing from v2 OpenAPI:\n  ${staleDynamicStorageRoutes.join('\n  ')}`,
+      ).toEqual([]);
+
+      const mappedRoutes = new Set([
+        ...Object.values(v2ToolMap).map((mapping) => `${mapping.method} ${mapping.route}`),
+        ...dynamicStorageRoutes,
+      ]);
       const unmappedSpecRoutes = [...v2Routes]
         .filter((route) => !isInfrastructureSpecRoute(route))
         .filter((route) => !mappedRoutes.has(route));
@@ -320,6 +344,19 @@ describe('api sync', () => {
     },
     15_000,
   );
+
+  test('unified storage dynamic route coverage is narrow and schema-backed', () => {
+    expect(V2_TOOL_MAP.storage).toMatchObject({
+      tool: 'spacemolt_storage',
+      method: 'POST',
+    });
+    expect(COMMANDS.storage?.schema?.action?.enum).toEqual(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
+    expect(unifiedStorageDynamicRoutes()).toEqual([
+      'POST /api/v2/spacemolt_storage/view',
+      'POST /api/v2/spacemolt_storage/loot',
+      'POST /api/v2/spacemolt_storage/jettison',
+    ]);
+  });
 
   test.skipIf(skip)(
     'generated OpenAPI metadata version matches cached spec',

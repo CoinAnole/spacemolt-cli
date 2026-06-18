@@ -158,6 +158,145 @@ describe('response renderer', () => {
     expect(calls).toEqual([{ command: 'view_market', payload: { category: 'ore' } }]);
   });
 
+  test('runCommand routes every storage action through its action endpoint', async () => {
+    const calls: Array<{ command: string; routeAction: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(
+        command: string,
+        config: { route?: { action?: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, routeAction: config.route?.action, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    for (const action of ['view', 'deposit', 'withdraw', 'loot', 'jettison']) {
+      await runCommand(
+        'storage',
+        { action, item_id: 'ore_iron', quantity: '2' },
+        baseOptions,
+        client,
+        BUNDLED_COMMAND_REGISTRY.commands.storage,
+      );
+    }
+
+    expect(calls.map((call) => call.routeAction)).toEqual(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
+  });
+
+  test('runCommand strips storage view filters before API execution', async () => {
+    const calls: Array<{ command: string; routeAction: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(
+        command: string,
+        config: { route?: { action?: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, routeAction: config.route?.action, payload });
+        return { structuredContent: { items: [] } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    await runCommand(
+      'storage',
+      {
+        action: 'view',
+        station_id: 'nexus_base',
+        item_id: 'iron_ore',
+        items: ['iron_ore', 'fuel_cell'],
+        search: 'iron',
+      },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.storage,
+    );
+
+    expect(calls).toEqual([
+      {
+        command: 'storage',
+        routeAction: 'view',
+        payload: { action: 'view', station_id: 'nexus_base', target: 'self' },
+      },
+    ]);
+  });
+
+  test('runCommand preserves explicit storage view target before API execution', async () => {
+    const calls: Array<{ command: string; routeAction: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(
+        command: string,
+        config: { route?: { action?: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, routeAction: config.route?.action, payload });
+        return { structuredContent: { items: [] } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    await runCommand(
+      'storage',
+      { action: 'view', station_id: 'nexus_base', target: 'faction' },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.storage,
+    );
+
+    expect(calls).toEqual([
+      {
+        command: 'storage',
+        routeAction: 'view',
+        payload: { action: 'view', station_id: 'nexus_base', target: 'faction' },
+      },
+    ]);
+  });
+
+  test('runCommand preserves storage bulk items arrays for API execution', async () => {
+    const calls: Array<{ command: string; routeAction: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      async executeCommandConfig(
+        command: string,
+        config: { route?: { action?: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, routeAction: config.route?.action, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const items = [
+      { item_id: 'ore_iron', quantity: 1 },
+      { item_id: 'ore_copper', quantity: 2 },
+    ];
+
+    await runCommand(
+      'storage',
+      { action: 'deposit', target: 'faction', items },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.storage,
+    );
+
+    await runCommand(
+      'storage',
+      { action: 'withdraw', target: 'self', source: 'faction', items },
+      baseOptions,
+      client,
+      BUNDLED_COMMAND_REGISTRY.commands.storage,
+    );
+
+    expect(calls).toEqual([
+      {
+        command: 'storage',
+        routeAction: 'deposit',
+        payload: { action: 'deposit', target: 'faction', items },
+      },
+      {
+        command: 'storage',
+        routeAction: 'withdraw',
+        payload: { action: 'withdraw', target: 'self', source: 'faction', items },
+      },
+    ]);
+  });
+
   test('renderResponse prints compact get_status summary only for default human output', async () => {
     const summaryCapture = fakeContext();
     const summaryExitCode = await renderResponse(
@@ -1071,13 +1210,13 @@ describe('response renderer', () => {
     expect(originalStoredShip.location).toBe('stored at Nova Terra Central');
   });
 
-  test('renderResponse applies view_storage item filter to --json output', async () => {
+  test('renderResponse applies storage view item filter to --json output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'view_storage',
-        displayCommand: 'view_storage',
-        payload: { item_id: 'iron_ore' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', item_id: 'iron_ore' },
         response: {
           structuredContent: {
             items: [
@@ -1098,13 +1237,13 @@ describe('response renderer', () => {
     expect(parsed.structuredContent.items).toEqual([expect.objectContaining({ item_id: 'iron_ore' })]);
   });
 
-  test('renderResponse applies view_storage search filter to --structured output', async () => {
+  test('renderResponse applies storage view search filter to --structured output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'view_storage',
-        displayCommand: 'view_storage',
-        payload: { search: 'fuel' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', search: 'fuel' },
         response: {
           structuredContent: {
             items: [
@@ -1125,13 +1264,13 @@ describe('response renderer', () => {
     expect(parsed.items).toEqual([expect.objectContaining({ item_id: 'fuel_cell' })]);
   });
 
-  test('renderResponse applies view_storage items filter to --structured output', async () => {
+  test('renderResponse applies storage view items filter to --structured output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'view_storage',
-        displayCommand: 'view_storage',
-        payload: { items: 'iron_ore,steel_plate' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', items: 'iron_ore,steel_plate' },
         response: {
           structuredContent: {
             items: [
@@ -1156,13 +1295,41 @@ describe('response renderer', () => {
     ]);
   });
 
-  test('renderResponse applies view_storage items filter for faction target table output', async () => {
+  test('renderResponse applies storage view array items filter to --structured output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'view_storage',
-        displayCommand: 'view_storage',
-        payload: { target: 'faction', items: 'fuel_cell,steel_plate' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', items: ['iron_ore', 'fuel_cell'] },
+        response: {
+          structuredContent: {
+            items: [
+              { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
+              { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
+              { item_id: 'steel_plate', item_name: 'Steel Plate', quantity: 7 },
+            ],
+          },
+        },
+      },
+      { ...baseOptions, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(capture.text());
+    expect(parsed.items.map((item: { item_id: string }) => item.item_id)).toEqual(['iron_ore', 'fuel_cell']);
+    expect(parsed.total_items).toBe(3);
+  });
+
+  test('renderResponse applies storage view items filter for faction target table output', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', target: 'faction', items: 'fuel_cell,steel_plate' },
         response: {
           structuredContent: {
             base_id: 'nova_terra_central',
@@ -1193,9 +1360,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'view_storage',
-        displayCommand: 'view_storage',
-        payload: { search: 'Copper Wiring,Steel Plate' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', search: 'Copper Wiring,Steel Plate' },
         response: {
           structuredContent: {
             items: [
@@ -1223,9 +1390,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'view_storage',
-        displayCommand: 'view_storage',
-        payload: { search: 'copper wiring' },
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', search: 'copper wiring' },
         response: {
           structuredContent: {
             items: [

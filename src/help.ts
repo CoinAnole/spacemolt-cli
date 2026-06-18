@@ -75,6 +75,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
 ];
 
 const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
+  storage: ['jettison', 'loot_wreck', 'salvage_wreck'],
   faction: [
     'faction_build',
     'faction_facility_build',
@@ -111,11 +112,15 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
   return registry.allCommands ?? (source as CommandHelpMap);
 }
 
-function structuredPayloadFields(config: CommandConfig | LocalCommandConfig): string[] {
-  if (!('schema' in config) || !config.schema) return [];
-  return Object.entries(config.schema)
-    .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
-    .map(([field]) => field);
+function structuredPayloadFields(command: string, config: CommandConfig | LocalCommandConfig): string[] {
+  const fields =
+    'schema' in config && config.schema
+      ? Object.entries(config.schema)
+          .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
+          .map(([field]) => field)
+      : [];
+  if (command === 'storage' && !fields.includes('items')) fields.push('items');
+  return fields;
 }
 
 function structuredPayloadExample(command: string, field: string): string {
@@ -427,7 +432,7 @@ export function showCommandHelp(
       const description = schema.description ? ` - ${schema.description}` : '';
       write(`  ${field}${values}${description}`);
     }
-    const structuredFields = structuredPayloadFields(config);
+    const structuredFields = structuredPayloadFields(command, config);
     if (structuredFields.length > 0) {
       write(`\n${c.bright}Structured payloads:${c.reset}`);
       write(`  Use --payload-json for array/object fields: ${structuredFields.join(', ')}.`);
@@ -605,7 +610,7 @@ function printStateSection(state: PlayerState, writer?: CliWriter, options?: Hel
     write(`    spacemolt view_market         # Check market prices`);
     write(`    spacemolt refuel              # Refuel ship`);
     write(`    spacemolt repair              # Repair hull damage`);
-    write(`    spacemolt view_storage        # Access station storage`);
+    write(`    spacemolt storage view        # Access station storage`);
     write(`    spacemolt sale_ship           # Buy ships`);
     write(`    spacemolt facility_list       # Check base facilities`);
     write(`    spacemolt undock              # Leave station when ready`);
@@ -1002,15 +1007,16 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     citizenship_withdraw <empire>   Withdraw application
 
   ${c.cyan}Storage:${c.reset}
-    view_storage [station_id]        Personal storage at station (or current)
-    view_faction_storage              Faction storage at current station
-    deposit_items <item_id> <qty>     Cargo -> personal storage
-    withdraw_items <item_id> <qty>    Personal storage -> cargo
-    send_gift <recipient> [item_id=.. quantity=.. credits=.. ship_id=..] [message=".."]
+    storage view [station_id] [target=self|faction] [--items item_id,item_id] [--search text]
+    storage deposit <item_id> <qty> [target=self|faction|player] [source=cargo|storage|faction]
+    storage withdraw <item_id> <qty> [source=storage|faction] [target=self]
+    storage loot [wreck_id] [item_id] [quantity]
+    storage jettison <item_id> <qty>
+    jettison <item_id> <qty>     Standalone cargo jettison
+    loot_wreck <wreck_id> <item_id> [quantity]  Standalone wreck loot
+    salvage_wreck <wreck_id>     Standalone wreck salvage
     faction_deposit_credits <amount>  Wallet -> faction treasury
     faction_withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
-    NOTE: deposit_items source=faction target=self for faction->personal direct transfer
-    NOTE: deposit_items source=storage target=faction for personal->faction direct transfer
 
   ${c.cyan}Market / Exchange:${c.reset}
     view_market [item_id] [category]  Order book (use item_id for depth, category for filter)

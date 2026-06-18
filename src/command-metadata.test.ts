@@ -408,6 +408,8 @@ describe('command metadata', () => {
     expect(help).toContain('deliver_to (cargo|storage)');
     expect(help).toContain('CLI default is storage');
     expect(help).toContain('deliver_to=storage');
+    expect(help).toContain('storage');
+    expect(help).not.toContain('view_storage');
   });
 
   test('deploy_drone help advertises bulk deploy mode', () => {
@@ -469,7 +471,18 @@ describe('command metadata', () => {
   test('full help does not advertise removed commands', () => {
     const help = captureFullHelp();
 
-    expect(help).not.toContain('claim_commission');
+    for (const command of [
+      'claim_commission',
+      'view_storage',
+      'view_faction_storage',
+      'deposit_items',
+      'withdraw_items',
+      'send_gift',
+      'storage_loot',
+      'storage_jettison',
+    ]) {
+      expect(help).not.toContain(command);
+    }
   });
 
   test('notifications is curated instead of exposed as a generated fallback', () => {

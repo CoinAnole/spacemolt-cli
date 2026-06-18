@@ -12,7 +12,6 @@ const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   get_status_summary: 'Internal display variant selected from get_status --summary; covered by CLI golden output.',
   notifications: 'Notification polling route is covered separately from command goldens.',
   sell: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',
-  view_faction_storage: 'Faction storage output needs a separate target=faction fixture before snapshotting.',
 };
 
 export const FRIENDLY_FORMATTING_TARGETS = [

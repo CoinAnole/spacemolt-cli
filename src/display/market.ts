@@ -319,11 +319,11 @@ export const marketFormatters = [
   namedFormatter(
     'storage',
     ['base_id', 'items'],
-    (r, command) => {
+    (r, _command) => {
       if (!r.base_id || !Array.isArray(r.items)) return false;
       const items = r.items as Array<Record<string, unknown>>;
       const ships = (r.ships as Array<Record<string, unknown>>) || [];
-      const isFactionStorage = command === 'view_faction_storage' || r.target === 'faction';
+      const isFactionStorage = r.target === 'faction';
       const title = isFactionStorage ? 'Faction Storage' : 'Storage';
       emitLine(`\n${c.bright}=== ${title} at ${r.base_id} ===${c.reset}\n`);
       const factionFuelReserve = r.faction_fuel_reserve;
@@ -359,7 +359,7 @@ export const marketFormatters = [
       }
       return true;
     },
-    { commands: ['storage', 'view_storage', 'view_faction_storage'], shapeFallback: true },
+    { commands: ['storage'], shapeFallback: true },
   ),
 
   // Direct market sell

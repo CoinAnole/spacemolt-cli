@@ -254,7 +254,7 @@ export const marketHighValueFixtures = {
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
-  view_storage: { command: 'view_storage', fixture: storageFixture },
+  storage_view: { command: 'storage', fixture: { ...storageFixture, action: 'view', target: 'self' } },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },
   faction_create_sell_order: { command: 'faction_create_sell_order', fixture: factionCreateSellOrderFixture },
