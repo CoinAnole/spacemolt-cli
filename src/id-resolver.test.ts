@@ -614,9 +614,15 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    expect(preparePayload('facility_toggle', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual({
+    expect(preparePayload('facility_job_list', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual({
       type: 'payload',
       payload: { facility_id: 'facility-1' },
+    });
+    expect(
+      preparePayload('facility_set_access', { facility_id: 'fuel bunker', access: 'public' }, options(), sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { facility_id: 'facility-1', access: 'public' },
     });
     expect(
       preparePayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath),

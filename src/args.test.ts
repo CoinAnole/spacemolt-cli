@@ -822,6 +822,17 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       facility_id: 'facility-1',
       access: 'public',
     });
+
+    expect(parseArgs(['facility_job_add', 'facility-1', 'refine_steel', '12', 'to_faction'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'direction',
+          message: 'Invalid value "to_faction" for "direction". Expected one of: forward, reverse',
+          code: 'invalid_enum',
+        },
+      ],
+    });
   });
 
   test('distress_signal - no args', () => {

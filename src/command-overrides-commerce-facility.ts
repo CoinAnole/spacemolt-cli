@@ -381,6 +381,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/job_add',
     positionals: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to'],
+    schemaExtensions: {
+      direction: {
+        type: 'string',
+        enum: ['forward', 'reverse'],
+        description: "Job direction for facility production: 'forward' crafts outputs, 'reverse' recycles recipe outputs.",
+      },
+    },
   },
   facility_job_list: {
     usage: '<facility_id>',

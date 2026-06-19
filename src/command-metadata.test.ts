@@ -458,6 +458,11 @@ describe('command metadata', () => {
       expect(config?.args).toEqual(expectation.args);
       expect(captureHelp(command)).toContain(expectation.help);
     }
+
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_add?.schema?.direction?.enum).toEqual([
+      'forward',
+      'reverse',
+    ]);
   });
 
   test('stale facility toggle and recycler configuration commands are not advertised', () => {
