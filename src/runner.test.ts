@@ -117,7 +117,7 @@ describe('runInvocation option isolation', () => {
     expect(capturedPayloads).toEqual([{}]);
   });
 
-  test('documented API --search filters JSON response output instead of projecting matches', async () => {
+  test('documented API --search keeps JSON response output raw instead of projecting matches', async () => {
     const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-search-json-'));
     const client = {
       config: { profile: 'pilot' },
@@ -145,7 +145,10 @@ describe('runInvocation option isolation', () => {
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
     const body = JSON.parse(stdout.join('\n'));
-    expect(body.structuredContent.items.map((item: { item_id: string }) => item.item_id)).toEqual(['ore_iron']);
+    expect(body.structuredContent.items.map((item: { item_id: string }) => item.item_id)).toEqual([
+      'ore_iron',
+      'fuel_cell',
+    ]);
   });
 
   test('loads cached OpenAPI routes when resolving dynamic commands', async () => {

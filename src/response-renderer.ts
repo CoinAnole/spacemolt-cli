@@ -9,7 +9,7 @@ import { displayNotifications } from './notifications.ts';
 import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
-import { getStructuredResult, isRecord, normalizeStructuredResultForOutput } from './response.ts';
+import { getStructuredResult, isRecord } from './response.ts';
 import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 
@@ -111,7 +111,7 @@ export async function renderResponse(
   const writer = context?.writer;
 
   if ((isJson || renderOptions.structured) && response.error) {
-    printJsonResponse(response, false, writer);
+    printJsonResponse(response, renderOptions.compact, writer);
     return 1;
   }
 
@@ -146,36 +146,34 @@ export async function renderResponse(
   const sessionPath = tryGetSessionPath(client.config, context?.env);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
 
-  const filteredResponse = applyDisplayFilters(command, response, commandRun.payload);
-
   if ((isJson || renderOptions.structured) && !hasProjection) {
-    if (renderOptions.structured && filteredResponse.structuredContent) {
+    if (renderOptions.structured && response.structuredContent) {
       const out = writer?.out.bind(writer) ?? console.log;
       const warning =
         renderOptions.quiet || isJson
           ? undefined
-          : catalogTruncationWarning(displayCommand, filteredResponse.structuredContent);
+          : catalogTruncationWarning(displayCommand, response.structuredContent);
       if (warning) {
         const err = writer?.err.bind(writer) ?? console.error;
         err(warning);
       }
-      out(
-        JSON.stringify(
-          normalizeStructuredResultForOutput(displayCommand, filteredResponse.structuredContent),
-          null,
-          renderOptions.compact ? 0 : 2,
-        ),
-      );
+      out(JSON.stringify(response.structuredContent, null, renderOptions.compact ? 0 : 2));
       return 0;
     }
-    printJsonResponse(filteredResponse, renderOptions.compact, writer);
-    return filteredResponse.error ? 1 : 0;
+    printJsonResponse(response, renderOptions.compact, writer);
+    return response.error ? 1 : 0;
   }
 
-  const display = prepareHumanDisplay(commandRun, filteredResponse, {
+  if (hasProjection) {
+    const success = displayResult(displayCommand, response, { ...renderOptions, noTimestamp: true }, context);
+    return success === false ? 1 : 0;
+  }
+
+  const displayResponse = applyHumanDisplayFilters(command, response, commandRun.payload);
+  const display = prepareHumanDisplay(commandRun, displayResponse, {
     sessionPath,
     options: renderOptions,
-    hasProjection,
+    hasProjection: false,
     isJson,
   });
   const success = displayResult(
@@ -309,7 +307,11 @@ function findCachedShipHint(shipId: string, sessionPath?: string) {
   return loadIdCacheSync(sessionPath).find((hint) => hint.kind === 'ship' && hint.id === shipId);
 }
 
-function applyDisplayFilters(command: string, response: APIResponse, payload?: Record<string, unknown>): APIResponse {
+function applyHumanDisplayFilters(
+  command: string,
+  response: APIResponse,
+  payload?: Record<string, unknown>,
+): APIResponse {
   if (command === 'get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
   if (!payload || !shouldApplyItemDisplayFilters(command, payload)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;

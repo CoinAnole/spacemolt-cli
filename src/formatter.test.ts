@@ -1051,13 +1051,15 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
-  test('yaml output truncates nearby player and NPC collections without losing totals', () => {
+  test('yaml output preserves nearby player and NPC collections', () => {
     const result = {
       ...getStatusFixture,
       location: {
         ...getStatusFixture.location,
         nearby_players: nearbyPlayers(12),
+        count: 12,
         nearby_empire_npcs: nearbyNpcs(13),
+        empire_npc_count: 13,
       },
     };
 
@@ -1065,14 +1067,12 @@ describe('structuredContent output mode precedence', () => {
     const yaml = rendered.stdout.join('\n');
 
     expect(rendered.success).toBe(true);
-    expect(yaml).toContain('nearby_player_count: 12');
-    expect(yaml).toContain('nearby_empire_npc_count: 13');
-    expect(yaml).toContain('username: "Pilot 10"');
-    expect(yaml).not.toContain('username: "Pilot 11"');
-    expect(yaml).toContain('name: "Patrol 10"');
-    expect(yaml).not.toContain('name: "Patrol 11"');
-    expect(result.location.nearby_players).toHaveLength(12);
-    expect(result.location.nearby_empire_npcs).toHaveLength(13);
+    expect(yaml).toContain('username: "Pilot 12"');
+    expect(yaml).toContain('name: "Patrol 13"');
+    expect(yaml).toContain('count: 12');
+    expect(yaml).toContain('empire_npc_count: 13');
+    expect(yaml).not.toContain('nearby_player_count:');
+    expect(yaml).not.toContain('nearby_empire_npc_count:');
   });
 
   test('pure structured renderer formats text as table output and compact output', () => {
