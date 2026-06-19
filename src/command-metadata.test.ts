@@ -427,12 +427,12 @@ describe('command metadata', () => {
       },
       facility_job_cancel: {
         action: 'job_cancel',
-        args: ['facility_id', 'job_id'],
+        args: ['job_id'],
         help: 'Cancel a queued facility job',
       },
       facility_job_reorder: {
         action: 'job_reorder',
-        args: ['facility_id', 'job_id', 'position'],
+        args: ['job_id', 'position'],
         help: 'Move a queued facility job',
       },
       facility_set_output_price: {
