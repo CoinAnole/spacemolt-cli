@@ -202,6 +202,57 @@ export const abandonMissionPostActionFixture = {
   queue: { has_pending: false },
 };
 
+export const craftQueuedFixture = {
+  details: {
+    action: 'craft',
+    effective_time_per_run: 3.5,
+    escrowed: {
+      inputs: [
+        { item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 },
+        { item_id: 'energy_crystal', name: 'Energy Crystal', quantity: 3 },
+        { item_id: 'copper_wiring', name: 'Copper Wiring', quantity: 2 },
+      ],
+    },
+    est_completion_tick: 1131729,
+    facility_id: 'workshop:player-1:nova_terra_central',
+    job_id: 'craft-job-1',
+    message: 'Crafting queued: 1 run(s) of Build Power Cell at Station Workshop, making 1 Power Cell.',
+    mode: 'craft',
+    produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+    recipe: 'Build Power Cell',
+    runs: 1,
+    venue: 'Station Workshop',
+    venue_type: 'workshop',
+  },
+};
+
+export const recycleQuoteFixture = {
+  details: {
+    action: 'recycle',
+    cost: {
+      inputs: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+    },
+    credits_total: 0,
+    dry_run: true,
+    effective_time_per_run: 4,
+    est_completion_tick: 1131730,
+    facility_id: 'recycler-facility-1',
+    have_credits: true,
+    have_inputs: true,
+    message: 'Quote only — nothing queued. Recycling 1 run(s) of Build Power Cell at Public Recycler.',
+    mode: 'recycle',
+    produces: [
+      { item_id: 'circuit_board', name: 'Circuit Board', quantity: 1 },
+      { item_id: 'copper_wiring', name: 'Copper Wiring', quantity: 1 },
+    ],
+    quantity: 1,
+    recipe: 'Build Power Cell',
+    runs: 1,
+    venue: 'Public Recycler',
+    venue_type: 'facility',
+  },
+};
+
 export const factionsFixture = {
   factions: [
     {
@@ -372,6 +423,8 @@ export const genericHighValueFixtures = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
+  craft: { command: 'craft', fixture: craftQueuedFixture },
+  recycle: { command: 'recycle', fixture: recycleQuoteFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },

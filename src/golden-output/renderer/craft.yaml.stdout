@@ -1,0 +1,28 @@
+
+details:
+  action: craft
+  effective_time_per_run: 3.5
+  escrowed:
+    inputs:
+      - item_id: circuit_board
+        name: "Circuit Board"
+        quantity: 2
+      - item_id: energy_crystal
+        name: "Energy Crystal"
+        quantity: 3
+      - item_id: copper_wiring
+        name: "Copper Wiring"
+        quantity: 2
+  est_completion_tick: 1131729
+  facility_id: "workshop:player-1:nova_terra_central"
+  job_id: "craft-job-1"
+  message: "Crafting queued: 1 run(s) of Build Power Cell at Station Workshop, making 1 Power Cell."
+  mode: craft
+  produces:
+    - item_id: power_cell
+      name: "Power Cell"
+      quantity: 1
+  recipe: "Build Power Cell"
+  runs: 1
+  venue: "Station Workshop"
+  venue_type: workshop

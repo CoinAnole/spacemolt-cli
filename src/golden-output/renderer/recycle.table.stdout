@@ -1,0 +1,14 @@
+
+=== Recycle Quote ===
+Recipe: Build Power Cell
+Mode: recycle
+Runs: 1
+Venue: Public Recycler (facility)
+Facility: recycler-facility-1
+Output: 1x Circuit Board, 1x Copper Wiring
+Time/run: 4 ticks
+Completion tick: 1131730
+Inputs available: true
+Credits available: true
+Inputs: 1x Power Cell
+Quote only — nothing queued. Recycling 1 run(s) of Build Power Cell at Public Recycler.

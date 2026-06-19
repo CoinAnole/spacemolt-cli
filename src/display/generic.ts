@@ -280,6 +280,19 @@ function summarizeItemQuantities(value: unknown): string {
     .join(', ');
 }
 
+function summarizeNamedItemQuantities(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const summary = value
+    .filter(isRecord)
+    .map((item) => {
+      const quantity = item.quantity ?? '?';
+      const name = item.name ?? item.item_name ?? item.item_id ?? item.id ?? 'item';
+      return `${quantity}x ${name}`;
+    })
+    .join(', ');
+  return summary || undefined;
+}
+
 function summarizePassiveRecipes(value: unknown): string {
   if (!Array.isArray(value)) return '';
   return value.filter((recipe) => typeof recipe === 'string').join(', ');
@@ -318,7 +331,142 @@ function printRecipeRows(
   );
 }
 
+function emitOptionalValue(label: string, value: unknown): void {
+  if (value === undefined || value === null || value === '') return;
+  emitLine(`${label}: ${String(value)}`);
+}
+
+function formatRunCount(value: unknown): string | undefined {
+  const count = formatCount(value);
+  if (count === undefined) return undefined;
+  return `${count}${Number(value) === 1 ? '' : ''}`;
+}
+
+function formatTimePerRun(value: unknown): string | undefined {
+  const number = finiteNumber(value);
+  if (number === undefined) return undefined;
+  return `${number.toLocaleString()} tick${number === 1 ? '' : 's'}`;
+}
+
+function formatCraftVenue(result: Record<string, unknown>): string | undefined {
+  if (result.venue === undefined && result.venue_type === undefined) return undefined;
+  if (result.venue !== undefined && result.venue_type !== undefined) return `${result.venue} (${result.venue_type})`;
+  return String(result.venue ?? result.venue_type);
+}
+
+function craftTitle(command: string, result: Record<string, unknown>): string {
+  const base = command === 'recycle' || result.mode === 'recycle' ? 'Recycle' : 'Craft';
+  if (result.dry_run === true) return `${base} Quote`;
+  if (result.job_id) return `${base} Queued`;
+  if (Array.isArray(result.jobs)) return `${base} Queue`;
+  if (Array.isArray(result.results)) return `${base} Results`;
+  return base;
+}
+
+function emitCraftCost(label: string, value: unknown): void {
+  if (!isRecord(value)) return;
+  const inputs = summarizeNamedItemQuantities(value.inputs);
+  if (inputs) emitLine(`${label}: ${inputs}`);
+  emitOptionalValue('Labor', value.labor === undefined ? undefined : `${formatCount(value.labor) ?? value.labor}cr`);
+  emitOptionalValue('Fee', value.fee === undefined ? undefined : `${formatCount(value.fee) ?? value.fee}cr`);
+}
+
+function craftResultRows(results: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return results.map((result) => ({
+    ...result,
+    success_display: result.success === undefined ? undefined : result.success ? 'yes' : 'no',
+  }));
+}
+
 export const genericFormatters = [
+  formatter(
+    (r, command) => {
+      if (command !== 'craft' && command !== 'recycle') return false;
+      if (
+        r.recipe === undefined &&
+        r.job_id === undefined &&
+        r.dry_run !== true &&
+        !Array.isArray(r.jobs) &&
+        !Array.isArray(r.results)
+      ) {
+        return false;
+      }
+
+      emitLine(`\n${c.bright}=== ${craftTitle(command, r)} ===${c.reset}`);
+
+      const jobs = firstArray(r, ['jobs']);
+      if (jobs) {
+        const rows = jobs.map((job) => ({
+          ...job,
+          runs_display:
+            job.runs_total === undefined
+              ? undefined
+              : `${job.runs_done ?? 0}/${job.runs_total} (${job.runs_remaining ?? 0} left)`,
+          output_display: summarizeNamedItemQuantities(job.produces),
+        }));
+        printCompactTable(
+          'Jobs',
+          rows,
+          [
+            ['Job', ['job_id']],
+            ['Recipe', ['recipe']],
+            ['Mode', ['mode']],
+            ['Runs', ['runs_display', 'runs_total']],
+            ['Output', ['output_display']],
+            ['Venue', ['venue', 'facility_id']],
+            ['ETA', ['eta_ticks']],
+            ['Status', ['status']],
+            ['Pos', ['position']],
+          ],
+          { maxCellWidth: 64 },
+        );
+        return true;
+      }
+
+      const results = firstArray(r, ['results']);
+      if (results) {
+        printCompactTable(
+          'Results',
+          craftResultRows(results),
+          [
+            ['Index', ['index']],
+            ['OK', ['success_display']],
+            ['Job', ['job_id']],
+            ['Recipe', ['recipe']],
+            ['Runs', ['runs']],
+            ['Venue', ['venue']],
+            ['Message', ['message', 'error', 'error_code']],
+          ],
+          { maxCellWidth: 72 },
+        );
+        if (isRecord(r.summary)) {
+          const total = formatCount(r.summary.total);
+          const succeeded = formatCount(r.summary.succeeded);
+          const failed = formatCount(r.summary.failed);
+          emitLine(`Summary: ${succeeded ?? '?'} succeeded, ${failed ?? '?'} failed, ${total ?? '?'} total`);
+        }
+        if (r.message) emitLine(String(r.message));
+        return true;
+      }
+
+      emitOptionalValue('Job', r.job_id);
+      emitOptionalValue('Recipe', r.recipe);
+      emitOptionalValue('Mode', r.mode);
+      emitOptionalValue('Runs', formatRunCount(r.runs ?? r.quantity));
+      emitOptionalValue('Venue', formatCraftVenue(r));
+      emitOptionalValue('Facility', r.facility_id);
+      emitOptionalValue('Output', summarizeNamedItemQuantities(r.produces));
+      emitOptionalValue('Time/run', formatTimePerRun(r.effective_time_per_run));
+      emitOptionalValue('Completion tick', r.est_completion_tick);
+      if (r.have_inputs !== undefined) emitOptionalValue('Inputs available', r.have_inputs);
+      if (r.have_credits !== undefined) emitOptionalValue('Credits available', r.have_credits);
+      emitCraftCost(r.dry_run === true ? 'Inputs' : 'Escrowed inputs', isRecord(r.cost) ? r.cost : r.escrowed);
+      if (r.message) emitLine(String(r.message));
+      return true;
+    },
+    { commands: ['craft', 'recycle'] },
+  ),
+
   formatter(
     (r) => {
       if (r.action !== 'dock' || typeof r.story !== 'string') return false;
@@ -421,7 +569,7 @@ export const genericFormatters = [
 
   formatter(
     (r) => {
-      const recipes = firstArray(r, ['recipes']);
+      const recipes = firstArray(r, r.type === 'recipes' ? ['recipes', 'items'] : ['recipes']);
       if (!recipes) return false;
       printRecipeRows('Recipes', recipes);
       printMetadata(r);

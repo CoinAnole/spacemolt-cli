@@ -55,3 +55,73 @@ test('renders facility list per-cycle item and labor upkeep', () => {
   expect(rendered.stdout.join('\n')).toContain('12 Fuel Cell');
   expect(rendered.stdout.join('\n')).toContain('320cr');
 });
+
+test('omits facility state and maintenance columns when the API omits those fields', () => {
+  const rendered = renderStructuredResult(
+    'facility_list',
+    {
+      base_id: 'nova_terra_central',
+      station_facilities: [
+        {
+          facility_id: 'power-cell-assembler',
+          type: 'power_cell_assembler',
+          name: 'Power Cell Assembler',
+          category: 'production',
+          level: 1,
+          recipe_id: 'build_power_cell',
+        },
+      ],
+      player_facilities: [
+        {
+          facility_id: 'crew-bunk-1',
+          type: 'crew_bunk',
+          name: 'Crew Bunk',
+          category: 'personal',
+          level: 1,
+        },
+      ],
+      faction_facilities: [
+        {
+          facility_id: 'faction-workshop-1',
+          type: 'faction_workshop',
+          name: 'Faction Workshop',
+          category: 'faction',
+          level: 1,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Active');
+  expect(stdout).not.toContain('Maint');
+});
+
+test('omits faction facility state column when the API omits that field', () => {
+  const rendered = renderStructuredResult(
+    'faction_facility_owned',
+    {
+      action: 'faction_owned',
+      facilities: [
+        {
+          facility_id: 'faction-workshop-1',
+          type: 'faction_workshop',
+          name: 'Faction Workshop',
+          base_name: 'Nova Terra Central',
+          system_id: 'sol',
+          rent_per_cycle: 80,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Active');
+  expect(stdout).toContain('Rent');
+});

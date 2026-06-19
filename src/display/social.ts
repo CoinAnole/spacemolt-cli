@@ -87,10 +87,14 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
     ['Level', ['level', 'tier']],
   ];
   if (options.grouped) columns.push(['Category', ['category']]);
-  columns.push(
-    options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
-  );
-  if (options.grouped) columns.push(['Maint', ['maintenance_satisfied']]);
+  if (hasAnyField(rows, ['active', 'enabled', 'status'])) {
+    columns.push(
+      options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
+    );
+  }
+  if (options.grouped && hasAnyField(rows, ['maintenance_satisfied'])) {
+    columns.push(['Maint', ['maintenance_satisfied']]);
+  }
   if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle'])) {
     columns.push(['Upkeep', ['maintenance_display', 'maintenance_per_cycle']]);
   }
@@ -420,18 +424,21 @@ export const socialFormatters = [
         arrears_display: formatCredits(facility.arrears_owed),
         labor_display: formatCredits(facility.labor_per_run),
       }));
-      printCompactTable('Faction Facilities', rows, [
+      const columns: Array<[string, string[]]> = [
         ['Name', ['name', 'type']],
         ['ID', ['facility_id', 'id']],
         ['Base', ['base_name', 'base_id']],
         ['System', ['system_id']],
-        ['Active', ['active', 'status']],
         ['Rent', ['rent_display', 'rent_per_cycle']],
         ['Missed', ['missed_rent_cycles']],
         ['Arrears', ['arrears_display', 'arrears_owed']],
         ['Labor/run', ['labor_display', 'labor_per_run']],
         ['Idle', ['idle_reason']],
-      ]);
+      ];
+      if (hasAnyField(rows, ['active', 'status'])) {
+        columns.splice(4, 0, ['Active', ['active', 'status']]);
+      }
+      printCompactTable('Faction Facilities', rows, columns);
 
       const totalRent = formatCredits(rentSummaryValue(r, 'total_rent_per_cycle'));
       const arrears = formatCredits(rentSummaryValue(r, 'arrears_owed'));

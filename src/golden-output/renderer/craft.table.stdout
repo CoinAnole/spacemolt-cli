@@ -1,0 +1,13 @@
+
+=== Craft Queued ===
+Job: craft-job-1
+Recipe: Build Power Cell
+Mode: craft
+Runs: 1
+Venue: Station Workshop (workshop)
+Facility: workshop:player-1:nova_terra_central
+Output: 1x Power Cell
+Time/run: 3.5 ticks
+Completion tick: 1131729
+Escrowed inputs: 2x Circuit Board, 3x Energy Crystal, 2x Copper Wiring
+Crafting queued: 1 run(s) of Build Power Cell at Station Workshop, making 1 Power Cell.
