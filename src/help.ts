@@ -81,7 +81,6 @@ const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
     'faction_facility_build',
     'faction_facility_list',
     'faction_facility_owned',
-    'faction_facility_toggle',
     'faction_facility_upgrade',
   ],
 };
@@ -988,7 +987,12 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility_types [category]  Browse facility types (use category=faction, infrastructure, etc.)
     facility_build <type>     Build a player facility
     facility_upgrade <type>   Upgrade a player facility
-    facility_toggle <id>      Toggle a facility
+    facility_job_add <facility> <recipe> <qty>  Queue production work
+    facility_job_list <facility>               List facility production jobs
+    facility_job_cancel <facility> <job>       Cancel queued production
+    facility_job_reorder <facility> <job> <pos>  Reorder queued production
+    facility_set_access <facility> <public|private>  Open or close rental access
+    facility_set_output_price <facility> <item> <price>  Set renter output pricing
     facility_list_for_sale <id> <price>  List a facility for sale
     facility_browse_for_sale             Browse facility listings
     facility_buy_listing <id>            Buy a listed facility
@@ -998,7 +1002,6 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction_build <type>      Build a faction facility
     faction_facility_build <type>  Build a faction facility
     faction_facility_upgrade <type>  Upgrade a faction facility
-    faction_facility_toggle <id>     Toggle a faction facility
 
   ${c.cyan}Citizenship:${c.reset}
     citizenship_list [empire]       View citizenship applications

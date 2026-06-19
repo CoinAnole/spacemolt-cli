@@ -327,8 +327,98 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['base_id'],
   },
   craft: {
+    usage:
+      '[recipe_id] [quantity] [action=queue] [dry_run=true] [preset=fast|cheap|workshop] [jobs=JSON]  (queues production from station storage)',
+    description:
+      'Queue crafting work; inputs are escrowed from station storage and output returns to station storage.',
+    example: 'spacemolt craft basic_iron_smelting 50 dry_run=true',
+    discoverWith: ['catalog', 'storage', 'get_status'],
+    seeAlso: ['recycle', 'catalog', 'storage', 'get_guide'],
     category: 'Crafting',
     apiRoute: 'POST /api/v2/spacemolt/craft',
     positionals: ['recipe_id', 'quantity'],
+    schemaExtensions: {
+      action: {
+        type: 'string',
+        enum: ['queue'],
+        description: 'Use action=queue, or omit recipe_id, to view queued crafting work without starting a new job.',
+      },
+      deliver_to: {
+        type: 'string',
+        enum: ['storage', 'faction'],
+        description:
+          "Output destination: 'storage' (default) or 'faction'. Crafting never delivers to cargo.",
+      },
+      dry_run: {
+        type: 'boolean',
+        description: 'Return a cost, routing, and ETA quote without queuing work or spending escrow.',
+      },
+      facility_id: {
+        type: 'string',
+        description: 'Route the job to a specific owned or public rental facility.',
+      },
+      id: {
+        type: 'string',
+        description:
+          'Recipe ID to craft. Inputs are escrowed from station storage when the job is queued.',
+      },
+      jobs: {
+        type: 'array',
+        description:
+          'Bulk mode JSON array of jobs, each with recipe_id, quantity, and optional facility_id, preset, or deliver_to.',
+      },
+      preset: {
+        type: 'string',
+        enum: ['fast', 'cheap', 'workshop'],
+        description:
+          "Auto-routing preset: 'fast' for quickest, 'cheap' for lowest fee, or 'workshop' to force hand-crafting.",
+      },
+      quantity: {
+        type: 'integer',
+        description:
+          'Number of output items to make. The server rounds up to whole production runs.',
+      },
+    },
+  },
+  recycle: {
+    usage: '<recipe_id> [quantity] [dry_run=true] [jobs=JSON]  (queues lossy reverse production)',
+    description:
+      "Queue a recycling job that consumes a recipe's outputs from station storage and returns a lossy fraction of its inputs.",
+    example: 'spacemolt recycle basic_iron_smelting 20 dry_run=true',
+    discoverWith: ['catalog', 'facility_list', 'storage'],
+    seeAlso: ['craft', 'catalog', 'storage', 'get_guide'],
+    category: 'Crafting',
+    apiRoute: 'POST /api/v2/spacemolt/recycle',
+    positionals: ['recipe_id', 'quantity'],
+    schemaExtensions: {
+      deliver_to: {
+        type: 'string',
+        enum: ['storage', 'faction'],
+        description: "Output destination for recovered inputs: 'storage' (default) or 'faction'.",
+      },
+      dry_run: {
+        type: 'boolean',
+        description: 'Return a feedstock, fee, venue, and ETA quote without queuing recycling work.',
+      },
+      facility_id: {
+        type: 'string',
+        description: 'Route the job to a specific recycler facility.',
+      },
+      id: {
+        type: 'string',
+        description:
+          "Recipe ID to recycle. The recycler consumes the recipe's output items from station storage.",
+      },
+      jobs: {
+        type: 'array',
+        description:
+          'Bulk mode JSON array of recycling jobs, each with recipe_id, quantity, and optional facility_id or deliver_to.',
+      },
+      quantity: {
+        type: 'integer',
+        description:
+          "Number of the recipe's output items to feed into the recycler, rounded up to whole recycling runs.",
+      },
+    },
   },
 };

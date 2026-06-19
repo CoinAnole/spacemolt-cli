@@ -371,17 +371,105 @@ describe('command metadata', () => {
     expect(help).toContain('quantity applies only to fuel cells and transfers');
   });
 
-  test('craft help does not advertise a fixed batch quantity limit', () => {
+  test('craft help documents queued station-storage production', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
-    // usage is now auto-generated from the spec; the key protection is that the bad
-    // hardcoded limit never appears in the schema description or rendered help.
-    expect(config?.usage).not.toContain('1-10');
-    expect(config?.schema?.quantity?.description).toContain('server-capped by crafting skill level');
-    expect(config?.schema?.quantity?.description).not.toContain('1-10');
+    expect(config?.args).toEqual(['recipe_id', 'quantity']);
+    expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
+    expect(config?.schema?.deliver_to?.enum).toEqual(['storage', 'faction']);
+    expect(config?.schema?.action?.enum).toEqual(['queue']);
+    expect(config?.schema?.quantity?.description).toContain('Number of output items');
+    expect(config?.schema?.quantity?.description).not.toContain('server-capped by crafting skill level');
 
     const help = captureHelp('craft');
-    expect(help).toContain('server-capped by crafting skill level');
+    expect(help).toContain('Queue crafting work');
+    expect(help).toContain('station storage');
+    expect(help).toContain('escrowed');
+    expect(help).toContain('dry_run');
+    expect(help).toContain('jobs');
+    expect(help).toContain('action=queue');
+    expect(help).toContain('Crafting never delivers to cargo');
+    expect(help).not.toContain('cargo|storage');
+    expect(help).not.toContain('server-capped by crafting skill level');
     expect(help).not.toContain('1-10');
+    expect(help).not.toContain('If cargo is full');
+  });
+
+  test('recycle help documents queued lossy reverse production', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.recycle;
+    expect(config?.route).toEqual({
+      tool: 'spacemolt',
+      action: 'recycle',
+      method: 'POST',
+    });
+    expect(config?.args).toEqual(['recipe_id', 'quantity']);
+    expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
+    expect(config?.schema?.deliver_to?.enum).toEqual(['storage', 'faction']);
+
+    const help = captureHelp('recycle');
+    expect(help).toContain('Queue a recycling job');
+    expect(help).toContain('lossy');
+    expect(help).toContain('station storage');
+    expect(help).toContain('dry_run');
+    expect(help).toContain('jobs');
+  });
+
+  test('facility production commands have curated routes and help', () => {
+    const expected = {
+      facility_job_add: {
+        action: 'job_add',
+        args: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to'],
+        help: 'Queue production work',
+      },
+      facility_job_list: {
+        action: 'job_list',
+        args: ['facility_id'],
+        help: 'List queued production jobs',
+      },
+      facility_job_cancel: {
+        action: 'job_cancel',
+        args: ['facility_id', 'job_id'],
+        help: 'Cancel a queued facility job',
+      },
+      facility_job_reorder: {
+        action: 'job_reorder',
+        args: ['facility_id', 'job_id', 'position'],
+        help: 'Move a queued facility job',
+      },
+      facility_set_output_price: {
+        action: 'set_output_price',
+        args: ['facility_id', 'item_id', 'price'],
+        help: 'Set the per-item output price',
+      },
+      facility_set_access: {
+        action: 'set_access',
+        args: ['facility_id', 'access'],
+        help: 'Open or close a facility',
+      },
+    } as const;
+
+    for (const [command, expectation] of Object.entries(expected)) {
+      const config = BUNDLED_COMMAND_REGISTRY.commands[command];
+      expect(config?.category).toBe('Facilities');
+      expect(config?.route).toEqual({
+        tool: 'spacemolt_facility',
+        action: expectation.action,
+        method: 'POST',
+      });
+      expect(config?.args).toEqual(expectation.args);
+      expect(captureHelp(command)).toContain(expectation.help);
+    }
+  });
+
+  test('stale facility toggle and recycler configuration commands are not advertised', () => {
+    for (const command of ['facility_toggle', 'faction_facility_toggle', 'configure_recycler']) {
+      expect(COMMANDS[command]).toBeUndefined();
+      expect(BUNDLED_COMMAND_REGISTRY.allCommands[command]).toBeUndefined();
+    }
+
+    const help = captureFullHelp();
+    expect(help).not.toContain('facility_toggle');
+    expect(help).not.toContain('faction_facility_toggle');
+    expect(help).not.toContain('configure_recycler');
   });
 
   test('chat help advertises quoted messages and explicit content', () => {

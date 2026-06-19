@@ -116,14 +116,30 @@ describe('client.ts source integrity', () => {
     expect(COMMANDS.catalog?.schema?.type?.enum).toContain('items');
   });
 
-  test('configure_recycler maps the v2 facility route with recipe id', () => {
-    expect(COMMANDS.configure_recycler?.route).toEqual({
-      tool: 'spacemolt_facility',
-      action: 'configure_recycler',
+  test('crafting production commands map the v2 routes', () => {
+    expect(COMMANDS.recycle?.route).toEqual({
+      tool: 'spacemolt',
+      action: 'recycle',
       method: 'POST',
     });
-    expect(COMMANDS.configure_recycler?.args).toEqual(['facility_id', 'recipe_id']);
-    expect(COMMANDS.configure_recycler?.schema?.recipe_id?.type).toBe('string');
+    expect(COMMANDS.facility_job_add?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'job_add',
+      method: 'POST',
+    });
+    expect(COMMANDS.facility_job_list?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'job_list',
+      method: 'POST',
+    });
+    expect(COMMANDS.facility_set_access?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'set_access',
+      method: 'POST',
+    });
+    expect(COMMANDS.configure_recycler).toBeUndefined();
+    expect(COMMANDS.facility_toggle).toBeUndefined();
+    expect(COMMANDS.faction_facility_toggle).toBeUndefined();
   });
 
   test('facility ownership commands map the v2 facility routes', () => {

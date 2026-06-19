@@ -737,6 +737,93 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.count).toBeUndefined();
   });
 
+  test('craft accepts queued production options and bulk jobs JSON', () => {
+    const queue = parseOk(['craft', 'action=queue']);
+    expect(queue.payload).toEqual({ action: 'queue' });
+
+    const quoted = parseOk(['craft', 'basic_iron_smelting', '50', 'dry_run=true', 'preset=cheap']);
+    const quotedPayload = convertPayloadTypes(normalizeParsedPayload('craft', quoted.payload), 'craft');
+    expect(quotedPayload).toEqual({
+      id: 'basic_iron_smelting',
+      quantity: 50,
+      dry_run: true,
+      preset: 'cheap',
+    });
+
+    const bulk = parseOk([
+      'craft',
+      'jobs=[{"recipe_id":"basic_iron_smelting","quantity":100},{"recipe_id":"basic_copper_processing","quantity":50}]',
+    ]);
+    const bulkPayload = convertPayloadTypes(normalizeParsedPayload('craft', bulk.payload), 'craft');
+    expect(bulkPayload).toEqual({
+      jobs: [
+        { recipe_id: 'basic_iron_smelting', quantity: 100 },
+        { recipe_id: 'basic_copper_processing', quantity: 50 },
+      ],
+    });
+  });
+
+  test('recycle parses recipe positionals and bulk jobs JSON', () => {
+    const single = parseOk(['recycle', 'basic_iron_smelting', '20', 'dry_run=true']);
+    const singlePayload = convertPayloadTypes(normalizeParsedPayload('recycle', single.payload), 'recycle');
+    expect(singlePayload).toEqual({
+      id: 'basic_iron_smelting',
+      quantity: 20,
+      dry_run: true,
+    });
+
+    const bulk = parseOk([
+      'recycle',
+      'jobs=[{"recipe_id":"basic_iron_smelting","quantity":20},{"recipe_id":"basic_copper_processing","quantity":10}]',
+    ]);
+    const bulkPayload = convertPayloadTypes(normalizeParsedPayload('recycle', bulk.payload), 'recycle');
+    expect(bulkPayload).toEqual({
+      jobs: [
+        { recipe_id: 'basic_iron_smelting', quantity: 20 },
+        { recipe_id: 'basic_copper_processing', quantity: 10 },
+      ],
+    });
+  });
+
+  test('facility production commands parse natural positionals', () => {
+    const add = parseOk(['facility_job_add', 'facility-1', 'refine_steel', '12', 'reverse', 'deliver_to=faction']);
+    expect(convertPayloadTypes(add.payload, 'facility_job_add')).toEqual({
+      facility_id: 'facility-1',
+      recipe_id: 'refine_steel',
+      quantity: 12,
+      direction: 'reverse',
+      deliver_to: 'faction',
+    });
+
+    expect(parseOk(['facility_job_list', 'facility-1']).payload).toEqual({
+      facility_id: 'facility-1',
+    });
+
+    expect(parseOk(['facility_job_cancel', 'facility-1', 'job-1']).payload).toEqual({
+      facility_id: 'facility-1',
+      job_id: 'job-1',
+    });
+
+    const reorder = parseOk(['facility_job_reorder', 'facility-1', 'job-1', '3']);
+    expect(convertPayloadTypes(reorder.payload, 'facility_job_reorder')).toEqual({
+      facility_id: 'facility-1',
+      job_id: 'job-1',
+      position: 3,
+    });
+
+    const price = parseOk(['facility_set_output_price', 'facility-1', 'steel_plate', '25']);
+    expect(convertPayloadTypes(price.payload, 'facility_set_output_price')).toEqual({
+      facility_id: 'facility-1',
+      item_id: 'steel_plate',
+      price: 25,
+    });
+
+    expect(parseOk(['facility_set_access', 'facility-1', 'public']).payload).toEqual({
+      facility_id: 'facility-1',
+      access: 'public',
+    });
+  });
+
   test('distress_signal - no args', () => {
     const { command, payload } = parseOk(['distress_signal']);
     expect(command).toBe('distress_signal');
@@ -1054,7 +1141,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
     expect(parseOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
-    expect(parseOk(['facility_toggle', 'fac_1']).payload.facility_id).toBe('fac_1');
+    expect(parseOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');
   });
 
   test('new coverage commands parse positional payloads', () => {

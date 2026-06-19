@@ -638,6 +638,29 @@ function parseTypedNumber(value: string, fieldType: string): number | undefined 
   return num;
 }
 
+function parseJsonStructuredValue(value: string, fieldType: string | undefined): unknown {
+  const trimmed = value.trim();
+  if (fieldType === 'array' && trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (fieldType === 'object' && trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
+
 export function convertPayloadTypes(
   payload: Record<string, unknown>,
   command?: string,
@@ -649,6 +672,8 @@ export function convertPayloadTypes(
 
     const convertSingle = (val: unknown): unknown => {
       if (typeof val !== 'string') return val;
+      const structured = parseJsonStructuredValue(val, fieldType);
+      if (structured !== undefined) return structured;
       if (fieldType === 'integer' || fieldType === 'number') {
         const num = parseTypedNumber(val, fieldType);
         if (num !== undefined) return num;
