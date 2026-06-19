@@ -743,6 +743,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
 
     expect(parseOk(['craft', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
 
+    const cancelManyPayload = convertPayloadTypes(parseOk(['craft', 'job_ids=["job-1","job-2"]']).payload, 'craft');
+    expect(cancelManyPayload).toEqual({ job_ids: ['job-1', 'job-2'] });
+
     const quoted = parseOk(['craft', 'basic_iron_smelting', '50', 'dry_run=true', 'preset=cheap']);
     const quotedPayload = convertPayloadTypes(normalizeParsedPayload('craft', quoted.payload), 'craft');
     expect(quotedPayload).toEqual({
@@ -767,6 +770,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
 
   test('recycle parses recipe positionals and bulk jobs JSON', () => {
     expect(parseOk(['recycle', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
+
+    const cancelManyPayload = convertPayloadTypes(parseOk(['recycle', 'job_ids=["job-1","job-2"]']).payload, 'recycle');
+    expect(cancelManyPayload).toEqual({ job_ids: ['job-1', 'job-2'] });
 
     const single = parseOk(['recycle', 'basic_iron_smelting', '20', 'dry_run=true']);
     const singlePayload = convertPayloadTypes(normalizeParsedPayload('recycle', single.payload), 'recycle');

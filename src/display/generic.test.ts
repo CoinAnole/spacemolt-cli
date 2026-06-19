@@ -144,3 +144,68 @@ test('renders queued craft details with job id and output', () => {
   expect(stdout).toContain('Output: 1x Power Cell');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('renders craft queue lists across workshop own and faction venues', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'queue',
+        jobs: [
+          {
+            job_id: 'workshop-job-1',
+            recipe: 'Build Power Cell',
+            mode: 'craft',
+            runs_done: 0,
+            runs_remaining: 1,
+            runs_total: 1,
+            produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+            venue: 'Station Workshop',
+            facility_id: 'workshop:player:station',
+            eta_ticks: 2,
+            status: 'queued',
+          },
+          {
+            job_id: 'own-job-1',
+            recipe: 'Assemble Power Cell',
+            mode: 'facility',
+            runs_done: 3,
+            runs_remaining: 2,
+            runs_total: 5,
+            produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 5 }],
+            venue: 'Own Power Cell Assembler',
+            facility_id: 'own-cell-assembler',
+            eta_ticks: 4,
+            status: 'running',
+          },
+          {
+            job_id: 'faction-job-1',
+            recipe: 'Refine Fuel',
+            mode: 'facility',
+            runs_done: 1,
+            runs_remaining: 9,
+            runs_total: 10,
+            produces: [{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 10 }],
+            venue: 'Faction Fuel Plant',
+            facility_id: 'faction-fuel-plant',
+            eta_ticks: 9,
+            status: 'queued',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queue ===');
+  expect(stdout).toContain('workshop-job-1');
+  expect(stdout).toContain('own-job-1');
+  expect(stdout).toContain('faction-job-1');
+  expect(stdout).toContain('Station Workshop');
+  expect(stdout).toContain('Own Power Cell Assembler');
+  expect(stdout).toContain('Faction Fuel Plant');
+  expect(stdout).not.toContain('=== Response ===');
+});

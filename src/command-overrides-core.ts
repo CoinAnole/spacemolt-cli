@@ -328,7 +328,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>] [dry_run=true] [preset=fast|cheap|workshop] [jobs=JSON]  (queues or cancels production from station storage)',
+      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|workshop] [jobs=JSON]  (queues or cancels production from station storage)',
     description:
       'Queue crafting work or cancel queued jobs; inputs are escrowed from station storage and output returns to station storage.',
     example: 'spacemolt craft basic_iron_smelting 50 dry_run=true',
@@ -369,6 +369,10 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         description: 'Queued crafting job ID to cancel; use action=queue to list job IDs.',
       },
+      job_ids: {
+        type: 'array',
+        description: 'Queued crafting job IDs to cancel in bulk; use action=queue to list job IDs.',
+      },
       preset: {
         type: 'string',
         enum: ['fast', 'cheap', 'workshop'],
@@ -383,7 +387,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   recycle: {
     usage:
-      '<recipe_id> [quantity] [job_id=<id>] [dry_run=true] [jobs=JSON]  (queues or cancels lossy reverse production)',
+      '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [jobs=JSON]  (queues or cancels lossy reverse production)',
     description:
       "Queue a recycling job or cancel queued jobs; recycling consumes a recipe's outputs from station storage and returns a lossy fraction of its inputs.",
     example: 'spacemolt recycle basic_iron_smelting 20 dry_run=true',
@@ -419,6 +423,11 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         description:
           'Queued recycling job ID to cancel; use action=queue on craft or facility job list output to find IDs.',
+      },
+      job_ids: {
+        type: 'array',
+        description:
+          'Queued recycling job IDs to cancel in bulk; use action=queue on craft or facility job list output to find IDs.',
       },
       quantity: {
         type: 'integer',
