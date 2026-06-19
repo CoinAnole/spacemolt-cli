@@ -443,6 +443,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/transfer',
     positionals: ['facility_id', 'direction', 'player_id'],
+    schemaExtensions: {
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction: 'to_faction' moves ownership to your faction, 'to_player' transfers to another player.",
+      },
+    },
   },
   personal_facility_build: {
     usage: '<facility_type>',

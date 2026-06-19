@@ -610,6 +610,13 @@ describe('cached ID payload resolver', () => {
             sourceCommand: 'facility_browse_for_sale',
             seenAt: '2026-05-18T00:00:00.000Z',
           },
+          {
+            kind: 'item',
+            id: 'steel_plate',
+            name: 'Steel Plate',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
         ],
       })}\n`,
     );
@@ -623,6 +630,17 @@ describe('cached ID payload resolver', () => {
     ).toEqual({
       type: 'payload',
       payload: { facility_id: 'facility-1', access: 'public' },
+    });
+    expect(
+      preparePayload(
+        'facility_set_output_price',
+        { facility_id: 'fuel bunker', item_id: 'steel plate', price: '25' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { facility_id: 'facility-1', item_id: 'steel_plate', price: 25 },
     });
     expect(
       preparePayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath),

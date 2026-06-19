@@ -463,6 +463,10 @@ describe('command metadata', () => {
       'forward',
       'reverse',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_transfer?.schema?.direction?.enum).toEqual([
+      'to_faction',
+      'to_player',
+    ]);
   });
 
   test('stale facility toggle and recycler configuration commands are not advertised', () => {

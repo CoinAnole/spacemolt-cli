@@ -1153,6 +1153,16 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');
+    expect(parseArgs(['facility_transfer', 'facility-1', 'forward'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'direction',
+          message: 'Invalid value "forward" for "direction". Expected one of: to_faction, to_player',
+          code: 'invalid_enum',
+        },
+      ],
+    });
   });
 
   test('new coverage commands parse positional payloads', () => {
