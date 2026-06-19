@@ -459,10 +459,7 @@ describe('command metadata', () => {
       expect(captureHelp(command)).toContain(expectation.help);
     }
 
-    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_add?.schema?.direction?.enum).toEqual([
-      'forward',
-      'reverse',
-    ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_add?.schema?.direction?.enum).toEqual(['forward', 'reverse']);
     expect(BUNDLED_COMMAND_REGISTRY.commands.facility_transfer?.schema?.direction?.enum).toEqual([
       'to_faction',
       'to_player',

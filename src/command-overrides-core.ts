@@ -329,8 +329,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   craft: {
     usage:
       '[recipe_id] [quantity] [action=queue] [dry_run=true] [preset=fast|cheap|workshop] [jobs=JSON]  (queues production from station storage)',
-    description:
-      'Queue crafting work; inputs are escrowed from station storage and output returns to station storage.',
+    description: 'Queue crafting work; inputs are escrowed from station storage and output returns to station storage.',
     example: 'spacemolt craft basic_iron_smelting 50 dry_run=true',
     discoverWith: ['catalog', 'storage', 'get_status'],
     seeAlso: ['recycle', 'catalog', 'storage', 'get_guide'],
@@ -346,8 +345,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       deliver_to: {
         type: 'string',
         enum: ['storage', 'faction'],
-        description:
-          "Output destination: 'storage' (default) or 'faction'. Crafting never delivers to cargo.",
+        description: "Output destination: 'storage' (default) or 'faction'. Crafting never delivers to cargo.",
       },
       dry_run: {
         type: 'boolean',
@@ -359,8 +357,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       id: {
         type: 'string',
-        description:
-          'Recipe ID to craft. Inputs are escrowed from station storage when the job is queued.',
+        description: 'Recipe ID to craft. Inputs are escrowed from station storage when the job is queued.',
       },
       jobs: {
         type: 'array',
@@ -375,8 +372,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       quantity: {
         type: 'integer',
-        description:
-          'Number of output items to make. The server rounds up to whole production runs.',
+        description: 'Number of output items to make. The server rounds up to whole production runs.',
       },
     },
   },
@@ -406,8 +402,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       id: {
         type: 'string',
-        description:
-          "Recipe ID to recycle. The recycler consumes the recipe's output items from station storage.",
+        description: "Recipe ID to recycle. The recycler consumes the recipe's output items from station storage.",
       },
       jobs: {
         type: 'array',

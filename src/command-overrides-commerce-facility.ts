@@ -385,7 +385,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       direction: {
         type: 'string',
         enum: ['forward', 'reverse'],
-        description: "Job direction for facility production: 'forward' crafts outputs, 'reverse' recycles recipe outputs.",
+        description:
+          "Job direction for facility production: 'forward' crafts outputs, 'reverse' recycles recipe outputs.",
       },
     },
   },
@@ -447,7 +448,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       direction: {
         type: 'string',
         enum: ['to_faction', 'to_player'],
-        description: "Transfer direction: 'to_faction' moves ownership to your faction, 'to_player' transfers to another player.",
+        description:
+          "Transfer direction: 'to_faction' moves ownership to your faction, 'to_player' transfers to another player.",
       },
     },
   },
