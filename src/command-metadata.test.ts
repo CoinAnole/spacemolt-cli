@@ -432,7 +432,7 @@ describe('command metadata', () => {
       facility_job_cancel: {
         action: 'job_cancel',
         args: ['job_id'],
-        help: 'Cancel a queued facility job',
+        help: 'Cancel queued facility jobs',
       },
       facility_dismantle: {
         action: 'dismantle',
@@ -474,6 +474,8 @@ describe('command metadata', () => {
     }
 
     expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_add?.schema?.direction?.enum).toEqual(['forward', 'reverse']);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_cancel?.schema?.job_ids?.type).toBe('array');
+    expect(captureHelp('facility_job_cancel')).toContain('job_ids');
     expect(BUNDLED_COMMAND_REGISTRY.commands.facility_transfer?.schema?.direction?.enum).toEqual([
       'to_faction',
       'to_player',

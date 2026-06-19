@@ -989,7 +989,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility_upgrade <type>   Upgrade a player facility
     facility_job_add <facility> <recipe> <qty>  Queue production work
     facility_job_list <facility>               List facility production jobs
-    facility_job_cancel <job>                  Cancel queued production
+    facility_job_cancel <job|job_ids=JSON>     Cancel queued production
     facility_job_reorder <job> <pos>           Reorder queued production
     facility_set_access <facility> <public|private>  Open or close rental access
     facility_set_output_price <facility> <item> <price>  Set renter output pricing

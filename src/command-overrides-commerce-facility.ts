@@ -411,14 +411,20 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_id'],
   },
   facility_job_cancel: {
-    usage: '<job_id>',
-    description: 'Cancel a queued facility job and refund unspent escrow.',
+    usage: '<job_id|job_ids=JSON>',
+    description: 'Cancel queued facility jobs and refund unspent escrow.',
     example: 'spacemolt facility_job_cancel job-1',
     discoverWith: ['facility_job_list'],
     seeAlso: ['facility_job_list', 'facility_job_add'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/job_cancel',
     positionals: ['job_id'],
+    schemaExtensions: {
+      job_ids: {
+        type: 'array',
+        description: 'Queued facility job IDs to cancel in bulk.',
+      },
+    },
   },
   facility_job_reorder: {
     usage: '<job_id> <position>',

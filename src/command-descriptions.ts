@@ -71,7 +71,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_write_room: 'Create or update a room in your faction common space.',
   find_route: 'Find the shortest route to a destination system, POI, or base',
   facility_job_add: 'Queue production work on a facility you own.',
-  facility_job_cancel: 'Cancel a queued facility job and refund unspent escrow.',
+  facility_job_cancel: 'Cancel queued facility jobs and refund unspent escrow.',
   facility_job_list: 'List queued production jobs on a facility you own.',
   facility_job_reorder: 'Move a queued facility job to a new position.',
   facility_owned: 'List every facility you own across all stations.',

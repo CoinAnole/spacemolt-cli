@@ -812,6 +812,11 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['facility_job_cancel', 'job-1']).payload).toEqual({
       job_id: 'job-1',
     });
+    expect(
+      convertPayloadTypes(parseOk(['facility_job_cancel', 'job_ids=["job-1","job-2"]']).payload, 'facility_job_cancel'),
+    ).toEqual({
+      job_ids: ['job-1', 'job-2'],
+    });
 
     const reorder = parseOk(['facility_job_reorder', 'job-1', '3']);
     expect(convertPayloadTypes(reorder.payload, 'facility_job_reorder')).toEqual({
