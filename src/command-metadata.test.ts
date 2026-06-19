@@ -445,7 +445,7 @@ describe('command metadata', () => {
         args: ['facility_id', 'access'],
         help: 'Open or close a facility',
       },
-    } as const;
+    };
 
     for (const [command, expectation] of Object.entries(expected)) {
       const config = BUNDLED_COMMAND_REGISTRY.commands[command];
