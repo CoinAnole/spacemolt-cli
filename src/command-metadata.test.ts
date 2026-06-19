@@ -377,6 +377,7 @@ describe('command metadata', () => {
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
     expect(config?.schema?.deliver_to?.enum).toEqual(['storage', 'faction']);
     expect(config?.schema?.action?.enum).toEqual(['queue']);
+    expect(config?.schema?.job_id?.type).toBe('string');
     expect(config?.schema?.quantity?.description).toContain('Number of output items');
     expect(config?.schema?.quantity?.description).not.toContain('server-capped by crafting skill level');
 
@@ -387,6 +388,7 @@ describe('command metadata', () => {
     expect(help).toContain('dry_run');
     expect(help).toContain('jobs');
     expect(help).toContain('action=queue');
+    expect(help).toContain('job_id');
     expect(help).toContain('Crafting never delivers to cargo');
     expect(help).not.toContain('cargo|storage');
     expect(help).not.toContain('server-capped by crafting skill level');
@@ -404,6 +406,7 @@ describe('command metadata', () => {
     expect(config?.args).toEqual(['recipe_id', 'quantity']);
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
     expect(config?.schema?.deliver_to?.enum).toEqual(['storage', 'faction']);
+    expect(config?.schema?.job_id?.type).toBe('string');
 
     const help = captureHelp('recycle');
     expect(help).toContain('Queue a recycling job');
@@ -411,6 +414,7 @@ describe('command metadata', () => {
     expect(help).toContain('station storage');
     expect(help).toContain('dry_run');
     expect(help).toContain('jobs');
+    expect(help).toContain('job_id');
   });
 
   test('facility production commands have curated routes and help', () => {
@@ -429,6 +433,16 @@ describe('command metadata', () => {
         action: 'job_cancel',
         args: ['job_id'],
         help: 'Cancel a queued facility job',
+      },
+      facility_dismantle: {
+        action: 'dismantle',
+        args: ['facility_id'],
+        help: 'Dismantle a facility',
+      },
+      faction_dismantle: {
+        action: 'faction_dismantle',
+        args: ['facility_id'],
+        help: 'Dismantle a faction facility',
       },
       facility_job_reorder: {
         action: 'job_reorder',

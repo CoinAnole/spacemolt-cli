@@ -741,6 +741,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     const queue = parseOk(['craft', 'action=queue']);
     expect(queue.payload).toEqual({ action: 'queue' });
 
+    expect(parseOk(['craft', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
+
     const quoted = parseOk(['craft', 'basic_iron_smelting', '50', 'dry_run=true', 'preset=cheap']);
     const quotedPayload = convertPayloadTypes(normalizeParsedPayload('craft', quoted.payload), 'craft');
     expect(quotedPayload).toEqual({
@@ -764,6 +766,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('recycle parses recipe positionals and bulk jobs JSON', () => {
+    expect(parseOk(['recycle', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
+
     const single = parseOk(['recycle', 'basic_iron_smelting', '20', 'dry_run=true']);
     const singlePayload = convertPayloadTypes(normalizeParsedPayload('recycle', single.payload), 'recycle');
     expect(singlePayload).toEqual({
@@ -1149,7 +1153,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['fleet_status']).payload).toEqual({});
     expect(parseOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
     expect(parseOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
+    expect(parseOk(['facility_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
+    expect(parseOk(['faction_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');
     expect(parseArgs(['facility_transfer', 'facility-1', 'forward'])).toEqual({
       ok: false,

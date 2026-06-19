@@ -366,6 +366,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/build',
     positionals: ['facility_type'],
   },
+  facility_dismantle: {
+    usage: '<facility_id>',
+    description: 'Dismantle a facility you own into assembly crates.',
+    example: 'spacemolt facility_dismantle facility-1',
+    discoverWith: ['facility_owned'],
+    seeAlso: ['facility_owned', 'facility_build'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/dismantle',
+    positionals: ['facility_id'],
+  },
   facility_upgrade: {
     usage: '<facility_type> [facility_id]',
     category: 'Facilities',
@@ -499,6 +509,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
     positionals: ['facility_type'],
+  },
+  faction_dismantle: {
+    usage: '<facility_id>',
+    description: 'Dismantle a faction facility into assembly crates.',
+    example: 'spacemolt faction_dismantle facility-1',
+    discoverWith: ['faction_facility_owned'],
+    seeAlso: ['faction_facility_owned', 'faction_build'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_dismantle',
+    positionals: ['facility_id'],
   },
   faction_facility_upgrade: {
     category: 'Facilities',
