@@ -91,6 +91,20 @@ function formatOptionalNumber(value: unknown): string {
   return number === undefined ? '?' : number.toLocaleString();
 }
 
+function formatFillCounterparties(fills: unknown): string {
+  if (!Array.isArray(fills)) return '';
+  const counterparties: string[] = [];
+  const seen = new Set<string>();
+  for (const fill of fills) {
+    if (!isRecord(fill) || typeof fill.counterparty !== 'string') continue;
+    const counterparty = fill.counterparty.trim();
+    if (!counterparty || seen.has(counterparty)) continue;
+    counterparties.push(counterparty);
+    seen.add(counterparty);
+  }
+  return counterparties.length ? ` from ${counterparties.join(', ')}` : '';
+}
+
 function autoListedOrder(value: unknown): Record<string, unknown> | undefined {
   return isRecord(value) ? value : undefined;
 }
@@ -294,7 +308,7 @@ export const marketFormatters = [
       if (filled !== undefined) {
         const totalLabel = side === 'buy' ? 'spent' : 'earned';
         const totalText = fillTotal !== undefined ? ` (${totalLabel}: ${formatCredits(fillTotal)})` : '';
-        emitLine(`Instant fills: ${filled.toLocaleString()}${totalText}`);
+        emitLine(`Instant fills: ${filled.toLocaleString()}${totalText}${formatFillCounterparties(r.fills)}`);
       }
       if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo.toLocaleString()}`);
       if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage.toLocaleString()}`);
@@ -379,7 +393,7 @@ export const marketFormatters = [
       if (sold !== undefined) emitLine(`Sold: ${sold.toLocaleString()}`);
       if (sold !== undefined) {
         const earnedText = earned !== undefined ? ` (earned: ${formatCredits(earned)})` : '';
-        emitLine(`Instant fills: ${sold.toLocaleString()}${earnedText}`);
+        emitLine(`Instant fills: ${sold.toLocaleString()}${earnedText}${formatFillCounterparties(r.fills)}`);
       } else if (earned !== undefined) {
         emitLine(`Total earned: ${formatCredits(earned)}`);
       }
@@ -413,7 +427,7 @@ export const marketFormatters = [
       if (filled !== undefined) emitLine(`Filled: ${filled.toLocaleString()}`);
       if (filled !== undefined) {
         const spentText = spent !== undefined ? ` (spent: ${formatCredits(spent)})` : '';
-        emitLine(`Instant fills: ${filled.toLocaleString()}${spentText}`);
+        emitLine(`Instant fills: ${filled.toLocaleString()}${spentText}${formatFillCounterparties(r.fills)}`);
       } else if (spent !== undefined) {
         emitLine(`Total cost: ${formatCredits(spent)}`);
       }

@@ -1575,6 +1575,130 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Remaining listed: 75');
   });
 
+  test.each([
+    [
+      'buy',
+      {
+        action: 'buy',
+        item: 'Liquid Hydrogen',
+        item_id: 'liquid_hydrogen',
+        quantity: 1,
+        total_cost: 25,
+        unfilled: 0,
+        fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+      },
+      'Instant fills: 1 (spent: 25 cr) from AetherWraith',
+    ],
+    [
+      'sell',
+      {
+        action: 'sell',
+        item: 'Liquid Hydrogen',
+        item_id: 'liquid_hydrogen',
+        quantity_sold: 1,
+        total_earned: 25,
+        unsold: 0,
+        fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+      },
+      'Instant fills: 1 (earned: 25 cr) from AetherWraith',
+    ],
+    [
+      'create_buy_order',
+      {
+        action: 'create_buy_order',
+        item: 'Liquid Hydrogen',
+        item_id: 'liquid_hydrogen',
+        quantity: 1,
+        price_each: 25,
+        quantity_filled: 1,
+        quantity_listed: 0,
+        total_spent: 25,
+        listing_fee: 1,
+        order_id: 'order-buy-fill',
+        fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+      },
+      'Instant fills: 1 (spent: 25 cr) from AetherWraith',
+    ],
+    [
+      'create_sell_order',
+      {
+        action: 'create_sell_order',
+        item: 'Liquid Hydrogen',
+        item_id: 'liquid_hydrogen',
+        quantity: 1,
+        price_each: 25,
+        quantity_filled: 1,
+        quantity_listed: 0,
+        total_earned: 25,
+        listing_fee: 1,
+        order_id: 'order-sell-fill',
+        fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+      },
+      'Instant fills: 1 (earned: 25 cr) from AetherWraith',
+    ],
+    [
+      'faction_create_buy_order',
+      {
+        action: 'create_buy_order',
+        item: 'Liquid Hydrogen',
+        item_id: 'liquid_hydrogen',
+        quantity: 1,
+        price_each: 25,
+        quantity_filled: 1,
+        quantity_listed: 0,
+        total_spent: 25,
+        listing_fee: 1,
+        order_id: 'faction-buy-fill',
+        fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+      },
+      'Instant fills: 1 (spent: 25 cr) from AetherWraith',
+    ],
+    [
+      'faction_create_sell_order',
+      {
+        action: 'create_sell_order',
+        item: 'Liquid Hydrogen',
+        item_id: 'liquid_hydrogen',
+        quantity: 1,
+        price_each: 25,
+        quantity_filled: 1,
+        quantity_listed: 0,
+        total_earned: 25,
+        listing_fee: 1,
+        order_id: 'faction-sell-fill',
+        fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+      },
+      'Instant fills: 1 (earned: 25 cr) from AetherWraith',
+    ],
+  ] as const)('formats %s fill counterparties', (command, fixture, expectedFillLine) => {
+    const { stdout, stderr } = captureStructuredOutput(command, fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(expectedFillLine);
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('keeps fill counterparty reachable in structured details output', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'buy',
+      {
+        details: {
+          action: 'buy',
+          item: 'Liquid Hydrogen',
+          item_id: 'liquid_hydrogen',
+          quantity: 1,
+          total_cost: 25,
+          unfilled: 0,
+          fills: [{ quantity: 1, price_each: 25, subtotal: 25, source: 'player', counterparty: 'AetherWraith' }],
+        },
+      },
+      { format: 'json', jq: '.details.fills[0].counterparty' },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('"AetherWraith"');
+  });
+
   test('formats direct sell fills and auto-listed leftovers', () => {
     const { stdout, stderr } = captureStructuredOutput('sell', {
       action: 'sell',
