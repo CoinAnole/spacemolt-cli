@@ -125,9 +125,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   scan: {
-    usage: '<player_id>',
-    description: 'Scan a nearby player for ship and combat details.',
-    example: 'spacemolt scan <player_id>',
+    usage: '[target_id]  (omit target_id to sweep your location for cloaked ships)',
+    description: 'Scan a nearby player or NPC for ship details. Omit the target to run an area sensor sweep.',
+    example: 'spacemolt scan',
     discoverWith: ['get_nearby'],
     seeAlso: ['attack', 'get_ship'],
     category: 'Combat',

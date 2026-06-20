@@ -2806,6 +2806,35 @@ describe('structuredContent formatters', () => {
     `);
   });
 
+  test('renders unknown cloaked signature hints in location-aware tables', () => {
+    const nearby = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      count: 0,
+      pirates: [],
+      pirate_count: 0,
+      empire_npcs: [],
+      empire_npc_count: 0,
+      poi_id: 'sol_earth',
+      unknown_signature: true,
+    });
+    const location = captureStructuredOutput('get_location', {
+      ...getLocationFixture,
+      location: { ...getLocationFixture.location, unknown_signature: true },
+    });
+    const status = captureStructuredOutput('get_status', {
+      ...getStatusFixture,
+      location: { ...getStatusFixture.location, unknown_signature: true },
+    });
+
+    expect(nearby.stderr).toBe('');
+    expect(location.stderr).toBe('');
+    expect(status.stderr).toBe('');
+    for (const output of [nearby.stdout, location.stdout, status.stdout]) {
+      expect(output).toContain('Unknown cloaked signature detected');
+      expect(output).toContain('scan');
+    }
+  });
+
   test('all named formatters have snapshot fixtures', () => {
     const namedFormatters = resultFormatters
       .map((formatter) => formatter.formatterName)

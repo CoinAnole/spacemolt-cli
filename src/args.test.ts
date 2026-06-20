@@ -1266,6 +1266,10 @@ describe('validateRequiredArgs', () => {
     expect(validateRequiredArgs('get_cargo', {})).toBeNull();
   });
 
+  test('scan accepts no target for an area sweep', () => {
+    expect(validateRequiredArgs('scan', {})).toBeNull();
+  });
+
   test('trade_offer requires target_id but not credits', () => {
     expect(validateRequiredArgs('trade_offer', {})).toBe('target_id');
     expect(validateRequiredArgs('trade_offer', { target_id: 'abc' })).toBeNull();

@@ -371,6 +371,18 @@ describe('command metadata', () => {
     expect(help).toContain('quantity applies only to fuel cells and transfers');
   });
 
+  test('scan help documents optional area sweeps', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.scan;
+    expect(config?.required ?? []).toEqual([]);
+    expect(config?.usage).toContain('[target_id]');
+    expect(config?.description).toContain('Omit the target to run an area sensor sweep');
+
+    const help = captureHelp('scan');
+    expect(help).toContain('spacemolt scan');
+    expect(help).toContain('[target_id]');
+    expect(help).toContain('area sensor sweep');
+  });
+
   test('craft help documents queued station-storage production', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.args).toEqual(['recipe_id', 'quantity']);

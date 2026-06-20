@@ -38,6 +38,15 @@ function formatSummaryLine(label: string, value: unknown): string {
   return `${label.padEnd(11)}${value === undefined || value === null || value === '' ? 'unknown' : String(value)}`;
 }
 
+function hasUnknownSignature(...sources: unknown[]): boolean {
+  return sources.some((source) => isRecord(source) && source.unknown_signature === true);
+}
+
+function emitUnknownSignatureHint(...sources: unknown[]): void {
+  if (!hasUnknownSignature(...sources)) return;
+  emitLine(`${c.yellow}Unknown cloaked signature detected.${c.reset} Run: scan`);
+}
+
 function textFromRecord(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
   if (!record) return undefined;
   for (const key of keys) {
@@ -366,6 +375,7 @@ export const statusFormatters = [
       emitLine(`  POI: ${poi?.name || p.current_poi}`);
       emitLine(`  Docked: ${p.docked_at_base ? `Yes (${p.docked_at_base})` : 'No'}`);
       if (p.is_cloaked) emitLine(`  ${c.cyan}[CLOAKED]${c.reset}`);
+      emitUnknownSignatureHint(r, r.location, poi);
 
       emitLine(`\n${c.bright}Ship: ${s.name}${c.reset} (${s.class_id})`);
       emitLine(`  Hull: ${s.hull}/${s.max_hull}`);
@@ -604,6 +614,7 @@ export const statusFormatters = [
       const empireNpcCount = typeof r.empire_npc_count === 'number' ? r.empire_npc_count : npcs.length;
 
       emitLine(`\n${c.bright}=== Nearby ===${c.reset}`);
+      emitUnknownSignatureHint(r);
       emitLine(`\n${c.bright}Players (${playerCount}):${c.reset}`);
       if (!players.length) {
         emitLine(`  (No other players at this location)`);
@@ -711,6 +722,7 @@ export const statusFormatters = [
       if (loc.docked_at) {
         emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
       }
+      emitUnknownSignatureHint(loc);
       if (nearbyPlayerCount > 0) {
         emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
         for (const player of nearbyPlayers.slice(0, NEARBY_TABLE_LIMIT)) {
