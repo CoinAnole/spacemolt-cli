@@ -145,31 +145,32 @@ export async function renderResponse(
 
   const sessionPath = tryGetSessionPath(client.config, context?.env);
   if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
+  const outputResponse = applyStructuredOutputFilters(command, response, commandRun.payload);
 
   if ((isJson || renderOptions.structured) && !hasProjection) {
-    if (renderOptions.structured && response.structuredContent) {
+    if (renderOptions.structured && outputResponse.structuredContent) {
       const out = writer?.out.bind(writer) ?? console.log;
       const warning =
         renderOptions.quiet || isJson
           ? undefined
-          : catalogTruncationWarning(displayCommand, response.structuredContent);
+          : catalogTruncationWarning(displayCommand, outputResponse.structuredContent);
       if (warning) {
         const err = writer?.err.bind(writer) ?? console.error;
         err(warning);
       }
-      out(JSON.stringify(response.structuredContent, null, renderOptions.compact ? 0 : 2));
+      out(JSON.stringify(outputResponse.structuredContent, null, renderOptions.compact ? 0 : 2));
       return 0;
     }
-    printJsonResponse(response, renderOptions.compact, writer);
-    return response.error ? 1 : 0;
+    printJsonResponse(outputResponse, renderOptions.compact, writer);
+    return outputResponse.error ? 1 : 0;
   }
 
   if (hasProjection) {
-    const success = displayResult(displayCommand, response, { ...renderOptions, noTimestamp: true }, context);
+    const success = displayResult(displayCommand, outputResponse, { ...renderOptions, noTimestamp: true }, context);
     return success === false ? 1 : 0;
   }
 
-  const displayResponse = applyHumanDisplayFilters(command, response, commandRun.payload);
+  const displayResponse = applyHumanDisplayFilters(command, outputResponse, commandRun.payload);
   const display = prepareHumanDisplay(commandRun, displayResponse, {
     sessionPath,
     options: renderOptions,
@@ -305,6 +306,15 @@ function enrichCarrierLoadDisplayResponse(
 
 function findCachedShipHint(shipId: string, sessionPath?: string) {
   return loadIdCacheSync(sessionPath).find((hint) => hint.kind === 'ship' && hint.id === shipId);
+}
+
+function applyStructuredOutputFilters(
+  command: string,
+  response: APIResponse,
+  payload?: Record<string, unknown>,
+): APIResponse {
+  if (command !== 'storage' || payload?.action !== 'view') return response;
+  return applyHumanDisplayFilters(command, response, payload);
 }
 
 function applyHumanDisplayFilters(

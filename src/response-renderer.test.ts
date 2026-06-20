@@ -1185,7 +1185,7 @@ describe('response renderer', () => {
     expect(parsed.ships[0].active).toBeUndefined();
   });
 
-  test('renderResponse keeps storage view item payload raw in --json output', async () => {
+  test('renderResponse applies storage view item filter to --json output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -1208,14 +1208,11 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(capture.text());
-    expect(parsed.structuredContent.total_items).toBeUndefined();
-    expect(parsed.structuredContent.items).toEqual([
-      { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
-      { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
-    ]);
+    expect(parsed.structuredContent.total_items).toBe(2);
+    expect(parsed.structuredContent.items).toEqual([{ item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 }]);
   });
 
-  test('renderResponse keeps storage view search payload raw in --structured output', async () => {
+  test('renderResponse applies storage view search filter to --structured output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -1238,14 +1235,11 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(capture.text());
-    expect(parsed.total_items).toBeUndefined();
-    expect(parsed.items).toEqual([
-      { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
-      { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
-    ]);
+    expect(parsed.total_items).toBe(2);
+    expect(parsed.items).toEqual([{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 }]);
   });
 
-  test('renderResponse keeps storage view items payload raw in --structured output', async () => {
+  test('renderResponse applies storage view items filter to --structured output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -1269,15 +1263,14 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(capture.text());
-    expect(parsed.total_items).toBeUndefined();
+    expect(parsed.total_items).toBe(3);
     expect(parsed.items).toEqual([
       { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
-      { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
       { item_id: 'steel_plate', item_name: 'Steel Plate', quantity: 7 },
     ]);
   });
 
-  test('renderResponse keeps storage view array items payload raw in --structured output', async () => {
+  test('renderResponse applies storage view array items filter to --structured output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
@@ -1301,21 +1294,20 @@ describe('response renderer', () => {
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(capture.text());
-    expect(parsed.total_items).toBeUndefined();
+    expect(parsed.total_items).toBe(3);
     expect(parsed.items).toEqual([
       { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718 },
       { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 },
-      { item_id: 'steel_plate', item_name: 'Steel Plate', quantity: 7 },
     ]);
   });
 
-  test('renderResponse projections use raw structured content before display filters', async () => {
+  test('renderResponse applies storage view items filter before jq projections', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
         command: 'storage',
         displayCommand: 'storage',
-        payload: { action: 'view', search: 'fuel' },
+        payload: { action: 'view', items: 'fuel_cell' },
         response: {
           structuredContent: {
             items: [
@@ -1331,7 +1323,7 @@ describe('response renderer', () => {
     );
 
     expect(exitCode).toBe(0);
-    expect(JSON.parse(capture.text())).toEqual(['iron_ore', 'fuel_cell']);
+    expect(JSON.parse(capture.text())).toEqual(['fuel_cell']);
   });
 
   test('renderResponse applies storage view items filter for faction target table output', async () => {
