@@ -3,13 +3,14 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { CliRuntimeContext, CliWriter } from './cli-context';
-import type { CommandRegistrySnapshot } from './command-registry';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
 import type { PlayerState } from './help';
 import {
   displayError,
   displayUnknownCommand,
   parseCommandSearchQuery,
   renderProgressiveHelp,
+  showCommandExplanation,
   showCommandGroup,
   showCommandGroups,
   showCommandHelp,
@@ -267,16 +268,29 @@ describe('help output branches', () => {
     expect(navOutput).toContain('dock - Dock at the current station');
   });
 
-  test('faction group includes faction facility commands', () => {
+  test('faction group includes nested faction facility actions', () => {
     const capture = captureWriter();
 
     expect(showCommandGroup('faction', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('Faction Commands');
-    expect(output).toContain('Faction facilities:');
-    expect(output).toContain('faction_build <facility_type> - Build a faction facility at the current base.');
-    expect(output).toContain('faction_facility_list <args...> - List faction facilities at the current base.');
+    expect(output).toContain('faction build <facility_type> - Build a faction facility at the current base.');
+    expect(output).toContain('faction facility_list <args...> - List faction facilities at the current base.');
+    expect(output).not.toContain('faction_build');
+    expect(output).not.toContain('faction_facility_list');
+  });
+
+  test('command group help lists nested executable actions', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('faction', capture.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('faction create_buy_order');
+    expect(output).toContain('faction info');
+    expect(output).not.toContain('faction_create_buy_order');
+    expect(output).not.toContain('faction_info');
   });
 
   test('full help facility section does not describe facility_build as player-only', () => {
@@ -428,18 +442,41 @@ describe('help output branches', () => {
     expect(output).toContain('Did you mean: travel');
   });
 
-  test('showCommandSearch ranks curated faction_build before legacy faction facility build', () => {
+  test('showCommandSearch ranks nested faction build before facility-specific action', () => {
     const capture = captureWriter();
 
     showCommandSearch('faction facility build', capture.writer);
 
     const lines = capture.stdout.join('\n').split('\n');
-    const factionBuildIndex = lines.findIndex((line) => line.includes('faction_build <facility_type>'));
-    const legacyIndex = lines.findIndex((line) => line.includes('faction_facility_build <facility_type>'));
+    const factionBuildIndex = lines.findIndex((line) => line.includes('faction build <facility_type>'));
+    const facilityBuildIndex = lines.findIndex((line) => line.includes('faction facility_build <facility_type>'));
 
     expect(factionBuildIndex).toBeGreaterThan(-1);
-    expect(legacyIndex).toBeGreaterThan(-1);
-    expect(factionBuildIndex).toBeLessThan(legacyIndex);
+    expect(facilityBuildIndex).toBeGreaterThan(-1);
+    expect(factionBuildIndex).toBeLessThan(facilityBuildIndex);
+  });
+
+  test('command search returns nested action display names and hides grouped flat names', () => {
+    const capture = captureWriter();
+
+    showCommandSearch('faction buy order', capture.writer, BUNDLED_COMMAND_REGISTRY);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('faction create_buy_order');
+    expect(output).not.toContain('faction_create_buy_order');
+  });
+
+  test('command help and explanation support nested action display names', () => {
+    const help = captureWriter();
+    const explain = captureWriter();
+
+    expect(showCommandHelp('faction create_buy_order', help.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+    expect(showCommandExplanation('faction create_buy_order', explain.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+
+    expect(help.stdout.join('\n')).toContain('spacemolt faction create_buy_order');
+    expect(explain.stdout.join('\n')).toContain(
+      'API route: POST /api/v2/spacemolt_faction_commerce/create_buy_order',
+    );
   });
 
   test('showCommandSearch matches command category metadata', () => {

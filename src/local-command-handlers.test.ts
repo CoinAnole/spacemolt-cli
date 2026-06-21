@@ -1412,14 +1412,41 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('spacemolt server-help travel');
   });
 
+  test('help and explain route nested command actions', async () => {
+    const helpHandler = resolveHandler(['help', 'faction', 'create_buy_order'], options);
+    expect(helpHandler?.name).toBe('help');
+    if (!helpHandler) return;
+    const helpParsed = helpHandler.parse(['help', 'faction', 'create_buy_order'], options);
+    expect(helpParsed.ok).toBe(true);
+    if (!helpParsed.ok) return;
+    const helpCapture = captureContext();
+    await helpHandler.render(await helpHandler.run(helpParsed.payload, options), options, undefined, helpCapture.context);
+    expect(helpCapture.stdout.join('\n')).toContain('spacemolt faction create_buy_order');
+
+    const explainHandler = resolveHandler(['explain', 'faction', 'create_buy_order'], options);
+    expect(explainHandler?.name).toBe('explain');
+    if (!explainHandler) return;
+    const explainParsed = explainHandler.parse(['explain', 'faction', 'create_buy_order'], options);
+    expect(explainParsed.ok).toBe(true);
+    if (!explainParsed.ok) return;
+    const explainCapture = captureContext();
+    await explainHandler.render(
+      await explainHandler.run(explainParsed.payload, options),
+      options,
+      undefined,
+      explainCapture.context,
+    );
+    expect(explainCapture.stdout.join('\n')).toContain('faction create_buy_order');
+  });
+
   test('help with unknown terms searches local commands', async () => {
-    const handler = resolveHandler(['help', 'faction', 'build'], options);
+    const handler = resolveHandler(['help', 'faction', 'facility'], options);
 
     expect(handler?.name).toBe('help');
     if (!handler) return;
     const { context, stdout } = captureContext();
 
-    const parsed = handler.parse(['help', 'faction', 'build'], { ...options, profile: 'pilot' }, context);
+    const parsed = handler.parse(['help', 'faction', 'facility'], { ...options, profile: 'pilot' }, context);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
 
@@ -1428,8 +1455,8 @@ describe('local command handlers', () => {
 
     expect(exitCode).toBe(0);
     const output = stdout.join('\n');
-    expect(output).toContain('Commands matching "faction build"');
-    expect(output).toContain('faction_build <facility_type>');
+    expect(output).toContain('Commands matching "faction facility"');
+    expect(output).toContain('faction build <facility_type>');
   });
 
   test('group trailing --help renders local group help without network', async () => {
@@ -1611,37 +1638,37 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('Dynamic command for inline help tests');
   });
 
-  test('api command trailing help renders local command help without network', async () => {
-    const handler = resolveHandler(['facility_upgrade', 'help'], options);
+  test('nested api command trailing help renders local command help without network', async () => {
+    const handler = resolveHandler(['facility', 'upgrade', 'help'], options);
 
-    expect(handler).toBeInstanceOf(ApiCommandHandler);
+    expect(handler?.name).toBe('facility upgrade');
     if (!handler) return;
     const { context, stdout } = captureContext();
 
-    const parsed = handler.parse(['facility_upgrade', 'help'], { ...options, profile: 'pilot' }, context);
+    const parsed = handler.parse(['facility', 'upgrade', 'help'], { ...options, profile: 'pilot' }, context);
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.error.code).toBe('exit');
     expect(parsed.error.exitCode).toBe(0);
-    expect(stdout.join('\n')).toContain('facility_upgrade');
-    expect(stdout.join('\n')).toContain('spacemolt facility_upgrade --facility-type ... --facility-id ...');
+    expect(stdout.join('\n')).toContain('facility upgrade');
+    expect(stdout.join('\n')).toContain('spacemolt facility upgrade');
   });
 
-  test('api command trailing help respects plain output state', async () => {
-    const handler = resolveHandler(['facility_upgrade', 'help'], { ...options, plain: true });
+  test('nested api command trailing help respects plain output state', async () => {
+    const handler = resolveHandler(['facility', 'upgrade', 'help'], { ...options, plain: true });
 
-    expect(handler).toBeInstanceOf(ApiCommandHandler);
+    expect(handler?.name).toBe('facility upgrade');
     if (!handler) return;
     const { context, stdout } = captureContext();
 
-    const parsed = handler.parse(['facility_upgrade', 'help'], { ...options, plain: true, profile: 'pilot' }, context);
+    const parsed = handler.parse(['facility', 'upgrade', 'help'], { ...options, plain: true, profile: 'pilot' }, context);
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.error.code).toBe('exit');
     expect(parsed.error.exitCode).toBe(0);
-    expect(stdout.join('\n')).toContain('facility_upgrade');
+    expect(stdout.join('\n')).toContain('facility upgrade');
     expect(stdout.join('\n')).not.toContain('\x1b[');
   });
 

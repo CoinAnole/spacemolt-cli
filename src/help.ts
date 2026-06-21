@@ -1,6 +1,7 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
+import { commandGroup, groupedCommandParts, type CommandGroupEntryConfig } from './command-groups.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
@@ -102,13 +103,77 @@ function err(writer?: CliWriter): (message?: string) => void {
   return writer?.err.bind(writer) ?? console.error;
 }
 
-type CommandHelpMap = Record<string, CommandConfig | LocalCommandConfig>;
-type CommandHelpSource = CommandHelpMap | Pick<CommandRegistrySnapshot, 'allCommands'>;
+type CommandHelpConfig = CommandConfig | LocalCommandConfig | CommandGroupEntryConfig;
+type CommandHelpMap = Record<string, CommandHelpConfig>;
+type CommandHelpSource = CommandHelpMap | Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>>;
+
+function isRegistryHelpSource(source: CommandHelpSource | undefined): source is Partial<
+  Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>
+> {
+  return Boolean(source && ('allCommands' in source || 'commandGroups' in source));
+}
+
+function commandHelpGroups(source?: CommandHelpSource): CommandRegistrySnapshot['commandGroups'] | undefined {
+  if (!source) return BUNDLED_COMMAND_REGISTRY.commandGroups;
+  return isRegistryHelpSource(source) ? source.commandGroups : undefined;
+}
+
+function groupedCommandDisplayNames(
+  commandGroups: CommandRegistrySnapshot['commandGroups'] | undefined,
+): Record<string, string> {
+  const displayNames: Record<string, string> = {};
+  for (const group of Object.values(commandGroups ?? {})) {
+    for (const action of Object.values(group?.actions ?? {})) {
+      displayNames[action.command] = action.displayName;
+    }
+  }
+  return displayNames;
+}
+
+function translateGroupedCommand(command: string, displayNames: Record<string, string>): string {
+  const direct = displayNames[command];
+  if (direct) return direct;
+  const parts = groupedCommandParts(command);
+  if (!parts) return command;
+  return displayNames[`${parts.group}_${parts.action}`] ?? command;
+}
+
+function translateGroupedExample(example: string | undefined, displayNames: Record<string, string>): string | undefined {
+  if (!example) return undefined;
+  let translated = example;
+  for (const [flatCommand, displayName] of Object.entries(displayNames)) {
+    translated = translated.replaceAll(`spacemolt ${flatCommand}`, `spacemolt ${displayName}`);
+  }
+  return translated;
+}
+
+function displayGroupedActionConfig(
+  config: CommandConfig,
+  displayNames: Record<string, string>,
+): CommandConfig {
+  return {
+    ...config,
+    example: translateGroupedExample(config.example, displayNames),
+    discoverWith: config.discoverWith?.map((command) => translateGroupedCommand(command, displayNames)),
+    seeAlso: config.seeAlso?.map((command) => translateGroupedCommand(command, displayNames)),
+  };
+}
 
 function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
-  if (!source) return BUNDLED_COMMAND_REGISTRY.allCommands;
-  const registry = source as Partial<Pick<CommandRegistrySnapshot, 'allCommands'>>;
-  return registry.allCommands ?? (source as CommandHelpMap);
+  const commandGroups = commandHelpGroups(source);
+  const baseCommands = !source
+    ? BUNDLED_COMMAND_REGISTRY.allCommands
+    : isRegistryHelpSource(source)
+      ? source.allCommands ?? {}
+      : source;
+  const commands: CommandHelpMap = { ...baseCommands };
+  const groupedDisplayNames = groupedCommandDisplayNames(commandGroups);
+  for (const group of Object.values(commandGroups ?? {})) {
+    for (const action of Object.values(group?.actions ?? {})) {
+      commands[action.displayName] = displayGroupedActionConfig(action.config, groupedDisplayNames);
+    }
+  }
+  return commands;
 }
 
 function structuredPayloadFields(command: string, config: CommandConfig | LocalCommandConfig): string[] {
@@ -135,6 +200,10 @@ export function getUsageHint(command: string, commands?: CommandHelpSource): str
 
 export function getUsageLine(command: string, commands?: CommandHelpSource): string {
   return `spacemolt ${command} ${getUsageHint(command, commands)}`.trimEnd();
+}
+
+export function hasCommandHelpTarget(command: string, commands?: CommandHelpSource): boolean {
+  return Boolean(commandHelpMap(commands)[command]);
 }
 
 function levenshtein(a: string, b: string): number {
@@ -218,6 +287,10 @@ function isWeakDescription(command: string, description: string | undefined): bo
   return normalizeCommandSummaryText(description) === normalizeCommandSummaryText(command);
 }
 
+function executableGroupLabel(groupName: string): string {
+  return findCommandGroup(groupName)?.label ?? groupName;
+}
+
 function normalizeCommandSummaryText(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '_');
 }
@@ -243,11 +316,21 @@ export function showCommandGroup(
   commands?: CommandHelpSource,
   options?: HelpOutputOptions,
 ): boolean {
-  const group = findCommandGroup(topic);
-  if (!group) return false;
+  const executableGroup = commandGroup(commandHelpGroups(commands), topic);
   const allCommands = commandHelpMap(commands);
   const write = out(writer);
   const c = colorsForPlain(Boolean(options?.plain));
+
+  if (executableGroup) {
+    const actions = Object.values(executableGroup.actions).sort((a, b) => a.action.localeCompare(b.action));
+    write(`\n${c.bright}${executableGroupLabel(executableGroup.name)} Commands${c.reset}`);
+    for (const action of actions) write(`  ${formatCommandSummary(action.displayName, allCommands)}`);
+    write(`\nRun "spacemolt help ${executableGroup.name} <action>" for argument details.`);
+    return true;
+  }
+
+  const group = findCommandGroup(topic);
+  if (!group) return false;
 
   const matchingCommands = Object.keys(allCommands)
     .filter((command) => commandMatchesGroup(command, group, allCommands))
@@ -378,7 +461,7 @@ export function showCommandExplanation(
   write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
     const routePath = routeToPath(config.route, { includeApiPrefix: true });
-    write(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
+    write(`${c.bright}API route: ${config.route.method || 'POST'} ${routePath}${c.reset}`);
   } else {
     write(`${c.bright}Type:${c.reset} local helper command`);
   }

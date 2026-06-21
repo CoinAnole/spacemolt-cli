@@ -17,6 +17,7 @@ import {
   displayUnknownCommand,
   getUsageLine,
   hasCommandGroup,
+  hasCommandHelpTarget,
   parseCommandSearchQuery,
   printJsonError,
   showCommandExplanation,
@@ -200,9 +201,12 @@ const profileHandler: CommandHandler<ProfilePayload, ProfilePayload> = {
 
 function createCommandsHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
-    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>> = BUNDLED_COMMAND_REGISTRY,
 ): CommandHandler<{ args: string[] }, { query: ReturnType<typeof parseCommandSearchQuery> }> {
-  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  const helpSource = {
+    allCommands: registrySnapshot.allCommands ?? registrySnapshot.commands,
+    commandGroups: registrySnapshot.commandGroups,
+  };
   return {
     name: 'commands',
     requiresNetwork: false,
@@ -214,7 +218,7 @@ function createCommandsHandler(
       return { query: outputSearchWithTrailingArgs(options.outputSearch, payload.args) || argsQuery || '' };
     },
     render(result, options, _client, context) {
-      showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
+      showCommandSearch(result.query, context?.writer, helpSource, localOutputOptions(options, context));
       return 0;
     },
   };
@@ -224,13 +228,17 @@ const commandsHandler = createCommandsHandler();
 
 function createExplainHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
-    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>> = BUNDLED_COMMAND_REGISTRY,
 ): CommandHandler<{ command: string }, { found: boolean; command: string }> {
+  const helpSource = {
+    allCommands: registrySnapshot.allCommands ?? registrySnapshot.commands,
+    commandGroups: registrySnapshot.commandGroups,
+  };
   return {
     name: 'explain',
     requiresNetwork: false,
     parse(argv) {
-      const explainCommand = argv[1];
+      const explainCommand = argv.slice(1).join(' ').trim();
       if (!explainCommand) {
         return {
           ok: false,
@@ -245,7 +253,7 @@ function createExplainHandler(
       return { ok: true, payload: { command: explainCommand } };
     },
     run(payload) {
-      const found = Boolean(registrySnapshot.commands[payload.command]);
+      const found = hasCommandHelpTarget(payload.command, helpSource);
       return { found, command: payload.command };
     },
     render(result, options, _client, context) {
@@ -268,7 +276,7 @@ function createExplainHandler(
       showCommandExplanation(
         result.command,
         context?.writer,
-        registrySnapshot.allCommands ?? registrySnapshot.commands,
+        helpSource,
         localOutputOptions(options, context),
       );
       return 0;
@@ -712,9 +720,13 @@ type HelpPayload =
 
 function createLocalHelpHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
-    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>> = BUNDLED_COMMAND_REGISTRY,
 ): CommandHandler<HelpPayload, HelpPayload> {
-  const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
+  const helpSource = {
+    allCommands: registrySnapshot.allCommands ?? registrySnapshot.commands,
+    commandGroups: registrySnapshot.commandGroups,
+  };
+  const allCommands = helpSource.allCommands;
   return {
     name: 'help',
     aliases: ['--help', '-h'],
@@ -728,7 +740,11 @@ function createLocalHelpHandler(
       }
 
       if (commandName === '--help' || commandName === '-h') {
-        const helpCommand = subArgs[0];
+        const groupedAction = commandGroupAction(registrySnapshot.commandGroups, subArgs[0], subArgs[1]);
+        if (groupedAction) {
+          return { ok: true, payload: { type: 'helpCommand', target: groupedAction.displayName } };
+        }
+        const helpCommand = subArgs.join(' ').trim();
         if (helpCommand) {
           return { ok: true, payload: { type: 'helpCommand', target: helpCommand } };
         }
@@ -755,9 +771,14 @@ function createLocalHelpHandler(
       const normalizedSubArgs =
         subArgs.length === 1 && target.startsWith('command=') ? [target.slice('command='.length)] : subArgs;
       const normalizedTarget = normalizedSubArgs[0];
+      const groupedAction = commandGroupAction(registrySnapshot.commandGroups, normalizedSubArgs[0], normalizedSubArgs[1]);
 
       if (target === 'all') {
         return { ok: true, payload: { type: 'helpAll' } };
+      }
+
+      if (groupedAction) {
+        return { ok: true, payload: { type: 'helpCommand', target: groupedAction.displayName } };
       }
 
       if (normalizedSubArgs.length === 1 && normalizedTarget && allCommands[normalizedTarget]) {
@@ -780,15 +801,15 @@ function createLocalHelpHandler(
       }
       if (result.type === 'showHelpAndGroups') {
         showHelp(context?.writer, localOutputOptions(options, context));
-        showCommandGroups(context?.writer, allCommands, localOutputOptions(options, context));
+        showCommandGroups(context?.writer, helpSource, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpAll') {
-        showFullHelp(context?.writer, allCommands, localOutputOptions(options, context));
+        showFullHelp(context?.writer, helpSource, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpGroup') {
-        showCommandGroup(result.target, context?.writer, allCommands, localOutputOptions(options, context));
+        showCommandGroup(result.target, context?.writer, helpSource, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'progressiveOrHelp') {
@@ -800,14 +821,14 @@ function createLocalHelpHandler(
         return 0;
       }
       if (result.type === 'helpSearch') {
-        showCommandSearch(result.query, context?.writer, allCommands, localOutputOptions(options, context));
+        showCommandSearch(result.query, context?.writer, helpSource, localOutputOptions(options, context));
         return 0;
       }
       if (result.type === 'helpCommand') {
         if (
-          showCommandExplanation(result.target, context?.writer, allCommands, localOutputOptions(options, context)) ||
+          showCommandExplanation(result.target, context?.writer, helpSource, localOutputOptions(options, context)) ||
           (hasCommandGroup(result.target) &&
-            showCommandGroup(result.target, context?.writer, allCommands, localOutputOptions(options, context)))
+            showCommandGroup(result.target, context?.writer, helpSource, localOutputOptions(options, context)))
         ) {
           return 0;
         }
