@@ -280,7 +280,7 @@ const explainHandler = createExplainHandler();
 
 function createCompletionHandler(
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
-    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>> = BUNDLED_COMMAND_REGISTRY,
 ): CommandHandler<{ shell: string }, { completion: string }> {
   const allCommands = registrySnapshot.allCommands ?? registrySnapshot.commands;
   return {
@@ -302,7 +302,12 @@ function createCompletionHandler(
       return { ok: true, payload: { shell } };
     },
     run(payload) {
-      return { completion: generateCompletion(payload.shell, { allCommands }) };
+      return {
+        completion: generateCompletion(payload.shell, {
+          allCommands,
+          commandGroups: registrySnapshot.commandGroups,
+        }),
+      };
     },
     render(result, _options, _client, context) {
       if (context) context.writer.out(result.completion);

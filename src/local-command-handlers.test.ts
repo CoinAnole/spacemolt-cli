@@ -599,6 +599,31 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('complete -c spacemolt');
   });
 
+  test('completion command emits nested static group fallbacks through runInvocation', async () => {
+    async function completionOutput(shell: 'bash' | 'fish'): Promise<string> {
+      const { context, stdout, stderr } = captureContext({ HOME: tempDir() });
+      const exitCode = await runInvocation(['completion', shell], undefined, context, {
+        async checkForUpdates() {},
+      });
+
+      expect(exitCode, shell).toBe(0);
+      expect(stderr, shell).toEqual([]);
+      return stdout.join('');
+    }
+
+    const bash = await completionOutput('bash');
+
+    expect(bash).toContain('case "$action" in');
+    expect(bash).toContain('create_buy_order)');
+    expect(bash).toContain('item_id=');
+    expect(bash).not.toContain('faction_create_buy_order');
+
+    const fish = await completionOutput('fish');
+
+    expect(fish).toContain('__spacemolt_seen_nested_command faction create_buy_order');
+    expect(fish).toContain('-a item_id=');
+  });
+
   test('hidden __complete command routes and renders line protocol candidates', async () => {
     const handler = resolveHandler(['__complete', 'fish', '--', 'spacemolt', 'sell', 'ir'], options);
     expect(handler).toBeDefined();
