@@ -11,6 +11,7 @@ import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './genera
 import { resolveHandler } from './local-command-handlers';
 import { runInvocation } from './main';
 import type { GeneratedApiRoute } from './openapi-metadata';
+import type { CommandRunResult } from './response-renderer';
 import type { GlobalOptions } from './types';
 
 const options: GlobalOptions = {
@@ -241,6 +242,69 @@ describe('local command handlers', () => {
         payload: { target_id: 'ship_123' },
       },
     ]);
+  });
+
+  test('nested API commands resolve and parse with original command configs', () => {
+    const cases: Array<{ argv: string[]; payload: Record<string, unknown>; handlerName: string }> = [
+      { argv: ['citizenship', 'apply', 'solarian'], payload: { target: 'solarian' }, handlerName: 'citizenship apply' },
+      {
+        argv: ['facility', 'job_add', 'facility-1', 'refine_steel', '12', 'reverse'],
+        payload: { facility_id: 'facility-1', recipe_id: 'refine_steel', quantity: 12, direction: 'reverse' },
+        handlerName: 'facility job_add',
+      },
+      {
+        argv: ['faction', 'create_buy_order', 'ore_iron', '100', '12'],
+        payload: { item_id: 'ore_iron', quantity: 100, price_each: 12 },
+        handlerName: 'faction create_buy_order',
+      },
+      { argv: ['fleet', 'invite', 'PlayerName'], payload: { id: 'PlayerName' }, handlerName: 'fleet invite' },
+      { argv: ['forum', 'get_thread', 'thread-1'], payload: { target: 'thread-1' }, handlerName: 'forum get_thread' },
+      { argv: ['station', 'set_name', 'Aurora Freeport'], payload: { name: 'Aurora Freeport' }, handlerName: 'station set_name' },
+      { argv: ['trade', 'offer', 'player-1', 'credits=500'], payload: { target: 'player-1', offer_credits: 500 }, handlerName: 'trade offer' },
+    ];
+
+    for (const entry of cases) {
+      const handler = resolveHandler(entry.argv, options);
+      expect(handler?.name, entry.argv.join(' ')).toBe(entry.handlerName);
+      const parsed = handler?.parse(entry.argv, { ...options, profile: 'pilot' }, fakeContext([], []));
+      expect(parsed?.ok, entry.argv.join(' ')).toBe(true);
+      if (!parsed || !parsed.ok) continue;
+      expect(parsed.payload, entry.argv.join(' ')).toEqual(entry.payload);
+    }
+  });
+
+  test('removed flat grouped commands are unknown', () => {
+    for (const command of ['citizenship_apply', 'facility_job_add', 'faction_info', 'fleet_invite', 'forum_get_thread', 'station_set_name', 'trade_offer']) {
+      expect(resolveHandler([command], options), command).toBeUndefined();
+    }
+  });
+
+  test('nested API command dry run keeps nested display name and original route', async () => {
+    const handler = resolveHandler(['faction', 'create_buy_order', 'ore_iron', '100', '12'], options);
+    expect(handler?.name).toBe('faction create_buy_order');
+    if (!handler) return;
+    const parsed = handler.parse(
+      ['faction', 'create_buy_order', 'ore_iron', '100', '12'],
+      { ...options, dryRun: true, profile: 'pilot' },
+      fakeContext([], []),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const runResult = (await handler.run(parsed.payload, { ...options, dryRun: true }, undefined)) as CommandRunResult & {
+      displayCommand?: string;
+    };
+
+    expect(runResult).toMatchObject({
+      command: 'faction_create_buy_order',
+      displayCommand: 'faction create_buy_order',
+      payload: { item_id: 'ore_iron', quantity: 100, price_each: 12 },
+    });
+    expect(runResult.response.structuredContent?.url).toContain('/api/v2/spacemolt_faction_commerce/create_buy_order');
+  });
+
+  test('unknown nested actions fail without API dispatch', () => {
+    expect(resolveHandler(['faction', 'made_up'], options)).toBeUndefined();
   });
 
   test('API command local search restoration does not mutate global output search options', () => {

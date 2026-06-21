@@ -1,5 +1,6 @@
 import { ApiCommandHandler, hasApiCommand } from './api-command-handler.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
+import { commandGroupAction } from './command-groups.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
@@ -37,6 +38,7 @@ import {
   searchIdHints,
   searchItemHints,
 } from './id-cache.ts';
+import { GroupedApiCommandHandler } from './grouped-api-command-handler.ts';
 import {
   defaultOpenApiCacheDir,
   loadOpenApiCacheVersion,
@@ -853,7 +855,7 @@ export function resolveHandler(
   argv: string[],
   _options: GlobalOptions,
   registrySnapshot: Pick<CommandRegistrySnapshot, 'commands'> &
-    Partial<Pick<CommandRegistrySnapshot, 'allCommands'>> = BUNDLED_COMMAND_REGISTRY,
+    Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>> = BUNDLED_COMMAND_REGISTRY,
 ): CommandHandler | undefined {
   const commandName = argv[0];
   const groupInlineHelp =
@@ -879,6 +881,8 @@ export function resolveHandler(
     if (commandName === 'completion') return createCompletionHandler(registrySnapshot);
     if (commandName === '__complete') return createDynamicCompletionHandler(registrySnapshot);
     if (commandName === 'server-help') return createServerHelpHandler(registrySnapshot);
+    const groupedAction = commandGroupAction(registrySnapshot.commandGroups, commandName, argv[1]);
+    if (groupedAction) return new GroupedApiCommandHandler(commandName, argv[1] as string, groupedAction);
     const handler = registry.get(commandName);
     if (handler) return handler;
   }
