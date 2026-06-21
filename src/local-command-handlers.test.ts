@@ -434,6 +434,46 @@ describe('local command handlers', () => {
     expect(output).not.toContain('Dry run: faction_create_buy_order');
   });
 
+  test('nested API command dry run preserves yaml structured output', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--plain', '--no-timestamp', '--format', 'yaml', '--dry-run', 'faction', 'create_buy_order', 'ore_iron', '100', '12'],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const output = stdout.join('\n');
+    expect(output).toContain('dry_run: true');
+    expect(output).toContain('command: faction_create_buy_order');
+    expect(output).toContain('url: "https://game.spacemolt.com/api/v2/spacemolt_faction_commerce/create_buy_order"');
+    expect(output).not.toContain('Dry run: faction create_buy_order');
+  });
+
+  test('nested API command dry run preserves compact structured output', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--plain', '--no-timestamp', '--compact', '--dry-run', 'faction', 'create_buy_order', 'ore_iron', '100', '12'],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const output = stdout.join('\n');
+    expect(JSON.parse(output)).toMatchObject({
+      dry_run: true,
+      command: 'faction_create_buy_order',
+      payload: { item_id: 'ore_iron', quantity: 100, price_each: 12 },
+    });
+    expect(output).not.toContain('Dry run: faction create_buy_order');
+  });
+
   test('nested API command parse validation errors use grouped display name', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

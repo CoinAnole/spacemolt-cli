@@ -58,7 +58,10 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
   }
 
   private humanDryRunOptions(options: GlobalOptions): boolean {
-    return !options.json &&
+    const format = options.format ?? 'table';
+    return (format === 'table' || format === 'text') &&
+      !options.compact &&
+      !options.json &&
       !options.structured &&
       !options.jq &&
       options.keys === undefined &&
