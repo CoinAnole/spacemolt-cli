@@ -7,14 +7,20 @@ import {
   routeSignature,
   type V2Route,
 } from './commands.ts';
+import {
+  splitGroupedCommands,
+  type CommandGroups,
+  type CommandGroupEntryConfig,
+} from './command-groups.ts';
 import { buildDynamicCommands } from './dynamic-commands.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GeneratedApiRoute } from './openapi-metadata.ts';
 
 export interface CommandRegistrySnapshot {
   commands: Record<string, CommandConfig>;
+  commandGroups: CommandGroups;
   localCommands: Record<string, LocalCommandConfig>;
-  allCommands: Record<string, CommandConfig | LocalCommandConfig>;
+  allCommands: Record<string, CommandConfig | LocalCommandConfig | CommandGroupEntryConfig>;
   apiRoutes: Record<string, V2Route>;
   generatedRoutes: Record<string, GeneratedApiRoute>;
 }
@@ -33,18 +39,22 @@ export function buildCommandRegistrySnapshot(options?: {
     options?.includeDynamic === false
       ? {}
       : buildDynamicCommands(dynamicGeneratedRoutes, curatedCommandNames, curatedRouteSignatures);
-  const commands = {
+  const flatCommands = {
     ...dynamic,
     ...curated,
   };
+  const grouped = splitGroupedCommands(flatCommands);
+  const commands = grouped.commands;
   const allCommands = {
     ...commands,
+    ...grouped.allGroupEntries,
     ...LOCAL_COMMANDS,
   };
   const apiRoutes = Object.fromEntries(Object.entries(commands).map(([command, config]) => [command, config.route]));
 
   return {
     commands,
+    commandGroups: grouped.commandGroups,
     localCommands: LOCAL_COMMANDS,
     allCommands,
     apiRoutes,
