@@ -748,15 +748,28 @@ describe('shell completion generation', () => {
   test('bash and fish suggest nested action argument inserts', () => {
     const fish = generateCompletion('fish');
     const bash = generateCompletion('bash');
+    const zsh = generateCompletion('zsh');
 
     expect(bash).toContain('case "$action" in');
     expect(bash).toContain('create_buy_order)');
     expect(bash).toContain('item_id=');
+    expect(zsh).toContain("_arguments '2:faction action:(");
+    expect(zsh).not.toContain("_arguments '1:faction action:(");
     expect(fish).toContain('function __spacemolt_static_command_words');
     expect(fish).toContain('set -l value_options');
     expect(fish).toContain('--profile');
     expect(fish).toContain('--format');
     expect(fish).toContain('set -l option_name (string replace -r -- "=.*$" "" "$token")');
+    expect(fish).toContain('function __spacemolt_completing_global_option_value');
+    expect(fish).toContain('set -l previous_index (count $tokens)');
+    expect(fish).toContain(`function __spacemolt_seen_group_without_action
+  if __spacemolt_completing_global_option_value
+    return 1
+  end`);
+    expect(fish).toContain(`function __spacemolt_seen_nested_command
+  if __spacemolt_completing_global_option_value
+    return 1
+  end`);
     expect(fish).toContain('function __spacemolt_seen_group_without_action');
     expect(fish).toContain('__spacemolt_seen_group_without_action faction');
     expect(fish).not.toContain(

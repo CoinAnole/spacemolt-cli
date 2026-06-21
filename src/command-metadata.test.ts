@@ -284,9 +284,17 @@ function zshCommandCompletionWords(completion: string, command: string): string[
   const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
   const body = match?.groups?.body;
   const words =
-    body?.match(/_arguments "1:[^"]*:\(([^)]*)\)"/)?.[1] ||
-    body?.match(/_arguments '1:(?:'\\''|[^'])*:\(([^)]*)\)'/)?.[1];
+    body?.match(/_arguments "\d+:[^"]*:\(([^)]*)\)"/)?.[1] ||
+    body?.match(/_arguments '\d+:(?:'\\''|[^'])*:\(([^)]*)\)'/)?.[1];
   return words ? parseZshDescribedWords(words) : [];
+}
+
+function zshCommandCompletionPosition(completion: string, command: string): string | undefined {
+  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
+  const body = match?.groups?.body;
+  return body?.match(/_arguments "(?<position>\d+):[^"]*:\([^)]*\)"/)?.groups?.position ||
+    body?.match(/_arguments '(?<position>\d+):(?:'\\''|[^'])*:\([^)]*\)'/)?.groups?.position;
 }
 
 function fishCommandCompletionWords(completion: string, command: string): string[] {
@@ -911,6 +919,9 @@ describe('command metadata', () => {
     const expected = ['info', 'create_buy_order', 'invite'];
     for (const shell of ['bash', 'zsh', 'fish']) {
       const completion = generateCompletion(shell);
+      if (shell === 'zsh') {
+        expect(zshCommandCompletionPosition(completion, 'faction'), `${shell} faction action position`).toBe('2');
+      }
       expect(commandCompletionWords(shell, completion, 'faction'), `${shell} faction actions`).toEqual(
         expect.arrayContaining(expected),
       );

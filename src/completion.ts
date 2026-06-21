@@ -383,7 +383,7 @@ function generateZshCompletion(registry: CompletionRegistry): string {
       .map((action) => escapeZshAlternative(action.action))
       .join(' ');
     lines.push(`        ${escapeZshCaseLabel(group)})`);
-    lines.push(`          _arguments ${escapeSingleQuotedShell(`1:${group} action:(${actions})`)}`);
+    lines.push(`          _arguments ${escapeSingleQuotedShell(`2:${group} action:(${actions})`)}`);
     lines.push('          ;;');
   }
 
@@ -536,13 +536,36 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('  printf "%s\\n" $result');
   lines.push('end');
   lines.push('');
+  lines.push('function __spacemolt_completing_global_option_value');
+  lines.push('  set -l tokens (commandline -opc)');
+  lines.push('  set -l current (commandline -ct)');
+  lines.push(`  set -l value_options ${escapeFishArguments(fishValueGlobalOptionWords())}`);
+  lines.push('  set -l last_index (count $tokens)');
+  lines.push('  if test -n "$current"; and test $last_index -gt 0; and test "$tokens[$last_index]" = "$current"');
+  lines.push('    set -e tokens[$last_index]');
+  lines.push('  end');
+  lines.push('  set -l previous_index (count $tokens)');
+  lines.push('  if test $previous_index -lt 1');
+  lines.push('    return 1');
+  lines.push('  end');
+  lines.push('  set -l previous "$tokens[$previous_index]"');
+  lines.push('  set -l option_name (string replace -r -- "=.*$" "" "$previous")');
+  lines.push('  contains -- "$option_name" $value_options; and not string match -q -- "*=*" "$previous"');
+  lines.push('end');
+  lines.push('');
   lines.push('function __spacemolt_seen_group_without_action');
+  lines.push('  if __spacemolt_completing_global_option_value');
+  lines.push('    return 1');
+  lines.push('  end');
   lines.push('  set -l group $argv[1]');
   lines.push('  set -l words (__spacemolt_static_command_words)');
   lines.push('  test (count $words) -eq 1; and test "$words[1]" = "$group"');
   lines.push('end');
   lines.push('');
   lines.push('function __spacemolt_seen_nested_command');
+  lines.push('  if __spacemolt_completing_global_option_value');
+  lines.push('    return 1');
+  lines.push('  end');
   lines.push('  set -l group $argv[1]');
   lines.push('  set -l action $argv[2]');
   lines.push('  set -l words (__spacemolt_static_command_words)');
