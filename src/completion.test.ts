@@ -338,6 +338,20 @@ describe('shell completion generation', () => {
     expect(
       completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile=pilot', 'cr'], current: 'cr' }),
     ).toEqual(expectedFactionCreateActions);
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile', ''], current: '' })).toEqual(
+      [],
+    );
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'faction', '--profile', ''], current: '' },
+        { profileNames: ['pilot'] },
+      ),
+    ).toEqual([{ value: 'pilot' }]);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--format', ''], current: '' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toEqual(['table', 'json', 'yaml', 'text']);
     expect(
       completeWords(
         {

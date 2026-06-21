@@ -462,6 +462,8 @@ export function completeWords(input: CompletionRequest, options: CompletionRunti
 
   const nested = nestedCommandContext(input, registrySnapshot);
   if (nested && !nested.action) {
+    const wordIndex = currentWordIndex(input);
+    if (isCurrentGlobalOptionValue(input.words.slice(nested.argOffset, wordIndex))) return [];
     return groupActionCandidates(nested.group, registrySnapshot, input.current);
   }
 
