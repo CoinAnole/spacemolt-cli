@@ -761,6 +761,16 @@ describe('shell completion generation', () => {
     expect(fish).toContain('--format');
     expect(fish).toContain('set -l option_name (string replace -r -- "=.*$" "" "$token")');
     expect(fish).toContain('function __spacemolt_completing_global_option_value');
+    expect(fish).toContain(`if test -n "$current"; and string match -q -- "*=*" "$current"
+    set -l current_option_name (string replace -r -- "=.*$" "" "$current")
+    if contains -- "$current_option_name" $value_options
+      return 0
+    end
+  end`);
+    const currentEqualsGuardIndex = fish.indexOf('set -l current_option_name');
+    const valueGuardTokenRemovalIndex = fish.indexOf('set -e tokens[$last_index]', currentEqualsGuardIndex);
+    expect(currentEqualsGuardIndex).toBeGreaterThan(-1);
+    expect(currentEqualsGuardIndex).toBeLessThan(valueGuardTokenRemovalIndex);
     expect(fish).toContain('set -l previous_index (count $tokens)');
     expect(fish).toContain(`function __spacemolt_seen_group_without_action
   if __spacemolt_completing_global_option_value

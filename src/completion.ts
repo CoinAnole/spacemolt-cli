@@ -541,6 +541,12 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('  set -l current (commandline -ct)');
   lines.push(`  set -l value_options ${escapeFishArguments(fishValueGlobalOptionWords())}`);
   lines.push('  set -l last_index (count $tokens)');
+  lines.push('  if test -n "$current"; and string match -q -- "*=*" "$current"');
+  lines.push('    set -l current_option_name (string replace -r -- "=.*$" "" "$current")');
+  lines.push('    if contains -- "$current_option_name" $value_options');
+  lines.push('      return 0');
+  lines.push('    end');
+  lines.push('  end');
   lines.push('  if test -n "$current"; and test $last_index -gt 0; and test "$tokens[$last_index]" = "$current"');
   lines.push('    set -e tokens[$last_index]');
   lines.push('  end');
