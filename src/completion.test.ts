@@ -315,6 +315,32 @@ describe('shell completion generation', () => {
     ).toEqual([{ value: 'reverse', description: expect.any(String) }]);
   });
 
+  test('runtime completion handles global options before nested grouped commands', async () => {
+    const sessionPath = await tempSessionWithCachedIds();
+    const expectedFactionCreateActions = [
+      { value: 'create_buy_order', description: expect.stringContaining('buy order') },
+      { value: 'create_role', description: expect.any(String) },
+      { value: 'create_sell_order', description: expect.stringContaining('sell order') },
+    ];
+
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--profile', 'pilot', 'faction', 'cr'], current: 'cr' }),
+    ).toEqual(expectedFactionCreateActions);
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', '--plain', 'faction', 'cr'], current: 'cr' })).toEqual(
+      expectedFactionCreateActions,
+    );
+    expect(
+      completeWords(
+        {
+          shell: 'fish',
+          words: ['spacemolt', '--profile', 'pilot', 'faction', 'create_buy_order', 'ir'],
+          current: 'ir',
+        },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+  });
+
   test('runtime completion describes help using local help metadata', () => {
     expect(completeWords({ shell: 'fish', words: ['spacemolt', 'hel'], current: 'hel' })).toContainEqual({
       value: 'help',
