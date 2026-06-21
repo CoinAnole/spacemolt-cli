@@ -293,6 +293,24 @@ describe('help output branches', () => {
     expect(output).not.toContain('faction_info');
   });
 
+  test('full faction group help lists nested actions before semantic commands', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('faction', capture.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    const nestedIndex = output.indexOf('faction create_buy_order');
+    const createFactionIndex = output.indexOf('create_faction');
+    const joinFactionIndex = output.indexOf('join_faction');
+    const achievementsIndex = output.indexOf('get_faction_achievements');
+
+    expect(nestedIndex).toBeGreaterThan(-1);
+    expect(createFactionIndex).toBeGreaterThan(-1);
+    expect(joinFactionIndex).toBeGreaterThan(-1);
+    expect(achievementsIndex).toBeGreaterThan(-1);
+    expect(nestedIndex).toBeLessThan(createFactionIndex);
+  });
+
   test('full help facility section does not describe facility_build as player-only', () => {
     const capture = captureWriter();
 
@@ -471,12 +489,28 @@ describe('help output branches', () => {
     const explain = captureWriter();
 
     expect(showCommandHelp('faction create_buy_order', help.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
-    expect(showCommandExplanation('faction create_buy_order', explain.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+    expect(
+      showCommandExplanation('faction create_buy_order', explain.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
 
     expect(help.stdout.join('\n')).toContain('spacemolt faction create_buy_order');
     expect(explain.stdout.join('\n')).toContain(
       'API route: POST /api/v2/spacemolt_faction_commerce/create_buy_order',
     );
+  });
+
+  test('related metadata translates grouped flat command names to nested names', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('faction build', capture.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt faction build ore_refinery');
+    expect(output).toContain('spacemolt faction facility_list');
+    expect(output).toContain('facility types, faction facility_list, faction facility_build');
+    expect(output).not.toContain('spacemolt faction_build');
+    expect(output).not.toContain('spacemolt faction_facility_list');
+    expect(output).not.toContain('faction_facility_build');
   });
 
   test('showCommandSearch matches command category metadata', () => {

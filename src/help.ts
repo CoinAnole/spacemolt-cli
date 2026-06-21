@@ -33,7 +33,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
     key: 'faction',
     label: 'Faction',
     aliases: ['factions'],
-    categories: ['Factions', 'Faction rooms', 'Faction missions & intel'],
+    categories: ['Faction', 'Factions', 'Faction rooms', 'Faction missions & intel'],
   },
   { key: 'fleet', label: 'Fleet', aliases: ['fleets'], categories: ['Fleet'] },
   { key: 'facility', label: 'Facilities', aliases: ['facilities'], categories: ['Facilities'] },
@@ -317,29 +317,38 @@ export function showCommandGroup(
   options?: HelpOutputOptions,
 ): boolean {
   const executableGroup = commandGroup(commandHelpGroups(commands), topic);
+  const group = findCommandGroup(topic);
+  if (!executableGroup && !group) return false;
+
   const allCommands = commandHelpMap(commands);
   const write = out(writer);
   const c = colorsForPlain(Boolean(options?.plain));
+  const displayedCommands = new Set<string>();
 
   if (executableGroup) {
     const actions = Object.values(executableGroup.actions).sort((a, b) => a.action.localeCompare(b.action));
     write(`\n${c.bright}${executableGroupLabel(executableGroup.name)} Commands${c.reset}`);
-    for (const action of actions) write(`  ${formatCommandSummary(action.displayName, allCommands)}`);
-    write(`\nRun "spacemolt help ${executableGroup.name} <action>" for argument details.`);
+    write(`\n${c.cyan}Actions:${c.reset}`);
+    for (const action of actions) {
+      displayedCommands.add(action.displayName);
+      write(`  ${formatCommandSummary(action.displayName, allCommands)}`);
+    }
+  }
+
+  if (!group) {
+    write(`\nRun "spacemolt help ${executableGroup?.name} <action>" for argument details.`);
     return true;
   }
 
-  const group = findCommandGroup(topic);
-  if (!group) return false;
-
   const matchingCommands = Object.keys(allCommands)
     .filter((command) => commandMatchesGroup(command, group, allCommands))
+    .filter((command) => !displayedCommands.has(command))
     .sort((a, b) => {
       const categoryCompare = (allCommands[a]?.category || '').localeCompare(allCommands[b]?.category || '');
       return categoryCompare || a.localeCompare(b);
     });
 
-  write(`\n${c.bright}${group.label} Commands${c.reset}`);
+  if (!executableGroup) write(`\n${c.bright}${group.label} Commands${c.reset}`);
   let lastCategory = '';
   for (const command of matchingCommands) {
     const includedInGroup = (COMMAND_GROUP_INCLUDES[group.key] || []).includes(command);
@@ -351,7 +360,8 @@ export function showCommandGroup(
     }
     write(`  ${formatCommandSummary(command, allCommands)}`);
   }
-  write(`\nRun "spacemolt help <command>" for argument details and related commands.`);
+  if (executableGroup) write(`\nRun "spacemolt help ${executableGroup.name} <action>" for argument details.`);
+  else write(`\nRun "spacemolt help <command>" for argument details and related commands.`);
   return true;
 }
 
@@ -461,7 +471,7 @@ export function showCommandExplanation(
   write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
     const routePath = routeToPath(config.route, { includeApiPrefix: true });
-    write(`${c.bright}API route: ${config.route.method || 'POST'} ${routePath}${c.reset}`);
+    write(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
   } else {
     write(`${c.bright}Type:${c.reset} local helper command`);
   }

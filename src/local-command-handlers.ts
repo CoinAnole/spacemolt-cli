@@ -1,6 +1,6 @@
 import { ApiCommandHandler, hasApiCommand } from './api-command-handler.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
-import { commandGroupAction } from './command-groups.ts';
+import { commandGroup, commandGroupAction } from './command-groups.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandHandler } from './command-types.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
@@ -770,6 +770,7 @@ function createLocalHelpHandler(
 
       const normalizedSubArgs =
         subArgs.length === 1 && target.startsWith('command=') ? [target.slice('command='.length)] : subArgs;
+      const explicitCommandTarget = subArgs.length === 1 && target.startsWith('command=');
       const normalizedTarget = normalizedSubArgs[0];
       const groupedAction = commandGroupAction(registrySnapshot.commandGroups, normalizedSubArgs[0], normalizedSubArgs[1]);
 
@@ -781,12 +782,18 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'helpCommand', target: groupedAction.displayName } };
       }
 
-      if (normalizedSubArgs.length === 1 && normalizedTarget && allCommands[normalizedTarget]) {
-        return { ok: true, payload: { type: 'helpCommand', target: normalizedTarget } };
+      if (
+        normalizedSubArgs.length === 1 &&
+        normalizedTarget &&
+        hasCommandGroup(normalizedTarget) &&
+        !explicitCommandTarget &&
+        (!allCommands[normalizedTarget] || commandGroup(registrySnapshot.commandGroups, normalizedTarget))
+      ) {
+        return { ok: true, payload: { type: 'helpGroup', target: normalizedTarget } };
       }
 
-      if (normalizedSubArgs.length === 1 && normalizedTarget && hasCommandGroup(normalizedTarget)) {
-        return { ok: true, payload: { type: 'helpGroup', target: normalizedTarget } };
+      if (normalizedSubArgs.length === 1 && normalizedTarget && allCommands[normalizedTarget]) {
+        return { ok: true, payload: { type: 'helpCommand', target: normalizedTarget } };
       }
 
       return { ok: true, payload: { type: 'helpSearch', query: parseCommandSearchQuery(normalizedSubArgs) } };

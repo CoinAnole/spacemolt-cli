@@ -1439,6 +1439,25 @@ describe('local command handlers', () => {
     expect(explainCapture.stdout.join('\n')).toContain('faction create_buy_order');
   });
 
+  test('help faction renders grouped action list before synthetic command help', async () => {
+    const handler = resolveHandler(['help', 'faction'], options);
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'faction'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const capture = captureContext();
+
+    const exitCode = await handler.render(await handler.run(parsed.payload, options), options, undefined, capture.context);
+
+    const output = capture.stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Faction Commands');
+    expect(output).toContain('faction create_buy_order');
+    expect(output).toContain('create_faction');
+    expect(output).not.toContain('spacemolt faction <action> [args...]');
+  });
+
   test('help with unknown terms searches local commands', async () => {
     const handler = resolveHandler(['help', 'faction', 'facility'], options);
 
