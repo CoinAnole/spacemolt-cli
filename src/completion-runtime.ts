@@ -342,6 +342,27 @@ function cachedIdCandidates(input: CompletionRequest, options: CompletionRuntime
   return candidates;
 }
 
+function commandFieldValueCandidates(input: CompletionRequest, options: CompletionRuntimeOptions): CompletionCandidate[] {
+  const registrySnapshot = options.registrySnapshot || BUNDLED_COMMAND_REGISTRY;
+  const context = commandContext(input, registrySnapshot);
+  if (!context?.field) return [];
+
+  const commandConfig = registrySnapshot.allCommands[context.command];
+  if (!commandConfig) return [];
+
+  const normalizedField = normalizeCompletionField(context.field);
+  const field = commandConfig.aliases?.[normalizedField] || normalizedField;
+  const arg = completionArgsForCommand(context.command, commandConfig).find((candidate) => candidate.name === field);
+  if (!arg?.values?.length) return [];
+
+  const currentValue = input.current.includes('=')
+    ? input.current.slice(input.current.indexOf('=') + 1)
+    : input.current;
+  return arg.values
+    .filter((value) => value.startsWith(currentValue))
+    .map((value) => ({ value, description: arg.description }));
+}
+
 export function completeWords(input: CompletionRequest, options: CompletionRuntimeOptions = {}): CompletionCandidate[] {
   const registrySnapshot = options.registrySnapshot || BUNDLED_COMMAND_REGISTRY;
   const optionValues = globalOptionValueCandidates(input, options);
@@ -354,7 +375,11 @@ export function completeWords(input: CompletionRequest, options: CompletionRunti
       .map((profileName) => ({ value: profileName }));
   }
 
-  if (!canCompleteTopLevel(input)) return cachedIdCandidates(input, { ...options, registrySnapshot });
+  if (!canCompleteTopLevel(input)) {
+    const fieldValues = commandFieldValueCandidates(input, { ...options, registrySnapshot });
+    if (fieldValues.length > 0) return fieldValues;
+    return cachedIdCandidates(input, { ...options, registrySnapshot });
+  }
 
   const prefix = input.current;
   const candidates = [...commandCandidates(registrySnapshot), ...globalOptionCandidates()];

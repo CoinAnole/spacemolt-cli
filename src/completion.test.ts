@@ -294,6 +294,12 @@ describe('shell completion generation', () => {
     ).toContain('sell');
   });
 
+  test('runtime completion suggests command enum values by typed prefix', () => {
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'storage', 'vi'], current: 'vi' })).toEqual([
+      { value: 'view', description: 'Storage operation to run.' },
+    ]);
+  });
+
   test('runtime completion suggests cached IDs for command fields by typed prefix', async () => {
     const sessionPath = await tempSessionWithCachedIds();
 
