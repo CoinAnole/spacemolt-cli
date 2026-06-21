@@ -258,7 +258,7 @@ export const socialFormatters = [
       emitOptionalLine('Created', formatTimestampPreview(thread.created_at));
       emitOptionalLine('Updated', formatTimestampPreview(thread.updated_at));
       emitOptionalLine('Upvotes', thread.upvotes);
-      emitOptionalLine('Replies', thread.reply_count);
+      emitOptionalLine('Replies', r.total_replies ?? thread.reply_count);
       emitBody('Content', thread.content ?? thread.text);
       const replies = firstArray(r, ['replies']);
       if (replies) {
@@ -280,6 +280,13 @@ export const socialFormatters = [
           { maxCellWidth: 72 },
         );
       }
+      const replyMetadata = [
+        r.page === undefined ? undefined : `reply page ${r.page}`,
+        r.per_page === undefined ? undefined : `per page ${r.per_page}`,
+        r.total_replies === undefined ? undefined : `total replies ${r.total_replies}`,
+      ].filter(Boolean);
+      if (replyMetadata.length) emitLine(`${c.dim}${replyMetadata.join(' | ')}${c.reset}`);
+      if (r.has_more) emitLine(`${c.dim}More replies available.${c.reset}`);
       return true;
     },
     { commands: ['forum_get_thread'] },

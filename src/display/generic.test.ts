@@ -110,6 +110,31 @@ test('renders craft dry-run details without raw response fallback', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders dry-run route previews for craft cancellation payloads', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      dry_run: true,
+      command: 'craft',
+      method: 'POST',
+      url: 'https://game.spacemolt.com/api/v2/spacemolt/craft',
+      payload: { job_id: 'craft-job-1' },
+      server_request_sent: false,
+      notes: ['No mutation was sent. This is a client-side route and payload preview.'],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Dry Run: craft ===');
+  expect(stdout).toContain('POST https://game.spacemolt.com/api/v2/spacemolt/craft');
+  expect(stdout).toContain('Payload: {"job_id":"craft-job-1"}');
+  expect(stdout).toContain('No request was sent.');
+  expect(stdout).not.toContain('=== Craft Quote ===');
+});
+
 test('renders queued craft details with job id and output', () => {
   const rendered = renderStructuredResult(
     'craft',

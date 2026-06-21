@@ -392,6 +392,7 @@ export const taxEstimateFixture = {
   assessed_property_by_ship: [{ ship_id: 'ship-1', value: 125000 }],
   property_tax: [{ empire: 'solarian', rate_bps: 50, assessed_value: 125000, owed: 625 }],
   property_tax_total: 625,
+  tax_prepaid: 150,
   tax_collection_active: true,
   last_assessed_at: 1779926400,
   last_property_assessed_at: 1779926400,

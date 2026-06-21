@@ -331,6 +331,7 @@ export const empireFormatters = [
       if (propertyTax) emitLine(`Property tax: ${propertyTax}`);
       if (r.property_tax_total !== undefined)
         emitLine(`Property tax total: ${formatCredits(r.property_tax_total) ?? r.property_tax_total}`);
+      if (r.tax_prepaid !== undefined) emitLine(`Tax prepaid: ${formatCredits(r.tax_prepaid) ?? r.tax_prepaid}`);
       const salesTaxRates = formatSalesTaxRates(r.sales_tax_rates);
       if (salesTaxRates) emitLine(`Sales tax rates: ${salesTaxRates}`);
       const taxableIncomeBySource = formatTaxableIncomeSources(r.taxable_income_by_source);

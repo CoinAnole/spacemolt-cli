@@ -363,6 +363,15 @@ function craftTitle(command: string, result: Record<string, unknown>): string {
   return base;
 }
 
+function isDryRunRoutePreview(result: Record<string, unknown>): boolean {
+  return (
+    result.dry_run === true &&
+    result.server_request_sent === false &&
+    typeof result.method === 'string' &&
+    typeof result.url === 'string'
+  );
+}
+
 function emitCraftCost(label: string, value: unknown): void {
   if (!isRecord(value)) return;
   const inputs = summarizeNamedItemQuantities(value.inputs);
@@ -382,6 +391,7 @@ export const genericFormatters = [
   formatter(
     (r, command) => {
       if (command !== 'craft' && command !== 'recycle') return false;
+      if (isDryRunRoutePreview(r)) return false;
       if (
         r.recipe === undefined &&
         r.job_id === undefined &&
@@ -465,6 +475,25 @@ export const genericFormatters = [
       return true;
     },
     { commands: ['craft', 'recycle'] },
+  ),
+
+  formatter(
+    (r, command) => {
+      if (command !== 'craft' && command !== 'recycle') return false;
+      if (!isDryRunRoutePreview(r)) return false;
+      const previewCommand = typeof r.command === 'string' && r.command ? r.command : command;
+      const payload = r.payload === undefined ? {} : r.payload;
+
+      emitLine(`\n${c.bright}=== Dry Run: ${previewCommand} ===${c.reset}`);
+      emitLine(`${r.method} ${r.url}`);
+      emitLine(`Payload: ${JSON.stringify(payload)}`);
+      if (Array.isArray(r.notes)) {
+        for (const note of r.notes) emitLine(`- ${note}`);
+      }
+      emitLine('No request was sent.');
+      return true;
+    },
+    { shapeFallback: true },
   ),
 
   formatter(

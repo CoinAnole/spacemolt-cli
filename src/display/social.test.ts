@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { facilityListFixture, factionFacilityOwnedFixture } from './social.fixtures.ts';
+import { facilityListFixture, factionFacilityOwnedFixture, forumThreadFixture } from './social.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -124,4 +124,25 @@ test('omits faction facility state column when the API omits that field', () => 
   expect(rendered.success).toBe(true);
   expect(stdout).not.toContain('Active');
   expect(stdout).toContain('Rent');
+});
+
+test('renders forum thread reply pagination metadata', () => {
+  const rendered = renderStructuredResult(
+    'forum_get_thread',
+    {
+      ...forumThreadFixture,
+      page: 2,
+      per_page: 20,
+      total_replies: 41,
+      has_more: true,
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Replies: 41');
+  expect(stdout).toContain('reply page 2 | per page 20 | total replies 41');
+  expect(stdout).toContain('More replies available.');
 });

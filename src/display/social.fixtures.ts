@@ -335,6 +335,10 @@ export const forumThreadFixture = {
       is_dev_team: false,
     },
   ],
+  page: 1,
+  per_page: 20,
+  total_replies: 1,
+  has_more: false,
 };
 
 export const guideFixture = {
