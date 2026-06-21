@@ -8,6 +8,7 @@ import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { buildCommandRegistrySnapshot, type CommandRegistrySnapshot } from './command-registry';
 import type { CommandHandler } from './command-types';
 import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands';
+import { type IdHint, saveIdCache } from './id-cache';
 import { resolveHandler } from './local-command-handlers';
 import { runInvocation } from './main';
 import type { GeneratedApiRoute } from './openapi-metadata';
@@ -327,6 +328,46 @@ describe('local command handlers', () => {
     expect(output).not.toContain('facility_job_cancel');
   });
 
+  test('nested API command help=true uses grouped display name', () => {
+    const handler = resolveHandler(['facility', 'job_add', 'help=true'], options);
+    expect(handler?.name).toBe('facility job_add');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['facility', 'job_add', 'help=true'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stdout.join('\n');
+    expect(output).toContain('spacemolt facility job_add');
+    expect(output).toContain('facility job_cancel');
+    expect(output).toContain('facility job_list');
+    expect(output).not.toContain('facility_job_add');
+    expect(output).not.toContain('facility_job_list');
+    expect(output).not.toContain('facility_job_cancel');
+  });
+
+  test('nested API command --help=true uses grouped display name', () => {
+    const handler = resolveHandler(['facility', 'job_add', '--help=true'], options);
+    expect(handler?.name).toBe('facility job_add');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['facility', 'job_add', '--help=true'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stdout.join('\n');
+    expect(output).toContain('spacemolt facility job_add');
+    expect(output).toContain('facility job_cancel');
+    expect(output).toContain('facility job_list');
+    expect(output).not.toContain('facility_job_add');
+    expect(output).not.toContain('facility_job_list');
+    expect(output).not.toContain('facility_job_cancel');
+  });
+
   test('nested API command missing required argument output uses grouped display name', () => {
     const handler = resolveHandler(['faction', 'create_buy_order'], options);
     expect(handler?.name).toBe('faction create_buy_order');
@@ -489,6 +530,43 @@ describe('local command handlers', () => {
     const output = stderr.join('\n');
     expect(output).toContain('facility upgrade');
     expect(output).not.toContain('facility_upgrade');
+  });
+
+  test('nested API command cached-ID ambiguity uses grouped display name', async () => {
+    const dir = tempDir();
+    const configHome = path.join(dir, 'config');
+    const sessionPath = path.join(configHome, 'spacemolt-cli', 'sessions', 'pilot.json');
+    const hints: IdHint[] = [
+      {
+        kind: 'faction',
+        id: 'fac_alpha',
+        name: 'Alpha Combine',
+        sourceCommand: 'faction_list',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+      {
+        kind: 'faction',
+        id: 'fac_beta',
+        name: 'Beta Collective',
+        sourceCommand: 'faction_list',
+        seenAt: '2026-05-18T00:00:01.000Z',
+      },
+    ];
+    await saveIdCache(hints, sessionPath);
+
+    const handler = resolveHandler(['faction', 'info', 'fac'], options);
+    expect(handler?.name).toBe('faction info');
+    if (!handler) return;
+    const { context, stderr } = captureContext({ XDG_CONFIG_HOME: configHome });
+
+    const parsed = handler.parse(['faction', 'info', 'fac'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stderr.join('\n');
+    expect(output).toContain('faction info');
+    expect(output).not.toContain('faction_info');
   });
 
   test('API command local search restoration does not mutate global output search options', () => {

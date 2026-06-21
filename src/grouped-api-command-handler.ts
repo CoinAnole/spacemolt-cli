@@ -42,6 +42,10 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     return { [this.name]: this.displayConfig() };
   }
 
+  private displayRegistrySnapshot(): { commands: Record<string, CommandConfig> } {
+    return { commands: this.displayRegistry() };
+  }
+
   private validationRegistry(): { commands: Record<string, CommandConfig> } {
     return {
       commands: {
@@ -101,6 +105,18 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
       return { ok: false, error: validationErrorFromParseErrors(this.translateParseErrors(parsedArgs.errors)) };
     }
 
+    if (parsedArgs.payload.help === 'true' || parsedArgs.payload.help === '1') {
+      showCommandHelp(this.name, context?.writer, this.displayRegistry(), { plain: options.plain });
+      return {
+        ok: false,
+        error: {
+          code: 'exit',
+          message: '',
+          exitCode: 0,
+        },
+      };
+    }
+
     const missingArg = validateRequiredArgs(this.action.command, parsedArgs.payload, validationRegistry);
     if (missingArg) {
       if (options.json) {
@@ -134,6 +150,10 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
       sessionPath,
       context?.writer,
       actionRegistry,
+      {
+        command: this.name,
+        registry: this.displayRegistrySnapshot(),
+      },
     );
     if (prepared.type === 'exit') {
       return { ok: false, error: { code: 'exit', message: '', exitCode: prepared.exitCode } };

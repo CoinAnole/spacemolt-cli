@@ -45,18 +45,25 @@ export function preparePayload(
   sessionPath?: string,
   writer?: CliWriter,
   registry: Pick<CommandRegistrySnapshot, 'commands'> = BUNDLED_COMMAND_REGISTRY,
+  display?: {
+    command?: string;
+    registry?: Pick<CommandRegistrySnapshot, 'commands'>;
+  },
 ): PreparedPayload {
+  const displayCommand = display?.command ?? command;
+  const displayRegistry = display?.registry ?? registry;
+
   if (!registry.commands[command]) {
     if (options.json) {
-      printJsonError('unknown_command', `Unknown command: ${command}`, writer);
+      printJsonError('unknown_command', `Unknown command: ${displayCommand}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayUnknownCommand(command, writer, { plain: options.plain });
+    displayUnknownCommand(displayCommand, writer, { plain: options.plain });
     return { type: 'exit', exitCode: 1 };
   }
 
   if (rawPayload.help === 'true' || rawPayload.help === '1') {
-    showCommandHelp(command, writer, registry.commands, { plain: options.plain });
+    showCommandHelp(displayCommand, writer, displayRegistry.commands, { plain: options.plain });
     return { type: 'exit', exitCode: 0 };
   }
 
@@ -66,7 +73,7 @@ export function preparePayload(
       printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayMissingArgument(command, missingArg, writer, registry.commands, options);
+    displayMissingArgument(displayCommand, missingArg, writer, displayRegistry.commands, options);
     return { type: 'exit', exitCode: 1 };
   }
 
@@ -83,7 +90,7 @@ export function preparePayload(
       return { type: 'exit', exitCode: 1 };
     }
     const writeErr = writer?.err.bind(writer) ?? console.error;
-    for (const line of formatCachedIdAmbiguity(command, resolvedPayload.field, resolvedPayload.result, {
+    for (const line of formatCachedIdAmbiguity(displayCommand, resolvedPayload.field, resolvedPayload.result, {
       plain: options.plain,
     })) {
       writeErr(line);
