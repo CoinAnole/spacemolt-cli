@@ -1,8 +1,9 @@
 import type { SpaceMoltClient } from './api.ts';
-import { parseArgs } from './args.ts';
+import { getArgNames, parseArgs } from './args.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import type { CommandGroupAction } from './command-groups.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
+import { displayMissingArgument, showCommandHelp } from './help.ts';
 import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
@@ -21,6 +22,27 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     this.name = `${group} ${actionName}`;
   }
 
+  private displayConfig() {
+    return {
+      ...this.action.config,
+      example: this.action.config.example?.replace(`spacemolt ${this.action.command}`, `spacemolt ${this.name}`),
+    };
+  }
+
+  private displayRegistry() {
+    return { [this.name]: this.displayConfig() };
+  }
+
+  private missingRequiredPositional(argv: string[]): string | undefined {
+    const args = getArgNames(this.action.config);
+    if (args.length === 0) return undefined;
+    const requiredCount = (this.action.config.usage?.match(/<[^>]+>/g) ?? []).length;
+    if (requiredCount === 0) return undefined;
+    const providedCount = argv.slice(2).length;
+    if (providedCount >= requiredCount) return undefined;
+    return args[providedCount];
+  }
+
   parse(
     argv: string[],
     options: GlobalOptions,
@@ -30,20 +52,25 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     const actionRegistry = { commands: { [this.action.command]: this.action.config } };
 
     if (flatArgv.length === 2 && (flatArgv[1] === 'help' || flatArgv[1] === '--help' || flatArgv[1] === '-h')) {
-      const prepared = preparePayload(
-        this.action.command,
-        { help: 'true' },
-        options,
-        undefined,
-        context?.writer,
-        actionRegistry,
-      );
+      showCommandHelp(this.name, context?.writer, this.displayRegistry(), { plain: options.plain });
       return {
         ok: false,
         error: {
           code: 'exit',
           message: '',
-          exitCode: prepared.type === 'exit' ? prepared.exitCode : 0,
+          exitCode: 0,
+        },
+      };
+    }
+
+    const missingPositional = this.missingRequiredPositional(argv);
+    if (missingPositional) {
+      displayMissingArgument(this.name, missingPositional, context?.writer, this.displayRegistry(), options);
+      return {
+        ok: false,
+        error: {
+          code: 'missing_required_argument',
+          message: `Missing required argument: ${missingPositional}`,
         },
       };
     }

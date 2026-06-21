@@ -307,6 +307,38 @@ describe('local command handlers', () => {
     expect(resolveHandler(['faction', 'made_up'], options)).toBeUndefined();
   });
 
+  test('nested API command inline help uses grouped display name', () => {
+    const handler = resolveHandler(['facility', 'job_add', 'help'], options);
+    expect(handler?.name).toBe('facility job_add');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['facility', 'job_add', 'help'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stdout.join('\n');
+    expect(output).toContain('spacemolt facility job_add');
+    expect(output).not.toContain('facility_job_add');
+  });
+
+  test('nested API command missing required argument output uses grouped display name', () => {
+    const handler = resolveHandler(['facility', 'job_add'], options);
+    expect(handler?.name).toBe('facility job_add');
+    if (!handler) return;
+    const { context, stderr } = captureContext();
+
+    const parsed = handler.parse(['facility', 'job_add'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('missing_required_argument');
+    const output = stderr.join('\n');
+    expect(output).toContain('spacemolt facility job_add');
+    expect(output).not.toContain('facility_job_add');
+  });
+
   test('API command local search restoration does not mutate global output search options', () => {
     const handler = new ApiCommandHandler('view_market');
     const parseOptions: GlobalOptions = { ...options, outputSearch: 'iron' };
