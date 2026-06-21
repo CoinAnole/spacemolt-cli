@@ -25,6 +25,13 @@ export interface CommandRegistrySnapshot {
   generatedRoutes: Record<string, GeneratedApiRoute>;
 }
 
+export function commandRegistryApiCommands(snapshot: Pick<CommandRegistrySnapshot, 'commands' | 'commandGroups'>): CommandConfig[] {
+  return [
+    ...Object.values(snapshot.commands),
+    ...Object.values(snapshot.commandGroups).flatMap((group) => Object.values(group?.actions ?? {}).map((action) => action.config)),
+  ];
+}
+
 export function buildCommandRegistrySnapshot(options?: {
   generatedRoutes?: Record<string, GeneratedApiRoute>;
   dynamicGeneratedRoutes?: Record<string, GeneratedApiRoute>;

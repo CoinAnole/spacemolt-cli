@@ -50,7 +50,21 @@ function defaultConfigWithoutEnvProfile() {
   return createDefaultConfig({}, { ...process.env, SPACEMOLT_PROFILE: undefined });
 }
 
-function writeOpenApiCache(configHome: string): void {
+function writeOpenApiCache(
+  configHome: string,
+  routes: Record<string, unknown> = {
+    'POST /api/v2/spacemolt_shipyard/repair': {
+      operationId: 'spacemolt_shipyard_repair',
+      summary: 'Repair a ship from cached OpenAPI metadata',
+      route: { tool: 'spacemolt_shipyard', action: 'repair', method: 'POST' },
+      cli: { category: 'Shipyard' },
+      required: ['ship_id'],
+      schema: {
+        ship_id: { type: 'string', positionalIndex: 0 },
+      },
+    },
+  },
+): void {
   const cacheDir = path.join(configHome, 'spacemolt-cli');
   fs.mkdirSync(cacheDir, { recursive: true });
   fs.writeFileSync(
@@ -58,18 +72,7 @@ function writeOpenApiCache(configHome: string): void {
     JSON.stringify({
       fetchedAt: '2026-05-20T00:00:00.000Z',
       gameserverVersion: 'v0.324.1',
-      routes: {
-        'POST /api/v2/spacemolt_shipyard/repair': {
-          operationId: 'spacemolt_shipyard_repair',
-          summary: 'Repair a ship from cached OpenAPI metadata',
-          route: { tool: 'spacemolt_shipyard', action: 'repair', method: 'POST' },
-          cli: { category: 'Shipyard' },
-          required: ['ship_id'],
-          schema: {
-            ship_id: { type: 'string', positionalIndex: 0 },
-          },
-        },
-      },
+      routes,
     }),
   );
 }
@@ -220,6 +223,40 @@ describe('doctor', () => {
     const configHome = tempDir();
     try {
       writeOpenApiCache(configHome);
+
+      const result = await runDirect(['--json', 'doctor'], { XDG_CONFIG_HOME: configHome });
+      const parsed = JSON.parse(result.stdout);
+      const cacheCheck = parsed.structuredContent.checks.find(
+        (check: { name: string }) => check.name === 'openapi-cache',
+      );
+
+      expect(parsed.structuredContent.cachedOpenApiRoutes).toBe(1);
+      expect(parsed.structuredContent.dynamicCommands).toBe(1);
+      expect(cacheCheck).toMatchObject({
+        ok: true,
+        message: '1 cached OpenAPI route',
+        detail: '1 dynamic command',
+      });
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('doctor counts grouped cached dynamic routes', async () => {
+    const configHome = tempDir();
+    try {
+      writeOpenApiCache(configHome, {
+        'POST /api/v2/spacemolt_faction/new_action': {
+          operationId: 'spacemolt_faction_new_action',
+          summary: 'Grouped faction action from cached OpenAPI metadata',
+          route: { tool: 'spacemolt_faction', action: 'new_action', method: 'POST' },
+          cli: { category: 'Factions' },
+          required: ['target_id'],
+          schema: {
+            target_id: { type: 'string', positionalIndex: 0 },
+          },
+        },
+      });
 
       const result = await runDirect(['--json', 'doctor'], { XDG_CONFIG_HOME: configHome });
       const parsed = JSON.parse(result.stdout);

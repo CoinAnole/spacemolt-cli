@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
-import { buildCommandRegistrySnapshot } from './command-registry.ts';
+import { buildCommandRegistrySnapshot, commandRegistryApiCommands } from './command-registry.ts';
 import { COMMANDS, routeSignature, routeToPath, V2_TOOL_MAP } from './commands.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
@@ -115,7 +115,7 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
       });
       const cachedRouteSignatures = new Set(Object.keys(cachedRoutes));
       const curatedRouteSignatures = new Set(Object.values(COMMANDS).map((command) => routeSignature(command.route)));
-      dynamicCommands = Object.values(registry.commands).filter((command) => {
+      dynamicCommands = commandRegistryApiCommands(registry).filter((command) => {
         const signature = routeSignature(command.route);
         return cachedRouteSignatures.has(signature) && !curatedRouteSignatures.has(signature);
       }).length;
