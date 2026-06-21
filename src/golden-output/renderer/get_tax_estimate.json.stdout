@@ -13,6 +13,10 @@
     }
   ],
   "taxable_income_to_date": 42000,
+  "market_sales_to_date": 30000,
+  "market_cost_of_goods_deducted": 18000,
+  "taxable_market_income": 12000,
+  "market_loss_carryforward": 2500,
   "taxable_income_by_source": [
     {
       "category": "market",

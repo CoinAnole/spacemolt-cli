@@ -2,6 +2,10 @@
 === Tax Estimate ===
 Collection active: true
 Taxable income: 42,000 cr
+Market sales: 30,000 cr
+Cost of goods deducted: 18,000 cr
+Taxable market income: 12,000 cr
+Market loss carryforward: 2,500 cr
 Income tax: solarian owed 210 cr (gross 210 cr, credit 0 cr, rate 5%, brackets 0-50,000 @ 5% (42,000 cr income, 210 cr tax))
 Income tax total: 210 cr
 Assessed property: 125,000 cr

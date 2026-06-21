@@ -321,6 +321,18 @@ export const empireFormatters = [
       if (r.tax_collection_active !== undefined) emitLine(`Collection active: ${r.tax_collection_active}`);
       if (r.taxable_income_to_date !== undefined)
         emitLine(`Taxable income: ${formatCredits(r.taxable_income_to_date) ?? r.taxable_income_to_date}`);
+      if (r.market_sales_to_date !== undefined)
+        emitLine(`Market sales: ${formatCredits(r.market_sales_to_date) ?? r.market_sales_to_date}`);
+      if (r.market_cost_of_goods_deducted !== undefined)
+        emitLine(
+          `Cost of goods deducted: ${formatCredits(r.market_cost_of_goods_deducted) ?? r.market_cost_of_goods_deducted}`,
+        );
+      if (r.taxable_market_income !== undefined)
+        emitLine(`Taxable market income: ${formatCredits(r.taxable_market_income) ?? r.taxable_market_income}`);
+      if (r.market_loss_carryforward !== undefined)
+        emitLine(
+          `Market loss carryforward: ${formatCredits(r.market_loss_carryforward) ?? r.market_loss_carryforward}`,
+        );
       const incomeTax = formatTaxEntries(r.income_tax, 'income');
       if (incomeTax) emitLine(`Income tax: ${incomeTax}`);
       if (r.income_tax_total !== undefined)
