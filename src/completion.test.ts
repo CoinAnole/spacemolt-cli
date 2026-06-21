@@ -329,11 +329,30 @@ describe('shell completion generation', () => {
     expect(completeWords({ shell: 'fish', words: ['spacemolt', '--plain', 'faction', 'cr'], current: 'cr' })).toEqual(
       expectedFactionCreateActions,
     );
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--plain', 'cr'], current: 'cr' })).toEqual(
+      expectedFactionCreateActions,
+    );
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile', 'pilot', 'cr'], current: 'cr' }),
+    ).toEqual(expectedFactionCreateActions);
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile=pilot', 'cr'], current: 'cr' }),
+    ).toEqual(expectedFactionCreateActions);
     expect(
       completeWords(
         {
           shell: 'fish',
           words: ['spacemolt', '--profile', 'pilot', 'faction', 'create_buy_order', 'ir'],
+          current: 'ir',
+        },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+    expect(
+      completeWords(
+        {
+          shell: 'fish',
+          words: ['spacemolt', 'faction', '--plain', 'create_buy_order', 'ir'],
           current: 'ir',
         },
         { sessionPath },

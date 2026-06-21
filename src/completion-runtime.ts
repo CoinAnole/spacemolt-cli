@@ -220,10 +220,8 @@ function commandContext(
   return undefined;
 }
 
-function firstCommandWordIndex(input: CompletionRequest, wordIndex: number): number | undefined {
-  const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
-
-  for (let i = firstArgIndex; i < wordIndex; i += 1) {
+function nextNonGlobalWordIndex(input: CompletionRequest, startIndex: number, wordIndex: number): number | undefined {
+  for (let i = startIndex; i < wordIndex; i += 1) {
     const word = input.words[i];
     if (!word) continue;
 
@@ -242,6 +240,11 @@ function firstCommandWordIndex(input: CompletionRequest, wordIndex: number): num
   return undefined;
 }
 
+function firstCommandWordIndex(input: CompletionRequest, wordIndex: number): number | undefined {
+  const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
+  return nextNonGlobalWordIndex(input, firstArgIndex, wordIndex);
+}
+
 function nestedCommandContext(
   input: CompletionRequest,
   registrySnapshot: CompletionRegistrySnapshot,
@@ -253,14 +256,15 @@ function nestedCommandContext(
   if (groupIndex === undefined) return undefined;
   const group = input.words[groupIndex];
   if (!group || !commandGroup(registrySnapshot.commandGroups, group)) return undefined;
-  const action = wordIndex > groupIndex + 1 ? input.words[groupIndex + 1] : undefined;
+  const actionIndex = nextNonGlobalWordIndex(input, groupIndex + 1, wordIndex);
+  const action = actionIndex === undefined ? undefined : input.words[actionIndex];
   const groupedAction = commandGroupAction(registrySnapshot.commandGroups, group, action);
   return {
     group,
     action,
     command: groupedAction?.command,
     actionConfig: groupedAction?.config,
-    argOffset: groupIndex + 2,
+    argOffset: actionIndex === undefined ? groupIndex + 1 : actionIndex + 1,
   };
 }
 
