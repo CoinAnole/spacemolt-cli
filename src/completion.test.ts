@@ -277,6 +277,44 @@ describe('shell completion generation', () => {
     ).toContain('--fuzzy');
   });
 
+  test('runtime completion exposes groups and hides grouped flat command names', () => {
+    const values = completeWords({ shell: 'fish', words: ['spacemolt', 'fa'], current: 'fa' }).map(
+      (candidate) => candidate.value,
+    );
+
+    expect(values).toContain('faction');
+    expect(values).toContain('facility');
+    expect(values).not.toContain('faction_info');
+    expect(values).not.toContain('facility_job_add');
+  });
+
+  test('runtime completion suggests grouped actions after a group', () => {
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'faction', 'cr'], current: 'cr' })).toEqual([
+      { value: 'create_buy_order', description: expect.stringContaining('buy order') },
+      { value: 'create_role', description: expect.any(String) },
+      { value: 'create_sell_order', description: expect.stringContaining('sell order') },
+    ]);
+  });
+
+  test('runtime completion suggests nested action enum values and cached IDs', async () => {
+    const sessionPath = await tempSessionWithCachedIds();
+
+    expect(
+      completeWords(
+        { shell: 'fish', words: ['spacemolt', 'faction', 'create_buy_order', 'ir'], current: 'ir' },
+        { sessionPath },
+      ),
+    ).toEqual([{ value: 'ore_iron', description: 'Iron Ore' }]);
+
+    expect(
+      completeWords({
+        shell: 'fish',
+        words: ['spacemolt', 'facility', 'job_add', 'facility-1', 'recipe-1', '2', 'r'],
+        current: 'r',
+      }),
+    ).toEqual([{ value: 'reverse', description: expect.any(String) }]);
+  });
+
   test('runtime completion describes help using local help metadata', () => {
     expect(completeWords({ shell: 'fish', words: ['spacemolt', 'hel'], current: 'hel' })).toContainEqual({
       value: 'help',

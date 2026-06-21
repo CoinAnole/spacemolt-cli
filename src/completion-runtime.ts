@@ -1,10 +1,12 @@
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import { commandGroup, commandGroupAction } from './command-groups.ts';
 import {
   completionArgsForCommand,
   GLOBAL_COMPLETION_OPTIONS,
   LOCAL_COMPLETION_COMMANDS,
   SPECIAL_COMPLETIONS,
 } from './completion-metadata.ts';
+import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import { hintsForKind, type IdHint, idKindForCommandField, loadIdCacheSync } from './id-cache.ts';
 
 export interface CompletionRequest {
@@ -18,8 +20,11 @@ export interface CompletionCandidate {
   description?: string;
 }
 
+type CompletionRegistrySnapshot = Pick<CommandRegistrySnapshot, 'allCommands'> &
+  Partial<Pick<CommandRegistrySnapshot, 'commands' | 'commandGroups'>>;
+
 type CompletionRuntimeOptions = {
-  registrySnapshot?: Pick<CommandRegistrySnapshot, 'allCommands'> & Partial<Pick<CommandRegistrySnapshot, 'commands'>>;
+  registrySnapshot?: CompletionRegistrySnapshot;
   sessionPath?: string;
   idHints?: IdHint[];
   profileNames?: string[];
@@ -59,7 +64,7 @@ export function formatCompletionCandidates(candidates: CompletionCandidate[]): s
 }
 
 function commandCandidates(
-  registrySnapshot: Pick<CommandRegistrySnapshot, 'allCommands'> & Partial<Pick<CommandRegistrySnapshot, 'commands'>>,
+  registrySnapshot: CompletionRegistrySnapshot,
 ): CompletionCandidate[] {
   const allCommands = registrySnapshot.allCommands;
   const commands = new Map<string, CompletionCandidate>();
@@ -84,6 +89,19 @@ function commandCandidates(
   });
 
   return [...commands.values()];
+}
+
+function groupActionCandidates(
+  group: string,
+  registrySnapshot: CompletionRegistrySnapshot,
+  prefix: string,
+): CompletionCandidate[] {
+  const actions = commandGroup(registrySnapshot.commandGroups, group)?.actions;
+  if (!actions) return [];
+  return Object.values(actions)
+    .filter((action) => action.action.startsWith(prefix))
+    .map((action) => ({ value: action.action, description: action.config.description }))
+    .sort((left, right) => left.value.localeCompare(right.value));
 }
 
 function globalOptionCandidates(): CompletionCandidate[] {
@@ -150,11 +168,26 @@ function canCompleteTopLevel(input: CompletionRequest): boolean {
 
 function commandContext(
   input: CompletionRequest,
-  registrySnapshot: Pick<CommandRegistrySnapshot, 'allCommands'> & Partial<Pick<CommandRegistrySnapshot, 'commands'>>,
+  registrySnapshot: CompletionRegistrySnapshot,
 ): { command: string; field?: string } | undefined {
   const wordIndex = currentWordIndex(input);
   const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
   const allCommands = registrySnapshot.allCommands;
+
+  const nested = nestedCommandContext(input, registrySnapshot);
+  if (nested?.command && nested.actionConfig) {
+    const args = completionArgsForCommand(nested.command, nested.actionConfig);
+    const currentWord = input.words[wordIndex] === input.current ? input.current : '';
+    const wordsBeforeCurrent = input.words.slice(nested.argOffset, wordIndex);
+    if (isCurrentGlobalOptionValue(wordsBeforeCurrent)) return undefined;
+    const positionalIndex = countCommandPositionalsBeforeCurrent(wordsBeforeCurrent);
+    const fallbackField = args[positionalIndex]?.name;
+    const keyValueField = currentWord.includes('=') ? currentWord.split('=', 1)[0] : undefined;
+    return {
+      command: nested.command,
+      field: keyValueField || completionFieldForCommand(nested.command, wordsBeforeCurrent, fallbackField),
+    };
+  }
 
   for (let i = firstArgIndex; i < wordIndex; i += 1) {
     const word = input.words[i];
@@ -185,6 +218,27 @@ function commandContext(
   }
 
   return undefined;
+}
+
+function nestedCommandContext(
+  input: CompletionRequest,
+  registrySnapshot: CompletionRegistrySnapshot,
+):
+  | { group: string; action?: string; command?: string; actionConfig?: CommandConfig | LocalCommandConfig; argOffset: number }
+  | undefined {
+  const wordIndex = currentWordIndex(input);
+  const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
+  const group = input.words[firstArgIndex];
+  if (!group || !commandGroup(registrySnapshot.commandGroups, group)) return undefined;
+  const action = wordIndex > firstArgIndex + 1 ? input.words[firstArgIndex + 1] : undefined;
+  const groupedAction = commandGroupAction(registrySnapshot.commandGroups, group, action);
+  return {
+    group,
+    action,
+    command: groupedAction?.command,
+    actionConfig: groupedAction?.config,
+    argOffset: firstArgIndex + 2,
+  };
 }
 
 function completionFieldForCommand(
@@ -347,7 +401,11 @@ function commandFieldValueCandidates(input: CompletionRequest, options: Completi
   const context = commandContext(input, registrySnapshot);
   if (!context?.field) return [];
 
-  const commandConfig = registrySnapshot.allCommands[context.command];
+  const commandConfig =
+    registrySnapshot.allCommands[context.command] ??
+    Object.values(registrySnapshot.commandGroups || {})
+      .flatMap((group) => Object.values(group?.actions ?? {}))
+      .find((action) => action.command === context.command)?.config;
   if (!commandConfig) return [];
 
   const normalizedField = normalizeCompletionField(context.field);
@@ -373,6 +431,11 @@ export function completeWords(input: CompletionRequest, options: CompletionRunti
     return (options.profileNames || [])
       .filter((profileName) => profileName.startsWith(prefix))
       .map((profileName) => ({ value: profileName }));
+  }
+
+  const nested = nestedCommandContext(input, registrySnapshot);
+  if (nested && !nested.action) {
+    return groupActionCandidates(nested.group, registrySnapshot, input.current);
   }
 
   if (!canCompleteTopLevel(input)) {
