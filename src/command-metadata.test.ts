@@ -292,7 +292,9 @@ function zshCommandCompletionWords(completion: string, command: string): string[
 function fishCommandCompletionWords(completion: string, command: string): string[] {
   const words: string[] = [];
   const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const commandMatcher = new RegExp(`__fish_seen_subcommand_from ${escapedCommand}(?:"|\\s|$)`);
+  const commandMatcher = new RegExp(
+    `(?:__fish_seen_subcommand_from|__spacemolt_seen_group_without_action) ${escapedCommand}(?:"|\\s|$)`,
+  );
   for (const line of completion.split('\n')) {
     if (!commandMatcher.test(line)) continue;
     const word = line.match(/(?:^|\s)-a\s+(\S+)/)?.[1];

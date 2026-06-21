@@ -162,6 +162,22 @@ function escapeFishArgumentList(values: string[]): string {
   return quoteFishSourceString(values.map(escapeFishCompletionToken).join(' '));
 }
 
+function escapeFishArguments(values: string[]): string {
+  return values.map(escapeFishArgument).join(' ');
+}
+
+function fishCompletionOptionWords(option: CompletionOption): string[] {
+  return [option.long, option.short].filter(Boolean) as string[];
+}
+
+function fishGlobalOptionWords(): string[] {
+  return GLOBAL_COMPLETION_OPTIONS.flatMap(fishCompletionOptionWords);
+}
+
+function fishValueGlobalOptionWords(): string[] {
+  return GLOBAL_COMPLETION_OPTIONS.filter((option) => option.takesValue).flatMap(fishCompletionOptionWords);
+}
+
 function generateZshGlobalOption(option: CompletionOption): string {
   const words = [option.short, option.long].filter(Boolean) as string[];
   const escapedDescription = escapeZshDescription(option.description);
@@ -483,11 +499,54 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('  not __spacemolt_has_dynamic_complete');
   lines.push('end');
   lines.push('');
+  lines.push('function __spacemolt_static_command_words');
+  lines.push('  set -l tokens (commandline -opc)');
+  lines.push('  set -l current (commandline -ct)');
+  lines.push(`  set -l value_options ${escapeFishArguments(fishValueGlobalOptionWords())}`);
+  lines.push(`  set -l global_options ${escapeFishArguments(fishGlobalOptionWords())}`);
+  lines.push('  set -l result');
+  lines.push('  set -l skip_next 0');
+  lines.push('  set -l last_index (count $tokens)');
+  lines.push('  if test -n "$current"; and test $last_index -gt 0; and test "$tokens[$last_index]" = "$current"');
+  lines.push('    set -e tokens[$last_index]');
+  lines.push('  end');
+  lines.push('  for token in $tokens');
+  lines.push('    if test "$token" = "spacemolt"');
+  lines.push('      continue');
+  lines.push('    end');
+  lines.push('    if test $skip_next -eq 1');
+  lines.push('      set skip_next 0');
+  lines.push('      continue');
+  lines.push('    end');
+  lines.push('    set -l option_name (string replace -r -- "=.*$" "" "$token")');
+  lines.push('    if contains -- "$option_name" $value_options');
+  lines.push('      if not string match -q -- "*=*" "$token"');
+  lines.push('        set skip_next 1');
+  lines.push('      end');
+  lines.push('      continue');
+  lines.push('    end');
+  lines.push('    if contains -- "$option_name" $global_options');
+  lines.push('      continue');
+  lines.push('    end');
+  lines.push('    if string match -q -- "-*" "$token"');
+  lines.push('      continue');
+  lines.push('    end');
+  lines.push('    set -a result "$token"');
+  lines.push('  end');
+  lines.push('  printf "%s\\n" $result');
+  lines.push('end');
+  lines.push('');
+  lines.push('function __spacemolt_seen_group_without_action');
+  lines.push('  set -l group $argv[1]');
+  lines.push('  set -l words (__spacemolt_static_command_words)');
+  lines.push('  test (count $words) -eq 1; and test "$words[1]" = "$group"');
+  lines.push('end');
+  lines.push('');
   lines.push('function __spacemolt_seen_nested_command');
   lines.push('  set -l group $argv[1]');
   lines.push('  set -l action $argv[2]');
-  lines.push('  set -l tokens (commandline -opc)');
-  lines.push('  test (count $tokens) -ge 3; and test "$tokens[2]" = "$group"; and test "$tokens[3]" = "$action"');
+  lines.push('  set -l words (__spacemolt_static_command_words)');
+  lines.push('  test (count $words) -ge 2; and test "$words[1]" = "$group"; and test "$words[2]" = "$action"');
   lines.push('end');
   lines.push('');
   lines.push('complete -c spacemolt -f -n "__spacemolt_has_dynamic_complete" -a "(__spacemolt_dynamic_complete)"');
@@ -510,7 +569,7 @@ function generateFishCompletion(registry: CompletionRegistry): string {
     for (const action of groupedActions(registry, group)) {
       const desc = escapeDoubleQuotedShell(action.config.description || action.action);
       lines.push(
-        `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${escapeFishConditionWord(group)}`)}" -a ${escapeFishArgument(action.action)} -d "${desc}"`,
+        `complete -c spacemolt -n "${fishStaticFallbackCondition(`__spacemolt_seen_group_without_action ${escapeFishConditionWord(group)}`)}" -a ${escapeFishArgument(action.action)} -d "${desc}"`,
       );
     }
   }

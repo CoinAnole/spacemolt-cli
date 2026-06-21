@@ -600,7 +600,7 @@ describe('local command handlers', () => {
   });
 
   test('completion command emits nested static group fallbacks through runInvocation', async () => {
-    async function completionOutput(shell: 'bash' | 'fish'): Promise<string> {
+    async function completionOutput(shell: 'bash' | 'fish' | 'zsh'): Promise<string> {
       const { context, stdout, stderr } = captureContext({ HOME: tempDir() });
       const exitCode = await runInvocation(['completion', shell], undefined, context, {
         async checkForUpdates() {},
@@ -622,6 +622,13 @@ describe('local command handlers', () => {
 
     expect(fish).toContain('__spacemolt_seen_nested_command faction create_buy_order');
     expect(fish).toContain('-a item_id=');
+
+    const zsh = await completionOutput('zsh');
+
+    expect(zsh).toContain('create_buy_order');
+    expect(zsh).toContain('info');
+    expect(zsh).toContain('invite');
+    expect(zsh).not.toContain('faction_create_buy_order');
   });
 
   test('hidden __complete command routes and renders line protocol candidates', async () => {

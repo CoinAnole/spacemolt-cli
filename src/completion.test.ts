@@ -752,6 +752,16 @@ describe('shell completion generation', () => {
     expect(bash).toContain('case "$action" in');
     expect(bash).toContain('create_buy_order)');
     expect(bash).toContain('item_id=');
+    expect(fish).toContain('function __spacemolt_static_command_words');
+    expect(fish).toContain('set -l value_options');
+    expect(fish).toContain('--profile');
+    expect(fish).toContain('--format');
+    expect(fish).toContain('set -l option_name (string replace -r -- "=.*$" "" "$token")');
+    expect(fish).toContain('function __spacemolt_seen_group_without_action');
+    expect(fish).toContain('__spacemolt_seen_group_without_action faction');
+    expect(fish).not.toContain(
+      '__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from faction" -a create_buy_order',
+    );
     expect(fish).toContain('__spacemolt_seen_nested_command faction create_buy_order');
     expect(fish).toContain('-a item_id=');
   });
