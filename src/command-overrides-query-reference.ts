@@ -177,7 +177,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage: '[empire_id]  (omit for all empires)',
     description: 'View live policy information for one empire or all empires.',
     example: 'spacemolt get_empire_info solarian',
-    seeAlso: ['get_tax_estimate', 'petition'],
+    seeAlso: ['get_tax_estimate', 'get_faction_tax_estimate', 'petition'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_empire_info',
     positionals: ['empire_id'],
@@ -188,6 +188,13 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_tax_estimate: {
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_tax_estimate',
+  },
+  get_faction_tax_estimate: {
+    description: "Preview your faction's corporate income tax bill, prepaid balance, and deductible expenses.",
+    example: 'spacemolt get_faction_tax_estimate',
+    seeAlso: ['get_tax_estimate', 'get_empire_info', 'faction_prepay_tax'],
+    category: 'Query commands',
+    apiRoute: 'POST /api/v2/spacemolt_faction/tax_estimate',
   },
   survey_system: {
     category: 'Query commands',
@@ -312,9 +319,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   catalog: {
     usage:
-      '<type> [id] [category] [search] [page] [page_size] [commissionable=true/false]  (types: ships, items, skills, recipes)',
-    description: 'Browse reference data such as ships, items, skills, and recipes.',
-    example: 'spacemolt catalog type=items',
+      '<type> [id] [category] [search] [page] [page_size] [commissionable=true/false]  (types: ships, items, skills, recipes, facilities)',
+    description: 'Browse reference data such as ships, items, skills, recipes, and facilities.',
+    example: 'spacemolt catalog type=facilities search=steel_plate',
     seeAlso: ['get_guide', 'get_commands'],
     category: 'Reference & Help',
     apiRoute: 'POST /api/v2/spacemolt_catalog',

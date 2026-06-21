@@ -848,6 +848,86 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('facility and station additions from v0.410 parse natural positionals', () => {
+    const facilityName = parseOk(['facility_set_name', 'facility-1', 'Frontier Smelter']);
+    expect(facilityName.payload).toEqual({
+      facility_id: 'facility-1',
+      custom_name: 'Frontier Smelter',
+    });
+
+    const fractionalPrice = parseOk(['facility_set_output_price', 'facility-1', 'steel_plate', '0.25']);
+    expect(convertPayloadTypes(fractionalPrice.payload, 'facility_set_output_price')).toEqual({
+      facility_id: 'facility-1',
+      item_id: 'steel_plate',
+      price: 0.25,
+    });
+
+    expect(parseOk(['get_base_cost']).payload).toEqual({});
+    expect(convertPayloadTypes(parseOk(['build_base', 'Aurora Freeport', 'true']).payload, 'build_base')).toEqual({
+      name: 'Aurora Freeport',
+      public_access: true,
+    });
+    expect(parseOk(['build_outpost', 'Aurora Cache']).payload).toEqual({
+      name: 'Aurora Cache',
+    });
+    expect(parseOk(['buy_ship_license', 'solarian']).payload).toEqual({
+      empire: 'solarian',
+    });
+
+    expect(parseOk(['station_info']).payload).toEqual({});
+    expect(parseOk(['station_set_name', 'Aurora Freeport']).payload).toEqual({
+      name: 'Aurora Freeport',
+    });
+    expect(parseOk(['station_set_description', 'A lawless trade hub']).payload).toEqual({
+      description: 'A lawless trade hub',
+    });
+    expect(convertPayloadTypes(parseOk(['station_set_public', 'true']).payload, 'station_set_public')).toEqual({
+      public: true,
+    });
+    expect(
+      convertPayloadTypes(parseOk(['station_set_build_policy', 'false']).payload, 'station_set_build_policy'),
+    ).toEqual({
+      allow_outsiders: false,
+    });
+    expect(parseOk(['station_set_service_access', 'market', 'allies']).payload).toEqual({
+      service: 'market',
+      access: 'allies',
+    });
+    expect(convertPayloadTypes(parseOk(['station_set_market_fee', '7']).payload, 'station_set_market_fee')).toEqual({
+      fee_percent: 7,
+    });
+    expect(convertPayloadTypes(parseOk(['station_set_refuel_price', '3']).payload, 'station_set_refuel_price')).toEqual(
+      {
+        price: 3,
+      },
+    );
+    expect(convertPayloadTypes(parseOk(['station_set_repair_price', '4']).payload, 'station_set_repair_price')).toEqual(
+      {
+        price: 4,
+      },
+    );
+    expect(parseOk(['station_allow_player', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseOk(['station_remove_player', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseOk(['station_ban', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseOk(['station_unban', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseOk(['station_allow_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
+    expect(parseOk(['station_remove_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
+  });
+
+  test('tax and faction scan additions from v0.410 parse natural positionals', () => {
+    const prepay = parseOk(['prepay_tax', '5000']);
+    expect(normalizeParsedPayload('prepay_tax', prepay.payload)).toEqual({ quantity: '5000' });
+    expect(convertPayloadTypes(normalizeParsedPayload('prepay_tax', prepay.payload), 'prepay_tax')).toEqual({
+      quantity: 5000,
+    });
+
+    expect(convertPayloadTypes(parseOk(['faction_prepay_tax', '12000']).payload, 'faction_prepay_tax')).toEqual({
+      amount: 12000,
+    });
+    expect(parseOk(['get_faction_tax_estimate']).payload).toEqual({});
+    expect(parseOk(['faction_scan_poi', 'poi-1']).payload).toEqual({ poi_id: 'poi-1' });
+  });
+
   test('distress_signal - no args', () => {
     const { command, payload } = parseOk(['distress_signal']);
     expect(command).toBe('distress_signal');

@@ -182,6 +182,15 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_faction_commerce/create_buy_order',
     positionals: ['item_id', 'quantity', 'price_each', 'deliver_to'],
   },
+  faction_prepay_tax: {
+    usage: '<amount>',
+    description: "Move treasury credits into your faction's prepaid corporate tax pool.",
+    example: 'spacemolt faction_prepay_tax 12000',
+    seeAlso: ['get_faction_tax_estimate', 'get_empire_info'],
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_faction/prepay_tax',
+    positionals: ['amount'],
+  },
   faction_rooms: {
     category: 'Faction rooms',
     apiRoute: 'POST /api/v2/spacemolt_faction/rooms',
@@ -232,6 +241,16 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   faction_intel_status: {
     category: 'Faction missions & intel',
     apiRoute: 'POST /api/v2/spacemolt_intel/intel_status',
+  },
+  faction_scan_poi: {
+    usage: '<poi_id>',
+    description: "Run a long-range sensor scan from your faction's sensor facility coverage.",
+    example: 'spacemolt faction_scan_poi <poi_id>',
+    discoverWith: ['get_system', 'faction_intel_status'],
+    seeAlso: ['faction_intel_status', 'faction_query_intel'],
+    category: 'Faction missions & intel',
+    apiRoute: 'POST /api/v2/spacemolt_intel/scan_poi',
+    positionals: ['poi_id'],
   },
   faction_submit_trade_intel: {
     category: 'Faction missions & intel',
@@ -296,7 +315,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     },
   },
   get_notes: {
-    usage: '(list all note documents)',
+    usage: '[page=1] [page_size=20]  (list note documents)',
     category: 'Notes',
     apiRoute: 'POST /api/v2/spacemolt_social/get_notes',
   },
@@ -335,7 +354,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     positionals: ['search', 'category', 'author', 'limit', 'page'],
   },
   forum_get_thread: {
-    usage: '<thread_id>  (view thread + replies)',
+    usage: '<thread_id> [page=1] [limit=20]  (view thread + paginated replies)',
     category: 'Forum',
     apiRoute: 'POST /api/v2/spacemolt_social/forum_get_thread',
     positionals: ['thread_id'],

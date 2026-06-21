@@ -326,6 +326,15 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt_salvage/set_home',
     positionals: ['base_id'],
   },
+  prepay_tax: {
+    usage: '<amount>',
+    description: 'Move wallet credits into the prepaid pool for your next personal tax assessment.',
+    example: 'spacemolt prepay_tax 5000',
+    seeAlso: ['get_tax_estimate', 'get_empire_info'],
+    category: 'Taxes',
+    apiRoute: 'POST /api/v2/spacemolt/prepay_tax',
+    positionals: ['amount'],
+  },
   craft: {
     usage:
       '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|workshop] [jobs=JSON]  (queues or cancels production from station storage)',

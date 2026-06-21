@@ -67,8 +67,6 @@ describe('client.ts source integrity', () => {
       'get_friend_requests',
       'accept_friend_request',
       'decline_friend_request',
-      'build_base',
-      'get_base_cost',
       'attack_base',
       'raid_status',
       'get_base_wrecks',
@@ -120,6 +118,16 @@ describe('client.ts source integrity', () => {
     expect(COMMANDS.recycle?.route).toEqual({
       tool: 'spacemolt',
       action: 'recycle',
+      method: 'POST',
+    });
+    expect(COMMANDS.build_base?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'found_station',
+      method: 'POST',
+    });
+    expect(COMMANDS.get_base_cost?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'base_cost',
       method: 'POST',
     });
     expect(COMMANDS.facility_job_add?.route).toEqual({
