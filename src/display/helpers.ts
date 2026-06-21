@@ -195,16 +195,31 @@ function formatPercent(value: unknown): string {
   return `${Number.isInteger(pct) ? pct.toFixed(0) : pct.toFixed(1)}%`;
 }
 
+function summarizePowerFuelInputs(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts = value
+    .filter(isRecord)
+    .map((item) => {
+      const quantity = item.quantity_per_cycle ?? item.quantity;
+      const name = item.name ?? item.item_id ?? 'item';
+      return `${formatDisplayNumber(quantity ?? '?')} ${name}`;
+    })
+    .filter(Boolean);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
 export function emitStationPower(power: unknown): boolean {
   if (!isRecord(power)) return false;
   const supply = power.supply;
-  const draw = power.structural_draw ?? power.draw;
+  const draw = power.current_draw ?? power.structural_draw ?? power.draw;
   const efficiency = power.efficiency;
   const batteryStored = power.battery_stored;
   const batteryCapacity = power.battery_capacity;
+  const fuelInputs = summarizePowerFuelInputs(power.fuel_inputs);
+  const remediation = typeof power.remediation === 'string' && power.remediation.trim() ? power.remediation : undefined;
   const hasPower = supply !== undefined || draw !== undefined || efficiency !== undefined;
   const hasBattery = batteryStored !== undefined || batteryCapacity !== undefined;
-  if (!hasPower && !hasBattery) return false;
+  if (!hasPower && !hasBattery && !fuelInputs && !remediation) return false;
 
   emitLine('');
   emitLine(`${c.bright}Power:${c.reset}`);
@@ -219,6 +234,8 @@ export function emitStationPower(power: unknown): boolean {
     const capacityText = batteryCapacity === undefined ? '?' : formatDisplayNumber(batteryCapacity);
     emitLine(`  Battery: ${storedText}/${capacityText}`);
   }
+  if (fuelInputs) emitLine(`  Fuel Inputs: ${fuelInputs}`);
+  if (remediation) emitLine(`  ${remediation}`);
   return true;
 }
 

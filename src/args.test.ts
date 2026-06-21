@@ -768,6 +768,17 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('craft accepts faction storage extension bucket destinations', () => {
+    const parsed = parseOk(['craft', 'basic_iron_smelting', '50', 'deliver_to=faction:Workshop']);
+    const payload = convertPayloadTypes(normalizeParsedPayload('craft', parsed.payload), 'craft');
+
+    expect(payload).toEqual({
+      id: 'basic_iron_smelting',
+      quantity: 50,
+      deliver_to: 'faction:Workshop',
+    });
+  });
+
   test('recycle parses recipe positionals and bulk jobs JSON', () => {
     expect(parseOk(['recycle', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
 
@@ -1107,6 +1118,27 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       target: 'PlayerName',
       item_id: 'ship_456',
       message: 'Enjoy',
+    });
+  });
+
+  test('storage deposit parses bulk items JSON and bucket destination', () => {
+    const parsed = parseOk([
+      'storage',
+      'deposit',
+      'target=faction',
+      'bucket=Workshop',
+      'items=[{"item_id":"iron_ore","quantity":5},{"item_id":"fuel_cell","quantity":2}]',
+    ]);
+    const payload = convertPayloadTypes(normalizeParsedPayload('storage', parsed.payload), 'storage');
+
+    expect(payload).toEqual({
+      action: 'deposit',
+      target: 'faction',
+      bucket: 'Workshop',
+      items: [
+        { item_id: 'iron_ore', quantity: 5 },
+        { item_id: 'fuel_cell', quantity: 2 },
+      ],
     });
   });
 

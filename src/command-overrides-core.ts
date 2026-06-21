@@ -354,8 +354,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       deliver_to: {
         type: 'string',
-        enum: ['storage', 'faction'],
-        description: "Output destination: 'storage' (default) or 'faction'. Crafting never delivers to cargo.",
+        description:
+          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Crafting never delivers to cargo.",
       },
       dry_run: {
         type: 'boolean',

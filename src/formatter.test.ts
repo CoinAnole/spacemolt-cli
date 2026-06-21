@@ -181,15 +181,18 @@ const captainsLogListFixture = {
 };
 
 const actionLogFixture = {
-  category: 'combat',
+  category: 'crafting',
   has_more: true,
   entries: [
     {
       id: 'event-1',
       created_at: '2026-05-23T15:04:05.000Z',
-      summary: 'Destroyed pirate skiff near Earth.',
-      category: 'combat',
-      event_type: 'pirate_destroyed',
+      summary: 'Completed basic iron smelting.',
+      category: 'crafting',
+      event_type: 'crafting.completed',
+      job_id: 'job-craft-1',
+      mode: 'craft',
+      storage: 'faction',
     },
   ],
 };
@@ -1299,12 +1302,16 @@ describe('structuredContent formatters', () => {
     const { stdout, stderr } = captureStructuredOutput('get_action_log', actionLogFixture);
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('category combat');
+    expect(stdout).toContain('category crafting');
     expect(stdout).toContain('=== Entries ===');
     expect(stdout).toContain('Timestamp');
     expect(stdout).toContain('2026-05-23 15:04:05');
-    expect(stdout).toContain('Destroyed pirate skiff near Earth.');
-    expect(stdout).toContain('combat');
+    expect(stdout).toContain('Completed basic iron smelting.');
+    expect(stdout).toContain('crafting');
+    expect(stdout).toContain('crafting.completed');
+    expect(stdout).toContain('job-craft-1');
+    expect(stdout).toContain('craft');
+    expect(stdout).toContain('faction');
     expect(stdout).toContain('More entries available.');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -2443,10 +2450,15 @@ describe('structuredContent formatters', () => {
       base_id: 'earth_station',
       power: {
         supply: 120,
-        structural_draw: 95,
+        current_draw: 95,
         battery_stored: 420,
         battery_capacity: 600,
         efficiency: 0.85,
+        fuel_inputs: [
+          { item_id: 'fuel_cell', name: 'Fuel Cell', quantity_per_cycle: 12 },
+          { item_id: 'iron_ore', name: 'Iron Ore', quantity_per_cycle: 5 },
+        ],
+        remediation: 'Sell Fuel Cell and Iron Ore into this station market to restore power.',
       },
       construction: {
         pending: [
@@ -2497,6 +2509,7 @@ describe('structuredContent formatters', () => {
           level: 2,
           active: false,
           maintenance_satisfied: true,
+          power_throttled: true,
           is_recycler: true,
           configured_recipe_id: 'iron_ore_reverse',
         },
@@ -2507,6 +2520,8 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('Power: 95/120 draw (85% efficiency)');
     expect(stdout).toContain('Battery: 420/600');
+    expect(stdout).toContain('Fuel Inputs: 12 Fuel Cell, 5 Iron Ore');
+    expect(stdout).toContain('Sell Fuel Cell and Iron Ore into this station market to restore power.');
     expect(stdout).toContain('=== Construction ===');
     expect(stdout).toContain('Life Support Mk II');
     expect(stdout).toContain('28 missing');
@@ -2518,6 +2533,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Ore Refinery');
     expect(stdout).toContain('Level');
     expect(stdout).toContain('Recycler');
+    expect(stdout).toContain('Power Throttled');
     expect(stdout).toContain('Recipe');
     expect(stdout).toContain('iron_ore_reverse');
     expect(stdout).not.toContain('=== Response ===');
@@ -2574,10 +2590,12 @@ describe('structuredContent formatters', () => {
       },
       power: {
         supply: 200,
-        structural_draw: 150,
+        current_draw: 150,
         battery_stored: 900,
         battery_capacity: 1000,
         efficiency: 0.92,
+        fuel_inputs: [{ item_id: 'deuterium', name: 'Deuterium', quantity_per_cycle: 4 }],
+        remediation: 'Sell Deuterium into this station market to bring power back online.',
       },
       construction: {
         pending: [
@@ -2609,6 +2627,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('All-in Refuel Price: 26 credits/unit');
     expect(stdout).toContain('Power: 150/200 draw (92% efficiency)');
     expect(stdout).toContain('Battery: 900/1,000');
+    expect(stdout).toContain('Fuel Inputs: 4 Deuterium');
+    expect(stdout).toContain('Sell Deuterium into this station market to bring power back online.');
     expect(stdout).toContain('=== Construction ===');
     expect(stdout).toContain('Life Support Mk III');
     expect(stdout).toContain('4 missing');
@@ -2769,6 +2789,70 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Cargo Expander III');
     expect(stdout).toContain('module-nested-1');
     expect(stdout).not.toContain('(None)');
+  });
+
+  test('get_battle_status formats current combat state from schema response', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_battle_status', {
+      battle_id: 'battle-1',
+      system_id: 'sol',
+      is_participant: true,
+      tick_duration: 10,
+      combat_state: {
+        flee_counter: 1,
+        flee_required: 3,
+        can_escape: true,
+        warp_disrupted: false,
+        webbed: true,
+        em_disrupted: true,
+        disruption_ticks: 2,
+        speed_penalty_pct: 25,
+        effective_speed: 85,
+        max_weapon_reach: 2,
+      },
+      participants: [
+        {
+          player_id: 'player-1',
+          username: 'Marlowe',
+          side_id: 1,
+          auto_pilot: false,
+          ship_name: 'Prospector',
+          ship_class: 'prospector',
+          stance: 'flee',
+          target_id: 'pirate-1',
+          zone: 'outer',
+          zone_distance: 0,
+          hull_pct: 82,
+          shield_pct: 40,
+        },
+        {
+          player_id: 'pirate-1',
+          username: 'Pirate Skiff',
+          side_id: 2,
+          auto_pilot: true,
+          ship_class: 'skiff',
+          zone: 'inner',
+          zone_distance: 3,
+          hull_pct: 55,
+          shield_pct: 0,
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Battle ===');
+    expect(stdout).toContain('ID: battle-1');
+    expect(stdout).toContain('System: sol');
+    expect(stdout).toContain('Can Escape: yes');
+    expect(stdout).toContain('Flee Progress: 1/3');
+    expect(stdout).toContain('Effective Speed: 85');
+    expect(stdout).toContain('Weapon Reach: 2 zones');
+    expect(stdout).toContain('Warp Disrupted: no');
+    expect(stdout).toContain('Webbed: yes');
+    expect(stdout).toContain('EM Disrupted: yes (25%, 2 ticks)');
+    expect(stdout).toContain('Pirate Skiff');
+    expect(stdout).toContain('Distance');
+    expect(stdout).toContain('3');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('normalizes get_status location data before player status formatting', () => {

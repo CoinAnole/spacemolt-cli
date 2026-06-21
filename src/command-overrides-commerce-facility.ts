@@ -74,7 +74,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   storage: {
     usage:
-      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction]',
+      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name] [items=JSON]',
     description: 'Run unified station storage operations: view, deposit, withdraw, loot, or jettison.',
     example: 'spacemolt storage view target=faction --items iron_ore,fuel_cell',
     discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
@@ -113,8 +113,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
           'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
       },
       items: {
-        type: 'string',
-        description: 'Client-side comma-separated exact item ID filter for text, JSON, and structured output.',
+        type: 'array',
+        description:
+          'Bulk transfer JSON array for deposit/withdraw, or a client-side comma-separated exact item ID filter for storage view output.',
       },
       source: {
         type: 'string',

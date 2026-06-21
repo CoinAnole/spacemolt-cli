@@ -59,6 +59,22 @@ function formatCycles(value: unknown): string | undefined {
   return `${number} ${Number(value) === 1 ? 'cycle' : 'cycles'}`;
 }
 
+function formatYesNo(value: unknown): string | undefined {
+  if (typeof value !== 'boolean') return undefined;
+  return value ? 'yes' : 'no';
+}
+
+function formatPercentValue(value: unknown): string | undefined {
+  const number = formatNumber(value);
+  return number === undefined ? undefined : `${number}%`;
+}
+
+function formatZoneCount(value: unknown): string | undefined {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return undefined;
+  return `${number.toLocaleString()} ${number === 1 ? 'zone' : 'zones'}`;
+}
+
 function formatMaintenance(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
   const parts = value
@@ -95,6 +111,9 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   if (options.grouped && hasAnyField(rows, ['maintenance_satisfied'])) {
     columns.push(['Maint', ['maintenance_satisfied']]);
   }
+  if (hasAnyField(rows, ['power_throttled'])) {
+    columns.push(['Power Throttled', ['power_throttled']]);
+  }
   if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle'])) {
     columns.push(['Upkeep', ['maintenance_display', 'maintenance_per_cycle']]);
   }
@@ -107,6 +126,76 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   }
   if (hasAnyField(rows, ['idle_reason'])) columns.push(['Idle Reason', ['idle_reason']]);
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
+  return columns;
+}
+
+function emitBattleCombatState(value: unknown): void {
+  if (!isRecord(value)) return;
+  const canEscape = formatYesNo(value.can_escape);
+  const fleeCounter = formatNumber(value.flee_counter);
+  const fleeRequired = formatNumber(value.flee_required);
+  const effectiveSpeed = formatNumber(value.effective_speed);
+  const weaponReach = formatZoneCount(value.max_weapon_reach);
+  const warpDisrupted = formatYesNo(value.warp_disrupted);
+  const webbed = formatYesNo(value.webbed);
+  const emDisrupted = formatYesNo(value.em_disrupted);
+  if (
+    canEscape === undefined &&
+    fleeCounter === undefined &&
+    effectiveSpeed === undefined &&
+    weaponReach === undefined &&
+    warpDisrupted === undefined &&
+    webbed === undefined &&
+    emDisrupted === undefined
+  ) {
+    return;
+  }
+
+  emitLine(`\n${c.bright}Combat State:${c.reset}`);
+  if (canEscape !== undefined) emitLine(`Can Escape: ${canEscape}`);
+  if (fleeCounter !== undefined || fleeRequired !== undefined) {
+    emitLine(`Flee Progress: ${fleeCounter ?? '?'}${fleeRequired === undefined ? '' : `/${fleeRequired}`}`);
+  }
+  if (effectiveSpeed !== undefined) emitLine(`Effective Speed: ${effectiveSpeed}`);
+  if (weaponReach !== undefined) emitLine(`Weapon Reach: ${weaponReach}`);
+  if (warpDisrupted !== undefined) emitLine(`Warp Disrupted: ${warpDisrupted}`);
+  if (webbed !== undefined) emitLine(`Webbed: ${webbed}`);
+  if (emDisrupted !== undefined) {
+    const details = [
+      formatPercentValue(value.speed_penalty_pct),
+      value.disruption_ticks === undefined
+        ? undefined
+        : `${formatNumber(value.disruption_ticks) ?? value.disruption_ticks} ticks`,
+    ].filter(Boolean);
+    emitLine(`EM Disrupted: ${emDisrupted}${details.length ? ` (${details.join(', ')})` : ''}`);
+  }
+}
+
+function battleParticipantRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return rows.map((row) => ({
+    ...row,
+    ship_display:
+      row.ship_name && row.ship_class ? `${row.ship_name} (${row.ship_class})` : (row.ship_name ?? row.ship_class),
+    hull_display: formatPercentValue(row.hull_pct),
+    shield_display: formatPercentValue(row.shield_pct),
+  }));
+}
+
+function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['username', 'name', 'player_name']],
+    ['ID', ['player_id', 'id']],
+    ['Side', ['side_id', 'side']],
+  ];
+  if (hasAnyField(rows, ['ship_display', 'ship_name', 'ship_class'])) {
+    columns.push(['Ship', ['ship_display', 'ship_name', 'ship_class']]);
+  }
+  if (hasAnyField(rows, ['zone'])) columns.push(['Zone', ['zone']]);
+  if (hasAnyField(rows, ['zone_distance'])) columns.push(['Distance', ['zone_distance']]);
+  if (hasAnyField(rows, ['stance'])) columns.push(['Stance', ['stance']]);
+  if (hasAnyField(rows, ['target_name', 'target_id'])) columns.push(['Target', ['target_name', 'target_id']]);
+  if (hasAnyField(rows, ['hull_display', 'hull_pct'])) columns.push(['Hull', ['hull_display', 'hull_pct']]);
+  if (hasAnyField(rows, ['shield_display', 'shield_pct'])) columns.push(['Shield', ['shield_display', 'shield_pct']]);
   return columns;
 }
 
@@ -322,17 +411,17 @@ export const socialFormatters = [
         timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
         category: entry.category ?? category,
       }));
+      const columns: Array<[string, string[]]> = [
+        ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
+        ['Summary', ['summary', 'message', 'description']],
+        ['Category', ['category']],
+      ];
+      if (hasAnyField(rows, ['event_type', 'type'])) columns.push(['Event', ['event_type', 'type']]);
+      if (hasAnyField(rows, ['job_id'])) columns.push(['Job', ['job_id']]);
+      if (hasAnyField(rows, ['mode'])) columns.push(['Mode', ['mode']]);
+      if (hasAnyField(rows, ['storage'])) columns.push(['Storage', ['storage']]);
       emitLine(`${c.dim}category ${category}${c.reset}`);
-      printCompactTable(
-        'Entries',
-        rows,
-        [
-          ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
-          ['Summary', ['summary', 'message', 'description']],
-          ['Category', ['category']],
-        ],
-        { maxCellWidth: 80 },
-      );
+      printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);
       return true;
     },
@@ -552,26 +641,29 @@ export const socialFormatters = [
   // Battle Status
   namedFormatter(
     'battle_status',
-    ['battle'],
-    (r) => {
-      const battle = r.battle as Record<string, unknown> | undefined;
-      if (!battle) return false;
+    ['battle', 'battle_id', 'combat_state', 'participants'],
+    (r, command) => {
+      if (command?.replace(/^v2_/, '') !== 'get_battle_status') return false;
+      const battle = isRecord(r.battle) ? r.battle : r;
+      const participants = (battle.participants || r.participants) as Array<Record<string, unknown>> | undefined;
+      if (!battle.battle_id && !battle.id && !battle.status && !battle.phase && !Array.isArray(participants)) {
+        return false;
+      }
       emitLine(`\n${c.bright}=== Battle ===${c.reset}`);
       emitLine(`ID: ${battle.battle_id || battle.id || 'unknown'}`);
+      if (battle.system_id) emitLine(`System: ${battle.system_id}`);
+      if (battle.is_participant !== undefined)
+        emitLine(`Participant: ${formatYesNo(battle.is_participant) ?? battle.is_participant}`);
       if (battle.status || battle.phase) emitLine(`Status: ${battle.status || battle.phase}`);
       if (battle.range_band || battle.range) emitLine(`Range: ${battle.range_band || battle.range}`);
-      const participants = (battle.participants || r.participants) as Array<Record<string, unknown>> | undefined;
+      if (battle.tick_duration !== undefined) emitLine(`Tick Duration: ${battle.tick_duration}`);
+      emitBattleCombatState(battle.combat_state);
       if (Array.isArray(participants)) {
-        printCompactTable('Participants', participants, [
-          ['Name', ['username', 'name', 'player_name']],
-          ['ID', ['player_id', 'id']],
-          ['Side', ['side_id', 'side']],
-          ['Stance', ['stance']],
-          ['Target', ['target_name', 'target_id']],
-        ]);
+        const rows = battleParticipantRows(participants);
+        printCompactTable('Participants', rows, battleParticipantColumns(rows));
       }
       return true;
     },
-    { commands: ['get_battle_status'], shapeFallback: true },
+    { commands: ['get_battle_status'] },
   ),
 ];
