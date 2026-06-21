@@ -147,10 +147,10 @@ function translateGroupedExample(example: string | undefined, displayNames: Reco
   return translated;
 }
 
-function displayGroupedActionConfig(
-  config: CommandConfig,
+function displayHelpConfig(
+  config: CommandHelpConfig,
   displayNames: Record<string, string>,
-): CommandConfig {
+): CommandHelpConfig {
   return {
     ...config,
     example: translateGroupedExample(config.example, displayNames),
@@ -166,11 +166,13 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
     : isRegistryHelpSource(source)
       ? source.allCommands ?? {}
       : source;
-  const commands: CommandHelpMap = { ...baseCommands };
   const groupedDisplayNames = groupedCommandDisplayNames(commandGroups);
+  const commands: CommandHelpMap = Object.fromEntries(
+    Object.entries(baseCommands).map(([command, config]) => [command, displayHelpConfig(config, groupedDisplayNames)]),
+  );
   for (const group of Object.values(commandGroups ?? {})) {
     for (const action of Object.values(group?.actions ?? {})) {
-      commands[action.displayName] = displayGroupedActionConfig(action.config, groupedDisplayNames);
+      commands[action.displayName] = displayHelpConfig(action.config, groupedDisplayNames);
     }
   }
   return commands;

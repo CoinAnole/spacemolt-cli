@@ -513,6 +513,18 @@ describe('help output branches', () => {
     expect(output).not.toContain('faction_facility_build');
   });
 
+  test('top-level related metadata translates grouped flat command names to nested names', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('build_base', capture.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('station info');
+    expect(output).toContain('faction build');
+    expect(output).not.toContain('station_info');
+    expect(output).not.toContain('faction_build');
+  });
+
   test('showCommandSearch matches command category metadata', () => {
     const capture = captureWriter();
     showCommandSearch('navigation', capture.writer, {
