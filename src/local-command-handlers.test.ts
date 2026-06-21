@@ -320,42 +320,134 @@ describe('local command handlers', () => {
     expect(parsed.error.code).toBe('exit');
     const output = stdout.join('\n');
     expect(output).toContain('spacemolt facility job_add');
+    expect(output).toContain('facility job_cancel');
+    expect(output).toContain('facility job_list');
     expect(output).not.toContain('facility_job_add');
+    expect(output).not.toContain('facility_job_list');
+    expect(output).not.toContain('facility_job_cancel');
   });
 
   test('nested API command missing required argument output uses grouped display name', () => {
-    const handler = resolveHandler(['facility', 'job_add'], options);
-    expect(handler?.name).toBe('facility job_add');
+    const handler = resolveHandler(['faction', 'create_buy_order'], options);
+    expect(handler?.name).toBe('faction create_buy_order');
     if (!handler) return;
     const { context, stderr } = captureContext();
 
-    const parsed = handler.parse(['facility', 'job_add'], { ...options, profile: 'pilot' }, context);
+    const parsed = handler.parse(['faction', 'create_buy_order'], { ...options, profile: 'pilot' }, context);
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
-    expect(parsed.error.code).toBe('missing_required_argument');
+    expect(parsed.error.code).toBe('exit');
     const output = stderr.join('\n');
-    expect(output).toContain('spacemolt facility job_add');
-    expect(output).not.toContain('facility_job_add');
+    expect(output).toContain('spacemolt faction create_buy_order');
+    expect(output).not.toContain('faction_create_buy_order');
   });
 
   test('nested API command named args still report missing required fields with grouped display name', () => {
-    const handler = resolveHandler(['facility', 'upgrade', '--facility-id', 'facility-1'], options);
-    expect(handler?.name).toBe('facility upgrade');
+    const handler = resolveHandler(['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'], options);
+    expect(handler?.name).toBe('faction create_buy_order');
     if (!handler) return;
     const { context, stderr } = captureContext();
 
     const parsed = handler.parse(
-      ['facility', 'upgrade', '--facility-id', 'facility-1'],
+      ['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
       { ...options, profile: 'pilot' },
       context,
     );
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
-    expect(parsed.error.code).toBe('missing_required_argument');
+    expect(parsed.error.code).toBe('exit');
     const output = stderr.join('\n');
-    expect(output).toContain('spacemolt facility upgrade');
+    expect(output).toContain('spacemolt faction create_buy_order');
+    expect(output).not.toContain('faction_create_buy_order');
+  });
+
+  test('nested API command one-of forms keep valid schema-based payloads', () => {
+    const handler = resolveHandler(['facility', 'job_cancel', '--job-ids', '["job1","job2"]'], options);
+    expect(handler?.name).toBe('facility job_cancel');
+    if (!handler) return;
+
+    const parsed = handler.parse(
+      ['facility', 'job_cancel', '--job-ids', '["job1","job2"]'],
+      { ...options, profile: 'pilot' },
+      fakeContext([], []),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.payload).toEqual({ job_ids: ['job1', 'job2'] });
+  });
+
+  test('nested API command missing required output is rendered once in text mode', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    const output = stderr.join('\n');
+    expect(output).toContain('spacemolt faction create_buy_order');
+    expect(output).not.toContain('faction_create_buy_order');
+    expect(output.match(/Missing required argument:/g)).toHaveLength(1);
+  });
+
+  test('nested API command missing required output stays JSON-only in json mode', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--json', 'faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toEqual([]);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({
+      error: {
+        code: 'missing_required_argument',
+        message: 'Missing required argument: price_each',
+      },
+    });
+  });
+
+  test('nested API command dry run renders nested display command in human output', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['--dry-run', 'faction', 'create_buy_order', 'ore_iron', '100', '12'],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const output = stdout.join('\n');
+    expect(output).toContain('Dry run: faction create_buy_order');
+    expect(output).not.toContain('Dry run: faction_create_buy_order');
+  });
+
+  test('nested API command parse validation errors use grouped display name', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      ['facility', 'upgrade', '--facilty-id', 'facility-1', '--facility-type', 'refinery'],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    const output = stderr.join('\n');
+    expect(output).toContain('facility upgrade');
     expect(output).not.toContain('facility_upgrade');
   });
 

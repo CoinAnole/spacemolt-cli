@@ -1,11 +1,12 @@
 import type { SpaceMoltClient } from './api.ts';
-import { parseArgs, validateRequiredArgs } from './args.ts';
+import { type CommandParseError, parseArgs, validateRequiredArgs } from './args.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
-import type { CommandGroupAction } from './command-groups.ts';
+import { groupedCommandParts, groupActionDisplayName, type CommandGroupAction } from './command-groups.ts';
 import type { CommandConfig } from './commands.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
 import { displayMissingArgument, showCommandHelp } from './help.ts';
 import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
+import { hasOutputSearch } from './output-search.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import { tryGetSessionPath } from './session.ts';
@@ -23,10 +24,17 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     this.name = `${group} ${actionName}`;
   }
 
+  private translateRelatedCommand(command: string): string {
+    const parts = groupedCommandParts(command);
+    return parts ? groupActionDisplayName(parts.group, parts.action) : command;
+  }
+
   private displayConfig() {
     return {
       ...this.action.config,
       example: this.action.config.example?.replace(`spacemolt ${this.action.command}`, `spacemolt ${this.name}`),
+      discoverWith: this.action.config.discoverWith?.map((command) => this.translateRelatedCommand(command)),
+      seeAlso: this.action.config.seeAlso?.map((command) => this.translateRelatedCommand(command)),
     };
   }
 
@@ -34,26 +42,34 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     return { [this.name]: this.displayConfig() };
   }
 
-  private derivedRequiredArgs(): string[] {
-    if (this.action.config.required && this.action.config.required.length > 0) {
-      return this.action.config.required;
-    }
-    const requiredPlaceholders = Array.from(this.action.config.usage?.matchAll(/<([^>]+)>/g) ?? []);
-    return requiredPlaceholders.map((match, index) => {
-      const arg = this.action.config.args?.[index];
-      return typeof arg === 'string' ? arg : typeof arg?.rest === 'string' ? arg.rest : (match[1] as string);
-    });
-  }
-
   private validationRegistry(): { commands: Record<string, CommandConfig> } {
     return {
       commands: {
-        [this.action.command]: {
-          ...this.action.config,
-          required: this.derivedRequiredArgs(),
-        },
+        [this.action.command]: this.action.config,
       },
     };
+  }
+
+  private translateParseErrors(errors: CommandParseError[]): CommandParseError[] {
+    return errors.map((error) => ({
+      ...error,
+      message: error.message.replaceAll(this.action.command, this.name),
+    }));
+  }
+
+  private humanDryRunOptions(options: GlobalOptions): boolean {
+    return !options.json &&
+      !options.structured &&
+      !options.jq &&
+      options.keys === undefined &&
+      !options.field &&
+      !(options.fields && options.fields.length > 0) &&
+      !hasOutputSearch(options);
+  }
+
+  private rewriteDryRunResult(result: string | undefined): string | undefined {
+    if (!result) return result;
+    return result.replace(`Dry run: ${this.action.command}`, `Dry run: ${this.name}`);
   }
 
   parse(
@@ -78,16 +94,30 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     }
 
     const parsedArgs = parseArgs(flatArgv, { allowUnknown: options.allowUnknown, registry: actionRegistry });
-    if (!parsedArgs.ok) return { ok: false, error: validationErrorFromParseErrors(parsedArgs.errors) };
+    if (!parsedArgs.ok) {
+      return { ok: false, error: validationErrorFromParseErrors(this.translateParseErrors(parsedArgs.errors)) };
+    }
 
     const missingArg = validateRequiredArgs(this.action.command, parsedArgs.payload, validationRegistry);
     if (missingArg) {
+      if (options.json) {
+        return {
+          ok: false,
+          error: {
+            code: 'missing_required_argument',
+            message: `Missing required argument: ${missingArg}`,
+            exitCode: 1,
+          },
+        };
+      }
+
       displayMissingArgument(this.name, missingArg, context?.writer, this.displayRegistry(), options);
       return {
         ok: false,
         error: {
-          code: 'missing_required_argument',
-          message: `Missing required argument: ${missingArg}`,
+          code: 'exit',
+          message: '',
+          exitCode: 1,
         },
       };
     }
@@ -119,6 +149,24 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     client?: SpaceMoltClient,
     context?: CliRuntimeContext,
   ) {
+    if (options.dryRun && this.humanDryRunOptions(options)) {
+      return renderResponse(
+        {
+          ...runResult,
+          response: {
+            ...runResult.response,
+            structuredContent: undefined,
+            result:
+              typeof runResult.response.result === 'string'
+                ? this.rewriteDryRunResult(runResult.response.result)
+                : runResult.response.result,
+          },
+        },
+        options,
+        client,
+        context,
+      );
+    }
     return renderResponse(runResult, options, client, context);
   }
 }
