@@ -1,4 +1,6 @@
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import { commandGroup } from './command-groups.ts';
+import type { CommandGroupEntryConfig, CommandGroups } from './command-groups.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import {
   type CompletionOption,
@@ -11,8 +13,8 @@ import {
 } from './completion-metadata.ts';
 
 type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'> &
-  Partial<Pick<CommandRegistrySnapshot, 'commands'>>;
-type CompletionCommandMap = Record<string, CommandConfig | LocalCommandConfig>;
+  Partial<Pick<CommandRegistrySnapshot, 'commands' | 'commandGroups'>>;
+type CompletionCommandMap = Record<string, CommandConfig | LocalCommandConfig | CommandGroupEntryConfig>;
 
 function allCommands(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): CompletionCommandMap {
   return registry.allCommands;
@@ -20,6 +22,16 @@ function allCommands(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): C
 
 function commandsList(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
   return Object.keys(registry.allCommands).sort();
+}
+
+function commandGroups(registry: CompletionRegistry): CommandGroups {
+  return registry.commandGroups || {};
+}
+
+function groupedActions(registry: CompletionRegistry, group: string) {
+  return Object.values(commandGroup(commandGroups(registry), group)?.actions || {}).sort((left, right) =>
+    left.action.localeCompare(right.action),
+  );
 }
 
 function registryCommandNames(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
@@ -194,6 +206,9 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
   const explainCommandNames = registryCommandNames(registry);
   const topCommands = topLevelCommandNames(registry);
+  const groups = commandGroups(registry);
+  const groupNames = Object.keys(groups).sort();
+  const groupNameSet = new Set(groupNames);
   const lines: string[] = [];
   lines.push('# Bash completion for spacemolt');
   lines.push('# Install: spacemolt completion bash > /etc/bash_completion.d/spacemolt');
@@ -232,9 +247,32 @@ function generateBashCompletion(registry: CompletionRegistry): string {
   lines.push('  # Per-command completions');
   // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
   lines.push('  local cmd="${words[1]}"');
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: bash variable in generated script
+  lines.push('  local action="${words[2]}"');
   lines.push('  case "$cmd" in');
 
-  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
+  for (const group of groupNames) {
+    const actions = groupedActions(registry, group).map((action) => action.action);
+    lines.push(`    ${escapeBashWord(group)})`);
+    lines.push('      if [ $cword -eq 2 ]; then');
+    lines.push(`        COMPREPLY=( $(compgen -W "${escapeBashWordList(actions)}" -- "$cur") )`);
+    lines.push('        return');
+    lines.push('      fi');
+    lines.push('      case "$action" in');
+    for (const action of groupedActions(registry, group)) {
+      const args = completionArgsForCommand(action.command, action.config);
+      const argParts = args.flatMap((arg) => (arg.kind === 'enum' && arg.values?.length ? arg.values : [arg.insert]));
+      lines.push(`        ${escapeBashWord(action.action)})`);
+      lines.push(
+        `          COMPREPLY=( $(compgen -W "${escapeBashWordList([...argParts, ...globalOptionWords()])}" -- "$cur") )`,
+      );
+      lines.push('          ;;');
+    }
+    lines.push('      esac');
+    lines.push('      ;;');
+  }
+
+  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command] && !groupNameSet.has(command))) {
     const args = completionArgsForCommand(cmd, allCommands(registry)[cmd]);
     if (args.length === 0) continue;
 
@@ -281,6 +319,9 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
   const explainCommandNames = registryCommandNames(registry);
   const topCommands = topLevelCommandNames(registry);
+  const groups = commandGroups(registry);
+  const groupNames = Object.keys(groups).sort();
+  const groupNameSet = new Set(groupNames);
   const lines: string[] = [];
   lines.push('#compdef spacemolt');
   lines.push('#');
@@ -321,7 +362,16 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('    args)');
   lines.push('      case $line[1] in');
 
-  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
+  for (const group of groupNames) {
+    const actions = groupedActions(registry, group)
+      .map((action) => escapeZshAlternative(action.action))
+      .join(' ');
+    lines.push(`        ${escapeZshCaseLabel(group)})`);
+    lines.push(`          _arguments ${escapeSingleQuotedShell(`1:${group} action:(${actions})`)}`);
+    lines.push('          ;;');
+  }
+
+  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command] && !groupNameSet.has(command))) {
     const args = getCommandArgNames(cmd, registry);
     lines.push(`        ${escapeZshCaseLabel(cmd)})`);
     if (args.length > 0) {
@@ -406,6 +456,9 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   const commandNames = commandsList(registry);
   const explainCommandNames = registryCommandNames(registry);
   const topCommands = topLevelCommandNames(registry);
+  const groups = commandGroups(registry);
+  const groupNames = Object.keys(groups).sort();
+  const groupNameSet = new Set(groupNames);
   const lines: string[] = [];
   lines.push('# Fish completion for spacemolt');
   lines.push('# Install: spacemolt completion fish > ~/.config/fish/completions/spacemolt.fish');
@@ -430,6 +483,13 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('  not __spacemolt_has_dynamic_complete');
   lines.push('end');
   lines.push('');
+  lines.push('function __spacemolt_seen_nested_command');
+  lines.push('  set -l group $argv[1]');
+  lines.push('  set -l action $argv[2]');
+  lines.push('  set -l tokens (commandline -opc)');
+  lines.push('  test (count $tokens) -ge 3; and test "$tokens[2]" = "$group"; and test "$tokens[3]" = "$action"');
+  lines.push('end');
+  lines.push('');
   lines.push('complete -c spacemolt -f -n "__spacemolt_has_dynamic_complete" -a "(__spacemolt_dynamic_complete)"');
   lines.push('');
   lines.push('# Global flags');
@@ -445,8 +505,45 @@ function generateFishCompletion(registry: CompletionRegistry): string {
     );
   }
   lines.push('');
+  lines.push('# Command group actions');
+  for (const group of groupNames) {
+    for (const action of groupedActions(registry, group)) {
+      const desc = escapeDoubleQuotedShell(action.config.description || action.action);
+      lines.push(
+        `complete -c spacemolt -n "${fishStaticFallbackCondition(`__fish_seen_subcommand_from ${escapeFishConditionWord(group)}`)}" -a ${escapeFishArgument(action.action)} -d "${desc}"`,
+      );
+    }
+  }
+  lines.push('');
+  lines.push('# Command group action arguments');
+  for (const group of groupNames) {
+    for (const action of groupedActions(registry, group)) {
+      const args = completionArgsForCommand(action.command, action.config);
+      if (args.length === 0) continue;
+
+      lines.push(`# ${group} ${action.action}`);
+      for (const arg of args) {
+        const desc =
+          arg.kind === 'enum' && arg.values?.length ? `${arg.description} (${arg.values.join('|')})` : arg.description;
+
+        if (arg.kind === 'enum' && arg.values?.length) {
+          for (const val of arg.values) {
+            const valueDesc = escapeDoubleQuotedShell(`${arg.description}: ${val}`);
+            lines.push(
+              `complete -c spacemolt -n "${fishStaticFallbackCondition(`__spacemolt_seen_nested_command ${escapeFishConditionWord(group)} ${escapeFishConditionWord(action.action)}`)}" -a ${escapeFishArgument(val)} -d "${valueDesc}"`,
+            );
+          }
+        } else {
+          lines.push(
+            `complete -c spacemolt -n "${fishStaticFallbackCondition(`__spacemolt_seen_nested_command ${escapeFishConditionWord(group)} ${escapeFishConditionWord(action.action)}`)}" -a ${escapeFishArgument(arg.insert)} -d "${escapeDoubleQuotedShell(desc)}"`,
+          );
+        }
+      }
+      lines.push('');
+    }
+  }
   lines.push('# Per-command arguments');
-  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command])) {
+  for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command] && !groupNameSet.has(command))) {
     const args = completionArgsForCommand(cmd, allCommands(registry)[cmd]);
     if (args.length === 0) continue;
 

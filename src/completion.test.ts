@@ -745,6 +745,17 @@ describe('shell completion generation', () => {
     expect(bashCommandCaseBody(bash, 'sell')).toContain('item_id=');
   });
 
+  test('bash and fish suggest nested action argument inserts', () => {
+    const fish = generateCompletion('fish');
+    const bash = generateCompletion('bash');
+
+    expect(bash).toContain('case "$action" in');
+    expect(bash).toContain('create_buy_order)');
+    expect(bash).toContain('item_id=');
+    expect(fish).toContain('__spacemolt_seen_nested_command faction create_buy_order');
+    expect(fish).toContain('-a item_id=');
+  });
+
   test('bash and fish suggest optional non-enum fields as key-value inserts', () => {
     const fish = generateCompletion('fish');
     const bash = generateCompletion('bash');

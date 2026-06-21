@@ -283,8 +283,10 @@ function zshCommandCompletionWords(completion: string, command: string): string[
   const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
   const body = match?.groups?.body;
-  const words = body?.match(/_arguments "1:[^"]*:\(([^)]*)\)"/)?.[1];
-  return words?.split(/\s+/).filter(Boolean) || [];
+  const words =
+    body?.match(/_arguments "1:[^"]*:\(([^)]*)\)"/)?.[1] ||
+    body?.match(/_arguments '1:(?:'\\''|[^'])*:\(([^)]*)\)'/)?.[1];
+  return words ? parseZshDescribedWords(words) : [];
 }
 
 function fishCommandCompletionWords(completion: string, command: string): string[] {
@@ -881,6 +883,35 @@ describe('command metadata', () => {
       const missing = expectedCommands.filter((command) => !actual.includes(command));
 
       expect(missing, `${shell} completion is missing local top-level commands`).toEqual([]);
+    }
+  });
+
+  test('shell completions expose nested groups instead of grouped flat commands', () => {
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      const completion = generateCompletion(shell);
+      const topLevel =
+        shell === 'bash'
+          ? bashTopLevelCommandWords(completion)
+          : shell === 'zsh'
+            ? zshTopLevelCommandWords(completion)
+            : fishTopLevelCommandWords(completion);
+
+      expect(topLevel, shell).toContain('faction');
+      expect(topLevel, shell).toContain('facility');
+      expect(topLevel, shell).toContain('trade');
+      expect(topLevel, shell).not.toContain('faction_info');
+      expect(topLevel, shell).not.toContain('facility_job_add');
+      expect(topLevel, shell).not.toContain('trade_offer');
+    }
+  });
+
+  test('shell completions include nested command group action values', () => {
+    const expected = ['info', 'create_buy_order', 'invite'];
+    for (const shell of ['bash', 'zsh', 'fish']) {
+      const completion = generateCompletion(shell);
+      expect(commandCompletionWords(shell, completion, 'faction'), `${shell} faction actions`).toEqual(
+        expect.arrayContaining(expected),
+      );
     }
   });
 
