@@ -985,7 +985,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility_list             List all facilities at current base
     facility_owned            List your facilities across all stations
     facility_types [category]  Browse facility types (use category=faction, infrastructure, etc.)
-    facility_build <type>     Build a player facility
+    facility_build <type>     Build a facility
     facility_upgrade <type>   Upgrade a player facility
     facility_job_add <facility> <recipe> <qty>  Queue production work
     facility_job_list <facility>               List facility production jobs

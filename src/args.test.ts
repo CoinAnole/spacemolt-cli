@@ -421,6 +421,14 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.payload).toEqual({ facility_type: 'ore_refinery' });
   });
 
+  test('facility_build preview documents that build accepts faction facility types', () => {
+    const response = createDryRunResponse('facility_build', { facility_type: 'faction_lockbox' });
+
+    expect(response.structuredContent?.url).toContain('/api/v2/spacemolt_facility/build');
+    expect(response.result).toContain('faction facility types are accepted');
+    expect(response.result).not.toContain('player facility');
+  });
+
   test('buy with quantity uses the server estimate endpoint as its preview', () => {
     expect(getServerPreviewCommand('buy', { item_id: 'ore_iron', quantity: 50 })).toBe('estimate_purchase');
     expect(getServerPreviewCommand('buy', { item_id: 'ore_iron' })).toBeNull();

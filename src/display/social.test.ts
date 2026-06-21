@@ -56,6 +56,47 @@ test('renders facility list per-cycle item and labor upkeep', () => {
   expect(rendered.stdout.join('\n')).toContain('320cr');
 });
 
+test('renders facility custom names alongside type names across facility views', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const playerFacilities = facilityList.player_facilities as Array<Record<string, unknown>>;
+  const factionFacilities = facilityList.faction_facilities as Array<Record<string, unknown>>;
+  if (!playerFacilities[0] || !factionFacilities[0]) throw new Error('Facility fixture is incomplete.');
+  playerFacilities[0].custom_name = 'Frontier Smelter';
+  factionFacilities[0].custom_name = 'Alloy One';
+
+  const listRendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const ownedRendered = renderStructuredResult(
+    'facility_owned',
+    {
+      facilities: [
+        {
+          facility_id: 'player-refinery',
+          type: 'ore_refinery',
+          name: 'Ore Refinery',
+          custom_name: 'Frontier Smelter',
+          level: 2,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+  const factionOwned = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
+  const factionOwnedFacilities = factionOwned.facilities as Array<Record<string, unknown>>;
+  if (!factionOwnedFacilities[0]) throw new Error('Faction facility fixture is incomplete.');
+  factionOwnedFacilities[0].name = 'Shipyard Berth';
+  factionOwnedFacilities[0].custom_name = 'Capital Yard';
+  const factionOwnedRendered = renderStructuredResult('faction_facility_owned', factionOwned, options, context);
+
+  expect(listRendered.success).toBe(true);
+  expect(listRendered.stdout.join('\n')).toContain('Frontier Smelter (Ore Refinery)');
+  expect(listRendered.stdout.join('\n')).toContain('Alloy One (Alloy Smelter)');
+  expect(ownedRendered.success).toBe(true);
+  expect(ownedRendered.stdout.join('\n')).toContain('Frontier Smelter (Ore Refinery)');
+  expect(factionOwnedRendered.success).toBe(true);
+  expect(factionOwnedRendered.stdout.join('\n')).toContain('Capital Yard (Shipyard Berth)');
+});
+
 test('omits facility state and maintenance columns when the API omits those fields', () => {
   const rendered = renderStructuredResult(
     'facility_list',

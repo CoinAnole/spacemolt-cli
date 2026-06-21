@@ -279,6 +279,16 @@ describe('help output branches', () => {
     expect(output).toContain('faction_facility_list <args...> - List faction facilities at the current base.');
   });
 
+  test('full help facility section does not describe facility_build as player-only', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('facility_build <type>     Build a facility');
+    expect(output).not.toContain('facility_build <type>     Build a player facility');
+  });
+
   test('storage group includes unified and standalone storage workflows', () => {
     const capture = captureWriter();
 

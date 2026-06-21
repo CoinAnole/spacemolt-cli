@@ -17,7 +17,9 @@ const RISK_NOTES: Record<string, string[]> = {
   jump: ['Moves your ship to a connected system and may consume fuel or time.'],
   scrap_ship: ['Permanently destroys a stored ship. This cannot be undone.'],
   self_destruct: ['Destroys your active ship, creates a wreck, and respawns you at your home base.'],
-  facility_build: ['Builds a player facility at the current base and spends required resources/credits.'],
+  facility_build: [
+    'Builds a facility at the current base and spends required resources/credits; faction facility types are accepted by the server.',
+  ],
   facility_upgrade: ['Upgrades a facility and spends required resources/credits.'],
   facility_list_for_sale: ['Lists a facility for sale at the requested price.'],
   facility_buy_listing: ['Buys a player-listed facility and spends credits.'],

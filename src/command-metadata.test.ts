@@ -430,6 +430,20 @@ describe('command metadata', () => {
     expect(help).toContain('job_id');
   });
 
+  test('facility_build help documents that build accepts faction facility types', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.facility_build;
+    expect(config?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'build',
+      method: 'POST',
+    });
+    expect(config?.description).toContain('faction facility types are accepted');
+
+    const help = captureHelp('facility_build');
+    expect(help).toContain('faction facility types are accepted');
+    expect(help).not.toContain('Build a player facility at the current base.');
+  });
+
   test('facility production commands have curated routes and help', () => {
     const expected = {
       facility_job_add: {

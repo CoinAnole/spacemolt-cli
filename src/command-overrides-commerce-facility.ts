@@ -396,7 +396,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_build: {
     usage: '<facility_type>',
-    description: 'Build a player facility at the current base.',
+    description: 'Build a facility at the current base; faction facility types are accepted by the server.',
     example: 'spacemolt facility_build ore_refinery',
     discoverWith: ['facility_types', 'facility_list'],
     seeAlso: ['facility_types', 'facility_list'],

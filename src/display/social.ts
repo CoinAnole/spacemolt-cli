@@ -88,9 +88,26 @@ function formatMaintenance(value: unknown): string | undefined {
   return parts.length ? parts.join(', ') : undefined;
 }
 
+function facilityBaseName(row: Record<string, unknown>): string | undefined {
+  for (const field of ['name', 'type_name', 'facility_type', 'type']) {
+    const value = row[field];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return undefined;
+}
+
+function facilityDisplayName(row: Record<string, unknown>): string | undefined {
+  const customName = typeof row.custom_name === 'string' ? row.custom_name.trim() : '';
+  const baseName = facilityBaseName(row);
+  if (!customName) return baseName;
+  if (!baseName || customName === baseName) return customName;
+  return `${customName} (${baseName})`;
+}
+
 function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return rows.map((row) => ({
     ...row,
+    name_display: facilityDisplayName(row),
     maintenance_display: formatMaintenance(row.maintenance_per_cycle),
     labor_cycle_display: formatCredits(row.labor_per_cycle),
   }));
@@ -98,7 +115,7 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
 
 function facilityColumns(rows: Array<Record<string, unknown>>, options: { grouped?: boolean } = {}) {
   const columns: Array<[string, string[]]> = [
-    ['Name', ['name', 'type_name', 'facility_type', 'type']],
+    ['Name', ['name_display', 'name', 'type_name', 'facility_type', 'type']],
     ['ID', ['facility_id', 'id', 'type_id']],
     ['Level', ['level', 'tier']],
   ];
@@ -516,12 +533,13 @@ export const socialFormatters = [
 
       const rows = facilities.map((facility) => ({
         ...facility,
+        name_display: facilityDisplayName(facility),
         rent_display: formatCredits(facility.rent_per_cycle),
         arrears_display: formatCredits(facility.arrears_owed),
         labor_display: formatCredits(facility.labor_per_run),
       }));
       const columns: Array<[string, string[]]> = [
-        ['Name', ['name', 'type']],
+        ['Name', ['name_display', 'name', 'type']],
         ['ID', ['facility_id', 'id']],
         ['Base', ['base_name', 'base_id']],
         ['System', ['system_id']],
