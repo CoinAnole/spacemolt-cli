@@ -45,6 +45,24 @@ test('renders personal tax prepaid balance', () => {
   expect(stdout).toContain('Tax prepaid: 150 cr');
 });
 
+test('renders inactive tax collection preview flag', () => {
+  const rendered = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      tax_collection_active: false,
+      note: 'Tax collection is in preview mode.',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Collection active: false');
+  expect(stdout).toContain('Tax collection is in preview mode.');
+});
+
 test('renders personal market margin tax fields', () => {
   const rendered = renderStructuredResult(
     'get_tax_estimate',
