@@ -1,7 +1,8 @@
 import type { SpaceMoltClient } from './api.ts';
-import { getArgNames, parseArgs } from './args.ts';
+import { parseArgs, validateRequiredArgs } from './args.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import type { CommandGroupAction } from './command-groups.ts';
+import type { CommandConfig } from './commands.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
 import { displayMissingArgument, showCommandHelp } from './help.ts';
 import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
@@ -33,14 +34,26 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     return { [this.name]: this.displayConfig() };
   }
 
-  private missingRequiredPositional(argv: string[]): string | undefined {
-    const args = getArgNames(this.action.config);
-    if (args.length === 0) return undefined;
-    const requiredCount = (this.action.config.usage?.match(/<[^>]+>/g) ?? []).length;
-    if (requiredCount === 0) return undefined;
-    const providedCount = argv.slice(2).length;
-    if (providedCount >= requiredCount) return undefined;
-    return args[providedCount];
+  private derivedRequiredArgs(): string[] {
+    if (this.action.config.required && this.action.config.required.length > 0) {
+      return this.action.config.required;
+    }
+    const requiredPlaceholders = Array.from(this.action.config.usage?.matchAll(/<([^>]+)>/g) ?? []);
+    return requiredPlaceholders.map((match, index) => {
+      const arg = this.action.config.args?.[index];
+      return typeof arg === 'string' ? arg : typeof arg?.rest === 'string' ? arg.rest : (match[1] as string);
+    });
+  }
+
+  private validationRegistry(): { commands: Record<string, CommandConfig> } {
+    return {
+      commands: {
+        [this.action.command]: {
+          ...this.action.config,
+          required: this.derivedRequiredArgs(),
+        },
+      },
+    };
   }
 
   parse(
@@ -50,6 +63,7 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
   ): CommandParseResult<Record<string, unknown>> {
     const flatArgv = [this.action.command, ...argv.slice(2)];
     const actionRegistry = { commands: { [this.action.command]: this.action.config } };
+    const validationRegistry = this.validationRegistry();
 
     if (flatArgv.length === 2 && (flatArgv[1] === 'help' || flatArgv[1] === '--help' || flatArgv[1] === '-h')) {
       showCommandHelp(this.name, context?.writer, this.displayRegistry(), { plain: options.plain });
@@ -63,20 +77,20 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
       };
     }
 
-    const missingPositional = this.missingRequiredPositional(argv);
-    if (missingPositional) {
-      displayMissingArgument(this.name, missingPositional, context?.writer, this.displayRegistry(), options);
+    const parsedArgs = parseArgs(flatArgv, { allowUnknown: options.allowUnknown, registry: actionRegistry });
+    if (!parsedArgs.ok) return { ok: false, error: validationErrorFromParseErrors(parsedArgs.errors) };
+
+    const missingArg = validateRequiredArgs(this.action.command, parsedArgs.payload, validationRegistry);
+    if (missingArg) {
+      displayMissingArgument(this.name, missingArg, context?.writer, this.displayRegistry(), options);
       return {
         ok: false,
         error: {
           code: 'missing_required_argument',
-          message: `Missing required argument: ${missingPositional}`,
+          message: `Missing required argument: ${missingArg}`,
         },
       };
     }
-
-    const parsedArgs = parseArgs(flatArgv, { allowUnknown: options.allowUnknown, registry: actionRegistry });
-    if (!parsedArgs.ok) return { ok: false, error: validationErrorFromParseErrors(parsedArgs.errors) };
 
     const config = context?.config ?? getRuntimeConfig(options, context?.env);
     const sessionPath = tryGetSessionPath(config, context?.env);

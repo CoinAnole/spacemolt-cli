@@ -339,6 +339,26 @@ describe('local command handlers', () => {
     expect(output).not.toContain('facility_job_add');
   });
 
+  test('nested API command named args still report missing required fields with grouped display name', () => {
+    const handler = resolveHandler(['facility', 'upgrade', '--facility-id', 'facility-1'], options);
+    expect(handler?.name).toBe('facility upgrade');
+    if (!handler) return;
+    const { context, stderr } = captureContext();
+
+    const parsed = handler.parse(
+      ['facility', 'upgrade', '--facility-id', 'facility-1'],
+      { ...options, profile: 'pilot' },
+      context,
+    );
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('missing_required_argument');
+    const output = stderr.join('\n');
+    expect(output).toContain('spacemolt facility upgrade');
+    expect(output).not.toContain('facility_upgrade');
+  });
+
   test('API command local search restoration does not mutate global output search options', () => {
     const handler = new ApiCommandHandler('view_market');
     const parseOptions: GlobalOptions = { ...options, outputSearch: 'iron' };
