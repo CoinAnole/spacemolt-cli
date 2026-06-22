@@ -346,9 +346,7 @@ describe('shell completion generation', () => {
     expect(
       completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile=pilot', 'cr'], current: 'cr' }),
     ).toEqual(expectedFactionCreateActions);
-    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile', ''], current: '' })).toEqual(
-      [],
-    );
+    expect(completeWords({ shell: 'fish', words: ['spacemolt', 'faction', '--profile', ''], current: '' })).toEqual([]);
     expect(
       completeWords(
         { shell: 'fish', words: ['spacemolt', 'faction', '--profile', ''], current: '' },
@@ -763,6 +761,11 @@ describe('shell completion generation', () => {
     expect(bash).toContain('item_id=');
     expect(zsh).toContain("_arguments '2:faction action:(");
     expect(zsh).not.toContain("_arguments '1:faction action:(");
+    expect(zsh).toContain('case $line[2] in');
+    expect(zsh).toContain('          create_buy_order)');
+    expect(zsh).toContain("'3:ID of the item to buy for faction storage:item_id'");
+    expect(zsh).toContain("'4:Number of items to buy:quantity'");
+    expect(zsh).toContain("'5:Maximum price per unit in credits:price_each'");
     expect(fish).toContain('function __spacemolt_static_command_words');
     expect(fish).toContain('set -l value_options');
     expect(fish).toContain('--profile');

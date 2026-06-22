@@ -512,9 +512,7 @@ describe('help output branches', () => {
     expect(help.stdout.join('\n')).toContain('spacemolt faction create_buy_order');
     expect(help.stdout.join('\n')).not.toContain('Server help:');
     expect(help.stdout.join('\n')).not.toContain('faction_create_buy_order');
-    expect(explain.stdout.join('\n')).toContain(
-      'API route: POST /api/v2/spacemolt_faction_commerce/create_buy_order',
-    );
+    expect(explain.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_faction_commerce/create_buy_order');
   });
 
   test('top-level API command help keeps server-help pointer', () => {
@@ -985,14 +983,14 @@ describe('help output branches', () => {
     }
   });
 
-  test('displayUnknownCommand points group-like commands to group help', () => {
+  test('displayUnknownCommand points executable command groups to group help', () => {
     const capture = captureWriter();
 
     displayUnknownCommand('faction', capture.writer);
 
     const output = capture.stderr.join('\n');
     expect(output).toContain('Unknown command "faction"');
-    expect(output).toContain('"faction" is a help group.');
+    expect(output).toContain('"faction" is a command group.');
     expect(output).toContain('spacemolt help faction');
     expect(output).toContain('spacemolt commands --search faction');
   });

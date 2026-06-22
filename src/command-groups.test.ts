@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { BUNDLED_COMMAND_REGISTRY, buildCommandRegistrySnapshot } from './command-registry';
 import {
-  GROUPED_COMMANDS,
   commandGroup,
+  GROUPED_COMMANDS,
   groupActionDisplayName,
   groupedCommandParts,
   splitGroupedCommands,
 } from './command-groups';
+import { BUNDLED_COMMAND_REGISTRY, buildCommandRegistrySnapshot } from './command-registry';
 import type { CommandConfig } from './commands';
 import { GENERATED_API_ROUTES } from './generated/api-commands';
 

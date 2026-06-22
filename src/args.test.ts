@@ -940,7 +940,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseInternalOk(['station_set_description', 'A lawless trade hub']).payload).toEqual({
       description: 'A lawless trade hub',
     });
-    expect(convertInternalPayloadTypes(parseInternalOk(['station_set_public', 'true']).payload, 'station_set_public')).toEqual({
+    expect(
+      convertInternalPayloadTypes(parseInternalOk(['station_set_public', 'true']).payload, 'station_set_public'),
+    ).toEqual({
       public: true,
     });
     expect(
@@ -1473,9 +1475,9 @@ describe('validateRequiredArgs', () => {
   test('faction_post_mission uses generated required fields', () => {
     expect(validateInternalRequiredArgs('faction_post_mission', {})).toBe('title');
     expect(validateInternalRequiredArgs('faction_post_mission', { title: 'T', type: 'defense' })).toBe('description');
-    expect(validateInternalRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' })).toBe(
-      'objectives',
-    );
+    expect(
+      validateInternalRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' }),
+    ).toBe('objectives');
     expect(
       validateInternalRequiredArgs('faction_post_mission', {
         title: 'T',

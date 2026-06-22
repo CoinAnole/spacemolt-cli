@@ -1,7 +1,7 @@
 import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
-import { commandGroup, groupedCommandParts, type CommandGroupEntryConfig } from './command-groups.ts';
+import { type CommandGroupEntryConfig, commandGroup, groupedCommandParts } from './command-groups.ts';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
@@ -109,9 +109,9 @@ type CommandHelpConfig = (CommandConfig | LocalCommandConfig | CommandGroupEntry
 type CommandHelpMap = Record<string, CommandHelpConfig>;
 type CommandHelpSource = CommandHelpMap | Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>>;
 
-function isRegistryHelpSource(source: CommandHelpSource | undefined): source is Partial<
-  Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>
-> {
+function isRegistryHelpSource(
+  source: CommandHelpSource | undefined,
+): source is Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>> {
   return Boolean(source && ('allCommands' in source || 'commandGroups' in source));
 }
 
@@ -140,7 +140,10 @@ function translateGroupedCommand(command: string, displayNames: Record<string, s
   return displayNames[`${parts.group}_${parts.action}`] ?? command;
 }
 
-function translateGroupedExample(example: string | undefined, displayNames: Record<string, string>): string | undefined {
+function translateGroupedExample(
+  example: string | undefined,
+  displayNames: Record<string, string>,
+): string | undefined {
   if (!example) return undefined;
   let translated = example;
   const sortedDisplayNames = Object.entries(displayNames).sort(([left], [right]) => right.length - left.length);
@@ -173,7 +176,7 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
   const baseCommands = !source
     ? BUNDLED_COMMAND_REGISTRY.allCommands
     : isRegistryHelpSource(source)
-      ? source.allCommands ?? {}
+      ? (source.allCommands ?? {})
       : source;
   const groupedDisplayNames = groupedCommandDisplayNames(commandGroups);
   const commands: CommandHelpMap = Object.fromEntries(
@@ -588,6 +591,13 @@ export function displayUnknownCommand(command: string, writer?: CliWriter, optio
   const writeErr = err(writer);
   const colors = colorsForPlain(Boolean(options?.plain));
   writeErr(`${colors.red}Error:${colors.reset} Unknown command "${command}"`);
+
+  const executableGroup = commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, command);
+  if (executableGroup) {
+    writeErr(`"${command}" is a command group. Try: spacemolt help ${executableGroup.name}`);
+    writeErr(`Search commands: spacemolt commands --search ${command}`);
+    return;
+  }
 
   const group = findCommandGroup(command);
   if (group) {

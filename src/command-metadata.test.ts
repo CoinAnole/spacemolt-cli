@@ -6,6 +6,7 @@ import {
   parseArgs,
   validatePayloadAgainstSchema,
 } from './args';
+import type { GroupedCommandName } from './command-groups';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
@@ -22,7 +23,6 @@ import {
 } from './commands';
 import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
-import type { GroupedCommandName } from './command-groups';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp, showFullHelp } from './help';
 import { createCommandConfigDryRunResponse } from './preview';
@@ -39,7 +39,10 @@ const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
 const internalCommandRegistry = { commands: COMMANDS };
 
-function captureHelp(command: string, registry: Parameters<typeof showCommandHelp>[2] = BUNDLED_COMMAND_REGISTRY): string {
+function captureHelp(
+  command: string,
+  registry: Parameters<typeof showCommandHelp>[2] = BUNDLED_COMMAND_REGISTRY,
+): string {
   const stdout: string[] = [];
 
   expect(
@@ -321,21 +324,32 @@ function bashCommandCompletionWords(completion: string, command: string): string
 }
 
 function zshCommandCompletionWords(completion: string, command: string): string[] {
-  const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
-  const body = match?.groups?.body;
+  const body = zshCommandCaseBody(completion, command);
+  const actionWords = body?.match(/_arguments '(?:\d+):(?:'\\''|[^'])* action:\(([^)]*)\)'/)?.[1];
   const words =
+    actionWords ||
     body?.match(/_arguments "\d+:[^"]*:\(([^)]*)\)"/)?.[1] ||
     body?.match(/_arguments '\d+:(?:'\\''|[^'])*:\(([^)]*)\)'/)?.[1];
   return words ? parseZshDescribedWords(words) : [];
 }
 
 function zshCommandCompletionPosition(completion: string, command: string): string | undefined {
+  const body = zshCommandCaseBody(completion, command);
+  return (
+    body?.match(/_arguments '(?<position>\d+):(?:'\\''|[^'])* action:\([^)]*\)'/)?.groups?.position ||
+    body?.match(/_arguments "(?<position>\d+):[^"]*:\([^)]*\)"/)?.groups?.position ||
+    body?.match(/_arguments '(?<position>\d+):(?:'\\''|[^'])*:\([^)]*\)'/)?.groups?.position
+  );
+}
+
+function zshCommandCaseBody(completion: string, command: string): string | undefined {
   const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
-  const body = match?.groups?.body;
-  return body?.match(/_arguments "(?<position>\d+):[^"]*:\([^)]*\)"/)?.groups?.position ||
-    body?.match(/_arguments '(?<position>\d+):(?:'\\''|[^'])*:\([^)]*\)'/)?.groups?.position;
+  const match = completion.match(new RegExp(`^        ${escapedCommand}\\)\\n`, 'm'));
+  if (match?.index === undefined) return undefined;
+  const bodyStart = match.index + match[0].length;
+  const rest = completion.slice(bodyStart);
+  const nextCase = rest.match(/^ {8}\S.*\)\n/m);
+  return nextCase?.index === undefined ? rest : rest.slice(0, nextCase.index);
 }
 
 function fishCommandCompletionWords(completion: string, command: string): string[] {
@@ -595,10 +609,7 @@ describe('command metadata', () => {
     expect(facilityActions?.job_add?.config.schema?.direction?.enum).toEqual(['forward', 'reverse']);
     expect(facilityActions?.job_cancel?.config.schema?.job_ids?.type).toBe('array');
     expect(captureHelp(facilityActions?.job_cancel?.displayName || 'facility job_cancel')).toContain('job_ids');
-    expect(facilityActions?.transfer?.config.schema?.direction?.enum).toEqual([
-      'to_faction',
-      'to_player',
-    ]);
+    expect(facilityActions?.transfer?.config.schema?.direction?.enum).toEqual(['to_faction', 'to_player']);
   });
 
   test('stale facility toggle and recycler configuration commands are not advertised', () => {

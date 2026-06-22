@@ -1,3 +1,4 @@
+import { type CommandGroupEntryConfig, type CommandGroups, splitGroupedCommands } from './command-groups.ts';
 import {
   buildCuratedCommands,
   COMMAND_OVERRIDES,
@@ -7,11 +8,6 @@ import {
   routeSignature,
   type V2Route,
 } from './commands.ts';
-import {
-  splitGroupedCommands,
-  type CommandGroups,
-  type CommandGroupEntryConfig,
-} from './command-groups.ts';
 import { buildDynamicCommands } from './dynamic-commands.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GeneratedApiRoute } from './openapi-metadata.ts';
@@ -25,10 +21,14 @@ export interface CommandRegistrySnapshot {
   generatedRoutes: Record<string, GeneratedApiRoute>;
 }
 
-export function commandRegistryApiCommands(snapshot: Pick<CommandRegistrySnapshot, 'commands' | 'commandGroups'>): CommandConfig[] {
+export function commandRegistryApiCommands(
+  snapshot: Pick<CommandRegistrySnapshot, 'commands' | 'commandGroups'>,
+): CommandConfig[] {
   return [
     ...Object.values(snapshot.commands),
-    ...Object.values(snapshot.commandGroups).flatMap((group) => Object.values(group?.actions ?? {}).map((action) => action.config)),
+    ...Object.values(snapshot.commandGroups).flatMap((group) =>
+      Object.values(group?.actions ?? {}).map((action) => action.config),
+    ),
   ];
 }
 

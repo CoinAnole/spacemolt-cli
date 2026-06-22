@@ -119,7 +119,7 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       );
       if ((d.offer_credits as number) > 0) writeLine(`  Offering: ${d.offer_credits} credits`);
       if ((d.request_credits as number) > 0) writeLine(`  Requesting: ${d.request_credits} credits`);
-      writeLine(`  Use: trade_accept trade_id=${d.trade_id} or trade_decline trade_id=${d.trade_id}`);
+      writeLine(`  Use: trade accept trade_id=${d.trade_id} or trade decline trade_id=${d.trade_id}`);
     },
 
     scan_result: (d, t, writeLine) => {
@@ -201,7 +201,7 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
         `${c.dim}[${t}]${c.reset} ${c.magenta}[FACTION]${c.reset} You've been invited to join ${d.faction_name || 'a faction'}`,
       );
       writeLine(
-        `  Use: join_faction faction_id=${d.faction_id || ''} or faction_decline_invite faction_id=${d.faction_id || ''}`,
+        `  Use: join_faction faction_id=${d.faction_id || ''} or faction decline_invite faction_id=${d.faction_id || ''}`,
       );
     },
 
@@ -217,7 +217,7 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
         `${c.dim}[${t}]${c.reset} ${c.green}[PEACE]${c.reset} ${d.proposer_name || 'a faction'} has proposed peace!`,
       );
       writeLine(`  Terms: ${d.terms || 'unconditional'}`);
-      writeLine(`  Use: faction_accept_peace target_faction_id=${d.faction_id || ''}`);
+      writeLine(`  Use: faction accept_peace target_faction_id=${d.faction_id || ''}`);
     },
 
     base_raid_update: (d, t, writeLine) => {

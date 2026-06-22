@@ -1,6 +1,6 @@
-import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
-import { commandGroup } from './command-groups.ts';
 import type { CommandGroupEntryConfig, CommandGroups } from './command-groups.ts';
+import { commandGroup } from './command-groups.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import {
   type CompletionOption,
@@ -72,19 +72,32 @@ function commandDescription(command: string, registry: CompletionRegistry): stri
   );
 }
 
-function getCommandArgNames(command: string, registry: CompletionRegistry): string[] {
-  return completionArgsForCommand(command, allCommands(registry)[command]).map((arg) => arg.name);
+function getCommandArgNames(
+  command: string,
+  registry: CompletionRegistry,
+  config: CommandConfig | LocalCommandConfig | undefined = allCommands(registry)[command],
+): string[] {
+  return completionArgsForCommand(command, config).map((arg) => arg.name);
 }
 
-function getFieldSchema(command: string, arg: string, registry: CompletionRegistry) {
-  const config = allCommands(registry)[command];
+function getFieldSchema(
+  command: string,
+  arg: string,
+  registry: CompletionRegistry,
+  config: CommandConfig | LocalCommandConfig | undefined = allCommands(registry)[command],
+) {
   if (!config || !('schema' in config) || !config.schema) return undefined;
   const canonicalArg = config.aliases?.[arg] || arg;
   return config.schema[canonicalArg] || config.schema[arg];
 }
 
-function getEnumValues(command: string, arg: string, registry: CompletionRegistry): string[] | undefined {
-  const schema = getFieldSchema(command, arg, registry);
+function getEnumValues(
+  command: string,
+  arg: string,
+  registry: CompletionRegistry,
+  config?: CommandConfig | LocalCommandConfig,
+): string[] | undefined {
+  const schema = getFieldSchema(command, arg, registry, config);
   if (schema?.enum?.length) return schema.enum;
   if (schema?.type === 'boolean') return ['true', 'false'];
   return undefined;
@@ -94,8 +107,13 @@ function getHintValue(command: string, arg: string): string | undefined {
   return HINT_VALUES[command]?.[arg];
 }
 
-function getArgDescription(command: string, arg: string, registry: CompletionRegistry): string {
-  return getFieldSchema(command, arg, registry)?.description || getHintValue(command, arg) || arg;
+function getArgDescription(
+  command: string,
+  arg: string,
+  registry: CompletionRegistry,
+  config?: CommandConfig | LocalCommandConfig,
+): string {
+  return getFieldSchema(command, arg, registry, config)?.description || getHintValue(command, arg) || arg;
 }
 
 function escapeSingleQuotedShell(value: string): string {
@@ -194,6 +212,46 @@ function generateZshGlobalOption(option: CompletionOption): string {
 
   const word = option.long || option.short;
   return `    "${word}[${escapedDescription}]${valueCompletion}" \\`;
+}
+
+function pushZshCommandArguments(
+  lines: string[],
+  command: string,
+  registry: CompletionRegistry,
+  startPosition: number,
+  indent: string,
+  config?: CommandConfig | LocalCommandConfig,
+): void {
+  const args = getCommandArgNames(command, registry, config);
+  if (args.length === 0) {
+    lines.push(`${indent}_message "no arguments"`);
+    return;
+  }
+
+  lines.push(`${indent}_arguments \\`);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg) continue;
+    const enums = getEnumValues(command, arg, registry, config);
+    const hint = getHintValue(command, arg);
+    const description = escapeZshCompletionText(getArgDescription(command, arg, registry, config));
+    const isLast = i === args.length - 1;
+    const terminator = isLast ? '' : ' \\';
+    const position = startPosition + i;
+
+    if (enums && enums.length > 0) {
+      const valuesStr = enums.map(escapeZshAlternative).join(' ');
+      lines.push(`${indent}  ${escapeSingleQuotedShell(`${position}:${description}:(${valuesStr})`)}${terminator}`);
+    } else if (hint) {
+      lines.push(
+        `${indent}  ${escapeSingleQuotedShell(`${position}:${description}:${escapeZshWord(hint)}`)}${terminator}`,
+      );
+    } else {
+      lines.push(
+        `${indent}  ${escapeSingleQuotedShell(`${position}:${description}:${escapeZshWord(arg)}`)}${terminator}`,
+      );
+    }
+  }
 }
 
 function fishStaticFallbackCondition(condition: string): string {
@@ -379,44 +437,25 @@ function generateZshCompletion(registry: CompletionRegistry): string {
   lines.push('      case $line[1] in');
 
   for (const group of groupNames) {
-    const actions = groupedActions(registry, group)
-      .map((action) => escapeZshAlternative(action.action))
-      .join(' ');
+    const groupActions = groupedActions(registry, group);
+    const actions = groupActions.map((action) => escapeZshAlternative(action.action)).join(' ');
     lines.push(`        ${escapeZshCaseLabel(group)})`);
-    lines.push(`          _arguments ${escapeSingleQuotedShell(`2:${group} action:(${actions})`)}`);
+    lines.push('          case $line[2] in');
+    for (const action of groupActions) {
+      lines.push(`            ${escapeZshCaseLabel(action.action)})`);
+      pushZshCommandArguments(lines, action.command, registry, 3, '              ', action.config);
+      lines.push('              ;;');
+    }
+    lines.push('            *)');
+    lines.push(`              _arguments ${escapeSingleQuotedShell(`2:${group} action:(${actions})`)}`);
+    lines.push('              ;;');
+    lines.push('          esac');
     lines.push('          ;;');
   }
 
   for (const cmd of commandNames.filter((command) => !SPECIAL_COMPLETIONS[command] && !groupNameSet.has(command))) {
-    const args = getCommandArgNames(cmd, registry);
     lines.push(`        ${escapeZshCaseLabel(cmd)})`);
-    if (args.length > 0) {
-      lines.push('          _arguments \\');
-      for (let i = 0; i < args.length; i++) {
-        const arg = args[i];
-        if (!arg) continue;
-        const enums = getEnumValues(cmd, arg, registry);
-        const hint = getHintValue(cmd, arg);
-        const description = escapeZshCompletionText(getArgDescription(cmd, arg, registry));
-        const isLast = i === args.length - 1;
-        const terminator = isLast ? '' : ' \\';
-
-        if (enums && enums.length > 0) {
-          const valuesStr = enums.map(escapeZshAlternative).join(' ');
-          lines.push(`            ${escapeSingleQuotedShell(`${i + 2}:${description}:(${valuesStr})`)}${terminator}`);
-        } else if (hint) {
-          lines.push(
-            `            ${escapeSingleQuotedShell(`${i + 2}:${description}:${escapeZshWord(hint)}`)}${terminator}`,
-          );
-        } else {
-          lines.push(
-            `            ${escapeSingleQuotedShell(`${i + 2}:${description}:${escapeZshWord(arg)}`)}${terminator}`,
-          );
-        }
-      }
-    } else {
-      lines.push('          _message "no arguments"');
-    }
+    pushZshCommandArguments(lines, cmd, registry, 2, '          ');
     lines.push('          ;;');
   }
 

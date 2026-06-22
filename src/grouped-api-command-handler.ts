@@ -1,12 +1,12 @@
 import type { SpaceMoltClient } from './api.ts';
 import { type CommandParseError, parseArgs, validateRequiredArgs } from './args.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
-import { groupedCommandParts, groupActionDisplayName, type CommandGroupAction } from './command-groups.ts';
-import type { CommandConfig } from './commands.ts';
+import { type CommandGroupAction, groupActionDisplayName, groupedCommandParts } from './command-groups.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
+import type { CommandConfig } from './commands.ts';
 import { displayMissingArgument, showCommandHelp } from './help.ts';
-import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
 import { hasOutputSearch } from './output-search.ts';
+import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
 import { tryGetSessionPath } from './session.ts';
@@ -64,7 +64,8 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
 
   private humanDryRunOptions(options: GlobalOptions): boolean {
     const format = options.format ?? 'table';
-    return (format === 'table' || format === 'text') &&
+    return (
+      (format === 'table' || format === 'text') &&
       !options.compact &&
       !options.json &&
       !options.structured &&
@@ -72,7 +73,8 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
       options.keys === undefined &&
       !options.field &&
       !(options.fields && options.fields.length > 0) &&
-      !hasOutputSearch(options);
+      !hasOutputSearch(options)
+    );
   }
 
   private rewriteDryRunResult(result: string | undefined): string | undefined {

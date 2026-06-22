@@ -1,12 +1,12 @@
-import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import { commandGroup, commandGroupAction } from './command-groups.ts';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import {
   completionArgsForCommand,
   GLOBAL_COMPLETION_OPTIONS,
   LOCAL_COMPLETION_COMMANDS,
   SPECIAL_COMPLETIONS,
 } from './completion-metadata.ts';
-import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 import { hintsForKind, type IdHint, idKindForCommandField, loadIdCacheSync } from './id-cache.ts';
 
 export interface CompletionRequest {
@@ -63,9 +63,7 @@ export function formatCompletionCandidates(candidates: CompletionCandidate[]): s
     .join('\n')}\n`;
 }
 
-function commandCandidates(
-  registrySnapshot: CompletionRegistrySnapshot,
-): CompletionCandidate[] {
+function commandCandidates(registrySnapshot: CompletionRegistrySnapshot): CompletionCandidate[] {
   const allCommands = registrySnapshot.allCommands;
   const commands = new Map<string, CompletionCandidate>();
 
@@ -249,7 +247,13 @@ function nestedCommandContext(
   input: CompletionRequest,
   registrySnapshot: CompletionRegistrySnapshot,
 ):
-  | { group: string; action?: string; command?: string; actionConfig?: CommandConfig | LocalCommandConfig; argOffset: number }
+  | {
+      group: string;
+      action?: string;
+      command?: string;
+      actionConfig?: CommandConfig | LocalCommandConfig;
+      argOffset: number;
+    }
   | undefined {
   const wordIndex = currentWordIndex(input);
   const groupIndex = firstCommandWordIndex(input, wordIndex);
@@ -423,7 +427,10 @@ function cachedIdCandidates(input: CompletionRequest, options: CompletionRuntime
   return candidates;
 }
 
-function commandFieldValueCandidates(input: CompletionRequest, options: CompletionRuntimeOptions): CompletionCandidate[] {
+function commandFieldValueCandidates(
+  input: CompletionRequest,
+  options: CompletionRuntimeOptions,
+): CompletionCandidate[] {
   const registrySnapshot = options.registrySnapshot || BUNDLED_COMMAND_REGISTRY;
   const context = commandContext(input, registrySnapshot);
   if (!context?.field) return [];

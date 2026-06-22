@@ -13,6 +13,7 @@ import {
 } from './completion-runtime.ts';
 import { type DoctorResult, printDoctorResult, runDoctor } from './doctor.ts';
 import { GENERATED_API_GAMESERVER_VERSION } from './generated/api-commands.ts';
+import { GroupedApiCommandHandler } from './grouped-api-command-handler.ts';
 import {
   displayUnknownCommand,
   getUsageLine,
@@ -39,7 +40,6 @@ import {
   searchIdHints,
   searchItemHints,
 } from './id-cache.ts';
-import { GroupedApiCommandHandler } from './grouped-api-command-handler.ts';
 import {
   defaultOpenApiCacheDir,
   loadOpenApiCacheVersion,
@@ -72,6 +72,11 @@ function localOutputOptions(options: GlobalOptions, context?: CliRuntimeContext)
     plain: context?.config?.plain ?? context?.output?.plain ?? options.plain,
     quiet: context?.config?.quiet ?? context?.output?.quiet ?? options.quiet,
   };
+}
+
+function writeErrorLine(context: CliRuntimeContext | undefined, message: string): void {
+  if (context) context.writer.err(message);
+  else console.error(message);
 }
 
 function compareGameserverVersions(left: string, right: string): number | undefined {
@@ -256,7 +261,10 @@ function createExplainHandler(
       const firstIsExactHelpTarget = firstCommand ? hasCommandHelpTarget(firstCommand, helpSource) : false;
       const firstIsExecutableGroup = Boolean(commandGroup(registrySnapshot.commandGroups, firstCommand));
       const explainCommand =
-        joinedIsExactHelpTarget || !firstCommand || !firstIsExactHelpTarget || (firstIsExecutableGroup && explainArgs.length > 1)
+        joinedIsExactHelpTarget ||
+        !firstCommand ||
+        !firstIsExactHelpTarget ||
+        (firstIsExecutableGroup && explainArgs.length > 1)
           ? joinedCommand
           : firstCommand;
       return { ok: true, payload: { command: explainCommand } };
@@ -282,12 +290,7 @@ function createExplainHandler(
         });
         return 1;
       }
-      showCommandExplanation(
-        result.command,
-        context?.writer,
-        helpSource,
-        localOutputOptions(options, context),
-      );
+      showCommandExplanation(result.command, context?.writer, helpSource, localOutputOptions(options, context));
       return 0;
     },
   };
@@ -335,6 +338,32 @@ function createCompletionHandler(
 }
 
 const completionHandler = createCompletionHandler();
+
+function createUnknownGroupedActionHandler(
+  group: string,
+  action: string,
+): CommandHandler<{ group: string; action: string }, { group: string; action: string }> {
+  return {
+    name: `${group} ${action}`,
+    requiresNetwork: false,
+    parse() {
+      return { ok: true, payload: { group, action } };
+    },
+    run(payload) {
+      return payload;
+    },
+    render(result, options, _client, context) {
+      const command = `${result.group} ${result.action}`;
+      if (options.json) {
+        printJsonError('unknown_command', `Unknown command: ${command}`, context?.writer);
+      } else {
+        writeErrorLine(context, `Error: Unknown command "${command}"`);
+        writeErrorLine(context, `Run "spacemolt help ${result.group}" to list actions.`);
+      }
+      return 1;
+    },
+  };
+}
 
 function completionProfileFromWords(words: string[]): string | undefined {
   const firstArgIndex = words[0] === 'spacemolt' ? 1 : 0;
@@ -768,6 +797,10 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'helpGroup', target: commandName } };
       }
 
+      if (commandName && commandGroup(registrySnapshot.commandGroups, commandName) && subArgs.length === 0) {
+        return { ok: true, payload: { type: 'helpGroup', target: commandName } };
+      }
+
       const target = subArgs[0];
       if (!target) {
         return { ok: true, payload: { type: 'progressiveOrHelp' } };
@@ -778,9 +811,15 @@ function createLocalHelpHandler(
       }
 
       const explicitCommandTarget = target.startsWith('command=');
-      const normalizedSubArgs = explicitCommandTarget ? [target.slice('command='.length), ...subArgs.slice(1)] : subArgs;
+      const normalizedSubArgs = explicitCommandTarget
+        ? [target.slice('command='.length), ...subArgs.slice(1)]
+        : subArgs;
       const normalizedTarget = normalizedSubArgs.join(' ').trim();
-      const groupedAction = commandGroupAction(registrySnapshot.commandGroups, normalizedSubArgs[0], normalizedSubArgs[1]);
+      const groupedAction = commandGroupAction(
+        registrySnapshot.commandGroups,
+        normalizedSubArgs[0],
+        normalizedSubArgs[1],
+      );
       const executableGroup = commandGroup(registrySnapshot.commandGroups, normalizedTarget);
 
       if (target === 'all') {
@@ -926,6 +965,10 @@ export function resolveHandler(
     if (commandName === 'server-help') return createServerHelpHandler(registrySnapshot);
     const groupedAction = commandGroupAction(registrySnapshot.commandGroups, commandName, argv[1]);
     if (groupedAction) return new GroupedApiCommandHandler(commandName, argv[1] as string, groupedAction);
+    if (commandGroup(registrySnapshot.commandGroups, commandName)) {
+      if (argv.length === 1) return createLocalHelpHandler(registrySnapshot);
+      return createUnknownGroupedActionHandler(commandName, argv[1] as string);
+    }
     const handler = registry.get(commandName);
     if (handler) return handler;
   }

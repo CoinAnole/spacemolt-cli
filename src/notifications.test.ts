@@ -53,7 +53,7 @@ describe('notification formatting', () => {
         timestamp: '2026-05-18T12:00:00.000Z',
         data: { from_name: 'Dockmaster', trade_id: 'trade_123', offer_credits: 250, request_credits: 100 },
       },
-      snippets: ['[TRADE]', 'Offer from Dockmaster', 'Offering: 250 credits', 'trade_accept trade_id=trade_123'],
+      snippets: ['[TRADE]', 'Offer from Dockmaster', 'Offering: 250 credits', 'trade accept trade_id=trade_123'],
     },
     {
       name: 'action error',
@@ -189,12 +189,12 @@ describe('notification formatting', () => {
     {
       msgType: 'faction_invite',
       data: { faction_name: 'Wardens', faction_id: 'fac_1' },
-      snippets: ['[FACTION]', 'Wardens', 'join_faction faction_id=fac_1'],
+      snippets: ['[FACTION]', 'Wardens', 'join_faction faction_id=fac_1', 'faction decline_invite faction_id=fac_1'],
     },
     {
       msgType: 'faction_peace_proposed',
       data: { proposer_name: 'Wardens', terms: 'truce', faction_id: 'fac_1' },
-      snippets: ['[PEACE]', 'Wardens', 'Terms: truce'],
+      snippets: ['[PEACE]', 'Wardens', 'Terms: truce', 'faction accept_peace target_faction_id=fac_1'],
     },
     {
       msgType: 'faction_war_declared',
@@ -321,7 +321,7 @@ describe('notification formatting', () => {
     {
       msgType: 'trade_offer_received',
       data: { from_name: 'Dockmaster', trade_id: 'trade_1', offer_credits: 5 },
-      snippets: ['[TRADE]', 'Offer from Dockmaster', 'Offering: 5 credits'],
+      snippets: ['[TRADE]', 'Offer from Dockmaster', 'Offering: 5 credits', 'trade accept trade_id=trade_1'],
     },
     { msgType: 'version_info', data: { version: '2.0.0' }, snippets: ['[VERSION]', 'Server version: 2.0.0'] },
   ];
@@ -343,6 +343,40 @@ describe('notification formatting', () => {
     for (const snippet of snippets) {
       expect(output).toContain(snippet);
     }
+  });
+
+  test('action prompts do not reference removed flat grouped commands', () => {
+    const prompts = [
+      formatNotification({
+        type: 'trade',
+        msg_type: 'trade_offer_received',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: { from_name: 'Dockmaster', trade_id: 'trade_1' },
+      }).join('\n'),
+      formatNotification({
+        type: 'faction',
+        msg_type: 'faction_invite',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: { faction_name: 'Wardens', faction_id: 'fac_1' },
+      }).join('\n'),
+      formatNotification({
+        type: 'faction',
+        msg_type: 'faction_peace_proposed',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: { proposer_name: 'Wardens', faction_id: 'fac_1' },
+      }).join('\n'),
+    ]
+      .map(stripAnsi)
+      .join('\n');
+
+    expect(prompts).toContain('trade accept trade_id=trade_1');
+    expect(prompts).toContain('trade decline trade_id=trade_1');
+    expect(prompts).toContain('faction decline_invite faction_id=fac_1');
+    expect(prompts).toContain('faction accept_peace target_faction_id=fac_1');
+    expect(prompts).not.toContain('trade_accept');
+    expect(prompts).not.toContain('trade_decline');
+    expect(prompts).not.toContain('faction_decline_invite');
+    expect(prompts).not.toContain('faction_accept_peace');
   });
 
   test('displayNotifications writes formatted lines through the provided writer', () => {

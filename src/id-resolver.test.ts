@@ -638,10 +638,12 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    expect(prepareInternalPayload('facility_job_list', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual({
-      type: 'payload',
-      payload: { facility_id: 'facility-1' },
-    });
+    expect(prepareInternalPayload('facility_job_list', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual(
+      {
+        type: 'payload',
+        payload: { facility_id: 'facility-1' },
+      },
+    );
     expect(
       prepareInternalPayload(
         'facility_set_access',

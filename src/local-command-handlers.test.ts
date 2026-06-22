@@ -260,8 +260,16 @@ describe('local command handlers', () => {
       },
       { argv: ['fleet', 'invite', 'PlayerName'], payload: { id: 'PlayerName' }, handlerName: 'fleet invite' },
       { argv: ['forum', 'get_thread', 'thread-1'], payload: { target: 'thread-1' }, handlerName: 'forum get_thread' },
-      { argv: ['station', 'set_name', 'Aurora Freeport'], payload: { name: 'Aurora Freeport' }, handlerName: 'station set_name' },
-      { argv: ['trade', 'offer', 'player-1', 'credits=500'], payload: { target: 'player-1', offer_credits: 500 }, handlerName: 'trade offer' },
+      {
+        argv: ['station', 'set_name', 'Aurora Freeport'],
+        payload: { name: 'Aurora Freeport' },
+        handlerName: 'station set_name',
+      },
+      {
+        argv: ['trade', 'offer', 'player-1', 'credits=500'],
+        payload: { target: 'player-1', offer_credits: 500 },
+        handlerName: 'trade offer',
+      },
     ];
 
     for (const entry of cases) {
@@ -275,7 +283,15 @@ describe('local command handlers', () => {
   });
 
   test('removed flat grouped commands are unknown', () => {
-    for (const command of ['citizenship_apply', 'facility_job_add', 'faction_info', 'fleet_invite', 'forum_get_thread', 'station_set_name', 'trade_offer']) {
+    for (const command of [
+      'citizenship_apply',
+      'facility_job_add',
+      'faction_info',
+      'fleet_invite',
+      'forum_get_thread',
+      'station_set_name',
+      'trade_offer',
+    ]) {
       expect(resolveHandler([command], options), command).toBeUndefined();
     }
   });
@@ -292,7 +308,11 @@ describe('local command handlers', () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
 
-    const runResult = (await handler.run(parsed.payload, { ...options, dryRun: true }, undefined)) as CommandRunResult & {
+    const runResult = (await handler.run(
+      parsed.payload,
+      { ...options, dryRun: true },
+      undefined,
+    )) as CommandRunResult & {
       displayCommand?: string;
     };
 
@@ -305,7 +325,10 @@ describe('local command handlers', () => {
   });
 
   test('unknown nested actions fail without API dispatch', () => {
-    expect(resolveHandler(['faction', 'made_up'], options)).toBeUndefined();
+    const handler = resolveHandler(['faction', 'made_up'], options);
+
+    expect(handler?.name).toBe('faction made_up');
+    expect(handler?.requiresNetwork).toBe(false);
   });
 
   test('nested API command inline help omits server help pointer and flat command name', () => {
@@ -403,7 +426,10 @@ describe('local command handlers', () => {
   });
 
   test('nested API command named args still report missing required fields with grouped display name', () => {
-    const handler = resolveHandler(['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'], options);
+    const handler = resolveHandler(
+      ['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
+      options,
+    );
     expect(handler?.name).toBe('faction create_buy_order');
     if (!handler) return;
     const { context, stderr } = captureContext();
@@ -498,7 +524,18 @@ describe('local command handlers', () => {
     const stderr: string[] = [];
 
     const exitCode = await runInvocation(
-      ['--plain', '--no-timestamp', '--format', 'yaml', '--dry-run', 'faction', 'create_buy_order', 'ore_iron', '100', '12'],
+      [
+        '--plain',
+        '--no-timestamp',
+        '--format',
+        'yaml',
+        '--dry-run',
+        'faction',
+        'create_buy_order',
+        'ore_iron',
+        '100',
+        '12',
+      ],
       undefined,
       fakeContext(stdout, stderr),
     );
@@ -1474,7 +1511,12 @@ describe('local command handlers', () => {
     expect(helpParsed.ok).toBe(true);
     if (!helpParsed.ok) return;
     const helpCapture = captureContext();
-    await helpHandler.render(await helpHandler.run(helpParsed.payload, options), options, undefined, helpCapture.context);
+    await helpHandler.render(
+      await helpHandler.run(helpParsed.payload, options),
+      options,
+      undefined,
+      helpCapture.context,
+    );
     expect(helpCapture.stdout.join('\n')).toContain('spacemolt faction create_buy_order');
 
     const explainHandler = resolveHandler(['explain', 'faction', 'create_buy_order'], options);
@@ -1502,7 +1544,12 @@ describe('local command handlers', () => {
     if (!parsed.ok) return;
     const capture = captureContext();
 
-    const exitCode = await handler.render(await handler.run(parsed.payload, options), options, undefined, capture.context);
+    const exitCode = await handler.render(
+      await handler.run(parsed.payload, options),
+      options,
+      undefined,
+      capture.context,
+    );
 
     const output = capture.stdout.join('\n');
     expect(exitCode).toBe(0);
@@ -1521,7 +1568,12 @@ describe('local command handlers', () => {
     if (!parsed.ok) return;
     const capture = captureContext();
 
-    const exitCode = await handler.render(await handler.run(parsed.payload, options), options, undefined, capture.context);
+    const exitCode = await handler.render(
+      await handler.run(parsed.payload, options),
+      options,
+      undefined,
+      capture.context,
+    );
 
     const output = capture.stdout.join('\n');
     expect(exitCode).toBe(0);
@@ -1539,13 +1591,42 @@ describe('local command handlers', () => {
     if (!parsed.ok) return;
     const capture = captureContext();
 
-    const exitCode = await handler.render(await handler.run(parsed.payload, options), options, undefined, capture.context);
+    const exitCode = await handler.render(
+      await handler.run(parsed.payload, options),
+      options,
+      undefined,
+      capture.context,
+    );
 
     const output = capture.stdout.join('\n');
     expect(exitCode).toBe(0);
     expect(output).toContain('citizenship Commands');
     expect(output).toContain('citizenship apply');
     expect(output).not.toContain('spacemolt citizenship <action> [args...]');
+  });
+
+  test('bare executable group renders its action list', async () => {
+    const capture = captureContext();
+
+    const exitCode = await runInvocation(['citizenship'], undefined, capture.context);
+
+    const output = capture.stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('citizenship Commands');
+    expect(output).toContain('citizenship apply');
+    expect(capture.stderr.join('\n')).not.toContain('Unknown command');
+  });
+
+  test('unknown nested group action reports the full command and group help hint', async () => {
+    const capture = captureContext();
+
+    const exitCode = await runInvocation(['trade', 'made_up'], undefined, capture.context);
+
+    const output = capture.stderr.join('\n');
+    expect(exitCode).toBe(1);
+    expect(output).toContain('Unknown command "trade made_up"');
+    expect(output).toContain('spacemolt help trade');
+    expect(output).not.toContain('spacemolt help market');
   });
 
   test('help with unknown terms searches local commands', async () => {
@@ -1811,7 +1892,11 @@ describe('local command handlers', () => {
     if (!handler) return;
     const { context, stdout } = captureContext();
 
-    const parsed = handler.parse(['facility', 'upgrade', 'help'], { ...options, plain: true, profile: 'pilot' }, context);
+    const parsed = handler.parse(
+      ['facility', 'upgrade', 'help'],
+      { ...options, plain: true, profile: 'pilot' },
+      context,
+    );
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
