@@ -2,10 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { COMMANDS } from './commands';
 import { cargoFixture, systemInfoFixture } from './display/formatter-fixtures';
 import { cacheIdsFromResponse, getIdCachePath } from './id-cache';
 import { preparePayload } from './main';
 import type { GlobalOptions } from './types';
+
+const internalCommandRegistry = { commands: COMMANDS };
 
 function options(overrides: Partial<GlobalOptions> = {}): GlobalOptions {
   return {
@@ -38,6 +41,15 @@ function writer(stdout: string[] = [], stderr: string[] = []) {
       stderr.push(message);
     },
   };
+}
+
+function prepareInternalPayload(
+  command: string,
+  rawPayload: Record<string, unknown>,
+  globalOptions: GlobalOptions,
+  sessionPath?: string,
+) {
+  return preparePayload(command, rawPayload, globalOptions, sessionPath, undefined, internalCommandRegistry);
 }
 
 describe('cached ID payload resolver', () => {
@@ -152,7 +164,7 @@ describe('cached ID payload resolver', () => {
     );
 
     expect(
-      preparePayload(
+      prepareInternalPayload(
         'faction_create_sell_order',
         { item_id: 'fuel', quantity: '100', price_each: '7' },
         options(),
@@ -163,7 +175,7 @@ describe('cached ID payload resolver', () => {
       payload: { item_id: 'fuel', quantity: 100, price_each: 7 },
     });
     expect(
-      preparePayload(
+      prepareInternalPayload(
         'faction_create_buy_order',
         { item_id: 'fuel', quantity: '100', price_each: '6' },
         options(),
@@ -254,7 +266,7 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = preparePayload('faction_invite', { player_id: 'marlowe' }, options(), sessionPath);
+    const prepared = prepareInternalPayload('faction_invite', { player_id: 'marlowe' }, options(), sessionPath);
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'player-marlowe' } });
   });
@@ -413,7 +425,7 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { target: 'note-1' },
     });
-    expect(preparePayload('forum_get_thread', { thread_id: 'note-1' }, options(), sessionPath)).toEqual({
+    expect(prepareInternalPayload('forum_get_thread', { thread_id: 'note-1' }, options(), sessionPath)).toEqual({
       type: 'payload',
       payload: { target: 'note-1' },
     });
@@ -441,7 +453,7 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { target: 'solarian', content: 'hello' },
     });
-    expect(preparePayload('citizenship_apply', { empire: 'solarian' }, options(), sessionPath)).toEqual({
+    expect(prepareInternalPayload('citizenship_apply', { empire: 'solarian' }, options(), sessionPath)).toEqual({
       type: 'payload',
       payload: { target: 'solarian' },
     });
@@ -549,7 +561,12 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = preparePayload('faction_declare_war', { target_faction_id: 'smc' }, options(), sessionPath);
+    const prepared = prepareInternalPayload(
+      'faction_declare_war',
+      { target_faction_id: 'smc' },
+      options(),
+      sessionPath,
+    );
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'faction-smc' } });
   });
@@ -621,18 +638,23 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    expect(preparePayload('facility_job_list', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual({
+    expect(prepareInternalPayload('facility_job_list', { facility_id: 'fuel bunker' }, options(), sessionPath)).toEqual({
       type: 'payload',
       payload: { facility_id: 'facility-1' },
     });
     expect(
-      preparePayload('facility_set_access', { facility_id: 'fuel bunker', access: 'public' }, options(), sessionPath),
+      prepareInternalPayload(
+        'facility_set_access',
+        { facility_id: 'fuel bunker', access: 'public' },
+        options(),
+        sessionPath,
+      ),
     ).toEqual({
       type: 'payload',
       payload: { facility_id: 'facility-1', access: 'public' },
     });
     expect(
-      preparePayload(
+      prepareInternalPayload(
         'facility_set_output_price',
         { facility_id: 'fuel bunker', item_id: 'steel plate', price: '25' },
         options(),
@@ -643,7 +665,7 @@ describe('cached ID payload resolver', () => {
       payload: { facility_id: 'facility-1', item_id: 'steel_plate', price: 25 },
     });
     expect(
-      preparePayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath),
+      prepareInternalPayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath),
     ).toEqual({
       type: 'payload',
       payload: { listing_id: 'listing-1' },
