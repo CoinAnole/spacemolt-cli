@@ -100,7 +100,7 @@ describe('client.ts source integrity', () => {
   test('payload conversion uses command schemas instead of a global numeric field set', () => {
     expect(getPayloadConversionSchema('travel').id?.type).toBe('string');
     expect(getPayloadConversionSchema('sell').quantity?.type).toBe('integer');
-    expect(getPayloadConversionSchema('trade_offer').offer_credits?.type).toBe('integer');
+    expect(getPayloadConversionSchema('trade_offer', { commands: COMMANDS }).offer_credits?.type).toBe('integer');
   });
 
   test('command override metadata has unique top-level command keys', () => {
@@ -115,6 +115,7 @@ describe('client.ts source integrity', () => {
   });
 
   test('crafting production commands map the v2 routes', () => {
+    // COMMANDS remains the curated route metadata source; dispatch visibility is tested through BUNDLED_COMMAND_REGISTRY.
     expect(COMMANDS.recycle?.route).toEqual({
       tool: 'spacemolt',
       action: 'recycle',

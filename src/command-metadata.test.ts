@@ -17,10 +17,12 @@ import {
   COMMAND_OVERRIDES,
   COMMANDS,
   type CommandArg,
+  type CommandConfig,
   LOCAL_COMMANDS,
 } from './commands';
 import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
+import type { GroupedCommandName } from './command-groups';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp, showFullHelp } from './help';
 import { createCommandConfigDryRunResponse } from './preview';
@@ -36,19 +38,35 @@ const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
 
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
 
-function captureHelp(command: string): string {
+function captureHelp(command: string, registry: Parameters<typeof showCommandHelp>[2] = BUNDLED_COMMAND_REGISTRY): string {
   const stdout: string[] = [];
 
   expect(
-    showCommandHelp(command, {
-      out(message = '') {
-        stdout.push(message);
+    showCommandHelp(
+      command,
+      {
+        out(message = '') {
+          stdout.push(message);
+        },
+        err() {},
       },
-      err() {},
-    }),
+      registry,
+    ),
   ).toBe(true);
 
   return stdout.join('\n').replace(ANSI_PATTERN, '');
+}
+
+function visibleBundledCommandName(command: string): string {
+  if (BUNDLED_COMMAND_REGISTRY.commands[command]) return command;
+
+  for (const group of Object.values(BUNDLED_COMMAND_REGISTRY.commandGroups)) {
+    for (const action of Object.values(group?.actions ?? {})) {
+      if (action.command === command) return action.displayName;
+    }
+  }
+
+  return command;
 }
 
 function captureFullHelp(): string {
@@ -68,15 +86,37 @@ function captureFullHelp(): string {
   return stdout.join('\n').replace(ANSI_PATTERN, '');
 }
 
-function getCompletionEnumCases(): Array<{ command: string; arg: string; values: string[] }> {
+function appendCompletionEnumCases(
+  cases: Array<{ command: string; arg: string; values: string[] }>,
+  command: string,
+  config: Pick<CommandConfig, 'args' | 'required' | 'aliases' | 'schema'>,
+): void {
+  for (const arg of getArgNames(config)) {
+    const canonicalArg = config.aliases?.[arg] || arg;
+    const values = config.schema?.[canonicalArg]?.enum;
+    if (values?.length) cases.push({ command, arg, values });
+  }
+}
+
+function getCompletionEnumCases(options: { includeGrouped?: boolean } = {}): Array<{
+  command: string;
+  arg: string;
+  values: string[];
+}> {
   const cases: Array<{ command: string; arg: string; values: string[] }> = [];
-  for (const [command, config] of Object.entries(COMMANDS)) {
-    for (const arg of getArgNames(config)) {
-      const canonicalArg = config.aliases?.[arg] || arg;
-      const values = config.schema?.[canonicalArg]?.enum;
-      if (values?.length) cases.push({ command, arg, values });
+
+  for (const [command, config] of Object.entries(BUNDLED_COMMAND_REGISTRY.commands)) {
+    appendCompletionEnumCases(cases, command, config);
+  }
+
+  if (options.includeGrouped) {
+    for (const group of Object.values(BUNDLED_COMMAND_REGISTRY.commandGroups)) {
+      for (const action of Object.values(group?.actions ?? {})) {
+        appendCompletionEnumCases(cases, action.command, action.config);
+      }
     }
   }
+
   return cases;
 }
 
@@ -318,6 +358,21 @@ function commandCompletionWords(shell: string, completion: string, command: stri
 }
 
 describe('command metadata', () => {
+  test('grouped flat commands are not user-visible command metadata', () => {
+    for (const command of [
+      'citizenship_apply',
+      'facility_job_add',
+      'faction_info',
+      'fleet_invite',
+      'forum_get_thread',
+      'station_set_name',
+      'trade_offer',
+    ]) {
+      expect(BUNDLED_COMMAND_REGISTRY.commands[command], command).toBeUndefined();
+      expect(BUNDLED_COMMAND_REGISTRY.allCommands[command], command).toBeUndefined();
+    }
+  });
+
   test('top-level command metadata has human descriptions', () => {
     const priorityCommands = [
       'register',
@@ -443,7 +498,8 @@ describe('command metadata', () => {
   });
 
   test('facility_build help documents that build accepts faction facility types', () => {
-    const config = BUNDLED_COMMAND_REGISTRY.commands.facility_build;
+    const action = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.build;
+    const config = action?.config;
     expect(config?.route).toEqual({
       tool: 'spacemolt_facility',
       action: 'build',
@@ -451,57 +507,77 @@ describe('command metadata', () => {
     });
     expect(config?.description).toContain('faction facility types are accepted');
 
-    const help = captureHelp('facility_build');
+    const help = captureHelp(action?.displayName || 'facility build');
     expect(help).toContain('faction facility types are accepted');
     expect(help).not.toContain('Build a player facility at the current base.');
   });
 
   test('facility production commands have curated routes and help', () => {
-    const expected = {
-      facility_job_add: {
+    const expected: Record<
+      string,
+      { group: GroupedCommandName; actionName: string; action: string; args: string[]; help: string }
+    > = {
+      job_add: {
+        group: 'facility',
+        actionName: 'job_add',
         action: 'job_add',
         args: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to'],
         help: 'Queue production work',
       },
-      facility_job_list: {
+      job_list: {
+        group: 'facility',
+        actionName: 'job_list',
         action: 'job_list',
         args: ['facility_id'],
         help: 'List queued production jobs',
       },
-      facility_job_cancel: {
+      job_cancel: {
+        group: 'facility',
+        actionName: 'job_cancel',
         action: 'job_cancel',
         args: ['job_id'],
         help: 'Cancel queued facility jobs',
       },
-      facility_dismantle: {
+      dismantle: {
+        group: 'facility',
+        actionName: 'dismantle',
         action: 'dismantle',
         args: ['facility_id'],
         help: 'Dismantle a facility',
       },
       faction_dismantle: {
+        group: 'faction',
+        actionName: 'dismantle',
         action: 'faction_dismantle',
         args: ['facility_id'],
         help: 'Dismantle a faction facility',
       },
-      facility_job_reorder: {
+      job_reorder: {
+        group: 'facility',
+        actionName: 'job_reorder',
         action: 'job_reorder',
         args: ['job_id', 'position'],
         help: 'Move a queued facility job',
       },
-      facility_set_output_price: {
+      set_output_price: {
+        group: 'facility',
+        actionName: 'set_output_price',
         action: 'set_output_price',
         args: ['facility_id', 'item_id', 'price'],
         help: 'Set the per-item output price',
       },
-      facility_set_access: {
+      set_access: {
+        group: 'facility',
+        actionName: 'set_access',
         action: 'set_access',
         args: ['facility_id', 'access'],
         help: 'Open or close a facility',
       },
     };
 
-    for (const [command, expectation] of Object.entries(expected)) {
-      const config = BUNDLED_COMMAND_REGISTRY.commands[command];
+    for (const expectation of Object.values(expected)) {
+      const action = BUNDLED_COMMAND_REGISTRY.commandGroups[expectation.group]?.actions[expectation.actionName];
+      const config = action?.config;
       expect(config?.category).toBe('Facilities');
       expect(config?.route).toEqual({
         tool: 'spacemolt_facility',
@@ -509,13 +585,16 @@ describe('command metadata', () => {
         method: 'POST',
       });
       expect(config?.args).toEqual(expectation.args);
-      expect(captureHelp(command)).toContain(expectation.help);
+      expect(captureHelp(action?.displayName || `${expectation.group} ${expectation.actionName}`)).toContain(
+        expectation.help,
+      );
     }
 
-    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_add?.schema?.direction?.enum).toEqual(['forward', 'reverse']);
-    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_job_cancel?.schema?.job_ids?.type).toBe('array');
-    expect(captureHelp('facility_job_cancel')).toContain('job_ids');
-    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_transfer?.schema?.direction?.enum).toEqual([
+    const facilityActions = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions;
+    expect(facilityActions?.job_add?.config.schema?.direction?.enum).toEqual(['forward', 'reverse']);
+    expect(facilityActions?.job_cancel?.config.schema?.job_ids?.type).toBe('array');
+    expect(captureHelp(facilityActions?.job_cancel?.displayName || 'facility job_cancel')).toContain('job_ids');
+    expect(facilityActions?.transfer?.config.schema?.direction?.enum).toEqual([
       'to_faction',
       'to_player',
     ]);
@@ -839,7 +918,7 @@ describe('command metadata', () => {
       if (required.length === 0) continue;
 
       const argNames = getArgNames(config);
-      const help = captureHelp(command);
+      const help = captureHelp(visibleBundledCommandName(command));
       for (const arg of required) {
         if (!argNames.includes(arg)) missing.push(`${command}: ${arg} missing from args`);
         if (!help.includes(arg)) missing.push(`${command}: ${arg} missing from help`);
@@ -850,11 +929,14 @@ describe('command metadata', () => {
   });
 
   test('completion enum values match generated command schemas', () => {
-    const enumCases = getCompletionEnumCases();
-    expect(enumCases.length).toBeGreaterThan(0);
+    const topLevelEnumCases = getCompletionEnumCases();
+    const groupedEnumCases = getCompletionEnumCases({ includeGrouped: true });
+    expect(topLevelEnumCases.length).toBeGreaterThan(0);
+    expect(groupedEnumCases.length).toBeGreaterThan(topLevelEnumCases.length);
 
     for (const shell of ['bash', 'zsh', 'fish']) {
       const completion = generateCompletion(shell);
+      const enumCases = shell === 'zsh' ? topLevelEnumCases : groupedEnumCases;
       const missing = enumCases.flatMap(({ command, arg, values }) =>
         values
           .filter((value) => !completion.includes(value))

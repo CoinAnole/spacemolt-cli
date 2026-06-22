@@ -195,6 +195,11 @@ describe('command metadata', () => {
     expect(COMMANDS).not.toHaveProperty('faction_set_ally');
     expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty('faction_set_ally');
   });
+
+  test('flat grouped command names no longer parse through the bundled registry', () => {
+    expect(parseArgs(['faction_info'])).toEqual({ ok: true, command: 'faction_info', payload: {} });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.faction_info).toBeUndefined();
+  });
 });
 
 describe('normalizeParsedPayload', () => {
