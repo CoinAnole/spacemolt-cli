@@ -32,6 +32,7 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
   private displayConfig() {
     return {
       ...this.action.config,
+      serverHelpTopic: false as const,
       example: this.action.config.example?.replace(`spacemolt ${this.action.command}`, `spacemolt ${this.name}`),
       discoverWith: this.action.config.discoverWith?.map((command) => this.translateRelatedCommand(command)),
       seeAlso: this.action.config.seeAlso?.map((command) => this.translateRelatedCommand(command)),

@@ -308,6 +308,24 @@ describe('local command handlers', () => {
     expect(resolveHandler(['faction', 'made_up'], options)).toBeUndefined();
   });
 
+  test('nested API command inline help omits server help pointer and flat command name', () => {
+    const handler = resolveHandler(['faction', 'create_buy_order', 'help'], options);
+    expect(handler?.name).toBe('faction create_buy_order');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['faction', 'create_buy_order', 'help'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stdout.join('\n');
+    expect(output).toContain('spacemolt faction create_buy_order');
+    expect(output).not.toContain('Server help:');
+    expect(output).not.toContain('spacemolt server-help faction create_buy_order');
+    expect(output).not.toContain('faction_create_buy_order');
+  });
+
   test('nested API command inline help uses grouped display name', () => {
     const handler = resolveHandler(['facility', 'job_add', 'help'], options);
     expect(handler?.name).toBe('facility job_add');
