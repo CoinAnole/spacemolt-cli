@@ -1554,6 +1554,46 @@ describe('local command handlers', () => {
     expect(output).not.toContain('Commands matching "command=get_status"');
   });
 
+  test('help command=faction create_buy_order resolves quoted nested command help', async () => {
+    const handler = resolveHandler(['help', 'command=faction create_buy_order'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'command=faction create_buy_order'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    const output = stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('spacemolt faction create_buy_order');
+    expect(output).toContain('POST /api/v2/spacemolt_faction_commerce/create_buy_order');
+    expect(output).not.toContain('Commands matching "faction create_buy_order"');
+  });
+
+  test('help command=faction create_buy_order resolves tokenized nested command help', async () => {
+    const handler = resolveHandler(['help', 'command=faction', 'create_buy_order'], options);
+
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'command=faction', 'create_buy_order'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    const output = stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('spacemolt faction create_buy_order');
+    expect(output).toContain('POST /api/v2/spacemolt_faction_commerce/create_buy_order');
+    expect(output).not.toContain('Commands matching "faction create_buy_order"');
+  });
+
   test('help --help shows local help overview', async () => {
     const handler = resolveHandler(['help', '--help'], options);
 

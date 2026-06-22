@@ -768,10 +768,9 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'showHelpAndGroups' } };
       }
 
-      const normalizedSubArgs =
-        subArgs.length === 1 && target.startsWith('command=') ? [target.slice('command='.length)] : subArgs;
-      const explicitCommandTarget = subArgs.length === 1 && target.startsWith('command=');
-      const normalizedTarget = normalizedSubArgs[0];
+      const explicitCommandTarget = target.startsWith('command=');
+      const normalizedSubArgs = explicitCommandTarget ? [target.slice('command='.length), ...subArgs.slice(1)] : subArgs;
+      const normalizedTarget = normalizedSubArgs.join(' ').trim();
       const groupedAction = commandGroupAction(registrySnapshot.commandGroups, normalizedSubArgs[0], normalizedSubArgs[1]);
 
       if (target === 'all') {
@@ -783,7 +782,6 @@ function createLocalHelpHandler(
       }
 
       if (
-        normalizedSubArgs.length === 1 &&
         normalizedTarget &&
         hasCommandGroup(normalizedTarget) &&
         !explicitCommandTarget &&
@@ -792,7 +790,7 @@ function createLocalHelpHandler(
         return { ok: true, payload: { type: 'helpGroup', target: normalizedTarget } };
       }
 
-      if (normalizedSubArgs.length === 1 && normalizedTarget && allCommands[normalizedTarget]) {
+      if (normalizedTarget && hasCommandHelpTarget(normalizedTarget, helpSource)) {
         return { ok: true, payload: { type: 'helpCommand', target: normalizedTarget } };
       }
 
