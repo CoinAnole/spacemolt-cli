@@ -252,8 +252,11 @@ function createExplainHandler(
         };
       }
       const firstCommand = explainArgs[0];
+      const joinedIsExactHelpTarget = hasCommandHelpTarget(joinedCommand, helpSource);
+      const firstIsExactHelpTarget = firstCommand ? hasCommandHelpTarget(firstCommand, helpSource) : false;
+      const firstIsExecutableGroup = Boolean(commandGroup(registrySnapshot.commandGroups, firstCommand));
       const explainCommand =
-        hasCommandHelpTarget(joinedCommand, helpSource) || !firstCommand || !hasCommandHelpTarget(firstCommand, helpSource)
+        joinedIsExactHelpTarget || !firstCommand || !firstIsExactHelpTarget || (firstIsExecutableGroup && explainArgs.length > 1)
           ? joinedCommand
           : firstCommand;
       return { ok: true, payload: { command: explainCommand } };
@@ -759,7 +762,7 @@ function createLocalHelpHandler(
 
       if (
         commandName &&
-        hasCommandGroup(commandName) &&
+        (hasCommandGroup(commandName) || commandGroup(registrySnapshot.commandGroups, commandName)) &&
         (subArgs[0] === '--help' || subArgs[0] === '-h' || subArgs[0] === 'help')
       ) {
         return { ok: true, payload: { type: 'helpGroup', target: commandName } };
@@ -778,6 +781,7 @@ function createLocalHelpHandler(
       const normalizedSubArgs = explicitCommandTarget ? [target.slice('command='.length), ...subArgs.slice(1)] : subArgs;
       const normalizedTarget = normalizedSubArgs.join(' ').trim();
       const groupedAction = commandGroupAction(registrySnapshot.commandGroups, normalizedSubArgs[0], normalizedSubArgs[1]);
+      const executableGroup = commandGroup(registrySnapshot.commandGroups, normalizedTarget);
 
       if (target === 'all') {
         return { ok: true, payload: { type: 'helpAll' } };
@@ -789,9 +793,9 @@ function createLocalHelpHandler(
 
       if (
         normalizedTarget &&
-        hasCommandGroup(normalizedTarget) &&
+        (hasCommandGroup(normalizedTarget) || executableGroup) &&
         !explicitCommandTarget &&
-        (!allCommands[normalizedTarget] || commandGroup(registrySnapshot.commandGroups, normalizedTarget))
+        (!allCommands[normalizedTarget] || executableGroup)
       ) {
         return { ok: true, payload: { type: 'helpGroup', target: normalizedTarget } };
       }
@@ -896,7 +900,9 @@ export function resolveHandler(
 ): CommandHandler | undefined {
   const commandName = argv[0];
   const groupInlineHelp =
-    commandName && hasCommandGroup(commandName) && (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
+    commandName &&
+    (hasCommandGroup(commandName) || commandGroup(registrySnapshot.commandGroups, commandName)) &&
+    (argv[1] === '--help' || argv[1] === '-h' || argv[1] === 'help');
 
   if (commandName === 'help' && argv[1] === '--server') {
     return createServerHelpHandler(registrySnapshot);

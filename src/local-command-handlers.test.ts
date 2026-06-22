@@ -1385,6 +1385,23 @@ describe('local command handlers', () => {
     expect(output).not.toContain('Unknown command: travel extra');
   });
 
+  test('explain faction made_up does not fall back to synthetic group help', async () => {
+    const handler = resolveHandler(['explain', 'faction', 'made_up'], options);
+    expect(handler?.name).toBe('explain');
+    if (!handler) return;
+    const parsed = handler.parse(['explain', 'faction', 'made_up'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout, stderr } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(1);
+    expect(stdout.join('\n')).not.toContain('spacemolt faction <action> [args...]');
+    expect(stderr.join('\n')).toContain('Unknown command "faction made_up"');
+  });
+
   test('help renders commands supplied by a registry snapshot', async () => {
     const command = 'dynamic_help_snapshot_test';
     const registry = {
@@ -1493,6 +1510,42 @@ describe('local command handlers', () => {
     expect(output).toContain('faction create_buy_order');
     expect(output).toContain('create_faction');
     expect(output).not.toContain('spacemolt faction <action> [args...]');
+  });
+
+  test('help citizenship renders executable-only group action list', async () => {
+    const handler = resolveHandler(['help', 'citizenship'], options);
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['help', 'citizenship'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const capture = captureContext();
+
+    const exitCode = await handler.render(await handler.run(parsed.payload, options), options, undefined, capture.context);
+
+    const output = capture.stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('citizenship Commands');
+    expect(output).toContain('citizenship apply');
+    expect(output).not.toContain('spacemolt citizenship <action> [args...]');
+  });
+
+  test('citizenship help renders executable-only group action list', async () => {
+    const handler = resolveHandler(['citizenship', 'help'], options);
+    expect(handler?.name).toBe('help');
+    if (!handler) return;
+    const parsed = handler.parse(['citizenship', 'help'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const capture = captureContext();
+
+    const exitCode = await handler.render(await handler.run(parsed.payload, options), options, undefined, capture.context);
+
+    const output = capture.stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('citizenship Commands');
+    expect(output).toContain('citizenship apply');
+    expect(output).not.toContain('spacemolt citizenship <action> [args...]');
   });
 
   test('help with unknown terms searches local commands', async () => {
