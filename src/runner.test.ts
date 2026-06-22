@@ -333,37 +333,48 @@ describe('runInvocation option isolation', () => {
   });
 
   test('nested command group invocation executes original API route', async () => {
-    const calls: Array<{ command: string; payload: Record<string, unknown>; configAction?: string }> = [];
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-nested-group-'));
+    const configHome = path.join(tempDir, 'config');
+    const calls: Array<{
+      command: string;
+      payload: Record<string, unknown>;
+      route: { tool?: string; action?: string; method?: string };
+    }> = [];
     const client = {
       config: { profile: 'pilot' },
       async executeCommandConfig(
         command: string,
-        config: { route: { action: string } },
+        config: { route: { tool?: string; action?: string; method?: string } },
         payload: Record<string, unknown>,
       ) {
-        calls.push({ command, payload, configAction: config.route.action });
+        calls.push({ command, payload, route: config.route });
         return { structuredContent: { ok: true } };
       },
     };
-    const context = fakeContext([], [], { HOME: '/tmp/spacemolt-test-home' });
 
-    const exitCode = await runInvocation(
-      ['faction', 'create_buy_order', 'ore_iron', '100', '12', '--structured'],
-      client as never,
-      context,
-    );
+    try {
+      const exitCode = await runInvocation(
+        ['faction', 'create_buy_order', 'ore_iron', '100', '12', '--structured'],
+        client as never,
+        fakeContext([], [], { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+      );
 
-    expect(exitCode).toBe(0);
-    expect(calls).toEqual([
-      {
-        command: 'faction_create_buy_order',
-        payload: { item_id: 'ore_iron', quantity: 100, price_each: 12 },
-        configAction: 'create_buy_order',
-      },
-    ]);
+      expect(exitCode).toBe(0);
+      expect(calls).toEqual([
+        {
+          command: 'faction_create_buy_order',
+          payload: { item_id: 'ore_iron', quantity: 100, price_each: 12 },
+          route: { tool: 'spacemolt_faction_commerce', action: 'create_buy_order', method: 'POST' },
+        },
+      ]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test('flat grouped command invocation is rejected before network dispatch', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-flat-group-'));
+    const configHome = path.join(tempDir, 'config');
     const stdout: string[] = [];
     const stderr: string[] = [];
     const client = {
@@ -373,15 +384,19 @@ describe('runInvocation option isolation', () => {
       },
     };
 
-    const exitCode = await runInvocation(
-      ['faction_create_buy_order', 'ore_iron', '100', '12'],
-      client as never,
-      fakeContext(stdout, stderr, { HOME: '/tmp/spacemolt-test-home' }),
-    );
+    try {
+      const exitCode = await runInvocation(
+        ['faction_create_buy_order', 'ore_iron', '100', '12'],
+        client as never,
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+      );
 
-    expect(exitCode).toBe(1);
-    expect(stderr.join('\n')).toContain('Unknown command "faction_create_buy_order"');
-    expect(stdout).toEqual([]);
+      expect(exitCode).toBe(1);
+      expect(stderr.join('\n')).toContain('Unknown command "faction_create_buy_order"');
+      expect(stdout).toEqual([]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test('facility_upgrade flag syntax prints structured API errors', async () => {
