@@ -103,7 +103,9 @@ function err(writer?: CliWriter): (message?: string) => void {
   return writer?.err.bind(writer) ?? console.error;
 }
 
-type CommandHelpConfig = CommandConfig | LocalCommandConfig | CommandGroupEntryConfig;
+type CommandHelpConfig = (CommandConfig | LocalCommandConfig | CommandGroupEntryConfig) & {
+  serverHelpTopic?: string | false;
+};
 type CommandHelpMap = Record<string, CommandHelpConfig>;
 type CommandHelpSource = CommandHelpMap | Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>>;
 
@@ -141,8 +143,13 @@ function translateGroupedCommand(command: string, displayNames: Record<string, s
 function translateGroupedExample(example: string | undefined, displayNames: Record<string, string>): string | undefined {
   if (!example) return undefined;
   let translated = example;
-  for (const [flatCommand, displayName] of Object.entries(displayNames)) {
-    translated = translated.replaceAll(`spacemolt ${flatCommand}`, `spacemolt ${displayName}`);
+  const sortedDisplayNames = Object.entries(displayNames).sort(([left], [right]) => right.length - left.length);
+  for (const [flatCommand, displayName] of sortedDisplayNames) {
+    const escapedCommand = flatCommand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    translated = translated.replace(
+      new RegExp(`spacemolt ${escapedCommand}(?=$|[\\s"';&|)])`, 'g'),
+      `spacemolt ${displayName}`,
+    );
   }
   return translated;
 }
@@ -150,9 +157,11 @@ function translateGroupedExample(example: string | undefined, displayNames: Reco
 function displayHelpConfig(
   config: CommandHelpConfig,
   displayNames: Record<string, string>,
+  displayOptions?: Pick<CommandHelpConfig, 'serverHelpTopic'>,
 ): CommandHelpConfig {
   return {
     ...config,
+    ...displayOptions,
     example: translateGroupedExample(config.example, displayNames),
     discoverWith: config.discoverWith?.map((command) => translateGroupedCommand(command, displayNames)),
     seeAlso: config.seeAlso?.map((command) => translateGroupedCommand(command, displayNames)),
@@ -172,7 +181,7 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
   );
   for (const group of Object.values(commandGroups ?? {})) {
     for (const action of Object.values(group?.actions ?? {})) {
-      commands[action.displayName] = displayHelpConfig(action.config, groupedDisplayNames);
+      commands[action.displayName] = displayHelpConfig(action.config, groupedDisplayNames, { serverHelpTopic: false });
     }
   }
   return commands;
@@ -539,9 +548,9 @@ export function showCommandHelp(
     for (const [key, value] of Object.entries(config.route.defaults)) write(`  ${key}=${value}`);
   }
 
-  if ('route' in config) {
+  if ('route' in config && config.serverHelpTopic !== false) {
     write(`\n${c.bright}Server help:${c.reset}`);
-    write(`  spacemolt server-help ${command}`);
+    write(`  spacemolt server-help ${config.serverHelpTopic || command}`);
   }
 
   if (config.example) {

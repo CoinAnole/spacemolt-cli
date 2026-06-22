@@ -238,8 +238,9 @@ function createExplainHandler(
     name: 'explain',
     requiresNetwork: false,
     parse(argv) {
-      const explainCommand = argv.slice(1).join(' ').trim();
-      if (!explainCommand) {
+      const explainArgs = argv.slice(1);
+      const joinedCommand = explainArgs.join(' ').trim();
+      if (!joinedCommand) {
         return {
           ok: false,
           error: {
@@ -250,6 +251,11 @@ function createExplainHandler(
           },
         };
       }
+      const firstCommand = explainArgs[0];
+      const explainCommand =
+        hasCommandHelpTarget(joinedCommand, helpSource) || !firstCommand || !hasCommandHelpTarget(firstCommand, helpSource)
+          ? joinedCommand
+          : firstCommand;
       return { ok: true, payload: { command: explainCommand } };
     },
     run(payload) {

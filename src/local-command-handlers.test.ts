@@ -1348,6 +1348,25 @@ describe('local command handlers', () => {
     expect(stdout.join('\n')).toContain('POST /api/v2/dynamic_explain/render_snapshot');
   });
 
+  test('explain travel extra keeps explaining first exact command target', async () => {
+    const handler = resolveHandler(['explain', 'travel', 'extra'], options);
+    expect(handler?.name).toBe('explain');
+    if (!handler) return;
+    const parsed = handler.parse(['explain', 'travel', 'extra'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stdout } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    const output = stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).toContain('spacemolt travel');
+    expect(output).toContain('POST /api/v2/spacemolt/travel');
+    expect(output).not.toContain('Unknown command: travel extra');
+  });
+
   test('help renders commands supplied by a registry snapshot', async () => {
     const command = 'dynamic_help_snapshot_test';
     const registry = {

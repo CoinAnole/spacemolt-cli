@@ -494,9 +494,21 @@ describe('help output branches', () => {
     ).toBe(true);
 
     expect(help.stdout.join('\n')).toContain('spacemolt faction create_buy_order');
+    expect(help.stdout.join('\n')).not.toContain('Server help:');
+    expect(help.stdout.join('\n')).not.toContain('faction_create_buy_order');
     expect(explain.stdout.join('\n')).toContain(
       'API route: POST /api/v2/spacemolt_faction_commerce/create_buy_order',
     );
+  });
+
+  test('top-level API command help keeps server-help pointer', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('travel', capture.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Server help:');
+    expect(output).toContain('spacemolt server-help travel');
   });
 
   test('related metadata translates grouped flat command names to nested names', () => {
@@ -523,6 +535,48 @@ describe('help output branches', () => {
     expect(output).toContain('faction build');
     expect(output).not.toContain('station_info');
     expect(output).not.toContain('faction_build');
+  });
+
+  test('related metadata example translation requires command-token boundary', () => {
+    const capture = captureWriter();
+    const registry: Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'> = {
+      allCommands: {
+        probe_examples: {
+          description: 'Probe command examples',
+          usage: '',
+          category: 'Generated API',
+          args: [],
+          route: { tool: 'probe', action: 'examples', method: 'POST' },
+          example: 'spacemolt station_info --ok && spacemolt station_info_backup --dry',
+        },
+      },
+      commandGroups: {
+        station: {
+          name: 'station',
+          actions: {
+            info: {
+              command: 'station_info',
+              action: 'info',
+              displayName: 'station info',
+              config: {
+                description: 'Station info',
+                usage: '',
+                category: 'Station',
+                args: [],
+                route: { tool: 'station', action: 'info', method: 'POST' },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    expect(showCommandHelp('probe_examples', capture.writer, registry)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt station info --ok');
+    expect(output).toContain('spacemolt station_info_backup --dry');
+    expect(output).not.toContain('spacemolt station info_backup');
   });
 
   test('showCommandSearch matches command category metadata', () => {
