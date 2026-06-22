@@ -936,6 +936,7 @@ describe('command metadata', () => {
 
     for (const shell of ['bash', 'zsh', 'fish']) {
       const completion = generateCompletion(shell);
+      // Zsh static grouped completions currently expose nested action names only; dynamic completion covers action args.
       const enumCases = shell === 'zsh' ? topLevelEnumCases : groupedEnumCases;
       const missing = enumCases.flatMap(({ command, arg, values }) =>
         values

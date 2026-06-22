@@ -14,6 +14,11 @@ import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './comman
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
 
+const internalCommandRegistry = { commands: COMMANDS } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+const internalParseOptions = { registry: internalCommandRegistry } satisfies NonNullable<
+  Parameters<typeof parseArgs>[1]
+>;
+
 function parseOk(
   args: string[],
   options?: Parameters<typeof parseArgs>[1],
@@ -24,12 +29,32 @@ function parseOk(
   return result;
 }
 
+function parseInternalOk(args: string[]): Extract<ReturnType<typeof parseArgs>, { ok: true }> {
+  return parseOk(args, internalParseOptions);
+}
+
+function parseInternalArgs(args: string[]): ReturnType<typeof parseArgs> {
+  return parseArgs(args, internalParseOptions);
+}
+
+function normalizeInternalPayload(command: string, payload: Record<string, unknown>): Record<string, unknown> {
+  return normalizeParsedPayload(command, payload, internalCommandRegistry);
+}
+
+function convertInternalPayloadTypes(payload: Record<string, unknown>, command: string): Record<string, unknown> {
+  return convertPayloadTypes(payload, command, internalCommandRegistry);
+}
+
+function validateInternalRequiredArgs(command: string, payload: Record<string, unknown>): string | null {
+  return validateRequiredArgs(command, payload, internalCommandRegistry);
+}
+
 describe('convertPayloadTypes', () => {
   test('converts numeric fields using the command schema', () => {
     expect(convertPayloadTypes({ quantity: '10' }, 'sell').quantity).toBe(10);
     expect(convertPayloadTypes({ page_size: '20' }, 'catalog').page_size).toBe(20);
-    expect(convertPayloadTypes({ max_price: '10000' }, 'facility_browse_for_sale').max_price).toBe(10000);
-    expect(convertPayloadTypes({ price: '500' }, 'facility_list_for_sale').price).toBe(500);
+    expect(convertInternalPayloadTypes({ max_price: '10000' }, 'facility_browse_for_sale').max_price).toBe(10000);
+    expect(convertInternalPayloadTypes({ price: '500' }, 'facility_list_for_sale').price).toBe(500);
   });
 
   test('leaves non-numeric fields as strings', () => {
@@ -59,8 +84,8 @@ describe('convertPayloadTypes', () => {
   });
 
   test('credits is numeric (trade_offer) after alias normalization', () => {
-    const normalized = normalizeParsedPayload('trade_offer', { target_id: 'abc123', credits: '500' });
-    const result = convertPayloadTypes(normalized, 'trade_offer');
+    const normalized = normalizeInternalPayload('trade_offer', { target_id: 'abc123', credits: '500' });
+    const result = convertInternalPayloadTypes(normalized, 'trade_offer');
     expect(result.target).toBe('abc123');
     expect(result.offer_credits).toBe(500);
   });
@@ -78,11 +103,11 @@ describe('convertPayloadTypes', () => {
 
   test('handles ticks and amount as numeric', () => {
     expect(convertPayloadTypes({ ticks: '100' }, 'buy_insurance').ticks).toBe(100);
-    expect(convertPayloadTypes({ quantity: '2500' }, 'faction_deposit_credits').quantity).toBe(2500);
+    expect(convertInternalPayloadTypes({ quantity: '2500' }, 'faction_deposit_credits').quantity).toBe(2500);
   });
 
   test('handles expiration_hours as numeric', () => {
-    const result = convertPayloadTypes({ expiration_hours: '24' }, 'faction_post_mission');
+    const result = convertInternalPayloadTypes({ expiration_hours: '24' }, 'faction_post_mission');
     expect(result.expiration_hours).toBe(24);
   });
 
@@ -196,7 +221,7 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty('faction_set_ally');
   });
 
-  test('flat grouped command names no longer parse through the bundled registry', () => {
+  test('flat grouped command tokens parse raw but are absent from bundled command registry', () => {
     expect(parseArgs(['faction_info'])).toEqual({ ok: true, command: 'faction_info', payload: {} });
     expect(BUNDLED_COMMAND_REGISTRY.commands.faction_info).toBeUndefined();
   });
@@ -235,13 +260,13 @@ describe('normalizeParsedPayload', () => {
       text: 'scan',
     });
     expect(normalizeParsedPayload('battle_target', { target_id: 'player_1' })).toEqual({ id: 'player_1' });
-    expect(normalizeParsedPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
+    expect(normalizeInternalPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
-    expect(normalizeParsedPayload('faction_propose_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
-    expect(normalizeParsedPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
-    expect(normalizeParsedPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
-    expect(normalizeParsedPayload('faction_accept_invite', { faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
-    expect(normalizeParsedPayload('faction_withdraw_invite', { player_id: 'PlayerName' })).toEqual({
+    expect(normalizeInternalPayload('faction_propose_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeInternalPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeInternalPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeInternalPayload('faction_accept_invite', { faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeInternalPayload('faction_withdraw_invite', { player_id: 'PlayerName' })).toEqual({
       id: 'PlayerName',
     });
     expect(normalizeParsedPayload('scrap_ship', { ship_id: 'ship_1' })).toEqual({ id: 'ship_1' });
@@ -249,16 +274,16 @@ describe('normalizeParsedPayload', () => {
   });
 
   test('citizenship command aliases normalize to API fields', () => {
-    expect(normalizeParsedPayload('citizenship_apply', { empire: 'solarian' })).toEqual({
+    expect(normalizeInternalPayload('citizenship_apply', { empire: 'solarian' })).toEqual({
       target: 'solarian',
     });
-    expect(normalizeParsedPayload('citizenship_renounce', { empire: 'voidborn' })).toEqual({
+    expect(normalizeInternalPayload('citizenship_renounce', { empire: 'voidborn' })).toEqual({
       target: 'voidborn',
     });
-    expect(normalizeParsedPayload('citizenship_withdraw', { empire: 'crimson' })).toEqual({
+    expect(normalizeInternalPayload('citizenship_withdraw', { empire: 'crimson' })).toEqual({
       target: 'crimson',
     });
-    expect(normalizeParsedPayload('citizenship_list', { empire_id: 'nebula' })).toEqual({
+    expect(normalizeInternalPayload('citizenship_list', { empire_id: 'nebula' })).toEqual({
       empire_id: 'nebula',
     });
   });
@@ -736,7 +761,7 @@ describe('parseArgs - tightened semantics', () => {
 
 describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   test('trade_offer uses credits not offer_credits', () => {
-    const { payload } = parseOk(['trade_offer', 'player123', '500']);
+    const { payload } = parseInternalOk(['trade_offer', 'player123', '500']);
     expect(payload.target_id).toBe('player123');
     expect(payload.credits).toBe('500');
     expect(payload.offer_credits).toBeUndefined();
@@ -820,8 +845,15 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('facility production commands parse natural positionals', () => {
-    const add = parseOk(['facility_job_add', 'facility-1', 'refine_steel', '12', 'reverse', 'deliver_to=faction']);
-    expect(convertPayloadTypes(add.payload, 'facility_job_add')).toEqual({
+    const add = parseInternalOk([
+      'facility_job_add',
+      'facility-1',
+      'refine_steel',
+      '12',
+      'reverse',
+      'deliver_to=faction',
+    ]);
+    expect(convertInternalPayloadTypes(add.payload, 'facility_job_add')).toEqual({
       facility_id: 'facility-1',
       recipe_id: 'refine_steel',
       quantity: 12,
@@ -829,38 +861,41 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       deliver_to: 'faction',
     });
 
-    expect(parseOk(['facility_job_list', 'facility-1']).payload).toEqual({
+    expect(parseInternalOk(['facility_job_list', 'facility-1']).payload).toEqual({
       facility_id: 'facility-1',
     });
 
-    expect(parseOk(['facility_job_cancel', 'job-1']).payload).toEqual({
+    expect(parseInternalOk(['facility_job_cancel', 'job-1']).payload).toEqual({
       job_id: 'job-1',
     });
     expect(
-      convertPayloadTypes(parseOk(['facility_job_cancel', 'job_ids=["job-1","job-2"]']).payload, 'facility_job_cancel'),
+      convertInternalPayloadTypes(
+        parseInternalOk(['facility_job_cancel', 'job_ids=["job-1","job-2"]']).payload,
+        'facility_job_cancel',
+      ),
     ).toEqual({
       job_ids: ['job-1', 'job-2'],
     });
 
-    const reorder = parseOk(['facility_job_reorder', 'job-1', '3']);
-    expect(convertPayloadTypes(reorder.payload, 'facility_job_reorder')).toEqual({
+    const reorder = parseInternalOk(['facility_job_reorder', 'job-1', '3']);
+    expect(convertInternalPayloadTypes(reorder.payload, 'facility_job_reorder')).toEqual({
       job_id: 'job-1',
       position: 3,
     });
 
-    const price = parseOk(['facility_set_output_price', 'facility-1', 'steel_plate', '25']);
-    expect(convertPayloadTypes(price.payload, 'facility_set_output_price')).toEqual({
+    const price = parseInternalOk(['facility_set_output_price', 'facility-1', 'steel_plate', '25']);
+    expect(convertInternalPayloadTypes(price.payload, 'facility_set_output_price')).toEqual({
       facility_id: 'facility-1',
       item_id: 'steel_plate',
       price: 25,
     });
 
-    expect(parseOk(['facility_set_access', 'facility-1', 'public']).payload).toEqual({
+    expect(parseInternalOk(['facility_set_access', 'facility-1', 'public']).payload).toEqual({
       facility_id: 'facility-1',
       access: 'public',
     });
 
-    expect(parseArgs(['facility_job_add', 'facility-1', 'refine_steel', '12', 'to_faction'])).toEqual({
+    expect(parseInternalArgs(['facility_job_add', 'facility-1', 'refine_steel', '12', 'to_faction'])).toEqual({
       ok: false,
       errors: [
         {
@@ -873,14 +908,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('facility and station additions from v0.410 parse natural positionals', () => {
-    const facilityName = parseOk(['facility_set_name', 'facility-1', 'Frontier Smelter']);
+    const facilityName = parseInternalOk(['facility_set_name', 'facility-1', 'Frontier Smelter']);
     expect(facilityName.payload).toEqual({
       facility_id: 'facility-1',
       custom_name: 'Frontier Smelter',
     });
 
-    const fractionalPrice = parseOk(['facility_set_output_price', 'facility-1', 'steel_plate', '0.25']);
-    expect(convertPayloadTypes(fractionalPrice.payload, 'facility_set_output_price')).toEqual({
+    const fractionalPrice = parseInternalOk(['facility_set_output_price', 'facility-1', 'steel_plate', '0.25']);
+    expect(convertInternalPayloadTypes(fractionalPrice.payload, 'facility_set_output_price')).toEqual({
       facility_id: 'facility-1',
       item_id: 'steel_plate',
       price: 0.25,
@@ -898,44 +933,55 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       empire: 'solarian',
     });
 
-    expect(parseOk(['station_info']).payload).toEqual({});
-    expect(parseOk(['station_set_name', 'Aurora Freeport']).payload).toEqual({
+    expect(parseInternalOk(['station_info']).payload).toEqual({});
+    expect(parseInternalOk(['station_set_name', 'Aurora Freeport']).payload).toEqual({
       name: 'Aurora Freeport',
     });
-    expect(parseOk(['station_set_description', 'A lawless trade hub']).payload).toEqual({
+    expect(parseInternalOk(['station_set_description', 'A lawless trade hub']).payload).toEqual({
       description: 'A lawless trade hub',
     });
-    expect(convertPayloadTypes(parseOk(['station_set_public', 'true']).payload, 'station_set_public')).toEqual({
+    expect(convertInternalPayloadTypes(parseInternalOk(['station_set_public', 'true']).payload, 'station_set_public')).toEqual({
       public: true,
     });
     expect(
-      convertPayloadTypes(parseOk(['station_set_build_policy', 'false']).payload, 'station_set_build_policy'),
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_build_policy', 'false']).payload,
+        'station_set_build_policy',
+      ),
     ).toEqual({
       allow_outsiders: false,
     });
-    expect(parseOk(['station_set_service_access', 'market', 'allies']).payload).toEqual({
+    expect(parseInternalOk(['station_set_service_access', 'market', 'allies']).payload).toEqual({
       service: 'market',
       access: 'allies',
     });
-    expect(convertPayloadTypes(parseOk(['station_set_market_fee', '7']).payload, 'station_set_market_fee')).toEqual({
+    expect(
+      convertInternalPayloadTypes(parseInternalOk(['station_set_market_fee', '7']).payload, 'station_set_market_fee'),
+    ).toEqual({
       fee_percent: 7,
     });
-    expect(convertPayloadTypes(parseOk(['station_set_refuel_price', '3']).payload, 'station_set_refuel_price')).toEqual(
-      {
-        price: 3,
-      },
-    );
-    expect(convertPayloadTypes(parseOk(['station_set_repair_price', '4']).payload, 'station_set_repair_price')).toEqual(
-      {
-        price: 4,
-      },
-    );
-    expect(parseOk(['station_allow_player', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
-    expect(parseOk(['station_remove_player', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
-    expect(parseOk(['station_ban', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
-    expect(parseOk(['station_unban', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
-    expect(parseOk(['station_allow_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
-    expect(parseOk(['station_remove_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_refuel_price', '3']).payload,
+        'station_set_refuel_price',
+      ),
+    ).toEqual({
+      price: 3,
+    });
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_repair_price', '4']).payload,
+        'station_set_repair_price',
+      ),
+    ).toEqual({
+      price: 4,
+    });
+    expect(parseInternalOk(['station_allow_player', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseInternalOk(['station_remove_player', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseInternalOk(['station_ban', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseInternalOk(['station_unban', 'pilot-1']).payload).toEqual({ player: 'pilot-1' });
+    expect(parseInternalOk(['station_allow_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
+    expect(parseInternalOk(['station_remove_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
   });
 
   test('tax and faction scan additions from v0.410 parse natural positionals', () => {
@@ -945,11 +991,13 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       quantity: 5000,
     });
 
-    expect(convertPayloadTypes(parseOk(['faction_prepay_tax', '12000']).payload, 'faction_prepay_tax')).toEqual({
+    expect(
+      convertInternalPayloadTypes(parseInternalOk(['faction_prepay_tax', '12000']).payload, 'faction_prepay_tax'),
+    ).toEqual({
       amount: 12000,
     });
-    expect(parseOk(['get_faction_tax_estimate']).payload).toEqual({});
-    expect(parseOk(['faction_scan_poi', 'poi-1']).payload).toEqual({ poi_id: 'poi-1' });
+    expect(parseInternalOk(['get_faction_tax_estimate']).payload).toEqual({});
+    expect(parseInternalOk(['faction_scan_poi', 'poi-1']).payload).toEqual({ poi_id: 'poi-1' });
   });
 
   test('distress_signal - no args', () => {
@@ -1225,20 +1273,20 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('faction_declare_war with reason', () => {
-    const { payload } = parseOk(['faction_declare_war', 'faction_xyz', 'territorial dispute']);
+    const { payload } = parseInternalOk(['faction_declare_war', 'faction_xyz', 'territorial dispute']);
     expect(payload.target_faction_id).toBe('faction_xyz');
     expect(payload.reason).toBe('territorial dispute');
   });
 
   test('faction_create_role with permissions', () => {
-    const { payload } = parseOk(['faction_create_role', 'Officer', '2', 'recruit,kick']);
+    const { payload } = parseInternalOk(['faction_create_role', 'Officer', '2', 'recruit,kick']);
     expect(payload.name).toBe('Officer');
     expect(payload.priority).toBe('2');
     expect(payload.permissions).toBe('recruit,kick');
   });
 
   test('faction_query_intel with all filters', () => {
-    const { payload } = parseOk(['faction_query_intel', 'sol', 'sys_123', 'asteroid', 'iron']);
+    const { payload } = parseInternalOk(['faction_query_intel', 'sol', 'sys_123', 'asteroid', 'iron']);
     expect(payload.system_name).toBe('sol');
     expect(payload.system_id).toBe('sys_123');
     expect(payload.poi_type).toBe('asteroid');
@@ -1251,7 +1299,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('faction_post_mission with required positional args', () => {
-    const { payload } = parseOk(['faction_post_mission', 'Defend Our Home', 'defense', 'Protect the base']);
+    const { payload } = parseInternalOk(['faction_post_mission', 'Defend Our Home', 'defense', 'Protect the base']);
     expect(payload.title).toBe('Defend Our Home');
     expect(payload.type).toBe('defense');
     expect(payload.description).toBe('Protect the base');
@@ -1286,14 +1334,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('new explicit fleet and facility commands parse positional payloads', () => {
-    expect(parseOk(['fleet_status']).payload).toEqual({});
-    expect(parseOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
-    expect(parseOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
-    expect(parseOk(['facility_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
-    expect(parseOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
-    expect(parseOk(['faction_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
-    expect(parseOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');
-    expect(parseArgs(['facility_transfer', 'facility-1', 'forward'])).toEqual({
+    expect(parseInternalOk(['fleet_status']).payload).toEqual({});
+    expect(parseInternalOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
+    expect(parseInternalOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
+    expect(parseInternalOk(['facility_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
+    expect(parseInternalOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
+    expect(parseInternalOk(['faction_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
+    expect(parseInternalOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');
+    expect(parseInternalArgs(['facility_transfer', 'facility-1', 'forward'])).toEqual({
       ok: false,
       errors: [
         {
@@ -1314,10 +1362,10 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       types: 'chat,combat',
     });
     expect(parseOk(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
-    expect(parseOk(['faction_propose_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
-    expect(parseOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
-    expect(parseOk(['faction_accept_invite', 'fac_1']).payload.faction_id).toBe('fac_1');
-    expect(parseOk(['faction_withdraw_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
+    expect(parseInternalOk(['faction_propose_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
+    expect(parseInternalOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
+    expect(parseInternalOk(['faction_accept_invite', 'fac_1']).payload.faction_id).toBe('fac_1');
+    expect(parseInternalOk(['faction_withdraw_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
   });
 
   test('passenger transport commands parse positional payloads and normalize API fields', () => {
@@ -1339,25 +1387,25 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('citizenship commands parse positional payloads', () => {
-    expect(parseOk(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
-    expect(parseOk(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
-    expect(parseOk(['citizenship_renounce', 'voidborn']).payload.empire).toBe('voidborn');
-    expect(parseOk(['citizenship_withdraw', 'crimson']).payload.empire).toBe('crimson');
+    expect(parseInternalOk(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
+    expect(parseInternalOk(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
+    expect(parseInternalOk(['citizenship_renounce', 'voidborn']).payload.empire).toBe('voidborn');
+    expect(parseInternalOk(['citizenship_withdraw', 'crimson']).payload.empire).toBe('crimson');
   });
 
   test('facility sale commands parse positional payloads', () => {
-    expect(parseOk(['facility_list_for_sale', 'facility_1', '5000']).payload).toEqual({
+    expect(parseInternalOk(['facility_list_for_sale', 'facility_1', '5000']).payload).toEqual({
       facility_id: 'facility_1',
       price: '5000',
     });
-    expect(parseOk(['facility_browse_for_sale', 'ore_refinery', '10000', '2', '25']).payload).toEqual({
+    expect(parseInternalOk(['facility_browse_for_sale', 'ore_refinery', '10000', '2', '25']).payload).toEqual({
       facility_type: 'ore_refinery',
       max_price: '10000',
       page: '2',
       per_page: '25',
     });
-    expect(parseOk(['facility_buy_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
-    expect(parseOk(['facility_cancel_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
+    expect(parseInternalOk(['facility_buy_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
+    expect(parseInternalOk(['facility_cancel_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
   });
 
   test('new note and captains log delete commands parse positional payloads', () => {
@@ -1396,8 +1444,8 @@ describe('validateRequiredArgs', () => {
   });
 
   test('trade_offer requires target_id but not credits', () => {
-    expect(validateRequiredArgs('trade_offer', {})).toBe('target_id');
-    expect(validateRequiredArgs('trade_offer', { target_id: 'abc' })).toBeNull();
+    expect(validateInternalRequiredArgs('trade_offer', {})).toBe('target_id');
+    expect(validateInternalRequiredArgs('trade_offer', { target_id: 'abc' })).toBeNull();
   });
 
   test('canonical API field satisfies friendly required arg after normalization', () => {
@@ -1423,13 +1471,13 @@ describe('validateRequiredArgs', () => {
   });
 
   test('faction_post_mission uses generated required fields', () => {
-    expect(validateRequiredArgs('faction_post_mission', {})).toBe('title');
-    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense' })).toBe('description');
-    expect(validateRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' })).toBe(
+    expect(validateInternalRequiredArgs('faction_post_mission', {})).toBe('title');
+    expect(validateInternalRequiredArgs('faction_post_mission', { title: 'T', type: 'defense' })).toBe('description');
+    expect(validateInternalRequiredArgs('faction_post_mission', { title: 'T', type: 'defense', description: 'D' })).toBe(
       'objectives',
     );
     expect(
-      validateRequiredArgs('faction_post_mission', {
+      validateInternalRequiredArgs('faction_post_mission', {
         title: 'T',
         type: 'defense',
         description: 'D',
