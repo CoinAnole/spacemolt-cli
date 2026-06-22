@@ -897,7 +897,7 @@ function showGeneratedCommandReference(
   writer?: CliWriter,
   options?: HelpOutputOptions,
 ): void {
-  const bundledCommands = BUNDLED_COMMAND_REGISTRY.allCommands;
+  const bundledCommands = commandHelpMap(BUNDLED_COMMAND_REGISTRY);
   const generatedCommands = Object.entries(commands)
     .filter(([command]) => !bundledCommands[command])
     .sort(([a], [b]) => a.localeCompare(b));

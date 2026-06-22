@@ -676,6 +676,19 @@ describe('help output branches', () => {
     expect(output).toContain('generated_only <id> - Generated command');
   });
 
+  test('Generated API Commands excludes bundled nested command actions', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY);
+
+    const output = capture.stdout.join('\n');
+    const generatedIndex = output.indexOf('Generated API Commands');
+    const generatedSection = generatedIndex === -1 ? '' : output.slice(generatedIndex);
+    expect(generatedSection).not.toContain('faction create_buy_order');
+    expect(generatedSection).not.toContain('facility upgrade');
+    expect(generatedSection).not.toContain('station info');
+  });
+
   test('showFullHelp emphasizes local help command discovery before server help', () => {
     const capture = captureWriter();
 
