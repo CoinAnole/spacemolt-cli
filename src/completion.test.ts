@@ -315,6 +315,14 @@ describe('shell completion generation', () => {
     ).toEqual([{ value: 'reverse', description: expect.any(String) }]);
   });
 
+  test('runtime completion uses nested action fields for player IDs', async () => {
+    const sessionPath = await tempSessionWithCachedIds();
+
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'fleet', 'invite', 'mar'], current: 'mar' }, { sessionPath }),
+    ).toEqual([{ value: 'player_marlow', description: 'Marlow' }]);
+  });
+
   test('runtime completion handles global options before nested grouped commands', async () => {
     const sessionPath = await tempSessionWithCachedIds();
     const expectedFactionCreateActions = [

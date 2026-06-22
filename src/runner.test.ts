@@ -332,6 +332,58 @@ describe('runInvocation option isolation', () => {
     expect(stdout.join('\n')).not.toContain('ship_claim_commission');
   });
 
+  test('nested command group invocation executes original API route', async () => {
+    const calls: Array<{ command: string; payload: Record<string, unknown>; configAction?: string }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(
+        command: string,
+        config: { route: { action: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, payload, configAction: config.route.action });
+        return { structuredContent: { ok: true } };
+      },
+    };
+    const context = fakeContext([], [], { HOME: '/tmp/spacemolt-test-home' });
+
+    const exitCode = await runInvocation(
+      ['faction', 'create_buy_order', 'ore_iron', '100', '12', '--structured'],
+      client as never,
+      context,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(calls).toEqual([
+      {
+        command: 'faction_create_buy_order',
+        payload: { item_id: 'ore_iron', quantity: 100, price_each: 12 },
+        configAction: 'create_buy_order',
+      },
+    ]);
+  });
+
+  test('flat grouped command invocation is rejected before network dispatch', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig() {
+        throw new Error('flat grouped command should not execute');
+      },
+    };
+
+    const exitCode = await runInvocation(
+      ['faction_create_buy_order', 'ore_iron', '100', '12'],
+      client as never,
+      fakeContext(stdout, stderr, { HOME: '/tmp/spacemolt-test-home' }),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Unknown command "faction_create_buy_order"');
+    expect(stdout).toEqual([]);
+  });
+
   test('facility_upgrade flag syntax prints structured API errors', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
