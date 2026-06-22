@@ -311,14 +311,30 @@ describe('help output branches', () => {
     expect(nestedIndex).toBeLessThan(createFactionIndex);
   });
 
-  test('full help facility section does not describe facility_build as player-only', () => {
+  test('full help facility section does not describe facility build as player-only', () => {
     const capture = captureWriter();
 
     showFullHelp(capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('facility_build <type>     Build a facility');
-    expect(output).not.toContain('facility_build <type>     Build a player facility');
+    expect(output).toContain('facility build <type>     Build a facility');
+    expect(output).not.toContain('facility build <type>     Build a player facility');
+  });
+
+  test('full help advertises nested command forms for grouped commands', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('fleet invite <player>');
+    expect(output).toContain('facility job_add <facility> <recipe> <qty>');
+    expect(output).toContain('citizenship apply <empire>');
+    expect(output).toContain('faction create_buy_order <item> <qty> <price>');
+    expect(output).not.toContain('fleet_invite <player>');
+    expect(output).not.toContain('facility_job_add <facility>');
+    expect(output).not.toContain('citizenship_apply <empire>');
+    expect(output).not.toContain('faction_create_buy_order <item>');
   });
 
   test('storage group includes unified and standalone storage workflows', () => {

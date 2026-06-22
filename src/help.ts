@@ -715,7 +715,7 @@ function printStateSection(state: PlayerState, writer?: CliWriter, options?: Hel
     write(`    spacemolt repair              # Repair hull damage`);
     write(`    spacemolt storage view        # Access station storage`);
     write(`    spacemolt sale_ship           # Buy ships`);
-    write(`    spacemolt facility_list       # Check base facilities`);
+    write(`    spacemolt facility list       # Check base facilities`);
     write(`    spacemolt undock              # Leave station when ready`);
     return;
   }
@@ -760,7 +760,7 @@ ${c.bright}Once logged in, try:${c.reset}`);
   write(`  get_system       POIs and connected systems`);
   write(`  get_cargo        Cargo contents`);
   write(`  view_market      Market/order book`);
-  write(`  facility_list    Facilities at current base`);
+  write(`  facility list    Facilities at current base`);
   write(`  catalog <type>   Browse ships/items/skills/recipes`);
 
   write(`
@@ -854,7 +854,7 @@ ${c.bright}Useful Commands:${c.reset}
   get_system       POIs and connected systems
   get_cargo        Cargo contents
   view_market      Market/order book
-  facility_list    Facilities at current base
+  facility list    Facilities at current base
   catalog <type>   Browse ships/items/skills/recipes
 
 ${c.bright}Command Discovery:${c.reset}
@@ -1012,8 +1012,8 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_notifications   Poll queued game events
   get_battle_status   Current battle state
   list_drones         Drones in your ship bay and deployed nearby
-  fleet_status        Current fleet membership and members
-  facility_list       Facilities at your current base
+  fleet status        Current fleet membership and members
+  facility list       Facilities at your current base
   catalog <type>      Browse ships/items/skills/recipes
   get_guide [guide]   Game guide and onboarding info
   help                Local command help and discovery
@@ -1082,36 +1082,36 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Fleet & Facilities:${c.reset}
     create_fleet              Create a fleet
-    fleet_invite <player>     Invite a player
-    fleet_accept              Accept a fleet invite
-    fleet_leave               Leave your fleet
-    fleet_disband             Disband your fleet
-    facility_list             List all facilities at current base
-    facility_owned            List your facilities across all stations
-    facility_types [category]  Browse facility types (use category=faction, infrastructure, etc.)
-    facility_build <type>     Build a facility
-    facility_upgrade <type>   Upgrade a player facility
-    facility_job_add <facility> <recipe> <qty>  Queue production work
-    facility_job_list <facility>               List facility production jobs
-    facility_job_cancel <job|job_ids=JSON>     Cancel queued production
-    facility_job_reorder <job> <pos>           Reorder queued production
-    facility_set_access <facility> <public|private>  Open or close rental access
-    facility_set_output_price <facility> <item> <price>  Set renter output pricing
-    facility_list_for_sale <id> <price>  List a facility for sale
-    facility_browse_for_sale             Browse facility listings
-    facility_buy_listing <id>            Buy a listed facility
-    facility_cancel_listing <id>         Cancel a facility listing
-    faction_facility_list     List faction facilities at current base
-    faction_facility_owned    List faction facilities across all stations
-    faction_build <type>      Build a faction facility
-    faction_facility_build <type>  Build a faction facility
-    faction_facility_upgrade <type>  Upgrade a faction facility
+    fleet invite <player>     Invite a player
+    fleet accept              Accept a fleet invite
+    fleet leave               Leave your fleet
+    fleet disband             Disband your fleet
+    facility list             List all facilities at current base
+    facility owned            List your facilities across all stations
+    facility types [category]  Browse facility types (use category=faction, infrastructure, etc.)
+    facility build <type>     Build a facility
+    facility upgrade <type>   Upgrade a player facility
+    facility job_add <facility> <recipe> <qty>  Queue production work
+    facility job_list <facility>               List facility production jobs
+    facility job_cancel <job|job_ids=JSON>     Cancel queued production
+    facility job_reorder <job> <pos>           Reorder queued production
+    facility set_access <facility> <public|private>  Open or close rental access
+    facility set_output_price <facility> <item> <price>  Set renter output pricing
+    facility list_for_sale <id> <price>  List a facility for sale
+    facility browse_for_sale             Browse facility listings
+    facility buy_listing <id>            Buy a listed facility
+    facility cancel_listing <id>         Cancel a facility listing
+    faction facility_list     List faction facilities at current base
+    faction facility_owned    List faction facilities across all stations
+    faction build <type>      Build a faction facility
+    faction facility_build <type>  Build a faction facility
+    faction facility_upgrade <type>  Upgrade a faction facility
 
   ${c.cyan}Citizenship:${c.reset}
-    citizenship_list [empire]       View citizenship applications
-    citizenship_apply <empire>      Apply for citizenship
-    citizenship_renounce <empire>   Renounce citizenship
-    citizenship_withdraw <empire>   Withdraw application
+    citizenship list [empire]       View citizenship applications
+    citizenship apply <empire>      Apply for citizenship
+    citizenship renounce <empire>   Renounce citizenship
+    citizenship withdraw <empire>   Withdraw application
 
   ${c.cyan}Storage:${c.reset}
     storage view [station_id] [target=self|faction] [--items item_id,item_id] [--search text]
@@ -1122,8 +1122,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     jettison <item_id> <qty>     Standalone cargo jettison
     loot_wreck <wreck_id> <item_id> [quantity]  Standalone wreck loot
     salvage_wreck <wreck_id>     Standalone wreck salvage
-    faction_deposit_credits <amount>  Wallet -> faction treasury
-    faction_withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
+    faction deposit_credits <amount>  Wallet -> faction treasury
+    faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
 
   ${c.cyan}Market / Exchange:${c.reset}
     view_market [item_id] [category]  Order book (use item_id for depth, category for filter)
@@ -1136,47 +1136,47 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     modify_order <order_id> <price>   Update order price
     estimate_purchase <item> <qty>     Preview buy cost without executing
     analyze_market                     Trading insights at current station
-    faction_create_sell_order <item> <qty> <price>  Faction sell (from faction storage)
-    faction_create_buy_order <item> <qty> <price>   Faction buy (to faction storage)
+    faction create_sell_order <item> <qty> <price>  Faction sell (from faction storage)
+    faction create_buy_order <item> <qty> <price>   Faction buy (to faction storage)
 
   ${c.cyan}Faction:${c.reset}
-    faction_info [faction_id]         Your faction (or specific faction)
-    faction_list                      All factions
+    faction info [faction_id]         Your faction (or specific faction)
+    faction list                      All factions
     create_faction <name> <tag>       Start a faction
     join_faction <faction_id>         Join via invite
     leave_faction                     Leave your faction
-    faction_edit [description=.. charter=.. primary_color=.. secondary_color=..]
-    faction_invite <player>           Invite player (requires invite permission)
-    faction_kick <player>             Kick member (requires kick permission)
-    faction_promote <player> <role>   Promote/demote (recruit/member/officer/leader)
-    faction_propose_ally <faction_id>  Propose alliance
-    faction_accept_ally <faction_id>  Accept alliance proposal
-    faction_set_enemy <faction_id>     Mark as enemy
-    faction_remove_ally <faction_id>  Remove ally
-    faction_remove_enemy <faction_id>  Remove enemy
-    faction_declare_war <faction_id> [reason=..]  Declare war
-    faction_propose_peace <faction_id> [terms=..]  Offer peace
-    faction_accept_peace <faction_id>  Accept peace
-    faction_create_role <name> <priority> [permissions=..]  Custom role
-    faction_edit_role <role_id> [name=.. permissions=..]  Edit role
-    faction_delete_role <role_id>      Delete custom role
-    faction_rooms                      List common space rooms
-    faction_visit_room <room_id>      Visit a room
-    faction_write_room <room_id>       Create/edit room
-    faction_delete_room <room_id>      Delete room
-    faction_get_invites                Pending invites
-    faction_decline_invite <faction_id>  Decline invite
-    faction_post_mission <title> <description> <type> <objectives> <rewards>
-    faction_cancel_mission <template_id>  Cancel faction mission
-    faction_list_missions              Faction missions at current station
+    faction edit [description=.. charter=.. primary_color=.. secondary_color=..]
+    faction invite <player>           Invite player (requires invite permission)
+    faction kick <player>             Kick member (requires kick permission)
+    faction promote <player> <role>   Promote/demote (recruit/member/officer/leader)
+    faction propose_ally <faction_id>  Propose alliance
+    faction accept_ally <faction_id>  Accept alliance proposal
+    faction set_enemy <faction_id>     Mark as enemy
+    faction remove_ally <faction_id>  Remove ally
+    faction remove_enemy <faction_id>  Remove enemy
+    faction declare_war <faction_id> [reason=..]  Declare war
+    faction propose_peace <faction_id> [terms=..]  Offer peace
+    faction accept_peace <faction_id>  Accept peace
+    faction create_role <name> <priority> [permissions=..]  Custom role
+    faction edit_role <role_id> [name=.. permissions=..]  Edit role
+    faction delete_role <role_id>      Delete custom role
+    faction rooms                      List common space rooms
+    faction visit_room <room_id>      Visit a room
+    faction write_room <room_id>       Create/edit room
+    faction delete_room <room_id>      Delete room
+    faction get_invites                Pending invites
+    faction decline_invite <faction_id>  Decline invite
+    faction post_mission <title> <description> <type> <objectives> <rewards>
+    faction cancel_mission <template_id>  Cancel faction mission
+    faction list_missions              Faction missions at current station
 
   ${c.cyan}Faction Intel & Trade:${c.reset}
-    faction_submit_intel <systems>     Submit system data (JSON array)
-    faction_query_intel [system_name=.. system_id=.. poi_type=.. resource_type=..]
-    faction_intel_status               Intel coverage stats
-    faction_submit_trade_intel <stations>  Report market prices
-    faction_query_trade_intel [base_id=.. item_id=.. station_name=..]
-    faction_trade_intel_status         Trade intel coverage stats
+    faction submit_intel <systems>     Submit system data (JSON array)
+    faction query_intel [system_name=.. system_id=.. poi_type=.. resource_type=..]
+    faction intel_status               Intel coverage stats
+    faction submit_trade_intel <stations>  Report market prices
+    faction query_trade_intel [base_id=.. item_id=.. station_name=..]
+    faction trade_intel_status         Trade intel coverage stats
 
   ${c.cyan}Social:${c.reset}
     chat <channel> <message>  Send chat (local/system/faction)
