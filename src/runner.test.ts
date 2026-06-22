@@ -351,15 +351,18 @@ describe('runInvocation option isolation', () => {
         return { structuredContent: { ok: true } };
       },
     };
+    const stdout: string[] = [];
+    const stderr: string[] = [];
 
     try {
       const exitCode = await runInvocation(
         ['faction', 'create_buy_order', 'ore_iron', '100', '12', '--structured'],
         client as never,
-        fakeContext([], [], { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
       );
 
       expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
       expect(calls).toEqual([
         {
           command: 'faction_create_buy_order',
@@ -417,7 +420,7 @@ describe('runInvocation option isolation', () => {
     } as unknown as SpaceMoltClient;
 
     const exitCode = await runInvocation(
-      ['facility_upgrade', '--facility-id', '3f67', '--facility-type', 'intel_center', '--structured'],
+      ['facility', 'upgrade', '--facility-id', '3f67', '--facility-type', 'intel_center', '--structured'],
       client,
       fakeContext(stdout, stderr, { SPACEMOLT_PROFILE: 'pilot' }),
     );
