@@ -9,6 +9,7 @@ import { displayNotifications } from './notifications.ts';
 import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
+import { enrichStorageViewStructuredContent } from './storage-view-display.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { tryGetSessionPath } from './session.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
@@ -211,7 +212,7 @@ function prepareHumanDisplay(
     return { command: 'get_status_summary', response, noTimestamp: true };
   }
 
-  const displayResponse = enrichStorageViewDisplayResponse(commandRun, response);
+  const displayResponse = enrichStorageViewDisplayResponse(commandRun, response, commandRun.response);
 
   if (!isDepositItemsCarrierLoad(commandRun, displayResponse)) {
     return { command: commandRun.displayCommand, response: displayResponse };
@@ -253,14 +254,31 @@ function isDepositItemsCarrierLoad(commandRun: CommandRunResult, response: APIRe
   return true;
 }
 
-function enrichStorageViewDisplayResponse(commandRun: CommandRunResult, response: APIResponse): APIResponse {
-  if (commandRun.command !== 'storage') return response;
-  if (commandRun.payload?.action !== 'view') return response;
-  const target = commandRun.payload.target;
-  if (target === undefined) return response;
+function enrichStorageViewDisplayResponse(
+  commandRun: CommandRunResult,
+  response: APIResponse,
+  sourceResponse: APIResponse = response,
+): APIResponse {
+  if (commandRun.command !== 'storage' || commandRun.payload?.action !== 'view') return response;
+
   const result = getStructuredResult(response);
-  if (!result || result.target !== undefined) return response;
-  return { ...response, structuredContent: { ...result, target } };
+  if (!result) return response;
+
+  const sourceResult = getStructuredResult(sourceResponse);
+  const inventoryItems = Array.isArray(sourceResult?.items)
+    ? (sourceResult.items as Array<Record<string, unknown>>)
+    : Array.isArray(result.items)
+      ? (result.items as Array<Record<string, unknown>>)
+      : undefined;
+
+  const enriched = enrichStorageViewStructuredContent(result, {
+    payloadTarget: commandRun.payload?.target ?? 'self',
+    requestedStationId:
+      typeof commandRun.payload?.station_id === 'string' ? commandRun.payload.station_id : undefined,
+    inventoryItems,
+  });
+
+  return { ...response, structuredContent: enriched };
 }
 
 function isUuidLike(value: string): boolean {

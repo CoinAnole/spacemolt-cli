@@ -998,11 +998,12 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Copper Ore');
   });
 
-  test('storage view faction prints bunker fuel and storage hint', async () => {
+  test('storage view faction prints bunker fuel and station-local storage hint', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
           base_id: 'earth_station',
+          target: 'faction',
           hint: "2,162,917 items in faction storage at crimson_war_citadel, nova_terra_central Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
           faction_fuel_reserve: 320,
           faction_fuel_capacity: 500,
@@ -1011,7 +1012,11 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'storage', displayCommand: 'storage', payload: { action: 'view', target: 'faction' } },
+      {
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', target: 'faction', station_id: 'earth_station' },
+      },
     );
 
     expect(exitCode).toBe(0);
@@ -1019,7 +1024,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('=== Faction Storage at earth_station ===');
     expect(stdout).toContain('Fuel bunker: 320 / 500 units');
     expect(stdout).toContain(
-      "2,162,917 items in faction storage at crimson_war_citadel, nova_terra_central\nFuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
+      "12 items in faction storage at earth_station (2,162,917 total across 2 stations)\nFuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
     );
   });
 

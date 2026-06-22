@@ -1359,6 +1359,41 @@ describe('response renderer', () => {
     expect(output).not.toContain('Iron Ore');
   });
 
+  test('renderResponse rewrites multi-station storage hints to station-local totals', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'storage',
+        displayCommand: 'storage',
+        payload: { action: 'view', station_id: 'crimson_war_citadel' },
+        response: {
+          structuredContent: {
+            base_id: 'crimson_war_citadel',
+            hint: '181,708 items in storage at confederacy_central_command, crimson_war_citadel, nova_terra_central',
+            items: [
+              { item_id: 'deuterium_ice', item_name: 'Deuterium Ice', quantity: 3 },
+              { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 6324 },
+            ],
+            ships: [],
+          },
+        },
+      },
+      { ...baseOptions, dryRun: true, noTimestamp: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('=== Storage at crimson_war_citadel ===');
+    expect(output).toContain(
+      '6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)',
+    );
+    expect(output).not.toContain(
+      '181,708 items in storage at confederacy_central_command, crimson_war_citadel, nova_terra_central',
+    );
+  });
+
   test('renderResponse treats comma-separated storage search terms as alternatives in table output', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
