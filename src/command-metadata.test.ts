@@ -37,6 +37,7 @@ const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
 ]);
 
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
+const internalCommandRegistry = { commands: COMMANDS };
 
 function captureHelp(command: string, registry: Parameters<typeof showCommandHelp>[2] = BUNDLED_COMMAND_REGISTRY): string {
   const stdout: string[] = [];
@@ -805,14 +806,14 @@ describe('command metadata', () => {
         }
       }
 
-      const parsed = parseArgs(args);
+      const parsed = parseArgs(args, { registry: internalCommandRegistry });
       if (!parsed.ok) {
         failures.push(`${command}: parse failed: ${parsed.errors.map((error) => error.message).join('; ')}`);
         continue;
       }
 
-      const normalized = normalizeParsedPayload(command, parsed.payload);
-      const converted = convertPayloadTypes(normalized, command);
+      const normalized = normalizeParsedPayload(command, parsed.payload, internalCommandRegistry);
+      const converted = convertPayloadTypes(normalized, command, internalCommandRegistry);
       const dryRun = createCommandConfigDryRunResponse(command, config, converted);
 
       if (!dryRun.structuredContent) failures.push(`${command}: dry run missing structuredContent`);
