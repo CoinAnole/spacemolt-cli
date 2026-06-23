@@ -421,14 +421,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_type', 'facility_id'],
   },
   facility_job_add: {
-    usage: '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction]',
+    usage:
+      '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction] [source=storage|faction]',
     description: 'Queue production work on a facility you own.',
     example: 'spacemolt facility_job_add facility-1 refine_steel 10 direction=forward',
     discoverWith: ['facility_list', 'facility_owned', 'catalog'],
     seeAlso: ['facility_job_list', 'facility_job_cancel', 'facility_job_reorder', 'facility_set_access'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/job_add',
-    positionals: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to'],
+    positionals: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to', 'source'],
     schemaExtensions: {
       direction: {
         type: 'string',
@@ -555,20 +556,20 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: [],
   },
   faction_build: {
-    usage: '<facility_type>',
+    usage: '<facility_type> [bucket=...]',
     description: 'Build a faction facility at the current base.',
     example: 'spacemolt faction_build ore_refinery',
     discoverWith: ['facility_types', 'faction_facility_list'],
     seeAlso: ['facility_types', 'faction_facility_list', 'faction_facility_build'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
-    positionals: ['facility_type'],
+    positionals: ['facility_type', 'bucket'],
   },
   faction_facility_build: {
-    usage: '<facility_type>',
+    usage: '<facility_type> [bucket=...]',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
-    positionals: ['facility_type'],
+    positionals: ['facility_type', 'bucket'],
   },
   faction_dismantle: {
     usage: '<facility_id>',
@@ -581,9 +582,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_id'],
   },
   faction_facility_upgrade: {
+    usage: '<facility_type> <facility_id> [bucket=...]',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_upgrade',
-    positionals: ['facility_type', 'facility_id'],
+    positionals: ['facility_type', 'facility_id', 'bucket'],
   },
   facility_list_for_sale: {
     usage: '<facility_id> <price>  (list a facility for sale)',

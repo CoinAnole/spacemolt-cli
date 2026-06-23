@@ -402,6 +402,75 @@ describe('runInvocation option isolation', () => {
     }
   });
 
+  test('grouped faction create_sell_order with bucket param parses to payload on real runInvocation path', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-faction-bucket-'));
+    const configHome = path.join(tempDir, 'config');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const captured: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string, _config: unknown, payload: Record<string, unknown>) {
+        captured.push({ command, payload });
+        return { result: 'ok' };
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      const exitCode = await runInvocation(
+        ['faction', 'create_sell_order', 'iron_ore', '50', '6', 'bucket=Export'],
+        client,
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr.join('')).not.toContain('Unknown command');
+      expect(captured.length).toBeGreaterThan(0);
+      expect(captured[0]!.payload).toMatchObject({
+        item_id: 'iron_ore',
+        quantity: 50,
+        price_each: 6,
+        bucket: 'Export',
+      });
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('grouped faction build and facility job_add accept bucket/source on real path', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-faction-source-'));
+    const configHome = path.join(tempDir, 'config');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const captured: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(_c: string, _cfg: unknown, p: Record<string, unknown>) {
+        captured.push({ command: _c, payload: p });
+        return { result: 'ok' };
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      await runInvocation(
+        ['faction', 'build', 'ore_refinery', 'bucket=Builds'],
+        client,
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+      );
+      await runInvocation(
+        ['facility', 'job_add', 'fac-1', 'refine', '3', 'forward', 'deliver_to=faction', 'source=storage'],
+        client,
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+      );
+
+      expect(captured.some((c) => c.payload.bucket === 'Builds')).toBe(true);
+      const job = captured.find((c) => c.payload.facility_id);
+      expect(job?.payload).toMatchObject({ source: 'storage', deliver_to: 'faction' });
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('facility_upgrade flag syntax prints structured API errors', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

@@ -536,7 +536,7 @@ describe('command metadata', () => {
         group: 'facility',
         actionName: 'job_add',
         action: 'job_add',
-        args: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to'],
+        args: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to', 'source'],
         help: 'Queue production work',
       },
       job_list: {
