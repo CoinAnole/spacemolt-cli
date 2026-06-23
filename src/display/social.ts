@@ -608,6 +608,40 @@ export const socialFormatters = [
     { commands: ['facility_list'], shapeFallback: true },
   ),
 
+  // Facility Upgrades (for facility_upgrades and faction variants)
+  namedFormatter(
+    'facility_upgrades',
+    ['upgrades'],
+    (r) => {
+      const ups = firstArray(r, ['upgrades', 'faction_upgrades', 'locked_upgrades']);
+      if (!ups || !Array.isArray(ups) || !ups.length) return false;
+      const rows = ups.map((u: Record<string, unknown>) => {
+        const to = isRecord(u.upgrade_to) ? u.upgrade_to : {};
+        return {
+          ...u,
+          current: u.current_level,
+          target_name: to.name ?? to.type_id ?? to.level,
+          target_level: to.level,
+          cost: to.build_cost,
+          time: to.build_time,
+          labor: to.labor_cost,
+        };
+      });
+      printCompactTable('Available Upgrades', rows, [
+        ['Current', ['current_level', 'current']],
+        ['To', ['target_name', 'upgrade_to.name', 'name']],
+        ['Cost', ['cost', 'build_cost']],
+        ['Ticks', ['time', 'build_time']],
+        ['Labor', ['labor', 'labor_cost']],
+        ['Requires', ['requires']],
+      ]);
+      const hint = r.hint ?? r.faction_upgrade_hint;
+      if (hint) emitLine(`\n${hint}`);
+      return true;
+    },
+    { commands: ['facility_upgrades'], shapeFallback: true },
+  ),
+
   // Facility Types
   namedFormatter(
     'facility_types',
