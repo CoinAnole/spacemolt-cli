@@ -771,6 +771,73 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
+  test('--jq length returns array element count via pipe', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_status',
+      { items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] },
+      {
+        jq: '.items | length',
+      },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('3');
+  });
+
+  test('--jq length on empty array returns 0', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_status',
+      { items: [] },
+      {
+        jq: '.items | length',
+      },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('0');
+  });
+
+  test('--jq length works on objects and strings', () => {
+    const obj = captureStructuredOutput(
+      'get_status',
+      { meta: { a: 1, b: 2 } },
+      { compact: true, jq: '.meta | length' },
+    );
+    const str = captureStructuredOutput('get_status', { name: 'hello' }, { jq: '.name | length' });
+
+    expect(obj.stderr).toBe('');
+    expect(obj.stdout).toBe('2');
+    expect(str.stderr).toBe('');
+    expect(str.stdout).toBe('5');
+  });
+
+  test('--jq length produces bare number under json output', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'view_market',
+      { items: [1, 2] },
+      {
+        format: 'json',
+        compact: true,
+        jq: '.items | length',
+      },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('2');
+  });
+
+  test('--jq length errors on non-container scalars', () => {
+    const rendered = renderStructuredResult(
+      'get_status',
+      outputModeFixture,
+      globalOptions({ jq: '.ship.fuel | length' }),
+    );
+
+    expect(rendered.success).toBe(false);
+    expect(rendered.stdout).toEqual([]);
+    expect(rendered.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('length is not defined for: number');
+  });
+
   test('--compact compacts projected JSON', () => {
     const { stdout, stderr } = captureStructuredOutput('get_status', outputModeFixture, {
       json: true,

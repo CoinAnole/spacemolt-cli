@@ -57,10 +57,12 @@ export function evaluateJq(data: unknown, expr: string, options: JqOptions = {})
   const selectInner = parseSelectCall(trimmed);
   if (selectInner !== undefined) return evalSelect(data, selectInner);
 
+  if (parseLength(trimmed)) return evalLength(data);
+
   if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed, options);
 
   throw new Error(
-    `Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field, select(...), {key: value}, [expr | ...]`,
+    `Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field, select(...), length, {key: value}, [expr | ...]`,
   );
 }
 
@@ -83,6 +85,11 @@ function evalPipe(data: unknown, parts: string[]): unknown {
 
     if (isArrayConstruction(part)) {
       current = evalArrayConstruction(current, part);
+      continue;
+    }
+
+    if (parseLength(part)) {
+      current = evalLength(current);
       continue;
     }
 
@@ -266,6 +273,11 @@ function parseSelectCall(expr: string): string | undefined {
   return inner || undefined;
 }
 
+function parseLength(expr: string): boolean {
+  const trimmed = expr.trim();
+  return trimmed === 'length' || trimmed === 'length()';
+}
+
 function evalSelect(data: unknown, innerExpr: string): unknown {
   if (Array.isArray(data)) {
     return data.filter((item) => isSelectMatch(item, innerExpr));
@@ -368,6 +380,16 @@ function isTruthyJqValue(value: unknown): boolean {
   if (value === false) return false;
   if (Array.isArray(value) && value.length === 0) return false;
   return true;
+}
+
+function evalLength(value: unknown): number {
+  if (Array.isArray(value)) return value.length;
+  if (typeof value === 'string') return value.length;
+  if (value !== null && typeof value === 'object') {
+    return Object.keys(value as Record<string, unknown>).length;
+  }
+  const t = value === null ? 'null' : typeof value;
+  throw new Error(`length is not defined for: ${t}`);
 }
 
 function evalArrayConstruction(data: unknown, expr: string): unknown[] {

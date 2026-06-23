@@ -256,6 +256,13 @@ const rendererProjectionCases: RendererGoldenCase[] = [
     options: { jq: '.items[0].item_id' },
     stdoutFormat: 'text',
   },
+  {
+    name: 'view_market.jq-items-length',
+    command: 'view_market',
+    fixture: viewMarketFixture,
+    options: { jq: '.items | length' },
+    stdoutFormat: 'text',
+  },
 ];
 
 const getStatusSummaryFixture = {

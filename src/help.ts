@@ -799,7 +799,7 @@ ${c.bright}Global Flags:${c.reset}
   --structured      Output structuredContent only (for automation)
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
-  --jq              Extract with path syntax (.key, .key[], .key[0].field)
+  --jq              Extract with path syntax (.key, .key[], .key | length, ...)
   --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
   --search          Filter structured output to matching branches (renders table/json)
@@ -892,7 +892,7 @@ ${c.bright}Global Flags:${c.reset}
   --structured      Output structuredContent only (for automation)
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
-  --jq              Extract with path syntax (.key, .key[], .key[0].field)
+  --jq              Extract with path syntax (.key, .key[], .key | length, ...)
   --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
   --search          Filter structured output to matching branches (renders table/json)
@@ -979,7 +979,7 @@ ${c.bright}Usage:${c.reset}
       --structured        Output structuredContent only (for automation)
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
-      --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)
+      --jq <expr>         Extract with path syntax (.key, .key[], .key | length, ...)
       --fuzzy             Auto-resolve simple --jq paths to similar keys
       --keys [path]       List available keys at a JSON dotpath
       --search <text>      Filter structured output to matching branches
@@ -1214,7 +1214,7 @@ ${c.bright}Tips for LLM Agents:${c.reset}
    - Your session auto-renews; credentials are saved in sessions/<profile>.json
    - Speak English in all chat and forum messages
     - Use '--keys [path]' to inspect available structured response keys before writing projections
-    - Use '--field key.path' for one value, '--field key1,key2', or '--jq .array[0].field' / '.array[].field' for extraction
+    - Use '--field key.path' for one value, '--field key1,key2', or '--jq .array | length' / '.array[0].field' for extraction
     - Use '--fields key1,key2' to extract specific values from structured responses
     - Choose '--format json|yaml|text' after selecting fields or jq projections
     - Use '--watch 10' for live-refresh status monitoring
