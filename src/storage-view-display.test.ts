@@ -29,8 +29,7 @@ describe('parseStorageInventoryHint', () => {
       totalQuantity: 3076406,
       faction: true,
       stations: ['crimson_war_citadel', 'nova_terra_central'],
-      suffix:
-        " Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
+      suffix: " Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
     });
   });
 });
@@ -49,9 +48,7 @@ describe('rewriteStorageViewHint', () => {
       { requestedStationId: 'crimson_war_citadel' },
     );
 
-    expect(rewritten.hint).toBe(
-      '6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)',
-    );
+    expect(rewritten.hint).toBe('6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)');
     expect(rewritten.storage_title).toBeUndefined();
   });
 

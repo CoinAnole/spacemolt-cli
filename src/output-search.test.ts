@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  filterStructuredOutputBySearch,
-  findOutputSearchMatches,
-  formatOutputSearchLine,
-} from './output-search.ts';
+import { filterStructuredOutputBySearch, findOutputSearchMatches, formatOutputSearchLine } from './output-search.ts';
 
 const fixture = {
   ship: {
@@ -162,7 +158,12 @@ describe('output search', () => {
 
   test('filter matches normalized tokens across underscores and hyphens', () => {
     const result = filterStructuredOutputBySearch(
-      { items: [{ item_id: 'fuel_cell', quantity: 3 }, { item_id: 'ore_iron', quantity: 1 }] },
+      {
+        items: [
+          { item_id: 'fuel_cell', quantity: 3 },
+          { item_id: 'ore_iron', quantity: 1 },
+        ],
+      },
       { outputSearch: 'fuel cell' },
     );
     if (!result.ok) throw new Error(result.message);

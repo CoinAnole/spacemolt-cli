@@ -1386,9 +1386,7 @@ describe('response renderer', () => {
     const output = capture.text();
     expect(exitCode).toBe(0);
     expect(output).toContain('=== Storage at crimson_war_citadel ===');
-    expect(output).toContain(
-      '6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)',
-    );
+    expect(output).toContain('6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)');
     expect(output).not.toContain(
       '181,708 items in storage at confederacy_central_command, crimson_war_citadel, nova_terra_central',
     );

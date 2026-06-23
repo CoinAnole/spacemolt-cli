@@ -196,9 +196,7 @@ function filterOutputValue(
   }
 
   if (Array.isArray(value)) {
-    const filtered = value
-      .map((item) => filterOutputValue(item, matcher, false))
-      .filter((item) => item !== undefined);
+    const filtered = value.map((item) => filterOutputValue(item, matcher, false)).filter((item) => item !== undefined);
     return filtered.length > 0 ? filtered : undefined;
   }
 
@@ -234,7 +232,10 @@ function filterOutputValue(
   return preserveMetadata && originalRoot ? preserveFilterMetadata(filtered, originalRoot) : filtered;
 }
 
-function preserveFilterMetadata(filtered: Record<string, unknown>, original: Record<string, unknown>): Record<string, unknown> {
+function preserveFilterMetadata(
+  filtered: Record<string, unknown>,
+  original: Record<string, unknown>,
+): Record<string, unknown> {
   const next = { ...filtered };
   for (const key of FILTER_METADATA_KEYS) {
     if (Object.hasOwn(original, key) && !Object.hasOwn(next, key)) {

@@ -623,11 +623,9 @@ describe('structuredContent output mode precedence', () => {
   });
 
   test('--search filters faction intel to matching resources and renders table output', () => {
-    const { stdout, stderr } = captureStructuredOutput(
-      'faction_query_intel',
-      factionQueryIntelFixture,
-      { outputSearch: 'hydrogen' },
-    );
+    const { stdout, stderr } = captureStructuredOutput('faction_query_intel', factionQueryIntelFixture, {
+      outputSearch: 'hydrogen',
+    });
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Faction Intel ===');

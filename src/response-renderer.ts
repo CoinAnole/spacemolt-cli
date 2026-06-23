@@ -9,9 +9,9 @@ import { displayNotifications } from './notifications.ts';
 import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
-import { enrichStorageViewStructuredContent } from './storage-view-display.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { tryGetSessionPath } from './session.ts';
+import { enrichStorageViewStructuredContent } from './storage-view-display.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
 
 export interface CommandRunResult {
@@ -273,8 +273,7 @@ function enrichStorageViewDisplayResponse(
 
   const enriched = enrichStorageViewStructuredContent(result, {
     payloadTarget: commandRun.payload?.target ?? 'self',
-    requestedStationId:
-      typeof commandRun.payload?.station_id === 'string' ? commandRun.payload.station_id : undefined,
+    requestedStationId: typeof commandRun.payload?.station_id === 'string' ? commandRun.payload.station_id : undefined,
     inventoryItems,
   });
 

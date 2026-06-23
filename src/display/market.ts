@@ -339,12 +339,7 @@ export const marketFormatters = [
       const ships = (r.ships as Array<Record<string, unknown>>) || [];
       const isFactionStorage = r.target === 'faction';
       const title = isFactionStorage ? 'Faction Storage' : 'Storage';
-      const location =
-        typeof r.storage_title === 'string'
-          ? r.storage_title
-          : r.base_id
-            ? `at ${r.base_id}`
-            : '';
+      const location = typeof r.storage_title === 'string' ? r.storage_title : r.base_id ? `at ${r.base_id}` : '';
       emitLine(`\n${c.bright}=== ${title}${location ? ` ${location}` : ''} ===${c.reset}\n`);
       const factionFuelReserve = r.faction_fuel_reserve;
       const factionFuelCapacity = r.faction_fuel_capacity;
@@ -508,7 +503,9 @@ export const marketFormatters = [
     (r) => {
       const entries = firstArray(r, ['entries']);
       if (!entries) return false;
-      if (!entries.every((entry) => isRecord(entry) && typeof entry.system_id === 'string' && Array.isArray(entry.pois))) {
+      if (
+        !entries.every((entry) => isRecord(entry) && typeof entry.system_id === 'string' && Array.isArray(entry.pois))
+      ) {
         return false;
       }
 
@@ -525,7 +522,9 @@ export const marketFormatters = [
         if (entry.submitted_at_tick !== undefined) {
           const submitter = entry.submitter_name ?? entry.submitted_by;
           const age =
-            r.current_tick !== undefined ? `, age ${Number(r.current_tick) - Number(entry.submitted_at_tick)} ticks` : '';
+            r.current_tick !== undefined
+              ? `, age ${Number(r.current_tick) - Number(entry.submitted_at_tick)} ticks`
+              : '';
           emitLine(`Intel tick: ${entry.submitted_at_tick}${submitter ? ` by ${submitter}` : ''}${age}`);
         }
 
