@@ -337,10 +337,10 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|workshop] [jobs=JSON]  (queues or cancels production from station storage)',
+      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|workshop] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; split source/deliver_to to route inputs and outputs separately)',
     description:
-      'Queue crafting work or cancel queued jobs; inputs are escrowed from station storage and output returns to station storage.',
-    example: 'spacemolt craft basic_iron_smelting 50 dry_run=true',
+      'Queue crafting work or cancel queued jobs. Inputs escrow from source (defaults to deliver_to) and outputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
+    example: 'spacemolt craft basic_iron_smelting 50 source=storage deliver_to=faction:Crafting',
     discoverWith: ['catalog', 'storage', 'get_status'],
     seeAlso: ['recycle', 'catalog', 'storage', 'get_guide'],
     category: 'Crafting',
@@ -401,10 +401,10 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   recycle: {
     usage:
-      '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [jobs=JSON]  (queues or cancels lossy reverse production)',
+      '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
     description:
-      "Queue a recycling job or cancel queued jobs; recycling consumes a recipe's outputs from station storage and returns a lossy fraction of its inputs.",
-    example: 'spacemolt recycle basic_iron_smelting 20 dry_run=true',
+      "Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.",
+    example: 'spacemolt recycle basic_iron_smelting 20 source=faction:Scrap deliver_to=storage',
     discoverWith: ['catalog', 'facility_list', 'storage'],
     seeAlso: ['craft', 'catalog', 'storage', 'get_guide'],
     category: 'Crafting',

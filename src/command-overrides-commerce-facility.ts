@@ -3,6 +3,12 @@ import type { CommandOverride } from './commands';
 const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
   "Optional source for deposit/withdraw: 'cargo' (default - your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction->personal directly, requires manage_treasury).";
 
+const STORAGE_BUCKET_DESCRIPTION =
+  'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. See bucket names in action=view target=faction.';
+
+const FACTION_BUILD_BUCKET_DESCRIPTION =
+  "For 'faction_build'/'faction_upgrade': a Storage Extension bucket (name or id) to source build/upgrade MATERIALS from, instead of the faction main store. Ship cargo backfills either way.";
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -88,6 +94,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       'quantity',
       'target',
       'source',
+      'bucket',
       'wreck_id',
       'module_id',
       'message',
@@ -120,6 +127,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       source: {
         type: 'string',
         description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
+      },
+      bucket: {
+        type: 'string',
+        description: STORAGE_BUCKET_DESCRIPTION,
       },
       wreck_id: {
         type: 'string',
@@ -422,9 +433,11 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_job_add: {
     usage:
-      '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction] [source=storage|faction]',
-    description: 'Queue production work on a facility you own.',
-    example: 'spacemolt facility_job_add facility-1 refine_steel 10 direction=forward',
+      '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction|faction:<bucket>] [source=storage|faction|faction:<bucket>]',
+    description:
+      'Queue production work on a facility you own. Use source and deliver_to to pull inputs from one store and deposit outputs to another; faction:<bucket> targets a Storage Extension bucket.',
+    example:
+      'spacemolt facility_job_add facility-1 refine_steel 10 source=storage deliver_to=faction:Crafting',
     discoverWith: ['facility_list', 'facility_owned', 'catalog'],
     seeAlso: ['facility_job_list', 'facility_job_cancel', 'facility_job_reorder', 'facility_set_access'],
     category: 'Facilities',
@@ -566,20 +579,33 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: [],
   },
   faction_build: {
-    usage: '<facility_type> [bucket=...]',
-    description: 'Build a faction facility at the current base.',
-    example: 'spacemolt faction_build ore_refinery',
+    usage: '<facility_type> [bucket=name-or-id]',
+    description:
+      'Build a faction facility at the current base. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store.',
+    example: 'spacemolt faction_build ore_refinery bucket=BuildMat',
     discoverWith: ['facility_types', 'faction_facility_list'],
     seeAlso: ['facility_types', 'faction_facility_list', 'faction_facility_build'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
     positionals: ['facility_type', 'bucket'],
+    schemaExtensions: {
+      bucket: {
+        type: 'string',
+        description: FACTION_BUILD_BUCKET_DESCRIPTION,
+      },
+    },
   },
   faction_facility_build: {
-    usage: '<facility_type> [bucket=...]',
+    usage: '<facility_type> [bucket=name-or-id]',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
     positionals: ['facility_type', 'bucket'],
+    schemaExtensions: {
+      bucket: {
+        type: 'string',
+        description: FACTION_BUILD_BUCKET_DESCRIPTION,
+      },
+    },
   },
   faction_dismantle: {
     usage: '<facility_id>',
@@ -592,10 +618,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_id'],
   },
   faction_facility_upgrade: {
-    usage: '<facility_type> <facility_id> [bucket=...]',
+    usage: '<facility_type> <facility_id> [bucket=name-or-id]',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_upgrade',
     positionals: ['facility_type', 'facility_id', 'bucket'],
+    schemaExtensions: {
+      bucket: {
+        type: 'string',
+        description: FACTION_BUILD_BUCKET_DESCRIPTION,
+      },
+    },
   },
   facility_list_for_sale: {
     usage: '<facility_id> <price>  (list a facility for sale)',

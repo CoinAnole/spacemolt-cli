@@ -469,8 +469,12 @@ describe('command metadata', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.args).toEqual(['recipe_id', 'quantity']);
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
+    expect(config?.usage).toContain('source=storage|faction|faction:<bucket>');
+    expect(config?.usage).toContain('deliver_to=storage|faction|faction:<bucket>');
+    expect(config?.description).toContain('faction:<bucket>');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
+    expect(config?.schema?.source?.type).toBe('string');
     expect(config?.schema?.action?.enum).toEqual(['queue']);
     expect(config?.schema?.job_id?.type).toBe('string');
     expect(config?.schema?.quantity?.description).toContain('Number of output items');
@@ -478,8 +482,9 @@ describe('command metadata', () => {
 
     const help = captureHelp('craft');
     expect(help).toContain('Queue crafting work');
-    expect(help).toContain('station storage');
-    expect(help).toContain('escrowed');
+    expect(help).toContain('source=storage|faction|faction:<bucket>');
+    expect(help).toContain('deliver_to=storage|faction|faction:<bucket>');
+    expect(help).toContain('escrow');
     expect(help).toContain('dry_run');
     expect(help).toContain('jobs');
     expect(help).toContain('action=queue');
@@ -500,6 +505,8 @@ describe('command metadata', () => {
     });
     expect(config?.args).toEqual(['recipe_id', 'quantity']);
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
+    expect(config?.usage).toContain('source=storage|faction|faction:<bucket>');
+    expect(config?.usage).toContain('deliver_to=storage|faction|faction:<bucket>');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
     expect(config?.schema?.source?.type).toBe('string');
@@ -507,11 +514,35 @@ describe('command metadata', () => {
 
     const help = captureHelp('recycle');
     expect(help).toContain('Queue a recycling job');
-    expect(help).toContain('lossy');
-    expect(help).toContain('station storage');
+    expect(help).toContain('source=storage|faction|faction:<bucket>');
+    expect(help).toContain('deliver_to=storage|faction|faction:<bucket>');
+    expect(help).toContain('feedstock');
     expect(help).toContain('dry_run');
     expect(help).toContain('jobs');
     expect(help).toContain('job_id');
+  });
+
+  test('storage help documents bucket transfers for faction storage extensions', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.storage;
+    expect(config?.args).toContain('bucket');
+    expect(config?.usage).toContain('[bucket=name]');
+    expect(config?.schema?.bucket?.description).toContain('Storage Extension bucket');
+
+    const help = captureHelp('storage');
+    expect(help).toContain('[bucket=name]');
+    expect(help).toContain('Storage Extension bucket');
+  });
+
+  test('faction_build help documents bucket material sourcing', () => {
+    const action = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.build;
+    const config = action?.config;
+    expect(config?.args).toEqual(['facility_type', 'bucket']);
+    expect(config?.usage).toContain('[bucket=name-or-id]');
+    expect(config?.schema?.bucket?.description).toContain('Storage Extension bucket');
+
+    const help = captureHelp(action?.displayName || 'faction build');
+    expect(help).toContain('[bucket=name-or-id]');
+    expect(help).toContain('Storage Extension bucket');
   });
 
   test('facility_build help documents that build accepts faction facility types', () => {
@@ -608,6 +639,13 @@ describe('command metadata', () => {
     }
 
     const facilityActions = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions;
+    expect(facilityActions?.job_add?.config.usage).toContain('faction:<bucket>');
+    expect(facilityActions?.job_add?.config.schema?.deliver_to?.description).toContain('faction:<bucket');
+    expect(facilityActions?.job_add?.config.schema?.source?.description).toContain('deliver_to');
+    const jobAddHelp = captureHelp(facilityActions?.job_add?.displayName || 'facility job_add');
+    expect(jobAddHelp).toContain('faction:<bucket>');
+    expect(jobAddHelp).toContain('deliver_to');
+    expect(jobAddHelp).toContain('source');
     expect(facilityActions?.job_add?.config.schema?.direction?.enum).toEqual(['forward', 'reverse']);
     expect(facilityActions?.job_cancel?.config.schema?.job_ids?.type).toBe('array');
     expect(captureHelp(facilityActions?.job_cancel?.displayName || 'facility job_cancel')).toContain('job_ids');
