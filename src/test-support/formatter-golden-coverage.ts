@@ -19,6 +19,7 @@ export const FRIENDLY_FORMATTING_TARGETS = [
   'create_faction',
   'faction_get_invites',
   'faction_intel_status',
+  'faction_query_intel',
   'faction_trade_intel_status',
   'faction_visit_room',
   'forum_get_thread',

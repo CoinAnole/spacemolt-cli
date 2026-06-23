@@ -224,6 +224,48 @@ export const intelFixture = {
   ],
 };
 
+export const factionQueryIntelFixture = {
+  count: 1,
+  current_tick: 900690,
+  entries: [
+    {
+      system_id: 'sol',
+      name: 'Sol',
+      empire: 'solarian',
+      police_level: 3,
+      submitted_at_tick: 900685,
+      submitter_name: 'Marlowe',
+      pois: [
+        {
+          id: 'sol_gas_cloud',
+          type: 'gas_cloud',
+          name: 'Sol Gas Cloud',
+          position: { x: 12, y: -4 },
+          resources: [
+            {
+              resource_id: 'hydrogen_gas',
+              richness: 4,
+              remaining: 500,
+              max_remaining: 1000,
+              depletion_percent: 50,
+              remaining_display: '500 units',
+            },
+            {
+              id: null,
+              resource_id: 'argon_gas',
+              richness: 2,
+              remaining: 200,
+              max_remaining: 500,
+              depletion_percent: 40,
+              remaining_display: '200 units',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 export const marketListingsFixture = {
   listings: [
     {
@@ -242,6 +284,7 @@ export const marketFixtureCases = {
   storage: { command: 'storage', fixture: storageFixture },
   market_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
+  faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
 };
 
 export const marketHighValueFixtures = {
@@ -256,6 +299,7 @@ export const marketHighValueFixtures = {
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   storage_view: { command: 'storage', fixture: { ...storageFixture, action: 'view', target: 'self' } },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
+  faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
   faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },
   faction_create_sell_order: { command: 'faction_create_sell_order', fixture: factionCreateSellOrderFixture },
   get_trades: { command: 'get_trades', fixture: marketListingsFixture },

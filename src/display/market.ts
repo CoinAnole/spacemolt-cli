@@ -501,4 +501,66 @@ export const marketFormatters = [
     },
     { commands: ['faction_query_trade_intel'], shapeFallback: true },
   ),
+
+  namedFormatter(
+    'faction_query_intel',
+    ['entries'],
+    (r) => {
+      const entries = firstArray(r, ['entries']);
+      if (!entries) return false;
+      if (!entries.every((entry) => isRecord(entry) && typeof entry.system_id === 'string' && Array.isArray(entry.pois))) {
+        return false;
+      }
+
+      emitLine(`\n${c.bright}=== Faction Intel ===${c.reset}`);
+      if (r.current_tick !== undefined) emitLine(`Current tick: ${r.current_tick}`);
+      if (r.count !== undefined) emitLine(`Systems: ${r.count}`);
+
+      for (const entry of entries) {
+        const systemName = String(entry.name ?? entry.system_id ?? 'unknown');
+        const systemId = String(entry.system_id ?? 'unknown');
+        emitLine(`\n${c.bright}${systemName}${c.reset} ${c.dim}(${systemId})${c.reset}`);
+        if (entry.empire) emitLine(`Empire: ${entry.empire}`);
+        if (entry.police_level !== undefined) emitLine(`Police: ${entry.police_level}`);
+        if (entry.submitted_at_tick !== undefined) {
+          const submitter = entry.submitter_name ?? entry.submitted_by;
+          const age =
+            r.current_tick !== undefined ? `, age ${Number(r.current_tick) - Number(entry.submitted_at_tick)} ticks` : '';
+          emitLine(`Intel tick: ${entry.submitted_at_tick}${submitter ? ` by ${submitter}` : ''}${age}`);
+        }
+
+        const pois = entry.pois as Array<Record<string, unknown>>;
+        for (const poi of pois) {
+          const poiName = String(poi.name ?? poi.id ?? 'unknown');
+          const poiType = poi.type ? ` (${poi.type})` : '';
+          const poiId = poi.id ? ` ${c.dim}${poi.id}${c.reset}` : '';
+          emitLine(`  ${poiName}${poiType}${poiId}`);
+
+          const resources = Array.isArray(poi.resources) ? poi.resources.filter(isRecord) : [];
+          for (const resource of resources) {
+            const resourceId = String(resource.resource_id ?? resource.id ?? 'unknown');
+            const display = resource.remaining_display || `${resource.remaining ?? '?'} remaining`;
+            if (display === 'depleted' || resource.remaining === 0) {
+              emitLine(`    - ${resourceId}: richness ${resource.richness ?? '?'}, depleted`);
+              continue;
+            }
+
+            let depletion = '';
+            if (resource.depletion_percent !== undefined) {
+              const pct = Number(resource.depletion_percent);
+              const color = pct > 25 ? c.green : pct >= 5 ? c.yellow : c.red;
+              depletion = ` (${color}${pct.toFixed(2)}% remaining${c.reset})`;
+            }
+            const remaining = resource.max_remaining
+              ? `${resource.remaining ?? '?'}/${resource.max_remaining}`
+              : display;
+            emitLine(`    - ${resourceId}: richness ${resource.richness ?? '?'}, ${remaining}${depletion}`);
+          }
+        }
+      }
+
+      return true;
+    },
+    { commands: ['faction_query_intel'] },
+  ),
 ];

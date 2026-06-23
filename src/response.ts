@@ -50,6 +50,7 @@ export function getObjectResult(response: APIResponse): Record<string, unknown> 
 
 export function normalizeStructuredResultForDisplay(result: Record<string, unknown>): Record<string, unknown> {
   const view = structuredClone(result);
+  if (isFactionQueryIntelResult(view)) return normalizeFactionQueryIntelResult(view);
   const loc = view.location as Record<string, unknown> | undefined;
   if (loc && !view.system) {
     view.system = { id: loc.system_id, name: loc.system_name };
@@ -69,9 +70,54 @@ export function normalizeStructuredResultForDisplay(result: Record<string, unkno
   return view;
 }
 
+function normalizeIntelResource(resource: unknown): Record<string, unknown> | unknown {
+  if (!isRecord(resource)) return resource;
+
+  const resourceId = resource.resource_id ?? resource.id;
+  if (typeof resourceId !== 'string' || !resourceId) return resource;
+
+  return {
+    ...resource,
+    id: typeof resource.id === 'string' && resource.id ? resource.id : resourceId,
+    resource_id: typeof resource.resource_id === 'string' && resource.resource_id ? resource.resource_id : resourceId,
+  };
+}
+
+function isFactionQueryIntelResult(result: Record<string, unknown>): boolean {
+  if (!Array.isArray(result.entries) || result.entries.length === 0) return false;
+  return result.entries.some(
+    (entry) => isRecord(entry) && typeof entry.system_id === 'string' && Array.isArray(entry.pois),
+  );
+}
+
+function normalizeFactionQueryIntelResult(result: Record<string, unknown>): Record<string, unknown> {
+  if (!isFactionQueryIntelResult(result)) return result;
+
+  const view = structuredClone(result);
+  const entries = view.entries as unknown[];
+  view.entries = entries.map((entry) => {
+    if (!isRecord(entry) || !Array.isArray(entry.pois)) return entry;
+
+    return {
+      ...entry,
+      pois: entry.pois.map((poi) => {
+        if (!isRecord(poi) || !Array.isArray(poi.resources)) return poi;
+
+        return {
+          ...poi,
+          resources: poi.resources.map((resource) => normalizeIntelResource(resource)),
+        };
+      }),
+    };
+  });
+
+  return view;
+}
+
 export function normalizeStructuredResultForOutput(
-  _command: string,
+  command: string,
   result: Record<string, unknown>,
 ): Record<string, unknown> {
+  if (command === 'faction_query_intel') return normalizeFactionQueryIntelResult(result);
   return result;
 }

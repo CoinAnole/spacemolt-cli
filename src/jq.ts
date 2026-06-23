@@ -50,11 +50,18 @@ export function evaluateJq(data: unknown, expr: string, options: JqOptions = {})
   const commaParts = splitTopLevel(trimmed, ',').map((part) => part.trim());
   if (commaParts.length > 1) return commaParts.map((part) => evaluateJq(data, part));
 
+  if (isArrayConstruction(trimmed)) return evalArrayConstruction(data, trimmed);
+
   if (isObjectConstruction(trimmed)) return evalObjectConstruction(data, trimmed);
+
+  const selectInner = parseSelectCall(trimmed);
+  if (selectInner !== undefined) return evalSelect(data, selectInner);
 
   if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed, options);
 
-  throw new Error(`Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field`);
+  throw new Error(
+    `Unsupported jq expression: "${expr}". Supported: .key, .key.nested, .key[], .key[0].field, select(...), {key: value}, [expr | ...]`,
+  );
 }
 
 function evalPipe(data: unknown, parts: string[]): unknown {
@@ -64,8 +71,24 @@ function evalPipe(data: unknown, parts: string[]): unknown {
 
   let current = evaluateJq(data, parts[0] ?? '.');
   for (const part of parts.slice(1)) {
+    const selectInner = parseSelectCall(part);
+    if (selectInner !== undefined) {
+      if (Array.isArray(current)) {
+        current = current.filter((item) => isSelectMatch(item, selectInner));
+      } else {
+        current = isSelectMatch(current, selectInner) ? current : undefined;
+      }
+      continue;
+    }
+
+    if (isArrayConstruction(part)) {
+      current = evalArrayConstruction(current, part);
+      continue;
+    }
+
     if (Array.isArray(current)) {
-      current = current.map((item) => evaluateJq(item, part));
+      const mapped = current.map((item) => evaluateJq(item, part));
+      current = mapped.flatMap((item) => (item === undefined ? [] : Array.isArray(item) ? item : [item]));
     } else {
       current = evaluateJq(current, part);
     }
@@ -230,6 +253,140 @@ function appendArrayIndexPath(path: string, index: number): string {
 
 function isObjectConstruction(expr: string): boolean {
   return expr.startsWith('{') && expr.endsWith('}');
+}
+
+function isArrayConstruction(expr: string): boolean {
+  return expr.startsWith('[') && expr.endsWith(']');
+}
+
+function parseSelectCall(expr: string): string | undefined {
+  const trimmed = expr.trim();
+  if (!trimmed.startsWith('select(') || !trimmed.endsWith(')')) return undefined;
+  const inner = trimmed.slice('select('.length, -1).trim();
+  return inner || undefined;
+}
+
+function evalSelect(data: unknown, innerExpr: string): unknown {
+  if (Array.isArray(data)) {
+    return data.filter((item) => isSelectMatch(item, innerExpr));
+  }
+  return isSelectMatch(data, innerExpr) ? data : undefined;
+}
+
+function isSelectMatch(data: unknown, innerExpr: string): boolean {
+  const comparison = parseComparisonExpression(innerExpr);
+  if (comparison) {
+    const left = tryEvaluateJq(data, comparison.left);
+    const right = parseComparisonValue(comparison.right);
+    return compareJqValues(left, right, comparison.operator);
+  }
+
+  const value = tryEvaluateJq(data, innerExpr);
+  return isTruthyJqValue(value);
+}
+
+function tryEvaluateJq(data: unknown, expr: string): unknown {
+  try {
+    return evaluateJq(data, expr);
+  } catch {
+    return undefined;
+  }
+}
+
+interface ComparisonExpression {
+  left: string;
+  operator: '==' | '!=';
+  right: string;
+}
+
+function parseComparisonExpression(expr: string): ComparisonExpression | undefined {
+  for (const operator of ['==', '!='] as const) {
+    const index = findTopLevelOperator(expr, operator);
+    if (index === -1) continue;
+    const left = expr.slice(0, index).trim();
+    const right = expr.slice(index + operator.length).trim();
+    if (!left || !right) continue;
+    return { left, operator, right };
+  }
+  return undefined;
+}
+
+function findTopLevelOperator(value: string, operator: string): number {
+  let bracketDepth = 0;
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+
+  for (let i = 0; i <= value.length - operator.length; i++) {
+    const char = value[i];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === '[' || char === '(' || char === '{') {
+      bracketDepth++;
+      continue;
+    }
+    if (char === ']' || char === ')' || char === '}') {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      continue;
+    }
+    if (bracketDepth === 0 && value.startsWith(operator, i)) return i;
+  }
+
+  return -1;
+}
+
+function parseComparisonValue(raw: string): unknown {
+  const trimmed = raw.trim();
+  if (isQuoted(trimmed)) return unquote(trimmed);
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (trimmed === 'null') return null;
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  throw new Error(`Unsupported jq comparison value: "${raw}"`);
+}
+
+function compareJqValues(left: unknown, right: unknown, operator: '==' | '!='): boolean {
+  const equal = left === right;
+  return operator === '==' ? equal : !equal;
+}
+
+function isTruthyJqValue(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (value === false) return false;
+  if (Array.isArray(value) && value.length === 0) return false;
+  return true;
+}
+
+function evalArrayConstruction(data: unknown, expr: string): unknown[] {
+  const body = expr.slice(1, -1).trim();
+  if (!body) return [];
+
+  const pipeParts = splitTopLevel(body, '|').map((part) => part.trim());
+  if (pipeParts.length > 1) {
+    const value = evalPipe(data, pipeParts);
+    return flattenJqArray(value);
+  }
+
+  return flattenJqArray(evaluateJq(data, body));
+}
+
+function flattenJqArray(value: unknown): unknown[] {
+  if (value === undefined) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => (item === undefined ? [] : [item]));
+  return [value];
 }
 
 function evalObjectConstruction(data: unknown, expr: string): Record<string, unknown> {

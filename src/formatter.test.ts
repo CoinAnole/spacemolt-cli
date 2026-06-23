@@ -8,6 +8,7 @@ import {
   catalogItemsFixture,
   createSellOrderFixture,
   empireInfoFixture,
+  factionQueryIntelFixture,
   formatterFixtureCases,
   getLocationFixture,
   getStatusFixture,
@@ -614,6 +615,49 @@ describe('structuredContent output mode precedence', () => {
     expect(JSON.parse(stdout)).toEqual([
       { id: 'commission-1', status: 'active', ticks: 3 },
       { id: 'commission-2', status: 'complete', ticks: 0 },
+    ]);
+  });
+
+  test('--search finds faction intel resources in structuredContent', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'faction_query_intel',
+      factionQueryIntelFixture,
+      { outputSearch: 'hydrogen' },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('hydrogen_gas');
+  });
+
+  test('--jq supports select and array construction for nested intel resources', () => {
+    const fixture = {
+      entries: [
+        {
+          pois: [
+            {
+              name: 'Sol Gas Cloud',
+              resources: [
+                { id: 'hydrogen_gas', resource_id: 'hydrogen_gas', richness: 4, remaining: 500 },
+                { id: 'argon_gas', resource_id: 'argon_gas', richness: 2, remaining: 200 },
+              ],
+            },
+            { name: 'Empty POI' },
+          ],
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('faction_query_intel', fixture, {
+      compact: true,
+      jq: '.entries[0].pois[] | select(.resources) | {name: .name, h2: [.resources[] | select(.id == "hydrogen_gas") | {richness, remaining}]}',
+    });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual([
+      {
+        name: 'Sol Gas Cloud',
+        h2: [{ richness: 4, remaining: 500 }],
+      },
     ]);
   });
 
@@ -1540,6 +1584,18 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Order ID: order-buy-1');
     expect(stdout).not.toContain('Sell Order Created');
     expect(stdout).not.toContain('earned:');
+  });
+
+  test('formats faction_query_intel with searchable resource ids', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_query_intel', factionQueryIntelFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Intel ===');
+    expect(stdout).toContain('Sol');
+    expect(stdout).toContain('Sol Gas Cloud');
+    expect(stdout).toContain('hydrogen_gas');
+    expect(stdout).toContain('argon_gas');
+    expect(stdout).toContain('richness 4');
   });
 
   test('formats faction created buy order without sell wording', () => {
@@ -3114,6 +3170,20 @@ describe('structuredContent formatters', () => {
       Grace remaining: 1 cycle
       Faction facilities pay rent from the treasury each cycle.
       Use action 'faction_list' while docked for full per-facility detail at that station."
+      ,
+        "faction_query_intel": 
+      "
+      === Faction Intel ===
+      Current tick: 900690
+      Systems: 1
+
+      Sol (sol)
+      Empire: solarian
+      Police: 3
+      Intel tick: 900685 by Marlowe, age 5 ticks
+        Sol Gas Cloud (gas_cloud) sol_gas_cloud
+          - hydrogen_gas: richness 4, 500/1000 (50.00% remaining)
+          - argon_gas: richness 2, 200/500 (40.00% remaining)"
       ,
         "fleet": 
       "
