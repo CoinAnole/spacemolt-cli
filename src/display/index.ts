@@ -1,6 +1,13 @@
 import type { CliRuntimeContext } from '../cli-context.ts';
 import { evaluateJq, formatJqResult, jqResultValue } from '../jq.ts';
-import { findOutputSearchMatches, formatOutputSearchLine, hasOutputSearch } from '../output-search.ts';
+import {
+  filterStructuredOutputBySearch,
+  findOutputSearchMatches,
+  formatOutputSearchLine,
+  hasOutputSearch,
+  isEmptyFilteredOutput,
+  isOutputSearchFilterMode,
+} from '../output-search.ts';
 import {
   extractFields,
   getFieldValue,
@@ -104,6 +111,43 @@ function formatEmptyJqOutputWarning(): string {
     `${c.yellow}[warning]${c.reset} --jq produced no output. Path may not exist in structuredContent.`,
     'Use --keys to explore available fields, or add --fuzzy for auto-resolution.',
   ].join('\n');
+}
+
+function formatEmptySearchFilterWarning(): string {
+  return `${c.yellow}[warning]${c.reset} --search produced no output. No structured fields matched the query.`;
+}
+
+function stripFilterSearchOptions(options: GlobalOptions, appliedJq = false): GlobalOptions {
+  const { outputSearch, ...rest } = options;
+  if (!appliedJq) return rest;
+  const { jq, ...withoutJq } = rest;
+  return withoutJq;
+}
+
+function renderFilteredStructuredValue(
+  command: string,
+  value: unknown,
+  options: GlobalOptions,
+  context?: DisplayContext,
+  appliedJq = false,
+): boolean {
+  const renderOptions = stripFilterSearchOptions(options, appliedJq);
+  if (isRecord(value)) {
+    return displayStructuredResultInternal(command, value, renderOptions, context);
+  }
+
+  const format = getOutputFormat(options, context);
+  const compact = isCompact(options, context);
+  if (format === 'yaml') {
+    emitLine(toYaml(value));
+    return true;
+  }
+  if (format === 'json' || format === 'text' || compact) {
+    emitLine(stringifyJson(value, compact));
+    return true;
+  }
+
+  return displayStructuredResultInternal(command, { items: value }, renderOptions, context);
 }
 
 type FieldProjectionResult = { success: true; value: unknown } | { success: false; message: string; fatal: boolean };
@@ -285,7 +329,21 @@ function displayStructuredResultInternal(
         return false;
       }
       if (outputSearch) {
-        const searchResult = findOutputSearchMatches(jqResultValue(jqResult), options ?? ({} as GlobalOptions));
+        const searchOptions = options ?? ({} as GlobalOptions);
+        if (isOutputSearchFilterMode(searchOptions)) {
+          const filterResult = filterStructuredOutputBySearch(jqResultValue(jqResult), searchOptions);
+          if (!filterResult.ok) {
+            emitError(`${c.red}Error:${c.reset} ${filterResult.message}`);
+            return false;
+          }
+          if (isEmptyFilteredOutput(filterResult.value)) {
+            emitError(formatEmptySearchFilterWarning());
+            return false;
+          }
+          return renderFilteredStructuredValue(command, filterResult.value, searchOptions, context, true);
+        }
+
+        const searchResult = findOutputSearchMatches(jqResultValue(jqResult), searchOptions);
         if (!searchResult.ok) {
           emitError(`${c.red}Error:${c.reset} ${searchResult.message}`);
           return false;
@@ -302,7 +360,21 @@ function displayStructuredResultInternal(
   }
 
   if (outputSearch) {
-    const searchResult = findOutputSearchMatches(structuredOutputResult, options ?? ({} as GlobalOptions));
+    const searchOptions = options ?? ({} as GlobalOptions);
+    if (isOutputSearchFilterMode(searchOptions)) {
+      const filterResult = filterStructuredOutputBySearch(structuredOutputResult, searchOptions);
+      if (!filterResult.ok) {
+        emitError(`${c.red}Error:${c.reset} ${filterResult.message}`);
+        return false;
+      }
+      if (isEmptyFilteredOutput(filterResult.value)) {
+        emitError(formatEmptySearchFilterWarning());
+        return false;
+      }
+      return renderFilteredStructuredValue(command, filterResult.value, searchOptions, context);
+    }
+
+    const searchResult = findOutputSearchMatches(structuredOutputResult, searchOptions);
     if (!searchResult.ok) {
       emitError(`${c.red}Error:${c.reset} ${searchResult.message}`);
       return false;

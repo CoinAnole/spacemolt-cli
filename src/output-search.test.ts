@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { findOutputSearchMatches, formatOutputSearchLine } from './output-search.ts';
+import {
+  filterStructuredOutputBySearch,
+  findOutputSearchMatches,
+  formatOutputSearchLine,
+} from './output-search.ts';
 
 const fixture = {
   ship: {
@@ -109,6 +113,62 @@ describe('output search', () => {
     expect(result).toEqual({
       ok: true,
       matches: [{ path: '.fuel', value: 'fuel' }],
+    });
+  });
+
+  test('filter keeps matching array elements and prunes non-matching siblings', () => {
+    const fixture = {
+      count: 2,
+      entries: [
+        {
+          system_id: 'sol',
+          name: 'Sol',
+          pois: [
+            {
+              id: 'sol_gas_cloud',
+              name: 'Sol Gas Cloud',
+              resources: [
+                { resource_id: 'hydrogen_gas', richness: 4, remaining: 500 },
+                { resource_id: 'argon_gas', richness: 2, remaining: 200 },
+              ],
+            },
+            { id: 'sol_station', name: 'Earth Station' },
+          ],
+        },
+        { system_id: 'alpha', name: 'Alpha Centauri', pois: [] },
+      ],
+    };
+
+    const result = filterStructuredOutputBySearch(fixture, { outputSearch: 'hydrogen' });
+    if (!result.ok) throw new Error(result.message);
+
+    expect(result.value).toEqual({
+      count: 2,
+      entries: [
+        {
+          system_id: 'sol',
+          name: 'Sol',
+          pois: [
+            {
+              id: 'sol_gas_cloud',
+              name: 'Sol Gas Cloud',
+              resources: [{ resource_id: 'hydrogen_gas', richness: 4, remaining: 500 }],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  test('filter matches normalized tokens across underscores and hyphens', () => {
+    const result = filterStructuredOutputBySearch(
+      { items: [{ item_id: 'fuel_cell', quantity: 3 }, { item_id: 'ore_iron', quantity: 1 }] },
+      { outputSearch: 'fuel cell' },
+    );
+    if (!result.ok) throw new Error(result.message);
+
+    expect(result.value).toEqual({
+      items: [{ item_id: 'fuel_cell', quantity: 3 }],
     });
   });
 });

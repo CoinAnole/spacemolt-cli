@@ -339,7 +339,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toBe('42');
   });
 
-  test('--search prints matching jq paths and values', () => {
+  test('--search filters structured output and renders matching branches', () => {
     const { stdout, stderr } = captureStructuredOutput(
       'get_status',
       {
@@ -350,7 +350,9 @@ describe('structuredContent output mode precedence', () => {
     );
 
     expect(stderr).toBe('');
-    expect(stdout).toBe(['.ship.fuel = 13', '.ship.max_fuel = 700', '.ship.name = Fuel Runner'].join('\n'));
+    expect(stdout).toContain('Fuel Runner');
+    expect(stdout).not.toContain('Marlowe');
+    expect(stdout).not.toContain('.ship.fuel = 13');
   });
 
   test('--search-keys and --search-values restrict match scopes', () => {
@@ -393,18 +395,20 @@ describe('structuredContent output mode precedence', () => {
     expect(invalid.stderr.join('\n').replace(ANSI_PATTERN, '')).toContain('Invalid --search-regex pattern');
   });
 
-  test('--jq scopes output search to the selected subtree', () => {
+  test('--jq scopes output search filter to the selected subtree', () => {
     const { stdout, stderr } = captureStructuredOutput(
       'get_status',
       {
-        ship: { fuel: 13, max_fuel: 700 },
+        ship: { fuel: 13, max_fuel: 700, name: 'Fuel Runner' },
         station: { fuel: 999 },
       },
       { jq: '.ship', outputSearch: 'fuel' },
     );
 
     expect(stderr).toBe('');
-    expect(stdout).toBe(['.fuel = 13', '.max_fuel = 700'].join('\n'));
+    expect(stdout).toContain('Fuel Runner');
+    expect(stdout).not.toContain('999');
+    expect(stdout).not.toContain('.fuel = 13');
   });
 
   test('--field extracts one scalar without a JSON object wrapper', () => {
@@ -618,7 +622,7 @@ describe('structuredContent output mode precedence', () => {
     ]);
   });
 
-  test('--search finds faction intel resources in structuredContent', () => {
+  test('--search filters faction intel to matching resources and renders table output', () => {
     const { stdout, stderr } = captureStructuredOutput(
       'faction_query_intel',
       factionQueryIntelFixture,
@@ -626,7 +630,9 @@ describe('structuredContent output mode precedence', () => {
     );
 
     expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Intel ===');
     expect(stdout).toContain('hydrogen_gas');
+    expect(stdout).not.toContain('argon_gas');
   });
 
   test('--jq supports select and array construction for nested intel resources', () => {

@@ -802,10 +802,10 @@ ${c.bright}Global Flags:${c.reset}
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
   --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
-  --search          Search structured output keys and values
-  --search-keys     Search structured output keys only
-  --search-values   Search structured output scalar values only
-  --search-regex    Regex search structured output keys and values
+  --search          Filter structured output to matching branches (renders table/json)
+  --search-keys     List matching jq paths and keys (projection mode)
+  --search-values   List matching jq paths and scalar values (projection mode)
+  --search-regex    List matching jq paths via regex (projection mode)
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
@@ -895,10 +895,10 @@ ${c.bright}Global Flags:${c.reset}
   --jq              Extract with path syntax (.key, .key[], .key[0].field)
   --fuzzy           Auto-resolve simple --jq paths to similar keys
   --keys [path]     List available keys at a JSON dotpath
-  --search          Search structured output keys and values
-  --search-keys     Search structured output keys only
-  --search-values   Search structured output scalar values only
-  --search-regex    Regex search structured output keys and values
+  --search          Filter structured output to matching branches (renders table/json)
+  --search-keys     List matching jq paths and keys (projection mode)
+  --search-values   List matching jq paths and scalar values (projection mode)
+  --search-regex    List matching jq paths via regex (projection mode)
   --profile <name>  Use named session
   --dry-run         Preview supported mutations without executing them
   --debug           Print verbose diagnostics for this command
@@ -982,10 +982,10 @@ ${c.bright}Usage:${c.reset}
       --jq <expr>         Extract with path syntax (.key, .key[], .key[0].field)
       --fuzzy             Auto-resolve simple --jq paths to similar keys
       --keys [path]       List available keys at a JSON dotpath
-      --search <text>      Search structured output keys and values
-      --search-keys <text> Search structured output keys only
-      --search-values <t>  Search structured output scalar values only
-      --search-regex <rx>  Regex search structured output keys and values
+      --search <text>      Filter structured output to matching branches
+      --search-keys <text> List matching jq paths and keys
+      --search-values <t>  List matching jq paths and scalar values
+      --search-regex <rx>  List matching jq paths via regex
       --profile           Use named session profile
       --dry-run           Preview supported mutations without executing them
       --allow-unknown     Allow unknown command fields to pass through
