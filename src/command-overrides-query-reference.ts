@@ -161,7 +161,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     schemaExtensions: {
       types: {
         type: 'array',
-        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'tip', 'system', 'market'],
+        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'tip', 'system', 'market', 'crafting'],
         description: 'Filter by notification types. Omit for all types.',
       },
     },
