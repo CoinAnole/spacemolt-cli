@@ -445,4 +445,16 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
     },
   },
+  subscribe_observation: {
+    category: 'Exploration',
+    apiRoute: 'POST /api/v2/spacemolt/subscribe_observation',
+    discoverWith: ['get_nearby', 'get_system_agents'],
+    seeAlso: ['unsubscribe_observation'],
+  },
+  unsubscribe_observation: {
+    category: 'Exploration',
+    apiRoute: 'POST /api/v2/spacemolt/unsubscribe_observation',
+    discoverWith: ['subscribe_observation'],
+    seeAlso: ['subscribe_observation'],
+  },
 };

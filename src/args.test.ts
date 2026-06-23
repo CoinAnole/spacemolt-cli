@@ -817,6 +817,24 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('faction_build accepts bucket from changelog (faction storage extension source)', () => {
+    const { payload } = parseInternalOk(['faction_build', 'deep_core_mine', 'bucket=BuildMat']);
+    expect(payload).toEqual({ facility_type: 'deep_core_mine', bucket: 'BuildMat' });
+  });
+
+  test('faction_create_sell_order accepts bucket param (changelog feature)', () => {
+    const { payload } = parseInternalOk(['faction_create_sell_order', 'steel_plate', '20', '12', 'bucket=Sales']);
+    expect(payload.bucket).toBe('Sales');
+    expect(payload.item_id).toBe('steel_plate');
+  });
+
+  test('craft accepts source param separate from deliver_to (changelog storage bucket split)', () => {
+    const parsed = parseOk(['craft', 'refine_titanium', '5', 'source=storage', 'deliver_to=faction:Crafting']);
+    const payload = normalizeParsedPayload('craft', parsed.payload);
+    expect(payload.source).toBe('storage');
+    expect(payload.deliver_to).toBe('faction:Crafting');
+  });
+
   test('recycle parses recipe positionals and bulk jobs JSON', () => {
     expect(parseOk(['recycle', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
 
