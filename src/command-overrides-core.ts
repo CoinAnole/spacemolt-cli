@@ -357,6 +357,11 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         description:
           "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Crafting never delivers to cargo.",
       },
+      source: {
+        type: 'string',
+        description:
+          "Where inputs and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.",
+      },
       dry_run: {
         type: 'boolean',
         description: 'Return a cost, routing, and ETA quote without queuing work or spending escrow.',
@@ -408,8 +413,13 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     schemaExtensions: {
       deliver_to: {
         type: 'string',
-        enum: ['storage', 'faction'],
-        description: "Output destination for recovered inputs: 'storage' (default) or 'faction'.",
+        description:
+          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Recycling never delivers to cargo.",
+      },
+      source: {
+        type: 'string',
+        description:
+          "Where feedstock and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.",
       },
       dry_run: {
         type: 'boolean',

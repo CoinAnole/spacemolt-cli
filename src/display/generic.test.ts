@@ -28,6 +28,43 @@ const context = {
   },
 };
 
+test('renders catalog ships with prestige lock notes when present', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          piloting_required: 8,
+          prestige_lock:
+            'Locked: prestige hull reserved for pilots who have earned the "Galactic Concierge" achievement.',
+          required_achievement: 'galactic_concierge',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      message: 'Ships: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Items ===');
+  expect(stdout).toContain('Concierge Liner');
+  expect(stdout).toContain('Locked: prestige hull reserved');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders catalog recipe items with recipe availability', () => {
   const rendered = renderStructuredResult(
     'catalog',

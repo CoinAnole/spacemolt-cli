@@ -9,9 +9,18 @@ items:
     required_reputation: 60
     shipyard_tier: 5
     tier: 5
-message: "Ships: showing 1 of 21"
+  - class: luxury_liner
+    empire: solarian
+    id: concierge_liner
+    name: "Concierge Liner"
+    piloting_required: 8
+    prestige_lock: "Locked: prestige hull reserved for pilots who have earned the \"Galactic Concierge\" achievement."
+    required_achievement: galactic_concierge
+    shipyard_tier: 3
+    tier: 4
+message: "Ships: showing 2 of 22"
 page: 1
 page_size: 20
-total: 21
+total: 22
 total_pages: 1
 type: ships

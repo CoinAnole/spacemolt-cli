@@ -109,6 +109,24 @@ export const facilityListFixture = {
   ],
 };
 
+export const facilityUpgradesFixture = {
+  upgrades: [
+    {
+      current_level: 1,
+      requires: 'Engineering 10',
+      upgrade_to: {
+        build_cost: 48_000,
+        build_time: 96,
+        labor_cost: 180,
+        level: 2,
+        name: 'Ore Refinery II',
+        type_id: 'ore_refinery_ii',
+      },
+    },
+  ],
+  hint: 'Dock at the facility to start an upgrade.',
+};
+
 export const facilityTypesFixture = {
   categories: {
     infrastructure: {
@@ -367,6 +385,7 @@ export const socialFixtureCases = {
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
   facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
+  facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
@@ -380,6 +399,7 @@ export const socialHighValueFixtures = {
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
+  facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
   captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },
   captains_log_list: { command: 'captains_log_list', fixture: captainsLogListFixture },
   get_chat_history: { command: 'get_chat_history', fixture: chatHistoryFixture },

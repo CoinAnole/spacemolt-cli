@@ -1,9 +1,10 @@
 
 === Items ===
 
-  Name      | ID        | Class            | Tier | Empire   | Yard | Pilot | Rep | Passive Recipes
-  ----------+-----------+------------------+------+----------+------+-------+-----+----------------
-  Money Pit | money_pit | capital_refinery | 5    | outerrim | 5    | 5     | 60  | refine_ore_iron
-page 1/1 | page size 20 | total 21
-(Showing 1 of 21 ships. Use --page 2 for more results.)
-Ships: showing 1 of 21
+  Name            | ID              | Class            | Tier | Empire   | Yard | Pilot | Rep | Passive Recipes | Lock                                                                    
+  ----------------+-----------------+------------------+------+----------+------+-------+-----+-----------------+-------------------------------------------------------------------------
+  Money Pit       | money_pit       | capital_refinery | 5    | outerrim | 5    | 5     | 60  | refine_ore_iron |                                                                         
+  Concierge Liner | concierge_liner | luxury_liner     | 4    | solarian | 3    | 8     |     |                 | Locked: prestige hull reserved for pilots who have earned the "Galact...
+page 1/1 | page size 20 | total 22
+(Showing 2 of 22 ships. Use --page 2 for more results.)
+Ships: showing 2 of 22

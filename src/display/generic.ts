@@ -569,22 +569,21 @@ export const genericFormatters = [
         ...ship,
         passive_recipes_summary: summarizePassiveRecipes(ship.passive_recipes),
       }));
-      printCompactTable(
-        'Items',
-        rows,
-        [
-          ['Name', ['name', 'class_name']],
-          ['ID', ['id', 'class_id']],
-          ['Class', ['class', 'category']],
-          ['Tier', ['tier']],
-          ['Empire', ['empire']],
-          ['Yard', ['shipyard_tier']],
-          ['Pilot', ['piloting_required']],
-          ['Rep', ['required_reputation']],
-          ['Passive Recipes', ['passive_recipes_summary']],
-        ],
-        { maxCellWidth: 72 },
-      );
+      const columns: Array<[string, string[]]> = [
+        ['Name', ['name', 'class_name']],
+        ['ID', ['id', 'class_id']],
+        ['Class', ['class', 'category']],
+        ['Tier', ['tier']],
+        ['Empire', ['empire']],
+        ['Yard', ['shipyard_tier']],
+        ['Pilot', ['piloting_required']],
+        ['Rep', ['required_reputation']],
+        ['Passive Recipes', ['passive_recipes_summary']],
+      ];
+      if (rows.some((ship) => ship.prestige_lock || ship.required_achievement)) {
+        columns.push(['Lock', ['prestige_lock']]);
+      }
+      printCompactTable('Items', rows, columns, { maxCellWidth: 72 });
 
       const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
       if (passiveRecipeDetails) printRecipeRows('Passive Recipes', passiveRecipeDetails, { passive: true });

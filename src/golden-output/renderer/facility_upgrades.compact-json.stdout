@@ -1,0 +1,1 @@
+{"upgrades":[{"current_level":1,"requires":"Engineering 10","upgrade_to":{"build_cost":48000,"build_time":96,"labor_cost":180,"level":2,"name":"Ore Refinery II","type_id":"ore_refinery_ii"}}],"hint":"Dock at the facility to start an upgrade."}

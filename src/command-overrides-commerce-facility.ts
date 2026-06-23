@@ -431,11 +431,21 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/job_add',
     positionals: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to', 'source'],
     schemaExtensions: {
+      deliver_to: {
+        type: 'string',
+        description:
+          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>' for a Storage Extension bucket.",
+      },
       direction: {
         type: 'string',
         enum: ['forward', 'reverse'],
         description:
           "Job direction for facility production: 'forward' crafts outputs, 'reverse' recycles recipe outputs.",
+      },
+      source: {
+        type: 'string',
+        description:
+          "Input source: where inputs and credits are pulled from. Same values as deliver_to; defaults to deliver_to.",
       },
     },
   },

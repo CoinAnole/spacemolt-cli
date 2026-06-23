@@ -835,6 +835,16 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.deliver_to).toBe('faction:Crafting');
   });
 
+  test('recycle accepts faction storage extension bucket destinations', () => {
+    const parsed = parseOk(['recycle', 'basic_iron_smelting', '20', 'deliver_to=faction:Recycling']);
+    const payload = convertPayloadTypes(normalizeParsedPayload('recycle', parsed.payload), 'recycle');
+    expect(payload).toEqual({
+      id: 'basic_iron_smelting',
+      quantity: 20,
+      deliver_to: 'faction:Recycling',
+    });
+  });
+
   test('recycle parses recipe positionals and bulk jobs JSON', () => {
     expect(parseOk(['recycle', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
 

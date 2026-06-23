@@ -195,6 +195,20 @@ const actionLogFixture = {
       mode: 'craft',
       storage: 'faction',
     },
+    {
+      id: 'event-2',
+      created_at: '2026-06-22T11:30:00.000Z',
+      summary: 'Marlowe rented your Ore Refinery: 5 runs, 250 credits earned.',
+      category: 'other',
+      event_type: 'other.facility_rented',
+    },
+    {
+      id: 'event-3',
+      created_at: '2026-06-22T12:00:00.000Z',
+      summary: 'Drone Control reached level 15.',
+      category: 'skill',
+      event_type: 'skill.level_up',
+    },
   ],
 };
 
@@ -1365,6 +1379,10 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('job-craft-1');
     expect(stdout).toContain('craft');
     expect(stdout).toContain('faction');
+    expect(stdout).toContain('other.facility_rented');
+    expect(stdout).toContain('Marlowe rented your Ore Refinery');
+    expect(stdout).toContain('skill.level_up');
+    expect(stdout).toContain('Drone Control reached level 15');
     expect(stdout).toContain('More entries available.');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -3160,6 +3178,16 @@ describe('structuredContent formatters', () => {
       Total facility types: 1753
 
       Use filters to browse."
+      ,
+        "facility_upgrades": 
+      "
+      === Available Upgrades ===
+
+        Current | To              | Cost  | Ticks | Labor | Requires
+        --------+-----------------+-------+-------+-------+---------------
+        1       | Ore Refinery II | 48000 | 96    | 180   | Engineering 10
+
+      Dock at the facility to start an upgrade."
       ,
         "faction_facility_owned": 
       "

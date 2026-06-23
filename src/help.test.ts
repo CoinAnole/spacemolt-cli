@@ -275,7 +275,9 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('Faction Commands');
-    expect(output).toContain('faction build <facility_type> - Build a faction facility at the current base.');
+    expect(output).toContain(
+      'faction build <facility_type> [bucket=...] - Build a faction facility at the current base.',
+    );
     expect(output).toContain('faction facility_list <args...> - List faction facilities at the current base.');
     expect(output).not.toContain('faction_build');
     expect(output).not.toContain('faction_facility_list');

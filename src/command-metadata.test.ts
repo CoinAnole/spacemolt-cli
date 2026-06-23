@@ -500,7 +500,9 @@ describe('command metadata', () => {
     });
     expect(config?.args).toEqual(['recipe_id', 'quantity']);
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
-    expect(config?.schema?.deliver_to?.enum).toEqual(['storage', 'faction']);
+    expect(config?.schema?.deliver_to?.enum).toBeUndefined();
+    expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
+    expect(config?.schema?.source?.type).toBe('string');
     expect(config?.schema?.job_id?.type).toBe('string');
 
     const help = captureHelp('recycle');
