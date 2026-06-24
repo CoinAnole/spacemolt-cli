@@ -12,7 +12,7 @@ import type { APIResponse, Session } from './types.ts';
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
 const SESSION_DIR_MODE = 0o700;
-type EnvLike = Record<string, string | undefined>;
+export type EnvLike = Record<string, string | undefined>;
 
 export function getSpacemoltHome(
   homeDir = os.homedir(),
