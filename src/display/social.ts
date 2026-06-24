@@ -142,6 +142,10 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
     columns.push(['Recipe', ['configured_recipe_id', 'recipe_id']]);
   }
   if (hasAnyField(rows, ['idle_reason'])) columns.push(['Idle Reason', ['idle_reason']]);
+  if (hasAnyField(rows, ['rental_fee_per_run', 'output_price', 'price'])) {
+    columns.push(['Rent/run', ['rental_fee_per_run', 'output_price', 'price']]);
+  }
+  if (hasAnyField(rows, ['public'])) columns.push(['Public', ['public']]);
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
 }
@@ -436,6 +440,8 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['event_type', 'type'])) columns.push(['Event', ['event_type', 'type']]);
       if (hasAnyField(rows, ['job_id'])) columns.push(['Job', ['job_id']]);
       if (hasAnyField(rows, ['mode'])) columns.push(['Mode', ['mode']]);
+      if (hasAnyField(rows, ['runs'])) columns.push(['Runs', ['runs']]);
+      if (hasAnyField(rows, ['venue'])) columns.push(['Venue', ['venue']]);
       if (hasAnyField(rows, ['storage'])) columns.push(['Storage', ['storage']]);
       emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });

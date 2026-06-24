@@ -62,6 +62,7 @@ test('renders facility custom names alongside type names across facility views',
   const factionFacilities = facilityList.faction_facilities as Array<Record<string, unknown>>;
   if (!playerFacilities[0] || !factionFacilities[0]) throw new Error('Facility fixture is incomplete.');
   playerFacilities[0].custom_name = 'Frontier Smelter';
+  playerFacilities[0].output_price = 0.5;
   factionFacilities[0].custom_name = 'Alloy One';
 
   const listRendered = renderStructuredResult('facility_list', facilityList, options, context);
@@ -91,6 +92,8 @@ test('renders facility custom names alongside type names across facility views',
   expect(listRendered.success).toBe(true);
   expect(listRendered.stdout.join('\n')).toContain('Frontier Smelter (Ore Refinery)');
   expect(listRendered.stdout.join('\n')).toContain('Alloy One (Alloy Smelter)');
+  expect(listRendered.stdout.join('\n')).toContain('Rent/run');
+  expect(listRendered.stdout.join('\n')).toContain('0.5');
   expect(ownedRendered.success).toBe(true);
   expect(ownedRendered.stdout.join('\n')).toContain('Frontier Smelter (Ore Refinery)');
   expect(factionOwnedRendered.success).toBe(true);

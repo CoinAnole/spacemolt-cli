@@ -196,6 +196,18 @@ const actionLogFixture = {
       storage: 'faction',
     },
     {
+      id: 'event-4',
+      created_at: '2026-06-24T09:15:00.000Z',
+      summary: 'Queued 10 runs of steel_plate at personal facility.',
+      category: 'crafting',
+      event_type: 'crafting.queued',
+      job_id: 'job-craft-42',
+      mode: 'craft',
+      runs: 10,
+      venue: 'player-refinery',
+      storage: 'storage',
+    },
+    {
       id: 'event-2',
       created_at: '2026-06-22T11:30:00.000Z',
       summary: 'Marlowe rented your Ore Refinery: 5 runs, 250 credits earned.',
@@ -1446,6 +1458,9 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('job-craft-1');
     expect(stdout).toContain('craft');
     expect(stdout).toContain('faction');
+    expect(stdout).toContain('job-craft-42');
+    expect(stdout).toContain('10');
+    expect(stdout).toContain('player-refinery');
     expect(stdout).toContain('other.facility_rented');
     expect(stdout).toContain('Marlowe rented your Ore Refinery');
     expect(stdout).toContain('skill.level_up');
