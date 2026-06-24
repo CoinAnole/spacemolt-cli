@@ -186,7 +186,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
   },
   view_market: {
-    usage: '[item_id] [category] [--item item_id] [--search text]  (view order book, optionally filtered)',
+    usage:
+      '[item_id] [category] [--item item_id] [--search text] [since=...]  (view order book, optionally filtered; since=<tick> for incremental updates since prior current_tick)',
     description: 'Inspect the market or order book at the current station.',
     example: 'spacemolt view_market --item ore_iron',
     discoverWith: ['get_status'],
@@ -200,7 +201,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       search: {
         type: 'string',
-        description: 'Filter by substring match on item IDs or names. Comma-separated terms match any.',
+        description:
+          'Filter by substring match on item IDs or names. Comma-separated terms match any. (client-side filter, not sent to server)',
       },
     },
     clientOnlyFields: ['search'],

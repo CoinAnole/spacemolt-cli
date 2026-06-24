@@ -411,10 +411,12 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('[--item item_id]');
     expect(output).toContain('[--search text]');
+    expect(output).toContain('[since=...]');
     expect(output).toContain('item -> item_id');
     expect(output).toContain('item_id');
     expect(output).toContain('category');
     expect(output).toContain('search');
+    expect(output).toContain('since');
   });
 
   test('showCommandHelp documents payload-json for bulk storage item arrays', () => {

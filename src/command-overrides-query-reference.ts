@@ -341,9 +341,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   catalog: {
     usage:
-      '<type> [id] [category] [search] [page] [page_size] [commissionable=true/false]  (types: ships, items, skills, recipes, facilities)',
+      '<type> [id] [category] [search] [page] [page_size] [class=...] [empire=...] [tier=...] [commissionable=true/false]  (ships: class/empire/tier/commissionable filters; types: ships, items, skills, recipes, facilities)',
     description: 'Browse reference data such as ships, items, skills, recipes, and facilities.',
-    example: 'spacemolt catalog type=facilities search=steel_plate',
+    example: 'spacemolt catalog type=ships empire=solarian tier=3',
     seeAlso: ['get_guide', 'get_commands'],
     category: 'Reference & Help',
     apiRoute: 'POST /api/v2/spacemolt_catalog',
