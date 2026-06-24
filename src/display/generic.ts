@@ -580,7 +580,7 @@ export const genericFormatters = [
         ['Rep', ['required_reputation']],
         ['Passive Recipes', ['passive_recipes_summary']],
       ];
-      if (rows.some((ship) => ship.prestige_lock || ship.required_achievement)) {
+      if ((rows as Array<Record<string, unknown>>).some((ship) => ship.prestige_lock || ship.required_achievement)) {
         columns.push(['Lock', ['prestige_lock']]);
       }
       printCompactTable('Items', rows, columns, { maxCellWidth: 72 });

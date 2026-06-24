@@ -24,7 +24,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_system',
   },
   get_poi: {
-    description: 'Current POI details (deprecated; prefer get_system / get_location / get_base).',
+    description:
+      'Current POI details, resources, station services/fuel (when docked), wormhole prediction, hidden deposit reveal difficulty. Use get_system / get_location / get_base for consolidated views.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_poi',
   },
@@ -221,7 +222,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_ships',
   },
   get_action_log: {
-    usage: '[category=.. event_type=.. faction_id=.. page=..]  (full history: mining, navigation, combat, reputation, etc)',
+    usage:
+      '[category=.. event_type=.. faction_id=.. page=..]  (full history: mining, navigation, combat, reputation, etc)',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt_social/get_action_log',
     positionals: ['category', 'faction_id', 'page'],
@@ -284,7 +286,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   fleet_board: {
     usage: '<player_id> [garage=true]',
-    description: 'Ride as passenger on a faction-mate\'s ship (same station + faction; carrier needs free berths). Creates fleet automatically if needed.',
+    description:
+      "Ride as passenger on a faction-mate's ship (same station + faction; carrier needs free berths). Creates fleet automatically if needed.",
     example: 'spacemolt fleet_board player123',
     discoverWith: ['get_nearby', 'get_status'],
     seeAlso: ['fleet_disembark', 'fleet_status', 'list_passengers'],

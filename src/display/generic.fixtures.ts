@@ -91,8 +91,7 @@ export const catalogShipsFixture = {
       id: 'concierge_liner',
       name: 'Concierge Liner',
       piloting_required: 8,
-      prestige_lock:
-        'Locked: prestige hull reserved for pilots who have earned the "Galactic Concierge" achievement.',
+      prestige_lock: 'Locked: prestige hull reserved for pilots who have earned the "Galactic Concierge" achievement.',
       required_achievement: 'galactic_concierge',
       shipyard_tier: 3,
       tier: 4,

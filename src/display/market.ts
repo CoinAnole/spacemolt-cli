@@ -320,7 +320,8 @@ export const marketFormatters = [
       if (notListed !== undefined) emitLine(`Not listed: ${notListed.toLocaleString()}`);
       if (selfCleared !== undefined) emitLine(`Self-cleared own crossing order(s): ${selfCleared.toLocaleString()}`);
       if (selfClearRefund !== undefined) emitLine(`Self-clear refund: ${formatCredits(selfClearRefund)}`);
-      if (selfClearReturned !== undefined) emitLine(`Self-clear returned to storage: ${selfClearReturned.toLocaleString()}`);
+      if (selfClearReturned !== undefined)
+        emitLine(`Self-clear returned to storage: ${selfClearReturned.toLocaleString()}`);
       if (priceEach !== undefined) emitLine(`Price each: ${formatCredits(priceEach)}`);
       if (totalEscrowed !== undefined) emitLine(`Total escrowed: ${formatCredits(totalEscrowed)}`);
       if (remainingEscrowed !== undefined) emitLine(`Remaining escrowed: ${formatCredits(remainingEscrowed)}`);

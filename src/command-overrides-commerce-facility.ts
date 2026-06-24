@@ -6,6 +6,9 @@ const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
 const STORAGE_BUCKET_DESCRIPTION =
   'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. See bucket names in action=view target=faction.';
 
+const STORAGE_DEST_BUCKET_DESCRIPTION =
+  "Optional destination for direct faction compartment moves (source=faction + target=faction): items move from 'bucket' into 'dest_bucket'. Leave either empty to mean the main store (covers main↔bucket and bucket↔bucket). Requires manage_treasury.";
+
 const FACTION_BUILD_BUCKET_DESCRIPTION =
   "For 'faction_build'/'faction_upgrade': a Storage Extension bucket (name or id) to source build/upgrade MATERIALS from, instead of the faction main store. Ship cargo backfills either way.";
 
@@ -80,7 +83,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   storage: {
     usage:
-      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name] [items=JSON]',
+      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name] [dest_bucket=name] [items=JSON]',
     description: 'Run unified station storage operations: view, deposit, withdraw, loot, or jettison.',
     example: 'spacemolt storage view target=faction --items iron_ore,fuel_cell',
     discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
@@ -95,6 +98,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       'target',
       'source',
       'bucket',
+      'dest_bucket',
       'wreck_id',
       'module_id',
       'message',
@@ -131,6 +135,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       bucket: {
         type: 'string',
         description: STORAGE_BUCKET_DESCRIPTION,
+      },
+      dest_bucket: {
+        type: 'string',
+        description: STORAGE_DEST_BUCKET_DESCRIPTION,
       },
       wreck_id: {
         type: 'string',
@@ -436,8 +444,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction|faction:<bucket>] [source=storage|faction|faction:<bucket>]',
     description:
       'Queue production work on a facility you own. Use source and deliver_to to pull inputs from one store and deposit outputs to another; faction:<bucket> targets a Storage Extension bucket.',
-    example:
-      'spacemolt facility_job_add facility-1 refine_steel 10 source=storage deliver_to=faction:Crafting',
+    example: 'spacemolt facility_job_add facility-1 refine_steel 10 source=storage deliver_to=faction:Crafting',
     discoverWith: ['facility_list', 'facility_owned', 'catalog'],
     seeAlso: ['facility_job_list', 'facility_job_cancel', 'facility_job_reorder', 'facility_set_access'],
     category: 'Facilities',
@@ -458,7 +465,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       source: {
         type: 'string',
         description:
-          "Input source: where inputs and credits are pulled from. Same values as deliver_to; defaults to deliver_to.",
+          'Input source: where inputs and credits are pulled from. Same values as deliver_to; defaults to deliver_to.',
       },
     },
   },
