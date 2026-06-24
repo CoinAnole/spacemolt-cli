@@ -8,8 +8,15 @@ import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
 import { runInvocation } from './main';
 import { VERSION } from './runtime';
-import { ACTIVE_PROFILE, getDefaultProfile, SessionManager, setActiveProfile, setDefaultProfile } from './session';
-import type { JsonRequestOptions } from './types';
+import {
+  ACTIVE_PROFILE,
+  type EnvLike,
+  getDefaultProfile,
+  SessionManager,
+  setActiveProfile,
+  setDefaultProfile,
+} from './session';
+import type { JsonRequestOptions, Session } from './types';
 
 async function captureInvocation(
   argv: string[],
@@ -428,7 +435,9 @@ describe('runInvocation option isolation', () => {
       expect(exitCode).toBe(0);
       expect(stderr.join('')).not.toContain('Unknown command');
       expect(captured.length).toBeGreaterThan(0);
-      expect(captured[0]!.payload).toMatchObject({
+      const first = captured[0];
+      expect(first).toBeDefined();
+      expect(first.payload).toMatchObject({
         item_id: 'iron_ore',
         quantity: 50,
         price_each: 6,
@@ -913,10 +922,10 @@ describe('runInvocation option isolation', () => {
     fs.writeFileSync(defaultSessionPath, `${JSON.stringify(defaultSession, null, 2)}\n`);
 
     // Capture session saves at a higher level for isolation from FS/env details inside SessionManager
-    const sessionSaves: Array<{ session: any; profile?: string }> = [];
+    const sessionSaves: Array<{ session: Session; profile?: string }> = [];
     const baseSessionManager = new SessionManager({
       apiBase: 'https://game.test/api/v2',
-      env: { XDG_CONFIG_HOME: configHome } as any,
+      env: { XDG_CONFIG_HOME: configHome } as EnvLike,
       transport: async <T>() => ({
         status: 200,
         ok: true,
@@ -931,7 +940,10 @@ describe('runInvocation option isolation', () => {
     });
     // Override on the instance (shadows prototype) so all other methods remain available
     const originalSave = baseSessionManager.saveSession.bind(baseSessionManager);
-    (baseSessionManager as any).saveSession = async (session: any, profile?: string) => {
+    (baseSessionManager as { saveSession: (s: Session, p?: string) => Promise<void> }).saveSession = async (
+      session: Session,
+      profile?: string,
+    ) => {
       sessionSaves.push({ session: JSON.parse(JSON.stringify(session)), profile });
       return originalSave(session, profile);
     };

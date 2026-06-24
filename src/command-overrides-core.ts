@@ -360,7 +360,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       source: {
         type: 'string',
         description:
-          "Where inputs and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.",
+          'Where inputs and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.',
       },
       dry_run: {
         type: 'boolean',
@@ -403,7 +403,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
     description:
-      "Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.",
+      'Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
     example: 'spacemolt recycle basic_iron_smelting 20 source=faction:Scrap deliver_to=storage',
     discoverWith: ['catalog', 'facility_list', 'storage'],
     seeAlso: ['craft', 'catalog', 'storage', 'get_guide'],
@@ -419,7 +419,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       source: {
         type: 'string',
         description:
-          "Where feedstock and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.",
+          'Where feedstock and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.',
       },
       dry_run: {
         type: 'boolean',
