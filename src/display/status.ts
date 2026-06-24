@@ -100,7 +100,7 @@ function compactSkillEntries(source: unknown): string[] {
 }
 
 function formatStatusSummary(r: Record<string, unknown>): string[] | undefined {
-  if (!isRecord(r.player) || !isRecord(r.ship)) return undefined;
+  if (!isRecord(r.player)) return undefined;
   const player = r.player;
   const ship = r.ship;
   const system = isRecord(r.system) ? r.system : undefined;
@@ -124,8 +124,19 @@ function formatStatusSummary(r: Record<string, unknown>): string[] | undefined {
       'docked_at_base',
     ]) ??
     'in space';
+  const isRiding = isRecord(r.riding);
+  const ridingCarrier = isRiding ? textFromRecord(r.riding as Record<string, unknown>, ['carrier']) : undefined;
   const shipClass =
-    textFromRecord(ship, ['class_name', 'ship_class_name', 'class', 'ship_class', 'class_id', 'name']) ?? 'unknown';
+    (isRiding
+      ? `passenger on ${ridingCarrier || 'carrier'}`
+      : textFromRecord(isRecord(ship) ? ship : undefined, [
+          'class_name',
+          'ship_class_name',
+          'class',
+          'ship_class',
+          'class_id',
+          'name',
+        ])) ?? 'unknown';
   const skills = compactSkillEntries(r.skills ?? player.skills ?? player.stats);
 
   return [
@@ -356,9 +367,9 @@ export const statusFormatters = [
   // Player status
   formatter(
     (r) => {
-      if (!r.player || !r.ship) return false;
+      if (!r.player) return false;
       const p = r.player as Record<string, unknown>;
-      const s = r.ship as Record<string, unknown>;
+      const s = isRecord(r.ship) ? r.ship : undefined;
       const sys = r.system as Record<string, unknown> | undefined;
       const poi = r.poi as Record<string, unknown> | undefined;
 
@@ -377,21 +388,31 @@ export const statusFormatters = [
       if (p.is_cloaked) emitLine(`  ${c.cyan}[CLOAKED]${c.reset}`);
       emitUnknownSignatureHint(r, r.location, poi);
 
-      emitLine(`\n${c.bright}Ship: ${s.name}${c.reset} (${s.class_id})`);
-      emitLine(`  Hull: ${s.hull}/${s.max_hull}`);
-      emitLine(`  Shield: ${s.shield}/${s.max_shield} (+${s.shield_recharge}/tick)`);
-      emitLine(`  Armor: ${s.armor || 0}`);
-      emitLine(`  Fuel: ${s.fuel}/${s.max_fuel}`);
-      emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}`);
-      emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}`);
-      emitLine(`  Power: ${s.power_used}/${s.power_capacity}`);
-      emitShipCombatEffects(s);
+      if (isRecord(r.riding)) {
+        const ride = r.riding as Record<string, unknown>;
+        emitLine(
+          `\n${c.bright}Riding aboard: ${ride.carrier || '?'}'s ship ${ride.ship_id ? `(${ride.ship_id})` : ''}${c.reset}`,
+        );
+        emitLine(`  (passenger; use 'fleet disembark' or switch_ship at station to exit)`);
+      } else if (s) {
+        emitLine(`\n${c.bright}Ship: ${s.name}${c.reset} (${s.class_id})`);
+        emitLine(`  Hull: ${s.hull}/${s.max_hull}`);
+        emitLine(`  Shield: ${s.shield}/${s.max_shield} (+${s.shield_recharge}/tick)`);
+        emitLine(`  Armor: ${s.armor || 0}`);
+        emitLine(`  Fuel: ${s.fuel}/${s.max_fuel}`);
+        emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}`);
+        emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}`);
+        emitLine(`  Power: ${s.power_used}/${s.power_capacity}`);
+        emitShipCombatEffects(s);
 
-      if (s.class_id === 'escape_pod') {
-        emitLine(`\n${c.yellow}WARNING: You are in an Escape Pod!${c.reset}`);
-        emitLine(`  - No cargo capacity, no weapons, no defenses`);
-        emitLine(`  - Infinite fuel - travel anywhere`);
-        emitLine(`  - Get to a station and commission or buy a ship with 'commission_ship' or 'browse_ships'`);
+        if (s.class_id === 'escape_pod') {
+          emitLine(`\n${c.yellow}WARNING: You are in an Escape Pod!${c.reset}`);
+          emitLine(`  - No cargo capacity, no weapons, no defenses`);
+          emitLine(`  - Infinite fuel - travel anywhere`);
+          emitLine(`  - Get to a station and commission or buy a ship with 'commission_ship' or 'browse_ships'`);
+        }
+      } else {
+        emitLine(`\n${c.bright}Ship:${c.reset} (none)`);
       }
 
       if (r.travel_progress !== undefined) {

@@ -1106,7 +1106,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility job_cancel <job|job_ids=JSON>     Cancel queued production
     facility job_reorder <job> <pos>           Reorder queued production
     facility set_access <facility> <public|private>  Open or close rental access
-    facility set_output_price <facility> <item> <price>  Set renter output pricing
+    facility set_output_price <facility> <price>  Set renter output pricing (0=free)
     facility list_for_sale <id> <price>  List a facility for sale
     facility browse_for_sale             Browse facility listings
     facility buy_listing <id>            Buy a listed facility

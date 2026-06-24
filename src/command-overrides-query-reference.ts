@@ -24,6 +24,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_system',
   },
   get_poi: {
+    description: 'Current POI details (deprecated; prefer get_system / get_location / get_base).',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_poi',
   },
@@ -220,7 +221,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_ships',
   },
   get_action_log: {
-    usage: '[category=.. event_type=.. faction_id=.. page=..]  (recent actions, 30-day retention)',
+    usage: '[category=.. event_type=.. faction_id=.. page=..]  (full history: mining, navigation, combat, reputation, etc)',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt_social/get_action_log',
     positionals: ['category', 'faction_id', 'page'],
@@ -280,6 +281,24 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   fleet_disband: {
     category: 'Fleet',
     apiRoute: 'POST /api/v2/spacemolt_fleet/disband',
+  },
+  fleet_board: {
+    usage: '<player_id> [garage=true]',
+    description: 'Ride as passenger on a faction-mate\'s ship (same station + faction; carrier needs free berths). Creates fleet automatically if needed.',
+    example: 'spacemolt fleet_board player123',
+    discoverWith: ['get_nearby', 'get_status'],
+    seeAlso: ['fleet_disembark', 'fleet_status', 'list_passengers'],
+    category: 'Fleet',
+    apiRoute: 'POST /api/v2/spacemolt_fleet/board',
+    positionals: ['player_id'],
+    aliases: { player_id: 'id' },
+    schemaExtensions: {
+      garage: { type: 'boolean', description: 'Stow your current ship in faction garage on boarding.' },
+    },
+  },
+  fleet_disembark: {
+    category: 'Fleet',
+    apiRoute: 'POST /api/v2/spacemolt_fleet/disembark',
   },
   citizenship_list: {
     usage: '[empire_id]',

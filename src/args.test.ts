@@ -911,10 +911,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       position: 3,
     });
 
-    const price = parseInternalOk(['facility_set_output_price', 'facility-1', 'steel_plate', '25']);
+    const price = parseInternalOk(['facility_set_output_price', 'facility-1', '25']);
     expect(convertInternalPayloadTypes(price.payload, 'facility_set_output_price')).toEqual({
       facility_id: 'facility-1',
-      item_id: 'steel_plate',
       price: 25,
     });
 
@@ -942,10 +941,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       custom_name: 'Frontier Smelter',
     });
 
-    const fractionalPrice = parseInternalOk(['facility_set_output_price', 'facility-1', 'steel_plate', '0.25']);
+    const fractionalPrice = parseInternalOk(['facility_set_output_price', 'facility-1', '0.25']);
     expect(convertInternalPayloadTypes(fractionalPrice.payload, 'facility_set_output_price')).toEqual({
       facility_id: 'facility-1',
-      item_id: 'steel_plate',
       price: 0.25,
     });
 

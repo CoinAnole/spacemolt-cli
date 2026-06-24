@@ -611,8 +611,8 @@ describe('command metadata', () => {
         group: 'facility',
         actionName: 'set_output_price',
         action: 'set_output_price',
-        args: ['facility_id', 'item_id', 'price'],
-        help: 'Set the per-item output price',
+        args: ['facility_id', 'price'],
+        help: 'Set the per-unit output price renters pay',
       },
       set_access: {
         group: 'facility',

@@ -499,15 +499,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['job_id', 'position'],
   },
   facility_set_output_price: {
-    usage: '<facility_id> <item_id> <price>',
+    usage: '<facility_id> <price>',
     description:
-      'Set the per-item output price renters pay for facility production output; fractional prices are allowed.',
-    example: 'spacemolt facility_set_output_price facility-1 steel_plate 0.25',
+      'Set the per-unit output price renters pay for facility production (price * qty per run, rounded). Use 0 for free (renters cover only their inputs/labor). Fractional allowed (e.g. 0.25).',
+    example: 'spacemolt facility_set_output_price facility-1 0.25',
     discoverWith: ['facility_list', 'facility_owned'],
     seeAlso: ['facility_set_access', 'facility_job_list'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_output_price',
-    positionals: ['facility_id', 'item_id', 'price'],
+    positionals: ['facility_id', 'price'],
   },
   facility_set_name: {
     usage: '<facility_id> <custom_name>',

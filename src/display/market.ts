@@ -301,6 +301,9 @@ export const marketFormatters = [
       const notListed = finiteNumber(r.quantity_not_listed);
       const deliveredToCargo = finiteNumber(r.delivered_to_cargo);
       const deliveredToStorage = finiteNumber(r.delivered_to_storage);
+      const selfCleared = finiteNumber(r.self_cleared);
+      const selfClearRefund = finiteNumber(r.self_clear_refund);
+      const selfClearReturned = finiteNumber(r.self_clear_returned);
 
       emitLine(`\n${c.bright}=== ${side === 'buy' ? 'Buy' : 'Sell'} Order Created ===${c.reset}`);
       emitLine(`Item: ${itemName}${itemId}`);
@@ -315,6 +318,9 @@ export const marketFormatters = [
       if (remaining !== undefined)
         emitLine(`${side === 'buy' ? 'Remaining open' : 'Remaining listed'}: ${remaining.toLocaleString()}`);
       if (notListed !== undefined) emitLine(`Not listed: ${notListed.toLocaleString()}`);
+      if (selfCleared !== undefined) emitLine(`Self-cleared own crossing order(s): ${selfCleared.toLocaleString()}`);
+      if (selfClearRefund !== undefined) emitLine(`Self-clear refund: ${formatCredits(selfClearRefund)}`);
+      if (selfClearReturned !== undefined) emitLine(`Self-clear returned to storage: ${selfClearReturned.toLocaleString()}`);
       if (priceEach !== undefined) emitLine(`Price each: ${formatCredits(priceEach)}`);
       if (totalEscrowed !== undefined) emitLine(`Total escrowed: ${formatCredits(totalEscrowed)}`);
       if (remainingEscrowed !== undefined) emitLine(`Remaining escrowed: ${formatCredits(remainingEscrowed)}`);

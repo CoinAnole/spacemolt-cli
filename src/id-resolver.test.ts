@@ -658,13 +658,13 @@ describe('cached ID payload resolver', () => {
     expect(
       prepareInternalPayload(
         'facility_set_output_price',
-        { facility_id: 'fuel bunker', item_id: 'steel plate', price: '25' },
+        { facility_id: 'fuel bunker', price: '25' },
         options(),
         sessionPath,
       ),
     ).toEqual({
       type: 'payload',
-      payload: { facility_id: 'facility-1', item_id: 'steel_plate', price: 25 },
+      payload: { facility_id: 'facility-1', price: 25 },
     });
     expect(
       prepareInternalPayload('facility_buy_listing', { listing_id: 'fuel bunker listing' }, options(), sessionPath),
