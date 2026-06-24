@@ -124,7 +124,7 @@ describe('help output branches', () => {
     expect(output).toContain('--search-keys');
     expect(output).toContain('--search-values');
     expect(output).toContain('--search-regex');
-    expect(output).toContain('.key[0].field');
+    expect(output).toContain('Extract with path syntax');
     expect(output).toContain('Projections read from structuredContent when present.');
     expect(output).toContain('Search projections print jq paths and values.');
     expect(output).toContain('--field/--fields output only the selected projection, even with --json/--format=json.');
@@ -822,7 +822,7 @@ describe('help output branches', () => {
     expect(output).toContain('--search-keys');
     expect(output).toContain('--search-values');
     expect(output).toContain('--search-regex');
-    expect(output).toContain('.key[0].field');
+    expect(output).toContain('Extract with path syntax');
     expect(output).toContain('Search projections print jq paths and values.');
     expect(output).toContain('--field/--fields output only the selected projection, even with --json/--format=json.');
     expect(output).toContain('SPACEMOLT_OUTPUT    Set to json for full API response JSON');

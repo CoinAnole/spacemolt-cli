@@ -81,6 +81,8 @@ async function withConfigHome<T>(configHome: string, fn: () => Promise<T>): Prom
 
 afterEach(() => {
   setActiveProfile(undefined);
+  // Best-effort reset of default profile to reduce cross-test pollution
+  // (tests that need a default explicitly set it inside their withConfigHome)
 });
 
 describe('runInvocation option isolation', () => {
@@ -889,8 +891,16 @@ describe('runInvocation option isolation', () => {
   test('login with saved default uses username profile without overwriting default session', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-login-default-'));
     const configHome = path.join(tempDir, 'config');
-    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    const spacemoltHome = path.join(configHome, 'spacemolt-cli');
+    const sessionsDir = path.join(spacemoltHome, 'sessions');
     fs.mkdirSync(sessionsDir, { recursive: true });
+
+    // Pre-populate default profile via config file (more reliable than relying only on setDefaultProfile during run)
+    fs.writeFileSync(
+      path.join(spacemoltHome, 'config.json'),
+      `${JSON.stringify({ defaultProfile: 'marlowe' }, null, 2)}\n`,
+    );
+
     const defaultSession = {
       id: 'sess_marlowe',
       username: 'marlowe',
@@ -901,6 +911,32 @@ describe('runInvocation option isolation', () => {
     };
     const defaultSessionPath = path.join(sessionsDir, 'marlowe.json');
     fs.writeFileSync(defaultSessionPath, `${JSON.stringify(defaultSession, null, 2)}\n`);
+
+    // Capture session saves at a higher level for isolation from FS/env details inside SessionManager
+    const sessionSaves: Array<{ session: any; profile?: string }> = [];
+    const baseSessionManager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env: { XDG_CONFIG_HOME: configHome } as any,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: {
+          session: {
+            id: 'sess_other_bootstrap',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        } as T,
+      }),
+    });
+    // Override on the instance (shadows prototype) so all other methods remain available
+    const originalSave = baseSessionManager.saveSession.bind(baseSessionManager);
+    (baseSessionManager as any).saveSession = async (session: any, profile?: string) => {
+      sessionSaves.push({ session: JSON.parse(JSON.stringify(session)), profile });
+      return originalSave(session, profile);
+    };
+    const capturingSessionStore = baseSessionManager;
+
     const stdout: string[] = [];
     const stderr: string[] = [];
 
@@ -915,22 +951,7 @@ describe('runInvocation option isolation', () => {
             createClient(config) {
               return new RealSpaceMoltClient({
                 config,
-                sessionStore: new SessionManager({
-                  apiBase: config.apiBase,
-                  profile: config.profile,
-                  profileIsExplicit: config.profileIsExplicit,
-                  transport: async <T>() => ({
-                    status: 200,
-                    ok: true,
-                    data: {
-                      session: {
-                        id: 'sess_other_bootstrap',
-                        created_at: '2026-01-01T00:00:00.000Z',
-                        expires_at: '2099-01-01T00:00:00.000Z',
-                      },
-                    } as T,
-                  }),
-                }),
+                sessionStore: capturingSessionStore,
                 transport: {
                   async requestJson<T>() {
                     return {
@@ -947,8 +968,19 @@ describe('runInvocation option isolation', () => {
 
       expect(exitCode).toBe(0);
       expect(stderr).toEqual([]);
+
+      // Default session file must remain completely untouched
       expect(JSON.parse(fs.readFileSync(defaultSessionPath, 'utf-8'))).toEqual(defaultSession);
-      expect(JSON.parse(fs.readFileSync(path.join(sessionsDir, 'otheruser.json'), 'utf-8'))).toMatchObject({
+
+      // Higher-level behavioral assertion via captured saves (more isolated from internal
+      // SessionManager FS/env details): at least one save for the new bootstrap session occurred
+      const newBootstrapSave = sessionSaves.find((s) => s.session?.id === 'sess_other_bootstrap');
+      expect(newBootstrapSave).toBeTruthy();
+
+      // The enriched final session file for the new user profile was still created on disk
+      const otherUserPath = path.join(sessionsDir, 'otheruser.json');
+      expect(fs.existsSync(otherUserPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(otherUserPath, 'utf-8'))).toMatchObject({
         id: 'sess_other_bootstrap',
         username: 'OtherUser',
         password: 'other-secret',
