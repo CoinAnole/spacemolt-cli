@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.417.1",
+  "generatedAtGameserver": "v0.436.0",
   "blockingDivergenceSignatures": [
     "browse_ships|browse_ships|extra-in-fixture|listings[0].seller_name",
     "browse_ships|browse_ships|required-missing|base_id",
@@ -24,8 +24,6 @@
     "faction_create_buy_order|faction_create_buy_order|extra-in-fixture|details.total_spent",
     "faction_create_buy_order|faction_create_buy_order|required-missing|details.faction_id",
     "faction_create_buy_order|faction_create_buy_order|required-missing|details.faction_tag",
-    "faction_create_sell_order|faction_create_sell_order|extra-in-fixture|details.quantity_listed",
-    "faction_create_sell_order|faction_create_sell_order|extra-in-fixture|details.total_earned",
     "faction_create_sell_order|faction_create_sell_order|required-missing|details.faction_id",
     "faction_create_sell_order|faction_create_sell_order|required-missing|details.faction_tag",
     "faction_info|faction_info|required-missing|at_war",

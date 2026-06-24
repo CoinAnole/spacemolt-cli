@@ -227,6 +227,9 @@ export const intelFixture = {
 export const factionQueryIntelFixture = {
   count: 1,
   current_tick: 900690,
+  intel_level: 2,
+  message: 'Showing intel for 1 system',
+  total: 1,
   entries: [
     {
       system_id: 'sol',
@@ -234,6 +237,7 @@ export const factionQueryIntelFixture = {
       empire: 'solarian',
       police_level: 3,
       submitted_at_tick: 900685,
+      submitted_by: 'p-123',
       submitter_name: 'Marlowe',
       pois: [
         {
