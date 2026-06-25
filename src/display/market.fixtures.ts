@@ -319,7 +319,11 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
-  storage_view: { command: 'storage', fixture: { ...storageFixture, action: 'view', target: 'self' }, schemaTarget: 'details' },
+  storage_view: {
+    command: 'storage',
+    fixture: { ...storageFixture, action: 'view', target: 'self' },
+    schemaTarget: 'details',
+  },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
   faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },

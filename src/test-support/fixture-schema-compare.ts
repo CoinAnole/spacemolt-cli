@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { COMMAND_OVERRIDES } from '../command-overrides.ts';
-import { highValueCommandFixtures, type HighValueFixtureEntry } from '../display/formatter-fixtures.ts';
+import { type HighValueFixtureEntry, highValueCommandFixtures } from '../display/formatter-fixtures.ts';
 
 export interface Divergence {
   path: string;
@@ -189,7 +189,21 @@ export function resolveSuccessResponseSchema(
 }
 
 /** Common top-level state keys in V2GameState / full responses. */
-const STATE_KEYS = ['cargo', 'credits', 'player', 'ship', 'location', 'missions', 'modules', 'queue', 'skills', 'hints', 'riding', 'version', 'details'] as const;
+const STATE_KEYS = [
+  'cargo',
+  'credits',
+  'player',
+  'ship',
+  'location',
+  'missions',
+  'modules',
+  'queue',
+  'skills',
+  'hints',
+  'riding',
+  'version',
+  'details',
+] as const;
 
 function hasStateLikeKeys(obj: Record<string, unknown>): boolean {
   return Object.keys(obj).some((k) => (STATE_KEYS as readonly string[]).includes(k));
@@ -206,7 +220,7 @@ function fixtureLooksLikePureActionResult(fixture: Record<string, unknown>): boo
   if ('details' in fixture) return false;
   // Common markers for action result payloads the CLI surfaces / tests
   if ('action' in fixture) return true;
-  if (typeof (fixture as any).success === 'boolean') return true;
+  if (typeof fixture.success === 'boolean') return true;
   if ('target_id' in fixture || 'fuel' in fixture || 'base_id' in fixture) return true;
   if (keys.some((k) => k === 'name' || k.endsWith('_id') || k === 'total_value' || k === 'xp_gained')) return true;
   return false;
@@ -221,7 +235,10 @@ function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSch
   }
   resolvedD = getEffectiveSchema(spec, resolvedD);
   // If it ended up empty or without properties, don't use it
-  if (!resolvedD || (resolvedD.properties && Object.keys(resolvedD.properties).length === 0 && !resolvedD.allOf && !resolvedD.oneOf)) {
+  if (
+    !resolvedD ||
+    (resolvedD.properties && Object.keys(resolvedD.properties).length === 0 && !resolvedD.allOf && !resolvedD.oneOf)
+  ) {
     return undefined;
   }
   return resolvedD;
@@ -281,7 +298,7 @@ function compareValueToSchema(
     // Extra in fixture (not declared)
     for (const k of Object.keys(obj)) {
       if (!(k in schemaProps)) {
-        if (allowedExtraKeys && allowedExtraKeys.has(k)) {
+        if (allowedExtraKeys?.has(k)) {
           // Known extra for this fixture (e.g. chat send view vs ack schema); do not flag
           continue;
         }
@@ -337,7 +354,17 @@ function compareValueToSchema(
     const itemRequired = Array.isArray(itemSchema.required) ? itemSchema.required : undefined;
     for (let i = 0; i < Math.min(value.length, 3); i++) {
       // sample first few items to keep report short
-      compareValueToSchema(value[i], itemSchema, `${path}[${i}]`, itemRequired, depth + 1, maxDepth, divergences, spec, allowedExtraKeys);
+      compareValueToSchema(
+        value[i],
+        itemSchema,
+        `${path}[${i}]`,
+        itemRequired,
+        depth + 1,
+        maxDepth,
+        divergences,
+        spec,
+        allowedExtraKeys,
+      );
     }
     if (value.length > 3) {
       divergences.push({
@@ -374,7 +401,7 @@ export function compareFixtureToSchema(
   const maxDepth = opts.maxDepth ?? 4;
   const divergences: Divergence[] = [];
   const effectiveSchema = resolveChildSchema(schema, opts.spec);
-  const allowedSet = opts.allowedExtraKeys && opts.allowedExtraKeys.length ? new Set(opts.allowedExtraKeys) : undefined;
+  const allowedSet = opts.allowedExtraKeys?.length ? new Set(opts.allowedExtraKeys) : undefined;
 
   // Top level required from the primary schema
   const topRequired = Array.isArray(effectiveSchema.required) ? effectiveSchema.required : undefined;
@@ -389,12 +416,12 @@ export function compareFixtureToSchema(
         const isRequired = topRequired?.includes(k);
         const isDetails = opts.comparedAgainst === 'details';
         const notExercisedMsg = isRequired
-          ? (isDetails
-              ? 'declared as required in the action response schema but not exercised by fixture'
-              : 'declared as required in schema but not exercised by fixture')
-          : (isDetails
-              ? 'present in the action response schema but not exercised by this fixture'
-              : 'present in live response schema but not exercised by this fixture');
+          ? isDetails
+            ? 'declared as required in the action response schema but not exercised by fixture'
+            : 'declared as required in schema but not exercised by fixture'
+          : isDetails
+            ? 'present in the action response schema but not exercised by this fixture'
+            : 'present in live response schema but not exercised by this fixture';
         divergences.push({
           path: k,
           kind: 'extra-in-schema',
@@ -490,7 +517,7 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
 
     const explicitTarget = entry.schemaTarget;
     const looksLikeAction = fixtureLooksLikePureActionResult(entry.fixture);
-    let comparedAgainst: FixtureSchemaComparison['comparedAgainst'] = undefined;
+    let comparedAgainst: FixtureSchemaComparison['comparedAgainst'];
 
     if (explicitTarget === 'details') {
       const detailsSchema = resolveDetailsSubschema(spec, resolved.schema);

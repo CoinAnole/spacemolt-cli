@@ -437,7 +437,7 @@ describe('runInvocation option isolation', () => {
       expect(captured.length).toBeGreaterThan(0);
       const first = captured[0];
       expect(first).toBeDefined();
-      expect(first!.payload).toMatchObject({
+      expect(first?.payload).toMatchObject({
         item_id: 'iron_ore',
         quantity: 50,
         price_each: 6,
