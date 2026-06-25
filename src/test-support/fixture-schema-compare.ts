@@ -18,6 +18,8 @@ export interface FixtureSchemaComparison {
   command: string;
   apiRoute: string;
   primarySchemaName?: string;
+  /** Indicates the fixture was compared against a subschema (e.g. the action details payload) rather than the raw top-level structuredContent response. */
+  comparedAgainst?: 'details' | 'structuredContent';
   divergences: Divergence[];
   summary: string;
   isPartialExample: boolean;
@@ -188,6 +190,43 @@ export function resolveSuccessResponseSchema(
   return { schema: effective, primarySchemaName: primaryName };
 }
 
+/** Common top-level state keys in V2GameState / full responses. */
+const STATE_KEYS = ['cargo', 'credits', 'player', 'ship', 'location', 'missions', 'modules', 'queue', 'skills', 'hints', 'riding', 'version', 'details'] as const;
+
+function hasStateLikeKeys(obj: Record<string, unknown>): boolean {
+  return Object.keys(obj).some((k) => (STATE_KEYS as readonly string[]).includes(k));
+}
+
+/** Heuristic: does this fixture look like a pure action/details payload rather than a full structuredContent/V2GameState? */
+function fixtureLooksLikePureActionResult(fixture: Record<string, unknown>): boolean {
+  if (!fixture || typeof fixture !== 'object' || Array.isArray(fixture)) return false;
+  const keys = Object.keys(fixture);
+  if (keys.length === 0) return false;
+  if (hasStateLikeKeys(fixture)) return false;
+  if ('details' in fixture) return false;
+  // Common markers for action result payloads the CLI surfaces / tests
+  if ('action' in fixture) return true;
+  if (typeof (fixture as any).success === 'boolean') return true;
+  if ('target_id' in fixture || 'fuel' in fixture || 'base_id' in fixture) return true;
+  if (keys.some((k) => k === 'name' || k.endsWith('_id') || k === 'total_value' || k === 'xp_gained')) return true;
+  return false;
+}
+
+function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSchema | undefined {
+  const d = schema.properties?.details as JsonSchema | undefined;
+  if (!d) return undefined;
+  let resolvedD = d;
+  if (resolvedD.$ref) {
+    resolvedD = resolveRef(spec, resolvedD.$ref);
+  }
+  resolvedD = getEffectiveSchema(spec, resolvedD);
+  // If it ended up empty or without properties, don't use it
+  if (!resolvedD || (resolvedD.properties && Object.keys(resolvedD.properties).length === 0 && !resolvedD.allOf && !resolvedD.oneOf)) {
+    return undefined;
+  }
+  return resolvedD;
+}
+
 function getJsonType(value: unknown): string {
   if (value === null) return 'null';
   if (Array.isArray(value)) return 'array';
@@ -203,6 +242,7 @@ function compareValueToSchema(
   maxDepth: number,
   divergences: Divergence[],
   spec?: OpenApiSpec,
+  allowedExtraKeys?: Set<string>,
 ): void {
   if (depth > maxDepth) return;
 
@@ -241,6 +281,10 @@ function compareValueToSchema(
     // Extra in fixture (not declared)
     for (const k of Object.keys(obj)) {
       if (!(k in schemaProps)) {
+        if (allowedExtraKeys && allowedExtraKeys.has(k)) {
+          // Known extra for this fixture (e.g. chat send view vs ack schema); do not flag
+          continue;
+        }
         const addl = schema.additionalProperties;
         if (addl === false || (typeof addl === 'object' && Object.keys(addl).length === 0)) {
           divergences.push({
@@ -278,6 +322,7 @@ function compareValueToSchema(
           maxDepth,
           divergences,
           spec,
+          allowedExtraKeys,
         );
       } else if (required?.includes(k)) {
         divergences.push({
@@ -292,7 +337,7 @@ function compareValueToSchema(
     const itemRequired = Array.isArray(itemSchema.required) ? itemSchema.required : undefined;
     for (let i = 0; i < Math.min(value.length, 3); i++) {
       // sample first few items to keep report short
-      compareValueToSchema(value[i], itemSchema, `${path}[${i}]`, itemRequired, depth + 1, maxDepth, divergences, spec);
+      compareValueToSchema(value[i], itemSchema, `${path}[${i}]`, itemRequired, depth + 1, maxDepth, divergences, spec, allowedExtraKeys);
     }
     if (value.length > 3) {
       divergences.push({
@@ -317,6 +362,9 @@ export function compareFixtureToSchema(
     primarySchemaName?: string;
     maxDepth?: number;
     spec?: OpenApiSpec;
+    /** Keys that are present in the fixture but should not be treated as extra-in-fixture (e.g. chat send view fields) */
+    allowedExtraKeys?: string[];
+    comparedAgainst?: FixtureSchemaComparison['comparedAgainst'];
   } = {
     label: '',
     command: '',
@@ -326,11 +374,12 @@ export function compareFixtureToSchema(
   const maxDepth = opts.maxDepth ?? 4;
   const divergences: Divergence[] = [];
   const effectiveSchema = resolveChildSchema(schema, opts.spec);
+  const allowedSet = opts.allowedExtraKeys && opts.allowedExtraKeys.length ? new Set(opts.allowedExtraKeys) : undefined;
 
   // Top level required from the primary schema
   const topRequired = Array.isArray(effectiveSchema.required) ? effectiveSchema.required : undefined;
 
-  compareValueToSchema(fixtureValue, effectiveSchema, '', topRequired, 0, maxDepth, divergences, opts.spec);
+  compareValueToSchema(fixtureValue, effectiveSchema, '', topRequired, 0, maxDepth, divergences, opts.spec, allowedSet);
 
   // Fields declared in schema but completely absent from fixture (informational for partial examples)
   if (effectiveSchema.properties && typeof fixtureValue === 'object' && fixtureValue !== null) {
@@ -363,7 +412,7 @@ export function compareFixtureToSchema(
   if (missingRequired > 0) summaryParts.push(`${missingRequired} missing required`);
   const summary = summaryParts.length > 0 ? summaryParts.join(', ') : 'no structural divergences detected';
 
-  return {
+  const out: FixtureSchemaComparison = {
     label: opts.label,
     command: opts.command,
     apiRoute: opts.apiRoute,
@@ -371,7 +420,9 @@ export function compareFixtureToSchema(
     divergences,
     summary,
     isPartialExample: isPartial,
+    comparedAgainst: opts.comparedAgainst,
   };
+  return out;
 }
 
 /**
@@ -421,13 +472,49 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
       continue;
     }
 
-    const comparison = compareFixtureToSchema(entry.fixture, resolved.schema, {
+    // Choose the most appropriate schema for this fixture.
+    // Many action command fixtures are written as the "details" payload (or a chat send view)
+    // rather than the full structuredContent / V2GameState envelope.
+    let schemaForCompare = resolved.schema;
+    let primaryForCompare = resolved.primarySchemaName;
+    let allowedExtraKeys: string[] | undefined;
+
+    const looksLikeAction = fixtureLooksLikePureActionResult(entry.fixture);
+    let comparedAgainst: FixtureSchemaComparison['comparedAgainst'] = undefined;
+
+    if (looksLikeAction) {
+      const detailsSchema = resolveDetailsSubschema(spec, resolved.schema);
+      if (detailsSchema) {
+        schemaForCompare = detailsSchema;
+        // Prefer a nice name like "RefuelResponse" when the ref is available
+        const detailsProp = (resolved.schema.properties?.details as JsonSchema | undefined) || {};
+        const refName = typeof detailsProp.$ref === 'string' ? detailsProp.$ref.split('/').pop() : undefined;
+        primaryForCompare = refName || resolved.primarySchemaName || 'details';
+        comparedAgainst = 'details';
+      } else {
+        comparedAgainst = 'structuredContent';
+      }
+    }
+
+    if (comparedAgainst === undefined) {
+      comparedAgainst = 'structuredContent';
+    }
+
+    // Chat send confirmation fixture uses a client-oriented shape (action/target/content)
+    // that the formatter accepts in addition to the declared ChatResponse ack shape.
+    if (label === 'chat' || entry.command === 'chat') {
+      allowedExtraKeys = ['action', 'target', 'content'];
+    }
+
+    const comparison = compareFixtureToSchema(entry.fixture, schemaForCompare, {
       label,
       command: entry.command,
       apiRoute,
-      primarySchemaName: resolved.primarySchemaName,
+      primarySchemaName: primaryForCompare,
       maxDepth,
       spec,
+      allowedExtraKeys,
+      comparedAgainst,
     });
 
     results.push(comparison);
@@ -523,7 +610,12 @@ export function formatComparisonReport(comparisons: FixtureSchemaComparison[]): 
   for (const c of comparisons) {
     lines.push(`## ${c.label}  (command: ${c.command})`);
     lines.push(`   apiRoute: ${c.apiRoute}`);
-    if (c.primarySchemaName) lines.push(`   primary schema: ${c.primarySchemaName}`);
+    let schemaLine = '';
+    if (c.primarySchemaName) schemaLine = `   primary schema: ${c.primarySchemaName}`;
+    if (c.comparedAgainst === 'details') {
+      schemaLine += ' (fixture compared as action details payload)';
+    }
+    if (schemaLine) lines.push(schemaLine);
     lines.push(`   summary: ${c.summary}`);
     if (c.divergences.length === 0) {
       lines.push('   (no divergences)');
