@@ -120,13 +120,10 @@ function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
   if (typeof value === 'number' && Number.isFinite(value)) {
     const milliseconds = value > 1_000_000_000_000 ? value : value * 1000;
-    return new Date(milliseconds)
-      .toISOString()
-      .replace('T', ' ')
-      .replace(/\.\d{3}Z$/, '');
+    return new Date(milliseconds).toISOString().replace('T', ' ').slice(0, 16);
   }
   const text = String(value);
-  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(text);
   return match ? `${match[1]} ${match[2]}` : text;
 }
 

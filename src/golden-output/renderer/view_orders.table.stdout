@@ -3,6 +3,6 @@
 Earth Station | personal | newest | 1 order | page 1/1
 Showing personal market orders.
 
-  Item     | Side | Open/Qty | Filled | Price | Fee   | Created             | ID     
-  ---------+------+----------+--------+-------+-------+---------------------+--------
-  Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00:00 | order-1
+  Item     | Side | Open/Qty | Filled | Price | Fee   | Created          | ID     
+  ---------+------+----------+--------+-------+-------+------------------+--------
+  Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00 | order-1
