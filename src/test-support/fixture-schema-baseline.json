@@ -80,7 +80,6 @@
     "get_nearby|get_nearby|required-missing|pirates[0].pirate_id",
     "get_nearby|get_nearby|required-missing|pirates[0].tier",
     "get_nearby|get_nearby|required-missing|poi_id",
-    "get_player|get_player|type-mismatch|player.citizenships",
     "refuel_station|refuel|extra-in-fixture|action",
     "refuel_station|refuel|extra-in-fixture|cost",
     "refuel_station|refuel|extra-in-fixture|fuel",

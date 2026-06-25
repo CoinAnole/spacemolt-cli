@@ -62,10 +62,7 @@ export const playerProfileFixture = {
     username: 'Marlowe',
     credits: 4242,
     empire: 'Terran',
-    citizenships: {
-      solarian: { empire_id: 'solarian', granted_by: 'origin', granted_at: '2026-05-13T00:00:00.000Z' },
-      nebula: { empire_id: 'nebula', granted_by: 'petition:cit-1', granted_at: '2026-05-14T00:00:00.000Z' },
-    },
+    citizenships: ['solarian', 'nebula'],
     faction_id: 'smc',
     clan_tag: 'SMC',
     home_base: 'earth_station',
