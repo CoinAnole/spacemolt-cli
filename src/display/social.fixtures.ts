@@ -22,7 +22,7 @@ export const facilityListFixture = {
   base_id: 'earth_station',
   power: {
     supply: 120,
-    structural_draw: 95,
+    current_draw: 95,
     battery_stored: 420,
     battery_capacity: 600,
     efficiency: 0.85,

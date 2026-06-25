@@ -190,7 +190,50 @@ export const marketFormatters = [
     { commands: ['browse_ships'], shapeFallback: true },
   ),
 
-  // Market listings
+  // Trade offers (get_trades real shape per GetTradesResponse)
+  formatter(
+    (r) => {
+      const incoming = Array.isArray(r.incoming) ? (r.incoming as Array<Record<string, unknown>>) : [];
+      const outgoing = Array.isArray(r.outgoing) ? (r.outgoing as Array<Record<string, unknown>>) : [];
+      if (incoming.length === 0 && outgoing.length === 0) return false;
+
+      emitLine(`\n${c.bright}=== Pending Trade Offers ===${c.reset}`);
+
+      const summarizeItems = (items: unknown): string => {
+        if (!Array.isArray(items)) return '';
+        return (items as Array<Record<string, unknown>>)
+          .map((it) => `${it.quantity ?? '?'}x ${it.item_id ?? '?'}`)
+          .join(', ');
+      };
+
+      if (outgoing.length) {
+        emitLine(`\nOutgoing:`);
+        for (const t of outgoing) {
+          const reqItems = summarizeItems(t.request_items);
+          const offItems = summarizeItems(t.offer_items);
+          const reqCr = t.request_credits ? `${t.request_credits} cr` : '';
+          const offCr = t.offer_credits ? `${t.offer_credits} cr` : '';
+          emitLine(`  ${t.trade_id}: offering ${offItems || offCr || 'nothing'} for ${reqItems || reqCr || 'nothing'}`);
+          if (t.target_name) emitLine(`    To: ${t.target_name}`);
+          if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
+        }
+      }
+
+      if (incoming.length) {
+        emitLine(`\nIncoming:`);
+        for (const t of incoming) {
+          const reqItems = summarizeItems(t.request_items);
+          const offItems = summarizeItems(t.offer_items);
+          emitLine(`  ${t.trade_id}: ${t.offerer_name || 'someone'} offers ${offItems} for ${reqItems}`);
+          if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
+        }
+      }
+      return true;
+    },
+    { commands: ['get_trades'] },
+  ),
+
+  // Market listings (legacy/other paths; does not apply to real get_trades trade offers)
   formatter(
     (r) => {
       if (!Array.isArray(r.listings)) return false;

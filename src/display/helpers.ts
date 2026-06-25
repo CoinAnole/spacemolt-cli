@@ -211,7 +211,7 @@ function summarizePowerFuelInputs(value: unknown): string | undefined {
 export function emitStationPower(power: unknown): boolean {
   if (!isRecord(power)) return false;
   const supply = power.supply;
-  const draw = power.current_draw ?? power.structural_draw ?? power.draw;
+  const draw = power.current_draw ?? power.draw;
   const efficiency = power.efficiency;
   const batteryStored = power.battery_stored;
   const batteryCapacity = power.battery_capacity;

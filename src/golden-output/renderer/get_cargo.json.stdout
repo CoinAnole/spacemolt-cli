@@ -7,7 +7,8 @@
       "quantity": 50
     }
   ],
-  "used": 50,
-  "capacity": 100,
-  "available": 50
+  "ship": {
+    "cargo_used": 50,
+    "cargo_capacity": 100
+  }
 }

@@ -1,1 +1,1 @@
-{"credits":12345,"cargo":[{"item_id":"ore_iron","item_name":"Iron Ore","quantity":50}],"used":50,"capacity":100,"available":50}
+{"credits":12345,"cargo":[{"item_id":"ore_iron","item_name":"Iron Ore","quantity":50}],"ship":{"cargo_used":50,"cargo_capacity":100}}

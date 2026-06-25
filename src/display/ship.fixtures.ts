@@ -1,9 +1,10 @@
 export const cargoFixture = {
   credits: 12345,
   cargo: [{ item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 50 }],
-  used: 50,
-  capacity: 100,
-  available: 50,
+  ship: {
+    cargo_used: 50,
+    cargo_capacity: 100,
+  },
 };
 
 export const emptyCargoFixture = {
@@ -122,7 +123,7 @@ export const baseFixture = {
   fuel_price: 6,
   power: {
     supply: 120,
-    structural_draw: 95,
+    current_draw: 95,
     battery_stored: 420,
     battery_capacity: 600,
     efficiency: 0.85,

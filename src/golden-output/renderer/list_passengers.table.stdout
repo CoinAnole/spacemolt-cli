@@ -4,6 +4,6 @@ Economy: 1/2 | Business: 0/1 | First: 0/0
 
 === Passengers ===
 
-  Name      | Class   | Destination  | System | Fare | Base | Bonus | Ticks | Bio                                                  | ID          
-  ----------+---------+--------------+--------+------+------+-------+-------+------------------------------------------------------+-------------
-  Lyra Vale | economy | Nova Central | Nova   | 125  | 100  | 25    | 8     | A courier with a nervous smile and a sealed satchel. | citizen-lyra
+  Name      | Class   | Destination  | System | Fare | Bonus | Ticks | Bio                                                  | ID          
+  ----------+---------+--------------+--------+------+-------+-------+------------------------------------------------------+-------------
+  Lyra Vale | economy | Nova Central | Nova   | 125  | 25    | 8     | A courier with a nervous smile and a sealed satchel. | citizen-lyra

@@ -1,6 +1,7 @@
 
-=== Listings ===
+=== Pending Trade Offers ===
 
-  ore_iron: 100 @ 15 each
-    Listing ID: listing-1
-    Seller: Marlowe
+Outgoing:
+  trade-1: offering 50x ore_iron for 3x fuel_cell
+    To: Marlowe
+    Expires: 2026-06-26T00:00:00Z

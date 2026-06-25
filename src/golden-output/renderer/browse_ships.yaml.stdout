@@ -12,4 +12,4 @@ listings:
     hull: 80
     max_hull: 100
     shield: 20
-    seller_name: Marlowe
+    seller: Marlowe

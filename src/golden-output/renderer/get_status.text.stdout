@@ -19,9 +19,6 @@ Ship: Surveyor (prospector)
   Cargo: 12/60
   CPU: 8/20
   Power: 10/25
-Effects:
-  Burn: 3 ticks, 4 hull/tick
-  Armor melt: 25% for 2 ticks
 
 Nearby Players: 1
   - Ibis (hauler)

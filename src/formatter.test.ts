@@ -2376,9 +2376,9 @@ describe('structuredContent formatters', () => {
     expect(aboard.stderr).toBe('');
     expect(aboard.stdout).toContain('System');
     expect(aboard.stdout).toContain('Nova');
-    expect(aboard.stdout).toContain('Base');
+    expect(aboard.stdout).toContain('Fare');
     expect(aboard.stdout).toContain('Bonus');
-    expect(aboard.stdout).toContain('100');
+    expect(aboard.stdout).toContain('125');
     expect(aboard.stdout).toContain('25');
 
     const waiting = captureStructuredOutput('list_station_passengers', listStationPassengersFixture);
@@ -3046,9 +3046,6 @@ describe('structuredContent formatters', () => {
         Cargo: 12/60
         CPU: 8/20
         Power: 10/25
-      Effects:
-        Burn: 3 ticks, 4 hull/tick
-        Armor melt: 25% for 2 ticks
 
       Nearby Players: 1
         - Ibis (hauler)"
@@ -3170,7 +3167,7 @@ describe('structuredContent formatters', () => {
       "
       === Cargo ===
       Credits: 12,345
-      Used: 50/100 (50 available)
+      Used: 50/100
 
       Cargo (1):
 

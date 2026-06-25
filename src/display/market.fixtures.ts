@@ -13,7 +13,7 @@ export const browseShipsFixture = {
       hull: 80,
       max_hull: 100,
       shield: 20,
-      seller_name: 'Marlowe',
+      seller: 'Marlowe',
     },
   ],
 };
@@ -282,6 +282,22 @@ export const marketListingsFixture = {
   ],
 };
 
+export const tradeOffersFixture = {
+  incoming: [],
+  outgoing: [
+    {
+      trade_id: 'trade-1',
+      offerer_name: 'BuyerBob',
+      target_name: 'Marlowe',
+      offer_items: [{ item_id: 'ore_iron', quantity: 50 }],
+      request_items: [{ item_id: 'fuel_cell', quantity: 3 }],
+      offer_credits: 0,
+      request_credits: 120,
+      expires_at: '2026-06-26T00:00:00Z',
+    },
+  ],
+};
+
 export const marketFixtureCases = {
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
@@ -306,5 +322,5 @@ export const marketHighValueFixtures = {
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
   faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },
   faction_create_sell_order: { command: 'faction_create_sell_order', fixture: factionCreateSellOrderFixture },
-  get_trades: { command: 'get_trades', fixture: marketListingsFixture },
+  get_trades: { command: 'get_trades', fixture: tradeOffersFixture },
 };

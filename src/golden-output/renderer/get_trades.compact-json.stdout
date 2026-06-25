@@ -1,1 +1,1 @@
-{"listings":[{"listing_id":"listing-1","item_id":"ore_iron","quantity":100,"price_each":15,"seller_name":"Marlowe"}]}
+{"incoming":[],"outgoing":[{"trade_id":"trade-1","offerer_name":"BuyerBob","target_name":"Marlowe","offer_items":[{"item_id":"ore_iron","quantity":50}],"request_items":[{"item_id":"fuel_cell","quantity":3}],"offer_credits":0,"request_credits":120,"expires_at":"2026-06-26T00:00:00Z"}]}
