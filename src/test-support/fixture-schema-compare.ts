@@ -1,9 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { COMMAND_OVERRIDES } from '../command-overrides.ts';
-import { highValueCommandFixtures } from '../display/formatter-fixtures.ts';
-
-type HighValueFixtureEntry = { command: string; fixture: Record<string, unknown> };
+import { highValueCommandFixtures, type HighValueFixtureEntry } from '../display/formatter-fixtures.ts';
 
 export interface Divergence {
   path: string;
@@ -197,7 +195,9 @@ function hasStateLikeKeys(obj: Record<string, unknown>): boolean {
   return Object.keys(obj).some((k) => (STATE_KEYS as readonly string[]).includes(k));
 }
 
-/** Heuristic: does this fixture look like a pure action/details payload rather than a full structuredContent/V2GameState? */
+/** Heuristic: does this fixture look like a pure action/details payload rather than a full structuredContent/V2GameState?
+ * Used only as fallback when entry.schemaTarget is not explicitly provided.
+ */
 function fixtureLooksLikePureActionResult(fixture: Record<string, unknown>): boolean {
   if (!fixture || typeof fixture !== 'object' || Array.isArray(fixture)) return false;
   const keys = Object.keys(fixture);
@@ -387,12 +387,18 @@ export function compareFixtureToSchema(
     for (const [k, prop] of Object.entries(effectiveSchema.properties)) {
       if (!present.has(k)) {
         const isRequired = topRequired?.includes(k);
+        const isDetails = opts.comparedAgainst === 'details';
+        const notExercisedMsg = isRequired
+          ? (isDetails
+              ? 'declared as required in the action response schema but not exercised by fixture'
+              : 'declared as required in schema but not exercised by fixture')
+          : (isDetails
+              ? 'present in the action response schema but not exercised by this fixture'
+              : 'present in live response schema but not exercised by this fixture');
         divergences.push({
           path: k,
           kind: 'extra-in-schema',
-          message: isRequired
-            ? 'declared as required in schema but not exercised by fixture'
-            : 'present in live response schema but not exercised by this fixture',
+          message: notExercisedMsg,
           schemaInfo: (prop as JsonSchema).description
             ? String((prop as JsonSchema).description).slice(0, 80)
             : undefined,
@@ -475,18 +481,35 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
     // Choose the most appropriate schema for this fixture.
     // Many action command fixtures are written as the "details" payload (or a chat send view)
     // rather than the full structuredContent / V2GameState envelope.
+    //
+    // Explicit `schemaTarget` on the HighValueFixtureEntry takes precedence over the shape heuristic.
+    // See formatter-fixtures.ts for the interface.
     let schemaForCompare = resolved.schema;
     let primaryForCompare = resolved.primarySchemaName;
     let allowedExtraKeys: string[] | undefined;
 
+    const explicitTarget = entry.schemaTarget;
     const looksLikeAction = fixtureLooksLikePureActionResult(entry.fixture);
     let comparedAgainst: FixtureSchemaComparison['comparedAgainst'] = undefined;
 
-    if (looksLikeAction) {
+    if (explicitTarget === 'details') {
       const detailsSchema = resolveDetailsSubschema(spec, resolved.schema);
       if (detailsSchema) {
         schemaForCompare = detailsSchema;
-        // Prefer a nice name like "RefuelResponse" when the ref is available
+        const detailsProp = (resolved.schema.properties?.details as JsonSchema | undefined) || {};
+        const refName = typeof detailsProp.$ref === 'string' ? detailsProp.$ref.split('/').pop() : undefined;
+        primaryForCompare = refName || resolved.primarySchemaName || 'details';
+        comparedAgainst = 'details';
+      } else {
+        comparedAgainst = 'structuredContent';
+      }
+    } else if (explicitTarget === 'structuredContent') {
+      comparedAgainst = 'structuredContent';
+    } else if (looksLikeAction) {
+      // Heuristic fallback (for entries without explicit schemaTarget)
+      const detailsSchema = resolveDetailsSubschema(spec, resolved.schema);
+      if (detailsSchema) {
+        schemaForCompare = detailsSchema;
         const detailsProp = (resolved.schema.properties?.details as JsonSchema | undefined) || {};
         const refName = typeof detailsProp.$ref === 'string' ? detailsProp.$ref.split('/').pop() : undefined;
         primaryForCompare = refName || resolved.primarySchemaName || 'details';
@@ -649,14 +672,22 @@ export function formatComparisonReport(comparisons: FixtureSchemaComparison[]): 
       }
     }
     if (byKind['extra-in-schema'].length) {
-      const shown = byKind['extra-in-schema'].slice(0, 12);
-      lines.push(`   Fields in schema not exercised by fixture (${byKind['extra-in-schema'].length} total):`);
+      const isDetails = c.comparedAgainst === 'details';
+      const maxToShow = isDetails ? 999 : 12; // show the full (usually modest) list for action details
+      const shown = byKind['extra-in-schema'].slice(0, maxToShow);
+      const header = isDetails
+        ? `   Fields in action response schema not exercised by this fixture (${byKind['extra-in-schema'].length} total):`
+        : `   Fields in schema not exercised by fixture (${byKind['extra-in-schema'].length} total):`;
+      lines.push(header);
       for (const d of shown) {
         const note = d.schemaInfo ? ` — ${d.schemaInfo}` : '';
         lines.push(`     - ${d.path}${note}`);
       }
-      if (byKind['extra-in-schema'].length > 12) {
-        lines.push(`     ... and ${byKind['extra-in-schema'].length - 12} more`);
+      if (byKind['extra-in-schema'].length > maxToShow) {
+        lines.push(`     ... and ${byKind['extra-in-schema'].length - maxToShow} more`);
+      }
+      if (isDetails) {
+        lines.push('     (fixture intentionally covers only fields used by the action renderer)');
       }
     }
     lines.push('');

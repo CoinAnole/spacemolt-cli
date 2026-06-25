@@ -1,3 +1,5 @@
+import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+
 export const catalogItemsFixture = {
   items: [
     {
@@ -435,7 +437,7 @@ export const undockFixture = {
 
 export const genericFixtureCases = {};
 
-export const genericHighValueFixtures = {
+export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
@@ -448,8 +450,8 @@ export const genericHighValueFixtures = {
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
   get_tax_estimate: { command: 'get_tax_estimate', fixture: taxEstimateFixture },
-  create_faction: { command: 'create_faction', fixture: createFactionFixture },
-  set_colors: { command: 'set_colors', fixture: setColorsFixture },
-  set_status: { command: 'set_status', fixture: setStatusFixture },
-  undock: { command: 'undock', fixture: undockFixture },
+  create_faction: { command: 'create_faction', fixture: createFactionFixture, schemaTarget: 'details' },
+  set_colors: { command: 'set_colors', fixture: setColorsFixture, schemaTarget: 'details' },
+  set_status: { command: 'set_status', fixture: setStatusFixture, schemaTarget: 'details' },
+  undock: { command: 'undock', fixture: undockFixture, schemaTarget: 'details' },
 };

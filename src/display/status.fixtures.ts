@@ -1,3 +1,5 @@
+import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+
 export const getLocationFixture = {
   message: 'Location retrieved',
   credits: 12345,
@@ -297,7 +299,7 @@ export const statusFixtureCases = {
   system_info: { command: 'get_system', fixture: systemInfoFixture },
 };
 
-export const statusHighValueFixtures = {
+export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
@@ -308,7 +310,7 @@ export const statusHighValueFixtures = {
   get_map: { command: 'get_map', fixture: getMapFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
-  scan: { command: 'scan', fixture: scanFixture },
+  scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   jump: { command: 'jump', fixture: jumpFixture },

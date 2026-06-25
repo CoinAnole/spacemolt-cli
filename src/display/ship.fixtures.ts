@@ -1,3 +1,5 @@
+import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+
 export const cargoFixture = {
   credits: 12345,
   cargo: [{ item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 50 }],
@@ -260,16 +262,16 @@ export const shipFixtureCases = {
   drones: { command: 'list_drones', fixture: dronesFixture },
 };
 
-export const shipHighValueFixtures = {
+export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
-  refuel: { command: 'refuel', fixture: refuelFixture },
-  refuel_station: { command: 'refuel', fixture: stationRefuelFixture },
+  refuel: { command: 'refuel', fixture: refuelFixture, schemaTarget: 'details' },
+  refuel_station: { command: 'refuel', fixture: stationRefuelFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },
-  salvage_wreck: { command: 'salvage_wreck', fixture: salvageWreckFixture },
+  salvage_wreck: { command: 'salvage_wreck', fixture: salvageWreckFixture, schemaTarget: 'details' },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
 };

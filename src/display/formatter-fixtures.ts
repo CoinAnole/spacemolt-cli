@@ -12,6 +12,18 @@ export * from './ship.fixtures.ts';
 export * from './social.fixtures.ts';
 export * from './status.fixtures.ts';
 
+/**
+ * Optional metadata for high-value fixtures used by the schema divergence reporter.
+ * schemaTarget controls whether the reporter compares the fixture against the inner
+ * action `details.*Response` (e.g. RefuelResponse) or the top-level structuredContent.
+ */
+export interface HighValueFixtureEntry {
+  command: string;
+  fixture: Record<string, unknown>;
+  /** Force comparison target for the fixture-schema reporter (undefined = use heuristic). */
+  schemaTarget?: 'details' | 'structuredContent';
+}
+
 export const formatterFixtureCases = {
   ...statusFixtureCases,
   ...marketFixtureCases,
@@ -20,7 +32,7 @@ export const formatterFixtureCases = {
   ...genericFixtureCases,
 };
 
-export const highValueCommandFixtures = {
+export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...statusHighValueFixtures,
   ...marketHighValueFixtures,
   ...passengerHighValueFixtures,

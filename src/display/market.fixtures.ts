@@ -1,3 +1,5 @@
+import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+
 export const browseShipsFixture = {
   base_name: 'Earth Station',
   listings: [
@@ -307,17 +309,17 @@ export const marketFixtureCases = {
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
 };
 
-export const marketHighValueFixtures = {
+export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
   create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
-  storage: { command: 'storage', fixture: storageFixture },
+  storage: { command: 'storage', fixture: storageFixture, schemaTarget: 'details' },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
-  storage_view: { command: 'storage', fixture: { ...storageFixture, action: 'view', target: 'self' } },
+  storage_view: { command: 'storage', fixture: { ...storageFixture, action: 'view', target: 'self' }, schemaTarget: 'details' },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
   faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },
