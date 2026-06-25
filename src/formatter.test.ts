@@ -1543,6 +1543,90 @@ describe('structuredContent formatters', () => {
     `);
   });
 
+  test('formats view_orders with context and fill progress', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_orders', {
+      action: 'view_orders',
+      base: 'Earth Station',
+      scope: 'personal',
+      orders: [
+        {
+          order_id: 'order-1',
+          order_type: 'limit',
+          side: 'buy',
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          quantity: 100,
+          remaining: 75,
+          filled_quantity: 25,
+          price_each: 12,
+          listing_fee: 25,
+          created_at: '2026-05-29T00:00:00Z',
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 20,
+      total_pages: 1,
+      has_more: false,
+      hint: 'Showing personal market orders.',
+      sort_by: 'newest',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Orders ===');
+    expect(stdout).toContain('Earth Station | personal | newest | 1 order | page 1/1');
+    expect(stdout).toContain('Showing personal market orders.');
+    expect(stdout).toContain('Item     | Side | Open/Qty | Filled | Price | Fee   | Created          | ID');
+    expect(stdout).toContain('Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00 | order-1');
+    expect(stdout).not.toContain('ore_iron | order-1 | buy');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats empty view_orders with context and no rows', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_orders', {
+      action: 'view_orders',
+      base: 'Earth Station',
+      scope: 'faction',
+      orders: [],
+      total: 0,
+      page: 1,
+      page_size: 20,
+      total_pages: 1,
+      has_more: false,
+      hint: 'Showing faction market orders.',
+      sort_by: 'price_desc',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Orders ===');
+    expect(stdout).toContain('Earth Station | faction | price_desc | 0 orders | page 1/1');
+    expect(stdout).toContain('Showing faction market orders.');
+    expect(stdout).toContain('(None)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats view_orders fallbacks without NaN', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_orders', {
+      orders: [
+        {
+          id: 'fallback-order',
+          type: 'sell',
+          item_id: 'nickel_ore',
+          remaining: 3,
+          filled_quantity: 'bad-filled',
+          price: 'market-maker',
+          listing_fee: 'fee-waived',
+          created_at: 'not-a-date',
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('nickel_ore | sell | 3        | bad-filled | market-maker | fee-waived | not-a-date | fallback-order');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+  });
+
   test('formats single-item market lookups with full order depth', () => {
     const { stdout, stderr } = captureStructuredOutput('view_market', viewMarketSingleItemFixture);
 
