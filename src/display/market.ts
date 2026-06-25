@@ -90,22 +90,26 @@ function formatCredits(value: number): string {
 function firstDisplayValue(row: Record<string, unknown>, keys: string[]): unknown {
   for (const key of keys) {
     const value = row[key];
-    if (value !== undefined && value !== null && value !== '') return value;
+    if (!isMissingDisplayValue(value)) return value;
   }
   return undefined;
 }
 
+function isMissingDisplayValue(value: unknown): boolean {
+  return value === undefined || value === null || value === '';
+}
+
 function formatDisplayNumber(value: unknown): string {
+  if (isMissingDisplayValue(value)) return '';
   const number = finiteNumber(value);
   if (number !== undefined) return number.toLocaleString();
-  if (value === undefined || value === null || value === '') return '';
   return String(value);
 }
 
 function formatCreditCell(value: unknown): string {
+  if (isMissingDisplayValue(value)) return '';
   const number = finiteNumber(value);
   if (number !== undefined) return formatCredits(number);
-  if (value === undefined || value === null || value === '') return '';
   return String(value);
 }
 
@@ -117,10 +121,11 @@ function formatOpenQuantity(order: Record<string, unknown>): string {
 }
 
 function formatTimestampPreview(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '';
+  if (isMissingDisplayValue(value)) return '';
   if (typeof value === 'number' && Number.isFinite(value)) {
     const milliseconds = value > 1_000_000_000_000 ? value : value * 1000;
-    return new Date(milliseconds).toISOString().replace('T', ' ').slice(0, 16);
+    const date = new Date(milliseconds);
+    return Number.isFinite(date.getTime()) ? date.toISOString().replace('T', ' ').slice(0, 16) : String(value);
   }
   const text = String(value);
   const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(text);
@@ -128,6 +133,7 @@ function formatTimestampPreview(value: unknown): string {
 }
 
 function formatOrderCount(value: unknown): string {
+  if (isMissingDisplayValue(value)) return '';
   const number = finiteNumber(value);
   if (number === undefined) return '';
   return `${number.toLocaleString()} ${number === 1 ? 'order' : 'orders'}`;

@@ -1629,6 +1629,59 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('undefined');
   });
 
+  test('formats view_orders missing numeric fields as blanks instead of zeroes', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_orders', {
+      base: 'Earth Station',
+      scope: 'personal',
+      sort_by: 'newest',
+      total: null,
+      page: '',
+      total_pages: null,
+      orders: [
+        {
+          id: 'missing-order',
+          side: 'buy',
+          item_id: 'void_ore',
+          remaining: null,
+          quantity: '',
+          filled_quantity: null,
+          listing_fee: '',
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Earth Station | personal | newest');
+    expect(stdout).toContain('void_ore');
+    expect(stdout).not.toContain('0 orders');
+    expect(stdout).not.toContain('page 0/0');
+    expect(stdout).not.toContain('0/0');
+    expect(stdout).not.toContain('0 cr');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+  });
+
+  test('formats view_orders out-of-range numeric timestamps as raw values', () => {
+    const createdAt = 1e20;
+
+    const { stdout, stderr } = captureStructuredOutput('view_orders', {
+      orders: [
+        {
+          id: 'far-future-order',
+          side: 'sell',
+          item_id: 'nickel_ore',
+          created_at: createdAt,
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(String(createdAt));
+    expect(stdout).not.toContain('RangeError');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+  });
+
   test('formats single-item market lookups with full order depth', () => {
     const { stdout, stderr } = captureStructuredOutput('view_market', viewMarketSingleItemFixture);
 
