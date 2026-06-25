@@ -10,6 +10,7 @@ import {
   printItemTable,
   sumNumericField,
 } from './helpers.ts';
+import { formatCompactTable, rowValue } from './tables.ts';
 
 interface BestPriceDepth {
   price: number;
@@ -84,6 +85,102 @@ function createOrderSide(result: Record<string, unknown>, command?: string): Ord
 
 function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
+}
+
+function firstDisplayValue(row: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return undefined;
+}
+
+function formatDisplayNumber(value: unknown): string {
+  const number = finiteNumber(value);
+  if (number !== undefined) return number.toLocaleString();
+  if (value === undefined || value === null || value === '') return '';
+  return String(value);
+}
+
+function formatCreditCell(value: unknown): string {
+  const number = finiteNumber(value);
+  if (number !== undefined) return formatCredits(number);
+  if (value === undefined || value === null || value === '') return '';
+  return String(value);
+}
+
+function formatOpenQuantity(order: Record<string, unknown>): string {
+  const remaining = formatDisplayNumber(order.remaining);
+  const quantity = formatDisplayNumber(order.quantity);
+  if (remaining && quantity) return `${remaining}/${quantity}`;
+  return remaining || quantity;
+}
+
+function formatTimestampPreview(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const milliseconds = value > 1_000_000_000_000 ? value : value * 1000;
+    return new Date(milliseconds)
+      .toISOString()
+      .replace('T', ' ')
+      .replace(/\.\d{3}Z$/, '');
+  }
+  const text = String(value);
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
+  return match ? `${match[1]} ${match[2]}` : text;
+}
+
+function formatOrderCount(value: unknown): string {
+  const number = finiteNumber(value);
+  if (number === undefined) return '';
+  return `${number.toLocaleString()} ${number === 1 ? 'order' : 'orders'}`;
+}
+
+function formatOrderPage(result: Record<string, unknown>): string {
+  const page = formatDisplayNumber(result.page);
+  const totalPages = formatDisplayNumber(result.total_pages);
+  if (!page || !totalPages) return '';
+  return `page ${page}/${totalPages}`;
+}
+
+function marketOrderContext(result: Record<string, unknown>): string {
+  return [result.base, result.scope, result.sort_by, formatOrderCount(result.total), formatOrderPage(result)]
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    .join(' | ');
+}
+
+function marketOrderRows(orders: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return orders.map((order) => ({
+    ...order,
+    item_display: rowValue(order, ['item_name', 'item_id']),
+    side_display: rowValue(order, ['side', 'type']),
+    open_quantity_display: formatOpenQuantity(order),
+    filled_display: formatDisplayNumber(order.filled_quantity),
+    price_display: formatCreditCell(firstDisplayValue(order, ['price_each', 'price'])),
+    fee_display: formatCreditCell(order.listing_fee),
+    created_preview: formatTimestampPreview(order.created_at),
+    id_display: rowValue(order, ['order_id', 'listing_id', 'id']),
+  }));
+}
+
+function printMarketOrders(result: Record<string, unknown>, orders: Array<Record<string, unknown>>): void {
+  emitLine(`\n${c.bright}=== Orders ===${c.reset}`);
+  const context = marketOrderContext(result);
+  if (context) emitLine(context);
+  if (result.hint !== undefined && result.hint !== null && result.hint !== '') emitLine(String(result.hint));
+
+  const lines = formatCompactTable('Orders', marketOrderRows(orders), [
+    ['Item', ['item_display']],
+    ['Side', ['side_display']],
+    ['Open/Qty', ['open_quantity_display']],
+    ['Filled', ['filled_display']],
+    ['Price', ['price_display']],
+    ['Fee', ['fee_display']],
+    ['Created', ['created_preview']],
+    ['ID', ['id_display']],
+  ]);
+
+  for (const line of lines.slice(1)) emitLine(line);
 }
 
 function formatTradeItems(items: unknown): string[] {
@@ -509,13 +606,7 @@ export const marketFormatters = [
     (r) => {
       const orders = firstArray(r, ['orders']);
       if (!orders) return false;
-      printCompactTable('Orders', orders, [
-        ['Item', ['item_id', 'item_name']],
-        ['ID', ['order_id', 'listing_id', 'id']],
-        ['Side', ['side', 'type']],
-        ['Qty', ['quantity', 'remaining']],
-        ['Price', ['price_each', 'price']],
-      ]);
+      printMarketOrders(r, orders);
       return true;
     },
     { commands: ['view_orders'], shapeFallback: true },

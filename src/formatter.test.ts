@@ -1576,8 +1576,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Orders ===');
     expect(stdout).toContain('Earth Station | personal | newest | 1 order | page 1/1');
     expect(stdout).toContain('Showing personal market orders.');
-    expect(stdout).toContain('Item     | Side | Open/Qty | Filled | Price | Fee   | Created          | ID');
-    expect(stdout).toContain('Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00 | order-1');
+    expect(stdout).toContain('Item     | Side | Open/Qty | Filled | Price | Fee   | Created             | ID');
+    expect(stdout).toContain('Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00:00 | order-1');
     expect(stdout).not.toContain('ore_iron | order-1 | buy');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -1622,7 +1622,9 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('nickel_ore | sell | 3        | bad-filled | market-maker | fee-waived | not-a-date | fallback-order');
+    expect(stdout).toContain(
+      'nickel_ore | sell | 3        | bad-filled | market-maker | fee-waived | not-a-date | fallback-order',
+    );
     expect(stdout).not.toContain('NaN');
     expect(stdout).not.toContain('undefined');
   });
@@ -3435,10 +3437,12 @@ describe('structuredContent formatters', () => {
         "market_orders": 
       "
       === Orders ===
+      Earth Station | personal | newest | 1 order | page 1/1
+      Showing personal market orders.
 
-        Item     | ID      | Side | Qty | Price
-        ---------+---------+------+-----+------
-        ore_iron | order-1 | buy  | 100 | 12"
+        Item     | Side | Open/Qty | Filled | Price | Fee   | Created             | ID
+        ---------+------+----------+--------+-------+-------+---------------------+--------
+        Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00:00 | order-1"
       ,
         "nearby": 
       "
