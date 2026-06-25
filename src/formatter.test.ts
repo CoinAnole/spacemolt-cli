@@ -2317,6 +2317,41 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Ships for Sale');
   });
 
+  test('formats empty trade offer lists without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_trades', {
+      incoming: [],
+      outgoing: [],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Pending Trade Offers ===');
+    expect(stdout).toContain('(No pending trade offers)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats incoming trade offer credit terms', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_trades', {
+      incoming: [
+        {
+          trade_id: 'trade-credit-1',
+          offerer_name: 'Ada',
+          offer_items: [],
+          request_items: [],
+          offer_credits: 250,
+          request_credits: 75,
+          expires_at: '2026-06-26T00:00:00Z',
+        },
+      ],
+      outgoing: [],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Pending Trade Offers ===');
+    expect(stdout).toContain('trade-credit-1: Ada offers 250 cr for 75 cr');
+    expect(stdout).not.toContain('offers  for');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('generic list fallback formats list-shaped responses', () => {
     const { stdout, stderr } = captureStructuredOutput('get_missions', missionsFixture);
 

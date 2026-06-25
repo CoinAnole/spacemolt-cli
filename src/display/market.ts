@@ -86,6 +86,18 @@ function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
 
+function formatTradeItems(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+  return items.filter(isRecord).map((item) => `${item.quantity ?? '?'}x ${item.item_id ?? '?'}`);
+}
+
+function formatTradeTerms(items: unknown, credits: unknown): string {
+  const parts = formatTradeItems(items);
+  const creditValue = finiteNumber(credits);
+  if (creditValue !== undefined && creditValue !== 0) parts.push(formatCredits(creditValue));
+  return parts.join(', ') || 'nothing';
+}
+
 function formatOptionalNumber(value: unknown): string {
   const number = finiteNumber(value);
   return number === undefined ? '?' : number.toLocaleString();
@@ -193,27 +205,26 @@ export const marketFormatters = [
   // Trade offers (get_trades real shape per GetTradesResponse)
   formatter(
     (r) => {
-      const incoming = Array.isArray(r.incoming) ? (r.incoming as Array<Record<string, unknown>>) : [];
-      const outgoing = Array.isArray(r.outgoing) ? (r.outgoing as Array<Record<string, unknown>>) : [];
-      if (incoming.length === 0 && outgoing.length === 0) return false;
+      const hasIncoming = Array.isArray(r.incoming);
+      const hasOutgoing = Array.isArray(r.outgoing);
+      if (!hasIncoming && !hasOutgoing) return false;
+
+      const incoming = hasIncoming ? (r.incoming as Array<Record<string, unknown>>) : [];
+      const outgoing = hasOutgoing ? (r.outgoing as Array<Record<string, unknown>>) : [];
 
       emitLine(`\n${c.bright}=== Pending Trade Offers ===${c.reset}`);
 
-      const summarizeItems = (items: unknown): string => {
-        if (!Array.isArray(items)) return '';
-        return (items as Array<Record<string, unknown>>)
-          .map((it) => `${it.quantity ?? '?'}x ${it.item_id ?? '?'}`)
-          .join(', ');
-      };
+      if (incoming.length === 0 && outgoing.length === 0) {
+        emitLine(`\n(No pending trade offers)`);
+        return true;
+      }
 
       if (outgoing.length) {
         emitLine(`\nOutgoing:`);
         for (const t of outgoing) {
-          const reqItems = summarizeItems(t.request_items);
-          const offItems = summarizeItems(t.offer_items);
-          const reqCr = t.request_credits ? `${t.request_credits} cr` : '';
-          const offCr = t.offer_credits ? `${t.offer_credits} cr` : '';
-          emitLine(`  ${t.trade_id}: offering ${offItems || offCr || 'nothing'} for ${reqItems || reqCr || 'nothing'}`);
+          const requested = formatTradeTerms(t.request_items, t.request_credits);
+          const offered = formatTradeTerms(t.offer_items, t.offer_credits);
+          emitLine(`  ${t.trade_id}: offering ${offered} for ${requested}`);
           if (t.target_name) emitLine(`    To: ${t.target_name}`);
           if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
         }
@@ -222,9 +233,9 @@ export const marketFormatters = [
       if (incoming.length) {
         emitLine(`\nIncoming:`);
         for (const t of incoming) {
-          const reqItems = summarizeItems(t.request_items);
-          const offItems = summarizeItems(t.offer_items);
-          emitLine(`  ${t.trade_id}: ${t.offerer_name || 'someone'} offers ${offItems} for ${reqItems}`);
+          const requested = formatTradeTerms(t.request_items, t.request_credits);
+          const offered = formatTradeTerms(t.offer_items, t.offer_credits);
+          emitLine(`  ${t.trade_id}: ${t.offerer_name || 'someone'} offers ${offered} for ${requested}`);
           if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
         }
       }
