@@ -323,6 +323,20 @@ describe('help output branches', () => {
     expect(output).not.toContain('facility build <type>     Build a player facility');
   });
 
+  test('full help advertises Company Store workflow on normal market commands', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('faction build company_store');
+    expect(output).toContain('Company Store -> Company Outlet -> Company Exchange');
+    expect(output).toContain('view_market [item_id] [category] [company_store=true]');
+    expect(output).toContain('faction create_sell_order <item> <qty> <price> [private=true]');
+    expect(output).toContain('faction create_buy_order <item> <qty> <price> [private=true]');
+    expect(output).toContain('Members fill private orders with normal buy/create_buy_order/create_sell_order');
+  });
+
   test('full help advertises nested command forms for grouped commands', () => {
     const capture = captureWriter();
 

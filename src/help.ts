@@ -1114,6 +1114,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction facility_list     List faction facilities at current base
     faction facility_owned    List faction facilities across all stations
     faction build <type>      Build a faction facility
+    faction build company_store  Build Company Store where a Market Runner exists
+    Company Store -> Company Outlet -> Company Exchange raises private listing cap: 20 / 50 / 100
     faction facility_build <type>  Build a faction facility
     faction facility_upgrade <type>  Upgrade a faction facility
 
@@ -1136,7 +1138,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
 
   ${c.cyan}Market / Exchange:${c.reset}
-    view_market [item_id] [category]  Order book (use item_id for depth, category for filter)
+    view_market [item_id] [category] [company_store=true]  Order book; company_store shows private faction listings
     subscribe_market                  Snapshot order book, then receive market_update notifications
     unsubscribe_market                Stop live market updates
     view_orders [station_id]          Your orders at station
@@ -1146,8 +1148,9 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     modify_order <order_id> <price>   Update order price
     estimate_purchase <item> <qty>     Preview buy cost without executing
     analyze_market                     Trading insights at current station
-    faction create_sell_order <item> <qty> <price>  Faction sell (from faction storage)
-    faction create_buy_order <item> <qty> <price>   Faction buy (to faction storage)
+    faction create_sell_order <item> <qty> <price> [private=true]  Faction sell / Company Store listing
+    faction create_buy_order <item> <qty> <price> [private=true]   Faction buy / Company Store listing
+    Members fill private orders with normal buy/create_buy_order/create_sell_order
 
   ${c.cyan}Faction:${c.reset}
     faction info [faction_id]         Your faction (or specific faction)
