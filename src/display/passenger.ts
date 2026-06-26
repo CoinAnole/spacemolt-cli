@@ -38,7 +38,7 @@ export const passengerFormatters = [
           ['Class', ['class']],
           ['Destination', ['destination_name', 'destination']],
           ['System', ['destination_system']],
-          ['Fare', ['fare']],
+          ['Fare', ['base_fare', 'fare']],
           ['Bonus', ['speed_bonus']],
           ['Ticks', ['ticks_remaining']],
           ['Bio', ['bio']],

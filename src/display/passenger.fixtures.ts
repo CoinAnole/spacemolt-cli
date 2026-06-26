@@ -12,7 +12,7 @@ export const listPassengersFixture = {
       destination: 'nova_central',
       destination_name: 'Nova Central',
       destination_system: 'Nova',
-      fare: 125,
+      base_fare: 125,
       speed_bonus: 25,
       ticks_remaining: 8,
     },

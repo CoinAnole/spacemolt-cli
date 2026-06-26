@@ -4,6 +4,12 @@ ID: battle-1
 Status: active
 Range: medium
 
+=== Sides ===
+
+  Side | Faction | Players
+  -----+---------+--------
+  1    | SMC     | 1      
+
 === Participants ===
 
   Name    | ID       | Side | Stance | Target  

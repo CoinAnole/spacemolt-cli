@@ -3145,6 +3145,10 @@ describe('structuredContent formatters', () => {
         effective_speed: 85,
         max_weapon_reach: 2,
       },
+      sides: [
+        { side_id: 1, faction_id: 'faction-smc', faction_name: 'SpaceMolt Co', faction_tag: 'SMC', player_count: 1 },
+        { side_id: 2, player_count: 1 },
+      ],
       participants: [
         {
           player_id: 'player-1',
@@ -3188,6 +3192,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Pirate Skiff');
     expect(stdout).toContain('Distance');
     expect(stdout).toContain('3');
+    expect(stdout).toContain('Sides');
+    expect(stdout).toContain('SMC');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -3327,6 +3333,12 @@ describe('structuredContent formatters', () => {
       ID: battle-1
       Status: active
       Range: medium
+
+      === Sides ===
+
+        Side | Faction | Players
+        -----+---------+--------
+        1    | SMC     | 1
 
       === Participants ===
 

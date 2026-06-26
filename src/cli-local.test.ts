@@ -253,6 +253,31 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('"quantity": 2');
   });
 
+  test('view_market accepts company_store filter without raw mode', async () => {
+    const result = await runDirect(['--dry-run', 'view_market', 'company_store=true']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "view_market"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_market/view_market"');
+    expect(result.stdout).toContain('"company_store": true');
+  });
+
+  test('faction company store orders accept private flag without raw mode', async () => {
+    const sell = await runDirect(['--dry-run', 'faction', 'create_sell_order', 'iron_ore', '1', '5', 'private=true']);
+    const buy = await runDirect(['--dry-run', 'faction', 'create_buy_order', 'iron_ore', '1', '5', 'private=true']);
+
+    const sellStdout = stripAnsi(sell.stdout);
+    const buyStdout = stripAnsi(buy.stdout);
+    expect(sell.exitCode).toBe(0);
+    expect(sellStdout).toContain('Dry run: faction create_sell_order');
+    expect(sellStdout).toContain('POST https://game.spacemolt.com/api/v2/spacemolt_faction_commerce/create_sell_order');
+    expect(sellStdout).toContain('"private":true');
+    expect(buy.exitCode).toBe(0);
+    expect(buyStdout).toContain('Dry run: faction create_buy_order');
+    expect(buyStdout).toContain('POST https://game.spacemolt.com/api/v2/spacemolt_faction_commerce/create_buy_order');
+    expect(buyStdout).toContain('"private":true');
+  });
+
   test('patch-note storage loot command routes through storage loot', async () => {
     const result = await runDirect([
       '--dry-run',

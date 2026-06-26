@@ -211,6 +211,9 @@ function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[
   if (hasAnyField(rows, ['ship_display', 'ship_name', 'ship_class'])) {
     columns.push(['Ship', ['ship_display', 'ship_name', 'ship_class']]);
   }
+  if (hasAnyField(rows, ['faction_tag', 'faction_name', 'faction_id'])) {
+    columns.push(['Faction', ['faction_tag', 'faction_name', 'faction_id']]);
+  }
   if (hasAnyField(rows, ['zone'])) columns.push(['Zone', ['zone']]);
   if (hasAnyField(rows, ['zone_distance'])) columns.push(['Distance', ['zone_distance']]);
   if (hasAnyField(rows, ['stance'])) columns.push(['Stance', ['stance']]);
@@ -716,6 +719,14 @@ export const socialFormatters = [
       if (battle.range_band || battle.range) emitLine(`Range: ${battle.range_band || battle.range}`);
       if (battle.tick_duration !== undefined) emitLine(`Tick Duration: ${battle.tick_duration}`);
       emitBattleCombatState(battle.combat_state);
+      const sides = (battle.sides || r.sides) as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(sides)) {
+        printCompactTable('Sides', sides.filter(isRecord), [
+          ['Side', ['side_id']],
+          ['Faction', ['faction_tag', 'faction_name', 'faction_id']],
+          ['Players', ['player_count']],
+        ]);
+      }
       if (Array.isArray(participants)) {
         const rows = battleParticipantRows(participants);
         printCompactTable('Participants', rows, battleParticipantColumns(rows));

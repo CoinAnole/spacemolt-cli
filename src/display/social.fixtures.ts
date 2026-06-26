@@ -195,6 +195,9 @@ export const battleStatusFixture = {
     battle_id: 'battle-1',
     status: 'active',
     range_band: 'medium',
+    sides: [
+      { side_id: 1, faction_id: 'faction-smc', faction_name: 'SpaceMolt Co', faction_tag: 'SMC', player_count: 1 },
+    ],
     participants: [
       {
         player_id: 'player-1',
