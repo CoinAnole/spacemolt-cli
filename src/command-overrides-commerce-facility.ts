@@ -1,13 +1,13 @@
 import type { CommandOverride } from './commands';
 
 const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
-  "Optional source for deposit/withdraw: 'cargo' (default - your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction->personal directly, requires manage_treasury).";
+  "Optional source for deposit/withdraw: 'cargo' (default - your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction->personal, or with source=faction target=faction to move items between faction compartments - both require manage_treasury).";
 
 const STORAGE_BUCKET_DESCRIPTION =
-  'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. See bucket names in action=view target=faction.';
+  'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. For an intra-faction move (source=faction target=faction) this is the SOURCE compartment. Empty means the main store. See bucket names in action=view target=faction.';
 
 const STORAGE_DEST_BUCKET_DESCRIPTION =
-  "Optional destination for direct faction compartment moves (source=faction + target=faction): items move from 'bucket' into 'dest_bucket'. Leave either empty to mean the main store (covers main↔bucket and bucket↔bucket). Requires manage_treasury.";
+  "Optional destination compartment by name or id for an intra-faction move (source=faction target=faction): items move from 'bucket' into 'dest_bucket'. Leave either empty to mean the main store (covers main↔bucket and bucket↔bucket). Requires manage_treasury.";
 
 const FACTION_BUILD_BUCKET_DESCRIPTION =
   "For 'faction_build'/'faction_upgrade': a Storage Extension bucket (name or id) to source build/upgrade MATERIALS from, instead of the faction main store. Ship cargo backfills either way.";
@@ -76,7 +76,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   jettison: {
-    usage: '<item_id> <quantity> [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
+    usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
     description: 'Jettison one cargo item, or several cargo item types with items=JSON, into one container.',
     example: 'spacemolt jettison items=\'[{"item_id":"iron_ore","quantity":50}]\'',
     category: 'Cargo',
@@ -85,8 +85,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   storage: {
     usage:
-      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name] [dest_bucket=name] [items=JSON]',
-    description: 'Run unified station storage operations: view, deposit, withdraw, loot, or jettison.',
+      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
+    description: 'Run unified station storage operations: view, bulk item transfers, wreck loot, or jettison.',
     example: 'spacemolt storage view target=faction --items iron_ore,fuel_cell',
     discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
     seeAlso: ['get_cargo', 'loot_wreck', 'salvage_wreck', 'jettison'],
@@ -128,7 +128,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       items: {
         type: 'array',
         description:
-          'Bulk transfer JSON array for deposit/withdraw, or a client-side comma-separated exact item ID filter for storage view output.',
+          'Bulk deposit/withdraw JSON array of {item_id, quantity} objects moved in a single action, or a client-side comma-separated exact item ID filter for storage view output.',
       },
       source: {
         type: 'string',

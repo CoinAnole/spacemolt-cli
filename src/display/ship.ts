@@ -122,7 +122,7 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
 export const shipFormatters = [
   formatter(
     (r) => {
-      if (r.action !== 'deposit_items' && r.action !== 'load_ship_into_carrier_bay') return false;
+      if (r.action !== 'deposit' && r.action !== 'load_ship_into_carrier_bay') return false;
       if (!r.ship_id && !r.item_id) return false;
 
       emitLine(`\n${c.bright}=== Load Ship Into Carrier Bay ===${c.reset}`);
@@ -133,7 +133,7 @@ export const shipFormatters = [
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
-    { commands: ['deposit_items_carrier_load'] },
+    { commands: ['storage_carrier_load'] },
   ),
 
   // Cargo

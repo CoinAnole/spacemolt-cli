@@ -534,12 +534,22 @@ describe('command metadata', () => {
   test('storage help documents bucket transfers for faction storage extensions', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.storage;
     expect(config?.args).toContain('bucket');
-    expect(config?.usage).toContain('[bucket=name]');
+    expect(config?.usage).toContain('[bucket=name-or-id]');
+    expect(config?.usage).toContain('[dest_bucket=name-or-id]');
+    expect(config?.description).toContain('bulk item transfers');
+    expect(config?.schema?.source?.description).toContain('source=faction target=faction');
+    expect(config?.schema?.source?.description).toContain('move items between faction compartments');
+    expect(config?.schema?.items?.description).toContain('Bulk deposit/withdraw');
     expect(config?.schema?.bucket?.description).toContain('Storage Extension bucket');
+    expect(config?.schema?.bucket?.description).toContain('SOURCE compartment');
+    expect(config?.schema?.dest_bucket?.description).toContain('main↔bucket and bucket↔bucket');
 
     const help = captureHelp('storage');
-    expect(help).toContain('[bucket=name]');
+    expect(help).toContain('[bucket=name-or-id]');
+    expect(help).toContain('[dest_bucket=name-or-id]');
     expect(help).toContain('Storage Extension bucket');
+    expect(help).toContain('source=faction target=faction');
+    expect(help).toContain('Bulk deposit/withdraw');
   });
 
   test('market and jettison help advertises v0.441 request options', () => {
@@ -554,6 +564,8 @@ describe('command metadata', () => {
 
     const jettison = BUNDLED_COMMAND_REGISTRY.commands.jettison;
     expect(jettison?.args).toEqual(['item_id', 'quantity', 'items']);
+    expect(jettison?.usage).toContain('[item_id]');
+    expect(jettison?.usage).toContain('[quantity]');
     expect(jettison?.usage).toContain('[items=JSON]');
     expect(jettison?.aliases).toMatchObject({ item_id: 'id' });
     expect(jettison?.schema?.items?.type).toBe('array');

@@ -1031,7 +1031,7 @@ describe('structuredContent output mode precedence', () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
-          action: 'deposit_items',
+          action: 'deposit',
           item_id: shipId,
           quantity: 1,
           storage_total: 3,
@@ -1062,12 +1062,38 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).not.toContain('Storage Total: 3');
   });
 
+  test('legacy deposit_items command name does not trigger carrier bay load display', async () => {
+    const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          action: 'deposit',
+          item_id: shipId,
+          quantity: 1,
+          storage_total: 3,
+          cargo_remaining: 0,
+          cargo_space: 5,
+        },
+      },
+      {},
+      {
+        command: 'deposit_items',
+        displayCommand: 'deposit_items',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Load Ship Into Carrier Bay ===');
+  });
+
   test('storage deposit carrier bay load falls back to remaining slots when capacity is absent', async () => {
     const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       {
         structuredContent: {
-          action: 'deposit_items',
+          action: 'deposit',
           item_id: shipId,
           quantity: 1,
           storage_total: 3,
@@ -1094,7 +1120,7 @@ describe('structuredContent output mode precedence', () => {
   test('storage deposit carrier bay display specialization does not alter structured output', async () => {
     const shipId = '0ceb2c65-cc4b-4797-a8f0-baec04dab000';
     const structuredContent = {
-      action: 'deposit_items',
+      action: 'deposit',
       item_id: shipId,
       quantity: 1,
       storage_total: 3,

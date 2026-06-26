@@ -253,6 +253,32 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('"quantity": 2');
   });
 
+  test('storage faction compartment bulk move keeps items bucket and destination bucket', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      'storage',
+      'deposit',
+      'source=faction',
+      'target=faction',
+      'bucket=Raw',
+      'dest_bucket=Builds',
+      'items=[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
+    expect(result.stdout).toContain('"source": "faction"');
+    expect(result.stdout).toContain('"target": "faction"');
+    expect(result.stdout).toContain('"bucket": "Raw"');
+    expect(result.stdout).toContain('"dest_bucket": "Builds"');
+    expect(result.stdout).toContain('"items": [');
+    expect(result.stdout).toContain('"item_id": "ore_iron"');
+    expect(result.stdout).toContain('"quantity": 1');
+    expect(result.stdout).toContain('"item_id": "ore_copper"');
+    expect(result.stdout).toContain('"quantity": 2');
+  });
+
   test('view_market accepts company_store filter without raw mode', async () => {
     const result = await runDirect(['--dry-run', 'view_market', 'company_store=true']);
 
@@ -315,6 +341,26 @@ describe('CLI local usability behavior', () => {
     expect(result.stdout).toContain('"action": "jettison"');
     expect(result.stdout).toContain('"item_id": "ore_iron"');
     expect(result.stdout).toContain('"quantity": 2');
+  });
+
+  test('storage jettison accepts bulk items without single item fields', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      'storage',
+      'jettison',
+      'items=[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/jettison"');
+    expect(result.stdout).toContain('"action": "jettison"');
+    expect(result.stdout).toContain('"items": [');
+    expect(result.stdout).toContain('"item_id": "ore_iron"');
+    expect(result.stdout).toContain('"quantity": 1');
+    expect(result.stdout).toContain('"item_id": "ore_copper"');
+    expect(result.stdout).toContain('"quantity": 2');
+    expect(result.stdout).not.toContain('"item_id": "items=');
   });
 
   test('patch-note set_drone_name command maps to drone rename route', async () => {

@@ -1127,11 +1127,12 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Storage:${c.reset}
     storage view [station_id] [target=self|faction] [--items item_id,item_id] [--search text]
-    storage deposit <item_id> <qty> [target=self|faction|player] [source=cargo|storage|faction]
-    storage withdraw <item_id> <qty> [source=storage|faction] [target=self]
+    storage deposit [item_id] [qty] [items=JSON] [target=self|faction|player] [source=cargo|storage|faction]
+    storage withdraw [item_id] [qty] [items=JSON] [source=storage|faction] [target=self|faction]
+    storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]
     storage loot [wreck_id] [item_id] [quantity]
-    storage jettison <item_id> <qty>
-    jettison <item_id> <qty>     Standalone cargo jettison
+    storage jettison [item_id] [qty] [items=JSON]
+    jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison
     loot_wreck <wreck_id> <item_id> [quantity]  Standalone wreck loot
     salvage_wreck <wreck_id>     Standalone wreck salvage
     faction deposit_credits <amount>  Wallet -> faction treasury
@@ -1287,7 +1288,7 @@ export function displayError(
     err(`${colors.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${colors.reset}`);
   }
   if (!quiet) {
-    const help = hasServerCode ? getErrorSuggestion(code) : undefined;
+    const help = hasServerCode ? getContextualErrorSuggestion(code, message) : undefined;
     if (help) err(`\n${colors.cyan}Suggestion:${colors.reset} ${help}`);
     if (hasServerCode && isRetryableError(code) && retryAfter === undefined) {
       err(`${colors.dim}This error may be retryable.${colors.reset}`);
@@ -1299,4 +1300,16 @@ export function displayError(
       printNextSteps(command, undefined, writer, { plain });
     }
   }
+}
+
+function getContextualErrorSuggestion(code: string, message: string): string | undefined {
+  if (isAmbiguousStorageBucketError(message)) {
+    return 'Storage Extension bucket name is ambiguous. Run "spacemolt storage view target=faction" to see bucket IDs, then pass the bucket id.';
+  }
+  return getErrorSuggestion(code);
+}
+
+function isAmbiguousStorageBucketError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return normalized.includes('bucket') && normalized.includes('ambiguous');
 }

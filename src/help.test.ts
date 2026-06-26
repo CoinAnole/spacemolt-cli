@@ -361,7 +361,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('Storage Commands');
     expect(output).toContain('storage <view|deposit|withdraw|loot|jettison>');
-    expect(output).toContain('jettison <item_id> <quantity>');
+    expect(output).toContain('jettison [item_id] [quantity] [items=JSON]');
     expect(output).toContain('loot_wreck <wreck_id> <item_id> [quantity]');
     expect(output).toContain('salvage_wreck <wreck_id>');
   });
@@ -373,7 +373,8 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('storage view [station_id] [target=self|faction]');
-    expect(output).toContain('jettison <item_id> <qty>     Standalone cargo jettison');
+    expect(output).toContain('storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]');
+    expect(output).toContain('jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison');
     expect(output).toContain('loot_wreck <wreck_id> <item_id> [quantity]');
     expect(output).toContain('salvage_wreck <wreck_id>');
   });
@@ -999,6 +1000,31 @@ describe('help output branches', () => {
       expect(output).toContain('spacemolt get_status');
       expect(output).toContain('This error may be retryable.');
     }
+  });
+
+  test('displayError preserves ambiguous bucket guidance instead of target not found suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'storage',
+      {
+        code: 'invalid_target',
+        message: 'Storage Extension bucket name "Reserve" is ambiguous; pass the bucket id instead.',
+      },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Storage Extension bucket name "Reserve" is ambiguous');
+    expect(output).toContain('pass the bucket id');
+    expect(output).not.toContain('Target not found');
   });
 
   test('displayUnknownCommand points executable command groups to group help', () => {

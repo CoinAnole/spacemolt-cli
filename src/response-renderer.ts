@@ -214,12 +214,12 @@ function prepareHumanDisplay(
 
   const displayResponse = enrichStorageViewDisplayResponse(commandRun, response, commandRun.response);
 
-  if (!isDepositItemsCarrierLoad(commandRun, displayResponse)) {
+  if (!isStorageCarrierLoad(commandRun, displayResponse)) {
     return { command: commandRun.displayCommand, response: displayResponse };
   }
 
   return {
-    command: 'deposit_items_carrier_load',
+    command: 'storage_carrier_load',
     response: enrichCarrierLoadDisplayResponse(commandRun, displayResponse, displayOptions.sessionPath),
   };
 }
@@ -234,16 +234,16 @@ function shouldUseGetStatusSummary(commandRun: CommandRunResult, displayOptions:
   return format === 'table' || format === 'text';
 }
 
-function isDepositItemsCarrierLoad(commandRun: CommandRunResult, response: APIResponse): boolean {
+function isStorageCarrierLoad(commandRun: CommandRunResult, response: APIResponse): boolean {
   if (commandRun.command === 'storage' && commandRun.payload?.action !== 'deposit') return false;
-  if (commandRun.command !== 'deposit_items' && commandRun.command !== 'storage') return false;
+  if (commandRun.command !== 'storage') return false;
 
   const payload = commandRun.payload ?? {};
   if (payload.target !== 'self') return false;
   if (Number(payload.quantity) !== 1) return false;
 
   const result = getStructuredResult(response);
-  if (!result || (result.action !== 'deposit_items' && result.action !== 'deposit')) return false;
+  if (!result || (result.action !== 'deposit' && result.action !== 'load_ship_into_carrier_bay')) return false;
 
   const payloadItemId = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const responseItemId = typeof result.item_id === 'string' ? result.item_id : undefined;
