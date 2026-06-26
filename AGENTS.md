@@ -27,6 +27,7 @@ bun run src/client.ts sync-api
 bun test
 bun run report:fixture-schemas          # compare golden fixtures vs OpenAPI response schemas
 bun run report:curated-commands         # compare curated commands vs generated OpenAPI command metadata
+bun run report:openapi-consistency      # fuzzy report of schema vs prose/examples, shared schemas, missing documented fields (high-recall, use --only)
 bun run typecheck
 bun run lint
 bun run build

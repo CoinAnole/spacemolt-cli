@@ -46,7 +46,7 @@ export interface CompareOptions {
 const DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
 export const DEFAULT_SCHEMA_BASELINE_PATH = path.join(import.meta.dir, 'fixture-schema-baseline.json');
 
-type JsonSchema = Record<string, unknown> & {
+export type JsonSchema = Record<string, unknown> & {
   type?: string | string[];
   properties?: Record<string, JsonSchema>;
   items?: JsonSchema;
@@ -77,7 +77,7 @@ export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
   return cachedSpec;
 }
 
-function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): JsonSchema {
+export function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): JsonSchema {
   if (!ref.startsWith('#/')) throw new Error(`Unsupported $ref: ${ref}`);
   if (seen.has(ref)) return {}; // cycle guard
   seen.add(ref);
@@ -123,7 +123,7 @@ function mergeAllOf(spec: OpenApiSpec, schemas: JsonSchema[], seen = new Set<str
   return out;
 }
 
-function getEffectiveSchema(spec: OpenApiSpec, schema: JsonSchema, seen = new Set<string>()): JsonSchema {
+export function getEffectiveSchema(spec: OpenApiSpec, schema: JsonSchema, seen = new Set<string>()): JsonSchema {
   const resolved = schema.$ref ? resolveRef(spec, schema.$ref, seen) : schema;
   if (resolved.allOf && resolved.allOf.length > 0) {
     return mergeAllOf(spec, resolved.allOf, seen);
