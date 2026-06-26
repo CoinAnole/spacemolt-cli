@@ -19,6 +19,7 @@ import {
   poiInfoFixture,
   storageFixture,
   subscribeMarketFixture,
+  unloadPassengerBulkFixture,
   viewMarketFixture,
   viewMarketSingleItemFixture,
 } from './display/formatter-fixtures';
@@ -2558,6 +2559,46 @@ describe('structuredContent formatters', () => {
     expect(waiting.stdout).toContain('Nova');
     expect(waiting.stdout).toContain('Est. Fare');
     expect(waiting.stdout).toContain('240');
+  });
+
+  test('passenger tables do not render removed legacy fare fields', () => {
+    const aboard = captureStructuredOutput('list_passengers', {
+      ...listPassengersFixture,
+      passengers: [
+        {
+          citizen_id: 'citizen-legacy',
+          name: 'Legacy Fare',
+          bio: 'A stale fixture from the old passenger API.',
+          class: 'economy',
+          destination: 'nova_central',
+          destination_name: 'Nova Central',
+          destination_system: 'Nova',
+          fare: 999,
+          speed_bonus: 25,
+          ticks_remaining: 8,
+        },
+      ],
+    });
+
+    expect(aboard.stderr).toBe('');
+    expect(aboard.stdout).toContain('Legacy Fare');
+    expect(aboard.stdout).not.toContain('999');
+  });
+
+  test('bulk passenger unload renders delivered and stranded base fares', () => {
+    const rendered = captureStructuredOutput('unload_passenger', unloadPassengerBulkFixture);
+
+    expect(rendered.stderr).toBe('');
+    expect(rendered.stdout).toContain('=== Passenger Unload ===');
+    expect(rendered.stdout).toContain('Fare collected: 150');
+    expect(rendered.stdout).toContain('=== Delivered Passengers ===');
+    expect(rendered.stdout).toContain('Lyra Vale');
+    expect(rendered.stdout).toContain('Base Fare');
+    expect(rendered.stdout).toContain('125');
+    expect(rendered.stdout).toContain('=== Stranded Passengers ===');
+    expect(rendered.stdout).toContain('Orin Pax');
+    expect(rendered.stdout).toContain('240');
+    expect(rendered.stdout).not.toContain('=== Response ===');
   });
 
   test('catalog list responses do not drift against market formatter', () => {

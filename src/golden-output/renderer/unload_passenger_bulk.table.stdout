@@ -1,0 +1,17 @@
+
+=== Passenger Unload ===
+Unloaded all passengers.
+Fare collected: 150
+Reputation changes: solarian -1
+
+=== Delivered Passengers ===
+
+  Name      | Class   | Destination  | System | Base Fare | Bonus | Ticks | ID          
+  ----------+---------+--------------+--------+-----------+-------+-------+-------------
+  Lyra Vale | economy | Nova Central | Nova   | 125       | 25    | 8     | citizen-lyra
+
+=== Stranded Passengers ===
+
+  Name     | Class    | Destination   | System | Base Fare | Ticks | ID          
+  ---------+----------+---------------+--------+-----------+-------+-------------
+  Orin Pax | business | Earth Station | Sol    | 240       | 3     | citizen-orin

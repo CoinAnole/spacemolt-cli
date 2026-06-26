@@ -464,6 +464,16 @@ describe('command metadata', () => {
     expect(help).toContain('area sensor sweep');
   });
 
+  test('unload_passenger help documents all-passenger bulk unload', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.unload_passenger;
+    expect(config?.usage).toContain('all');
+    expect(config?.description).toContain('Pass "all" to put every passenger off at once');
+
+    const help = captureHelp('unload_passenger');
+    expect(help).toContain('Pass "all" to put every passenger off at once');
+    expect(help).toContain('or "all" to put every passenger off at once');
+  });
+
   test('craft help documents queued station-storage production', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.args).toEqual(['recipe_id', 'quantity']);

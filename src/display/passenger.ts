@@ -16,6 +16,28 @@ function berthSummary(result: Record<string, unknown>): string {
   return berths.join(' | ');
 }
 
+function hasValue(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== '';
+}
+
+function singleUnloadRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  if (!hasValue(result.name) && !hasValue(result.base_fare) && !hasValue(result.fare_paid)) return undefined;
+  if (Array.isArray(result.delivered) || Array.isArray(result.stranded)) return undefined;
+  return [result];
+}
+
+function reputationChangesSummary(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const parts = Object.entries(value)
+    .filter(([, change]) => hasValue(change))
+    .map(([empire, change]) => {
+      const number = Number(change);
+      const prefix = Number.isFinite(number) && number > 0 ? '+' : '';
+      return `${empire} ${prefix}${change}`;
+    });
+  return parts.length ? parts.join(', ') : undefined;
+}
+
 export const passengerFormatters = [
   formatter(
     (r) => {
@@ -38,7 +60,7 @@ export const passengerFormatters = [
           ['Class', ['class']],
           ['Destination', ['destination_name', 'destination']],
           ['System', ['destination_system']],
-          ['Fare', ['base_fare', 'fare']],
+          ['Fare', ['base_fare']],
           ['Bonus', ['speed_bonus']],
           ['Ticks', ['ticks_remaining']],
           ['Bio', ['bio']],
@@ -49,6 +71,75 @@ export const passengerFormatters = [
       return true;
     },
     { commands: ['list_passengers'] },
+  ),
+
+  formatter(
+    (r) => {
+      const deliveredRows = passengerRows(r.delivered);
+      const strandedRows = passengerRows(r.stranded);
+      const singleRows = singleUnloadRows(r);
+      if (!deliveredRows && !strandedRows && !singleRows) return false;
+
+      emitLine(`\n${c.bright}=== Passenger Unload ===${c.reset}`);
+      if (hasValue(r.message)) emitLine(String(r.message));
+      if (hasValue(r.fare_collected)) emitLine(`Fare collected: ${r.fare_collected}`);
+      const reputation = reputationChangesSummary(r.reputation_changes);
+      if (reputation) emitLine(`Reputation changes: ${reputation}`);
+
+      if (singleRows) {
+        printCompactTable(
+          'Passenger',
+          singleRows,
+          [
+            ['Name', ['name']],
+            ['Delivered', ['delivered']],
+            ['Base Fare', ['base_fare']],
+            ['Bonus', ['speed_bonus']],
+            ['Fare Paid', ['fare_paid']],
+          ],
+          { maxCellWidth: 72 },
+        );
+        return true;
+      }
+
+      if (deliveredRows) {
+        printCompactTable(
+          'Delivered Passengers',
+          deliveredRows,
+          [
+            ['Name', ['name']],
+            ['Class', ['class']],
+            ['Destination', ['destination_name', 'destination']],
+            ['System', ['destination_system']],
+            ['Base Fare', ['base_fare']],
+            ['Bonus', ['speed_bonus']],
+            ['Ticks', ['ticks_remaining']],
+            ['ID', ['citizen_id']],
+          ],
+          { maxCellWidth: 72 },
+        );
+      }
+
+      if (strandedRows) {
+        printCompactTable(
+          'Stranded Passengers',
+          strandedRows,
+          [
+            ['Name', ['name']],
+            ['Class', ['class']],
+            ['Destination', ['destination_name', 'destination']],
+            ['System', ['destination_system']],
+            ['Base Fare', ['base_fare']],
+            ['Ticks', ['ticks_remaining']],
+            ['ID', ['citizen_id']],
+          ],
+          { maxCellWidth: 72 },
+        );
+      }
+
+      return true;
+    },
+    { commands: ['unload_passenger'] },
   ),
 
   formatter(
