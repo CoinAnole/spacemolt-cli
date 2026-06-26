@@ -173,14 +173,22 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     positionals: ['role_id'],
   },
   faction_create_sell_order: {
+    usage: '<item_id> <quantity> <price_each> [bucket=name-or-id] [private=true]',
+    description:
+      'Create a faction sell order from faction storage. Use private=true for a members-only Company Store listing.',
+    example: 'spacemolt faction create_sell_order steel_plate 20 12 private=true',
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction_commerce/create_sell_order',
-    positionals: ['item_id', 'quantity', 'price_each'],
+    positionals: ['item_id', 'quantity', 'price_each', 'bucket', 'private'],
   },
   faction_create_buy_order: {
+    usage: '<item_id> <quantity> <price_each> [bucket=name-or-id] [private=true]',
+    description:
+      'Create a faction buy order with treasury credits. Use private=true for a members-only Company Store listing.',
+    example: 'spacemolt faction create_buy_order ore_iron 100 12 private=true',
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction_commerce/create_buy_order',
-    positionals: ['item_id', 'quantity', 'price_each', 'deliver_to'],
+    positionals: ['item_id', 'quantity', 'price_each', 'bucket', 'private'],
   },
   faction_prepay_tax: {
     usage: '<amount>',

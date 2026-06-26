@@ -31,7 +31,6 @@ const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
 const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
   'trade_offer.credits',
-  'faction_create_buy_order.deliver_to',
   'analyze_market.item_id',
   'analyze_market.page',
 ]);
@@ -531,6 +530,51 @@ describe('command metadata', () => {
     const help = captureHelp('storage');
     expect(help).toContain('[bucket=name]');
     expect(help).toContain('Storage Extension bucket');
+  });
+
+  test('market and jettison help advertises v0.441 request options', () => {
+    const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
+    expect(viewMarket?.args).toEqual(['item_id', 'category', 'company_store', 'since']);
+    expect(viewMarket?.usage).toContain('[company_store=true]');
+    expect(viewMarket?.schema?.company_store?.type).toBe('boolean');
+
+    const viewMarketHelp = captureHelp('view_market');
+    expect(viewMarketHelp).toContain('[company_store=true]');
+    expect(viewMarketHelp).toContain('Company Store');
+
+    const jettison = BUNDLED_COMMAND_REGISTRY.commands.jettison;
+    expect(jettison?.args).toEqual(['item_id', 'quantity', 'items']);
+    expect(jettison?.usage).toContain('[items=JSON]');
+    expect(jettison?.aliases).toMatchObject({ item_id: 'id' });
+    expect(jettison?.schema?.items?.type).toBe('array');
+
+    const jettisonHelp = captureHelp('jettison');
+    expect(jettisonHelp).toContain('[items=JSON]');
+    expect(jettisonHelp).toContain('Bulk mode');
+  });
+
+  test('faction order help advertises private Company Store listings', () => {
+    const buy = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.create_buy_order?.config;
+    expect(buy?.args).toEqual(['item_id', 'quantity', 'price_each', 'bucket', 'private']);
+    expect(buy?.usage).toContain('[bucket=name-or-id]');
+    expect(buy?.usage).toContain('[private=true]');
+    expect(buy?.usage).not.toContain('deliver_to');
+    expect(buy?.schema?.private?.type).toBe('boolean');
+
+    const buyHelp = captureHelp('faction create_buy_order');
+    expect(buyHelp).toContain('[private=true]');
+    expect(buyHelp).toContain('Company Store');
+    expect(buyHelp).not.toContain('deliver_to');
+
+    const sell = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.create_sell_order?.config;
+    expect(sell?.args).toEqual(['item_id', 'quantity', 'price_each', 'bucket', 'private']);
+    expect(sell?.usage).toContain('[bucket=name-or-id]');
+    expect(sell?.usage).toContain('[private=true]');
+    expect(sell?.schema?.private?.type).toBe('boolean');
+
+    const sellHelp = captureHelp('faction create_sell_order');
+    expect(sellHelp).toContain('[private=true]');
+    expect(sellHelp).toContain('Company Store');
   });
 
   test('faction_build help documents bucket material sourcing', () => {

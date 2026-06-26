@@ -76,10 +76,12 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   jettison: {
-    usage: '<item_id> <quantity>',
+    usage: '<item_id> <quantity> [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
+    description: 'Jettison one cargo item, or several cargo item types with items=JSON, into one container.',
+    example: 'spacemolt jettison items=\'[{"item_id":"iron_ore","quantity":50}]\'',
     category: 'Cargo',
     apiRoute: 'POST /api/v2/spacemolt/jettison',
-    positionals: ['item_id', 'quantity'],
+    positionals: ['item_id', 'quantity', 'items'],
   },
   storage: {
     usage:
@@ -187,14 +189,14 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   view_market: {
     usage:
-      '[item_id] [category] [--item item_id] [--search text] [since=...]  (view order book, optionally filtered; since=<tick> for incremental updates since prior current_tick)',
-    description: 'Inspect the market or order book at the current station.',
+      '[item_id] [category] [company_store=true] [since=...] [--item item_id] [--search text]  (company_store shows only faction private listings; since=<tick> polls changes)',
+    description: 'Inspect the public market, or pass company_store=true to show faction Company Store listings.',
     example: 'spacemolt view_market --item ore_iron',
     discoverWith: ['get_status'],
     seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/view_market',
-    positionals: ['item_id', 'category'],
+    positionals: ['item_id', 'category', 'company_store', 'since'],
     aliases: {
       item: 'item_id',
     },
