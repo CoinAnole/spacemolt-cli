@@ -19,6 +19,7 @@ import {
   poiInfoFixture,
   storageFixture,
   subscribeMarketFixture,
+  systemInfoFixture,
   unloadPassengerBulkFixture,
   viewMarketFixture,
   viewMarketSingleItemFixture,
@@ -3294,6 +3295,19 @@ describe('structuredContent formatters', () => {
       Nearby Players: 1
         - Ibis (hauler)"
     `);
+  });
+
+  test('get_system table output marks stronghold systems', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_system', {
+      ...systemInfoFixture,
+      system: {
+        ...systemInfoFixture.system,
+        is_stronghold: true,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Stronghold: yes');
   });
 
   test('renders unknown cloaked signature hints in location-aware tables', () => {

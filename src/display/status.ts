@@ -516,6 +516,7 @@ export const statusFormatters = [
       emitLine(`ID: ${sys.id}`);
       emitLine(`Empire: ${sys.empire || 'None'}`);
       emitLine(`Police Level: ${sys.police_level} (${r.security_status || sys.security_status || 'unknown security'})`);
+      if (sys.is_stronghold === true) emitLine('Stronghold: yes');
       if (sys.description) emitLine(`Description: ${sys.description}`);
 
       const pois = sys.pois as Array<Record<string, unknown> | string>;

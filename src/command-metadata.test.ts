@@ -815,6 +815,19 @@ describe('command metadata', () => {
     }
   });
 
+  test('command registry does not expose get_leaderboard when OpenAPI omits it', () => {
+    const snapshot = buildCommandRegistrySnapshot();
+    const hasGeneratedLeaderboardRoute = Object.keys(GENERATED_API_ROUTES).some((route) =>
+      route.toLowerCase().includes('leaderboard'),
+    );
+
+    expect(hasGeneratedLeaderboardRoute).toBe(false);
+    expect(snapshot.commands.get_leaderboard).toBeUndefined();
+    expect(snapshot.allCommands.get_leaderboard).toBeUndefined();
+    expect(snapshot.apiRoutes.get_leaderboard).toBeUndefined();
+    expect(captureFullHelp()).not.toContain('get_leaderboard');
+  });
+
   test('full help does not advertise removed commands', () => {
     const help = captureFullHelp();
 
