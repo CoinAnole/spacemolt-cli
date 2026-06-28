@@ -24,6 +24,7 @@ export interface Finding {
     | 'overbroad-shared-schema'
     | 'missing-response-field-prose'
     | 'schema-description-inconsistency'
+    // 'cli-alias-vs-schema' reserved for future cross-check of curated CLI aliases vs schema fields
     | 'cli-alias-vs-schema';
   severity: 'high' | 'medium' | 'low' | 'info';
   route?: string;
@@ -175,17 +176,6 @@ function getRequestSchemaForPath(spec: OpenApiSpec, apiPath: string) {
   return props;
 }
 
-function shapeSignature(props: Record<string, any>): string {
-  const keys = Object.keys(props).sort();
-  const summary = keys.map((k) => {
-    const p = props[k] || {};
-    const t = p.type ?? 'unknown';
-    const en = p.enum ? p.enum.slice().sort().join('|') : '';
-    return `${k}:${t}${en ? `:${en}` : ''}`;
-  });
-  return summary.join(',');
-}
-
 function routeMatchesOnly(route: string, only?: string[]): boolean {
   if (!only || only.length === 0) return true;
   const lower = route.toLowerCase();
@@ -239,20 +229,26 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
     // Also check the schema property descriptions for self-confusing names (nice-to-have)
     for (const [propName, propSchema] of Object.entries(props)) {
       const desc = (propSchema as any)?.description;
-      if (typeof desc === 'string' && /\b(name|destination|station|commission_id)\b/i.test(desc) && propName === 'id') {
-        findings.push({
-          id: `schema-description-inconsistency|${routeSig}|${propName}`,
-          kind: 'schema-description-inconsistency',
-          severity: 'medium',
-          route: routeSig,
-          field: propName,
-          message: `schema property is named "${propName}" but its description talks about domain names like name/destination/station`,
-          evidence: {
-            schemaProperty: propSchema,
-            description: desc,
-          },
-          confidence: 'medium',
-        });
+      if (typeof desc === 'string' && propName === 'id') {
+        // Flag when the canonical 'id' field is documented with prose that implies a domain-specific name.
+        // This is intentionally broader than a fixed word list to surface more "friendly name vs id" drift.
+        const talksAboutNames = /\b(name|destination|station|commission_id|player|ship|template|mission|item)\b/i.test(desc);
+        const mentionsAlternatives = /\bor\b|[/|]/.test(desc);
+        if (talksAboutNames || mentionsAlternatives) {
+          findings.push({
+            id: `schema-description-inconsistency|${routeSig}|${propName}`,
+            kind: 'schema-description-inconsistency',
+            severity: 'medium',
+            route: routeSig,
+            field: propName,
+            message: `schema property is named "${propName}" but its description talks about domain names or alternatives`,
+            evidence: {
+              schemaProperty: propSchema,
+              description: desc,
+            },
+            confidence: 'medium',
+          });
+        }
       }
     }
   }
@@ -263,7 +259,8 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
   const findings: Finding[] = [];
   const only = options.only;
 
-  // Group routes by their request shape signature (simple, no long-term fingerprint stability needed)
+  // Group routes by key set (ignore minor type/enum annotation diffs for "sharing" detection).
+  // This catches cases where a component schema or copy is reused with nearly identical fields.
   const groups = new Map<string, Array<{ route: string; path: string; props: Record<string, any> }>>();
 
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
@@ -275,7 +272,8 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
     const props = getRequestSchemaForPath(spec, apiPath);
     if (Object.keys(props).length < 4) continue; // ignore trivial schemas
 
-    const sig = shapeSignature(props);
+    // Prefer key-based grouping for sharing; fall back keeps prior behavior available.
+    const sig = keySetSignature(props);
     if (!groups.has(sig)) groups.set(sig, []);
     groups.get(sig)?.push({ route: routeSig, path: apiPath, props });
   }
@@ -283,43 +281,53 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
   for (const [_sig, members] of groups.entries()) {
     if (members.length < 2) continue;
 
-    // Look for action-specific paths that still carry the full shared shape
+    // Look for action-specific paths that still carry the (near) shared shape.
+    // Use a heuristic rather than a static list so new action routes are considered.
     const actionPaths = members.filter((m) => {
-      const last = m.path.split('/').pop() || '';
-      return ['job_add', 'transfer', 'buy_listing', 'sell_listing', 'upgrade', 'build'].includes(last);
+      const last = (m.path.split('/').pop() || '').toLowerCase();
+      if (['job_add', 'transfer', 'buy_listing', 'sell_listing', 'upgrade', 'build', 'craft'].includes(last)) return true;
+      // Treat non-query leaf actions as dedicated (avoid get_*, list_*, view_*, search_*, completed_* etc.)
+      if (/^(get_|list_|view_|search_|completed_|v2_get_)/.test(last)) return false;
+      // Anything with an action verb in the last segment is interesting.
+      return /_(add|buy|sell|send|take|make|do|run|start|stop|attack|dock|jump|claim|load|unload|deliver)/.test(last) || last.includes('_');
     });
 
     if (actionPaths.length === 0) continue;
 
-    // Check for known over-broad fields (direction is the canonical example)
+    // Check for over-broad enum fields on dedicated action paths (generalized beyond just "direction").
+    const KNOWN_BROAD = new Set(['direction', 'mode', 'op', 'operation', 'variant']);
     for (const member of actionPaths) {
-      const dir = member.props.direction;
-      if (dir && Array.isArray(dir.enum) && dir.enum.length >= 3) {
-        const sharedRoutes = members.map((m) => m.route);
-        findings.push({
-          id: `overbroad-shared-schema|${member.route}|direction`,
-          kind: 'overbroad-shared-schema',
-          severity: 'high',
-          route: member.route,
-          field: 'direction',
-          message: `dedicated action path uses a shared schema with broad "direction" enum that documents values for other actions`,
-          evidence: {
-            schemaEnum: dir.enum,
-            description: dir.description,
-            sharedWith: sharedRoutes.filter((r) => r !== member.route),
-          },
-          suggestedAction:
-            'Give dedicated action paths (job_add, transfer, ...) their own request schemas with appropriately narrowed enums, or use oneOf/discriminators.',
-          confidence: 'high',
-        });
+      for (const [fname, fsch] of Object.entries(member.props)) {
+        const en = (fsch as any)?.enum;
+        if (Array.isArray(en) && en.length >= 3 && (fname === 'direction' || KNOWN_BROAD.has(fname))) {
+          const sharedRoutes = members.map((m) => m.route);
+          const id = `overbroad-shared-schema|${member.route}|${fname}`;
+          if (findings.some((f) => f.id === id)) continue;
+          findings.push({
+            id,
+            kind: 'overbroad-shared-schema',
+            severity: 'high',
+            route: member.route,
+            field: fname,
+            message: `dedicated action path uses a shared schema with broad "${fname}" enum that documents values for other actions`,
+            evidence: {
+              schemaEnum: en,
+              description: (fsch as any)?.description,
+              sharedWith: sharedRoutes.filter((r) => r !== member.route),
+            },
+            suggestedAction:
+              'Give dedicated action paths (job_add, transfer, ...) their own request schemas with appropriately narrowed enums, or use oneOf/discriminators.',
+            confidence: 'high',
+          });
+        }
       }
     }
 
-    // General note for large shared shapes on leaf actions
+    // General note for large shared shapes on leaf actions (use speculative confidence so it can be filtered).
     if (members.length >= 3 && actionPaths.length > 0) {
       for (const ap of actionPaths) {
-        // Avoid duplicate if we already emitted the direction one
-        if (findings.some((f) => f.route === ap.route && f.field === 'direction')) continue;
+        const already = findings.some((f) => f.route === ap.route && f.kind === 'overbroad-shared-schema');
+        if (already) continue;
         findings.push({
           id: `overbroad-shared-schema|${ap.route}|shared-shape`,
           kind: 'overbroad-shared-schema',
@@ -329,13 +337,17 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
           evidence: {
             sharedWith: members.map((m) => m.route),
           },
-          confidence: 'medium',
+          confidence: 'speculative',
         });
       }
     }
   }
 
   return findings;
+}
+
+function keySetSignature(props: Record<string, any>): string {
+  return Object.keys(props).sort().join(',');
 }
 
 /**
@@ -414,6 +426,9 @@ export function extractResponseFieldCandidates(text: string | undefined): string
   // Natural-language compounds in docs ("base fare", "speed bonus", "ticks remaining")
   // become snake_case candidates so they can be matched against real schema fields.
   // Only synthesize when neither word is a trivial article/preposition (reduces "a fleet" -> a_fleet noise).
+  // Further tightened: only when the second word is a plausible field-name component (attribute tail),
+  // and the first word is not a common prose/verb starter. This cuts junk like "you_no", "cargo_stays",
+  // "longer_carry", "most_mission" while preserving real compounds.
   const compound = /\b([a-z][a-z0-9]*)\s+([a-z][a-z0-9]*)\b/gi;
   let m: RegExpExecArray | null;
   const trivialFirst = new Set([
@@ -433,12 +448,128 @@ export function extractResponseFieldCandidates(text: string | undefined): string
     'or',
     'but',
   ]);
+  const badFirstForCompound = new Set([
+    ...trivialFirst,
+    'most',
+    'any',
+    'only',
+    'your',
+    'our',
+    'their',
+    'its',
+    'this',
+    'that',
+    'some',
+    'other',
+    'each',
+    'every',
+    'held',
+    'goods',
+    'longer',
+    'are',
+    'is',
+    'was',
+    'were',
+    'be',
+    'been',
+    'you',
+    'we',
+    'they',
+    'it',
+    'no',
+    'not',
+    'can',
+    'will',
+    'must',
+    'do',
+    'does',
+    'did',
+    'have',
+    'has',
+    'had',
+    'get',
+    'gets',
+    'got',
+    'make',
+    'see',
+    'use',
+    'using',
+    'via',
+    'rate',
+    'internal',
+    'surfacing',
+    'economic',
+    'structured',
+    'new',
+    'all',
+    'subsequent',
+    'included',
+    'active',
+    'mission',
+    'provided',
+    'per',
+    'resistant',
+    'integrated',
+    'hidden',
+    'reported',
+    'based',
+  ]);
+  // Plausible right-hand sides for two-word field references in docs.
+  const compoundableTail = new Set([
+    'id',
+    'name',
+    'type',
+    'count',
+    'fare',
+    'bonus',
+    'ticks',
+    'remaining',
+    'level',
+    'xp',
+    'price',
+    'cost',
+    'capacity',
+    'quantity',
+    'amount',
+    'limit',
+    'rate',
+    'speed',
+    'value',
+    'time',
+    'duration',
+    'cooldown',
+    'progress',
+    'status',
+    'result',
+    'fuel',
+    'hull',
+    'scan',
+    'stealth',
+    'reputation',
+    'skill',
+    'hint',
+    'location',
+    'details',
+    'item',
+    'listing',
+    'order',
+    'job',
+    'template',
+    'recipe',
+    'passenger',
+    'events',
+    'log',
+    'system',
+    'station',
+    'base',
+  ]);
   m = compound.exec(text);
   while (m !== null) {
     const w1 = (m[1] || '').toLowerCase();
     const w2 = (m[2] || '').toLowerCase();
     if (!w1 || !w2) continue;
-    if (trivialFirst.has(w1) || trivialFirst.has(w2)) continue;
+    if (badFirstForCompound.has(w1) || trivialFirst.has(w2)) continue;
+    if (!compoundableTail.has(w2)) continue;
     const joined = `${m[1]}_${m[2]}`;
     if (joined.length > 2 && joined.length < 50) cands.add(joined);
     m = compound.exec(text);
@@ -452,7 +583,7 @@ export function extractResponseFieldCandidates(text: string | undefined): string
   const filtered = [...cands].filter((t) => {
     if (t.includes('_')) return true;
     if (/[a-z][A-Z]/.test(t)) return true;
-    if (new RegExp(`[\`"']${t}[\`"']`).test(src)) return true;
+    if (new RegExp('[\\`"\'\']' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\`"\'\']').test(src)) return true;
     return false;
   });
   return filtered;
@@ -538,6 +669,24 @@ function isNoiseTerm(term: string): boolean {
     'inside',
     'with',
     'per',
+    'rate',
+    'limited',
+    'mutation',
+    'tick',
+    'ticks',
+    'seconds',
+    'active',
+    'hold',
+    'goods',
+    'units',
+    'reclaimed',
+    'confiscated',
+    'provided',
+    'delivery',
+    'pays',
+    'only',
+    'most',
+    'any',
   ]);
   return stop.has(t);
 }
@@ -569,6 +718,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const name = schemaName;
     const isResponseLike = /Response|Result|State|Status|Output/i.test(name);
     if (!isResponseLike) continue;
+    if (only && only.length && !routeMatchesOnly(name, only)) continue;
 
     const prose = collectDescriptionText(schema);
     let terms = extractResponseFieldCandidates(prose);
