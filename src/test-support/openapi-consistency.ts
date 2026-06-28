@@ -6,6 +6,7 @@ import {
   type OpenApiSpec as FixtureOpenApiSpec,
   getEffectiveSchema,
   loadOpenApiSpec as loadFixtureOpenApiSpec,
+  resolveSuccessResponseSchema,
 } from './fixture-schema-compare';
 
 export type OpenApiSpec = FixtureOpenApiSpec;
@@ -337,6 +338,62 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
   return findings;
 }
 
+/**
+ * Recursively collect all property names reachable in a (possibly effective) schema.
+ * Handles properties, array items (any container), oneOf/allOf/anyOf, and refs via getEffectiveSchema.
+ * Used to improve detection of fields present in nested response shapes (e.g. passengers[], passenger_arrivals, oneOf variants).
+ */
+function collectAllPropertyNames(
+  schema: any,
+  spec: OpenApiSpec,
+  seen = new Set<string>(),
+): Set<string> {
+  const fields = new Set<string>();
+  if (!schema || typeof schema !== 'object') return fields;
+
+  const eff = getEffectiveSchema(spec, schema as any, seen);
+
+  // Direct properties at this level
+  if (eff.properties && typeof eff.properties === 'object') {
+    for (const [k, sub] of Object.entries(eff.properties as Record<string, any>)) {
+      fields.add(k);
+      // Recurse into nested object schemas to catch deep fields
+      if (sub && typeof sub === 'object') {
+        for (const f of collectAllPropertyNames(sub, spec, seen)) fields.add(f);
+      }
+    }
+  }
+
+  // Array items — any array container (passengers, loaded, delivered, stranded, passenger_arrivals.*, etc.)
+  if (eff.items) {
+    for (const f of collectAllPropertyNames(eff.items, spec, seen)) fields.add(f);
+    // Also surface direct item properties
+    const itemEff = getEffectiveSchema(spec, eff.items as any, seen);
+    if (itemEff.properties && typeof itemEff.properties === 'object') {
+      for (const k of Object.keys(itemEff.properties)) fields.add(k);
+    }
+  }
+
+  // oneOf / allOf / anyOf variants
+  for (const variant of [...(eff.oneOf || []), ...(eff.allOf || []), ...(eff.anyOf || [])] as any[]) {
+    for (const f of collectAllPropertyNames(variant, spec, seen)) fields.add(f);
+  }
+
+  return fields;
+}
+
+/** Heuristic: does the collected field set contain something that satisfies a "base_fare"/"base fare" mention? */
+function hasFareLikeField(fields: Set<string>): boolean {
+  for (const k of fields) {
+    const lower = k.toLowerCase();
+    if (lower.includes('base_fare') || lower.includes('basefare')) return true;
+    if (lower.includes('fare') && (lower.includes('base') || lower === 'fare' || lower.startsWith('fare_') || lower.endsWith('_fare'))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Lightweight response prose check for things like "base_fare"
 export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
   const findings: Finding[] = [];
@@ -352,17 +409,20 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     for (const term of interestingTerms) {
       if (!descText.toLowerCase().includes(term.toLowerCase().replace('_', '')) && !descText.includes(term)) continue;
 
-      const props = schema.properties || {};
+      const allFields = collectAllPropertyNames(schema, spec);
+      const hasFareField = allFields.has('base_fare') || allFields.has('baseFare') || hasFareLikeField(allFields);
+
+      if (hasFareField) continue;
+
+      // Fall back to legacy narrow check for emission decision (kept temporarily for compatibility during rollout)
+      const props = (schema.properties || {}) as Record<string, any>;
       const hasDirect = Object.keys(props).some(
         (k) => k.toLowerCase().includes('base') && k.toLowerCase().includes('fare'),
       );
-      if (hasDirect) continue;
-
-      // Check items in arrays too (passengers[])
       let missingInArrayItem = false;
       const passengers = props.passengers;
       if (passengers?.items?.properties) {
-        const itemProps = passengers.items.properties;
+        const itemProps = passengers.items.properties as Record<string, any>;
         const has = Object.keys(itemProps).some(
           (k) => k.toLowerCase().includes('base') && k.toLowerCase().includes('fare'),
         );
@@ -391,7 +451,9 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     }
   }
 
-  // Also scan operation descriptions mentioning base fare for passenger routes
+  // Also scan operation descriptions mentioning base fare (or similar) for passenger routes.
+  // Now actively resolves the 200 response schema for the route and uses the collector
+  // so we correctly recognize fields inside passengers[], passenger_arrivals, oneOf variants, etc.
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
     if (!/passenger/i.test(apiPath)) continue;
     const op: any = methods.post || methods.get;
@@ -399,10 +461,24 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const routeSig = `${methods.post ? 'POST' : 'GET'} ${apiPath}`;
     if (!routeMatchesOnly(routeSig, only)) continue;
 
-    if (/base.?fare/i.test(op.description as string)) {
-      // Try to resolve the response schema name and check
-      // (lightweight: if we see it mentioned but the known passenger response shapes in components miss it, the component scan above already caught it)
-      // Add an extra note if desired.
+    if (/base.?fare|base fare/i.test(op.description as string)) {
+      try {
+        const { schema: respSchema } = resolveSuccessResponseSchema(spec, routeSig);
+        if (respSchema && Object.keys(respSchema).length > 0) {
+          const respFields = collectAllPropertyNames(respSchema, spec);
+          if (respFields.has('base_fare') || respFields.has('baseFare') || hasFareLikeField(respFields)) {
+            // Field is present in the actual response shape for this route — do not emit here
+            // (component scan may still have emitted if the named *Response schema itself looked deficient).
+            continue;
+          }
+        }
+      } catch {
+        // resolution failed; fall through to component-based finding if any
+      }
+
+      // If we reach here the field was mentioned in prose for this route but not found via resolution/collector.
+      // We keep the emission lightweight (the component scan is the main reporter for schemaName).
+      // Future: we could emit a route-specific variant of the finding.
     }
   }
 
