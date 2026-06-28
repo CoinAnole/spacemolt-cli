@@ -36,6 +36,7 @@ export interface RunnerDependencies {
   defaultOpenApiCacheDir?: typeof defaultOpenApiCacheDir;
   checkForUpdates?: typeof checkForUpdates;
   getDefaultProfile?: typeof getDefaultProfile;
+  resolveHandler?: typeof resolveHandler;
   createClient?: (config: SpaceMoltClient['config']) => SpaceMoltClient;
   onSigint?: (listener: () => void) => () => void;
 }
@@ -46,6 +47,7 @@ const defaultRunnerDependencies: Required<RunnerDependencies> = {
   defaultOpenApiCacheDir,
   checkForUpdates,
   getDefaultProfile,
+  resolveHandler,
   createClient(config) {
     return new SpaceMoltClient({ config });
   },
@@ -120,7 +122,79 @@ export async function runInvocation(
   dependencies: RunnerDependencies = {},
 ): Promise<number> {
   const deps = { ...defaultRunnerDependencies, ...dependencies };
-  return withCliWriter(context.writer, () => runInvocationWithContext(argv, client, context, deps));
+  const outputTracker = createOutputTracker(context.writer);
+  const trackedContext = { ...context, writer: outputTracker.writer };
+  const fallbackOutput = fallbackOutputMode(argv, context);
+  return withCliWriter(outputTracker.writer, async () => {
+    const exitCode = await runInvocationWithContext(argv, client, trackedContext, deps);
+    renderFallbackDiagnosticIfSilent(exitCode, trackedContext, outputTracker, fallbackOutput);
+    return exitCode;
+  });
+}
+
+interface OutputTracker {
+  writer: CliRuntimeContext['writer'];
+  hasStdout(): boolean;
+  hasStderr(): boolean;
+}
+
+function createOutputTracker(writer: CliRuntimeContext['writer']): OutputTracker {
+  let stdoutWrites = 0;
+  let stderrWrites = 0;
+  return {
+    writer: {
+      out(message = '') {
+        stdoutWrites += 1;
+        writer.out(message);
+      },
+      err(message = '') {
+        stderrWrites += 1;
+        writer.err(message);
+      },
+      writeOut: writer.writeOut
+        ? (chunk: string) => {
+            stdoutWrites += 1;
+            writer.writeOut?.(chunk);
+          }
+        : undefined,
+    },
+    hasStdout() {
+      return stdoutWrites > 0;
+    },
+    hasStderr() {
+      return stderrWrites > 0;
+    },
+  };
+}
+
+function renderFallbackDiagnosticIfSilent(
+  exitCode: number,
+  context: CliRuntimeContext,
+  outputTracker: OutputTracker,
+  output: { machineReadable: boolean },
+): void {
+  if (exitCode === 0) return;
+  const message = 'Command failed without an error message.';
+
+  if (output.machineReadable) {
+    if (outputTracker.hasStdout()) return;
+    printJsonError('missing_error_output', message, context.writer);
+    return;
+  }
+
+  if (outputTracker.hasStderr()) return;
+  context.writer.err(`Error: ${message}`);
+}
+
+function fallbackOutputMode(argv: string[], context: CliRuntimeContext): { machineReadable: boolean } {
+  const parsed = parseInvocation(argv, context);
+  if (!parsed.ok) {
+    const output = outputStateFromGlobalOptionError(parsed.error, context.env);
+    return { machineReadable: output.jsonOutput };
+  }
+
+  const config = getRuntimeConfig(parsed.invocation.options, context.env);
+  return { machineReadable: config.jsonOutput || parsed.invocation.options.structured === true };
 }
 
 async function runInvocationWithContext(
@@ -191,7 +265,7 @@ async function runInvocationWithContext(
     });
   }
 
-  const handler = resolveHandler(invocation.args, invocation.options, commandRegistry);
+  const handler = deps.resolveHandler(invocation.args, invocation.options, commandRegistry);
   const activeClient = client ?? deps.createClient(config);
 
   if (invocation.options.watch) {

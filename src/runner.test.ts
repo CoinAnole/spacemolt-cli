@@ -1018,6 +1018,30 @@ describe('runInvocation option isolation', () => {
     expect(console.error).toBe(originalError);
   });
 
+  test('plain nonzero invocations get a fallback diagnostic when handlers write no output', async () => {
+    const result = await captureInvocation(['silent_failure'], process.env, {
+      resolveHandler() {
+        return {
+          name: 'silent_failure',
+          requiresNetwork: false,
+          parse() {
+            return { ok: true, payload: {} };
+          },
+          run() {
+            return {};
+          },
+          render() {
+            return 1;
+          },
+        };
+      },
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Error: Command failed without an error message.');
+  });
+
   test('--plain removes ANSI codes from global parse errors', async () => {
     const result = await captureInvocation(['--plain', '--format', 'nope', 'get_status']);
 
