@@ -17,6 +17,12 @@ export interface DocExample {
   payloadShape: Record<string, unknown> | null;
 }
 
+/** Rich candidate with provenance for review/debug (used internally; string[] APIs kept for compat). */
+export interface FieldCandidate {
+  term: string;
+  provenance: string;
+}
+
 export interface Finding {
   id: string;
   kind:
@@ -39,6 +45,8 @@ export interface Finding {
     description?: string;
     sharedWith?: string[];
     cliAlias?: string;
+    /** Provenance for how this field candidate was synthesized (e.g. from compound, JSON, or loose proseKey in a context block). */
+    candidateProvenance?: string;
   };
   suggestedAction?: string;
   confidence: 'high' | 'medium' | 'speculative';
@@ -61,6 +69,11 @@ export interface ReportOptions {
 }
 
 const _DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
+
+// Per-run memoization for expensive schema walks (big win on unfiltered runs over 200+ components).
+// Keyed on the schema node object (stable refs for components and resolved subschemas).
+const propNamesMemo = new WeakMap<object, Set<string>>();
+const descTextMemo = new WeakMap<object, string>();
 
 export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
   return loadFixtureOpenApiSpec(customPath);
@@ -133,27 +146,145 @@ function getInnerPayloadShape(parsed: unknown): Record<string, unknown> | null {
   return null;
 }
 
-/** Extract plausible field names mentioned in prose (heuristic, high-recall). */
-export function extractMentionedFieldNames(text: string | undefined): string[] {
+/** Split description into blocks on blank-line boundaries (\n\n or rate-limit notes). */
+function splitDescriptionBlocks(text: string): string[] {
   if (!text) return [];
-  const fields = new Set<string>();
-  const s = text;
+  // Split on one or more blank lines (handles \n\n and \r\n variants)
+  const parts = text.split(/\n\s*\n+/);
+  return parts.map((b) => b.trim()).filter(Boolean);
+}
 
-  // Keys inside JSON-like structures
-  const jsonKey = /"([a-z][a-z0-9_]*)"\s*:/g;
-  for (let m = jsonKey.exec(s); m !== null; m = jsonKey.exec(s)) {
-    if (m[1]) fields.add(m[1]);
-  }
+/** Return whether this block looks like a rate-limit note (used to bound post-example context). */
+function isRateLimitBlock(block: string | undefined): boolean {
+  if (!block) return false;
+  return /\*\*Rate limited\b|Rate limited\b/i.test(block);
+}
 
-  // Common prose patterns: "foo" or foo= or the <foo> placeholders
-  const proseKey = /[`"']([a-z][a-z0-9_]*)[`"']|([a-z][a-z0-9_]*)[=\s:]/g;
-  for (let m = proseKey.exec(s); m !== null; m = proseKey.exec(s)) {
-    const candidate = m[1] || m[2];
-    if (candidate && candidate.length > 1 && candidate.length < 40) {
-      fields.add(candidate);
+/** Return whether this block is/contains the canonical Example section. */
+function isExampleBlock(block: string | undefined): boolean {
+  if (!block) return false;
+  return /\*\*Example:?\*\*/i.test(block) || /^Example:/i.test(block);
+}
+
+/**
+ * Decide if a block is relevant for field/compound extraction.
+ * Relevant near cue words (payload, accepts, Example, parameter, specify, : ) or after an example block
+ * until a rate-limit note (per the requested split rules).
+ */
+function classifyBlock(
+  block: string | undefined,
+  index: number,
+  blocks: readonly (string | undefined)[],
+): { relevant: boolean; label: string } {
+  if (!block) return { relevant: false, label: 'general' };
+  const lower = block.toLowerCase();
+  const cues = ['payload', 'accepts', 'example', 'parameter', 'specify', 'specifies'];
+  const hasCue = cues.some((c) => lower.includes(c));
+  const hasColonTail = /:\s*$/.test(block) || /[=:]\s*["'`]/.test(block);
+  const hasCode = /[`"']/.test(block) || /\{[\s\S]*\}/.test(block) || /"[a-z_]+":/.test(block);
+  // Already-canonical snake_case tokens or quoted identifiers make the block relevant for recall
+  const hasFieldLikeToken = /\b[a-z][a-z0-9_]{2,}\b/.test(block) && block.includes('_');
+
+  // Look at previous block for "after the example block"
+  const prevCandidate = index > 0 ? blocks[index - 1] : undefined;
+  const prev = (prevCandidate ?? '') as string;
+  const prevWasExample = isExampleBlock(prev);
+
+  let label = 'general';
+  if (isExampleBlock(block)) label = 'example';
+  else if (prevWasExample) label = 'post-example';
+  else if (hasCue || hasColonTail) label = 'cue-near';
+  else if (hasCode) label = 'code-like';
+  else if (hasFieldLikeToken) label = 'field-token';
+
+  const relevant = hasCue || hasColonTail || isExampleBlock(block) || prevWasExample || hasCode || hasFieldLikeToken;
+
+  return { relevant, label };
+}
+
+/** Is there a code-like token near the match index (backticks, quotes, braces, =, : or "key": pattern). */
+function isNearCodeLikeToken(text: string, index: number | undefined): boolean {
+  if (index == null || index < 0) return false;
+  const start = Math.max(0, index - 35);
+  const end = Math.min(text.length, index + 55);
+  const win = text.slice(start, end);
+  if (/[`"'[{]/.test(win)) return true;
+  if (/[=:]\s*["'`]/.test(win)) return true;
+  if (/"[a-z_][a-z0-9_]*"\s*:/.test(win)) return true;
+  return false;
+}
+
+/**
+ * Harvest FieldCandidates (with provenance) from text using only context-relevant blocks.
+ * This powers both legacy string[] extractors (compat) and rich paths for provenance.
+ */
+function harvestFieldCandidates(text: string | undefined): FieldCandidate[] {
+  if (!text) return [];
+  const blocks = splitDescriptionBlocks(text);
+  const out: FieldCandidate[] = [];
+  let afterExample = false;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const maybeBlock = blocks[i];
+    if (typeof maybeBlock !== 'string' || !maybeBlock) continue;
+    const block = maybeBlock as string;
+    const { relevant, label } = classifyBlock(block, i, blocks);
+    const useBlock = relevant || afterExample;
+    if (!useBlock) {
+      if (isExampleBlock(block)) afterExample = true;
+      if (isRateLimitBlock(block)) afterExample = false;
+      continue;
     }
+
+    // JSON keys inside this block (examples are the primary source)
+    const jsonKey = /"([a-z][a-z0-9_]*)"\s*:/g;
+    for (let m = jsonKey.exec(block); m !== null; m = jsonKey.exec(block)) {
+      if (m[1]) {
+        const term = m[1];
+        const prov =
+          isExampleBlock(block) || label === 'example' || label === 'post-example'
+            ? `from JSON in example`
+            : `from JSON key in ${label} block`;
+        out.push({ term, provenance: prov });
+      }
+    }
+
+    // Loose proseKey: quoted or key= / key: / key<space>
+    const proseKey = /[`"']([a-z][a-z0-9_]*)[`"']|([a-z][a-z0-9_]*)[=\s:]/g;
+    for (let m = proseKey.exec(block); m !== null; m = proseKey.exec(block)) {
+      const candidate = m[1] || m[2];
+      if (candidate && candidate.length > 1 && candidate.length < 40) {
+        // Try to capture a nearby cue for provenance
+        const near = /\b(use|accepts?|specify|payload|parameter|example)\b[^.]{0,20}/i.exec(
+          block.slice(Math.max(0, (m.index || 0) - 20), (m.index || 0) + 30),
+        );
+        const matchedCue = near?.[1];
+        const cuePart = matchedCue ? ` after '${matchedCue.toLowerCase()}'` : '';
+        out.push({ term: candidate, provenance: `from loose proseKey${cuePart} in ${label}` });
+      }
+    }
+
+    if (isExampleBlock(block)) afterExample = true;
+    if (isRateLimitBlock(block)) afterExample = false;
   }
-  return [...fields];
+
+  // Dedup by term, prefer more-specific provenance (example > cue > general)
+  const best = new Map<string, FieldCandidate>();
+  for (const c of out) {
+    const prev = best.get(c.term);
+    if (!prev) {
+      best.set(c.term, c);
+      continue;
+    }
+    const rank = (p: string) => (/example/i.test(p) ? 3 : /JSON|cue|proseKey/i.test(p) ? 2 : 1);
+    if (rank(c.provenance) > rank(prev.provenance)) best.set(c.term, c);
+  }
+  return [...best.values()];
+}
+
+/** Extract plausible field names mentioned in prose (heuristic, high-recall). Legacy string[] API kept for compat. */
+export function extractMentionedFieldNames(text: string | undefined): string[] {
+  return harvestFieldCandidates(text).map((c) => c.term);
 }
 
 function schemaRequestProperties(spec: OpenApiSpec, apiPath: string, method: 'get' | 'post' = 'post') {
@@ -218,6 +349,7 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
             proseExcerpt,
             examplePayload: shape,
             schemaProperty: schemaProp,
+            candidateProvenance: 'from JSON in example',
           },
           suggestedAction:
             'Align the request schema property name with the documented server help / prose, or update prose examples to use the canonical schema field name.',
@@ -232,7 +364,9 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
       if (typeof desc === 'string' && propName === 'id') {
         // Flag when the canonical 'id' field is documented with prose that implies a domain-specific name.
         // This is intentionally broader than a fixed word list to surface more "friendly name vs id" drift.
-        const talksAboutNames = /\b(name|destination|station|commission_id|player|ship|template|mission|item)\b/i.test(desc);
+        const talksAboutNames = /\b(name|destination|station|commission_id|player|ship|template|mission|item)\b/i.test(
+          desc,
+        );
         const mentionsAlternatives = /\bor\b|[/|]/.test(desc);
         if (talksAboutNames || mentionsAlternatives) {
           findings.push({
@@ -285,11 +419,15 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
     // Use a heuristic rather than a static list so new action routes are considered.
     const actionPaths = members.filter((m) => {
       const last = (m.path.split('/').pop() || '').toLowerCase();
-      if (['job_add', 'transfer', 'buy_listing', 'sell_listing', 'upgrade', 'build', 'craft'].includes(last)) return true;
+      if (['job_add', 'transfer', 'buy_listing', 'sell_listing', 'upgrade', 'build', 'craft'].includes(last))
+        return true;
       // Treat non-query leaf actions as dedicated (avoid get_*, list_*, view_*, search_*, completed_* etc.)
       if (/^(get_|list_|view_|search_|completed_|v2_get_)/.test(last)) return false;
       // Anything with an action verb in the last segment is interesting.
-      return /_(add|buy|sell|send|take|make|do|run|start|stop|attack|dock|jump|claim|load|unload|deliver)/.test(last) || last.includes('_');
+      return (
+        /_(add|buy|sell|send|take|make|do|run|start|stop|attack|dock|jump|claim|load|unload|deliver)/.test(last) ||
+        last.includes('_')
+      );
     });
 
     if (actionPaths.length === 0) continue;
@@ -354,11 +492,16 @@ function keySetSignature(props: Record<string, any>): string {
  * Recursively collect all property names reachable in a (possibly effective) schema.
  * Handles properties, array items (any container), oneOf/allOf/anyOf, and refs via getEffectiveSchema.
  * Used to improve detection of fields present in nested response shapes (e.g. passengers[], passenger_arrivals, oneOf variants).
+ * Memoized by input schema object for repeated walks over shared components.
  */
 function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<string>()): Set<string> {
-  const fields = new Set<string>();
-  if (!schema || typeof schema !== 'object') return fields;
+  if (!schema || typeof schema !== 'object') return new Set<string>();
 
+  // Memo hit: return a copy (callers may mutate their local set)
+  const cached = propNamesMemo.get(schema);
+  if (cached) return new Set(cached);
+
+  const fields = new Set<string>();
   const eff = getEffectiveSchema(spec, schema as any, seen);
 
   // Direct properties at this level
@@ -387,51 +530,163 @@ function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<
     for (const f of collectAllPropertyNames(variant, spec, seen)) fields.add(f);
   }
 
+  propNamesMemo.set(schema, new Set(fields));
   return fields;
 }
 
 /**
  * Collect human prose descriptions from a schema subtree (descriptions on the node,
  * its properties, items, and oneOf/allOf/anyOf variants). Avoids schema keywords.
+ * Memoized by input node object.
  */
 // biome-ignore lint/suspicious/noExplicitAny: schema walking (matches style of collectAllPropertyNames)
-function collectDescriptionText(node: any, out: string[] = []): string {
-  if (!node || typeof node !== 'object') return out.join('\n');
+function collectDescriptionText(node: any): string {
+  if (!node || typeof node !== 'object') return '';
+  const cached = descTextMemo.get(node);
+  if (cached !== undefined) return cached;
+
+  const parts: string[] = [];
   if (typeof node.description === 'string') {
-    out.push(node.description);
+    parts.push(node.description);
   }
   if (node.properties && typeof node.properties === 'object') {
     for (const p of Object.values(node.properties as Record<string, any>)) {
-      collectDescriptionText(p, out);
+      const sub = collectDescriptionText(p);
+      if (sub) parts.push(sub);
     }
   }
   if (node.items) {
-    collectDescriptionText(node.items, out);
+    const sub = collectDescriptionText(node.items);
+    if (sub) parts.push(sub);
   }
   for (const k of ['oneOf', 'allOf', 'anyOf'] as const) {
     const arr = (node as any)[k];
     if (Array.isArray(arr)) {
-      for (const v of arr) collectDescriptionText(v, out);
+      for (const v of arr) {
+        const sub = collectDescriptionText(v);
+        if (sub) parts.push(sub);
+      }
     }
   }
-  return out.join('\n');
+  const joined = parts.join('\n');
+  descTextMemo.set(node, joined);
+  return joined;
 }
 
-/** Extract candidate field terms from prose, including compounds like "base fare" -> "base_fare". */
-export function extractResponseFieldCandidates(text: string | undefined): string[] {
-  if (!text) return [];
-  const base = extractMentionedFieldNames(text);
-  const cands = new Set(base);
+/** Positive allow-list of first-word stems known to start real schema compounds (e.g. base_fare, speed_bonus). */
+const goodCompoundStems = new Set([
+  'base',
+  'speed',
+  'tow',
+  'cargo',
+  'fuel',
+  'hull',
+  'scan',
+  'stealth',
+  'mission',
+  'job',
+  'item',
+  'order',
+  'buy',
+  'sell',
+  'listing',
+  'player',
+  'target',
+  'station',
+  'system',
+  'berth',
+  'passenger',
+  'crew',
+  'weapon',
+  'ammo',
+  'shield',
+  'power',
+  'module',
+  'facility',
+  'recipe',
+  'template',
+  'xp',
+  'level',
+  'travel',
+  'jump',
+  'dock',
+  'load',
+  'unload',
+]);
 
-  // Natural-language compounds in docs ("base fare", "speed bonus", "ticks remaining")
-  // become snake_case candidates so they can be matched against real schema fields.
-  // Only synthesize when neither word is a trivial article/preposition (reduces "a fleet" -> a_fleet noise).
-  // Further tightened: only when the second word is a plausible field-name component (attribute tail),
-  // and the first word is not a common prose/verb starter. This cuts junk like "you_no", "cargo_stays",
-  // "longer_carry", "most_mission" while preserving real compounds.
-  const compound = /\b([a-z][a-z0-9]*)\s+([a-z][a-z0-9]*)\b/gi;
-  let m: RegExpExecArray | null;
-  const trivialFirst = new Set([
+/** Plausible right-hand sides for two-word field references in docs (kept from prior logic). */
+const compoundableTail = new Set([
+  'id',
+  'name',
+  'type',
+  'count',
+  'fare',
+  'bonus',
+  'ticks',
+  'remaining',
+  'level',
+  'xp',
+  'price',
+  'cost',
+  'capacity',
+  'quantity',
+  'amount',
+  'limit',
+  'rate',
+  'speed',
+  'value',
+  'time',
+  'duration',
+  'cooldown',
+  'progress',
+  'status',
+  'result',
+  'fuel',
+  'hull',
+  'scan',
+  'stealth',
+  'reputation',
+  'skill',
+  'hint',
+  'location',
+  'details',
+  'item',
+  'listing',
+  'order',
+  'job',
+  'template',
+  'recipe',
+  'passenger',
+  'events',
+  'log',
+  'system',
+  'station',
+  'base',
+]);
+
+/** Extract candidate field terms from prose, including compounds like "base fare" -> "base_fare".
+ *  Now context-sensitive: compounds and loose keys are only synthesized inside relevant blocks.
+ *  Legacy string[] kept; use the WithProvenance variant for review provenance.
+ */
+export function extractResponseFieldCandidates(text: string | undefined): string[] {
+  const rich = extractResponseFieldCandidatesWithProvenance(text);
+  return rich.map((c) => c.term);
+}
+
+/** Rich variant that returns provenance for each synthesized candidate. */
+export function extractResponseFieldCandidatesWithProvenance(text: string | undefined): FieldCandidate[] {
+  if (!text) return [];
+  // Start with context-sensitive base candidates (JSON + loose proseKey in relevant blocks only)
+  const base = harvestFieldCandidates(text);
+  const byTerm = new Map<string, FieldCandidate>();
+  for (const c of base) byTerm.set(c.term, c);
+
+  // Compound synthesis — strictly inside relevant blocks (context-sensitive).
+  // Token-pair walk (not regex exec) avoids skipping adjacent pairs like "speed bonus" after "and speed".
+  const blocks = splitDescriptionBlocks(text);
+  let afterExample = false;
+
+  const trivialSecond = new Set([
     'a',
     'an',
     'the',
@@ -448,144 +703,118 @@ export function extractResponseFieldCandidates(text: string | undefined): string
     'or',
     'but',
   ]);
-  const badFirstForCompound = new Set([
-    ...trivialFirst,
-    'most',
-    'any',
-    'only',
-    'your',
-    'our',
-    'their',
-    'its',
-    'this',
-    'that',
-    'some',
-    'other',
-    'each',
-    'every',
-    'held',
-    'goods',
-    'longer',
-    'are',
-    'is',
-    'was',
-    'were',
-    'be',
-    'been',
-    'you',
-    'we',
-    'they',
-    'it',
-    'no',
-    'not',
-    'can',
-    'will',
-    'must',
-    'do',
-    'does',
-    'did',
-    'have',
-    'has',
-    'had',
-    'get',
-    'gets',
-    'got',
-    'make',
-    'see',
-    'use',
-    'using',
-    'via',
-    'rate',
-    'internal',
-    'surfacing',
-    'economic',
-    'structured',
-    'new',
-    'all',
-    'subsequent',
-    'included',
-    'active',
-    'mission',
-    'provided',
-    'per',
-    'resistant',
-    'integrated',
-    'hidden',
-    'reported',
-    'based',
-  ]);
-  // Plausible right-hand sides for two-word field references in docs.
-  const compoundableTail = new Set([
-    'id',
-    'name',
-    'type',
-    'count',
-    'fare',
-    'bonus',
-    'ticks',
-    'remaining',
-    'level',
-    'xp',
-    'price',
-    'cost',
-    'capacity',
-    'quantity',
-    'amount',
-    'limit',
-    'rate',
-    'speed',
-    'value',
-    'time',
-    'duration',
-    'cooldown',
-    'progress',
-    'status',
-    'result',
-    'fuel',
-    'hull',
-    'scan',
-    'stealth',
-    'reputation',
-    'skill',
-    'hint',
-    'location',
-    'details',
-    'item',
-    'listing',
-    'order',
-    'job',
-    'template',
-    'recipe',
-    'passenger',
-    'events',
-    'log',
-    'system',
-    'station',
-    'base',
-  ]);
-  m = compound.exec(text);
-  while (m !== null) {
-    const w1 = (m[1] || '').toLowerCase();
-    const w2 = (m[2] || '').toLowerCase();
-    if (!w1 || !w2) continue;
-    if (badFirstForCompound.has(w1) || trivialFirst.has(w2)) continue;
-    if (!compoundableTail.has(w2)) continue;
-    const joined = `${m[1]}_${m[2]}`;
-    if (joined.length > 2 && joined.length < 50) cands.add(joined);
-    m = compound.exec(text);
+
+  for (let i = 0; i < blocks.length; i++) {
+    const maybeBlock = blocks[i];
+    if (typeof maybeBlock !== 'string' || !maybeBlock) continue;
+    const block = maybeBlock as string;
+    const { relevant, label } = classifyBlock(block, i, blocks);
+    const useBlock = relevant || afterExample;
+    if (!useBlock) {
+      if (isExampleBlock(block)) afterExample = true;
+      if (isRateLimitBlock(block)) afterExample = false;
+      continue;
+    }
+
+    const words = block.match(/\b([a-z][a-z0-9]*)\b/gi) || [];
+    for (let wi = 0; wi < words.length - 1; wi++) {
+      const w1raw = words[wi];
+      const w2raw = words[wi + 1];
+      if (!w1raw || !w2raw) continue;
+      const w1 = w1raw.toLowerCase();
+      const w2 = w2raw.toLowerCase();
+      if (trivialSecond.has(w2)) continue;
+      if (!compoundableTail.has(w2)) continue;
+      if (trivialSecond.has(w1)) continue; // never start compound with "and speed" etc.
+
+      const approxIdx = block.toLowerCase().indexOf(`${w1} ${w2}`);
+      const nearCode = isNearCodeLikeToken(block, approxIdx >= 0 ? approxIdx : undefined);
+      const goodStem = goodCompoundStems.has(w1);
+
+      if (!goodStem && !nearCode) {
+        const badStarters = new Set([
+          'most',
+          'any',
+          'only',
+          'your',
+          'our',
+          'their',
+          'its',
+          'this',
+          'that',
+          'some',
+          'other',
+          'each',
+          'every',
+          'held',
+          'goods',
+          'longer',
+          'are',
+          'is',
+          'was',
+          'were',
+          'be',
+          'been',
+          'you',
+          'we',
+          'they',
+          'it',
+          'no',
+          'not',
+          'can',
+          'will',
+          'must',
+          'do',
+          'does',
+          'did',
+          'have',
+          'has',
+          'had',
+          'get',
+          'gets',
+          'got',
+          'make',
+          'see',
+          'use',
+          'using',
+          'via',
+          'new',
+          'all',
+          'per',
+          'and',
+          'the',
+        ]);
+        if (badStarters.has(w1)) continue;
+      }
+
+      const joined = `${w1raw}_${w2raw}`;
+      if (joined.length <= 2 || joined.length >= 50) continue;
+
+      const prov = `from compound '${w1raw} ${w2raw}' in ${label}`;
+      const existing = byTerm.get(joined);
+      if (!existing || !/example|JSON/i.test(existing.provenance)) {
+        byTerm.set(joined, { term: joined, provenance: prov });
+      }
+    }
+
+    if (isExampleBlock(block)) afterExample = true;
+    if (isRateLimitBlock(block)) afterExample = false;
   }
 
-  // For response-field detection, keep candidates that look like actual documented fields:
-  // - contain underscore (the dominant style in this API)
-  // - camelCase
-  // - or were explicitly quoted/backticked in the source text
-  const src = text ?? '';
-  const filtered = [...cands].filter((t) => {
-    if (t.includes('_')) return true;
-    if (/[a-z][A-Z]/.test(t)) return true;
-    if (new RegExp('[\\`"\'\']' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\`"\'\']').test(src)) return true;
-    return false;
-  });
+  // Final documented-field filter (underscore, camel, or was quoted in source)
+  const src = text;
+  const q = '["`\']';
+  const filtered: FieldCandidate[] = [];
+  for (const c of byTerm.values()) {
+    const t = c.term;
+    if (
+      t.includes('_') ||
+      /[a-z][A-Z]/.test(t) ||
+      new RegExp(`${q}${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${q}`).test(src)
+    ) {
+      filtered.push(c);
+    }
+  }
   return filtered;
 }
 
@@ -721,7 +950,8 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     if (only && only.length && !routeMatchesOnly(name, only)) continue;
 
     const prose = collectDescriptionText(schema);
-    let terms = extractResponseFieldCandidates(prose);
+    const rich = extractResponseFieldCandidatesWithProvenance(prose);
+    let terms = rich.map((c) => c.term);
     terms = terms.filter((t) => !isNoiseTerm(t));
 
     if (terms.length === 0) continue;
@@ -729,6 +959,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const present = collectAllPropertyNames(schema, spec);
     for (const term of terms) {
       if (termPresentIn(term, present)) continue;
+      const prov = rich.find((c) => c.term === term)?.provenance;
 
       findings.push({
         id: `missing-response-field-prose|${schemaName}|${term}`,
@@ -739,6 +970,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
         message: `prose/patch notes reference ${term} but it is absent from ${schemaName}`,
         evidence: {
           description: typeof schema.description === 'string' ? schema.description.slice(0, 200) : undefined,
+          candidateProvenance: prov,
         },
         suggestedAction: 'Add the field to the response schema (and bulk variants) if the server actually returns it.',
         confidence: 'medium',
@@ -755,7 +987,8 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const routeSig = `${methods.post ? 'POST' : 'GET'} ${apiPath}`;
     if (!routeMatchesOnly(routeSig, only)) continue;
 
-    let terms = extractResponseFieldCandidates(op.description as string);
+    const rich = extractResponseFieldCandidatesWithProvenance(op.description as string);
+    let terms = rich.map((c) => c.term);
     terms = terms.filter((t) => !isNoiseTerm(t));
     if (terms.length === 0) continue;
 
@@ -776,6 +1009,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
 
     for (const term of terms) {
       if (termPresentIn(term, respFields) || termPresentIn(term, reqFields)) continue;
+      const prov = rich.find((c) => c.term === term)?.provenance;
 
       findings.push({
         id: `missing-response-field-prose|${routeSig}|${term}`,
@@ -787,6 +1021,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
         message: `prose references "${term}" but it is absent from the response schema for ${routeSig}`,
         evidence: {
           proseExcerpt: (op.description as string | undefined)?.slice(0, 280),
+          candidateProvenance: prov,
         },
         suggestedAction: 'Add the field to the response schema if the server actually returns it, or update prose.',
         confidence: 'medium',
@@ -804,6 +1039,9 @@ function stableId(f: Finding): string {
 export function buildConsistencyReport(spec: OpenApiSpec, options: ReportOptions = {}): ConsistencyReport {
   // biome-ignore lint/suspicious/noExplicitAny: version helper accepts the richer loaded document shape
   const version = gameserverVersionFromSpec(spec as any);
+
+  // Note: WeakMap caches are object-keyed. Fresh plain objects created in tests (makeMinimalSpec)
+  // or a freshly loaded spec will naturally miss prior entries. No explicit clear needed.
 
   let findings: Finding[] = [
     ...findProseFieldMismatches(spec, options),
@@ -881,6 +1119,9 @@ export function formatConsistencyReport(report: ConsistencyReport, opts: { json?
       }
       if (f.evidence.examplePayload) {
         lines.push(`  example keys: ${Object.keys(f.evidence.examplePayload).join(', ')}`);
+      }
+      if (f.evidence.candidateProvenance) {
+        lines.push(`  provenance: ${f.evidence.candidateProvenance}`);
       }
       if (f.evidence.schemaEnum) {
         lines.push(`  enum in schema: ${f.evidence.schemaEnum.join(' | ')}`);

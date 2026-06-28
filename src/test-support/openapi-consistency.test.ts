@@ -3,9 +3,11 @@ import {
   buildConsistencyReport,
   extractDocExamples,
   extractMentionedFieldNames,
+  extractResponseFieldCandidatesWithProvenance,
   findOverbroadSharedSchemas,
   findProseFieldMismatches,
   findResponseProseMismatches,
+  type FieldCandidate,
   type OpenApiSpec,
 } from './openapi-consistency';
 
@@ -36,6 +38,11 @@ function addPostOperation(spec: OpenApiSpec, apiPath: string, description: strin
       },
     },
   } as any;
+}
+
+function addComponentSchema(spec: OpenApiSpec, name: string, schema: any) {
+  if (!spec.components) spec.components = { schemas: {} };
+  (spec.components.schemas as any)[name] = schema;
 }
 
 describe('openapi-consistency doc snippet parser', () => {
@@ -136,11 +143,6 @@ describe('full report build', () => {
 });
 
 describe('response prose mismatch (base_fare style)', () => {
-  function addComponentSchema(spec: OpenApiSpec, name: string, schema: any) {
-    if (!spec.components) spec.components = { schemas: {} };
-    (spec.components.schemas as any)[name] = schema;
-  }
-
   test('does not flag ListPassengersResponse when base_fare is inside passengers[] items', () => {
     const spec = makeMinimalSpec();
     addComponentSchema(spec, 'ListPassengersResponse', {
@@ -245,5 +247,96 @@ describe('response prose mismatch (base_fare style)', () => {
       (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'SomeResponse',
     );
     expect(flag).toBeDefined();
+  });
+});
+
+describe('context-sensitive extraction and provenance', () => {
+  test('extractMentionedFieldNames and rich candidates respect context blocks (ignores unrelated prose)', () => {
+    const text = [
+      'General chatter here with no payload meaning.',
+      '',
+      'Use payload to send station_id or use "quoted".',
+      '',
+      '**Example:** `{"type": "foo", "payload": {"special_key": 1}}`',
+      '',
+      '**Rate limited:** mutation',
+      '',
+      'After rate limit notes we may mention stray words like destination but should not synthesize from them.',
+    ].join('\n\n');
+
+    const names = extractMentionedFieldNames(text);
+    expect(names).toContain('station_id');
+    expect(names).toContain('quoted');
+    expect(names).toContain('special_key');
+    // "destination" appears only after rate-limit note => should be filtered by context
+    expect(names).not.toContain('destination');
+
+    const rich = extractResponseFieldCandidatesWithProvenance(text);
+    const special = rich.find((c: FieldCandidate) => c.term === 'special_key');
+    expect(special?.provenance).toMatch(/JSON in example/);
+    const station = rich.find((c: FieldCandidate) => c.term === 'station_id');
+    expect(station?.provenance).toMatch(/loose proseKey/);
+  });
+
+  test('compound synthesis only in relevant blocks and carries provenance', () => {
+    const text = 'General text about most mission stuff.\n\n**Example:** `{"type":"x"}`\n\nShows the base fare and speed bonus plus ticks remaining.\n\n**Rate limited:** x';
+    const rich = extractResponseFieldCandidatesWithProvenance(text);
+    const baseFare = rich.find((c) => c.term === 'base_fare');
+    const speedBonus = rich.find((c) => c.term === 'speed_bonus');
+    const ticksRem = rich.find((c) => c.term === 'ticks_remaining');
+
+    expect(baseFare).toBeTruthy();
+    expect(baseFare?.provenance).toMatch(/compound 'base fare'/);
+    expect(speedBonus).toBeTruthy();
+    expect(ticksRem).toBeTruthy();
+
+    // "most mission" should not synthesize (bad starter + not promoted by positive stem or near-code)
+    expect(rich.some((c) => /most_mission|mission_stuff/.test(c.term))).toBe(false);
+  });
+
+  test('provenance is attached to missing-response-field-prose findings', () => {
+    const spec = makeMinimalSpec();
+    addComponentSchema(spec, 'PassengerResponse', {
+      // Include a cue-like context + the compound to exercise the path
+      description: 'Response payload lists base fare for each passenger.',
+      properties: { count: { type: 'integer' } },
+    });
+
+    const findings = findResponseProseMismatches(spec);
+    const f = findings.find((ff) => ff.field === 'base_fare' && ff.schemaName === 'PassengerResponse');
+    expect(f).toBeDefined();
+    expect(f?.evidence.candidateProvenance).toMatch(/compound|proseKey|JSON/);
+  });
+
+  test('prose-field-mismatch findings carry "from JSON in example" provenance', () => {
+    const spec = makeMinimalSpec();
+    addPostOperation(
+      spec,
+      '/api/v2/spacemolt/test_cmd',
+      '**Example:** `{"type": "test_cmd", "payload": {"mystery": 42}}`',
+      { id: { type: 'string' } },
+    );
+    const findings = findProseFieldMismatches(spec);
+    const f = findings.find((ff) => ff.field === 'mystery');
+    expect(f?.evidence.candidateProvenance).toBe('from JSON in example');
+  });
+});
+
+describe('memoization of schema walks', () => {
+  test('repeated walks via public report API are stable (memo does not alter results)', () => {
+    const spec = makeMinimalSpec();
+    addComponentSchema(spec, 'MemoResponse', {
+      description: 'Contains base_fare in nested items.',
+      properties: {
+        list: { items: { properties: { base_fare: { type: 'integer' } } } },
+      },
+    });
+
+    const r1 = findResponseProseMismatches(spec);
+    const r2 = findResponseProseMismatches(spec);
+    expect(r1.length).toBe(r2.length);
+    // If base_fare is present it should never produce a missing-prose flag
+    const baseFlags = [...r1, ...r2].filter((f) => f.field === 'base_fare');
+    expect(baseFlags.length).toBe(0);
   });
 });
