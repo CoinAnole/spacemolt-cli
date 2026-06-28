@@ -246,14 +246,6 @@ export const stationRefuelFixture = {
   cost: 15992,
 };
 
-export const salvageWreckFixture = {
-  metal_scrap: 14,
-  rare_materials: 2,
-  components: 3,
-  total_value: 1250,
-  xp_gained: 18,
-};
-
 export const shipFixtureCases = {
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   ship: { command: 'get_ship', fixture: shipFixture },
@@ -271,7 +263,6 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   refuel: { command: 'refuel', fixture: refuelFixture, schemaTarget: 'details' },
   refuel_station: { command: 'refuel', fixture: stationRefuelFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },
-  salvage_wreck: { command: 'salvage_wreck', fixture: salvageWreckFixture, schemaTarget: 'details' },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
 };

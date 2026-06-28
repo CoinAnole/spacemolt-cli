@@ -30,7 +30,6 @@ export const FRIENDLY_FORMATTING_TARGETS = [
   'get_tax_estimate',
   'read_note',
   'reload',
-  'salvage_wreck',
   'scan',
   'set_colors',
   'set_status',

@@ -76,7 +76,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
 ];
 
 const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
-  storage: ['jettison', 'loot_wreck', 'salvage_wreck'],
+  storage: ['jettison', 'loot_wreck'],
   faction: [
     'faction_build',
     'faction_facility_build',
@@ -1134,7 +1134,6 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     storage jettison [item_id] [qty] [items=JSON]
     jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison
     loot_wreck <wreck_id> <item_id> [quantity]  Standalone wreck loot
-    salvage_wreck <wreck_id>     Standalone wreck salvage
     faction deposit_credits <amount>  Wallet -> faction treasury
     faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
 
@@ -1180,6 +1179,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction delete_room <room_id>      Delete room
     faction get_invites                Pending invites
     faction decline_invite <faction_id>  Decline invite
+    faction garages                    Shared ship garages at every station
     faction post_mission <title> <description> <type> <objectives> <rewards>
     faction cancel_mission <template_id>  Cancel faction mission
     faction list_missions              Faction missions at current station

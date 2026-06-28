@@ -57,6 +57,13 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/get_invites',
   },
+  faction_garages: {
+    description: "View your faction's full ship-garage roster across all stations",
+    example: 'spacemolt faction garages',
+    seeAlso: ['list_ships', 'switch_ship'],
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_faction/garages',
+  },
   faction_accept_invite: {
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/accept_invite',

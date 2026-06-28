@@ -217,12 +217,6 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt_salvage/loot',
     positionals: ['wreck_id', 'item_id', 'quantity'],
   },
-  salvage_wreck: {
-    usage: '<wreck_id>',
-    category: 'Wrecks',
-    apiRoute: 'POST /api/v2/spacemolt_salvage/salvage',
-    positionals: ['wreck_id'],
-  },
   name_ship: {
     usage: '<name>  (set ship name, empty to clear)',
     category: 'Ship management',

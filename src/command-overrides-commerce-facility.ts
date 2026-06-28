@@ -89,7 +89,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description: 'Run unified station storage operations: view, bulk item transfers, wreck loot, or jettison.',
     example: 'spacemolt storage view target=faction --items iron_ore,fuel_cell',
     discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
-    seeAlso: ['get_cargo', 'loot_wreck', 'salvage_wreck', 'jettison'],
+    seeAlso: ['get_cargo', 'loot_wreck', 'jettison'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
     positionals: [

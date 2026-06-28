@@ -80,14 +80,6 @@
     "register|register|required-missing|poi",
     "register|register|required-missing|ship",
     "register|register|required-missing|system",
-    "salvage_wreck|salvage_wreck|extra-in-fixture|components",
-    "salvage_wreck|salvage_wreck|extra-in-fixture|metal_scrap",
-    "salvage_wreck|salvage_wreck|extra-in-fixture|rare_materials",
-    "salvage_wreck|salvage_wreck|extra-in-fixture|xp_gained",
-    "salvage_wreck|salvage_wreck|required-missing|action",
-    "salvage_wreck|salvage_wreck|required-missing|materials",
-    "salvage_wreck|salvage_wreck|required-missing|message",
-    "salvage_wreck|salvage_wreck|required-missing|wreck_id",
     "view_market|view_market|required-missing|current_tick"
   ]
 }

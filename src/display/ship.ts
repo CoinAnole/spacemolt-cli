@@ -329,27 +329,6 @@ export const shipFormatters = [
     { commands: ['reload'] },
   ),
 
-  formatter(
-    (r) => {
-      if (
-        r.metal_scrap === undefined &&
-        r.rare_materials === undefined &&
-        r.components === undefined &&
-        r.total_value === undefined &&
-        r.xp_gained === undefined
-      )
-        return false;
-      emitLine(`\n${c.bright}=== Salvage Complete ===${c.reset}`);
-      if (r.metal_scrap !== undefined) emitLine(`Metal scrap: ${r.metal_scrap}`);
-      if (r.rare_materials !== undefined) emitLine(`Rare materials: ${r.rare_materials}`);
-      if (r.components !== undefined) emitLine(`Components: ${r.components}`);
-      if (r.total_value !== undefined) emitLine(`Total value: ${r.total_value}`);
-      if (r.xp_gained !== undefined) emitLine(`XP gained: ${r.xp_gained}`);
-      return true;
-    },
-    { commands: ['salvage_wreck'] },
-  ),
-
   // Wrecks
   formatter(
     (r) => {

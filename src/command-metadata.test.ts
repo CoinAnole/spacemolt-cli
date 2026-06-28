@@ -795,6 +795,7 @@ describe('command metadata', () => {
     const snapshot = buildCommandRegistrySnapshot();
     const removedCommands = [
       'claim_commission',
+      'salvage_wreck',
       'v2_get_cargo',
       'v2_get_missions',
       'v2_get_player',
@@ -824,6 +825,7 @@ describe('command metadata', () => {
       'deposit_items',
       'withdraw_items',
       'send_gift',
+      'salvage_wreck',
       'storage_loot',
       'storage_jettison',
     ]) {
