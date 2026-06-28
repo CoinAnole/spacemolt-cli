@@ -6,7 +6,7 @@
  * Focuses on the classes of problems we have seen repeatedly:
  * - Field names in **Example:** prose vs actual schema property names (e.g. "name"/"destination" vs "id")
  * - Over-shared request schemas on dedicated action paths (e.g. job_add vs transfer sharing "direction")
- * - Response fields referenced in docs but missing from schemas (e.g. base_fare)
+ * - Response fields referenced in docs but missing from schemas (any term extracted from prose)
  *
  * Usage:
  *   bun run report:openapi-consistency

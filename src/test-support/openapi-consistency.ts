@@ -343,11 +343,7 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
  * Handles properties, array items (any container), oneOf/allOf/anyOf, and refs via getEffectiveSchema.
  * Used to improve detection of fields present in nested response shapes (e.g. passengers[], passenger_arrivals, oneOf variants).
  */
-function collectAllPropertyNames(
-  schema: any,
-  spec: OpenApiSpec,
-  seen = new Set<string>(),
-): Set<string> {
+function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<string>()): Set<string> {
   const fields = new Set<string>();
   if (!schema || typeof schema !== 'object') return fields;
 
@@ -382,103 +378,269 @@ function collectAllPropertyNames(
   return fields;
 }
 
-/** Heuristic: does the collected field set contain something that satisfies a "base_fare"/"base fare" mention? */
-function hasFareLikeField(fields: Set<string>): boolean {
-  for (const k of fields) {
-    const lower = k.toLowerCase();
-    if (lower.includes('base_fare') || lower.includes('basefare')) return true;
-    if (lower.includes('fare') && (lower.includes('base') || lower === 'fare' || lower.startsWith('fare_') || lower.endsWith('_fare'))) {
-      return true;
+/**
+ * Collect human prose descriptions from a schema subtree (descriptions on the node,
+ * its properties, items, and oneOf/allOf/anyOf variants). Avoids schema keywords.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: schema walking (matches style of collectAllPropertyNames)
+function collectDescriptionText(node: any, out: string[] = []): string {
+  if (!node || typeof node !== 'object') return out.join('\n');
+  if (typeof node.description === 'string') {
+    out.push(node.description);
+  }
+  if (node.properties && typeof node.properties === 'object') {
+    for (const p of Object.values(node.properties as Record<string, any>)) {
+      collectDescriptionText(p, out);
     }
+  }
+  if (node.items) {
+    collectDescriptionText(node.items, out);
+  }
+  for (const k of ['oneOf', 'allOf', 'anyOf'] as const) {
+    const arr = (node as any)[k];
+    if (Array.isArray(arr)) {
+      for (const v of arr) collectDescriptionText(v, out);
+    }
+  }
+  return out.join('\n');
+}
+
+/** Extract candidate field terms from prose, including compounds like "base fare" -> "base_fare". */
+export function extractResponseFieldCandidates(text: string | undefined): string[] {
+  if (!text) return [];
+  const base = extractMentionedFieldNames(text);
+  const cands = new Set(base);
+
+  // Natural-language compounds in docs ("base fare", "speed bonus", "ticks remaining")
+  // become snake_case candidates so they can be matched against real schema fields.
+  // Only synthesize when neither word is a trivial article/preposition (reduces "a fleet" -> a_fleet noise).
+  const compound = /\b([a-z][a-z0-9]*)\s+([a-z][a-z0-9]*)\b/gi;
+  let m: RegExpExecArray | null;
+  const trivialFirst = new Set([
+    'a',
+    'an',
+    'the',
+    'to',
+    'of',
+    'in',
+    'on',
+    'for',
+    'with',
+    'by',
+    'at',
+    'from',
+    'and',
+    'or',
+    'but',
+  ]);
+  m = compound.exec(text);
+  while (m !== null) {
+    const w1 = (m[1] || '').toLowerCase();
+    const w2 = (m[2] || '').toLowerCase();
+    if (!w1 || !w2) continue;
+    if (trivialFirst.has(w1) || trivialFirst.has(w2)) continue;
+    const joined = `${m[1]}_${m[2]}`;
+    if (joined.length > 2 && joined.length < 50) cands.add(joined);
+    m = compound.exec(text);
+  }
+
+  // For response-field detection, keep candidates that look like actual documented fields:
+  // - contain underscore (the dominant style in this API)
+  // - camelCase
+  // - or were explicitly quoted/backticked in the source text
+  const src = text ?? '';
+  const filtered = [...cands].filter((t) => {
+    if (t.includes('_')) return true;
+    if (/[a-z][A-Z]/.test(t)) return true;
+    if (new RegExp(`[\`"']${t}[\`"']`).test(src)) return true;
+    return false;
+  });
+  return filtered;
+}
+
+function isNoiseTerm(term: string): boolean {
+  const t = term.toLowerCase();
+  const stop = new Set([
+    'the',
+    'and',
+    'for',
+    'with',
+    'that',
+    'this',
+    'from',
+    'into',
+    'when',
+    'will',
+    'can',
+    'may',
+    'also',
+    'each',
+    'per',
+    'all',
+    'one',
+    'use',
+    'see',
+    'via',
+    'using',
+    'return',
+    'returns',
+    'include',
+    'includes',
+    'contain',
+    'contains',
+    'provide',
+    'provides',
+    'field',
+    'fields',
+    'value',
+    'values',
+    'item',
+    'items',
+    'list',
+    'array',
+    'object',
+    'response',
+    'result',
+    'payload',
+    'request',
+    'example',
+    'note',
+    'notes',
+    'optional',
+    'required',
+    'default',
+    'true',
+    'false',
+    'null',
+    'string',
+    'number',
+    'integer',
+    'boolean',
+    'schema',
+    'type',
+    'properties',
+    'description',
+    'enum',
+    'data',
+    'content',
+    'structuredcontent',
+    'notifications',
+    'action',
+    'actions',
+    'information',
+    'containing',
+    'entries',
+    'report',
+    'may',
+    'style',
+    'variant',
+    'variants',
+    'inside',
+    'with',
+    'per',
+  ]);
+  return stop.has(t);
+}
+
+/** Exact + normalized fuzzy (alphanum only) presence check. */
+function termPresentIn(term: string, fields: Set<string>): boolean {
+  if (fields.has(term)) return true;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const tnorm = norm(term);
+  for (const f of fields) {
+    if (norm(f) === tnorm) return true;
   }
   return false;
 }
 
-// Lightweight response prose check for things like "base_fare"
+// Response prose vs schema check. Generalized to any term extracted from prose
+// (component descriptions + operation descriptions), not a hardcoded list.
 export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
   const findings: Finding[] = [];
   const only = options.only;
 
-  // Look in component schemas and operation descriptions for field names that sound important
-  const interestingTerms = ['base_fare', 'baseFare', 'base fare'];
-
-  // Check component schemas
+  // Component schemas: extract terms from their documentation prose and verify presence
+  // in the full reachable field set (including nested items/oneOf etc.).
+  // Focus on Response/Result/State schemas and a few broad containers to avoid
+  // flooding from partial component descriptions that reference fields from larger envelopes.
+  // biome-ignore lint/suspicious/noExplicitAny: schema access (matches file style)
   const components = (spec as any).components?.schemas || {};
   for (const [schemaName, schema] of Object.entries(components) as [string, any][]) {
-    const descText = JSON.stringify(schema); // cheap way to search the whole subtree
-    for (const term of interestingTerms) {
-      if (!descText.toLowerCase().includes(term.toLowerCase().replace('_', '')) && !descText.includes(term)) continue;
+    const name = schemaName;
+    const isResponseLike = /Response|Result|State|Status|Output/i.test(name);
+    if (!isResponseLike) continue;
 
-      const allFields = collectAllPropertyNames(schema, spec);
-      const hasFareField = allFields.has('base_fare') || allFields.has('baseFare') || hasFareLikeField(allFields);
+    const prose = collectDescriptionText(schema);
+    let terms = extractResponseFieldCandidates(prose);
+    terms = terms.filter((t) => !isNoiseTerm(t));
 
-      if (hasFareField) continue;
+    if (terms.length === 0) continue;
 
-      // Fall back to legacy narrow check for emission decision (kept temporarily for compatibility during rollout)
-      const props = (schema.properties || {}) as Record<string, any>;
-      const hasDirect = Object.keys(props).some(
-        (k) => k.toLowerCase().includes('base') && k.toLowerCase().includes('fare'),
-      );
-      let missingInArrayItem = false;
-      const passengers = props.passengers;
-      if (passengers?.items?.properties) {
-        const itemProps = passengers.items.properties as Record<string, any>;
-        const has = Object.keys(itemProps).some(
-          (k) => k.toLowerCase().includes('base') && k.toLowerCase().includes('fare'),
-        );
-        if (!has) missingInArrayItem = true;
-      }
+    const present = collectAllPropertyNames(schema, spec);
+    for (const term of terms) {
+      if (termPresentIn(term, present)) continue;
 
-      if (missingInArrayItem || !hasDirect) {
-        const _routeHint = schemaName.includes('Passenger')
-          ? 'ListPassengersResponse or UnloadPassengerResponse'
-          : schemaName;
-        findings.push({
-          id: `missing-response-field-prose|${schemaName}|${term}`,
-          kind: 'missing-response-field-prose',
-          severity: 'high',
-          schemaName,
-          field: term,
-          message: `prose/patch notes reference ${term} but it is absent from ${schemaName}`,
-          evidence: {
-            description: typeof schema.description === 'string' ? schema.description.slice(0, 200) : undefined,
-          },
-          suggestedAction:
-            'Add the field to the response schema (and bulk variants) if the server actually returns it.',
-          confidence: 'medium',
-        });
-      }
+      findings.push({
+        id: `missing-response-field-prose|${schemaName}|${term}`,
+        kind: 'missing-response-field-prose',
+        severity: 'high',
+        schemaName,
+        field: term,
+        message: `prose/patch notes reference ${term} but it is absent from ${schemaName}`,
+        evidence: {
+          description: typeof schema.description === 'string' ? schema.description.slice(0, 200) : undefined,
+        },
+        suggestedAction: 'Add the field to the response schema (and bulk variants) if the server actually returns it.',
+        confidence: 'medium',
+      });
     }
   }
 
-  // Also scan operation descriptions mentioning base fare (or similar) for passenger routes.
-  // Now actively resolves the 200 response schema for the route and uses the collector
-  // so we correctly recognize fields inside passengers[], passenger_arrivals, oneOf variants, etc.
+  // Operation descriptions: extract candidate terms, resolve the success response schema
+  // (and request schema), and flag terms mentioned in prose that are absent from both.
+  // This generalizes beyond any single command family or term.
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
-    if (!/passenger/i.test(apiPath)) continue;
     const op: any = methods.post || methods.get;
     if (!op || !op.description) continue;
     const routeSig = `${methods.post ? 'POST' : 'GET'} ${apiPath}`;
     if (!routeMatchesOnly(routeSig, only)) continue;
 
-    if (/base.?fare|base fare/i.test(op.description as string)) {
-      try {
-        const { schema: respSchema } = resolveSuccessResponseSchema(spec, routeSig);
-        if (respSchema && Object.keys(respSchema).length > 0) {
-          const respFields = collectAllPropertyNames(respSchema, spec);
-          if (respFields.has('base_fare') || respFields.has('baseFare') || hasFareLikeField(respFields)) {
-            // Field is present in the actual response shape for this route — do not emit here
-            // (component scan may still have emitted if the named *Response schema itself looked deficient).
-            continue;
-          }
-        }
-      } catch {
-        // resolution failed; fall through to component-based finding if any
-      }
+    let terms = extractResponseFieldCandidates(op.description as string);
+    terms = terms.filter((t) => !isNoiseTerm(t));
+    if (terms.length === 0) continue;
 
-      // If we reach here the field was mentioned in prose for this route but not found via resolution/collector.
-      // We keep the emission lightweight (the component scan is the main reporter for schemaName).
-      // Future: we could emit a route-specific variant of the finding.
+    let respFields = new Set<string>();
+    let primarySchemaName: string | undefined;
+    try {
+      const resolved = resolveSuccessResponseSchema(spec, routeSig);
+      if (resolved.schema && Object.keys(resolved.schema).length > 0) {
+        respFields = collectAllPropertyNames(resolved.schema, spec);
+        primarySchemaName = resolved.primarySchemaName;
+      }
+    } catch {
+      // resolution failed; proceed with empty respFields
+    }
+
+    const reqProps = getRequestSchemaForPath(spec, apiPath);
+    const reqFields = new Set(Object.keys(reqProps || {}));
+
+    for (const term of terms) {
+      if (termPresentIn(term, respFields) || termPresentIn(term, reqFields)) continue;
+
+      findings.push({
+        id: `missing-response-field-prose|${routeSig}|${term}`,
+        kind: 'missing-response-field-prose',
+        severity: 'medium',
+        route: routeSig,
+        schemaName: primarySchemaName,
+        field: term,
+        message: `prose references "${term}" but it is absent from the response schema for ${routeSig}`,
+        evidence: {
+          proseExcerpt: (op.description as string | undefined)?.slice(0, 280),
+        },
+        suggestedAction: 'Add the field to the response schema if the server actually returns it, or update prose.',
+        confidence: 'medium',
+      });
     }
   }
 

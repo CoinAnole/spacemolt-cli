@@ -144,6 +144,7 @@ describe('response prose mismatch (base_fare style)', () => {
   test('does not flag ListPassengersResponse when base_fare is inside passengers[] items', () => {
     const spec = makeMinimalSpec();
     addComponentSchema(spec, 'ListPassengersResponse', {
+      description: 'Response containing passengers with base_fare information.',
       properties: {
         passengers: {
           items: {
@@ -158,7 +159,10 @@ describe('response prose mismatch (base_fare style)', () => {
 
     const findings = findResponseProseMismatches(spec);
     const baseFareFlags = findings.filter(
-      (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'ListPassengersResponse',
+      (f) =>
+        f.kind === 'missing-response-field-prose' &&
+        f.schemaName === 'ListPassengersResponse' &&
+        f.field === 'base_fare',
     );
     expect(baseFareFlags).toHaveLength(0);
   });
@@ -166,6 +170,7 @@ describe('response prose mismatch (base_fare style)', () => {
   test('does not flag a oneOf Unload-style response containing base_fare in variants', () => {
     const spec = makeMinimalSpec();
     addComponentSchema(spec, 'UnloadPassengerResponse', {
+      description: 'Unload result may include base_fare in the response or delivered list.',
       oneOf: [
         {
           properties: {
@@ -185,7 +190,10 @@ describe('response prose mismatch (base_fare style)', () => {
 
     const findings = findResponseProseMismatches(spec);
     const flags = findings.filter(
-      (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'UnloadPassengerResponse',
+      (f) =>
+        f.kind === 'missing-response-field-prose' &&
+        f.schemaName === 'UnloadPassengerResponse' &&
+        f.field === 'base_fare',
     );
     expect(flags).toHaveLength(0);
   });
@@ -193,6 +201,7 @@ describe('response prose mismatch (base_fare style)', () => {
   test('does not flag DockResponse with base_fare inside passenger_arrivals.delivered[]', () => {
     const spec = makeMinimalSpec();
     addComponentSchema(spec, 'DockResponse', {
+      description: 'Dock may report passenger_arrivals with base_fare in delivered entries.',
       properties: {
         passenger_arrivals: {
           properties: {
@@ -211,7 +220,10 @@ describe('response prose mismatch (base_fare style)', () => {
 
     const findings = findResponseProseMismatches(spec);
     const flags = findings.filter(
-      (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'DockResponse',
+      (f) =>
+        f.kind === 'missing-response-field-prose' &&
+        f.schemaName === 'DockResponse' &&
+        f.field === 'base_fare',
     );
     expect(flags).toHaveLength(0);
   });
@@ -224,7 +236,7 @@ describe('response prose mismatch (base_fare style)', () => {
       },
     });
 
-    // Manually trigger by putting the term in the schema desc text (simulates "prose" inside schema)
+    // Term referenced only in prose description; absent from the schema shape.
     (spec.components!.schemas as any).SomeResponse.description =
       'Returns base_fare and other things.';
 
