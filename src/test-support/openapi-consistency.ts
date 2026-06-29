@@ -496,14 +496,166 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
   return findings;
 }
 
+const KNOWN_BROAD_ENUM_FIELDS = new Set(['direction', 'mode', 'op', 'operation', 'variant']);
+
+type SharedSchemaMember = {
+  route: string;
+  path: string;
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
+  props: Record<string, any>;
+};
+
+type EnumGroup = {
+  enum: string[];
+  routes: string[];
+  description?: string;
+};
+
+function isBroadEnumField(field: string): boolean {
+  return KNOWN_BROAD_ENUM_FIELDS.has(field);
+}
+
+function enumValuesFromSchemaField(schema: unknown): string[] | undefined {
+  const en = (schema as { enum?: unknown } | undefined)?.enum;
+  if (!Array.isArray(en) || en.length === 0) return undefined;
+  return en.map(String);
+}
+
+function enumGroupKey(values: string[]): string {
+  return values.join('\u0000');
+}
+
+function sortedUnique(values: string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function descriptionReferencesMultipleActions(description: string | undefined): boolean {
+  if (!description || !/\baction\b/i.test(description)) return false;
+  const quotedTerms = description.match(/'[^']+'/g) ?? [];
+  return quotedTerms.length >= 2;
+}
+
+function collectEnumGroupsForField(members: SharedSchemaMember[], field: string): EnumGroup[] {
+  const groups = new Map<string, EnumGroup>();
+
+  for (const member of members) {
+    const values = enumValuesFromSchemaField(member.props[field]);
+    if (!values) continue;
+
+    const key = enumGroupKey(values);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.routes.push(member.route);
+      continue;
+    }
+
+    groups.set(key, {
+      enum: values,
+      routes: [member.route],
+      description: (member.props[field] as { description?: string } | undefined)?.description,
+    });
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      routes: sortedUnique(group.routes),
+    }))
+    .sort((a, b) => {
+      if (b.enum.length !== a.enum.length) return b.enum.length - a.enum.length;
+      if (b.routes.length !== a.routes.length) return b.routes.length - a.routes.length;
+      return a.enum.join('|').localeCompare(b.enum.join('|'));
+    });
+}
+
+function collectBroadEnumFields(members: SharedSchemaMember[]): string[] {
+  const fields = new Set<string>();
+
+  for (const member of members) {
+    for (const [field, schema] of Object.entries(member.props)) {
+      const values = enumValuesFromSchemaField(schema);
+      if (values && values.length >= 3 && isBroadEnumField(field)) fields.add(field);
+    }
+  }
+
+  return [...fields].sort();
+}
+
+function routeFindingKey(route: string | undefined, field: string | undefined): string {
+  return `${route ?? ''}\u0000${field ?? ''}`;
+}
+
+function buildOverbroadSharedSchemaClusters(
+  members: SharedSchemaMember[],
+  routeFindings: Finding[],
+): Finding[] {
+  const routeFindingKeys = new Set(
+    routeFindings
+      .filter((finding) => finding.kind === 'overbroad-shared-schema' && finding.route && finding.field)
+      .map((finding) => routeFindingKey(finding.route, finding.field)),
+  );
+  const clusters: Finding[] = [];
+
+  for (const field of collectBroadEnumFields(members)) {
+    const enumGroups = collectEnumGroupsForField(members, field);
+    const broadGroups = enumGroups.filter((group) => group.enum.length >= 3);
+
+    for (const group of broadGroups) {
+      const flaggedRoutes = group.routes.filter((route) => routeFindingKeys.has(routeFindingKey(route, field)));
+      const hasRouteFinding = flaggedRoutes.length > 0;
+      const hasMultiActionDescription = descriptionReferencesMultipleActions(group.description);
+      if (!hasRouteFinding && !hasMultiActionDescription) continue;
+      if (group.routes.length <= flaggedRoutes.length) continue;
+
+      const flaggedRouteSet = new Set(flaggedRoutes);
+      const unflaggedRoutes = group.routes.filter((route) => !flaggedRouteSet.has(route));
+      const narrowedEnumRoutes = enumGroups
+        .filter((candidate) => candidate.enum.length < group.enum.length)
+        .flatMap((candidate) =>
+          candidate.routes.map((route) => ({
+            route,
+            enum: candidate.enum,
+          })),
+        )
+        .sort((a, b) => a.route.localeCompare(b.route));
+      const firstRoute = group.routes[0] ?? 'unknown-route';
+
+      clusters.push({
+        id: `overbroad-shared-schema-cluster|${field}|${firstRoute}`,
+        kind: 'overbroad-shared-schema',
+        severity: 'info',
+        field,
+        message: `shared request schema exposes broad "${field}" enum on ${group.routes.length} routes; ${flaggedRoutes.length} are emitted as action findings`,
+        evidence: {
+          schemaEnum: group.enum,
+          description: group.description,
+          sharedWith: group.routes,
+          affectedRouteCount: group.routes.length,
+          flaggedRouteCount: flaggedRoutes.length,
+          unflaggedRoutes,
+          narrowedEnumRoutes,
+          enumGroups: enumGroups.map((candidate) => ({
+            enum: candidate.enum,
+            routes: candidate.routes,
+          })),
+        },
+        suggestedAction:
+          'Review the shared request schema group and give affected dedicated paths narrower request schemas or a oneOf/discriminator model.',
+        confidence: 'high',
+      });
+    }
+  }
+
+  return clusters;
+}
+
 export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
   const findings: Finding[] = [];
   const only = options.only;
 
   // Group routes by key set (ignore minor type/enum annotation diffs for "sharing" detection).
   // This catches cases where a component schema or copy is reused with nearly identical fields.
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-  const groups = new Map<string, Array<{ route: string; path: string; props: Record<string, any> }>>();
+  const groups = new Map<string, SharedSchemaMember[]>();
 
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
     // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
@@ -542,12 +694,10 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
     if (actionPaths.length === 0) continue;
 
     // Check for over-broad enum fields on dedicated action paths (generalized beyond just "direction").
-    const KNOWN_BROAD = new Set(['direction', 'mode', 'op', 'operation', 'variant']);
     for (const member of actionPaths) {
       for (const [fname, fsch] of Object.entries(member.props)) {
-        // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-        const en = (fsch as any)?.enum;
-        if (Array.isArray(en) && en.length >= 3 && (fname === 'direction' || KNOWN_BROAD.has(fname))) {
+        const en = enumValuesFromSchemaField(fsch);
+        if (en && en.length >= 3 && isBroadEnumField(fname)) {
           const sharedRoutes = members.map((m) => m.route);
           const id = `overbroad-shared-schema|${member.route}|${fname}`;
           if (findings.some((f) => f.id === id)) continue;
@@ -559,7 +709,7 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
             field: fname,
             message: `dedicated action path uses a shared schema with broad "${fname}" enum that documents values for other actions`,
             evidence: {
-              schemaEnum: en.map(String),
+              schemaEnum: en,
               // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
               description: (fsch as any)?.description,
               sharedWith: sharedRoutes.filter((r) => r !== member.route),
@@ -571,6 +721,8 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
         }
       }
     }
+
+    findings.push(...buildOverbroadSharedSchemaClusters(members, findings));
 
     // General note for large shared shapes on leaf actions (use speculative confidence so it can be filtered).
     if (members.length >= 3 && actionPaths.length > 0) {
