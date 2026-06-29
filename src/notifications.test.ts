@@ -356,6 +356,29 @@ describe('notification formatting', () => {
     }
   });
 
+  test('crafting summary formatter omits malformed numeric and object fields', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'crafting',
+        msg_type: 'crafting_summary',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {
+          count: Number.NaN,
+          jobs: Number.POSITIVE_INFINITY,
+          latest_tick: { bad: true },
+          latest_message: { text: 'bad' },
+        },
+      }).join('\n'),
+    );
+
+    expect(output).toContain('0 crafting progress updates summarized');
+    expect(output).not.toContain('NaN');
+    expect(output).not.toContain('Infinity');
+    expect(output).not.toContain('[object Object]');
+    expect(output).not.toContain('latest tick');
+    expect(output).not.toContain('Latest:');
+  });
+
   test('action prompts do not reference removed flat grouped commands', () => {
     const prompts = [
       formatNotification({

@@ -1579,6 +1579,57 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats malformed notification arrays without crashing', () => {
+    const fixture = {
+      count: 2,
+      notifications: [
+        null,
+        {
+          type: 'system',
+          msg_type: 'system',
+          data: { message: 'Still here.' },
+          timestamp: '2026-06-29T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Still here.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats malformed crafting summary fields without diagnostic tokens', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_summary',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            count: Number.NaN,
+            jobs: Number.POSITIVE_INFINITY,
+            latest_tick: { bad: true },
+            latest_message: { text: 'bad' },
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_summary');
+    expect(stdout).toContain('0 crafting progress updates summarized');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('Infinity');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('latest tick');
+    expect(stdout).not.toContain('latest:');
+  });
+
   test('formats ship listings before generic market listings', () => {
     const { stdout, stderr } = captureStructuredOutput('browse_ships', browseShipsFixture);
 

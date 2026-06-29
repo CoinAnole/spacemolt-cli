@@ -49,6 +49,16 @@ function plural(value: number, singular: string, pluralText = `${singular}s`): s
   return value === 1 ? singular : pluralText;
 }
 
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function safeScalar(value: unknown): string | number | boolean | undefined {
+  if (typeof value === 'string') return value.trim() ? value : undefined;
+  if (typeof value === 'boolean') return value;
+  return finiteNumber(value);
+}
+
 function createNotificationHandlers(c: NotificationColors): Record<string, NotificationHandler> {
   return {
     chat_message: (d, t, writeLine) => {
@@ -118,12 +128,15 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
     },
 
     crafting_summary: (d, t, writeLine) => {
-      const count = typeof d.count === 'number' ? d.count : 0;
+      const count = finiteNumber(d.count) ?? 0;
       const parts = [`${count} crafting progress ${plural(count, 'update')} summarized`];
-      if (d.latest_tick !== undefined) parts.push(`latest tick ${d.latest_tick}`);
-      if (typeof d.jobs === 'number') parts.push(`${d.jobs} active ${plural(d.jobs, 'job')}`);
+      const latestTick = safeScalar(d.latest_tick);
+      const jobs = finiteNumber(d.jobs);
+      const latestMessage = safeScalar(d.latest_message);
+      if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
+      if (jobs !== undefined) parts.push(`${jobs} active ${plural(jobs, 'job')}`);
       writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${parts.join('; ')}`);
-      if (d.latest_message) writeLine(`  Latest: ${d.latest_message}`);
+      if (latestMessage !== undefined) writeLine(`  Latest: ${latestMessage}`);
     },
 
     trade_offer_received: (d, t, writeLine) => {

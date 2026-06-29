@@ -24,6 +24,20 @@ function records(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function safeScalar(value: unknown): string | number | boolean | undefined {
+  if (typeof value === 'string') return value.trim() ? value : undefined;
+  if (typeof value === 'boolean') return value;
+  return finiteNumber(value);
+}
+
+function isNotificationArray(value: unknown[]): value is Notification[] {
+  return value.every((entry) => isRecord(entry) && typeof entry.type === 'string');
+}
+
 function formatDepth(label: string, value: unknown): string | undefined {
   const levels = records(value);
   if (!levels.length) return undefined;
@@ -52,12 +66,15 @@ function formatMarketUpdate(data: Record<string, unknown>): string {
 }
 
 function formatCraftingSummary(data: Record<string, unknown>): string {
-  const count = typeof data.count === 'number' ? data.count : 0;
+  const count = finiteNumber(data.count) ?? 0;
   const updateWord = count === 1 ? 'update' : 'updates';
   const parts = [`${count} crafting progress ${updateWord} summarized`];
-  if (data.latest_tick !== undefined) parts.push(`latest tick ${data.latest_tick}`);
-  if (typeof data.jobs === 'number') parts.push(`${data.jobs} active ${data.jobs === 1 ? 'job' : 'jobs'}`);
-  if (data.latest_message) parts.push(`latest: ${data.latest_message}`);
+  const latestTick = safeScalar(data.latest_tick);
+  const jobs = finiteNumber(data.jobs);
+  const latestMessage = safeScalar(data.latest_message);
+  if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
+  if (jobs !== undefined) parts.push(`${jobs} active ${jobs === 1 ? 'job' : 'jobs'}`);
+  if (latestMessage !== undefined) parts.push(`latest: ${latestMessage}`);
   return parts.join('; ');
 }
 
@@ -97,7 +114,8 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
 
 function notificationRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
   if (Array.isArray(result.notifications)) {
-    return presentNotifications(result.notifications as Notification[]).notifications.filter(isRecord);
+    if (!isNotificationArray(result.notifications)) return result.notifications.filter(isRecord);
+    return presentNotifications(result.notifications).notifications.filter(isRecord);
   }
   if (result.notifications === null) return [];
   return undefined;
