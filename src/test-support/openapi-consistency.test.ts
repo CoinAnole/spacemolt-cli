@@ -47,6 +47,42 @@ function addPostOperation(
   spec.paths[apiPath] = postOp;
 }
 
+function addPostOperationWithResponse(
+  spec: OpenApiSpec,
+  apiPath: string,
+  description: string,
+  requestProps: Record<string, unknown>,
+  responseSchema: Record<string, unknown>,
+) {
+  if (!spec.paths) spec.paths = {};
+  // biome-ignore lint/suspicious/noExplicitAny: test fixture for arbitrary request/response shapes
+  const postOp: any = {
+    post: {
+      description,
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: requestProps,
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          content: {
+            'application/json': {
+              schema: responseSchema,
+            },
+          },
+        },
+      },
+    },
+  };
+  spec.paths[apiPath] = postOp;
+}
+
 function addComponentSchema(spec: OpenApiSpec, name: string, schema: unknown) {
   if (!spec.components) spec.components = { schemas: {} };
   // biome-ignore lint/suspicious/noExplicitAny: test fixture for arbitrary request/response shapes
@@ -133,6 +169,7 @@ describe('overbroad-shared-schema analyzer', () => {
     const dirFinding = findings.find((f) => f.kind === 'overbroad-shared-schema' && f.field === 'direction');
     expect(dirFinding).toBeDefined();
     expect(dirFinding?.severity).toBe('high');
+    expect(dirFinding?.evidence.schemaEnum).toEqual(['to_faction', 'to_player', 'forward', 'reverse']);
     expect(dirFinding?.evidence.sharedWith?.some((r) => r.includes('transfer'))).toBe(true);
   });
 });
@@ -324,6 +361,280 @@ describe('context-sensitive extraction and provenance', () => {
     const findings = findProseFieldMismatches(spec);
     const f = findings.find((ff) => ff.field === 'mystery');
     expect(f?.evidence.candidateProvenance).toBe('from JSON in example');
+  });
+});
+
+describe('operation response prose mismatch filtering', () => {
+  test('operation response scan still reports response prose fields absent from response schema', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/test_response_mismatch';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/test_response_mismatch',
+      'Response payload includes base fare for audit.',
+      { id: { type: 'string' } },
+      {
+        type: 'object',
+        properties: {
+          count: { type: 'integer' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('base_fare');
+  });
+
+  test('operation response scan ignores action catalogs and request examples', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_facility/job_add';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_facility/job_add',
+      [
+        "Actions: types, build, job_add, job_list, set_access, set_name. Call with no action or action 'help' for full documentation. PRODUCTION JOBS: queue work with 'job_add' (recipe_id, quantity, facility_id; direction=reverse to recycle).",
+        '',
+        '**Example:** `{"type": "facility", "payload": {"action": "types"}}`',
+      ].join('\n'),
+      {
+        action: { type: 'string' },
+        facility_id: { type: 'string' },
+        recipe_id: { type: 'string' },
+        quantity: { type: 'integer' },
+        direction: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          queued: { type: 'boolean' },
+          job_id: { type: 'string' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toEqual([]);
+  });
+
+  test('operation response scan does not treat request example wrapper keys or command names as response fields', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/list_passengers';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/list_passengers',
+      [
+        'Shows base fare, speed bonus, and ticks remaining for passengers.',
+        '',
+        '**Example:** `{"type": "list_passengers"}`',
+      ].join('\n'),
+      {},
+      {
+        type: 'object',
+        properties: {
+          passengers: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                base_fare: { type: 'integer' },
+                speed_bonus: { type: 'integer' },
+                ticks_remaining: { type: 'integer' },
+              },
+            },
+          },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toEqual([]);
+  });
+
+  test('operation response scan trims inline action catalogs from mixed prose blocks', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_facility/station_set_name';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_facility/station_set_name',
+      [
+        "Must be docked at a station your faction owns. Action 'info' shows the current configuration. Outposts support only 'info', 'set_name', and 'set_description'. Actions: set_name (name), set_description (description), set_public (public: true/false), set_refuel_price (price per fuel unit), allow_player/remove_player/ban/unban (player: id or username).",
+        '',
+        '**Example:** `{"type": "station", "payload": {"action": "info"}}`',
+      ].join('\n'),
+      {
+        name: { type: 'string' },
+        public: { type: 'boolean' },
+        player: { type: 'string' },
+        price: { type: 'number' },
+      },
+      {
+        type: 'object',
+        properties: {
+          current_configuration: { type: 'object' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toEqual([]);
+  });
+
+  test('operation response scan ignores command cross-references in prose', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/unload_passenger';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/unload_passenger',
+      'Pass "all" to put every passenger off at once. Use list_passengers to see names before unloading.',
+      { id: { type: 'string' } },
+      {
+        type: 'object',
+        properties: {
+          delivered: {
+            type: 'array',
+            items: { type: 'object', properties: { passenger_id: { type: 'string' } } },
+          },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toEqual([]);
+  });
+
+  test('operation response scan ignores known command cross-references from route names', () => {
+    const spec = makeMinimalSpec();
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/get_missions',
+      'Returns available missions.',
+      {},
+      { type: 'object', properties: { missions: { type: 'array' } } },
+    );
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_ship/browse_ships',
+      'Returns listed ships.',
+      {},
+      { type: 'object', properties: { listings: { type: 'array' } } },
+    );
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_ship/commission_ship',
+      'Returns commission state.',
+      {},
+      { type: 'object', properties: { commission_id: { type: 'string' } } },
+    );
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/accept_mission',
+      'Use get_missions to see available missions and their IDs.',
+      { mission_id: { type: 'string' } },
+      { type: 'object', properties: { accepted: { type: 'boolean' } } },
+    );
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/get_ships',
+      'Returns all ship classes. Use browse_ships or commission_ship to purchase.',
+      {},
+      { type: 'object', properties: { ships: { type: 'array' } } },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter(
+        (f) =>
+          f.kind === 'missing-response-field-prose' &&
+          (f.route === 'POST /api/v2/spacemolt/accept_mission' || f.route === 'POST /api/v2/spacemolt/get_ships'),
+      )
+      .map((f) => f.field);
+
+    expect(fields).toEqual([]);
+  });
+
+  test('operation response scan ignores accepts request prose while keeping response prose', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/find_route';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/search_systems',
+      'Returns matching systems.',
+      { query: { type: 'string' } },
+      { type: 'object', properties: { systems: { type: 'array' } } },
+    );
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/find_route',
+      'Accepts a system ID, POI ID, or base ID. Use search_systems to find system IDs. Response includes fuel_per_jump and estimated_fuel for trip planning.',
+      { target_system: { type: 'string' } },
+      { type: 'object', properties: { fuel_per_jump: { type: 'integer' } } },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toEqual(['estimated_fuel']);
+  });
+
+  test('operation response scan keeps use prose for field-like response terms', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/test_use_field_prose';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/test_use_field_prose',
+      'Use base_fare to audit pricing.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          count: { type: 'integer' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('base_fare');
+  });
+
+  test('operation response scan keeps command-prefix field-like response terms', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/test_repair_cost_prose';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/test_repair_cost_prose',
+      'Use repair_cost to audit pricing.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          count: { type: 'integer' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('repair_cost');
   });
 });
 

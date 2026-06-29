@@ -316,6 +316,93 @@ function routeMatchesOnly(route: string, only?: string[]): boolean {
   return only.some((o) => lower.includes(o.toLowerCase()));
 }
 
+function isActionCatalogBlock(block: string | undefined): boolean {
+  if (!block) return false;
+  return /^\s*Actions:\s/i.test(block);
+}
+
+function sanitizeOperationResponseBlock(block: string | undefined): string {
+  if (!block) return '';
+  if (isExampleBlock(block)) return '';
+  if (isRateLimitBlock(block)) return '';
+
+  let sanitized = block.replace(/\bActions:\s[\s\S]*$/i, '').trim();
+  sanitized = sanitized.replace(/(^|[.!?]\s+)Action\s+["'`][a-z][a-z0-9_]*["'`][^.?!]*(?:[.?!]|$)/gi, '$1');
+  sanitized = sanitized.replace(/(^|[.!?]\s+)Accepts?\b[^.?!]*(?:[.?!]|$)/gi, '$1');
+  sanitized = sanitized.replace(
+    /(^|[.!?]\s+)[^.?!]*\bsupports?\s+only\b[^.?!]*["'`][a-z][a-z0-9_]*["'`][^.?!]*(?:[.?!]|$)/gi,
+    '$1',
+  );
+
+  return sanitized.trim();
+}
+
+function getRouteLeaf(routeSig: string): string {
+  const pathPart = routeSig.split(/\s+/).slice(1).join(' ');
+  return pathPart.split('/').filter(Boolean).pop() ?? '';
+}
+
+function collectKnownOperationTerms(spec: OpenApiSpec): Set<string> {
+  const terms = new Set<string>();
+  for (const apiPath of Object.keys(spec.paths || {})) {
+    const leaf = apiPath.split('/').filter(Boolean).pop();
+    if (leaf) terms.add(leaf.toLowerCase());
+  }
+  return terms;
+}
+
+function collectOperationResponseCandidateText(description: string | undefined): string {
+  if (!description) return '';
+  const blocks = splitDescriptionBlocks(description);
+  const kept: string[] = [];
+
+  for (const block of blocks) {
+    if (isActionCatalogBlock(block)) continue;
+    const sanitized = sanitizeOperationResponseBlock(block);
+    if (sanitized) kept.push(sanitized);
+  }
+
+  return kept.join('\n\n');
+}
+
+function shouldSuppressOperationResponseCandidate(
+  candidate: FieldCandidate,
+  routeSig: string,
+  requestFields: Set<string>,
+  knownOperationTerms: Set<string>,
+): boolean {
+  const term = candidate.term;
+  const lower = term.toLowerCase();
+  const routeLeaf = getRouteLeaf(routeSig).toLowerCase();
+  const isLooseCommandReference = /loose proseKey|code-like/i.test(candidate.provenance);
+  const actionValueTerms = new Set(['help', 'info', 'types']);
+  const narrativeCompoundStarters = new Set([
+    'each',
+    'every',
+    'this',
+    'their',
+    'small',
+    'total',
+    'same',
+    'current',
+    'find',
+  ]);
+
+  if (/example/i.test(candidate.provenance)) return true;
+  if (lower === routeLeaf) return true;
+  if (requestFields.has(term)) return true;
+  if (termPresentIn(term, requestFields)) return true;
+  if (isLooseCommandReference && knownOperationTerms.has(lower)) return true;
+  if (isLooseCommandReference && /_passengers?$/.test(lower)) return true;
+  if (isLooseCommandReference && actionValueTerms.has(lower)) return true;
+  if (/^from compound/.test(candidate.provenance)) {
+    const starter = lower.split('_')[0];
+    if (starter && narrativeCompoundStarters.has(starter)) return true;
+  }
+
+  return false;
+}
+
 export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
   const findings: Finding[] = [];
   const only = options.only;
@@ -457,6 +544,7 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
             field: fname,
             message: `dedicated action path uses a shared schema with broad "${fname}" enum that documents values for other actions`,
             evidence: {
+              schemaEnum: en.map(String),
               // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
               description: (fsch as any)?.description,
               sharedWith: sharedRoutes.filter((r) => r !== member.route),
@@ -952,6 +1040,7 @@ function termPresentIn(term: string, fields: Set<string>): boolean {
 export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
   const findings: Finding[] = [];
   const only = options.only;
+  const knownOperationTerms = collectKnownOperationTerms(spec);
 
   // Component schemas: extract terms from their documentation prose and verify presence
   // in the full reachable field set (including nested items/oneOf etc.).
@@ -1005,10 +1094,12 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const routeSig = `${methods.post ? 'POST' : 'GET'} ${apiPath}`;
     if (!routeMatchesOnly(routeSig, only)) continue;
 
-    const rich = extractResponseFieldCandidatesWithProvenance(op.description as string);
-    let terms = rich.map((c) => c.term);
-    terms = terms.filter((t) => !isNoiseTerm(t));
-    if (terms.length === 0) continue;
+    const responseCandidateText = collectOperationResponseCandidateText(op.description as string | undefined);
+    if (!responseCandidateText) continue;
+    const rich = extractResponseFieldCandidatesWithProvenance(responseCandidateText).filter(
+      (c) => !isNoiseTerm(c.term),
+    );
+    if (rich.length === 0) continue;
 
     let respFields = new Set<string>();
     let primarySchemaName: string | undefined;
@@ -1025,9 +1116,11 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const reqProps = getRequestSchemaForPath(spec, apiPath);
     const reqFields = new Set(Object.keys(reqProps || {}));
 
-    for (const term of terms) {
-      if (termPresentIn(term, respFields) || termPresentIn(term, reqFields)) continue;
-      const prov = rich.find((c) => c.term === term)?.provenance;
+    for (const candidate of rich) {
+      const term = candidate.term;
+      if (shouldSuppressOperationResponseCandidate(candidate, routeSig, reqFields, knownOperationTerms)) continue;
+      if (termPresentIn(term, respFields)) continue;
+      const prov = candidate.provenance;
 
       findings.push({
         id: `missing-response-field-prose|${routeSig}|${term}`,
@@ -1038,7 +1131,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
         field: term,
         message: `prose references "${term}" but it is absent from the response schema for ${routeSig}`,
         evidence: {
-          proseExcerpt: (op.description as string | undefined)?.slice(0, 280),
+          proseExcerpt: responseCandidateText.slice(0, 280),
           candidateProvenance: prov,
         },
         suggestedAction: 'Add the field to the response schema if the server actually returns it, or update prose.',
