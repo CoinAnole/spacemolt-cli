@@ -11,6 +11,46 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? 'null';
+  } catch {
+    return '"unserializable"';
+  }
+}
+
+function normalizedNotification(notification: unknown): {
+  type: string;
+  msgType: string;
+  timestamp: unknown;
+  data: NotificationData;
+} {
+  const record = asRecord(notification);
+  if (!record) {
+    return {
+      type: 'notification',
+      msgType: 'notification',
+      timestamp: undefined,
+      data: { value: notification },
+    };
+  }
+
+  const type = typeof record.type === 'string' && record.type.trim() ? record.type : 'notification';
+  const msgType = typeof record.msg_type === 'string' && record.msg_type.trim() ? record.msg_type : type;
+  return {
+    type,
+    msgType,
+    timestamp: record.timestamp,
+    data: asRecord(record.data) ?? (record.data === undefined ? {} : { value: record.data }),
+  };
+}
+
+function formatTime(value: unknown): string {
+  if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) return 'unknown time';
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : 'unknown time';
+}
+
 function orderLevels(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value)
     ? value.map(asRecord).filter((record): record is Record<string, unknown> => Boolean(record))
@@ -378,10 +418,10 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
     system: (d, t, writeLine) => {
       // Handle different system notification types
       if (d.type === 'gameplay_tip') {
-        writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${d.message}`);
+        writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
       } else {
         // Generic system message
-        writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${d.message || JSON.stringify(d)}`);
+        writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
       }
     },
 
@@ -428,9 +468,10 @@ export const NOTIFICATION_TYPES = Object.keys(createNotificationHandlers(colorsF
 export function formatNotification(notification: Notification, options?: { plain?: boolean }): string[] {
   const lines: string[] = [];
   const writeLine = (message = '') => lines.push(message);
-  const data = notification.data as NotificationData;
-  const time = new Date(notification.timestamp).toLocaleTimeString();
-  const type = notification.msg_type || notification.type;
+  const normalized = normalizedNotification(notification);
+  const data = normalized.data;
+  const time = formatTime(normalized.timestamp);
+  const type = normalized.msgType;
   const c = colorsForPlain(Boolean(options?.plain));
   const notificationHandlers = createNotificationHandlers(c);
   const handler = notificationHandlers[type];
@@ -441,12 +482,14 @@ export function formatNotification(notification: Notification, options?: { plain
   }
 
   const message = data.message;
-  if (message) {
-    writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset} ${message}`);
+  if (safeScalar(message) !== undefined) {
+    writeLine(
+      `${c.dim}[${time}]${c.reset} ${c.magenta}[${normalized.type.toUpperCase()}]${c.reset} ${safeScalar(message)}`,
+    );
   } else {
-    writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset}`);
+    writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${normalized.type.toUpperCase()}]${c.reset}`);
     for (const [key, value] of Object.entries(data)) {
-      writeLine(`  ${key}: ${JSON.stringify(value)}`);
+      writeLine(`  ${key}: ${safeJson(value)}`);
     }
   }
   return lines;
@@ -458,7 +501,7 @@ export function displayNotifications(
   quiet = false,
   options?: { plain?: boolean },
 ): void {
-  if (!notifications?.length) return;
+  if (!Array.isArray(notifications) || !notifications.length) return;
   if (quiet) return;
 
   const out = writer?.out.bind(writer) ?? console.log;

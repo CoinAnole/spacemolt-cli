@@ -23,35 +23,14 @@ export interface NotificationPresentationOptions {
 }
 
 const HIGH_SIGNAL_TERMS = ['complete', 'completed', 'failed', 'failure', 'error', 'cancel', 'cancelled', 'refund'];
+const HIGH_SIGNAL_TEXT = /(?:^|[^a-z])(complete|completed|failed|failure|error|cancel|cancelled|refund)(?:[^a-z]|$)/i;
+const HIGH_SIGNAL_KEYS = new Set(HIGH_SIGNAL_TERMS);
 
 function asNotificationArray(value: unknown): Notification[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.every((entry) => isRecord(entry) && typeof entry.type === 'string')
     ? (value as Notification[])
     : undefined;
-}
-
-function collectSearchText(value: unknown, output: string[] = [], depth = 0): string[] {
-  if (value === undefined || value === null || depth > 3) return output;
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    output.push(String(value).toLowerCase());
-    return output;
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value.slice(0, 20)) collectSearchText(entry, output, depth + 1);
-    return output;
-  }
-  if (isRecord(value)) {
-    for (const [key, entry] of Object.entries(value)) {
-      output.push(key.toLowerCase());
-      collectSearchText(entry, output, depth + 1);
-    }
-  }
-  return output;
-}
-
-function notificationText(notification: Notification): string {
-  return collectSearchText([notification.type, notification.msg_type, notification.data]).join(' ');
 }
 
 function isCraftingSummary(notification: Notification): boolean {
@@ -80,9 +59,30 @@ function isCraftingLike(notification: Notification): boolean {
   );
 }
 
+function containsHighSignalText(value: unknown): boolean {
+  return typeof value === 'string' && HIGH_SIGNAL_TEXT.test(value);
+}
+
+function isTrueLike(value: unknown): boolean {
+  return value === true || value === 1 || value === 'true' || value === 'yes';
+}
+
+function hasHighSignalValue(value: unknown, depth = 0): boolean {
+  if (value === undefined || value === null || depth > 5) return false;
+  if (containsHighSignalText(value)) return true;
+  if (Array.isArray(value)) return value.slice(0, 20).some((entry) => hasHighSignalValue(entry, depth + 1));
+  if (!isRecord(value)) return false;
+
+  for (const [key, entry] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase();
+    if (HIGH_SIGNAL_KEYS.has(normalizedKey) && isTrueLike(entry)) return true;
+    if (hasHighSignalValue(entry, depth + 1)) return true;
+  }
+  return false;
+}
+
 function isHighSignalCrafting(notification: Notification): boolean {
-  const text = notificationText(notification);
-  return HIGH_SIGNAL_TERMS.some((term) => text.includes(term));
+  return hasHighSignalValue([notification.type, notification.msg_type, notification.data]);
 }
 
 function isRoutineCraftingProgress(notification: Notification): boolean {

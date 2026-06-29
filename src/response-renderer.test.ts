@@ -6,7 +6,7 @@ import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
 import { BUNDLED_COMMAND_REGISTRY } from './command-registry';
 import { renderResponse, runCommand } from './response-renderer';
-import type { GlobalOptions } from './types';
+import type { APIResponse, GlobalOptions } from './types';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
@@ -558,6 +558,33 @@ describe('response renderer', () => {
     expect(output).toContain('Tick complete');
     expect(output.indexOf('Notifications (1)')).toBeLessThan(output.indexOf('Status ready'));
     expect(capture.stdout.join('\n')).not.toContain('\x1b[');
+  });
+
+  test('renderResponse handles malformed top-level inline notifications defensively', async () => {
+    const capture = fakeContext();
+
+    await expect(
+      renderResponse(
+        {
+          command: 'get_status',
+          displayCommand: 'get_status',
+          response: {
+            result: 'Status ready',
+            notifications: [null],
+          } as unknown as APIResponse,
+        },
+        { ...baseOptions, dryRun: true },
+        { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+        capture.context,
+      ),
+    ).resolves.toBe(0);
+
+    const output = capture.text();
+    expect(output).toContain('Notifications (1)');
+    expect(output).toContain('Status ready');
+    expect(output).not.toContain('NaN');
+    expect(output).not.toContain('Infinity');
+    expect(output).not.toContain('[object Object]');
   });
 
   test('renderResponse summarizes inline crafting progress before successful command output and keeps failures visible', async () => {

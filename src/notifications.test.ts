@@ -5,6 +5,12 @@ function stripAnsi(value: string): string {
   return value.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '');
 }
 
+function expectNoDiagnosticTokens(value: string): void {
+  expect(value).not.toContain('NaN');
+  expect(value).not.toContain('Infinity');
+  expect(value).not.toContain('[object Object]');
+}
+
 describe('notification formatting', () => {
   test.each([
     {
@@ -377,6 +383,42 @@ describe('notification formatting', () => {
     expect(output).not.toContain('[object Object]');
     expect(output).not.toContain('latest tick');
     expect(output).not.toContain('Latest:');
+  });
+
+  test('crafting summary formatter handles non-object data defensively', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'crafting',
+        msg_type: 'crafting_summary',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: null,
+      } as unknown as Parameters<typeof formatNotification>[0]).join('\n'),
+    );
+
+    expect(output).toContain('[CRAFTING]');
+    expectNoDiagnosticTokens(output);
+  });
+
+  test.each([
+    ['null entry', null],
+    ['string entry', 'bad'],
+    ['missing data', { type: 'system', timestamp: '2026-06-29T00:00:00.000Z' }],
+    ['non-object data', { type: 'system', timestamp: '2026-06-29T00:00:00.000Z', data: 'bad' }],
+    ['array data', { type: 'system', timestamp: '2026-06-29T00:00:00.000Z', data: [{ bad: true }] }],
+  ])('displayNotifications handles malformed notification: %s', (_name, notification) => {
+    const lines: string[] = [];
+
+    expect(() =>
+      displayNotifications([notification] as unknown as Parameters<typeof displayNotifications>[0], {
+        out(message = '') {
+          lines.push(message);
+        },
+        err() {},
+      }),
+    ).not.toThrow();
+
+    expect(lines.length).toBeGreaterThan(0);
+    expectNoDiagnosticTokens(stripAnsi(lines.join('\n')));
   });
 
   test('action prompts do not reference removed flat grouped commands', () => {

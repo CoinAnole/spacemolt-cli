@@ -49,6 +49,52 @@ describe('notification presentation', () => {
     });
   });
 
+  test('summarizes OpenAPI-shaped incomplete crafting updates as routine progress', () => {
+    const updateA = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: {
+        tick: 901300,
+        jobs: [{ id: 'job-a', completed: false, recipe_id: 'steel_plate' }],
+        message: 'Crafting in progress.',
+      },
+    };
+    const updateB = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:20.000Z',
+      data: {
+        tick: 901301,
+        jobs: [{ id: 'job-a', completed: false, recipe_id: 'steel_plate' }],
+        message: 'Crafting in progress.',
+      },
+    };
+
+    const presented = presentNotifications([updateA, updateB]);
+
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['crafting_summary']);
+    expect(presented.summarizedCount).toBe(2);
+  });
+
+  test('leaves value-level high-signal crafting updates visible', () => {
+    const update = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: {
+        tick: 901300,
+        jobs: [{ id: 'job-a', status: 'completed', recipe_id: 'steel_plate' }],
+        message: 'Crafting in progress.',
+      },
+    };
+
+    const presented = presentNotifications([update]);
+
+    expect(presented.notifications).toEqual([update]);
+    expect(presented.summarizedCount).toBe(0);
+  });
+
   test('leaves crafting completion and failure notifications visible', () => {
     const completed = {
       type: 'crafting',
