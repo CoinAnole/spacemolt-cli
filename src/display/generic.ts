@@ -391,6 +391,18 @@ function formatCraftStation(result: Record<string, unknown>): string | undefined
   return formatNameAndId(name, id);
 }
 
+function stationFromWorkshopFacilityId(value: unknown): string | undefined {
+  const facilityId = scalarText(value);
+  if (!facilityId) return undefined;
+  const parts = facilityId.split(':');
+  if (parts[0] !== 'workshop' || parts.length < 3) return undefined;
+  return parts[parts.length - 1] || undefined;
+}
+
+function formatCraftJobStation(job: Record<string, unknown>, result: Record<string, unknown>): string | undefined {
+  return formatCraftStation(job) ?? stationFromWorkshopFacilityId(job.facility_id) ?? formatCraftStation(result);
+}
+
 function craftTitle(command: string, result: Record<string, unknown>): string {
   const base = command === 'recycle' || result.mode === 'recycle' ? 'Recycle' : 'Craft';
   if (result.dry_run === true) return `${base} Quote`;
@@ -449,26 +461,29 @@ export const genericFormatters = [
       if (jobs) {
         const rows = jobs.map((job) => ({
           ...job,
+          station_display: formatCraftJobStation(job, r),
           runs_display:
             job.runs_total === undefined
               ? undefined
               : `${job.runs_done ?? 0}/${job.runs_total} (${job.runs_remaining ?? 0} left)`,
           output_display: summarizeNamedItemQuantities(job.produces),
         }));
+        const columns: Array<[string, string[]]> = [
+          ['Job', ['job_id']],
+          ['Recipe', ['recipe']],
+          ['Mode', ['mode']],
+          ['Runs', ['runs_display', 'runs_total']],
+          ['Output', ['output_display']],
+          ['Venue', ['venue', 'facility_id']],
+          ['ETA', ['eta_ticks']],
+          ['Status', ['status']],
+          ['Pos', ['position']],
+        ];
+        if (rows.some((row) => row.station_display !== undefined)) columns.splice(6, 0, ['Station', ['station_display']]);
         printCompactTable(
           craftTitleWithStation(command, r),
           rows,
-          [
-            ['Job', ['job_id']],
-            ['Recipe', ['recipe']],
-            ['Mode', ['mode']],
-            ['Runs', ['runs_display', 'runs_total']],
-            ['Output', ['output_display']],
-            ['Venue', ['venue', 'facility_id']],
-            ['ETA', ['eta_ticks']],
-            ['Status', ['status']],
-            ['Pos', ['position']],
-          ],
+          columns,
           { maxCellWidth: 64 },
         );
         return true;

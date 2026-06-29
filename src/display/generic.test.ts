@@ -272,6 +272,56 @@ test('renders craft queue lists across workshop own and faction venues', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders craft queue station from workshop facility ids', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      action: 'queue',
+      jobs: [
+        {
+          job_id: 'workshop-job-1',
+          recipe: 'Sinter Tungsten Steel',
+          mode: 'craft',
+          runs_done: 4329,
+          runs_remaining: 21357,
+          runs_total: 25686,
+          produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 3 }],
+          venue: 'Station Workshop',
+          facility_id: 'workshop:3b887e57d3e875649579bc301a66df34:nova_terra_central',
+          eta_ticks: 18160,
+          status: 'active',
+          position: 0,
+        },
+        {
+          job_id: 'facility-job-1',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 5250,
+          runs_remaining: 4750,
+          runs_total: 10000,
+          produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 2 }],
+          venue: 'Iron Refinery',
+          facility_id: 'e85ab866c46f5b3cb6c3dde515de1533',
+          eta_ticks: 514,
+          status: 'active',
+          position: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queue ===');
+  expect(stdout).toContain('Station');
+  expect(stdout).toContain('nova_terra_central');
+  expect(stdout).toContain('Iron Refinery');
+  expect(stdout).not.toContain('e85ab866c46f5b3cb6c3dde515de1533');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders craft queue with station context and a single table heading', () => {
   const rendered = renderStructuredResult(
     'craft',
