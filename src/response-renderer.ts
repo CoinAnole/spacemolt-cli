@@ -6,6 +6,7 @@ import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
 import { displayNotifications } from './notifications.ts';
+import { presentResponseNotifications } from './notification-summary.ts';
 import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
@@ -99,8 +100,10 @@ export async function renderResponse(
   client: SpaceMoltClient = defaultClient,
   context?: CliRuntimeContext,
 ): Promise<number> {
-  const { command, displayCommand, response } = commandRun;
+  const { command, displayCommand } = commandRun;
   const renderOptions = optionsForCommandLocalSearch(commandRun, options);
+  const presented = presentResponseNotifications(commandRun.response, { rawNotifications: renderOptions.rawNotifications });
+  const response = presented.response;
   const isJson = renderOptions.json || renderOptions.format === 'json';
   const hasProjection = Boolean(
     renderOptions.jq ||
@@ -124,7 +127,11 @@ export async function renderResponse(
     !renderOptions.quiet
   ) {
     const colors = colorsForPlain(Boolean(renderOptions.plain));
-    const header = `${colors.dim}--- Notifications (${response.notifications.length}) ---${colors.reset}`;
+    const notificationLabel =
+      presented.topLevel && presented.topLevel.summarizedCount > 0
+        ? `${presented.topLevel.rawCount} -> ${presented.topLevel.shownCount} shown`
+        : String(response.notifications.length);
+    const header = `${colors.dim}--- Notifications (${notificationLabel}) ---${colors.reset}`;
     if (writer) writer.out(header);
     else console.log(header);
     displayNotifications(response.notifications, writer, renderOptions.quiet, { plain: renderOptions.plain });
@@ -145,7 +152,7 @@ export async function renderResponse(
   }
 
   const sessionPath = tryGetSessionPath(client.config, context?.env);
-  if (!options.dryRun) await cacheIdsFromResponse(command, response, sessionPath);
+  if (!options.dryRun) await cacheIdsFromResponse(command, commandRun.response, sessionPath);
   const outputResponse = applyStructuredOutputFilters(command, response, commandRun.payload);
 
   if ((isJson || renderOptions.structured) && !hasProjection) {

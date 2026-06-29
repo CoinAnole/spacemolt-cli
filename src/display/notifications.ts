@@ -1,5 +1,6 @@
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 import { presentNotifications, type Notification } from '../notification-summary.ts';
+import type { GlobalOptions } from '../types.ts';
 
 function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
@@ -112,9 +113,13 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
   return compact === '{}' ? '' : compact;
 }
 
-function notificationRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+function notificationRows(
+  result: Record<string, unknown>,
+  options?: Pick<GlobalOptions, 'rawNotifications'>,
+): Array<Record<string, unknown>> | undefined {
   if (Array.isArray(result.notifications)) {
     if (!isNotificationArray(result.notifications)) return result.notifications.filter(isRecord);
+    if (options?.rawNotifications) return result.notifications.filter(isRecord);
     return presentNotifications(result.notifications).notifications.filter(isRecord);
   }
   if (result.notifications === null) return [];
@@ -123,8 +128,8 @@ function notificationRows(result: Record<string, unknown>): Array<Record<string,
 
 export const notificationFormatters = [
   formatter(
-    (r) => {
-      const notifications = notificationRows(r);
+    (r, _command, options) => {
+      const notifications = notificationRows(r, options);
       if (!notifications) return false;
       const count = typeof r.count === 'number' ? r.count : notifications.length;
 

@@ -97,6 +97,48 @@ const getStatusSummaryFixture = {
   },
 };
 
+const craftingProgressA = {
+  type: 'crafting',
+  msg_type: 'crafting_progress',
+  timestamp: '2026-06-29T00:00:00.000Z',
+  data: { tick: 901237, job_id: 'job-a', message: 'Crafting steel plate.' },
+};
+
+const craftingProgressB = {
+  type: 'system',
+  msg_type: 'crafting_tick',
+  timestamp: '2026-06-29T00:00:20.000Z',
+  data: { event_type: 'crafting.progress', tick: 901239, job_id: 'job-b', message: 'Crafting fuel cells.' },
+};
+
+const actionFailure = {
+  type: 'action',
+  msg_type: 'action_error',
+  timestamp: '2026-06-29T00:00:30.000Z',
+  data: { command: 'craft', tick: 901240, message: 'Missing input.' },
+};
+
+const notificationStream = [craftingProgressA, craftingProgressB, actionFailure];
+
+function notificationResponse() {
+  return {
+    notifications: structuredClone(notificationStream),
+    structuredContent: {
+      count: notificationStream.length,
+      notifications: structuredClone(notificationStream),
+    },
+  };
+}
+
+function structuredNotificationResponse() {
+  return {
+    structuredContent: {
+      count: notificationStream.length,
+      notifications: structuredClone(notificationStream),
+    },
+  };
+}
+
 describe('response renderer', () => {
   test('runCommand strips get_cargo display-only fields before API execution', async () => {
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
@@ -516,6 +558,220 @@ describe('response renderer', () => {
     expect(output).toContain('Tick complete');
     expect(output.indexOf('Notifications (1)')).toBeLessThan(output.indexOf('Status ready'));
     expect(capture.stdout.join('\n')).not.toContain('\x1b[');
+  });
+
+  test('renderResponse summarizes inline crafting progress before successful command output and keeps failures visible', async () => {
+    const response = {
+      result: 'Status ready',
+      notifications: structuredClone(notificationStream),
+    };
+    const original = structuredClone(response);
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_status',
+        displayCommand: 'get_status',
+        response,
+      },
+      { ...baseOptions, dryRun: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    const output = capture.text();
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Notifications (3 -> 2 shown)');
+    expect(output).toContain('[CRAFTING] 2 crafting progress updates summarized');
+    expect(output).toContain('[ACTION FAILED] craft failed');
+    expect(output).toContain('Missing input.');
+    expect(output).not.toContain('Crafting steel plate.');
+    expect(output.indexOf('Notifications (3 -> 2 shown)')).toBeLessThan(output.indexOf('Status ready'));
+    expect(response).toEqual(original);
+  });
+
+  test('renderResponse summarizes notifications in JSON output by default and preserves raw notifications with raw mode', async () => {
+    const summarizedCapture = fakeContext();
+    const summarizedResponse = notificationResponse();
+    const summarizedExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: summarizedResponse,
+      },
+      { ...baseOptions, dryRun: true, json: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      summarizedCapture.context,
+    );
+
+    expect(summarizedExitCode).toBe(0);
+    const summarized = JSON.parse(summarizedCapture.text());
+    expect(summarized.notifications.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
+      'crafting_summary',
+      'action_error',
+    ]);
+    expect(
+      summarized.structuredContent.notifications.map((notification: { msg_type?: string }) => notification.msg_type),
+    ).toEqual(['crafting_summary', 'action_error']);
+    expect(summarizedResponse.notifications?.map((notification) => notification.msg_type)).toEqual([
+      'crafting_progress',
+      'crafting_tick',
+      'action_error',
+    ]);
+
+    const rawCapture = fakeContext();
+    const rawExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: notificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, json: true, rawNotifications: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      rawCapture.context,
+    );
+
+    expect(rawExitCode).toBe(0);
+    const raw = JSON.parse(rawCapture.text());
+    expect(raw.notifications.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
+      'crafting_progress',
+      'crafting_tick',
+      'action_error',
+    ]);
+    expect(raw.structuredContent.notifications.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
+      'crafting_progress',
+      'crafting_tick',
+      'action_error',
+    ]);
+  });
+
+  test('renderResponse summarizes get_notifications structured output by default', async () => {
+    const capture = fakeContext();
+    const exitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: notificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const structured = JSON.parse(capture.text());
+    expect(structured.notifications.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
+      'crafting_summary',
+      'action_error',
+    ]);
+  });
+
+  test('renderResponse projections use summarized notification streams by default', async () => {
+    const jqCapture = fakeContext();
+    const jqExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: notificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, jq: '.notifications[].msg_type' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      jqCapture.context,
+    );
+
+    expect(jqExitCode).toBe(0);
+    expect(JSON.parse(jqCapture.text())).toEqual(['crafting_summary', 'action_error']);
+
+    const fieldsCapture = fakeContext();
+    const fieldsExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: notificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, fields: ['notifications'] },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      fieldsCapture.context,
+    );
+
+    expect(fieldsExitCode).toBe(0);
+    const fields = JSON.parse(fieldsCapture.text());
+    expect(fields.notifications.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
+      'crafting_summary',
+      'action_error',
+    ]);
+  });
+
+  test('renderResponse raw notification projections preserve raw streams', async () => {
+    const jqCapture = fakeContext();
+    const jqExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: notificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, jq: '.notifications[].msg_type', rawNotifications: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      jqCapture.context,
+    );
+
+    expect(jqExitCode).toBe(0);
+    expect(JSON.parse(jqCapture.text())).toEqual(['crafting_progress', 'crafting_tick', 'action_error']);
+
+    const fieldCapture = fakeContext();
+    const fieldExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: structuredNotificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, field: 'notifications', rawNotifications: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      fieldCapture.context,
+    );
+
+    expect(fieldExitCode).toBe(0);
+    const field = JSON.parse(fieldCapture.text());
+    expect(field.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
+      'crafting_progress',
+      'crafting_tick',
+      'action_error',
+    ]);
+  });
+
+  test('renderResponse get_notifications table output respects raw notification mode', async () => {
+    const summarizedCapture = fakeContext();
+    const summarizedExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: structuredNotificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, format: 'table' },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      summarizedCapture.context,
+    );
+
+    expect(summarizedExitCode).toBe(0);
+    expect(summarizedCapture.text()).toContain('crafting_summary');
+    expect(summarizedCapture.text()).not.toContain('crafting_progress');
+
+    const rawCapture = fakeContext();
+    const rawExitCode = await renderResponse(
+      {
+        command: 'get_notifications',
+        displayCommand: 'get_notifications',
+        response: notificationResponse(),
+      },
+      { ...baseOptions, dryRun: true, format: 'table', rawNotifications: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      rawCapture.context,
+    );
+
+    expect(rawExitCode).toBe(0);
+    const rawOutput = rawCapture.text();
+    expect(rawOutput).toContain('crafting_progress');
+    expect(rawOutput).toContain('crafting_tick');
+    expect(rawOutput).not.toContain('crafting_summary');
   });
 
   test('renderResponse does not warn for legacy server help filter payloads', async () => {

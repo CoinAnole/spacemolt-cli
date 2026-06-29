@@ -1,7 +1,8 @@
 import { colorize, formatPlayer as formatPlayerValue, rawColors } from './ansi.ts';
 import { type CompactTableOptions, firstArray, formatCompactTable, formatItemTable, rowValue } from './tables.ts';
+import type { GlobalOptions } from '../types.ts';
 
-export type ResultFormatter = ((result: Record<string, unknown>, command?: string) => boolean) & {
+export type ResultFormatter = ((result: Record<string, unknown>, command?: string, options?: GlobalOptions) => boolean) & {
   formatterName?: string;
   hintKeys?: string[];
   commands?: readonly string[];
@@ -14,7 +15,7 @@ export interface ResultFormatterOptions {
 }
 
 export function formatter(
-  format: (result: Record<string, unknown>, command?: string) => boolean,
+  format: (result: Record<string, unknown>, command?: string, options?: GlobalOptions) => boolean,
   options: ResultFormatterOptions = {},
 ): ResultFormatter {
   const resultFormatter = format as ResultFormatter;
@@ -26,7 +27,7 @@ export function formatter(
 export function namedFormatter(
   formatterName: string,
   hintKeys: string[],
-  format: (result: Record<string, unknown>, command?: string) => boolean,
+  format: (result: Record<string, unknown>, command?: string, options?: GlobalOptions) => boolean,
   options: ResultFormatterOptions = {},
 ): ResultFormatter {
   const resultFormatter = formatter(format, options);

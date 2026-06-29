@@ -441,14 +441,14 @@ function displayStructuredResultInternal(
   const commandFormatterInputs = detailsViewModel ? [detailsViewModel, viewModel] : [viewModel];
   for (const input of commandFormatterInputs) {
     for (const formatter of commandScopedFormatters(resultFormatters, command)) {
-      if (formatter(input, command)) return true;
+      if (formatter(input, command, options)) return true;
     }
   }
 
   const fallbackFormatterInputs = detailsViewModel ? [detailsViewModel] : [viewModel];
   for (const input of fallbackFormatterInputs) {
     for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
-      if (formatter(input, command)) return true;
+      if (formatter(input, command, options)) return true;
     }
   }
 
