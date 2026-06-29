@@ -1354,6 +1354,19 @@ export function buildConsistencyReport(spec: OpenApiSpec, options: ReportOptions
     byKind[f.kind] = (byKind[f.kind] || 0) + 1;
     bySeverity[f.severity] = (bySeverity[f.severity] || 0) + 1;
   }
+  const sharedSchemaClusterFindings = findings.filter(
+    (f) => f.kind === 'overbroad-shared-schema' && f.id.startsWith('overbroad-shared-schema-cluster|'),
+  );
+  const sharedSchemaClusters =
+    sharedSchemaClusterFindings.length > 0
+      ? {
+          total: sharedSchemaClusterFindings.length,
+          affectedRoutes: sharedSchemaClusterFindings.reduce(
+            (sum, finding) => sum + (finding.evidence.affectedRouteCount ?? 0),
+            0,
+          ),
+        }
+      : undefined;
 
   return {
     gameserverVersion: version,
@@ -1363,8 +1376,23 @@ export function buildConsistencyReport(spec: OpenApiSpec, options: ReportOptions
       total: findings.length,
       byKind,
       bySeverity,
+      ...(sharedSchemaClusters ? { sharedSchemaClusters } : {}),
     },
   };
+}
+
+function pluralize(count: number, singular: string): string {
+  return `${count} ${singular}${count === 1 ? '' : 's'}`;
+}
+
+function previewList(values: string[] | undefined): string | undefined {
+  if (!values?.length) return undefined;
+  return values.join(', ');
+}
+
+function previewNarrowedEnumRoutes(values: Array<{ route: string; enum: string[] }> | undefined): string | undefined {
+  if (!values?.length) return undefined;
+  return values.map((value) => `${value.route} (${value.enum.join(' | ')})`).join(', ');
 }
 
 export function formatConsistencyReport(report: ConsistencyReport, opts: { json?: boolean } = {}): string {
@@ -1376,6 +1404,14 @@ export function formatConsistencyReport(report: ConsistencyReport, opts: { json?
   lines.push(`OpenAPI Consistency / Reality Report`);
   lines.push(`Gameserver: ${report.gameserverVersion}`);
   lines.push(`Findings: ${report.summary.total}`);
+  if (report.summary.sharedSchemaClusters) {
+    lines.push(
+      `Shared schema clusters: ${pluralize(report.summary.sharedSchemaClusters.total, 'cluster')}, ${pluralize(
+        report.summary.sharedSchemaClusters.affectedRoutes,
+        'affected route',
+      )}`,
+    );
+  }
   lines.push('');
 
   if (report.findings.length === 0) {
@@ -1405,6 +1441,20 @@ export function formatConsistencyReport(report: ConsistencyReport, opts: { json?
       }
       if (f.evidence.schemaEnum) {
         lines.push(`  enum in schema: ${f.evidence.schemaEnum.join(' | ')}`);
+      }
+      if (f.evidence.affectedRouteCount !== undefined) {
+        lines.push(`  affected routes: ${f.evidence.affectedRouteCount}`);
+      }
+      if (f.evidence.flaggedRouteCount !== undefined) {
+        lines.push(`  individually flagged: ${f.evidence.flaggedRouteCount}`);
+      }
+      const unflaggedRoutes = previewList(f.evidence.unflaggedRoutes);
+      if (unflaggedRoutes) {
+        lines.push(`  unflagged affected routes: ${unflaggedRoutes}`);
+      }
+      const narrowedSiblings = previewNarrowedEnumRoutes(f.evidence.narrowedEnumRoutes);
+      if (narrowedSiblings) {
+        lines.push(`  narrowed siblings: ${narrowedSiblings}`);
       }
       if (f.evidence.sharedWith?.length) {
         lines.push(
