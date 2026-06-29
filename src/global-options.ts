@@ -128,6 +128,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       result.debug = true;
     } else if (arg === '--raw' || arg === '--allow-unknown' || arg === '-allow-unknown') {
       result.allowUnknown = true;
+    } else if (arg === '--raw-notifications') {
+      result.rawNotifications = true;
     } else if (arg === '--dry-run' || arg === '--preview') {
       result.dryRun = true;
     } else if (arg.startsWith('--dry-run=') || arg.startsWith('--preview=')) {

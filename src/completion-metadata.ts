@@ -28,6 +28,7 @@ export const HINT_VALUES: Record<string, Record<string, string>> = {
 export const GLOBAL_COMPLETION_OPTIONS: CompletionOption[] = [
   { long: '--json', short: '-j', description: 'Raw JSON response' },
   { long: '--quiet', short: '-q', description: 'Suppress notifications' },
+  { long: '--raw-notifications', description: 'Render raw notification streams' },
   { long: '--plain', short: '-p', description: 'No ANSI colors' },
   { long: '--debug', description: 'Print verbose diagnostics' },
   { long: '--raw', description: 'Allow unknown payload fields' },

@@ -277,6 +277,14 @@ describe('shell completion generation', () => {
     ).toContain('--fuzzy');
   });
 
+  test('runtime completion suggests raw notification override', () => {
+    const labels = completeWords({ shell: 'fish', words: ['spacemolt', '--raw-n'], current: '--raw-n' }).map(
+      (entry) => entry.value,
+    );
+
+    expect(labels).toContain('--raw-notifications');
+  });
+
   test('runtime completion exposes groups and hides grouped flat command names', () => {
     const values = completeWords({ shell: 'fish', words: ['spacemolt', 'fa'], current: 'fa' }).map(
       (candidate) => candidate.value,

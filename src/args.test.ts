@@ -1575,6 +1575,16 @@ describe('CLI output modes', () => {
     }
   });
 
+  test('global option parser handles raw notification override', () => {
+    const result = parseGlobalOptions(['--json', '--raw-notifications', 'get_notifications']);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.options.json).toBe(true);
+    expect(result.options.rawNotifications).toBe(true);
+    expect(result.options.args).toEqual(['get_notifications']);
+  });
+
   test('global option parser handles watch, format, jq, profile, fuzzy, and dry-run values', () => {
     const result = parseGlobalOptions([
       '--watch',

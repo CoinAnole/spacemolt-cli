@@ -117,6 +117,8 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('--json, -j        Full API response as JSON');
+    expect(output).toContain('--raw-notifications');
+    expect(output).toContain('Render raw notification streams');
     expect(output).toContain('--jq              Extract with path syntax');
     expect(output).toContain('--fuzzy           Auto-resolve simple --jq paths to similar keys');
     expect(output).toContain('--keys [path]     List available keys at a JSON dotpath');
@@ -834,6 +836,8 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('--json, -j          Full API response as JSON');
+    expect(output).toContain('--raw-notifications');
+    expect(output).toContain('Render raw notification streams');
     expect(output).toContain('--jq <expr>         Extract with path syntax');
     expect(output).toContain('--fuzzy             Auto-resolve simple --jq paths to similar keys');
     expect(output).toContain('--keys [path]       List available keys at a JSON dotpath');

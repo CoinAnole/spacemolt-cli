@@ -791,6 +791,7 @@ ${c.bright}Arguments:${c.reset}
 ${c.bright}Global Flags:${c.reset}
   --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
+  --raw-notifications  Render raw notification streams without crafting summaries
   --plain, -p       No ANSI colors
   --field           Extract one response field, or comma-separated fields
   --fields, -f      Extract response fields
@@ -884,6 +885,7 @@ ${c.bright}Arguments:${c.reset}
 ${c.bright}Global Flags:${c.reset}
   --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
+  --raw-notifications  Render raw notification streams without crafting summaries
   --plain, -p       No ANSI colors
   --field           Extract one response field, or comma-separated fields
   --fields, -f      Extract response fields
@@ -970,6 +972,7 @@ ${c.bright}Usage:${c.reset}
     Output modes:
       --json, -j          Full API response as JSON; same as --format=json for successful output
       --quiet, -q         Suppress notifications and info messages
+      --raw-notifications  Render raw notification streams without crafting summaries
       --plain, -p         No ANSI colors
       --raw               Allow unknown command fields to pass through
       --field             Extract one response field, or comma-separated fields
