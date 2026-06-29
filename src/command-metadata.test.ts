@@ -457,11 +457,33 @@ describe('command metadata', () => {
     expect(config?.required ?? []).toEqual([]);
     expect(config?.usage).toContain('[target_id]');
     expect(config?.description).toContain('Omit the target to run an area sensor sweep');
+    expect(config?.description).toContain('creature');
 
     const help = captureHelp('scan');
     expect(help).toContain('spacemolt scan');
     expect(help).toContain('[target_id]');
     expect(help).toContain('area sensor sweep');
+    expect(help).toContain('creature');
+  });
+
+  test('wildlife hunt command is bundled with creature-focused help', () => {
+    const hunt = BUNDLED_COMMAND_REGISTRY.allCommands.hunt;
+    expect(hunt?.required).toEqual(['creature_id']);
+    expect(hunt?.usage).toContain('<creature_id>');
+    expect(hunt?.description).toContain('wildlife creature');
+    expect(hunt?.example).toBe('spacemolt hunt <creature_id>');
+    expect(hunt?.seeAlso).toEqual(expect.arrayContaining(['get_nearby', 'scan', 'get_battle_status']));
+
+    const nearby = BUNDLED_COMMAND_REGISTRY.allCommands.get_nearby;
+    expect(nearby?.description).toContain('creatures');
+
+    const survey = BUNDLED_COMMAND_REGISTRY.allCommands.survey_system;
+    expect(survey?.description).toContain('wildlife');
+
+    const help = captureHelp('hunt');
+    expect(help).toContain('spacemolt hunt <creature_id>');
+    expect(help).toContain('wildlife creature');
+    expect(help).toContain('get_nearby');
   });
 
   test('unload_passenger help documents all-passenger bulk unload', () => {

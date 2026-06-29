@@ -13,3 +13,13 @@ empire_npcs:
   - name: Patrol
     ship_class: interceptor
 empire_npc_count: 1
+creatures:
+  - creature_id: creature_pilot_whale_1
+    species: pilot_whale
+    name: "Pilot-Whale Pod"
+    role: grazer
+    hull: 80
+    max_hull: 120
+    in_combat: false
+creature_count: 1
+poi_id: sol_cloudbank

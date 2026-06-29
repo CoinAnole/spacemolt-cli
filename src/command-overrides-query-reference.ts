@@ -68,6 +68,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     clientOnlyFields: ['top', 'show_empty', 'items'],
   },
   get_nearby: {
+    description: 'Show visible nearby players, pirates, empire NPCs, and wildlife creatures at your current POI.',
+    example: 'spacemolt get_nearby',
+    seeAlso: ['scan', 'hunt', 'survey_system'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_nearby',
   },
@@ -199,6 +202,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_faction/tax_estimate',
   },
   survey_system: {
+    description: 'Scan the current system for hidden POIs plus a wildlife species census and bloom status.',
+    example: 'spacemolt survey_system',
+    seeAlso: ['get_nearby', 'hunt', 'get_system'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/survey_system',
   },

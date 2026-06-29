@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.436.0",
+  "generatedAtGameserver": "v0.454.0",
   "blockingDivergenceSignatures": [
     "browse_ships|browse_ships|required-missing|base_id",
     "browse_ships|browse_ships|required-missing|count",
@@ -13,9 +13,7 @@
     "chat|chat|required-missing|sent_at",
     "commission_status|commission_status|required-missing|commissions[0].materials_provided",
     "create_faction|create_faction|required-missing|message",
-    "faction_create_buy_order|faction_create_buy_order|extra-in-fixture|details.quantity_listed",
     "faction_create_buy_order|faction_create_buy_order|extra-in-fixture|details.remaining_escrowed",
-    "faction_create_buy_order|faction_create_buy_order|extra-in-fixture|details.total_spent",
     "faction_create_buy_order|faction_create_buy_order|required-missing|details.faction_id",
     "faction_create_buy_order|faction_create_buy_order|required-missing|details.faction_tag",
     "faction_create_sell_order|faction_create_sell_order|required-missing|details.faction_id",
@@ -74,7 +72,6 @@
     "get_nearby|get_nearby|required-missing|pirates[0].is_boss",
     "get_nearby|get_nearby|required-missing|pirates[0].pirate_id",
     "get_nearby|get_nearby|required-missing|pirates[0].tier",
-    "get_nearby|get_nearby|required-missing|poi_id",
     "register|register|required-missing|message",
     "register|register|required-missing|player",
     "register|register|required-missing|poi",

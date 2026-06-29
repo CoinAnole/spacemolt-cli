@@ -1139,6 +1139,50 @@ describe('response renderer', () => {
     expect(structuredContent.empire_npcs).toHaveLength(13);
   });
 
+  test('renderResponse prints nearby wildlife creatures in table output', async () => {
+    const capture = fakeContext();
+    const structuredContent = {
+      nearby: [],
+      count: 0,
+      pirates: [],
+      pirate_count: 0,
+      empire_npcs: [],
+      empire_npc_count: 0,
+      creatures: [
+        {
+          creature_id: 'creature_pilot_whale_1',
+          species: 'pilot_whale',
+          name: 'Pilot-Whale Pod',
+          role: 'grazer',
+          hull: 80,
+          max_hull: 120,
+          in_combat: false,
+        },
+      ],
+      creature_count: 1,
+      poi_id: 'sol_cloudbank',
+    };
+
+    const exitCode = await renderResponse(
+      {
+        command: 'get_nearby',
+        displayCommand: 'get_nearby',
+        response: { structuredContent },
+      },
+      baseOptions,
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(0);
+    const output = capture.text();
+    expect(output).toContain('Creatures (1):');
+    expect(output).toContain('Pilot-Whale Pod');
+    expect(output).toContain('grazer');
+    expect(output).toContain('80/120');
+    expect(output).toContain('creature_pilot_whale_1');
+  });
+
   test('renderResponse preserves list_ships --structured output fields exactly', async () => {
     const capture = fakeContext();
     const structuredContent = {

@@ -3601,7 +3601,10 @@ describe('structuredContent formatters', () => {
         Raider (skiff) - hostile
 
       Empire NPCs (1):
-        Patrol (interceptor)"
+        Patrol (interceptor)
+
+      Creatures (1):
+        Pilot-Whale Pod [creature_pilot_whale_1] (pilot_whale) - grazer - hull 80/120"
       ,
         "poi_info": 
       "

@@ -627,6 +627,7 @@ export const statusFormatters = [
       if (!Array.isArray(players)) return false;
       const pirates = (r.pirates as Array<Record<string, unknown>>) || [];
       const npcs = (r.empire_npcs as Array<Record<string, unknown>>) || [];
+      const creatures = (r.creatures as Array<Record<string, unknown>>) || [];
       const playerCount =
         typeof r.nearby_player_count === 'number'
           ? r.nearby_player_count
@@ -634,6 +635,7 @@ export const statusFormatters = [
             ? r.count
             : players.length;
       const empireNpcCount = typeof r.empire_npc_count === 'number' ? r.empire_npc_count : npcs.length;
+      const creatureCount = typeof r.creature_count === 'number' ? r.creature_count : creatures.length;
 
       emitLine(`\n${c.bright}=== Nearby ===${c.reset}`);
       emitUnknownSignatureHint(r);
@@ -663,6 +665,23 @@ export const statusFormatters = [
           emitLine(`  ${name}${ship}`);
         }
         if (empireNpcCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${empireNpcCount - NEARBY_TABLE_LIMIT} more`);
+      }
+
+      if (creatureCount > 0) {
+        emitLine(`\n${c.green}Creatures (${creatureCount}):${c.reset}`);
+        for (const creature of creatures.slice(0, NEARBY_TABLE_LIMIT)) {
+          const name = creature.name || creature.creature_id || creature.species || 'Unknown';
+          const species = creature.species ? ` (${creature.species})` : '';
+          const role = creature.role ? ` - ${creature.role}` : '';
+          const hull =
+            creature.hull !== undefined || creature.max_hull !== undefined
+              ? ` - hull ${creature.hull ?? '?'}/${creature.max_hull ?? '?'}`
+              : '';
+          const combat = creature.in_combat ? ' - in combat' : '';
+          const id = creature.creature_id && creature.creature_id !== name ? ` [${creature.creature_id}]` : '';
+          emitLine(`  ${name}${id}${species}${role}${hull}${combat}`);
+        }
+        if (creatureCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${creatureCount - NEARBY_TABLE_LIMIT} more`);
       }
       return true;
     },

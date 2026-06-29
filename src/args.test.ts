@@ -1073,6 +1073,15 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.get_status?.clientOnlyFields).toContain('summary');
   });
 
+  test('hunt accepts a creature id positional and normalizes it for the API', () => {
+    const { command, payload } = parseOk(['hunt', 'creature_pilot_whale_1']);
+
+    expect(command).toBe('hunt');
+    expect(payload).toEqual({ creature_id: 'creature_pilot_whale_1' });
+    expect(normalizeParsedPayload('hunt', payload)).toEqual({ id: 'creature_pilot_whale_1' });
+    expect(validateRequiredArgs('hunt', {})).toBe('creature_id');
+  });
+
   test('completed_missions - no args', () => {
     const { command, payload } = parseOk(['completed_missions']);
     expect(command).toBe('completed_missions');
