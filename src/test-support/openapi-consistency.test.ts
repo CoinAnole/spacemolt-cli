@@ -8,6 +8,7 @@ import {
   findOverbroadSharedSchemas,
   findProseFieldMismatches,
   findResponseProseMismatches,
+  formatConsistencyReport,
   type OpenApiSpec,
 } from './openapi-consistency';
 
@@ -172,6 +173,131 @@ describe('overbroad-shared-schema analyzer', () => {
     expect(dirFinding?.evidence.schemaEnum).toEqual(['to_faction', 'to_player', 'forward', 'reverse']);
     expect(dirFinding?.evidence.sharedWith?.some((r) => r.includes('transfer'))).toBe(true);
   });
+
+  test('adds an info cluster when broad enum affected routes exceed route-level findings', () => {
+    const spec = makeMinimalSpec();
+    const broadFacilitySchema = {
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        description: "Transfer direction for 'transfer' action or job direction for 'job_add'.",
+      },
+      facility_id: { type: 'string' },
+      foo: { type: 'string' },
+      bar: { type: 'string' },
+      baz: { type: 'integer' },
+    };
+
+    addPostOperation(spec, '/api/v2/spacemolt_facility/build', 'build', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/buy_listing', 'buy listing', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/list', 'list', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/types', 'types', broadFacilitySchema);
+
+    const findings = findOverbroadSharedSchemas(spec);
+    const cluster = findings.find((f) => f.id.startsWith('overbroad-shared-schema-cluster|direction|'));
+
+    expect(cluster).toBeDefined();
+    expect(cluster?.severity).toBe('info');
+    expect(cluster?.confidence).toBe('high');
+    expect(cluster?.evidence.schemaEnum).toEqual(['to_faction', 'to_player', 'forward', 'reverse']);
+    expect(cluster?.evidence.affectedRouteCount).toBe(4);
+    expect(cluster?.evidence.flaggedRouteCount).toBe(2);
+    expect(cluster?.evidence.unflaggedRoutes).toEqual([
+      'POST /api/v2/spacemolt_facility/list',
+      'POST /api/v2/spacemolt_facility/types',
+    ]);
+  });
+
+  test('records narrowed enum siblings for shared schema clusters', () => {
+    const spec = makeMinimalSpec();
+    const broadFacilitySchema = {
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        description: "Transfer direction for 'transfer' action or job direction for 'job_add'.",
+      },
+      facility_id: { type: 'string' },
+      foo: { type: 'string' },
+      bar: { type: 'string' },
+      baz: { type: 'integer' },
+    };
+    const jobAddSchema = {
+      ...broadFacilitySchema,
+      direction: {
+        type: 'string',
+        enum: ['forward', 'reverse'],
+        description: "Job direction: 'forward' crafts, 'reverse' recycles.",
+      },
+    };
+    const transferSchema = {
+      ...broadFacilitySchema,
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player'],
+        description: "Transfer direction: 'to_faction' or 'to_player'.",
+      },
+    };
+
+    addPostOperation(spec, '/api/v2/spacemolt_facility/build', 'build', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/buy_listing', 'buy listing', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/list', 'list', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/job_add', 'job add', jobAddSchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/transfer', 'transfer', transferSchema);
+
+    const findings = findOverbroadSharedSchemas(spec);
+    const cluster = findings.find((f) => f.id.startsWith('overbroad-shared-schema-cluster|direction|'));
+
+    expect(cluster?.evidence.narrowedEnumRoutes).toEqual([
+      {
+        route: 'POST /api/v2/spacemolt_facility/job_add',
+        enum: ['forward', 'reverse'],
+      },
+      {
+        route: 'POST /api/v2/spacemolt_facility/transfer',
+        enum: ['to_faction', 'to_player'],
+      },
+    ]);
+    expect(cluster?.evidence.enumGroups).toEqual([
+      {
+        enum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        routes: [
+          'POST /api/v2/spacemolt_facility/build',
+          'POST /api/v2/spacemolt_facility/buy_listing',
+          'POST /api/v2/spacemolt_facility/list',
+        ],
+      },
+      {
+        enum: ['forward', 'reverse'],
+        routes: ['POST /api/v2/spacemolt_facility/job_add'],
+      },
+      {
+        enum: ['to_faction', 'to_player'],
+        routes: ['POST /api/v2/spacemolt_facility/transfer'],
+      },
+    ]);
+  });
+
+  test('does not add an aggregate cluster when all broad enum routes are individually flagged', () => {
+    const spec = makeMinimalSpec();
+    const broadFacilitySchema = {
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        description: "Transfer direction for 'transfer' action or job direction for 'job_add'.",
+      },
+      facility_id: { type: 'string' },
+      foo: { type: 'string' },
+      bar: { type: 'string' },
+      baz: { type: 'integer' },
+    };
+
+    addPostOperation(spec, '/api/v2/spacemolt_facility/build', 'build', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/buy_listing', 'buy listing', broadFacilitySchema);
+
+    const findings = findOverbroadSharedSchemas(spec);
+
+    expect(findings.some((f) => f.id.startsWith('overbroad-shared-schema-cluster|'))).toBe(false);
+  });
 });
 
 describe('full report build', () => {
@@ -185,6 +311,54 @@ describe('full report build', () => {
     // because the committed spec may be updated over time. We mainly care that filtering + extraction works.
     expect(report.summary.total).toBeGreaterThanOrEqual(0);
     expect(report.gameserverVersion).toMatch(/v\d/);
+  });
+});
+
+describe('openapi consistency report formatter', () => {
+  test('renders shared schema aggregate evidence', () => {
+    const output = formatConsistencyReport({
+      gameserverVersion: 'v0.test.1',
+      generatedAt: '2026-06-29T00:00:00.000Z',
+      findings: [
+        {
+          id: 'overbroad-shared-schema-cluster|direction|POST /api/v2/spacemolt_facility/build',
+          kind: 'overbroad-shared-schema',
+          severity: 'info',
+          field: 'direction',
+          message: 'shared request schema exposes broad "direction" enum on 4 routes; 2 are emitted as action findings',
+          evidence: {
+            schemaEnum: ['to_faction', 'to_player', 'forward', 'reverse'],
+            affectedRouteCount: 4,
+            flaggedRouteCount: 2,
+            unflaggedRoutes: [
+              'POST /api/v2/spacemolt_facility/list',
+              'POST /api/v2/spacemolt_facility/types',
+            ],
+            narrowedEnumRoutes: [
+              {
+                route: 'POST /api/v2/spacemolt_facility/job_add',
+                enum: ['forward', 'reverse'],
+              },
+            ],
+          },
+          confidence: 'high',
+        },
+      ],
+      summary: {
+        total: 1,
+        byKind: { 'overbroad-shared-schema': 1 },
+        bySeverity: { info: 1 },
+        sharedSchemaClusters: { total: 1, affectedRoutes: 4 },
+      },
+    });
+
+    expect(output).toContain('Shared schema clusters: 1 cluster, 4 affected routes');
+    expect(output).toContain('affected routes: 4');
+    expect(output).toContain('individually flagged: 2');
+    expect(output).toContain(
+      'unflagged affected routes: POST /api/v2/spacemolt_facility/list, POST /api/v2/spacemolt_facility/types',
+    );
+    expect(output).toContain('narrowed siblings: POST /api/v2/spacemolt_facility/job_add (forward | reverse)');
   });
 });
 
