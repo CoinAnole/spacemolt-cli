@@ -4,7 +4,9 @@ import {
   extractDocExamples,
   extractMentionedFieldNames,
   extractResponseFieldCandidatesWithProvenance,
+  type ConsistencyReport,
   type FieldCandidate,
+  type Finding,
   findOverbroadSharedSchemas,
   findProseFieldMismatches,
   findResponseProseMismatches,
@@ -89,22 +91,6 @@ function addComponentSchema(spec: OpenApiSpec, name: string, schema: unknown) {
   // biome-ignore lint/suspicious/noExplicitAny: test fixture for arbitrary request/response shapes
   const schemas = spec.components.schemas as any;
   schemas[name] = schema;
-}
-
-type FutureSharedSchemaEvidence = {
-  affectedRouteCount?: number;
-  flaggedRouteCount?: number;
-  unflaggedRoutes?: string[];
-  narrowedEnumRoutes?: Array<{ route: string; enum: string[] }>;
-  enumGroups?: Array<{ enum: string[]; routes: string[] }>;
-};
-
-function sharedSchemaEvidence(finding: { evidence: unknown } | undefined): FutureSharedSchemaEvidence | undefined {
-  return finding?.evidence as FutureSharedSchemaEvidence | undefined;
-}
-
-function futureConsistencyReport(report: unknown): Parameters<typeof formatConsistencyReport>[0] {
-  return report as Parameters<typeof formatConsistencyReport>[0];
 }
 
 describe('openapi-consistency doc snippet parser', () => {
@@ -216,9 +202,9 @@ describe('overbroad-shared-schema analyzer', () => {
     expect(cluster?.severity).toBe('info');
     expect(cluster?.confidence).toBe('high');
     expect(cluster?.evidence.schemaEnum).toEqual(['to_faction', 'to_player', 'forward', 'reverse']);
-    expect(sharedSchemaEvidence(cluster)?.affectedRouteCount).toBe(4);
-    expect(sharedSchemaEvidence(cluster)?.flaggedRouteCount).toBe(2);
-    expect(sharedSchemaEvidence(cluster)?.unflaggedRoutes).toEqual([
+    expect(cluster?.evidence.affectedRouteCount).toBe(4);
+    expect(cluster?.evidence.flaggedRouteCount).toBe(2);
+    expect(cluster?.evidence.unflaggedRoutes).toEqual([
       'POST /api/v2/spacemolt_facility/list',
       'POST /api/v2/spacemolt_facility/types',
     ]);
@@ -263,7 +249,7 @@ describe('overbroad-shared-schema analyzer', () => {
     const findings = findOverbroadSharedSchemas(spec);
     const cluster = findings.find((f) => f.id.startsWith('overbroad-shared-schema-cluster|direction|'));
 
-    expect(sharedSchemaEvidence(cluster)?.narrowedEnumRoutes).toEqual([
+    expect(cluster?.evidence.narrowedEnumRoutes).toEqual([
       {
         route: 'POST /api/v2/spacemolt_facility/job_add',
         enum: ['forward', 'reverse'],
@@ -273,7 +259,7 @@ describe('overbroad-shared-schema analyzer', () => {
         enum: ['to_faction', 'to_player'],
       },
     ]);
-    expect(sharedSchemaEvidence(cluster)?.enumGroups).toEqual([
+    expect(cluster?.evidence.enumGroups).toEqual([
       {
         enum: ['to_faction', 'to_player', 'forward', 'reverse'],
         routes: [
@@ -324,9 +310,9 @@ describe('overbroad-shared-schema analyzer', () => {
     const clusters = findings.filter((f) => f.id.startsWith('overbroad-shared-schema-cluster|direction|'));
 
     expect(clusters).toHaveLength(1);
-    expect(sharedSchemaEvidence(clusters[0])?.affectedRouteCount).toBe(4);
-    expect(sharedSchemaEvidence(clusters[0])?.flaggedRouteCount).toBe(2);
-    expect(sharedSchemaEvidence(clusters[0])?.unflaggedRoutes).toEqual([
+    expect(clusters[0]?.evidence.affectedRouteCount).toBe(4);
+    expect(clusters[0]?.evidence.flaggedRouteCount).toBe(2);
+    expect(clusters[0]?.evidence.unflaggedRoutes).toEqual([
       'POST /api/v2/spacemolt_facility/list',
       'POST /api/v2/spacemolt_facility/types',
     ]);
@@ -367,47 +353,68 @@ describe('full report build', () => {
     expect(report.summary.total).toBeGreaterThanOrEqual(0);
     expect(report.gameserverVersion).toMatch(/v\d/);
   });
+
+  test('buildConsistencyReport summarizes shared schema aggregate clusters', () => {
+    const spec = makeMinimalSpec();
+    const broadFacilitySchema = {
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        description: "Transfer direction for 'transfer' action or job direction for 'job_add'.",
+      },
+      facility_id: { type: 'string' },
+      foo: { type: 'string' },
+      bar: { type: 'string' },
+      baz: { type: 'integer' },
+    };
+
+    addPostOperation(spec, '/api/v2/spacemolt_facility/build', 'build', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/buy_listing', 'buy listing', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/list', 'list', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/types', 'types', broadFacilitySchema);
+
+    const report = buildConsistencyReport(spec);
+
+    expect(report.findings.some((f) => f.id.startsWith('overbroad-shared-schema-cluster|direction|'))).toBe(true);
+    expect(report.summary.sharedSchemaClusters).toEqual({ total: 1, affectedRoutes: 4 });
+  });
 });
 
 describe('openapi consistency report formatter', () => {
   test('renders shared schema aggregate evidence', () => {
-    const output = formatConsistencyReport(
-      futureConsistencyReport({
-        gameserverVersion: 'v0.test.1',
-        generatedAt: '2026-06-29T00:00:00.000Z',
-        findings: [
+    const finding: Finding = {
+      id: 'overbroad-shared-schema-cluster|direction|POST /api/v2/spacemolt_facility/build',
+      kind: 'overbroad-shared-schema',
+      severity: 'info',
+      field: 'direction',
+      message: 'shared request schema exposes broad "direction" enum on 4 routes; 2 are emitted as action findings',
+      evidence: {
+        schemaEnum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        affectedRouteCount: 4,
+        flaggedRouteCount: 2,
+        unflaggedRoutes: ['POST /api/v2/spacemolt_facility/list', 'POST /api/v2/spacemolt_facility/types'],
+        narrowedEnumRoutes: [
           {
-            id: 'overbroad-shared-schema-cluster|direction|POST /api/v2/spacemolt_facility/build',
-            kind: 'overbroad-shared-schema',
-            severity: 'info',
-            field: 'direction',
-            message: 'shared request schema exposes broad "direction" enum on 4 routes; 2 are emitted as action findings',
-            evidence: {
-              schemaEnum: ['to_faction', 'to_player', 'forward', 'reverse'],
-              affectedRouteCount: 4,
-              flaggedRouteCount: 2,
-              unflaggedRoutes: [
-                'POST /api/v2/spacemolt_facility/list',
-                'POST /api/v2/spacemolt_facility/types',
-              ],
-              narrowedEnumRoutes: [
-                {
-                  route: 'POST /api/v2/spacemolt_facility/job_add',
-                  enum: ['forward', 'reverse'],
-                },
-              ],
-            },
-            confidence: 'high',
+            route: 'POST /api/v2/spacemolt_facility/job_add',
+            enum: ['forward', 'reverse'],
           },
         ],
-        summary: {
-          total: 1,
-          byKind: { 'overbroad-shared-schema': 1 },
-          bySeverity: { info: 1 },
-          sharedSchemaClusters: { total: 1, affectedRoutes: 4 },
-        },
-      }),
-    );
+      },
+      confidence: 'high',
+    };
+    const report: ConsistencyReport = {
+      gameserverVersion: 'v0.test.1',
+      generatedAt: '2026-06-29T00:00:00.000Z',
+      findings: [finding],
+      summary: {
+        total: 1,
+        byKind: { 'overbroad-shared-schema': 1 },
+        bySeverity: { info: 1 },
+        sharedSchemaClusters: { total: 1, affectedRoutes: 4 },
+      },
+    };
+
+    const output = formatConsistencyReport(report);
 
     expect(output).toContain('Shared schema clusters: 1 cluster, 4 affected routes');
     expect(output).toContain('affected routes: 4');
