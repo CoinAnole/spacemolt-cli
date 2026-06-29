@@ -44,6 +44,17 @@ export interface Finding {
     schemaEnum?: string[];
     description?: string;
     sharedWith?: string[];
+    affectedRouteCount?: number;
+    flaggedRouteCount?: number;
+    unflaggedRoutes?: string[];
+    narrowedEnumRoutes?: Array<{
+      route: string;
+      enum: string[];
+    }>;
+    enumGroups?: Array<{
+      enum: string[];
+      routes: string[];
+    }>;
     cliAlias?: string;
     /** Provenance for how this field candidate was synthesized (e.g. from compound, JSON, or loose proseKey in a context block). */
     candidateProvenance?: string;
@@ -60,6 +71,10 @@ export interface ConsistencyReport {
     total: number;
     byKind: Record<string, number>;
     bySeverity: Record<string, number>;
+    sharedSchemaClusters?: {
+      total: number;
+      affectedRoutes: number;
+    };
   };
 }
 
