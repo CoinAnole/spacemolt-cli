@@ -293,6 +293,45 @@ describe('overbroad-shared-schema analyzer', () => {
     ]);
   });
 
+  test('groups shared schema clusters by enum value set instead of enum order', () => {
+    const spec = makeMinimalSpec();
+    const broadFacilitySchema = {
+      direction: {
+        type: 'string',
+        enum: ['to_faction', 'to_player', 'forward', 'reverse'],
+        description: "Transfer direction for 'transfer' action or job direction for 'job_add'.",
+      },
+      facility_id: { type: 'string' },
+      foo: { type: 'string' },
+      bar: { type: 'string' },
+      baz: { type: 'integer' },
+    };
+    const permutedBroadFacilitySchema = {
+      ...broadFacilitySchema,
+      direction: {
+        type: 'string',
+        enum: ['reverse', 'forward', 'to_player', 'to_faction'],
+        description: "Transfer direction for 'transfer' action or job direction for 'job_add'.",
+      },
+    };
+
+    addPostOperation(spec, '/api/v2/spacemolt_facility/build', 'build', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/buy_listing', 'buy listing', permutedBroadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/list', 'list', broadFacilitySchema);
+    addPostOperation(spec, '/api/v2/spacemolt_facility/types', 'types', permutedBroadFacilitySchema);
+
+    const findings = findOverbroadSharedSchemas(spec);
+    const clusters = findings.filter((f) => f.id.startsWith('overbroad-shared-schema-cluster|direction|'));
+
+    expect(clusters).toHaveLength(1);
+    expect(sharedSchemaEvidence(clusters[0])?.affectedRouteCount).toBe(4);
+    expect(sharedSchemaEvidence(clusters[0])?.flaggedRouteCount).toBe(2);
+    expect(sharedSchemaEvidence(clusters[0])?.unflaggedRoutes).toEqual([
+      'POST /api/v2/spacemolt_facility/list',
+      'POST /api/v2/spacemolt_facility/types',
+    ]);
+  });
+
   test('does not add an aggregate cluster when all broad enum routes are individually flagged', () => {
     const spec = makeMinimalSpec();
     const broadFacilitySchema = {

@@ -523,7 +523,7 @@ function enumValuesFromSchemaField(schema: unknown): string[] | undefined {
 }
 
 function enumGroupKey(values: string[]): string {
-  return values.join('\u0000');
+  return sortedUnique(values).join('\u0000');
 }
 
 function sortedUnique(values: string[]): string[] {
