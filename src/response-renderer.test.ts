@@ -637,11 +637,9 @@ describe('response renderer', () => {
       'crafting_tick',
       'action_error',
     ]);
-    expect(raw.structuredContent.notifications.map((notification: { msg_type?: string }) => notification.msg_type)).toEqual([
-      'crafting_progress',
-      'crafting_tick',
-      'action_error',
-    ]);
+    expect(
+      raw.structuredContent.notifications.map((notification: { msg_type?: string }) => notification.msg_type),
+    ).toEqual(['crafting_progress', 'crafting_tick', 'action_error']);
   });
 
   test('renderResponse summarizes get_notifications structured output by default', async () => {

@@ -26,7 +26,9 @@ const HIGH_SIGNAL_TERMS = ['complete', 'completed', 'failed', 'failure', 'error'
 
 function asNotificationArray(value: unknown): Notification[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  return value.every((entry) => isRecord(entry) && typeof entry.type === 'string') ? (value as Notification[]) : undefined;
+  return value.every((entry) => isRecord(entry) && typeof entry.type === 'string')
+    ? (value as Notification[])
+    : undefined;
 }
 
 function collectSearchText(value: unknown, output: string[] = [], depth = 0): string[] {
@@ -63,7 +65,9 @@ function metadataString(value: unknown): string | undefined {
 function hasCraftingSignal(value: unknown): boolean {
   const text = metadataString(value);
   if (!text) return false;
-  return text === 'crafting' || text.startsWith('crafting_') || text.startsWith('crafting.') || text.includes('.crafting.');
+  return (
+    text === 'crafting' || text.startsWith('crafting_') || text.startsWith('crafting.') || text.includes('.crafting.')
+  );
 }
 
 function isCraftingLike(notification: Notification): boolean {

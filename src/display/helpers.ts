@@ -1,8 +1,12 @@
+import type { GlobalOptions } from '../types.ts';
 import { colorize, formatPlayer as formatPlayerValue, rawColors } from './ansi.ts';
 import { type CompactTableOptions, firstArray, formatCompactTable, formatItemTable, rowValue } from './tables.ts';
-import type { GlobalOptions } from '../types.ts';
 
-export type ResultFormatter = ((result: Record<string, unknown>, command?: string, options?: GlobalOptions) => boolean) & {
+export type ResultFormatter = ((
+  result: Record<string, unknown>,
+  command?: string,
+  options?: GlobalOptions,
+) => boolean) & {
   formatterName?: string;
   hintKeys?: string[];
   commands?: readonly string[];

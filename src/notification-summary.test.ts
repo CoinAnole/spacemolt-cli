@@ -126,12 +126,14 @@ describe('notification presentation', () => {
     const presented = presentResponseNotifications(response);
 
     expect(presented.response.notifications?.map((n) => n.msg_type)).toEqual(['crafting_summary']);
-    expect((presented.response.structuredContent?.notifications as Array<{ msg_type?: string }>).map((n) => n.msg_type)).toEqual([
-      'crafting_summary',
-    ]);
-    expect(((presented.response.result as Record<string, unknown>).notifications as Array<{ msg_type?: string }>).map((n) => n.msg_type)).toEqual([
-      'crafting_summary',
-    ]);
+    expect(
+      (presented.response.structuredContent?.notifications as Array<{ msg_type?: string }>).map((n) => n.msg_type),
+    ).toEqual(['crafting_summary']);
+    expect(
+      ((presented.response.result as Record<string, unknown>).notifications as Array<{ msg_type?: string }>).map(
+        (n) => n.msg_type,
+      ),
+    ).toEqual(['crafting_summary']);
     expect(response.notifications?.map((n) => n.msg_type)).toEqual(['crafting_progress', 'crafting_tick']);
   });
 

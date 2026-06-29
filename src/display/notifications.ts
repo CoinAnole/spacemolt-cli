@@ -1,6 +1,6 @@
-import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
-import { presentNotifications, type Notification } from '../notification-summary.ts';
+import { type Notification, presentNotifications } from '../notification-summary.ts';
 import type { GlobalOptions } from '../types.ts';
+import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';

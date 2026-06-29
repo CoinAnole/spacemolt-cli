@@ -5,8 +5,8 @@ import type { CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
-import { displayNotifications } from './notifications.ts';
 import { presentResponseNotifications } from './notification-summary.ts';
+import { displayNotifications } from './notifications.ts';
 import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
@@ -102,7 +102,9 @@ export async function renderResponse(
 ): Promise<number> {
   const { command, displayCommand } = commandRun;
   const renderOptions = optionsForCommandLocalSearch(commandRun, options);
-  const presented = presentResponseNotifications(commandRun.response, { rawNotifications: renderOptions.rawNotifications });
+  const presented = presentResponseNotifications(commandRun.response, {
+    rawNotifications: renderOptions.rawNotifications,
+  });
   const response = presented.response;
   const isJson = renderOptions.json || renderOptions.format === 'json';
   const hasProjection = Boolean(
