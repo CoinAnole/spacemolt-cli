@@ -271,3 +271,46 @@ test('renders craft queue lists across workshop own and faction venues', () => {
   expect(stdout).toContain('Faction Fuel Plant');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('renders craft queue with station context and a single table heading', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      location: {
+        docked_at: 'iron_reach_station',
+        poi_name: 'Iron Reach Station',
+        system_id: 'iron_reach',
+        system_name: 'Iron Reach',
+      },
+      details: {
+        action: 'queue',
+        jobs: [
+          {
+            job_id: 'steel-job-1',
+            recipe: 'Refine Steel',
+            mode: 'craft',
+            runs_done: 2,
+            runs_remaining: 3,
+            runs_total: 5,
+            produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 2 }],
+            venue: 'Iron Refinery',
+            facility_id: 'iron-refinery',
+            eta_ticks: 12,
+            status: 'active',
+            position: 0,
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queue @ Iron Reach Station (iron_reach_station) ===');
+  expect(stdout).toContain('steel-job-1');
+  expect(stdout).toContain('Iron Refinery');
+  expect(stdout).not.toContain('=== Jobs ===');
+  expect(stdout).not.toContain('=== Response ===');
+});

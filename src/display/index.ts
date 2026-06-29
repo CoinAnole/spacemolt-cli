@@ -489,6 +489,13 @@ function addLocationAliases(actionViewModel: Record<string, unknown>, location: 
   copyIfMissing(actionViewModel, 'poi_id', location.poi_id);
   copyIfMissing(actionViewModel, 'poi', location.poi_name);
   copyIfMissing(actionViewModel, 'poi_name', location.poi_name);
+  if (location.docked_at !== undefined) {
+    copyIfMissing(actionViewModel, 'docked_at', location.docked_at);
+    copyIfMissing(actionViewModel, 'station_id', location.docked_at);
+    copyIfMissing(actionViewModel, 'station_name', location.poi_name);
+    copyIfMissing(actionViewModel, 'base_id', location.docked_at);
+    copyIfMissing(actionViewModel, 'base_name', location.poi_name);
+  }
   copyIfMissing(actionViewModel, 'online_players', location.nearby_players);
   copyIfMissing(actionViewModel, 'online_players_count', location.nearby_player_count);
 }

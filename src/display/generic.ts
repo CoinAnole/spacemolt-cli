@@ -354,6 +354,43 @@ function formatCraftVenue(result: Record<string, unknown>): string | undefined {
   return String(result.venue ?? result.venue_type);
 }
 
+function scalarText(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return undefined;
+}
+
+function firstText(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
+  if (!record) return undefined;
+  for (const key of keys) {
+    const value = scalarText(record[key]);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function formatNameAndId(name: string | undefined, id: string | undefined): string | undefined {
+  if (!name) return id;
+  if (!id || id === name) return name;
+  return `${name} (${id})`;
+}
+
+function formatCraftStation(result: Record<string, unknown>): string | undefined {
+  const station = isRecord(result.station) ? result.station : undefined;
+  const base = isRecord(result.base) ? result.base : undefined;
+  const name =
+    firstText(result, ['station_name', 'base_name', 'poi_name']) ??
+    firstText(station, ['name', 'station_name', 'base_name', 'id', 'station_id', 'base_id']) ??
+    firstText(base, ['name', 'station_name', 'base_name', 'id', 'station_id', 'base_id']) ??
+    scalarText(result.station) ??
+    scalarText(result.base);
+  const id =
+    firstText(result, ['station_id', 'base_id', 'docked_at', 'poi_id']) ??
+    firstText(station, ['station_id', 'base_id', 'id']) ??
+    firstText(base, ['station_id', 'base_id', 'id']);
+  return formatNameAndId(name, id);
+}
+
 function craftTitle(command: string, result: Record<string, unknown>): string {
   const base = command === 'recycle' || result.mode === 'recycle' ? 'Recycle' : 'Craft';
   if (result.dry_run === true) return `${base} Quote`;
@@ -361,6 +398,12 @@ function craftTitle(command: string, result: Record<string, unknown>): string {
   if (Array.isArray(result.jobs)) return `${base} Queue`;
   if (Array.isArray(result.results)) return `${base} Results`;
   return base;
+}
+
+function craftTitleWithStation(command: string, result: Record<string, unknown>): string {
+  const station = formatCraftStation(result);
+  const title = craftTitle(command, result);
+  return station ? `${title} @ ${station}` : title;
 }
 
 function isDryRunRoutePreview(result: Record<string, unknown>): boolean {
@@ -402,8 +445,6 @@ export const genericFormatters = [
         return false;
       }
 
-      emitLine(`\n${c.bright}=== ${craftTitle(command, r)} ===${c.reset}`);
-
       const jobs = firstArray(r, ['jobs']);
       if (jobs) {
         const rows = jobs.map((job) => ({
@@ -415,7 +456,7 @@ export const genericFormatters = [
           output_display: summarizeNamedItemQuantities(job.produces),
         }));
         printCompactTable(
-          'Jobs',
+          craftTitleWithStation(command, r),
           rows,
           [
             ['Job', ['job_id']],
@@ -436,7 +477,7 @@ export const genericFormatters = [
       const results = firstArray(r, ['results']);
       if (results) {
         printCompactTable(
-          'Results',
+          craftTitleWithStation(command, r),
           craftResultRows(results),
           [
             ['Index', ['index']],
@@ -459,6 +500,7 @@ export const genericFormatters = [
         return true;
       }
 
+      emitLine(`\n${c.bright}=== ${craftTitleWithStation(command, r)} ===${c.reset}`);
       emitOptionalValue('Job', r.job_id);
       emitOptionalValue('Recipe', r.recipe);
       emitOptionalValue('Mode', r.mode);
