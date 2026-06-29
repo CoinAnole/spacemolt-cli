@@ -4,10 +4,10 @@ import {
   extractDocExamples,
   extractMentionedFieldNames,
   extractResponseFieldCandidatesWithProvenance,
+  type FieldCandidate,
   findOverbroadSharedSchemas,
   findProseFieldMismatches,
   findResponseProseMismatches,
-  type FieldCandidate,
   type OpenApiSpec,
 } from './openapi-consistency';
 
@@ -21,9 +21,15 @@ function makeMinimalSpec(overrides: Partial<OpenApiSpec> = {}): OpenApiSpec {
   return base;
 }
 
-function addPostOperation(spec: OpenApiSpec, apiPath: string, description: string, requestProps: Record<string, any>) {
+function addPostOperation(
+  spec: OpenApiSpec,
+  apiPath: string,
+  description: string,
+  requestProps: Record<string, unknown>,
+) {
   if (!spec.paths) spec.paths = {};
-  spec.paths[apiPath] = {
+  // biome-ignore lint/suspicious/noExplicitAny: test fixture for arbitrary request/response shapes
+  const postOp: any = {
     post: {
       description,
       requestBody: {
@@ -37,12 +43,15 @@ function addPostOperation(spec: OpenApiSpec, apiPath: string, description: strin
         },
       },
     },
-  } as any;
+  };
+  spec.paths[apiPath] = postOp;
 }
 
-function addComponentSchema(spec: OpenApiSpec, name: string, schema: any) {
+function addComponentSchema(spec: OpenApiSpec, name: string, schema: unknown) {
   if (!spec.components) spec.components = { schemas: {} };
-  (spec.components.schemas as any)[name] = schema;
+  // biome-ignore lint/suspicious/noExplicitAny: test fixture for arbitrary request/response shapes
+  const schemas = spec.components.schemas as any;
+  schemas[name] = schema;
 }
 
 describe('openapi-consistency doc snippet parser', () => {
@@ -222,10 +231,7 @@ describe('response prose mismatch (base_fare style)', () => {
 
     const findings = findResponseProseMismatches(spec);
     const flags = findings.filter(
-      (f) =>
-        f.kind === 'missing-response-field-prose' &&
-        f.schemaName === 'DockResponse' &&
-        f.field === 'base_fare',
+      (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'DockResponse' && f.field === 'base_fare',
     );
     expect(flags).toHaveLength(0);
   });
@@ -239,13 +245,11 @@ describe('response prose mismatch (base_fare style)', () => {
     });
 
     // Term referenced only in prose description; absent from the schema shape.
-    (spec.components!.schemas as any).SomeResponse.description =
-      'Returns base_fare and other things.';
+    // biome-ignore lint/suspicious/noExplicitAny: test fixture construction
+    (spec.components?.schemas as any).SomeResponse.description = 'Returns base_fare and other things.';
 
     const findings = findResponseProseMismatches(spec);
-    const flag = findings.find(
-      (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'SomeResponse',
-    );
+    const flag = findings.find((f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'SomeResponse');
     expect(flag).toBeDefined();
   });
 });
@@ -279,7 +283,8 @@ describe('context-sensitive extraction and provenance', () => {
   });
 
   test('compound synthesis only in relevant blocks and carries provenance', () => {
-    const text = 'General text about most mission stuff.\n\n**Example:** `{"type":"x"}`\n\nShows the base fare and speed bonus plus ticks remaining.\n\n**Rate limited:** x';
+    const text =
+      'General text about most mission stuff.\n\n**Example:** `{"type":"x"}`\n\nShows the base fare and speed bonus plus ticks remaining.\n\n**Rate limited:** x';
     const rich = extractResponseFieldCandidatesWithProvenance(text);
     const baseFare = rich.find((c) => c.term === 'base_fare');
     const speedBonus = rich.find((c) => c.term === 'speed_bonus');

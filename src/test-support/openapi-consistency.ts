@@ -290,11 +290,14 @@ export function extractMentionedFieldNames(text: string | undefined): string[] {
 function schemaRequestProperties(spec: OpenApiSpec, apiPath: string, method: 'get' | 'post' = 'post') {
   const pathItem = spec.paths?.[apiPath];
   if (!pathItem) return {};
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   const op: any = pathItem[method];
   if (!op) return {};
   const schema = op.requestBody?.content?.['application/json']?.schema;
   if (!schema) return {};
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   const effective = getEffectiveSchema(spec, schema as any);
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   return (effective.properties ?? {}) as Record<string, any>;
 }
 
@@ -318,6 +321,7 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
   const only = options.only;
 
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     const op: any = methods.post;
     if (!op) continue;
     const routeSig = `POST ${apiPath}`;
@@ -360,6 +364,7 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
 
     // Also check the schema property descriptions for self-confusing names (nice-to-have)
     for (const [propName, propSchema] of Object.entries(props)) {
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
       const desc = (propSchema as any)?.description;
       if (typeof desc === 'string' && propName === 'id') {
         // Flag when the canonical 'id' field is documented with prose that implies a domain-specific name.
@@ -395,9 +400,11 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
 
   // Group routes by key set (ignore minor type/enum annotation diffs for "sharing" detection).
   // This catches cases where a component schema or copy is reused with nearly identical fields.
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   const groups = new Map<string, Array<{ route: string; path: string; props: Record<string, any> }>>();
 
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     const op: any = methods.post;
     if (!op) continue;
     const routeSig = `POST ${apiPath}`;
@@ -436,6 +443,7 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
     const KNOWN_BROAD = new Set(['direction', 'mode', 'op', 'operation', 'variant']);
     for (const member of actionPaths) {
       for (const [fname, fsch] of Object.entries(member.props)) {
+        // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
         const en = (fsch as any)?.enum;
         if (Array.isArray(en) && en.length >= 3 && (fname === 'direction' || KNOWN_BROAD.has(fname))) {
           const sharedRoutes = members.map((m) => m.route);
@@ -449,7 +457,7 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
             field: fname,
             message: `dedicated action path uses a shared schema with broad "${fname}" enum that documents values for other actions`,
             evidence: {
-              schemaEnum: en,
+              // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
               description: (fsch as any)?.description,
               sharedWith: sharedRoutes.filter((r) => r !== member.route),
             },
@@ -484,6 +492,7 @@ export function findOverbroadSharedSchemas(spec: OpenApiSpec, options: ReportOpt
   return findings;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
 function keySetSignature(props: Record<string, any>): string {
   return Object.keys(props).sort().join(',');
 }
@@ -494,6 +503,7 @@ function keySetSignature(props: Record<string, any>): string {
  * Used to improve detection of fields present in nested response shapes (e.g. passengers[], passenger_arrivals, oneOf variants).
  * Memoized by input schema object for repeated walks over shared components.
  */
+// biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
 function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<string>()): Set<string> {
   if (!schema || typeof schema !== 'object') return new Set<string>();
 
@@ -502,10 +512,12 @@ function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<
   if (cached) return new Set(cached);
 
   const fields = new Set<string>();
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   const eff = getEffectiveSchema(spec, schema as any, seen);
 
   // Direct properties at this level
   if (eff.properties && typeof eff.properties === 'object') {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     for (const [k, sub] of Object.entries(eff.properties as Record<string, any>)) {
       fields.add(k);
       // Recurse into nested object schemas to catch deep fields
@@ -519,6 +531,7 @@ function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<
   if (eff.items) {
     for (const f of collectAllPropertyNames(eff.items, spec, seen)) fields.add(f);
     // Also surface direct item properties
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     const itemEff = getEffectiveSchema(spec, eff.items as any, seen);
     if (itemEff.properties && typeof itemEff.properties === 'object') {
       for (const k of Object.keys(itemEff.properties)) fields.add(k);
@@ -526,6 +539,7 @@ function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<
   }
 
   // oneOf / allOf / anyOf variants
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   for (const variant of [...(eff.oneOf || []), ...(eff.allOf || []), ...(eff.anyOf || [])] as any[]) {
     for (const f of collectAllPropertyNames(variant, spec, seen)) fields.add(f);
   }
@@ -550,6 +564,7 @@ function collectDescriptionText(node: any): string {
     parts.push(node.description);
   }
   if (node.properties && typeof node.properties === 'object') {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     for (const p of Object.values(node.properties as Record<string, any>)) {
       const sub = collectDescriptionText(p);
       if (sub) parts.push(sub);
@@ -560,6 +575,7 @@ function collectDescriptionText(node: any): string {
     if (sub) parts.push(sub);
   }
   for (const k of ['oneOf', 'allOf', 'anyOf'] as const) {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     const arr = (node as any)[k];
     if (Array.isArray(arr)) {
       for (const v of arr) {
@@ -941,13 +957,14 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
   // in the full reachable field set (including nested items/oneOf etc.).
   // Focus on Response/Result/State schemas and a few broad containers to avoid
   // flooding from partial component descriptions that reference fields from larger envelopes.
-  // biome-ignore lint/suspicious/noExplicitAny: schema access (matches file style)
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   const components = (spec as any).components?.schemas || {};
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
   for (const [schemaName, schema] of Object.entries(components) as [string, any][]) {
     const name = schemaName;
     const isResponseLike = /Response|Result|State|Status|Output/i.test(name);
     if (!isResponseLike) continue;
-    if (only && only.length && !routeMatchesOnly(name, only)) continue;
+    if (only?.length && !routeMatchesOnly(name, only)) continue;
 
     const prose = collectDescriptionText(schema);
     const rich = extractResponseFieldCandidatesWithProvenance(prose);
@@ -982,6 +999,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
   // (and request schema), and flag terms mentioned in prose that are absent from both.
   // This generalizes beyond any single command family or term.
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
     const op: any = methods.post || methods.get;
     if (!op || !op.description) continue;
     const routeSig = `${methods.post ? 'POST' : 'GET'} ${apiPath}`;
