@@ -42,6 +42,7 @@ export interface Finding {
     examplePayload?: Record<string, unknown>;
     schemaProperty?: unknown;
     schemaEnum?: string[];
+    schemaEnumValues?: string[];
     description?: string;
     sharedWith?: string[];
     affectedRouteCount?: number;
@@ -628,6 +629,7 @@ function buildOverbroadSharedSchemaClusters(
         message: `shared request schema exposes broad "${field}" enum on ${group.routes.length} routes; ${flaggedRoutes.length} are emitted as action findings`,
         evidence: {
           schemaEnum: group.enum,
+          schemaEnumValues: group.enum,
           description: group.description,
           sharedWith: group.routes,
           affectedRouteCount: group.routes.length,
