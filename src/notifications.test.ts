@@ -9,6 +9,7 @@ function expectNoDiagnosticTokens(value: string): void {
   expect(value).not.toContain('NaN');
   expect(value).not.toContain('Infinity');
   expect(value).not.toContain('[object Object]');
+  expect(value).not.toContain('undefined');
 }
 
 describe('notification formatting', () => {
@@ -419,6 +420,50 @@ describe('notification formatting', () => {
 
     expect(lines.length).toBeGreaterThan(0);
     expectNoDiagnosticTokens(stripAnsi(lines.join('\n')));
+  });
+
+  test.each([
+    [
+      'scan_result malformed revealed_info',
+      {
+        type: 'scan',
+        msg_type: 'scan_result',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: { success: true, revealed_info: { bad: true } },
+      },
+    ],
+    [
+      'scan_detected malformed revealed_info',
+      {
+        type: 'scan',
+        msg_type: 'scan_detected',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: { revealed_info: { bad: true } },
+      },
+    ],
+    [
+      'police_warning missing message',
+      {
+        type: 'police',
+        msg_type: 'police_warning',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {},
+      },
+    ],
+    [
+      'reconnected missing message',
+      {
+        type: 'system',
+        msg_type: 'reconnected',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {},
+      },
+    ],
+  ])('formatNotification handles malformed known handler data: %s', (_name, notification) => {
+    const output = stripAnsi(formatNotification(notification).join('\n'));
+
+    expect(output.length).toBeGreaterThan(0);
+    expectNoDiagnosticTokens(output);
   });
 
   test('action prompts do not reference removed flat grouped commands', () => {

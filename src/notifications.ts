@@ -19,6 +19,16 @@ function safeJson(value: unknown): string {
   }
 }
 
+function hasDiagnosticToken(lines: string[]): boolean {
+  return lines.some(
+    (line) =>
+      line.includes('NaN') ||
+      line.includes('Infinity') ||
+      line.includes('[object Object]') ||
+      line.includes('undefined'),
+  );
+}
+
 function normalizedNotification(notification: unknown): {
   type: string;
   msgType: string;
@@ -97,6 +107,26 @@ function safeScalar(value: unknown): string | number | boolean | undefined {
   if (typeof value === 'string') return value.trim() ? value : undefined;
   if (typeof value === 'boolean') return value;
   return finiteNumber(value);
+}
+
+function formatGenericNotification(
+  notification: ReturnType<typeof normalizedNotification>,
+  time: string,
+  c: NotificationColors,
+  writeLine: (message?: string) => void,
+): void {
+  const message = notification.data.message;
+  if (safeScalar(message) !== undefined) {
+    writeLine(
+      `${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset} ${safeScalar(message)}`,
+    );
+    return;
+  }
+
+  writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset}`);
+  for (const [key, value] of Object.entries(notification.data)) {
+    writeLine(`  ${key}: ${safeJson(value)}`);
+  }
 }
 
 function createNotificationHandlers(c: NotificationColors): Record<string, NotificationHandler> {
@@ -477,21 +507,17 @@ export function formatNotification(notification: Notification, options?: { plain
   const handler = notificationHandlers[type];
 
   if (handler) {
-    handler(data, time, writeLine);
-    return lines;
-  }
-
-  const message = data.message;
-  if (safeScalar(message) !== undefined) {
-    writeLine(
-      `${c.dim}[${time}]${c.reset} ${c.magenta}[${normalized.type.toUpperCase()}]${c.reset} ${safeScalar(message)}`,
-    );
-  } else {
-    writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${normalized.type.toUpperCase()}]${c.reset}`);
-    for (const [key, value] of Object.entries(data)) {
-      writeLine(`  ${key}: ${safeJson(value)}`);
+    const handledLines: string[] = [];
+    const handledWriteLine = (message = '') => handledLines.push(message);
+    try {
+      handler(data, time, handledWriteLine);
+      if (handledLines.length > 0 && !hasDiagnosticToken(handledLines)) return handledLines;
+    } catch {
+      // Malformed server notifications should not make rendering fail.
     }
   }
+
+  formatGenericNotification(normalized, time, c, writeLine);
   return lines;
 }
 
