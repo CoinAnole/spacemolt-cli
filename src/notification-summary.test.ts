@@ -73,6 +73,40 @@ describe('notification presentation', () => {
     expect(presented.summarizedCount).toBe(1);
   });
 
+  test.each([
+    ['crafting_completed'],
+    ['crafting_failed'],
+    ['crafting_cancelled'],
+    ['crafting_refund'],
+    ['crafting_error'],
+  ])('leaves high-signal crafting event %s visible', (msgType) => {
+    const notification = {
+      type: 'crafting',
+      msg_type: msgType,
+      timestamp: '2026-06-29T00:01:00.000Z',
+      data: { message: msgType },
+    };
+
+    const presented = presentNotifications([notification]);
+
+    expect(presented.notifications).toEqual([notification]);
+    expect(presented.summarizedCount).toBe(0);
+  });
+
+  test('does not summarize non-crafting notifications that merely mention craft text', () => {
+    const notification = {
+      type: 'market',
+      msg_type: 'market_update',
+      timestamp: '2026-06-29T00:01:00.000Z',
+      data: { item_name: 'Handcrafted Trinket', crafting_time: 20, craftable: true },
+    };
+
+    const presented = presentNotifications([notification]);
+
+    expect(presented.notifications).toEqual([notification]);
+    expect(presented.summarizedCount).toBe(0);
+  });
+
   test('does not mutate raw notifications', () => {
     const raw = [progressA, progressB];
     const before = structuredClone(raw);
@@ -101,6 +135,18 @@ describe('notification presentation', () => {
     expect(response.notifications?.map((n) => n.msg_type)).toEqual(['crafting_progress', 'crafting_tick']);
   });
 
+  test('leaves malformed top-level notification values unchanged without throwing', () => {
+    const response = {
+      notifications: [null],
+      structuredContent: { ok: true },
+    } as unknown as APIResponse;
+
+    const presented = presentResponseNotifications(response);
+
+    expect(presented.response).toBe(response);
+    expect(presented.topLevel).toBeUndefined();
+  });
+
   test('raw option returns the original response object', () => {
     const response: APIResponse = { notifications: [progressA, progressB] };
 
@@ -108,5 +154,14 @@ describe('notification presentation', () => {
 
     expect(presented.response).toBe(response);
     expect(presented.topLevel?.notifications.map((n) => n.msg_type)).toEqual(['crafting_progress', 'crafting_tick']);
+  });
+
+  test('raw option leaves malformed top-level notifications unchanged without throwing', () => {
+    const response = { notifications: [null] } as unknown as APIResponse;
+
+    const presented = presentResponseNotifications(response, { rawNotifications: true });
+
+    expect(presented.response).toBe(response);
+    expect(presented.topLevel).toBeUndefined();
   });
 });

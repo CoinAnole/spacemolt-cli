@@ -56,9 +56,24 @@ function isCraftingSummary(notification: Notification): boolean {
   return notification.msg_type === 'crafting_summary';
 }
 
+function metadataString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.toLowerCase() : undefined;
+}
+
+function hasCraftingSignal(value: unknown): boolean {
+  const text = metadataString(value);
+  if (!text) return false;
+  return text === 'crafting' || text.startsWith('crafting_') || text.startsWith('crafting.') || text.includes('.crafting.');
+}
+
 function isCraftingLike(notification: Notification): boolean {
-  const text = notificationText(notification);
-  return text.includes('craft') || text.includes('crafting.');
+  const data = isRecord(notification.data) ? notification.data : undefined;
+  return (
+    hasCraftingSignal(notification.type) ||
+    hasCraftingSignal(notification.msg_type) ||
+    hasCraftingSignal(data?.type) ||
+    hasCraftingSignal(data?.event_type)
+  );
 }
 
 function isHighSignalCrafting(notification: Notification): boolean {
@@ -197,14 +212,16 @@ export function presentResponseNotifications(
   response: APIResponse,
   options: NotificationPresentationOptions = {},
 ): PresentedResponse {
+  const topLevelNotifications = asNotificationArray(response.notifications);
+
   if (options.rawNotifications) {
     return {
       response,
-      topLevel: response.notifications
+      topLevel: topLevelNotifications
         ? {
-            notifications: [...response.notifications],
-            rawCount: response.notifications.length,
-            shownCount: response.notifications.length,
+            notifications: [...topLevelNotifications],
+            rawCount: topLevelNotifications.length,
+            shownCount: topLevelNotifications.length,
             summarizedCount: 0,
             summaries: [],
           }
@@ -213,7 +230,7 @@ export function presentResponseNotifications(
   }
 
   let next: APIResponse = response;
-  const topLevel = response.notifications ? presentNotifications(response.notifications) : undefined;
+  const topLevel = topLevelNotifications ? presentNotifications(topLevelNotifications) : undefined;
   if (topLevel) next = { ...next, notifications: topLevel.notifications };
 
   let structuredContent: PresentedNotifications | undefined;
