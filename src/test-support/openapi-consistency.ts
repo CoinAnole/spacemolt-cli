@@ -586,10 +586,7 @@ function routeFindingKey(route: string | undefined, field: string | undefined): 
   return `${route ?? ''}\u0000${field ?? ''}`;
 }
 
-function buildOverbroadSharedSchemaClusters(
-  members: SharedSchemaMember[],
-  routeFindings: Finding[],
-): Finding[] {
+function buildOverbroadSharedSchemaClusters(members: SharedSchemaMember[], routeFindings: Finding[]): Finding[] {
   const routeFindingKeys = new Set(
     routeFindings
       .filter((finding) => finding.kind === 'overbroad-shared-schema' && finding.route && finding.field)

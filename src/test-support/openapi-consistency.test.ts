@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
   buildConsistencyReport,
+  type ConsistencyReport,
   extractDocExamples,
   extractMentionedFieldNames,
   extractResponseFieldCandidatesWithProvenance,
-  type ConsistencyReport,
   type FieldCandidate,
   type Finding,
   findOverbroadSharedSchemas,
