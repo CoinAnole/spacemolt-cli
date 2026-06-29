@@ -279,6 +279,38 @@ const marketNotificationsFixture = {
   timestamp: 1779562982,
 };
 
+const craftingNotificationsFixture = {
+  count: 4,
+  current_tick: 901337,
+  notifications: [
+    {
+      type: 'crafting',
+      msg_type: 'crafting_progress',
+      data: { tick: 901335, job_id: 'job-a', message: 'Crafting steel plate.' },
+      timestamp: '2026-06-29T00:00:00.000Z',
+    },
+    {
+      type: 'crafting',
+      msg_type: 'crafting_progress',
+      data: { tick: 901336, job_id: 'job-a', message: 'Crafting steel plate.' },
+      timestamp: '2026-06-29T00:00:20.000Z',
+    },
+    {
+      type: 'trade',
+      msg_type: 'trade_offer_received',
+      data: { from_name: 'Dockmaster', trade_id: 'trade-1' },
+      timestamp: '2026-06-29T00:00:30.000Z',
+    },
+    {
+      type: 'crafting',
+      msg_type: 'crafting_completed',
+      data: { event_type: 'crafting.completed', message: 'Completed steel plate.' },
+      timestamp: '2026-06-29T00:00:40.000Z',
+    },
+  ],
+  remaining: 0,
+};
+
 function nearbyPlayers(count: number): Array<Record<string, unknown>> {
   return Array.from({ length: count }, (_, index) => ({
     username: `Pilot ${index + 1}`,
@@ -1530,6 +1562,20 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('1 item update');
     expect(stdout).toContain('Iron Ore');
     expect(stdout).not.toContain('"sell_orders"');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats crafting progress notifications as a summary row', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', craftingNotificationsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('count 4');
+    expect(stdout).toContain('crafting_summary');
+    expect(stdout).toContain('2 crafting progress updates summarized');
+    expect(stdout).toContain('latest tick 901336');
+    expect(stdout).toContain('trade_offer_received');
+    expect(stdout).toContain('crafting_completed');
+    expect(stdout.match(/Crafting steel plate\./g)?.length ?? 0).toBe(1);
     expect(stdout).not.toContain('=== Response ===');
   });
 

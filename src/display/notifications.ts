@@ -1,4 +1,5 @@
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { presentNotifications, type Notification } from '../notification-summary.ts';
 
 function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
@@ -50,6 +51,16 @@ function formatMarketUpdate(data: Record<string, unknown>): string {
   return `${station}${tick}: ${items.length} item update${plural}; ${itemName} ${depth}${remaining}`;
 }
 
+function formatCraftingSummary(data: Record<string, unknown>): string {
+  const count = typeof data.count === 'number' ? data.count : 0;
+  const updateWord = count === 1 ? 'update' : 'updates';
+  const parts = [`${count} crafting progress ${updateWord} summarized`];
+  if (data.latest_tick !== undefined) parts.push(`latest tick ${data.latest_tick}`);
+  if (typeof data.jobs === 'number') parts.push(`${data.jobs} active ${data.jobs === 1 ? 'job' : 'jobs'}`);
+  if (data.latest_message) parts.push(`latest: ${data.latest_message}`);
+  return parts.join('; ');
+}
+
 function formatNotificationType(notification: Record<string, unknown>): string {
   const data = isRecord(notification.data) ? notification.data : undefined;
   const type = notification.msg_type ?? notification.type ?? data?.type;
@@ -63,6 +74,7 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
 
   const type = formatNotificationType(notification);
   if (type === 'market_update') return formatMarketUpdate(data);
+  if (type === 'crafting_summary') return formatCraftingSummary(data);
 
   const sender = data.sender ?? data.sender_name ?? data.from_name ?? data.username;
   const content = data.content ?? data.message ?? data.summary ?? data.text ?? data.description;
@@ -84,7 +96,9 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
 }
 
 function notificationRows(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
-  if (Array.isArray(result.notifications)) return result.notifications.filter(isRecord);
+  if (Array.isArray(result.notifications)) {
+    return presentNotifications(result.notifications as Notification[]).notifications.filter(isRecord);
+  }
   if (result.notifications === null) return [];
   return undefined;
 }
@@ -117,7 +131,7 @@ export const notificationFormatters = [
           ['Type', ['type_preview', 'msg_type', 'type']],
           ['Message', ['message_preview']],
         ],
-        { maxCellWidth: 80 },
+        { maxCellWidth: 120 },
       );
 
       if (typeof r.remaining === 'number' && r.remaining > 0) {

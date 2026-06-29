@@ -45,6 +45,10 @@ function marketUpdateSummary(data: NotificationData): string {
   return `${station} market update${tick}: ${count} item update${plural}`;
 }
 
+function plural(value: number, singular: string, pluralText = `${singular}s`): string {
+  return value === 1 ? singular : pluralText;
+}
+
 function createNotificationHandlers(c: NotificationColors): Record<string, NotificationHandler> {
   return {
     chat_message: (d, t, writeLine) => {
@@ -111,6 +115,15 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
         writeLine(`  ${marketItemLabel(item)}: ${depth}`);
       }
       if (items.length > 5) writeLine(`  +${items.length - 5} more item update${items.length === 6 ? '' : 's'}`);
+    },
+
+    crafting_summary: (d, t, writeLine) => {
+      const count = typeof d.count === 'number' ? d.count : 0;
+      const parts = [`${count} crafting progress ${plural(count, 'update')} summarized`];
+      if (d.latest_tick !== undefined) parts.push(`latest tick ${d.latest_tick}`);
+      if (typeof d.jobs === 'number') parts.push(`${d.jobs} active ${plural(d.jobs, 'job')}`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${parts.join('; ')}`);
+      if (d.latest_message) writeLine(`  Latest: ${d.latest_message}`);
     },
 
     trade_offer_received: (d, t, writeLine) => {

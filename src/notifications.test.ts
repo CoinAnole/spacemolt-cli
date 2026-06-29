@@ -233,6 +233,17 @@ describe('notification formatting', () => {
       snippets: ['[MARKET]', 'Haven Exchange', '1 item update', 'Iron Ore', 'sell 40 @ 12', 'buy 25 @ 9'],
     },
     {
+      msgType: 'crafting_summary',
+      data: { count: 48, latest_tick: 901337, jobs: 2, latest_message: 'Crafting fuel cells.' },
+      snippets: [
+        '[CRAFTING]',
+        '48 crafting progress updates summarized',
+        'latest tick 901337',
+        '2 active jobs',
+        'Latest: Crafting fuel cells.',
+      ],
+    },
+    {
       msgType: 'pilotless_ship',
       data: { player_username: 'Marlowe', ship_class: 'hauler', ticks_remaining: 3 },
       snippets: ['[PILOTLESS]', "Marlowe's hauler", 'Vulnerable for 3 ticks'],
