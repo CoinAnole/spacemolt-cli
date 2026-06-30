@@ -3603,7 +3603,13 @@ describe('structuredContent formatters', () => {
 
         Name          | ID              | Level | Category   | Active | Maint | Idle Reason                | Owner
         --------------+-----------------+-------+------------+--------+-------+----------------------------+------
-        Alloy Smelter | faction-smelter | 1     | production | true   | true  | insufficient_labor_credits |"
+        Alloy Smelter | faction-smelter | 1     | production | true   | true  | insufficient_labor_credits |
+
+      Faction rent bill: 1,200cr/cycle
+      Faction arrears: 2,400cr
+      Grace remaining: 1 cycle
+      Estimated rent/day: 7,200cr
+      Faction facilities pay rent from the treasury each cycle."
       ,
         "facility_types": 
       "

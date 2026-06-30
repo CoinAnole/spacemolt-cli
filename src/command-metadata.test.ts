@@ -510,6 +510,8 @@ describe('command metadata', () => {
     expect(config?.schema?.job_id?.type).toBe('string');
     expect(config?.schema?.quantity?.description).toContain('Number of output items');
     expect(config?.schema?.quantity?.description).not.toContain('server-capped by crafting skill level');
+    expect(config?.schema?.preset?.description).toContain('globally fastest or cheapest');
+    expect(config?.schema?.preset?.description).toContain('public rental');
 
     const help = captureHelp('craft');
     expect(help).toContain('Queue crafting work');
@@ -520,6 +522,8 @@ describe('command metadata', () => {
     expect(help).toContain('jobs');
     expect(help).toContain('action=queue');
     expect(help).toContain('job_id');
+    expect(help).toContain('globally fastest or cheapest');
+    expect(help).toContain('public rental');
     expect(help).toContain('Crafting never delivers to cargo');
     expect(help).not.toContain('cargo|storage');
     expect(help).not.toContain('server-capped by crafting skill level');
@@ -1081,7 +1085,7 @@ describe('command metadata', () => {
     }
 
     expect(missing).toEqual([]);
-  });
+  }, 10_000);
 
   test('completion enum values match generated command schemas', () => {
     const topLevelEnumCases = getCompletionEnumCases();

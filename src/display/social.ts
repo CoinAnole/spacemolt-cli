@@ -225,8 +225,27 @@ function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[
 
 function rentSummaryValue(result: Record<string, unknown>, key: string): unknown {
   if (result[key] !== undefined) return result[key];
+  const factionRent = isRecord(result.faction_rent) ? result.faction_rent : undefined;
+  if (factionRent?.[key] !== undefined) return factionRent[key];
   const rent = isRecord(result.rent) ? result.rent : undefined;
   return rent?.[key];
+}
+
+function emitFactionRentSummary(result: Record<string, unknown>): void {
+  const totalRent = formatCredits(rentSummaryValue(result, 'total_rent_per_cycle'));
+  const arrears = formatCredits(rentSummaryValue(result, 'arrears_owed'));
+  const grace = formatCycles(rentSummaryValue(result, 'grace_cycles'));
+  const estRentPerDay = formatCredits(rentSummaryValue(result, 'est_rent_per_day'));
+  const factionRent = isRecord(result.faction_rent) ? result.faction_rent : undefined;
+  const note = factionRent?.note ?? result.note;
+  const hint = factionRent?.hint ?? result.hint;
+
+  if (totalRent !== undefined) emitLine(`\nFaction rent bill: ${totalRent}/cycle`);
+  if (arrears !== undefined) emitLine(`Faction arrears: ${arrears}`);
+  if (grace !== undefined) emitLine(`Grace remaining: ${grace}`);
+  if (estRentPerDay !== undefined) emitLine(`Estimated rent/day: ${estRentPerDay}`);
+  if (note) emitLine(String(note));
+  if (hint) emitLine(String(hint));
 }
 
 function formatChatSender(message: Record<string, unknown>): string | undefined {
@@ -417,8 +436,10 @@ export const socialFormatters = [
       }
       if (r.content !== undefined) {
         emitLine(`\n${c.bright}=== Guide: ${r.guide ?? 'Guide'} ===${c.reset}`);
+        emitOptionalLine('Server version', r.server_version);
         emitBody('Content', r.content);
       }
+      if (r.content === undefined) emitOptionalLine('Server version', r.server_version);
       if (r.hint) emitLine(`\n${c.dim}${r.hint}${c.reset}`);
       return true;
     },
@@ -563,16 +584,7 @@ export const socialFormatters = [
       }
       printCompactTable('Faction Facilities', rows, columns);
 
-      const totalRent = formatCredits(rentSummaryValue(r, 'total_rent_per_cycle'));
-      const arrears = formatCredits(rentSummaryValue(r, 'arrears_owed'));
-      const grace = formatCycles(rentSummaryValue(r, 'grace_cycles'));
-      const estRentPerDay = formatCredits(rentSummaryValue(r, 'est_rent_per_day'));
-      if (totalRent !== undefined) emitLine(`\nFaction rent bill: ${totalRent}/cycle`);
-      if (arrears !== undefined) emitLine(`Faction arrears: ${arrears}`);
-      if (grace !== undefined) emitLine(`Grace remaining: ${grace}`);
-      if (estRentPerDay !== undefined) emitLine(`Estimated rent/day: ${estRentPerDay}`);
-      if (r.note) emitLine(String(r.note));
-      if (r.hint) emitLine(String(r.hint));
+      emitFactionRentSummary(r);
       return true;
     },
     { commands: ['faction_facility_owned'], shapeFallback: true },
@@ -612,6 +624,7 @@ export const socialFormatters = [
         const displayRows = facilityRows(rows);
         printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true }));
       }
+      emitFactionRentSummary(r);
       return true;
     },
     { commands: ['facility_list'], shapeFallback: true },

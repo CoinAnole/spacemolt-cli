@@ -479,13 +479,9 @@ export const genericFormatters = [
           ['Status', ['status']],
           ['Pos', ['position']],
         ];
-        if (rows.some((row) => row.station_display !== undefined)) columns.splice(6, 0, ['Station', ['station_display']]);
-        printCompactTable(
-          craftTitleWithStation(command, r),
-          rows,
-          columns,
-          { maxCellWidth: 64 },
-        );
+        if (rows.some((row) => row.station_display !== undefined))
+          columns.splice(6, 0, ['Station', ['station_display']]);
+        printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 64 });
         return true;
       }
 

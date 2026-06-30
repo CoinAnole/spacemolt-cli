@@ -343,7 +343,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|workshop] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; split source/deliver_to to route inputs and outputs separately)',
     description:
-      'Queue crafting work or cancel queued jobs. Inputs escrow from source (defaults to deliver_to) and outputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
+      'Queue crafting work or cancel queued jobs. Fast/cheap presets choose the globally fastest or cheapest usable facility, including public rentals that may charge fees. Inputs escrow from source (defaults to deliver_to) and outputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
     example: 'spacemolt craft basic_iron_smelting 50 source=storage deliver_to=faction:Crafting',
     discoverWith: ['catalog', 'storage', 'get_status'],
     seeAlso: ['recycle', 'catalog', 'storage', 'get_guide'],
@@ -395,7 +395,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         enum: ['fast', 'cheap', 'workshop'],
         description:
-          "Auto-routing preset: 'fast' for quickest, 'cheap' for lowest fee, or 'workshop' to force hand-crafting.",
+          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest usable facility; 'workshop' forces hand-crafting. A public rental facility can be selected and may charge a fee.",
       },
       quantity: {
         type: 'integer',

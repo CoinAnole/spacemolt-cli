@@ -107,6 +107,14 @@ export const facilityListFixture = {
       idle_reason: 'insufficient_labor_credits',
     },
   ],
+  faction_rent: {
+    facilities: 1,
+    total_rent_per_cycle: 1200,
+    arrears_owed: 2400,
+    grace_cycles: 1,
+    est_rent_per_day: 7200,
+    note: 'Faction facilities pay rent from the treasury each cycle.',
+  },
 };
 
 export const facilityUpgradesFixture = {
@@ -365,10 +373,12 @@ export const forumThreadFixture = {
 export const guideFixture = {
   guide: 'miner',
   content: 'Mine at asteroid belts, then sell ore at a station market.',
+  server_version: 'v0.461.0',
   hint: 'Use get_poi before mining.',
 };
 
 export const guideListFixture = {
+  server_version: 'v0.461.0',
   guides: [
     {
       id: 'miner',

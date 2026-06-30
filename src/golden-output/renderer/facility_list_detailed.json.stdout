@@ -94,5 +94,13 @@
       "maintenance_satisfied": true,
       "idle_reason": "insufficient_labor_credits"
     }
-  ]
+  ],
+  "faction_rent": {
+    "facilities": 1,
+    "total_rent_per_cycle": 1200,
+    "arrears_owed": 2400,
+    "grace_cycles": 1,
+    "est_rent_per_day": 7200,
+    "note": "Faction facilities pay rent from the treasury each cycle."
+  }
 }

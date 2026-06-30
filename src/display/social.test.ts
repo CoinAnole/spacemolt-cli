@@ -56,6 +56,28 @@ test('renders facility list per-cycle item and labor upkeep', () => {
   expect(rendered.stdout.join('\n')).toContain('320cr');
 });
 
+test('renders facility list faction rent summary', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  facilityList.faction_rent = {
+    facilities: 2,
+    total_rent_per_cycle: 1200,
+    arrears_owed: 2400,
+    grace_cycles: 1,
+    est_rent_per_day: 7200,
+    note: 'Faction facilities pay rent from the treasury each cycle.',
+  };
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).toContain('Faction arrears: 2,400cr');
+  expect(stdout).toContain('Grace remaining: 1 cycle');
+  expect(stdout).toContain('Estimated rent/day: 7,200cr');
+  expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+});
+
 test('renders facility custom names alongside type names across facility views', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   const playerFacilities = facilityList.player_facilities as Array<Record<string, unknown>>;
@@ -189,4 +211,21 @@ test('renders forum thread reply pagination metadata', () => {
   expect(stdout).toContain('Replies: 41');
   expect(stdout).toContain('reply page 2 | per page 20 | total replies 41');
   expect(stdout).toContain('More replies available.');
+});
+
+test('renders get_guide server version', () => {
+  const rendered = renderStructuredResult(
+    'get_guide',
+    {
+      guide: 'miner',
+      content: 'Mine at asteroid belts.',
+      server_version: 'v0.461.0',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Server version: v0.461.0');
 });
