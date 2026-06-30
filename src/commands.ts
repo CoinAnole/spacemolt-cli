@@ -28,6 +28,7 @@ export interface CommandConfig {
   discoverWith?: string[];
   seeAlso?: string[];
   category?: string;
+  stateSections?: string[];
   aliases?: Record<string, string>;
   route: V2Route;
   schema?: Record<string, CommandFieldSchema>;
@@ -246,6 +247,7 @@ function mergeCommandConfig(
     required: displayRequiredFields(generated.required, config.positionals, aliases),
     description: config.description ?? CURATED_COMMAND_DESCRIPTIONS[command] ?? generated.summary,
     usage: buildUsageFromSchema(config, generated),
+    ...(generated.stateSections ? { stateSections: generated.stateSections } : {}),
     aliases,
     route: {
       ...generated.route,

@@ -43,29 +43,32 @@ export function getRoutePreview(command: string, payload: Record<string, unknown
 
 export function getCommandConfigRoutePreview(
   command: string,
-  commandConfig: Pick<CommandConfig, 'arrayFields' | 'route'>,
+  commandConfig: Pick<CommandConfig, 'arrayFields' | 'route' | 'stateSections'>,
   payload: Record<string, unknown>,
 ): Record<string, unknown> {
   const normalizedPayload = applyCommandPayloadTransforms(commandConfig, { ...payload });
-  return buildRoutePreview(command, commandConfig.route, normalizedPayload);
+  return buildRoutePreview(command, commandConfig.route, normalizedPayload, commandConfig.stateSections);
 }
 
 function buildRoutePreview(
   command: string,
   mapping: V2Route,
   payload: Record<string, unknown>,
+  stateSections?: string[],
 ): Record<string, unknown> {
   const requestPayload = mapping.defaults ? { ...mapping.defaults, ...payload } : payload;
-
-  return {
+  const preview: Record<string, unknown> = {
     dry_run: true,
     command,
     method: mapping.method || 'POST',
     url: `${trimTrailingSlash(API_BASE)}/${routeToPath(mapping)}`,
     payload: requestPayload,
     server_request_sent: false,
-    notes: RISK_NOTES[command] || ['No mutation was sent. This is a client-side route and payload preview.'],
   };
+  if (stateSections?.length) preview.state_sections = stateSections;
+  preview.notes = RISK_NOTES[command] || ['No mutation was sent. This is a client-side route and payload preview.'];
+
+  return preview;
 }
 
 export function createDryRunResponse(command: string, payload: Record<string, unknown>): APIResponse {
@@ -75,7 +78,7 @@ export function createDryRunResponse(command: string, payload: Record<string, un
 
 export function createCommandConfigDryRunResponse(
   command: string,
-  commandConfig: Pick<CommandConfig, 'arrayFields' | 'route'>,
+  commandConfig: Pick<CommandConfig, 'arrayFields' | 'route' | 'stateSections'>,
   payload: Record<string, unknown>,
 ): APIResponse {
   const preview = getCommandConfigRoutePreview(command, commandConfig, payload);
@@ -89,6 +92,9 @@ function createDryRunResponseFromPreview(command: string, preview: Record<string
       `Dry run: ${command}`,
       `${preview.method} ${preview.url}`,
       `Payload: ${JSON.stringify(preview.payload)}`,
+      ...(Array.isArray(preview.state_sections)
+        ? [`State sections: ${preview.state_sections.filter((section) => typeof section === 'string').join(', ')}`]
+        : []),
       ...(Array.isArray(preview.notes) ? preview.notes.map((note) => `- ${note}`) : []),
       'No request was sent.',
     ].join('\n'),

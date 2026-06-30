@@ -52,6 +52,7 @@ export function buildGeneratedCommandConfig(generated: GeneratedApiRoute): Comma
     description: generated.summary,
     usage: generatedUsage(generated, args),
     category: generated.cli?.category || 'Generated API',
+    ...(generated.stateSections ? { stateSections: generated.stateSections } : {}),
     route: generated.route,
     schema: generated.schema,
   };

@@ -5,6 +5,7 @@ import type { GeneratedApiRoute } from './openapi-metadata';
 const route = (tool: string, action: string, method: 'GET' | 'POST' = 'POST'): GeneratedApiRoute => ({
   operationId: `${tool}_${action}`,
   summary: `${action} summary`,
+  stateSections: ['ship', 'cargo'],
   route: { tool, action, method },
   required: ['ship_id'],
   schema: {
@@ -74,6 +75,7 @@ describe('dynamic OpenAPI commands', () => {
       usage: '<ship_id> [dry_run=true/false]',
       description: 'repair summary',
       category: 'Generated API',
+      stateSections: ['ship', 'cargo'],
       route: { tool: 'spacemolt_shipyard', action: 'repair', method: 'POST' },
       schema: {
         ship_id: { type: 'string', positionalIndex: 0 },

@@ -981,6 +981,18 @@ describe('command metadata', () => {
     expect(failures).toEqual([]);
   });
 
+  test('dry-run previews include OpenAPI state sections when metadata is available', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.hunt;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('hunt command is missing from the bundled registry');
+    const stateSections = (config as { stateSections?: string[] }).stateSections;
+    expect(stateSections).toEqual(['player', 'ship', 'cargo', 'location', 'queue', 'skills']);
+
+    const dryRun = createCommandConfigDryRunResponse('hunt', config, { creature_id: 'creature_pilot_whale_1' });
+    expect(dryRun.structuredContent?.state_sections).toEqual(stateSections);
+    expect(dryRun.result).toContain('State sections: player, ship, cargo, location, queue, skills');
+  });
+
   test('command override positionals and aliases map to generated schema fields', () => {
     const failures: string[] = [];
 

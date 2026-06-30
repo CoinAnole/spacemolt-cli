@@ -45,13 +45,14 @@ describe('generate-api-metadata', () => {
     try {
       const openApiPath = path.join(tempDir, 'openapi.json');
       const outputPath = path.join(tempDir, 'generated', 'api-commands.ts');
-      const spec: OpenApiSpec = {
+      const spec = {
         info: { 'x-gameserver-version': 'v0.324.1' },
         paths: {
           '/api/v2/spacemolt_probe/ping': {
             post: {
               operationId: 'probePing',
               summary: 'Ping probe',
+              'x-state-sections': ['ship', 'cargo'],
               requestBody: {
                 content: {
                   'application/json': {
@@ -68,7 +69,7 @@ describe('generate-api-metadata', () => {
             },
           },
         },
-      };
+      } as OpenApiSpec;
 
       fs.writeFileSync(openApiPath, JSON.stringify(spec));
 
@@ -90,6 +91,7 @@ export interface GeneratedApiField {
 export interface GeneratedApiRoute {
   operationId?: string;
   summary?: string;
+  stateSections?: string[];
   route: {
     tool: string;
     action: string;
@@ -105,6 +107,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_probe/ping': {
     operationId: 'probePing',
     summary: 'Ping probe',
+    stateSections: ['ship', 'cargo'],
     route: {
       tool: 'spacemolt_probe',
       action: 'ping',

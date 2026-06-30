@@ -11,6 +11,7 @@ export interface GeneratedApiField {
 export interface GeneratedApiRoute {
   operationId?: string;
   summary?: string;
+  stateSections?: string[];
   route: {
     tool: string;
     action: string;
@@ -268,6 +269,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_battle/reload': {
     operationId: 'spacemolt_battle_reload',
     summary: "Reload a weapon's magazine from ammo in cargo",
+    stateSections: ['ship', 'modules', 'cargo'],
     route: {
       tool: 'spacemolt_battle',
       action: 'reload',
@@ -459,6 +461,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_citizenship/apply': {
     operationId: 'spacemolt_citizenship_apply',
     summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_citizenship',
       action: 'apply',
@@ -516,6 +519,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_citizenship/renounce': {
     operationId: 'spacemolt_citizenship_renounce',
     summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_citizenship',
       action: 'renounce',
@@ -533,6 +537,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_citizenship/withdraw': {
     operationId: 'spacemolt_citizenship_withdraw',
     summary: 'View and manage your empire citizenships (list, apply, renounce, withdraw)',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_citizenship',
       action: 'withdraw',
@@ -622,6 +627,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_drone/load': {
     operationId: 'spacemolt_drone_load',
     summary: 'Load a drone from cargo into your drone bay',
+    stateSections: ['cargo'],
     route: {
       tool: 'spacemolt_drone',
       action: 'load',
@@ -681,6 +687,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_drone/unload': {
     operationId: 'spacemolt_drone_unload',
     summary: 'Return a drone from your bay back to cargo',
+    stateSections: ['cargo'],
     route: {
       tool: 'spacemolt_drone',
       action: 'unload',
@@ -720,6 +727,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/allow_faction': {
     operationId: 'spacemolt_facility_allow_faction',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'allow_faction',
@@ -772,6 +780,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/allow_player': {
     operationId: 'spacemolt_facility_allow_player',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'allow_player',
@@ -824,6 +833,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/ban': {
     operationId: 'spacemolt_facility_ban',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'ban',
@@ -1010,6 +1020,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/build': {
     operationId: 'spacemolt_facility_build',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'build',
@@ -1134,6 +1145,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/buy_listing': {
     operationId: 'spacemolt_facility_buy_listing',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'buy_listing',
@@ -1258,6 +1270,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/buy_ship_license': {
     operationId: 'spacemolt_facility_buy_ship_license',
     summary: "Buy an empire shipbuilding license so your faction can build that empire's hulls at its own stations",
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_facility',
       action: 'buy_ship_license',
@@ -1275,6 +1288,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/cancel_listing': {
     operationId: 'spacemolt_facility_cancel_listing',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'cancel_listing',
@@ -1399,6 +1413,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/deploy_outpost': {
     operationId: 'spacemolt_facility_deploy_outpost',
     summary: 'Deploy a lightweight, members-only faction outpost at your current point of interest in lawless space',
+    stateSections: ['player', 'cargo', 'location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'deploy_outpost',
@@ -1415,6 +1430,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/dismantle': {
     operationId: 'spacemolt_facility_dismantle',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'dismantle',
@@ -1539,6 +1555,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/faction_build': {
     operationId: 'spacemolt_facility_faction_build',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'faction_build',
@@ -1663,6 +1680,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/faction_dismantle': {
     operationId: 'spacemolt_facility_faction_dismantle',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'faction_dismantle',
@@ -2035,6 +2053,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/faction_upgrade': {
     operationId: 'spacemolt_facility_faction_upgrade',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'faction_upgrade',
@@ -2159,6 +2178,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/found_station': {
     operationId: 'spacemolt_facility_found_station',
     summary: 'Found a faction-owned station at your current point of interest in lawless space',
+    stateSections: ['player', 'cargo', 'location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'found_station',
@@ -2203,6 +2223,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/job_add': {
     operationId: 'spacemolt_facility_job_add',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'job_add',
@@ -2328,6 +2349,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/job_cancel': {
     operationId: 'spacemolt_facility_job_cancel',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'job_cancel',
@@ -2576,6 +2598,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/job_reorder': {
     operationId: 'spacemolt_facility_job_reorder',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'job_reorder',
@@ -2824,6 +2847,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/list_for_sale': {
     operationId: 'spacemolt_facility_list_for_sale',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'list_for_sale',
@@ -3072,6 +3096,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/personal_build': {
     operationId: 'spacemolt_facility_personal_build',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'personal_build',
@@ -3196,6 +3221,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/personal_decorate': {
     operationId: 'spacemolt_facility_personal_decorate',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'personal_decorate',
@@ -3444,6 +3470,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/remove_faction': {
     operationId: 'spacemolt_facility_remove_faction',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'remove_faction',
@@ -3496,6 +3523,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/remove_player': {
     operationId: 'spacemolt_facility_remove_player',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'remove_player',
@@ -3548,6 +3576,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_access': {
     operationId: 'spacemolt_facility_set_access',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_access',
@@ -3672,6 +3701,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_build_policy': {
     operationId: 'spacemolt_facility_set_build_policy',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_build_policy',
@@ -3724,6 +3754,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_description': {
     operationId: 'spacemolt_facility_set_description',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_description',
@@ -3776,6 +3807,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_market_fee': {
     operationId: 'spacemolt_facility_set_market_fee',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_market_fee',
@@ -3828,6 +3860,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_name': {
     operationId: 'spacemolt_facility_set_name',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_name',
@@ -3952,6 +3985,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_output_price': {
     operationId: 'spacemolt_facility_set_output_price',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_output_price',
@@ -4076,6 +4110,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_public': {
     operationId: 'spacemolt_facility_set_public',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_public',
@@ -4128,6 +4163,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_refuel_price': {
     operationId: 'spacemolt_facility_set_refuel_price',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_refuel_price',
@@ -4180,6 +4216,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_repair_price': {
     operationId: 'spacemolt_facility_set_repair_price',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_repair_price',
@@ -4232,6 +4269,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/set_service_access': {
     operationId: 'spacemolt_facility_set_service_access',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'set_service_access',
@@ -4388,6 +4426,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/transfer': {
     operationId: 'spacemolt_facility_transfer',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'transfer',
@@ -4637,6 +4676,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/unban': {
     operationId: 'spacemolt_facility_unban',
     summary: "Administer one of your faction's stations or outposts: rename, access control, and build policy",
+    stateSections: ['location'],
     route: {
       tool: 'spacemolt_facility',
       action: 'unban',
@@ -4689,6 +4729,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_facility/upgrade': {
     operationId: 'spacemolt_facility_upgrade',
     summary: 'Manage facilities at stations (production, faction, personal, sales, and more)',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_facility',
       action: 'upgrade',
@@ -5098,6 +5139,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction_admin/promote': {
     operationId: 'spacemolt_faction_admin_promote',
     summary: 'Promote or demote a faction member',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction_admin',
       action: 'promote',
@@ -5264,6 +5306,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/accept_invite': {
     operationId: 'spacemolt_faction_accept_invite',
     summary: 'Accept a faction invitation (alias for join_faction)',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'accept_invite',
@@ -5315,6 +5358,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/create': {
     operationId: 'spacemolt_faction_create',
     summary: 'Create a new faction',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'create',
@@ -5478,6 +5522,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/invite': {
     operationId: 'spacemolt_faction_invite',
     summary: 'Invite a player to your faction',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'invite',
@@ -5495,6 +5540,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/join': {
     operationId: 'spacemolt_faction_join',
     summary: 'Join a faction via invitation',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'join',
@@ -5512,6 +5558,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/kick': {
     operationId: 'spacemolt_faction_kick',
     summary: 'Kick a player from your faction',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'kick',
@@ -5529,6 +5576,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/leave': {
     operationId: 'spacemolt_faction_leave',
     summary: 'Leave your faction',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'leave',
@@ -5712,6 +5760,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_faction/withdraw_invite': {
     operationId: 'spacemolt_faction_withdraw_invite',
     summary: 'Withdraw a pending invite you sent',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_faction',
       action: 'withdraw_invite',
@@ -6089,6 +6138,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_market/cancel_order': {
     operationId: 'spacemolt_market_cancel_order',
     summary: 'Cancel an active order and return escrow',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_market',
       action: 'cancel_order',
@@ -6111,6 +6161,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_market/create_buy_order': {
     operationId: 'spacemolt_market_create_buy_order',
     summary: 'Place a buy offer on the station exchange',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_market',
       action: 'create_buy_order',
@@ -6147,6 +6198,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_market/create_sell_order': {
     operationId: 'spacemolt_market_create_sell_order',
     summary: 'List items for sale on the station exchange',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_market',
       action: 'create_sell_order',
@@ -6224,6 +6276,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_market/modify_order': {
     operationId: 'spacemolt_market_modify_order',
     summary: 'Change the price on an existing order',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_market',
       action: 'modify_order',
@@ -6373,6 +6426,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/insure': {
     operationId: 'spacemolt_salvage_insure',
     summary: 'Purchase ship insurance',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'insure',
@@ -6389,6 +6443,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/loot': {
     operationId: 'spacemolt_salvage_loot',
     summary: 'Loot items and modules from a wreck',
+    stateSections: ['ship', 'cargo'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'loot',
@@ -6439,6 +6494,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/release': {
     operationId: 'spacemolt_salvage_release',
     summary: 'Release a towed wreck at your current location',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'release',
@@ -6449,6 +6505,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/scrap': {
     operationId: 'spacemolt_salvage_scrap',
     summary: 'Scrap a towed wreck for salvage materials',
+    stateSections: ['player', 'skills'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'scrap',
@@ -6459,6 +6516,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/sell': {
     operationId: 'spacemolt_salvage_sell',
     summary: 'Sell a towed wreck to the salvage yard for credits',
+    stateSections: ['player', 'skills'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'sell',
@@ -6469,6 +6527,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/set_home': {
     operationId: 'spacemolt_salvage_set_home',
     summary: 'Set your home base for respawning',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'set_home',
@@ -6486,6 +6545,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_salvage/tow': {
     operationId: 'spacemolt_salvage_tow',
     summary: 'Attach a tow line to a wreck for hauling',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_salvage',
       action: 'tow',
@@ -6536,6 +6596,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/buy_listed_ship': {
     operationId: 'spacemolt_ship_buy_listed_ship',
     summary: 'Purchase a ship from the exchange',
+    stateSections: ['player', 'ship', 'modules', 'cargo'],
     route: {
       tool: 'spacemolt_ship',
       action: 'buy_listed_ship',
@@ -6553,6 +6614,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/cancel_commission': {
     operationId: 'spacemolt_ship_cancel_commission',
     summary: 'Cancel a pending or in-progress ship commission',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_ship',
       action: 'cancel_commission',
@@ -6604,6 +6666,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/commission_ship': {
     operationId: 'spacemolt_ship_commission_ship',
     summary: 'Commission a ship to be built at this shipyard',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt_ship',
       action: 'commission_ship',
@@ -6665,6 +6728,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/list_ship_for_sale': {
     operationId: 'spacemolt_ship_list_ship_for_sale',
     summary: 'List a stored ship for sale on the exchange',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_ship',
       action: 'list_ship_for_sale',
@@ -6696,6 +6760,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/refit_ship': {
     operationId: 'spacemolt_ship_refit_ship',
     summary: 'Refit your active ship to its latest class specifications',
+    stateSections: ['ship', 'modules', 'cargo'],
     route: {
       tool: 'spacemolt_ship',
       action: 'refit_ship',
@@ -6706,6 +6771,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/rename_ship': {
     operationId: 'spacemolt_ship_rename_ship',
     summary: 'Set or clear a custom name for your active ship',
+    stateSections: ['ship'],
     route: {
       tool: 'spacemolt_ship',
       action: 'rename_ship',
@@ -6724,6 +6790,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/scrap_ship': {
     operationId: 'spacemolt_ship_scrap_ship',
     summary: 'Permanently destroy a ship you no longer want (no credits returned)',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_ship',
       action: 'scrap_ship',
@@ -6742,6 +6809,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/sell_ship': {
     operationId: 'spacemolt_ship_sell_ship',
     summary: 'Sell a stored ship at the current station',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt_ship',
       action: 'sell_ship',
@@ -6759,6 +6827,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/supply_commission': {
     operationId: 'spacemolt_ship_supply_commission',
     summary: 'Donate materials directly to a credits-only commission that is stuck sourcing',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt_ship',
       action: 'supply_commission',
@@ -6785,6 +6854,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_ship/switch_ship': {
     operationId: 'spacemolt_ship_switch_ship',
     summary: 'Switch to a different ship stored at this station',
+    stateSections: ['player', 'ship', 'modules', 'cargo'],
     route: {
       tool: 'spacemolt_ship',
       action: 'switch_ship',
@@ -7380,6 +7450,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     operationId: 'spacemolt_storage_deposit',
     summary:
       'Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt_storage',
       action: 'deposit',
@@ -7460,6 +7531,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_storage/jettison': {
     operationId: 'spacemolt_storage_jettison',
     summary: 'Jettison items from cargo into space',
+    stateSections: ['ship', 'cargo'],
     route: {
       tool: 'spacemolt_storage',
       action: 'jettison',
@@ -7486,6 +7558,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_storage/loot': {
     operationId: 'spacemolt_storage_loot',
     summary: 'Loot items and modules from a wreck',
+    stateSections: ['ship', 'cargo'],
     route: {
       tool: 'spacemolt_storage',
       action: 'loot',
@@ -7575,6 +7648,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
     operationId: 'spacemolt_storage_withdraw',
     summary:
       'Unified storage: view, deposit, withdraw items for self/faction; credit transfers for faction treasury; gift items/credits/ships to players',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt_storage',
       action: 'withdraw',
@@ -7665,6 +7739,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_transfer/trade_accept': {
     operationId: 'spacemolt_transfer_trade_accept',
     summary: 'Accept a trade offer',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_transfer',
       action: 'trade_accept',
@@ -7716,6 +7791,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt_transfer/trade_offer': {
     operationId: 'spacemolt_transfer_trade_offer',
     summary: 'Offer a trade to another player',
+    stateSections: ['player', 'cargo'],
     route: {
       tool: 'spacemolt_transfer',
       action: 'trade_offer',
@@ -7749,6 +7825,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/abandon_mission': {
     operationId: 'spacemolt_abandon_mission',
     summary: 'Abandon an active mission',
+    stateSections: ['player', 'ship', 'cargo', 'missions'],
     route: {
       tool: 'spacemolt',
       action: 'abandon_mission',
@@ -7766,6 +7843,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/accept_mission': {
     operationId: 'spacemolt_accept_mission',
     summary: 'Accept a mission from the mission board',
+    stateSections: ['player', 'ship', 'cargo', 'missions'],
     route: {
       tool: 'spacemolt',
       action: 'accept_mission',
@@ -7786,6 +7864,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/attack': {
     operationId: 'spacemolt_attack',
     summary: 'Attack another player, pirate, or empire NPC',
+    stateSections: ['player', 'ship', 'cargo', 'location', 'queue', 'skills'],
     route: {
       tool: 'spacemolt',
       action: 'attack',
@@ -7803,6 +7882,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/buy': {
     operationId: 'spacemolt_buy',
     summary: 'Buy items at market price from the station exchange',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'buy',
@@ -7836,6 +7916,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/cloak': {
     operationId: 'spacemolt_cloak',
     summary: 'Toggle cloaking device',
+    stateSections: ['ship'],
     route: {
       tool: 'spacemolt',
       action: 'cloak',
@@ -7856,6 +7937,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/complete_mission': {
     operationId: 'spacemolt_complete_mission',
     summary: 'Complete a mission and claim rewards',
+    stateSections: ['player', 'cargo', 'missions', 'skills'],
     route: {
       tool: 'spacemolt',
       action: 'complete_mission',
@@ -7883,6 +7965,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/craft': {
     operationId: 'spacemolt_craft',
     summary: 'Queue a crafting job (auto-routes to your own/faction facility, or hand-crafts at the Station Workshop)',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt',
       action: 'craft',
@@ -7970,6 +8053,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/distress_signal': {
     operationId: 'spacemolt_distress_signal',
     summary: 'Broadcast a distress signal to nearby players for emergency rescue',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt',
       action: 'distress_signal',
@@ -7986,6 +8070,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/dock': {
     operationId: 'spacemolt_dock',
     summary: 'Dock at a base',
+    stateSections: ['ship', 'location', 'queue'],
     route: {
       tool: 'spacemolt',
       action: 'dock',
@@ -8340,6 +8425,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/hunt': {
     operationId: 'spacemolt_hunt',
     summary: 'Hunt a wildlife creature to start a battle',
+    stateSections: ['player', 'ship', 'cargo', 'location', 'queue', 'skills'],
     route: {
       tool: 'spacemolt',
       action: 'hunt',
@@ -8357,6 +8443,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/install_mod': {
     operationId: 'spacemolt_install_mod',
     summary: 'Install a module on your ship',
+    stateSections: ['ship', 'modules', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'install_mod',
@@ -8375,6 +8462,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/jettison': {
     operationId: 'spacemolt_jettison',
     summary: 'Jettison items from cargo into space',
+    stateSections: ['ship', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'jettison',
@@ -8401,6 +8489,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/jump': {
     operationId: 'spacemolt_jump',
     summary: 'Jump to an adjacent star system, or plot a numeric bearing with a Pathfinder Drive',
+    stateSections: ['ship', 'location', 'queue'],
     route: {
       tool: 'spacemolt',
       action: 'jump',
@@ -8445,6 +8534,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/load_passenger': {
     operationId: 'spacemolt_load_passenger',
     summary: 'Load all waiting passengers bound for a destination into your passenger berths',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt',
       action: 'load_passenger',
@@ -8463,6 +8553,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/mine': {
     operationId: 'spacemolt_mine',
     summary: 'Mine resources from asteroids, ice fields, or gas clouds',
+    stateSections: ['ship', 'cargo', 'queue', 'skills'],
     route: {
       tool: 'spacemolt',
       action: 'mine',
@@ -8491,6 +8582,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/recycle': {
     operationId: 'spacemolt_recycle',
     summary: "Queue a recycling job: consume a recipe's outputs to recover a fraction of its inputs",
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt',
       action: 'recycle',
@@ -8548,6 +8640,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/refuel': {
     operationId: 'spacemolt_refuel',
     summary: 'Refuel your ship or transfer fuel to another ship',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'refuel',
@@ -8576,6 +8669,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/repair': {
     operationId: 'spacemolt_repair',
     summary: 'Repair hull — at station (credits), in space (repair kits), or on another ship (repair arm + kits)',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'repair',
@@ -8601,6 +8695,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/repair_module': {
     operationId: 'spacemolt_repair_module',
     summary: 'Repair wear on a module using a Repair Kit',
+    stateSections: ['modules', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'repair_module',
@@ -8618,6 +8713,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/scan': {
     operationId: 'spacemolt_scan',
     summary: 'Scan a target, or sweep the area for cloaked ships when no target is given',
+    stateSections: ['skills'],
     route: {
       tool: 'spacemolt',
       action: 'scan',
@@ -8653,6 +8749,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/self_destruct': {
     operationId: 'spacemolt_self_destruct',
     summary: 'Destroy your own ship',
+    stateSections: ['player', 'ship', 'cargo', 'location', 'queue', 'skills'],
     route: {
       tool: 'spacemolt',
       action: 'self_destruct',
@@ -8663,6 +8760,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/sell': {
     operationId: 'spacemolt_sell',
     summary: 'Sell items at market price on the station exchange',
+    stateSections: ['player', 'ship', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'sell',
@@ -8706,6 +8804,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/survey_system': {
     operationId: 'spacemolt_survey_system',
     summary: 'Scan for hidden deep core deposits in the current system',
+    stateSections: ['location', 'skills'],
     route: {
       tool: 'spacemolt',
       action: 'survey_system',
@@ -8716,6 +8815,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/travel': {
     operationId: 'spacemolt_travel',
     summary: 'Travel to a different Point of Interest (POI) within your current system',
+    stateSections: ['ship', 'location', 'queue'],
     route: {
       tool: 'spacemolt',
       action: 'travel',
@@ -8733,6 +8833,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/undock': {
     operationId: 'spacemolt_undock',
     summary: 'Undock from a base',
+    stateSections: ['ship', 'location', 'queue'],
     route: {
       tool: 'spacemolt',
       action: 'undock',
@@ -8743,6 +8844,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/uninstall_mod': {
     operationId: 'spacemolt_uninstall_mod',
     summary: 'Uninstall a module from your ship',
+    stateSections: ['ship', 'modules', 'cargo'],
     route: {
       tool: 'spacemolt',
       action: 'uninstall_mod',
@@ -8761,6 +8863,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/unload_passenger': {
     operationId: 'spacemolt_unload_passenger',
     summary: 'Put a passenger (or everyone) off the ship at the current station',
+    stateSections: ['player'],
     route: {
       tool: 'spacemolt',
       action: 'unload_passenger',
@@ -8789,6 +8892,7 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
   'POST /api/v2/spacemolt/use_item': {
     operationId: 'spacemolt_use_item',
     summary: 'Use a consumable item from cargo',
+    stateSections: ['player', 'ship', 'cargo', 'location'],
     route: {
       tool: 'spacemolt',
       action: 'use_item',

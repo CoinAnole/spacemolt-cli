@@ -9,6 +9,7 @@ export interface OpenApiSpec {
 interface Operation {
   operationId?: string;
   summary?: string;
+  'x-state-sections'?: unknown;
   requestBody?: {
     content?: {
       'application/json'?: {
@@ -41,6 +42,7 @@ export interface GeneratedApiField {
 export interface GeneratedApiRoute {
   operationId?: string;
   summary?: string;
+  stateSections?: string[];
   route: {
     tool: string;
     action: string;
@@ -112,6 +114,13 @@ function requestSchema(operation: Operation): Pick<GeneratedApiRoute, 'required'
   return generated;
 }
 
+function stateSections(operation: Operation): string[] | undefined {
+  const sections = operation['x-state-sections'];
+  if (!Array.isArray(sections)) return undefined;
+  const validSections = sections.filter((section): section is string => typeof section === 'string' && section !== '');
+  return validSections.length > 0 ? validSections : undefined;
+}
+
 export function generateApiRoutes(spec: OpenApiSpec): Record<string, GeneratedApiRoute> {
   const routes: Record<string, GeneratedApiRoute> = {};
 
@@ -120,9 +129,11 @@ export function generateApiRoutes(spec: OpenApiSpec): Record<string, GeneratedAp
       const operation = methods[method];
       if (!operation) continue;
       const route = routeParts(apiPath);
+      const operationStateSections = stateSections(operation);
       const generated: GeneratedApiRoute = {
         operationId: operation.operationId,
         summary: operation.summary,
+        ...(operationStateSections ? { stateSections: operationStateSections } : {}),
         route: {
           ...route,
           method: method.toUpperCase() as 'GET' | 'POST',
