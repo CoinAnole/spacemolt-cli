@@ -1423,8 +1423,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseArgs(['unload_passenger', 'passenger=Lyra Vale']).ok).toBe(false);
   });
 
-  test('citizenship commands parse positional payloads', () => {
-    expect(parseInternalOk(['citizenship_list', 'solarian']).payload.empire_id).toBe('solarian');
+  test('citizenship commands parse current payloads', () => {
+    expect(parseInternalOk(['citizenship_list']).payload).toEqual({});
     expect(parseInternalOk(['citizenship_apply', 'solarian']).payload.empire).toBe('solarian');
     expect(parseInternalOk(['citizenship_renounce', 'voidborn']).payload.empire).toBe('voidborn');
     expect(parseInternalOk(['citizenship_withdraw', 'crimson']).payload.empire).toBe('crimson');
@@ -1435,11 +1435,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       facility_id: 'facility_1',
       price: '5000',
     });
-    expect(parseInternalOk(['facility_browse_for_sale', 'ore_refinery', '10000', '2', '25']).payload).toEqual({
+    expect(parseInternalOk(['facility_browse_for_sale', 'ore_refinery', '10000']).payload).toEqual({
       facility_type: 'ore_refinery',
       max_price: '10000',
-      page: '2',
-      per_page: '25',
     });
     expect(parseInternalOk(['facility_buy_listing', 'listing_1']).payload.listing_id).toBe('listing_1');
     expect(parseInternalOk(['facility_cancel_listing', 'listing_1']).payload.listing_id).toBe('listing_1');

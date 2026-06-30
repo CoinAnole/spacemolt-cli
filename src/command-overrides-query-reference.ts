@@ -222,11 +222,6 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_queue',
   },
-  get_ships: {
-    description: 'Unavailable; use browse_ships for station listings or commission_ship to order a custom build.',
-    category: 'Query commands',
-    apiRoute: 'POST /api/v2/spacemolt/get_ships',
-  },
   get_action_log: {
     usage:
       '[category=.. event_type=.. faction_id=.. page=..]  (full history: mining, navigation, combat, reputation, etc)',
@@ -310,10 +305,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_fleet/disembark',
   },
   citizenship_list: {
-    usage: '[empire_id]',
     category: 'Citizenship',
     apiRoute: 'POST /api/v2/spacemolt_citizenship/list',
-    positionals: ['empire_id'],
   },
   citizenship_apply: {
     usage: '<empire>',

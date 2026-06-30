@@ -110,6 +110,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     ],
     aliases: {
       action: 'action',
+      station_id: 'station_id',
       item: 'item_id',
       recipient: 'target',
       ship_id: 'item_id',
@@ -124,6 +125,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
         type: 'string',
         description:
           'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
+      },
+      station_id: {
+        type: 'string',
+        description: 'Optional station ID for action=view; view storage at a remote station without docking.',
       },
       items: {
         type: 'array',
@@ -415,7 +420,6 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_upgrades: {
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/upgrades',
-    positionals: ['facility_type', 'facility_id'],
   },
   facility_build: {
     usage: '<facility_type>',
@@ -647,10 +651,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_id', 'price'],
   },
   facility_browse_for_sale: {
-    usage: '[facility_type] [max_price] [page] [per_page]  (browse listed facilities)',
+    usage: '[facility_type] [max_price]  (browse listed facilities)',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/browse_for_sale',
-    positionals: ['facility_type', 'max_price', 'page', 'per_page'],
+    positionals: ['facility_type', 'max_price'],
   },
   facility_buy_listing: {
     usage: '<listing_id>',

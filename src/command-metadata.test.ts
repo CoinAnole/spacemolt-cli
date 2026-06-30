@@ -744,8 +744,8 @@ describe('command metadata', () => {
     expect(facilityActions?.transfer?.config.schema?.direction?.enum).toEqual(['to_faction', 'to_player']);
   });
 
-  test('stale facility toggle and recycler configuration commands are not advertised', () => {
-    for (const command of ['facility_toggle', 'faction_facility_toggle', 'configure_recycler']) {
+  test('stale commands removed from the v2 API are not advertised', () => {
+    for (const command of ['facility_toggle', 'faction_facility_toggle', 'configure_recycler', 'get_ships']) {
       expect(COMMANDS[command]).toBeUndefined();
       expect(BUNDLED_COMMAND_REGISTRY.allCommands[command]).toBeUndefined();
     }
@@ -754,6 +754,7 @@ describe('command metadata', () => {
     expect(help).not.toContain('facility_toggle');
     expect(help).not.toContain('faction_facility_toggle');
     expect(help).not.toContain('configure_recycler');
+    expect(help).not.toContain('get_ships');
   });
 
   test('chat help advertises quoted messages and explicit content', () => {

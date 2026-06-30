@@ -280,7 +280,7 @@ describe('help output branches', () => {
     expect(output).toContain(
       'faction build <facility_type> [bucket=name-or-id] - Build a faction facility at the current base.',
     );
-    expect(output).toContain('faction facility_list <args...> - List faction facilities at the current base.');
+    expect(output).toContain('faction facility_list - List faction facilities at the current base.');
     expect(output).not.toContain('faction_build');
     expect(output).not.toContain('faction_facility_list');
   });
