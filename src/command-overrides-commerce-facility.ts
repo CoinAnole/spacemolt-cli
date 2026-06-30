@@ -157,7 +157,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       },
       credits: {
         type: 'integer',
-        description: 'Credits to gift to a player or donate to an empire treasury.',
+        description: 'Credits to gift to another player.',
       },
     },
     clientOnlyFields: ['search', 'items'],

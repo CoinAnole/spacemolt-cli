@@ -448,6 +448,16 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt storage --payload-json \'{"items":[{"item_id":"ore_iron","quantity":1}]}\'');
   });
 
+  test('showCommandHelp documents storage credit gifts to players', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('storage', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('credits - Credits to gift to another player.');
+    expect(output).not.toContain('donate to an empire treasury');
+  });
+
   test('showCommandGroup omits duplicate command-name descriptions', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {
