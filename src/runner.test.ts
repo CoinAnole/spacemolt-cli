@@ -736,6 +736,32 @@ describe('runInvocation option isolation', () => {
     expect(textResult.config).toMatchObject({ jsonOutput: process.env.SPACEMOLT_OUTPUT === 'json', format: 'table' });
   });
 
+  test('--structured unknown command emits machine-readable JSON on stderr', async () => {
+    const result = await captureInvocation(['--structured', 'trvel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toEqual({
+      error: {
+        code: 'unknown_command',
+        message: 'Unknown command: trvel',
+      },
+    });
+  });
+
+  test('--structured command parse errors emit machine-readable JSON on stderr', async () => {
+    const result = await captureInvocation(['--structured', 'travel']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toEqual({
+      error: {
+        code: 'missing_required_argument',
+        message: 'Missing required argument: target_poi',
+      },
+    });
+  });
+
   test('repeated direct invocations do not leak --plain or --compact', async () => {
     const plainResult = await captureInvocation(['--plain', '--compact', '--json', 'trvel']);
     expect(plainResult.config).toMatchObject({ plain: true, compact: true });
@@ -1082,6 +1108,18 @@ describe('runInvocation option isolation', () => {
     });
   });
 
+  test('--structured global parse errors emit machine-readable JSON on stderr', async () => {
+    const result = await captureInvocation(['--structured', '--format=invalid']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      error: {
+        code: 'invalid_global_option',
+      },
+    });
+  });
+
   test('plain parse errors use explicit plain state', async () => {
     const result = await captureInvocation(['--plain', '--format=invalid']);
 
@@ -1213,6 +1251,28 @@ describe('runInvocation option isolation', () => {
     expect(result.stderr).toContain('Verify the API is reachable: https://configured.test/api/v2');
     expect(result.stderr).toContain('[DEBUG] Full error:');
     expect(result.stderr).not.toContain('\x1b[');
+  });
+
+  test('--structured connection errors emit machine-readable JSON on stderr', async () => {
+    const result = await captureInvocation(['--structured', 'get_status'], process.env, {
+      createClient(config) {
+        return {
+          config,
+          async execute() {
+            throw new Error('fetch failed');
+          },
+        } as unknown as SpaceMoltClient;
+      },
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toEqual({
+      error: {
+        code: 'connection_error',
+        message: 'fetch failed',
+      },
+    });
   });
 
   test('plain command parse errors use explicit output state', async () => {

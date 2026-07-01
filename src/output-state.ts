@@ -28,11 +28,17 @@ export function outputStateFromOptions(options: GlobalOptions, env: CliEnv = pro
   };
 }
 
+export function wantsMachineReadableErrorOutput(
+  options: Pick<GlobalOptions, 'json' | 'format' | 'structured'>,
+): boolean {
+  return Boolean(options.json || options.format === 'json' || options.structured);
+}
+
 export function outputStateFromGlobalOptionError(
   error: GlobalOptionParseError,
   env: CliEnv = process.env,
 ): OutputRuntimeState {
-  const jsonOutput = Boolean(error.json || env.SPACEMOLT_OUTPUT === 'json');
+  const jsonOutput = Boolean(error.json || error.structured || env.SPACEMOLT_OUTPUT === 'json');
   return {
     jsonOutput,
     debug: Boolean(error.debug || env.DEBUG === 'true'),

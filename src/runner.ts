@@ -18,7 +18,7 @@ import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
 import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes, loadOpenApiCacheVersion } from './openapi-cache.ts';
-import { outputStateFromGlobalOptionError } from './output-state.ts';
+import { outputStateFromGlobalOptionError, wantsMachineReadableErrorOutput } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
 import { API_BASE } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
@@ -87,6 +87,7 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
   const envProfile = context?.env.SPACEMOLT_PROFILE;
   const outputState = {
     json: parsed.options.json || parsed.options.format === 'json',
+    structured: parsed.options.structured,
     plain: parsed.options.plain,
     quiet: parsed.options.quiet,
     debug: parsed.options.debug,
@@ -101,7 +102,7 @@ export function parseInvocation(argv: string[], context?: CliRuntimeContext): In
 
 function validateEnvProfile(
   value: string,
-  state: Pick<GlobalOptionParseError, 'json' | 'plain' | 'quiet' | 'debug'>,
+  state: Pick<GlobalOptionParseError, 'json' | 'structured' | 'plain' | 'quiet' | 'debug'>,
 ): string | GlobalOptionParseError {
   try {
     return validateProfileName(value);
@@ -336,7 +337,7 @@ async function runWatchLoop(
 
 function renderUnknownCommand(invocation: Invocation, context: CliRuntimeContext): number {
   const commandName = invocation.args[0] || 'help';
-  if (invocation.options.json) {
+  if (wantsMachineReadableErrorOutput(invocation.options)) {
     printJsonError('unknown_command', `Unknown command: ${commandName}`, context.writer);
   } else {
     displayUnknownCommand(commandName, context.writer, { plain: context.config?.plain ?? context.output?.plain });
@@ -348,7 +349,7 @@ function renderCommandError(error: CommandError, options: GlobalOptions, context
   if (error.code === 'validation_error' && error.errors) {
     displayCommandParseErrors(error.errors, options, context.writer);
   } else if (error.code !== 'exit') {
-    if (options.json) {
+    if (wantsMachineReadableErrorOutput(options)) {
       printJsonError(error.code, error.message, context.writer);
     } else if (error.customStderr) {
       context.writer.err(error.customStderr);
@@ -376,7 +377,7 @@ function outputFromContext(context: CliRuntimeContext): {
 
 function renderConnectionError(error: unknown, options: GlobalOptions, context: CliRuntimeContext): number {
   const errorMessage = error instanceof Error ? error.message : String(error);
-  if (options.json) {
+  if (wantsMachineReadableErrorOutput(options)) {
     printJsonError('connection_error', errorMessage, context.writer);
     return 1;
   }

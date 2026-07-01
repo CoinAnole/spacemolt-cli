@@ -46,6 +46,7 @@ import {
   type OpenApiCacheFile,
   refreshOpenApiCache,
 } from './openapi-cache.ts';
+import { wantsMachineReadableErrorOutput } from './output-state.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { API_BASE, DEFAULT_USER_AGENT, getBuildCommit, normalizeUserAgent, VERSION } from './runtime.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
@@ -275,7 +276,7 @@ function createExplainHandler(
     },
     render(result, options, _client, context) {
       if (!result.found) {
-        if (options.json) {
+        if (wantsMachineReadableErrorOutput(options)) {
           printJsonError('unknown_command', `Unknown command: ${result.command}`, context?.writer);
           return 1;
         }
@@ -348,7 +349,7 @@ function createUnknownGroupedActionHandler(
     },
     render(result, options, _client, context) {
       const command = `${result.group} ${result.action}`;
-      if (options.json) {
+      if (wantsMachineReadableErrorOutput(options)) {
         printJsonError('unknown_command', `Unknown command: ${command}`, context?.writer);
       } else {
         writeErrorLine(context, `Error: Unknown command "${command}"`);
@@ -880,7 +881,7 @@ function createLocalHelpHandler(
         ) {
           return 0;
         }
-        if (options.json) {
+        if (wantsMachineReadableErrorOutput(options)) {
           printJsonError('unknown_command', `Unknown command: ${result.target}`, context?.writer);
           return 1;
         }

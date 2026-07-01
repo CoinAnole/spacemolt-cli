@@ -11,6 +11,7 @@ export interface GlobalOptionParseError {
   plain?: boolean;
   quiet?: boolean;
   json?: boolean;
+  structured?: boolean;
   debug?: boolean;
 }
 
@@ -18,7 +19,7 @@ export type GlobalOptionParseResult =
   | { ok: true; options: GlobalOptions }
   | { ok: false; error: GlobalOptionParseError };
 
-type PartialOutputState = Partial<Pick<GlobalOptions, 'plain' | 'quiet' | 'json' | 'format' | 'debug'>>;
+type PartialOutputState = Partial<Pick<GlobalOptions, 'plain' | 'quiet' | 'json' | 'format' | 'structured' | 'debug'>>;
 
 function parseError(option: string, message: string, state: PartialOutputState = {}): GlobalOptionParseResult {
   return {
@@ -37,6 +38,7 @@ function outputState(options: PartialOutputState): PartialOutputState {
     ...(options.plain ? { plain: true } : {}),
     ...(options.quiet ? { quiet: true } : {}),
     ...(options.json || options.format === 'json' ? { json: true } : {}),
+    ...(options.structured ? { structured: true } : {}),
     ...(options.debug ? { debug: true } : {}),
   };
 }

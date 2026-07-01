@@ -6,6 +6,7 @@ import type { CommandHandler, CommandParseResult } from './command-types.ts';
 import type { CommandConfig } from './commands.ts';
 import { displayMissingArgument, showCommandHelp } from './help.ts';
 import { hasOutputSearch } from './output-search.ts';
+import { wantsMachineReadableErrorOutput } from './output-state.ts';
 import { preparePayload, validationErrorFromParseErrors } from './payload.ts';
 import { type CommandRunResult, renderResponse, runCommand } from './response-renderer.ts';
 import { getRuntimeConfig } from './runtime-config.ts';
@@ -122,7 +123,7 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
 
     const missingArg = validateRequiredArgs(this.action.command, parsedArgs.payload, validationRegistry);
     if (missingArg) {
-      if (options.json) {
+      if (wantsMachineReadableErrorOutput(options)) {
         return {
           ok: false,
           error: {

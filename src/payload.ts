@@ -12,6 +12,7 @@ import {
   loadIdCacheSync,
   resolveCachedId,
 } from './id-cache.ts';
+import { wantsMachineReadableErrorOutput } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
 import type { GlobalOptions } from './types.ts';
 
@@ -54,7 +55,7 @@ export function preparePayload(
   const displayRegistry = display?.registry ?? registry;
 
   if (!registry.commands[command]) {
-    if (options.json) {
+    if (wantsMachineReadableErrorOutput(options)) {
       printJsonError('unknown_command', `Unknown command: ${displayCommand}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
@@ -69,7 +70,7 @@ export function preparePayload(
 
   const missingArg = validateRequiredArgs(command, rawPayload, registry);
   if (missingArg) {
-    if (options.json) {
+    if (wantsMachineReadableErrorOutput(options)) {
       printJsonError('missing_required_argument', `Missing required argument: ${missingArg}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
@@ -85,7 +86,7 @@ export function preparePayload(
   );
   const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath);
   if (resolvedPayload.type === 'ambiguous') {
-    if (options.json) {
+    if (wantsMachineReadableErrorOutput(options)) {
       printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result), writer);
       return { type: 'exit', exitCode: 1 };
     }
@@ -232,7 +233,7 @@ export function displayCommandParseErrors(
   options: GlobalOptions,
   writer?: CliWriter,
 ): void {
-  if (options.json) {
+  if (wantsMachineReadableErrorOutput(options)) {
     printJsonError('validation_error', errors.map((e) => e.message).join('; '), writer);
     return;
   }
