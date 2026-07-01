@@ -86,6 +86,7 @@ interface CliGoldenCase {
   response?: APIResponse;
   expectedExitCode?: number;
   stdoutFormat?: GoldenStdoutFormat;
+  stderrFormat?: GoldenStdoutFormat;
   expectedYamlKeys?: string[];
 }
 
@@ -324,7 +325,7 @@ const cliCases: CliGoldenCase[] = [
     name: 'validation-error.--json',
     argv: ['--plain', '--json', 'travel'],
     expectedExitCode: 1,
-    stdoutFormat: 'json',
+    stderrFormat: 'json',
   },
   {
     name: 'unknown-command.table',
@@ -335,7 +336,7 @@ const cliCases: CliGoldenCase[] = [
     name: 'unknown-command.--json',
     argv: ['--plain', '--json', 'trvel'],
     expectedExitCode: 1,
-    stdoutFormat: 'json',
+    stderrFormat: 'json',
   },
   {
     name: 'structured-api-error.--structured',
@@ -347,7 +348,7 @@ const cliCases: CliGoldenCase[] = [
       },
     },
     expectedExitCode: 1,
-    stdoutFormat: 'json',
+    stderrFormat: 'json',
   },
   {
     name: 'dynamic-generated-command.table',
@@ -418,6 +419,7 @@ describe('CLI golden output', () => {
           name: testCase.name,
           expectedExitCode: testCase.expectedExitCode,
           stdoutFormat: testCase.stdoutFormat,
+          stderrFormat: testCase.stderrFormat,
           expectedYamlKeys: testCase.expectedYamlKeys,
         },
         await renderCliCase(testCase),

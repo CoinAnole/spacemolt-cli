@@ -989,8 +989,8 @@ describe('structuredContent output mode precedence', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(stderr).toBe('');
-    expect(JSON.parse(stdout)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
+    expect(stdout).toBe('');
+    expect(JSON.parse(stderr)).toEqual({ error: { code: 'validation_error', message: 'Bad field' } });
   });
 
   test('ambiguous --field projection exits nonzero without stdout', async () => {

@@ -506,14 +506,14 @@ describe('runInvocation option isolation', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(stderr).toEqual([]);
+    expect(stdout).toEqual([]);
     expect(calls).toEqual([
       {
         command: 'facility_upgrade',
         payload: { facility_id: '3f67', facility_type: 'intel_center' },
       },
     ]);
-    expect(JSON.parse(stdout.join('\n'))).toEqual({
+    expect(JSON.parse(stderr.join('\n'))).toEqual({
       error: {
         code: 'missing_materials',
         message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
@@ -725,8 +725,8 @@ describe('runInvocation option isolation', () => {
   test('repeated direct invocations do not leak --json', async () => {
     const jsonResult = await captureInvocation(['--json', 'trvel']);
     expect(jsonResult.exitCode).toBe(1);
-    expect(jsonResult.stdout).toContain('"unknown_command"');
-    expect(jsonResult.stderr).toBe('');
+    expect(jsonResult.stdout).toBe('');
+    expect(jsonResult.stderr).toContain('"unknown_command"');
     expect(jsonResult.config).toMatchObject({ jsonOutput: true, format: 'table' });
 
     const textResult = await captureInvocation(['trvel']);
@@ -1012,8 +1012,8 @@ describe('runInvocation option isolation', () => {
     const exitCode = await runInvocation(['--json', 'trvel'], undefined, fakeContext(stdout, stderr));
 
     expect(exitCode).toBe(1);
-    expect(stdout.join('\n')).toContain('"unknown_command"');
-    expect(stderr).toEqual([]);
+    expect(stdout).toEqual([]);
+    expect(stderr.join('\n')).toContain('"unknown_command"');
     expect(console.log).toBe(originalLog);
     expect(console.error).toBe(originalError);
   });
@@ -1074,8 +1074,8 @@ describe('runInvocation option isolation', () => {
     const result = await captureInvocation(['--format=invalid'], { SPACEMOLT_OUTPUT: 'json', DEBUG: 'true' });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout)).toMatchObject({
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr)).toMatchObject({
       error: {
         code: 'invalid_global_option',
       },
@@ -1094,16 +1094,16 @@ describe('runInvocation option isolation', () => {
     const result = await captureInvocation(['--json', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr).error.code).toBe('invalid_global_option');
   });
 
   test('invalid env profile preserves parsed format json output state', async () => {
     const result = await captureInvocation(['--format=json', 'help'], { SPACEMOLT_PROFILE: 'bad/name' });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr).error.code).toBe('invalid_global_option');
   });
 
   test('invalid env profile preserves env JSON output state', async () => {
@@ -1113,8 +1113,8 @@ describe('runInvocation option isolation', () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr).error.code).toBe('invalid_global_option');
   });
 
   test('invalid env profile preserves parsed plain output state', async () => {
@@ -1145,15 +1145,15 @@ describe('runInvocation option isolation', () => {
     const result = await captureInvocation(['--format', 'json', '--format', 'nope', 'get_status']);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout).error.code).toBe('invalid_global_option');
+    expect(result.stdout).toBe('');
+    expect(JSON.parse(result.stderr).error.code).toBe('invalid_global_option');
   });
 
   test('repeated global parse failures do not leak output mode', async () => {
     const jsonResult = await captureInvocation(['--json', '--format', 'nope']);
     expect(jsonResult.exitCode).toBe(1);
-    expect(JSON.parse(jsonResult.stdout).error.code).toBe('invalid_global_option');
-    expect(jsonResult.stderr).toBe('');
+    expect(jsonResult.stdout).toBe('');
+    expect(JSON.parse(jsonResult.stderr).error.code).toBe('invalid_global_option');
 
     const textResult = await captureInvocation(['--format', 'nope']);
     expect(textResult.exitCode).toBe(1);
@@ -1172,8 +1172,8 @@ describe('runInvocation option isolation', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(stderr).toEqual([]);
-    expect(JSON.parse(stdout.join('\n')).error.code).toBe('invalid_global_option');
+    expect(stdout).toEqual([]);
+    expect(JSON.parse(stderr.join('\n')).error.code).toBe('invalid_global_option');
   });
 
   test('context env resolves output mode and profile config', async () => {
@@ -1188,8 +1188,8 @@ describe('runInvocation option isolation', () => {
     const exitCode = await runInvocation(['trvel'], undefined, fakeContext(stdout, stderr, env));
 
     expect(exitCode).toBe(1);
-    expect(stdout.join('\n')).toContain('"unknown_command"');
-    expect(stderr).toEqual([]);
+    expect(stdout).toEqual([]);
+    expect(stderr.join('\n')).toContain('"unknown_command"');
   });
 
   test('connection errors use explicit output state after parsing', async () => {

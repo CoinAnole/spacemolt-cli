@@ -276,13 +276,7 @@ function createExplainHandler(
     render(result, options, _client, context) {
       if (!result.found) {
         if (options.json) {
-          const json = JSON.stringify(
-            { error: { code: 'unknown_command', message: `Unknown command: ${result.command}` } },
-            null,
-            2,
-          );
-          if (context) context.writer.out(json);
-          else printJsonError('unknown_command', `Unknown command: ${result.command}`);
+          printJsonError('unknown_command', `Unknown command: ${result.command}`, context?.writer);
           return 1;
         }
         displayUnknownCommand(result.command, context?.writer, {

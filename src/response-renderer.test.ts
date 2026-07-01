@@ -834,8 +834,9 @@ describe('response renderer', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(capture.text()).toBe(JSON.stringify(expected));
-    expect(JSON.parse(capture.text())).toEqual(expected);
+    expect(capture.stdout).toEqual([]);
+    expect(capture.stderr.join('\n')).toBe(JSON.stringify(expected));
+    expect(JSON.parse(capture.stderr.join('\n'))).toEqual(expected);
   });
 
   test('renderResponse prints structured-mode error envelopes and exits nonzero', async () => {
@@ -857,8 +858,8 @@ describe('response renderer', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(capture.stderr).toEqual([]);
-    expect(JSON.parse(capture.text())).toEqual({
+    expect(capture.stdout).toEqual([]);
+    expect(JSON.parse(capture.stderr.join('\n'))).toEqual({
       error: {
         code: 'missing_materials',
         message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',

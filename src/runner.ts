@@ -177,7 +177,7 @@ function renderFallbackDiagnosticIfSilent(
   const message = 'Command failed without an error message.';
 
   if (output.machineReadable) {
-    if (outputTracker.hasStdout()) return;
+    if (outputTracker.hasStdout() || outputTracker.hasStderr()) return;
     printJsonError('missing_error_output', message, context.writer);
     return;
   }

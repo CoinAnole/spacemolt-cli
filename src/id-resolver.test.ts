@@ -743,17 +743,19 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
     const stdout: string[] = [];
+    const stderr: string[] = [];
 
     const prepared = preparePayload(
       'sell',
       { item_id: 'iron', quantity: '50' },
       options({ json: true }),
       sessionPath,
-      writer(stdout),
+      writer(stdout, stderr),
     );
 
     expect(prepared).toEqual({ type: 'exit', exitCode: 1 });
-    const parsed = JSON.parse(stdout.join('\n'));
+    expect(stdout).toEqual([]);
+    const parsed = JSON.parse(stderr.join('\n'));
     expect(parsed.error.code).toBe('ambiguous_cached_id');
     expect(parsed.error.message).toContain('ore_iron');
     expect(parsed.error.message).toContain('iron_plate');

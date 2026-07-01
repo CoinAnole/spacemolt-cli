@@ -108,7 +108,8 @@ describe('CLI local usability behavior', () => {
   test('--json unknown command keeps compatible error shape', async () => {
     const result = await runDirect(['--json', 'trvel']);
     expect(result.exitCode).toBe(1);
-    const parsed = JSON.parse(result.stdout);
+    expect(result.stdout).toBe('');
+    const parsed = JSON.parse(result.stderr);
     expect(parsed).toEqual({ error: { code: 'unknown_command', message: 'Unknown command: trvel' } });
   });
 

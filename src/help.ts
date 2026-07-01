@@ -87,8 +87,10 @@ const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
 };
 
 export function printJsonResponse(response: APIResponse, compact = false, writer?: CliWriter): void {
-  const out = writer?.out.bind(writer) ?? console.log;
-  out(JSON.stringify(response, null, compact ? 0 : 2));
+  const write = response.error
+    ? (writer?.err.bind(writer) ?? console.error)
+    : (writer?.out.bind(writer) ?? console.log);
+  write(JSON.stringify(response, null, compact ? 0 : 2));
 }
 
 export function printJsonError(code: string, message: string, writer?: CliWriter): void {

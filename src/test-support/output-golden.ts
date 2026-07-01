@@ -35,6 +35,7 @@ export interface GoldenUpdateGuardOptions {
 
 export interface GoldenValidationOptions {
   stdoutFormat?: GoldenStdoutFormat;
+  stderrFormat?: GoldenStdoutFormat;
   expectedYamlKeys?: string[];
   allowFallback?: boolean;
   allowDiagnosticTokens?: boolean;
@@ -155,6 +156,14 @@ export function validateGoldenOutput(actual: GoldenOutput, options: GoldenValida
       JSON.parse(actual.stdout);
     } catch {
       errors.push('stdout is not valid JSON');
+    }
+  }
+
+  if (options.stderrFormat === 'json') {
+    try {
+      JSON.parse(actual.stderr);
+    } catch {
+      errors.push('stderr is not valid JSON');
     }
   }
 

@@ -37,7 +37,8 @@ describe('payload preparation', () => {
     const result = preparePayload('does_not_exist', {}, { ...baseOptions, json: true }, undefined, capture.writer);
 
     expect(result).toEqual({ type: 'exit', exitCode: 1 });
-    expect(JSON.parse(capture.stdout.join('\n'))).toMatchObject({
+    expect(capture.stdout).toEqual([]);
+    expect(JSON.parse(capture.stderr.join('\n'))).toMatchObject({
       error: {
         code: 'unknown_command',
         message: 'Unknown command: does_not_exist',
@@ -74,7 +75,8 @@ describe('payload preparation', () => {
     const result = preparePayload('travel', {}, { ...baseOptions, json: true }, undefined, capture.writer);
 
     expect(result).toEqual({ type: 'exit', exitCode: 1 });
-    expect(JSON.parse(capture.stdout.join('\n'))).toMatchObject({
+    expect(capture.stdout).toEqual([]);
+    expect(JSON.parse(capture.stderr.join('\n'))).toMatchObject({
       error: {
         code: 'missing_required_argument',
         message: 'Missing required argument: target_poi',
@@ -87,7 +89,8 @@ describe('payload preparation', () => {
 
     const jsonCapture = captureWriter();
     displayCommandParseErrors(errors, { ...baseOptions, json: true }, jsonCapture.writer);
-    expect(JSON.parse(jsonCapture.stdout.join('\n'))).toMatchObject({
+    expect(jsonCapture.stdout).toEqual([]);
+    expect(JSON.parse(jsonCapture.stderr.join('\n'))).toMatchObject({
       error: {
         code: 'validation_error',
         message: 'Unknown field: bad',

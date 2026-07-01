@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "missing_required_argument",
+    "message": "Missing required argument: target_poi"
+  }
+}

@@ -493,8 +493,8 @@ describe('local command handlers', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(stderr).toEqual([]);
-    expect(JSON.parse(stdout.join('\n'))).toEqual({
+    expect(stdout).toEqual([]);
+    expect(JSON.parse(stderr.join('\n'))).toEqual({
       error: {
         code: 'missing_required_argument',
         message: 'Missing required argument: price_each',
@@ -1340,12 +1340,13 @@ describe('local command handlers', () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     const result = await handler.run(parsed.payload, options);
-    const { context, stdout } = captureContext();
+    const { context, stdout, stderr } = captureContext();
 
     const exitCode = await handler.render(result, { ...options, json: true }, undefined, context);
 
     expect(exitCode).toBe(1);
-    expect(JSON.parse(stdout.join('\n'))).toEqual({
+    expect(stdout).toEqual([]);
+    expect(JSON.parse(stderr.join('\n'))).toEqual({
       error: { code: 'unknown_command', message: 'Unknown command: nope_nope' },
     });
   });
