@@ -3719,7 +3719,7 @@ describe('structuredContent formatters', () => {
       Class: common
 
       Resources:
-        - Iron Ore: richness 3, 750/1000 (75.00% remaining)"
+        - Iron Ore: richness 3, 750/1000 (75.00% remaining), supports power 12"
       ,
         "ship": 
       "

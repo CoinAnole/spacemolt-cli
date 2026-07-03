@@ -579,9 +579,10 @@ export const statusFormatters = [
         emitLine(`\n${c.bright}Resources:${c.reset}`);
         for (const res of resources) {
           const display = res.remaining_display || `${res.remaining} remaining`;
+          const supportedPower = res.supported_power !== undefined ? `, supports power ${res.supported_power}` : '';
           if (display === 'depleted' || res.remaining === 0) {
             emitLine(
-              `  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${c.reset}\x1b[29m`,
+              `  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${supportedPower}${c.reset}\x1b[29m`,
             );
             continue;
           }
@@ -593,7 +594,9 @@ export const statusFormatters = [
             depletion = ` (${color}${pct.toFixed(2)}% remaining${c.reset})`;
           }
           const remaining = res.max_remaining ? `${res.remaining}/${res.max_remaining}` : display;
-          emitLine(`  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}`);
+          emitLine(
+            `  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}${supportedPower}`,
+          );
         }
       }
 

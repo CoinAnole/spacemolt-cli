@@ -119,6 +119,7 @@ export const poiInfoFixture = {
       remaining: 750,
       max_remaining: 1000,
       depletion_percent: 75,
+      supported_power: 12,
     },
   ],
 };
