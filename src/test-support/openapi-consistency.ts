@@ -971,6 +971,25 @@ export function extractResponseFieldCandidates(text: string | undefined): string
   return rich.map((c) => c.term);
 }
 
+function extractFieldListTerms(block: string): string[] {
+  const out: string[] = [];
+  const fieldList =
+    /((?:\b[a-z][a-z0-9_]*\b(?:\s*,\s*(?:and\s+)?|\s+and\s+))+?\b[a-z][a-z0-9_]*\b)\s+(?:fields?|properties|keys?)\b/gi;
+
+  for (let m = fieldList.exec(block); m !== null; m = fieldList.exec(block)) {
+    const list = m[1];
+    if (!list) continue;
+    const tokens = list.match(/\b[a-z][a-z0-9_]*\b/gi) ?? [];
+    for (const token of tokens) {
+      if (/^(and|or)$/i.test(token)) continue;
+      if (!token.includes('_') && !/[a-z][A-Z]/.test(token)) continue;
+      out.push(token);
+    }
+  }
+
+  return sortedUnique(out);
+}
+
 /** Rich variant that returns provenance for each synthesized candidate. */
 export function extractResponseFieldCandidatesWithProvenance(text: string | undefined): FieldCandidate[] {
   if (!text) return [];
@@ -1012,6 +1031,13 @@ export function extractResponseFieldCandidatesWithProvenance(text: string | unde
       if (isExampleBlock(block)) afterExample = true;
       if (isRateLimitBlock(block)) afterExample = false;
       continue;
+    }
+
+    for (const term of extractFieldListTerms(block)) {
+      const existing = byTerm.get(term);
+      if (!existing || !/example|JSON/i.test(existing.provenance)) {
+        byTerm.set(term, { term, provenance: `from field list in ${label}` });
+      }
     }
 
     const words = block.match(/\b([a-z][a-z0-9]*)\b/gi) || [];

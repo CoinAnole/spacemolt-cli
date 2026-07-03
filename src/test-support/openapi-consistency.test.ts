@@ -640,6 +640,31 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).toContain('base_fare');
   });
 
+  test('operation response scan captures comma-separated field lists and suppresses present fields', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/get_cargo';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/get_cargo',
+      'Returns cargo items with resolved names and sizes. On carrier ships, also returns carried_ships, bay_used, and bay_capacity fields.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          carried_ships: { type: 'array' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('carried_ships');
+    expect(fields).toContain('bay_used');
+    expect(fields).toContain('bay_capacity');
+  });
+
   test('operation response scan ignores action catalogs and request examples', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt_facility/job_add';
