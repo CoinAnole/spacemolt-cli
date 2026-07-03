@@ -384,6 +384,7 @@ function collectOperationResponseCandidateText(description: string | undefined):
 function shouldSuppressOperationResponseCandidate(
   candidate: FieldCandidate,
   routeSig: string,
+  sourceText: string,
   requestFields: Set<string>,
   knownOperationTerms: Set<string>,
 ): boolean {
@@ -408,12 +409,38 @@ function shouldSuppressOperationResponseCandidate(
   if (lower === routeLeaf) return true;
   if (requestFields.has(term)) return true;
   if (termPresentIn(term, requestFields)) return true;
+  if (isLooseCommandReference && isQuotedExampleValue(term, sourceText)) return true;
   if (isLooseCommandReference && knownOperationTerms.has(lower)) return true;
   if (isLooseCommandReference && /_passengers?$/.test(lower)) return true;
   if (isLooseCommandReference && actionValueTerms.has(lower)) return true;
   if (/^from compound/.test(candidate.provenance)) {
+    if (isHeaderNameCompound(term, sourceText)) return true;
     const starter = lower.split('_')[0];
     if (starter && narrativeCompoundStarters.has(starter)) return true;
+  }
+
+  return false;
+}
+
+function isHeaderNameCompound(term: string, text: string): boolean {
+  if (!term || !text || !term.includes('_')) return false;
+  const parts = term.split('_').filter(Boolean);
+  if (parts.length < 2) return false;
+
+  const phrase = parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[-\\s]+');
+  const headerPattern = new RegExp(`(?:\\bX[-\\s]+)?${phrase}\\b[^.]{0,80}\\bheader\\b`, 'i');
+  return headerPattern.test(text);
+}
+
+function isQuotedExampleValue(term: string, text: string): boolean {
+  if (!term || !text) return false;
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const quotedTerm = new RegExp(`["'\`]${escaped}["'\`]`, 'gi');
+
+  for (let match = quotedTerm.exec(text); match !== null; match = quotedTerm.exec(text)) {
+    const start = match.index ?? 0;
+    const before = text.slice(Math.max(0, start - 40), start);
+    if (/\be\.g\.|\b(?:for example|such as|example value)\b/i.test(before)) return true;
   }
 
   return false;
@@ -877,6 +904,7 @@ const goodCompoundStems = new Set([
   'template',
   'xp',
   'level',
+  'ticks',
   'travel',
   'jump',
   'dock',
@@ -1001,7 +1029,9 @@ export function extractResponseFieldCandidatesWithProvenance(text: string | unde
       const nearCode = isNearCodeLikeToken(block, approxIdx >= 0 ? approxIdx : undefined);
       const goodStem = goodCompoundStems.has(w1);
 
-      if (!goodStem && !nearCode) {
+      if (!goodStem && !nearCode) continue;
+
+      if (!goodStem) {
         const badStarters = new Set([
           'most',
           'any',
@@ -1284,7 +1314,16 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
 
     for (const candidate of rich) {
       const term = candidate.term;
-      if (shouldSuppressOperationResponseCandidate(candidate, routeSig, reqFields, knownOperationTerms)) continue;
+      if (
+        shouldSuppressOperationResponseCandidate(
+          candidate,
+          routeSig,
+          responseCandidateText,
+          reqFields,
+          knownOperationTerms,
+        )
+      )
+        continue;
       if (termPresentIn(term, respFields)) continue;
       const prov = candidate.provenance;
 

@@ -574,6 +574,20 @@ describe('context-sensitive extraction and provenance', () => {
     expect(rich.some((c) => /most_mission|mission_stuff/.test(c.term))).toBe(false);
   });
 
+  test('compound synthesis ignores ordinary prose with unsupported stems', () => {
+    const text = [
+      'Use query parameters to control limit, clearing, and type filtering.',
+      'Use get_system to see available POIs. Consumes fuel based on ship speed and distance.',
+      'Current speed reduction is shown as a percentage.',
+    ].join('\n\n');
+
+    const fields = extractResponseFieldCandidatesWithProvenance(text).map((c) => c.term);
+
+    expect(fields).not.toContain('control_limit');
+    expect(fields).not.toContain('Consumes_fuel');
+    expect(fields).not.toContain('Current_speed');
+  });
+
   test('provenance is attached to missing-response-field-prose findings', () => {
     const spec = makeMinimalSpec();
     addComponentSchema(spec, 'PassengerResponse', {
@@ -873,6 +887,58 @@ describe('operation response prose mismatch filtering', () => {
       .map((f) => f.field);
 
     expect(fields).toContain('repair_cost');
+  });
+
+  test('operation response scan ignores quoted example values', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/uninstall_mod';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/uninstall_mod',
+      "module_id accepts a module instance ID or a module type ID (e.g. 'pulse_laser_i'). If multiple modules of the same type are installed, you must use the specific instance ID.",
+      { id: { type: 'string' } },
+      {
+        type: 'object',
+        properties: {
+          uninstalled: { type: 'boolean' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('pulse_laser_i');
+  });
+
+  test('operation response scan ignores header-name prose compounds', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/session';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/session',
+      'Creates a new API session. Returns a session ID that must be included as the `X-Session-Id` header on all subsequent calls.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          session: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+            },
+          },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('session_ID');
+    expect(fields).not.toContain('Session_Id');
   });
 });
 
