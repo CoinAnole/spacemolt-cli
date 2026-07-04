@@ -585,6 +585,8 @@ function shouldSuppressOperationResponseCandidate(
   if (/example/i.test(candidate.provenance)) return true;
   if (lower === routeLeaf) return true;
   if (isSkillOrProficiencyReference(term, sourceText)) return true;
+  if (target === 'response' && termPresentIn(term, requestFields) && isRequestConditionPrefixCandidate(term, sourceText))
+    return true;
   if (target !== 'response' && requestFields.has(term)) return true;
   if (target !== 'response' && termPresentIn(term, requestFields)) return true;
   if (isLooseCommandReference && isQuotedExampleValue(term, sourceText)) return true;
@@ -598,6 +600,20 @@ function shouldSuppressOperationResponseCandidate(
   }
 
   return false;
+}
+
+function isRequestConditionPrefixCandidate(term: string, sourceText: string): boolean {
+  const returnMatch = /\b(?:returns?|returned)\b/i.exec(sourceText);
+  if (!returnMatch) return false;
+
+  const beforeReturn = sourceText.slice(0, returnMatch.index);
+  const afterReturn = sourceText.slice(returnMatch.index + returnMatch[0].length);
+  if (beforeReturn.length > 120) return false;
+  if (!/^\s*(?:with|for|when|if|given)\b/i.test(beforeReturn)) return false;
+
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const termPattern = new RegExp(`\\b${escaped}\\b`, 'i');
+  return termPattern.test(beforeReturn) && !termPattern.test(afterReturn);
 }
 
 function isSkillOrProficiencyReference(term: string, sourceText: string): boolean {

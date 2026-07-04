@@ -792,6 +792,32 @@ describe('operation response prose mismatch filtering', () => {
     expect(findings.map((f) => f.field)).not.toContain('refund_amount');
   });
 
+  test('operation response scan suppresses request-condition fields before return verbs', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_market/order_book';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_market/order_book',
+      'With item_id: returns base_fare and full order book depth for that item.',
+      {
+        item_id: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          depth: { type: 'array' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('base_fare');
+    expect(fields).not.toContain('item_id');
+  });
+
   test('operation response scan suppresses skill references without dropping response fields', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt_drone/list';
