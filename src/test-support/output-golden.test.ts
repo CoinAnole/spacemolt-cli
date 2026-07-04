@@ -9,6 +9,7 @@ import {
   DEFAULT_SCHEMA_BASELINE_PATH,
   divergenceSignature,
   filterBlockingDivergences,
+  formatComparisonReport,
   type JsonSchema,
   type OpenApiSpec,
 } from './fixture-schema-compare';
@@ -140,6 +141,59 @@ describe('output golden test support', () => {
     expect(comparison?.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain(
       'extra-in-fixture:skipped_unfunded',
     );
+  });
+
+  test('fixture schema report names selected details schema and ambiguity diagnostics', () => {
+    const detailsReport = formatComparisonReport([
+      {
+        label: 'load_passenger',
+        command: 'load_passenger',
+        apiRoute: 'POST /api/v2/spacemolt/load_passenger',
+        primarySchemaName: 'LoadPassengersResponse',
+        comparedAgainst: 'details',
+        selectionReason: 'best-score',
+        candidateScores: [
+          {
+            label: 'details',
+            primarySchemaName: 'LoadPassengersResponse',
+            score: 0,
+            summary: 'no structural divergences detected',
+          },
+        ],
+        divergences: [],
+        summary: 'no structural divergences detected',
+        isPartialExample: false,
+      },
+      {
+        label: 'ambiguous_sample',
+        command: 'sample',
+        apiRoute: 'POST /api/v2/sample/action',
+        primarySchemaName: 'A',
+        comparedAgainst: 'ambiguous',
+        selectionReason: 'ambiguous',
+        candidateScores: [
+          {
+            label: 'structuredContent',
+            primarySchemaName: 'A',
+            score: 0,
+            summary: 'no structural divergences detected',
+          },
+          { label: 'details', primarySchemaName: 'B', score: 0, summary: 'no structural divergences detected' },
+        ],
+        divergences: [{ path: '', kind: 'schema-target-ambiguous', message: 'fixture matched multiple candidates' }],
+        summary: 'ambiguous schema target',
+        isPartialExample: true,
+      },
+    ]);
+
+    expect(detailsReport).toContain(
+      'primary schema: LoadPassengersResponse (fixture matched structuredContent.details)',
+    );
+    expect(detailsReport).toContain('summary: ambiguous schema target');
+    expect(detailsReport).toContain('Schema target ambiguity:');
+    expect(detailsReport).toContain('candidate scores:');
+    expect(detailsReport).toContain('structuredContent -> A: 0');
+    expect(detailsReport).toContain('details -> B: 0');
   });
 
   test('schema candidate scoring chooses details for a details-shaped fixture without heuristic markers', () => {

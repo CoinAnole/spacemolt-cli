@@ -896,12 +896,31 @@ export function formatComparisonReport(comparisons: FixtureSchemaComparison[]): 
     let schemaLine = '';
     if (c.primarySchemaName) schemaLine = `   primary schema: ${c.primarySchemaName}`;
     if (c.comparedAgainst === 'details') {
-      schemaLine += ' (fixture compared as action details payload)';
+      schemaLine += ' (fixture matched structuredContent.details)';
+    } else if (c.comparedAgainst && c.comparedAgainst !== 'structuredContent' && c.comparedAgainst !== 'ambiguous') {
+      schemaLine += ` (fixture matched ${c.comparedAgainst})`;
     }
     if (schemaLine) lines.push(schemaLine);
     lines.push(`   summary: ${c.summary}`);
     if (c.divergences.length === 0) {
       lines.push('   (no divergences)');
+      lines.push('');
+      continue;
+    }
+
+    const ambiguous = c.divergences.filter((d) => d.kind === 'schema-target-ambiguous');
+    if (ambiguous.length) {
+      lines.push('   Schema target ambiguity:');
+      for (const d of ambiguous) {
+        lines.push(`     - ${d.message}`);
+      }
+      if (c.candidateScores?.length) {
+        lines.push('   candidate scores:');
+        for (const score of c.candidateScores) {
+          const name = score.primarySchemaName ? `${score.label} -> ${score.primarySchemaName}` : score.label;
+          lines.push(`     - ${name}: ${score.score} (${score.summary})`);
+        }
+      }
       lines.push('');
       continue;
     }
@@ -960,6 +979,7 @@ export function formatComparisonReport(comparisons: FixtureSchemaComparison[]): 
   );
   lines.push('  type-mismatch     = fixture value type differs from schema declaration');
   lines.push('  required-missing  = schema marks a field required but fixture omits it (common for partial examples)');
+  lines.push('  schema-target-ambiguous = reporter could not confidently choose a response subschema');
   lines.push('');
   lines.push(
     'Run with SHOW_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts to see this during golden runs.',
