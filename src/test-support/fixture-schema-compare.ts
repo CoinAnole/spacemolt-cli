@@ -5,19 +5,30 @@ import { type HighValueFixtureEntry, highValueCommandFixtures } from '../display
 
 export interface Divergence {
   path: string;
-  kind: 'extra-in-fixture' | 'extra-in-schema' | 'type-mismatch' | 'required-missing';
+  kind: 'extra-in-fixture' | 'extra-in-schema' | 'type-mismatch' | 'required-missing' | 'schema-target-ambiguous';
   message: string;
   fixtureValue?: unknown;
   schemaInfo?: string;
 }
+
+export interface FixtureSchemaCandidateScore {
+  label: string;
+  primarySchemaName?: string;
+  score: number;
+  summary: string;
+}
+
+export type FixtureSchemaSelectionReason = 'explicit-target' | 'best-score' | 'ambiguous' | 'fallback';
 
 export interface FixtureSchemaComparison {
   label: string;
   command: string;
   apiRoute: string;
   primarySchemaName?: string;
-  /** Indicates the fixture was compared against a subschema (e.g. the action details payload) rather than the raw top-level structuredContent response. */
-  comparedAgainst?: 'details' | 'structuredContent';
+  /** Indicates which response subschema this fixture was compared against. */
+  comparedAgainst?: string;
+  candidateScores?: FixtureSchemaCandidateScore[];
+  selectionReason?: FixtureSchemaSelectionReason;
   divergences: Divergence[];
   summary: string;
   isPartialExample: boolean;
@@ -41,6 +52,31 @@ export interface CompareOptions {
   only?: string[];
   /** Max recursion depth for nested comparison */
   maxDepth?: number;
+}
+
+interface SchemaCandidate {
+  label: string;
+  comparedAgainst: string;
+  schema: JsonSchema;
+  primarySchemaName?: string;
+}
+
+interface CandidateComparison {
+  candidate: SchemaCandidate;
+  comparison: FixtureSchemaComparison;
+  score: number;
+}
+
+interface ResponseCandidateOptions {
+  label: string;
+  command: string;
+  apiRoute: string;
+  spec: OpenApiSpec;
+  responseSchema: JsonSchema;
+  primarySchemaName?: string;
+  explicitTarget?: HighValueFixtureEntry['schemaTarget'];
+  maxDepth?: number;
+  allowedExtraKeys?: string[];
 }
 
 const DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
@@ -96,6 +132,10 @@ export function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string
     return resolveRef(spec, schema.$ref, seen);
   }
   return schema;
+}
+
+function schemaRefName(schema: JsonSchema | undefined): string | undefined {
+  return typeof schema?.$ref === 'string' ? schema.$ref.split('/').pop() : undefined;
 }
 
 function mergeAllOf(spec: OpenApiSpec, schemas: JsonSchema[], seen = new Set<string>()): JsonSchema {
@@ -242,6 +282,70 @@ function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSch
     return undefined;
   }
   return resolvedD;
+}
+
+function schemaHasComparableShape(schema: JsonSchema | undefined): schema is JsonSchema {
+  if (!schema) return false;
+  if (schema.properties && Object.keys(schema.properties).length > 0) return true;
+  if (schema.oneOf && schema.oneOf.length > 0) return true;
+  if (schema.anyOf && schema.anyOf.length > 0) return true;
+  if (schema.allOf && schema.allOf.length > 0) return true;
+  return false;
+}
+
+function expandBranchCandidates(spec: OpenApiSpec, candidate: SchemaCandidate): SchemaCandidate[] {
+  const effective = getEffectiveSchema(spec, candidate.schema);
+  const branches = effective.oneOf ?? effective.anyOf;
+  const hasOwnComparableProperties = !!effective.properties && Object.keys(effective.properties).length > 0;
+  const out: SchemaCandidate[] = !branches || hasOwnComparableProperties ? [candidate] : [];
+  if (!branches) return out;
+
+  for (let i = 0; i < branches.length; i++) {
+    const branch = branches[i] as JsonSchema;
+    const resolved = getEffectiveSchema(spec, branch);
+    if (!schemaHasComparableShape(resolved)) continue;
+    const refName = schemaRefName(branch);
+    out.push({
+      label: `${candidate.label}.${effective.oneOf ? 'oneOf' : 'anyOf'}[${i}]`,
+      comparedAgainst: candidate.comparedAgainst,
+      schema: resolved,
+      primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
+    });
+  }
+  return out;
+}
+
+function buildSchemaCandidates(
+  spec: OpenApiSpec,
+  responseSchema: JsonSchema,
+  primarySchemaName?: string,
+): SchemaCandidate[] {
+  const effectiveResponseSchema = getEffectiveSchema(spec, responseSchema);
+  const structured: SchemaCandidate = {
+    label: 'structuredContent',
+    comparedAgainst: 'structuredContent',
+    schema: effectiveResponseSchema,
+    primarySchemaName,
+  };
+  const candidates: SchemaCandidate[] = [...expandBranchCandidates(spec, structured)];
+
+  const detailsProp = effectiveResponseSchema.properties?.details as JsonSchema | undefined;
+  const detailsSchema = resolveDetailsSubschema(spec, effectiveResponseSchema);
+  if (detailsSchema) {
+    const details: SchemaCandidate = {
+      label: 'details',
+      comparedAgainst: 'details',
+      schema: detailsSchema,
+      primarySchemaName: schemaRefName(detailsProp) ?? 'details',
+    };
+    candidates.push(...expandBranchCandidates(spec, details));
+  }
+
+  const unique = new Map<string, SchemaCandidate>();
+  for (const candidate of candidates) {
+    unique.set(`${candidate.label}:${candidate.primarySchemaName ?? ''}`, candidate);
+  }
+  return [...unique.values()];
 }
 
 function getJsonType(value: unknown): string {
@@ -458,6 +562,169 @@ export function compareFixtureToSchema(
   return out;
 }
 
+function scoreComparison(comparison: FixtureSchemaComparison): number {
+  const counts = {
+    typeMismatch: comparison.divergences.filter((d) => d.kind === 'type-mismatch').length,
+    requiredMissing: comparison.divergences.filter((d) => d.kind === 'required-missing').length,
+    extraInFixture: comparison.divergences.filter((d) => d.kind === 'extra-in-fixture').length,
+    extraInSchema: comparison.divergences.filter((d) => d.kind === 'extra-in-schema').length,
+  };
+
+  return (
+    counts.typeMismatch * 1000 +
+    counts.requiredMissing * 100 +
+    counts.extraInFixture * 10 +
+    counts.extraInSchema
+  );
+}
+
+function candidateScores(comparisons: CandidateComparison[]): FixtureSchemaCandidateScore[] {
+  return comparisons.map(({ candidate, comparison, score }) => ({
+    label: candidate.label,
+    primarySchemaName: candidate.primarySchemaName,
+    score,
+    summary: comparison.summary,
+  }));
+}
+
+function candidateForExplicitTarget(
+  candidates: SchemaCandidate[],
+  explicitTarget: HighValueFixtureEntry['schemaTarget'],
+): SchemaCandidate | undefined {
+  if (explicitTarget === 'details') return candidates.find((candidate) => candidate.comparedAgainst === 'details');
+  if (explicitTarget === 'structuredContent')
+    return candidates.find((candidate) => candidate.comparedAgainst === 'structuredContent');
+  return undefined;
+}
+
+function ambiguousSchemaTargetComparison(
+  fixtureValue: unknown,
+  opts: ResponseCandidateOptions,
+  comparisons: CandidateComparison[],
+): FixtureSchemaComparison {
+  const scores = candidateScores(comparisons);
+  const bestScore = comparisons[0]?.score ?? 0;
+  const tied = scores.filter((score) => score.score === bestScore);
+  const labels = tied.map((score) => score.primarySchemaName ?? score.label).join(', ');
+
+  return {
+    label: opts.label,
+    command: opts.command,
+    apiRoute: opts.apiRoute,
+    primarySchemaName: tied[0]?.primarySchemaName,
+    comparedAgainst: 'ambiguous',
+    candidateScores: scores,
+    selectionReason: 'ambiguous',
+    divergences: [
+      {
+        path: '',
+        kind: 'schema-target-ambiguous',
+        message: `fixture matched multiple response schema candidates with the same score: ${labels}`,
+        fixtureValue,
+      },
+    ],
+    summary: 'ambiguous schema target',
+    isPartialExample: true,
+  };
+}
+
+export function compareFixtureAgainstResponseCandidates(
+  fixtureValue: unknown,
+  opts: ResponseCandidateOptions,
+): FixtureSchemaComparison {
+  const candidates = buildSchemaCandidates(opts.spec, opts.responseSchema, opts.primarySchemaName);
+  const fallbackCandidate =
+    candidates.find((candidate) => candidate.comparedAgainst === 'structuredContent') ?? candidates[0];
+
+  if (!fallbackCandidate) {
+    return {
+      label: opts.label,
+      command: opts.command,
+      apiRoute: opts.apiRoute,
+      primarySchemaName: opts.primarySchemaName,
+      comparedAgainst: 'structuredContent',
+      selectionReason: 'fallback',
+      divergences: [
+        {
+          path: '',
+          kind: 'extra-in-schema',
+          message: 'could not build a comparable response schema candidate',
+        },
+      ],
+      summary: 'schema candidate resolution failed',
+      isPartialExample: true,
+    };
+  }
+
+  const explicitCandidate = candidateForExplicitTarget(candidates, opts.explicitTarget);
+  if (opts.explicitTarget && explicitCandidate) {
+    const comparison = compareFixtureToSchema(fixtureValue, explicitCandidate.schema, {
+      label: opts.label,
+      command: opts.command,
+      apiRoute: opts.apiRoute,
+      primarySchemaName: explicitCandidate.primarySchemaName,
+      maxDepth: opts.maxDepth,
+      spec: opts.spec,
+      allowedExtraKeys: opts.allowedExtraKeys,
+      comparedAgainst: explicitCandidate.comparedAgainst,
+    });
+    return {
+      ...comparison,
+      candidateScores: [
+        {
+          label: explicitCandidate.label,
+          primarySchemaName: explicitCandidate.primarySchemaName,
+          score: scoreComparison(comparison),
+          summary: comparison.summary,
+        },
+      ],
+      selectionReason: 'explicit-target',
+    };
+  }
+
+  const comparisons = candidates
+    .map((candidate) => {
+      const comparison = compareFixtureToSchema(fixtureValue, candidate.schema, {
+        label: opts.label,
+        command: opts.command,
+        apiRoute: opts.apiRoute,
+        primarySchemaName: candidate.primarySchemaName,
+        maxDepth: opts.maxDepth,
+        spec: opts.spec,
+        allowedExtraKeys: opts.allowedExtraKeys,
+        comparedAgainst: candidate.comparedAgainst,
+      });
+      return { candidate, comparison, score: scoreComparison(comparison) };
+    })
+    .sort((a, b) => a.score - b.score || a.candidate.label.localeCompare(b.candidate.label));
+
+  const best = comparisons[0];
+  if (!best) {
+    const comparison = compareFixtureToSchema(fixtureValue, fallbackCandidate.schema, {
+      label: opts.label,
+      command: opts.command,
+      apiRoute: opts.apiRoute,
+      primarySchemaName: fallbackCandidate.primarySchemaName,
+      maxDepth: opts.maxDepth,
+      spec: opts.spec,
+      allowedExtraKeys: opts.allowedExtraKeys,
+      comparedAgainst: fallbackCandidate.comparedAgainst,
+    });
+    return { ...comparison, selectionReason: 'fallback' };
+  }
+
+  const tied = comparisons.filter((candidate) => candidate.score === best.score);
+  if (tied.length > 1) {
+    return ambiguousSchemaTargetComparison(fixtureValue, opts, tied);
+  }
+
+  return {
+    ...best.comparison,
+    candidateScores: candidateScores(comparisons),
+    selectionReason: 'best-score',
+  };
+}
+
 /**
  * Run comparisons for all (or filtered) high-value fixtures against the OpenAPI spec.
  */
@@ -505,50 +772,7 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
       continue;
     }
 
-    // Choose the most appropriate schema for this fixture.
-    // Many action command fixtures are written as the "details" payload (or a chat send view)
-    // rather than the full structuredContent / V2GameState envelope.
-    //
-    // Explicit `schemaTarget` on the HighValueFixtureEntry takes precedence over the shape heuristic.
-    // See formatter-fixtures.ts for the interface.
-    let schemaForCompare = resolved.schema;
-    let primaryForCompare = resolved.primarySchemaName;
     let allowedExtraKeys: string[] | undefined;
-
-    const explicitTarget = entry.schemaTarget;
-    const looksLikeAction = fixtureLooksLikePureActionResult(entry.fixture);
-    let comparedAgainst: FixtureSchemaComparison['comparedAgainst'];
-
-    if (explicitTarget === 'details') {
-      const detailsSchema = resolveDetailsSubschema(spec, resolved.schema);
-      if (detailsSchema) {
-        schemaForCompare = detailsSchema;
-        const detailsProp = (resolved.schema.properties?.details as JsonSchema | undefined) || {};
-        const refName = typeof detailsProp.$ref === 'string' ? detailsProp.$ref.split('/').pop() : undefined;
-        primaryForCompare = refName || resolved.primarySchemaName || 'details';
-        comparedAgainst = 'details';
-      } else {
-        comparedAgainst = 'structuredContent';
-      }
-    } else if (explicitTarget === 'structuredContent') {
-      comparedAgainst = 'structuredContent';
-    } else if (looksLikeAction) {
-      // Heuristic fallback (for entries without explicit schemaTarget)
-      const detailsSchema = resolveDetailsSubschema(spec, resolved.schema);
-      if (detailsSchema) {
-        schemaForCompare = detailsSchema;
-        const detailsProp = (resolved.schema.properties?.details as JsonSchema | undefined) || {};
-        const refName = typeof detailsProp.$ref === 'string' ? detailsProp.$ref.split('/').pop() : undefined;
-        primaryForCompare = refName || resolved.primarySchemaName || 'details';
-        comparedAgainst = 'details';
-      } else {
-        comparedAgainst = 'structuredContent';
-      }
-    }
-
-    if (comparedAgainst === undefined) {
-      comparedAgainst = 'structuredContent';
-    }
 
     // Chat send confirmation fixture uses a client-oriented shape (action/target/content)
     // that the formatter accepts in addition to the declared ChatResponse ack shape.
@@ -556,15 +780,16 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
       allowedExtraKeys = ['action', 'target', 'content'];
     }
 
-    const comparison = compareFixtureToSchema(entry.fixture, schemaForCompare, {
+    const comparison = compareFixtureAgainstResponseCandidates(entry.fixture, {
       label,
       command: entry.command,
       apiRoute,
-      primarySchemaName: primaryForCompare,
-      maxDepth,
       spec,
+      responseSchema: resolved.schema,
+      primarySchemaName: resolved.primarySchemaName,
+      explicitTarget: entry.schemaTarget,
+      maxDepth,
       allowedExtraKeys,
-      comparedAgainst,
     });
 
     results.push(comparison);

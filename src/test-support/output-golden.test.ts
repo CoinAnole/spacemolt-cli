@@ -3,11 +3,16 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
+  compareFixtureAgainstResponseCandidates,
   compareFixtureToSchema,
+  compareHighValueFixturesToSpec,
   DEFAULT_SCHEMA_BASELINE_PATH,
   divergenceSignature,
   filterBlockingDivergences,
+  type JsonSchema,
+  type OpenApiSpec,
 } from './fixture-schema-compare';
+import { loadPassengerFixture } from '../display/passenger.fixtures';
 import {
   assertGoldenFileSet,
   assertGoldenOutput,
@@ -18,6 +23,75 @@ import {
   shouldUpdateGolden,
   validateGoldenOutput,
 } from './output-golden';
+
+function responseSpecWithSchemas(schemas: Record<string, JsonSchema>, detailsRef?: string): OpenApiSpec {
+  return {
+    paths: {
+      '/api/v2/sample/action': {
+        post: {
+          responses: {
+            '200': {
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/V2Response' },
+                      {
+                        type: 'object',
+                        properties: {
+                          structuredContent: detailsRef
+                            ? {
+                                allOf: [
+                                  { $ref: '#/components/schemas/V2GameState' },
+                                  {
+                                    type: 'object',
+                                    properties: {
+                                      details: { $ref: detailsRef },
+                                    },
+                                  },
+                                ],
+                              }
+                            : { $ref: '#/components/schemas/V2GameState' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        V2Response: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            structuredContent: { type: 'object' },
+          },
+        },
+        V2GameState: {
+          type: 'object',
+          properties: {
+            player: { type: 'object' },
+            ship: { type: 'object' },
+            location: { type: 'object' },
+            details: { type: 'object' },
+          },
+        },
+        ...schemas,
+      },
+    },
+  };
+}
+
+const sampleContext = {
+  label: 'sample',
+  command: 'sample',
+  apiRoute: 'POST /api/v2/sample/action',
+};
 
 describe('output golden test support', () => {
   test('fixture schema baseline path is exported for report tooling', () => {
@@ -51,6 +125,63 @@ describe('output golden test support', () => {
     ]);
 
     expect(blocking.map((entry) => divergenceSignature(entry))).toEqual(['sample|sample|extra-in-fixture|old_field']);
+  });
+
+  test('fixture schema report matches load_passenger against LoadPassengersResponse details', () => {
+    const [comparison] = compareHighValueFixturesToSpec({ only: ['load_passenger'] });
+
+    expect(comparison?.command).toBe('load_passenger');
+    expect(comparison?.primarySchemaName).toBe('LoadPassengersResponse');
+    expect(comparison?.comparedAgainst).toBe('details');
+    expect(comparison?.selectionReason).toBe('best-score');
+    expect(comparison?.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain('extra-in-fixture:loaded');
+    expect(comparison?.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain('extra-in-fixture:count');
+    expect(comparison?.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain('extra-in-fixture:total_fare');
+    expect(comparison?.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain(
+      'extra-in-fixture:skipped_unfunded',
+    );
+  });
+
+  test('schema candidate scoring chooses details for a details-shaped fixture without heuristic markers', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        ActionDetails: {
+          type: 'object',
+          required: ['message', 'loaded', 'count'],
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            loaded: { type: 'array', items: { type: 'object' } },
+            count: { type: 'integer' },
+            total_fare: { type: 'integer' },
+            skipped_unfunded: { type: 'integer' },
+          },
+        },
+      },
+      '#/components/schemas/ActionDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(loadPassengerFixture, {
+      ...sampleContext,
+      spec,
+      responseSchema: {
+        allOf: [
+          { $ref: '#/components/schemas/V2GameState' },
+          {
+            type: 'object',
+            properties: {
+              details: { $ref: '#/components/schemas/ActionDetails' },
+            },
+          },
+        ],
+      },
+      primarySchemaName: 'V2GameState',
+    });
+
+    expect(comparison.primarySchemaName).toBe('ActionDetails');
+    expect(comparison.comparedAgainst).toBe('details');
+    expect(comparison.selectionReason).toBe('best-score');
+    expect(comparison.summary).toBe('no structural divergences detected');
   });
 
   test('schema comparison follows nested refs inside array items', () => {
