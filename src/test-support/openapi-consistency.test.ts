@@ -765,6 +765,33 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).not.toContain('fare_surge');
   });
 
+  test('operation response scan treats return verbs with field-like candidates as response context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_market/refund_quote';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_market/refund_quote',
+      'Returns base_fare and refund_amount.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          refund_amount: { type: 'integer' },
+        },
+      },
+    );
+
+    const findings = findResponseProseMismatches(spec).filter(
+      (f) => f.kind === 'missing-response-field-prose' && f.route === route,
+    );
+
+    expect(findings.find((f) => f.field === 'base_fare')).toMatchObject({
+      confidence: 'medium',
+      severity: 'medium',
+    });
+    expect(findings.map((f) => f.field)).not.toContain('refund_amount');
+  });
+
   test('operation response scan suppresses skill references without dropping response fields', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt_drone/list';
@@ -1059,6 +1086,33 @@ describe('operation response prose mismatch filtering', () => {
     expect(requestFinding?.evidence.candidateProvenance).toContain('request context');
     expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
     expect(responseFields).not.toContain('target_base_id');
+  });
+
+  test('prose-field analyzer reports explicit request prose against empty request schema', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_faction/post_mission';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_faction/post_mission',
+      'Pass target_base_id when posting a delivery mission.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+        },
+      },
+    );
+
+    const requestFindings = findProseFieldMismatches(spec).filter(
+      (f) => f.kind === 'prose-field-mismatch' && f.route === route,
+    );
+    const requestFinding = requestFindings.find((f) => f.field === 'target_base_id');
+
+    expect(requestFinding).toBeDefined();
+    expect(requestFinding?.confidence).toBe('medium');
+    expect(requestFinding?.severity).toBe('medium');
+    expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
   });
 
   test('prose-field analyzer reports backticked request field prose absent from request schema', () => {

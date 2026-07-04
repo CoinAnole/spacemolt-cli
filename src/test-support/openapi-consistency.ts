@@ -417,6 +417,9 @@ function hasResponseContext(text: string, responseFields: Set<string>): boolean 
   const hasFieldNoun = /\b(?:fields?|keys?|payload|result|response|details)\b/i.test(text);
   if (hasResponseNoun && hasReturnVerb && hasFieldNoun) return true;
 
+  const hasReturnOnlyVerb = /\b(?:returns?|returned)\b/i.test(text);
+  if (hasReturnOnlyVerb && hasFieldLikeResponseCandidate(text)) return true;
+
   const hasDisplayVerb = /\b(?:shows?|lists?|reports?|summari[sz]es|carries)\b/i.test(text);
   if (hasDisplayVerb && (mentionsAnyResponseField(text, responseFields) || hasFieldLikeResponseCandidate(text))) {
     return true;
@@ -696,7 +699,6 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
     if (!routeMatchesOnly(routeSig, only)) continue;
 
     const props = getRequestSchemaForPath(spec, apiPath);
-    if (Object.keys(props).length === 0) continue;
 
     const examples = extractDocExamples(op.description as string | undefined);
     for (const ex of examples) {
