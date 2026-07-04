@@ -2,6 +2,19 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { COMMAND_OVERRIDES } from '../command-overrides.ts';
 import { type HighValueFixtureEntry, highValueCommandFixtures } from '../display/formatter-fixtures.ts';
+import {
+  buildResponseSchemaCandidates,
+  getEffectiveSchema,
+  loadOpenApiSpec,
+  resolveRef,
+  resolveSuccessResponseSchema,
+  type JsonSchema,
+  type OpenApiSchemaCandidate,
+  type OpenApiSpec,
+} from './openapi-schema';
+
+export { getEffectiveSchema, loadOpenApiSpec, resolveRef, resolveSuccessResponseSchema };
+export type { JsonSchema, OpenApiSpec };
 
 export interface Divergence {
   path: string;
@@ -54,15 +67,8 @@ export interface CompareOptions {
   maxDepth?: number;
 }
 
-interface SchemaCandidate {
-  label: string;
-  comparedAgainst: string;
-  schema: JsonSchema;
-  primarySchemaName?: string;
-}
-
 interface CandidateComparison {
-  candidate: SchemaCandidate;
+  candidate: OpenApiSchemaCandidate;
   comparison: FixtureSchemaComparison;
   score: number;
 }
@@ -79,240 +85,11 @@ interface ResponseCandidateOptions {
   allowedExtraKeys?: string[];
 }
 
-const DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
 export const DEFAULT_SCHEMA_BASELINE_PATH = path.join(import.meta.dir, 'fixture-schema-baseline.json');
-
-export type JsonSchema = Record<string, unknown> & {
-  type?: string | string[];
-  properties?: Record<string, JsonSchema>;
-  items?: JsonSchema;
-  required?: string[];
-  additionalProperties?: boolean | JsonSchema;
-  $ref?: string;
-  allOf?: JsonSchema[];
-  oneOf?: JsonSchema[];
-  anyOf?: JsonSchema[];
-  description?: string;
-};
-
-export interface OpenApiSpec {
-  paths: Record<
-    string,
-    Record<string, { responses?: Record<string, { content?: Record<string, { schema?: JsonSchema }> }> }>
-  >;
-  components?: { schemas?: Record<string, JsonSchema> };
-}
-
-let cachedSpec: OpenApiSpec | null = null;
-
-export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
-  if (cachedSpec && !customPath) return cachedSpec;
-  const specPath = customPath ?? DEFAULT_OPENAPI_PATH;
-  const raw = fs.readFileSync(specPath, 'utf8');
-  cachedSpec = JSON.parse(raw) as OpenApiSpec;
-  return cachedSpec;
-}
-
-export function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): JsonSchema {
-  if (!ref.startsWith('#/')) throw new Error(`Unsupported $ref: ${ref}`);
-  if (seen.has(ref)) return {}; // cycle guard
-  seen.add(ref);
-
-  const parts = ref.slice(2).split('/');
-  let current: unknown = spec;
-  for (const part of parts) {
-    if (current && typeof current === 'object' && part in (current as Record<string, unknown>)) {
-      current = (current as Record<string, unknown>)[part];
-    } else {
-      return {};
-    }
-  }
-  const schema = current as JsonSchema;
-  if (schema?.$ref) {
-    return resolveRef(spec, schema.$ref, seen);
-  }
-  return schema;
-}
-
-function schemaRefName(schema: JsonSchema | undefined): string | undefined {
-  return typeof schema?.$ref === 'string' ? schema.$ref.split('/').pop() : undefined;
-}
-
-function mergeAllOf(spec: OpenApiSpec, schemas: JsonSchema[], seen = new Set<string>()): JsonSchema {
-  const properties: Record<string, JsonSchema> = {};
-  const required: string[] = [];
-  const out: JsonSchema = {};
-  for (const s of schemas) {
-    const resolved = s.$ref ? resolveRef(spec, s.$ref, seen) : s;
-    const effective = resolved.allOf ? mergeAllOf(spec, resolved.allOf, seen) : resolved;
-
-    for (const [key, value] of Object.entries(effective)) {
-      if (key === 'properties' || key === 'required' || key === 'allOf') continue;
-      if (out[key] === undefined) out[key] = value;
-    }
-
-    if (effective.properties) {
-      for (const [key, propertySchema] of Object.entries(effective.properties)) {
-        properties[key] = { ...(properties[key] ?? {}), ...propertySchema };
-      }
-    }
-    if (effective.required) required.push(...effective.required);
-  }
-  if (Object.keys(properties).length > 0) out.properties = properties;
-  if (required.length > 0) out.required = Array.from(new Set(required));
-  return out;
-}
-
-export function getEffectiveSchema(spec: OpenApiSpec, schema: JsonSchema, seen = new Set<string>()): JsonSchema {
-  const resolved = schema.$ref ? resolveRef(spec, schema.$ref, seen) : schema;
-  if (resolved.allOf && resolved.allOf.length > 0) {
-    return mergeAllOf(spec, resolved.allOf, seen);
-  }
-  return resolved;
-}
 
 function resolveChildSchema(schema: JsonSchema, spec?: OpenApiSpec): JsonSchema {
   if (!spec) return schema;
   return getEffectiveSchema(spec, schema);
-}
-
-/**
- * Given a full apiRoute like "POST /api/v2/spacemolt/get_status",
- * return the resolved 200 response schema (merged).
- */
-export function resolveSuccessResponseSchema(
-  spec: OpenApiSpec,
-  apiRoute: string,
-): { schema: JsonSchema; primarySchemaName?: string } {
-  const parts = apiRoute.split(' ');
-  const methodRaw = parts[0];
-  const pathParts = parts.slice(1);
-  if (!methodRaw) return { schema: {} };
-  const method = methodRaw.toLowerCase() as 'get' | 'post';
-  const apiPath = pathParts.join(' ');
-
-  const pathItem = spec.paths?.[apiPath];
-  if (!pathItem) {
-    return { schema: {} };
-  }
-  const operation = pathItem[method];
-  if (!operation) {
-    return { schema: {} };
-  }
-
-  const resp = operation.responses?.['200'] ?? operation.responses?.[200];
-  const media = resp?.content?.['application/json'];
-  if (!media?.schema) {
-    return { schema: {} };
-  }
-
-  let effective = getEffectiveSchema(spec, media.schema as JsonSchema);
-
-  // Common pattern: V2Response envelope + structuredContent
-  let primaryName: string | undefined;
-  const sc = effective.properties?.structuredContent as JsonSchema | undefined;
-  if (sc) {
-    if (sc.$ref) {
-      primaryName = sc.$ref.split('/').pop();
-      effective = resolveRef(spec, sc.$ref);
-    } else if (sc.allOf) {
-      effective = mergeAllOf(spec, sc.allOf);
-    } else {
-      effective = sc;
-    }
-  } else if (effective.properties) {
-    // Some responses put data at top level (e.g. register success, simple actions)
-    // Keep the merged effective schema as primary.
-  }
-
-  return { schema: effective, primarySchemaName: primaryName };
-}
-
-function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSchema | undefined {
-  const d = schema.properties?.details as JsonSchema | undefined;
-  if (!d) return undefined;
-  let resolvedD = d;
-  if (resolvedD.$ref) {
-    resolvedD = resolveRef(spec, resolvedD.$ref);
-  }
-  resolvedD = getEffectiveSchema(spec, resolvedD);
-  // If it ended up empty or without properties, don't use it
-  if (
-    !resolvedD ||
-    (resolvedD.properties &&
-      Object.keys(resolvedD.properties).length === 0 &&
-      !resolvedD.allOf &&
-      !resolvedD.oneOf &&
-      !resolvedD.anyOf)
-  ) {
-    return undefined;
-  }
-  return resolvedD;
-}
-
-function schemaHasComparableShape(schema: JsonSchema | undefined): schema is JsonSchema {
-  if (!schema) return false;
-  if (schema.properties && Object.keys(schema.properties).length > 0) return true;
-  if (schema.items) return true;
-  const schemaTypes = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
-  return schemaTypes.some((type) => type !== 'object');
-}
-
-function expandBranchCandidates(spec: OpenApiSpec, candidate: SchemaCandidate): SchemaCandidate[] {
-  const effective = getEffectiveSchema(spec, candidate.schema);
-  const branches = effective.oneOf ?? effective.anyOf;
-  const out: SchemaCandidate[] = schemaHasComparableShape(effective) ? [{ ...candidate, schema: effective }] : [];
-  if (!branches) {
-    return out;
-  }
-
-  for (let i = 0; i < branches.length; i++) {
-    const branch = branches[i] as JsonSchema;
-    const resolved = getEffectiveSchema(spec, branch);
-    const refName = schemaRefName(branch);
-    out.push(
-      ...expandBranchCandidates(spec, {
-        label: `${candidate.label}.${effective.oneOf ? 'oneOf' : 'anyOf'}[${i}]`,
-        comparedAgainst: candidate.comparedAgainst,
-        schema: resolved,
-        primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
-      }),
-    );
-  }
-  return out;
-}
-
-function buildSchemaCandidates(
-  spec: OpenApiSpec,
-  responseSchema: JsonSchema,
-  primarySchemaName?: string,
-): SchemaCandidate[] {
-  const effectiveResponseSchema = getEffectiveSchema(spec, responseSchema);
-  const structured: SchemaCandidate = {
-    label: 'structuredContent',
-    comparedAgainst: 'structuredContent',
-    schema: effectiveResponseSchema,
-    primarySchemaName,
-  };
-  const candidates: SchemaCandidate[] = [...expandBranchCandidates(spec, structured)];
-
-  const detailsProp = effectiveResponseSchema.properties?.details as JsonSchema | undefined;
-  const detailsSchema = resolveDetailsSubschema(spec, effectiveResponseSchema);
-  if (detailsSchema) {
-    const details: SchemaCandidate = {
-      label: 'details',
-      comparedAgainst: 'details',
-      schema: detailsSchema,
-      primarySchemaName: schemaRefName(detailsProp) ?? 'details',
-    };
-    candidates.push(...expandBranchCandidates(spec, details));
-  }
-
-  const unique = new Map<string, SchemaCandidate>();
-  for (const candidate of candidates) {
-    unique.set(`${candidate.label}:${candidate.primarySchemaName ?? ''}`, candidate);
-  }
-  return [...unique.values()];
 }
 
 function getJsonType(value: unknown): string {
@@ -554,9 +331,9 @@ function candidateScores(comparisons: CandidateComparison[]): FixtureSchemaCandi
 }
 
 function candidatesForExplicitTarget(
-  candidates: SchemaCandidate[],
+  candidates: OpenApiSchemaCandidate[],
   explicitTarget: HighValueFixtureEntry['schemaTarget'],
-): SchemaCandidate[] {
+): OpenApiSchemaCandidate[] {
   if (!explicitTarget) return [];
   return candidates.filter((candidate) => candidate.comparedAgainst === explicitTarget);
 }
@@ -623,7 +400,7 @@ function ambiguousSchemaTargetComparison(
 function compareCandidates(
   fixtureValue: unknown,
   opts: ResponseCandidateOptions,
-  candidates: SchemaCandidate[],
+  candidates: OpenApiSchemaCandidate[],
 ): CandidateComparison[] {
   return candidates
     .map((candidate) => {
@@ -666,7 +443,7 @@ function selectCandidateComparison(
 function fallbackComparison(
   fixtureValue: unknown,
   opts: ResponseCandidateOptions,
-  fallbackCandidate: SchemaCandidate,
+  fallbackCandidate: OpenApiSchemaCandidate,
 ): FixtureSchemaComparison {
   const comparison = compareFixtureToSchema(fixtureValue, fallbackCandidate.schema, {
     label: opts.label,
@@ -685,7 +462,7 @@ export function compareFixtureAgainstResponseCandidates(
   fixtureValue: unknown,
   opts: ResponseCandidateOptions,
 ): FixtureSchemaComparison {
-  const candidates = buildSchemaCandidates(opts.spec, opts.responseSchema, opts.primarySchemaName);
+  const candidates = buildResponseSchemaCandidates(opts.spec, opts.responseSchema, opts.primarySchemaName);
   const fallbackCandidate =
     candidates.find((candidate) => candidate.comparedAgainst === 'structuredContent') ?? candidates[0];
 
