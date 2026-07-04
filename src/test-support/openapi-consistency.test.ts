@@ -1097,7 +1097,7 @@ describe('operation response prose mismatch filtering', () => {
     expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
   });
 
-  test('operation response scan keeps use prose for field-like response terms', () => {
+  test('operation response scan suppresses ambiguous use prose by default and keeps it in high-recall mode', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt/test_use_field_prose';
     addPostOperationWithResponse(
@@ -1113,14 +1113,23 @@ describe('operation response prose mismatch filtering', () => {
       },
     );
 
-    const fields = findResponseProseMismatches(spec)
+    const defaultFields = findResponseProseMismatches(spec)
       .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
       .map((f) => f.field);
 
-    expect(fields).toContain('base_fare');
+    expect(defaultFields).not.toContain('base_fare');
+
+    const highRecallFinding = findResponseProseMismatches(spec, { includeLowConfidence: true }).find(
+      (f) => f.kind === 'missing-response-field-prose' && f.route === route && f.field === 'base_fare',
+    );
+
+    expect(highRecallFinding).toBeDefined();
+    expect(highRecallFinding?.confidence).toBe('speculative');
+    expect(highRecallFinding?.severity).toBe('low');
+    expect(highRecallFinding?.evidence.candidateProvenance).toContain('ambiguous context');
   });
 
-  test('operation response scan keeps command-prefix field-like response terms', () => {
+  test('operation response scan keeps command-prefix ambiguous terms only in high-recall mode', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt/test_repair_cost_prose';
     addPostOperationWithResponse(
@@ -1136,11 +1145,20 @@ describe('operation response prose mismatch filtering', () => {
       },
     );
 
-    const fields = findResponseProseMismatches(spec)
+    const defaultFields = findResponseProseMismatches(spec)
       .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
       .map((f) => f.field);
 
-    expect(fields).toContain('repair_cost');
+    expect(defaultFields).not.toContain('repair_cost');
+
+    const highRecallFinding = findResponseProseMismatches(spec, { includeLowConfidence: true }).find(
+      (f) => f.kind === 'missing-response-field-prose' && f.route === route && f.field === 'repair_cost',
+    );
+
+    expect(highRecallFinding).toBeDefined();
+    expect(highRecallFinding?.confidence).toBe('speculative');
+    expect(highRecallFinding?.severity).toBe('low');
+    expect(highRecallFinding?.evidence.candidateProvenance).toContain('ambiguous context');
   });
 
   test('operation response scan ignores quoted example values', () => {
