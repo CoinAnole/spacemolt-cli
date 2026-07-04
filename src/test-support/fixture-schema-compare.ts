@@ -5,12 +5,12 @@ import { type HighValueFixtureEntry, highValueCommandFixtures } from '../display
 import {
   buildResponseSchemaCandidates,
   getEffectiveSchema,
-  loadOpenApiSpec,
-  resolveRef,
-  resolveSuccessResponseSchema,
   type JsonSchema,
+  loadOpenApiSpec,
   type OpenApiSchemaCandidate,
   type OpenApiSpec,
+  resolveRef,
+  resolveSuccessResponseSchema,
 } from './openapi-schema';
 
 export { getEffectiveSchema, loadOpenApiSpec, resolveRef, resolveSuccessResponseSchema };

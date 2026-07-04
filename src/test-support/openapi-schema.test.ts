@@ -1,14 +1,14 @@
+import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { describe, expect, test } from 'bun:test';
 import {
   buildResponseSchemaCandidates,
   collectAllPropertyNames,
   getEffectiveSchema,
   loadOpenApiSpec,
-  resolveSuccessResponseSchema,
   type OpenApiSpec,
+  resolveSuccessResponseSchema,
 } from './openapi-schema';
 
 const DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
@@ -187,11 +187,7 @@ describe('OpenAPI schema utilities', () => {
     const resolved = resolveSuccessResponseSchema(spec, 'POST /api/v2/spacemolt/craft');
     const candidates = buildResponseSchemaCandidates(spec, resolved.schema, resolved.primarySchemaName);
 
-    expect(candidates.map((c) => c.label)).toEqual([
-      'structuredContent',
-      'details.oneOf[0]',
-      'details.oneOf[1]',
-    ]);
+    expect(candidates.map((c) => c.label)).toEqual(['structuredContent', 'details.oneOf[0]', 'details.oneOf[1]']);
     expect(candidates.map((c) => c.comparedAgainst)).toEqual(['structuredContent', 'details', 'details']);
   });
 

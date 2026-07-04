@@ -226,7 +226,10 @@ function summaryFor(differences: CuratedCommandComparisonDifference[]): string {
   return [...counts.entries()].map(([kind, count]) => `${count} ${kind}`).join(', ');
 }
 
-function canonicalRequiredFields(required: string[] | undefined, aliases: Record<string, string> | undefined): string[] {
+function canonicalRequiredFields(
+  required: string[] | undefined,
+  aliases: Record<string, string> | undefined,
+): string[] {
   return [...new Set((required || []).map((field) => aliases?.[field] ?? field))].sort();
 }
 
