@@ -37,15 +37,18 @@ export interface OpenApiSchemaCandidate {
   primarySchemaName?: string;
 }
 
-let cachedSpec: OpenApiSpec | null = null;
+const specCache = new Map<string, OpenApiSpec>();
 const propNamesMemo = new WeakMap<object, Set<string>>();
 
 export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
-  if (cachedSpec && !customPath) return cachedSpec;
-  const specPath = customPath ?? DEFAULT_OPENAPI_PATH;
+  const specPath = path.resolve(customPath ?? DEFAULT_OPENAPI_PATH);
+  const cachedSpec = specCache.get(specPath);
+  if (cachedSpec) return cachedSpec;
+
   const raw = fs.readFileSync(specPath, 'utf8');
-  cachedSpec = JSON.parse(raw) as OpenApiSpec;
-  return cachedSpec;
+  const spec = JSON.parse(raw) as OpenApiSpec;
+  specCache.set(specPath, spec);
+  return spec;
 }
 
 export function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): JsonSchema {
@@ -122,13 +125,7 @@ export function resolveSuccessResponseSchema(
 
   if (structuredContent) {
     primarySchemaName = schemaRefName(structuredContent);
-    if (structuredContent.$ref) {
-      effective = resolveRef(spec, structuredContent.$ref);
-    } else if (structuredContent.allOf) {
-      effective = mergeAllOf(spec, structuredContent.allOf);
-    } else {
-      effective = getEffectiveSchema(spec, structuredContent);
-    }
+    effective = getEffectiveSchema(spec, structuredContent);
   }
 
   return { schema: effective, primarySchemaName };
