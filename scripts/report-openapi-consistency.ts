@@ -12,6 +12,7 @@
  *   bun run report:openapi-consistency
  *   bun run report:openapi-consistency --only passenger,facility,job
  *   bun run report:openapi-consistency --include-component-prose
+ *   bun run report:openapi-consistency --high-recall
  *   bun run report:openapi-consistency --json
  *
  * This is a diagnostic / high-recall fuzzy tool. It is informational unless you add your own gating.
@@ -67,7 +68,7 @@ export function parseArgs(argv: string[]): CliArgs {
       );
     } else if (a === '--json') {
       args.json = true;
-    } else if (a === '--include-low' || a === '--low-confidence') {
+    } else if (a === '--include-low' || a === '--low-confidence' || a === '--high-recall') {
       args.includeLow = true;
     } else if (a === '--include-component-prose') {
       args.includeComponentProse = true;

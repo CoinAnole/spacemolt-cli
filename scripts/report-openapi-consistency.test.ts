@@ -18,4 +18,12 @@ describe('report-openapi-consistency args', () => {
       includeComponentProse: true,
     });
   });
+
+  test('parses high-recall as an include-low alias', () => {
+    expect(parseArgs(['--high-recall'])).toMatchObject({
+      json: false,
+      includeLow: true,
+      includeComponentProse: false,
+    });
+  });
 });
