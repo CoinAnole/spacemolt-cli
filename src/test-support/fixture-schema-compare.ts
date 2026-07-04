@@ -287,30 +287,31 @@ function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSch
 function schemaHasComparableShape(schema: JsonSchema | undefined): schema is JsonSchema {
   if (!schema) return false;
   if (schema.properties && Object.keys(schema.properties).length > 0) return true;
-  if (schema.oneOf && schema.oneOf.length > 0) return true;
-  if (schema.anyOf && schema.anyOf.length > 0) return true;
-  if (schema.allOf && schema.allOf.length > 0) return true;
-  return false;
+  if (schema.items) return true;
+  const schemaTypes = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
+  return schemaTypes.some((type) => type !== 'object');
 }
 
 function expandBranchCandidates(spec: OpenApiSpec, candidate: SchemaCandidate): SchemaCandidate[] {
   const effective = getEffectiveSchema(spec, candidate.schema);
   const branches = effective.oneOf ?? effective.anyOf;
-  const hasOwnComparableProperties = !!effective.properties && Object.keys(effective.properties).length > 0;
-  const out: SchemaCandidate[] = !branches || hasOwnComparableProperties ? [candidate] : [];
-  if (!branches) return out;
+  const out: SchemaCandidate[] = schemaHasComparableShape(effective) ? [{ ...candidate, schema: effective }] : [];
+  if (!branches) {
+    return out;
+  }
 
   for (let i = 0; i < branches.length; i++) {
     const branch = branches[i] as JsonSchema;
     const resolved = getEffectiveSchema(spec, branch);
-    if (!schemaHasComparableShape(resolved)) continue;
     const refName = schemaRefName(branch);
-    out.push({
-      label: `${candidate.label}.${effective.oneOf ? 'oneOf' : 'anyOf'}[${i}]`,
-      comparedAgainst: candidate.comparedAgainst,
-      schema: resolved,
-      primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
-    });
+    out.push(
+      ...expandBranchCandidates(spec, {
+        label: `${candidate.label}.${effective.oneOf ? 'oneOf' : 'anyOf'}[${i}]`,
+        comparedAgainst: candidate.comparedAgainst,
+        schema: resolved,
+        primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
+      }),
+    );
   }
   return out;
 }
@@ -587,14 +588,12 @@ function candidateScores(comparisons: CandidateComparison[]): FixtureSchemaCandi
   }));
 }
 
-function candidateForExplicitTarget(
+function candidatesForExplicitTarget(
   candidates: SchemaCandidate[],
   explicitTarget: HighValueFixtureEntry['schemaTarget'],
-): SchemaCandidate | undefined {
-  if (explicitTarget === 'details') return candidates.find((candidate) => candidate.comparedAgainst === 'details');
-  if (explicitTarget === 'structuredContent')
-    return candidates.find((candidate) => candidate.comparedAgainst === 'structuredContent');
-  return undefined;
+): SchemaCandidate[] {
+  if (!explicitTarget) return [];
+  return candidates.filter((candidate) => candidate.comparedAgainst === explicitTarget);
 }
 
 function ambiguousSchemaTargetComparison(
@@ -628,6 +627,67 @@ function ambiguousSchemaTargetComparison(
   };
 }
 
+function compareCandidates(
+  fixtureValue: unknown,
+  opts: ResponseCandidateOptions,
+  candidates: SchemaCandidate[],
+): CandidateComparison[] {
+  return candidates
+    .map((candidate) => {
+      const comparison = compareFixtureToSchema(fixtureValue, candidate.schema, {
+        label: opts.label,
+        command: opts.command,
+        apiRoute: opts.apiRoute,
+        primarySchemaName: candidate.primarySchemaName,
+        maxDepth: opts.maxDepth,
+        spec: opts.spec,
+        allowedExtraKeys: opts.allowedExtraKeys,
+        comparedAgainst: candidate.comparedAgainst,
+      });
+      return { candidate, comparison, score: scoreComparison(comparison) };
+    })
+    .sort((a, b) => a.score - b.score || a.candidate.label.localeCompare(b.candidate.label));
+}
+
+function selectCandidateComparison(
+  fixtureValue: unknown,
+  opts: ResponseCandidateOptions,
+  comparisons: CandidateComparison[],
+  selectionReason: FixtureSchemaSelectionReason,
+): FixtureSchemaComparison | undefined {
+  const best = comparisons[0];
+  if (!best) return undefined;
+
+  const tied = comparisons.filter((candidate) => candidate.score === best.score);
+  if (tied.length > 1) {
+    return ambiguousSchemaTargetComparison(fixtureValue, opts, tied);
+  }
+
+  return {
+    ...best.comparison,
+    candidateScores: candidateScores(comparisons),
+    selectionReason,
+  };
+}
+
+function fallbackComparison(
+  fixtureValue: unknown,
+  opts: ResponseCandidateOptions,
+  fallbackCandidate: SchemaCandidate,
+): FixtureSchemaComparison {
+  const comparison = compareFixtureToSchema(fixtureValue, fallbackCandidate.schema, {
+    label: opts.label,
+    command: opts.command,
+    apiRoute: opts.apiRoute,
+    primarySchemaName: fallbackCandidate.primarySchemaName,
+    maxDepth: opts.maxDepth,
+    spec: opts.spec,
+    allowedExtraKeys: opts.allowedExtraKeys,
+    comparedAgainst: fallbackCandidate.comparedAgainst,
+  });
+  return { ...comparison, selectionReason: 'fallback' };
+}
+
 export function compareFixtureAgainstResponseCandidates(
   fixtureValue: unknown,
   opts: ResponseCandidateOptions,
@@ -656,73 +716,21 @@ export function compareFixtureAgainstResponseCandidates(
     };
   }
 
-  const explicitCandidate = candidateForExplicitTarget(candidates, opts.explicitTarget);
-  if (opts.explicitTarget && explicitCandidate) {
-    const comparison = compareFixtureToSchema(fixtureValue, explicitCandidate.schema, {
-      label: opts.label,
-      command: opts.command,
-      apiRoute: opts.apiRoute,
-      primarySchemaName: explicitCandidate.primarySchemaName,
-      maxDepth: opts.maxDepth,
-      spec: opts.spec,
-      allowedExtraKeys: opts.allowedExtraKeys,
-      comparedAgainst: explicitCandidate.comparedAgainst,
-    });
-    return {
-      ...comparison,
-      candidateScores: [
-        {
-          label: explicitCandidate.label,
-          primarySchemaName: explicitCandidate.primarySchemaName,
-          score: scoreComparison(comparison),
-          summary: comparison.summary,
-        },
-      ],
-      selectionReason: 'explicit-target',
-    };
+  const explicitCandidates = candidatesForExplicitTarget(candidates, opts.explicitTarget);
+  if (explicitCandidates.length > 0) {
+    const selected = selectCandidateComparison(
+      fixtureValue,
+      opts,
+      compareCandidates(fixtureValue, opts, explicitCandidates),
+      'explicit-target',
+    );
+    if (selected) return selected;
   }
 
-  const comparisons = candidates
-    .map((candidate) => {
-      const comparison = compareFixtureToSchema(fixtureValue, candidate.schema, {
-        label: opts.label,
-        command: opts.command,
-        apiRoute: opts.apiRoute,
-        primarySchemaName: candidate.primarySchemaName,
-        maxDepth: opts.maxDepth,
-        spec: opts.spec,
-        allowedExtraKeys: opts.allowedExtraKeys,
-        comparedAgainst: candidate.comparedAgainst,
-      });
-      return { candidate, comparison, score: scoreComparison(comparison) };
-    })
-    .sort((a, b) => a.score - b.score || a.candidate.label.localeCompare(b.candidate.label));
-
-  const best = comparisons[0];
-  if (!best) {
-    const comparison = compareFixtureToSchema(fixtureValue, fallbackCandidate.schema, {
-      label: opts.label,
-      command: opts.command,
-      apiRoute: opts.apiRoute,
-      primarySchemaName: fallbackCandidate.primarySchemaName,
-      maxDepth: opts.maxDepth,
-      spec: opts.spec,
-      allowedExtraKeys: opts.allowedExtraKeys,
-      comparedAgainst: fallbackCandidate.comparedAgainst,
-    });
-    return { ...comparison, selectionReason: 'fallback' };
-  }
-
-  const tied = comparisons.filter((candidate) => candidate.score === best.score);
-  if (tied.length > 1) {
-    return ambiguousSchemaTargetComparison(fixtureValue, opts, tied);
-  }
-
-  return {
-    ...best.comparison,
-    candidateScores: candidateScores(comparisons),
-    selectionReason: 'best-score',
-  };
+  return (
+    selectCandidateComparison(fixtureValue, opts, compareCandidates(fixtureValue, opts, candidates), 'best-score') ??
+    fallbackComparison(fixtureValue, opts, fallbackCandidate)
+  );
 }
 
 /**
