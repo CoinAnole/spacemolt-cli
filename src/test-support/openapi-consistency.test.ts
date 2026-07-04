@@ -1037,6 +1037,66 @@ describe('operation response prose mismatch filtering', () => {
     expect(responseFields).not.toContain('target_base_id');
   });
 
+  test('prose-field analyzer reports backticked request field prose absent from request schema', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_faction/post_mission';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_faction/post_mission',
+      'Pass `target_base_id` when posting a delivery mission.',
+      {
+        mission_type: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+        },
+      },
+    );
+
+    const requestFindings = findProseFieldMismatches(spec).filter(
+      (f) => f.kind === 'prose-field-mismatch' && f.route === route,
+    );
+    const requestFinding = requestFindings.find((f) => f.field === 'target_base_id');
+
+    expect(requestFinding).toBeDefined();
+    expect(requestFinding?.confidence).toBe('medium');
+    expect(requestFinding?.severity).toBe('medium');
+    expect(requestFinding?.evidence.candidateProvenance).toContain('request context');
+    expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
+  });
+
+  test('prose-field analyzer reports explicit request field-list prose by default', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_faction/post_mission';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_faction/post_mission',
+      'Accepts mission_type and target_base_id fields.',
+      {
+        mission_type: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+        },
+      },
+    );
+
+    const requestFindings = findProseFieldMismatches(spec).filter(
+      (f) => f.kind === 'prose-field-mismatch' && f.route === route,
+    );
+    const requestFinding = requestFindings.find((f) => f.field === 'target_base_id');
+
+    expect(requestFinding).toBeDefined();
+    expect(requestFinding?.confidence).toBe('medium');
+    expect(requestFinding?.severity).toBe('medium');
+    expect(requestFinding?.evidence.candidateProvenance).toContain('request context');
+    expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
+  });
+
   test('operation response scan keeps use prose for field-like response terms', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt/test_use_field_prose';

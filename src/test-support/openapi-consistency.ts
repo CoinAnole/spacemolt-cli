@@ -86,6 +86,26 @@ export interface ReportOptions {
   includeComponentProse?: boolean;
 }
 
+type ProseTarget = 'request' | 'response' | 'neutral' | 'ambiguous';
+
+interface ClassifiedOperationProseSegment {
+  text: string;
+  target: ProseTarget;
+  label: string;
+}
+
+interface OperationProseContext {
+  routeSig: string;
+  requestFields: Set<string>;
+  responseFields: Set<string>;
+  knownOperationTerms: Set<string>;
+  includeAmbiguous: boolean;
+}
+
+interface CandidateExtractionOptions {
+  forceRelevant?: boolean;
+}
+
 const descTextMemo = new WeakMap<object, string>();
 
 export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
@@ -167,6 +187,11 @@ function splitDescriptionBlocks(text: string): string[] {
   return parts.map((b) => b.trim()).filter(Boolean);
 }
 
+function splitDescriptionSentences(block: string): string[] {
+  const matches = block.match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g) ?? [block];
+  return matches.map((part) => part.trim()).filter(Boolean);
+}
+
 /** Return whether this block looks like a rate-limit note (used to bound post-example context). */
 function isRateLimitBlock(block: string | undefined): boolean {
   if (!block) return false;
@@ -231,7 +256,10 @@ function isNearCodeLikeToken(text: string, index: number | undefined): boolean {
  * Harvest FieldCandidates (with provenance) from text using only context-relevant blocks.
  * This powers both legacy string[] extractors (compat) and rich paths for provenance.
  */
-function harvestFieldCandidates(text: string | undefined): FieldCandidate[] {
+function harvestFieldCandidates(
+  text: string | undefined,
+  options: CandidateExtractionOptions = {},
+): FieldCandidate[] {
   if (!text) return [];
   const blocks = splitDescriptionBlocks(text);
   const out: FieldCandidate[] = [];
@@ -242,7 +270,8 @@ function harvestFieldCandidates(text: string | undefined): FieldCandidate[] {
     if (typeof maybeBlock !== 'string' || !maybeBlock) continue;
     const block = maybeBlock as string;
     const { relevant, label } = classifyBlock(block, i, blocks);
-    const useBlock = relevant || afterExample;
+    const useBlock = options.forceRelevant || relevant || afterExample;
+    const provenanceLabel = options.forceRelevant && !relevant ? 'forced response context' : label;
     if (!useBlock) {
       if (isExampleBlock(block)) afterExample = true;
       if (isRateLimitBlock(block)) afterExample = false;
@@ -255,9 +284,9 @@ function harvestFieldCandidates(text: string | undefined): FieldCandidate[] {
       if (m[1]) {
         const term = m[1];
         const prov =
-          isExampleBlock(block) || label === 'example' || label === 'post-example'
+          isExampleBlock(block) || provenanceLabel === 'example' || provenanceLabel === 'post-example'
             ? `from JSON in example`
-            : `from JSON key in ${label} block`;
+            : `from JSON key in ${provenanceLabel} block`;
         out.push({ term, provenance: prov });
       }
     }
@@ -273,7 +302,7 @@ function harvestFieldCandidates(text: string | undefined): FieldCandidate[] {
         );
         const matchedCue = near?.[1];
         const cuePart = matchedCue ? ` after '${matchedCue.toLowerCase()}'` : '';
-        out.push({ term: candidate, provenance: `from loose proseKey${cuePart} in ${label}` });
+        out.push({ term: candidate, provenance: `from loose proseKey${cuePart} in ${provenanceLabel}` });
       }
     }
 
@@ -334,20 +363,125 @@ function isActionCatalogBlock(block: string | undefined): boolean {
   return /^\s*Actions:\s/i.test(block);
 }
 
-function sanitizeOperationResponseBlock(block: string | undefined): string {
-  if (!block) return '';
-  if (isExampleBlock(block)) return '';
-  if (isRateLimitBlock(block)) return '';
+function isHelpDocumentationProse(text: string): boolean {
+  return /\bReturns documentation for all actions available in [a-z][a-z0-9_]*\b/i.test(text);
+}
 
-  let sanitized = block.replace(/\bActions:\s[\s\S]*$/i, '').trim();
-  sanitized = sanitized.replace(/(^|[.!?]\s+)Action\s+["'`][a-z][a-z0-9_]*["'`][^.?!]*(?:[.?!]|$)/gi, '$1');
-  sanitized = sanitized.replace(/(^|[.!?]\s+)Accepts?\b[^.?!]*(?:[.?!]|$)/gi, '$1');
-  sanitized = sanitized.replace(
-    /(^|[.!?]\s+)[^.?!]*\bsupports?\s+only\b[^.?!]*["'`][a-z][a-z0-9_]*["'`][^.?!]*(?:[.?!]|$)/gi,
-    '$1',
+function isPermissionProse(text: string): boolean {
+  return /\bRequires\b[^.?!]*\bpermission\b/i.test(text);
+}
+
+function isErrorResponseProse(text: string): boolean {
+  return /\berror response\b|\berror details\b|\berror codes?\b/i.test(text);
+}
+
+function hasExplicitFieldList(text: string): boolean {
+  return /((?:\b[a-z][a-z0-9_]*\b(?:\s*,\s*(?:and\s+)?|\s+and\s+))+?\b[a-z][a-z0-9_]*\b)\s+(?:fields?|keys?)\b/i.test(
+    text,
   );
+}
 
-  return sanitized.trim();
+function mentionsKnownOperation(text: string, knownOperationTerms: Set<string>): boolean {
+  const lower = text.toLowerCase();
+  for (const term of knownOperationTerms) {
+    if (new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(lower)) return true;
+  }
+  return false;
+}
+
+function mentionsAnyField(text: string, fields: Set<string>): boolean {
+  for (const field of fields) {
+    const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`\\b${escaped}\\b`, 'i').test(text)) return true;
+  }
+  return false;
+}
+
+function mentionsAnyRequestField(text: string, requestFields: Set<string>): boolean {
+  return mentionsAnyField(text, requestFields);
+}
+
+function mentionsAnyResponseField(text: string, responseFields: Set<string>): boolean {
+  return mentionsAnyField(text, responseFields);
+}
+
+function hasFieldLikeResponseCandidate(text: string): boolean {
+  if (/\b[a-z][a-z0-9_]*_[a-z0-9_]*\b/.test(text)) return true;
+  return extractResponseFieldCandidatesWithProvenance(text, { forceRelevant: true }).some((c) => !isNoiseTerm(c.term));
+}
+
+function hasResponseContext(text: string, responseFields: Set<string>): boolean {
+  if (hasExplicitFieldList(text)) return true;
+  const hasResponseNoun = /\b(?:response|result|returns?|returned|structuredContent|details)\b/i.test(text);
+  const hasReturnVerb = /\b(?:returns?|returned|shows|includes?|contains?|has)\b/i.test(text);
+  const hasFieldNoun = /\b(?:fields?|keys?|payload|result|response|details)\b/i.test(text);
+  if (hasResponseNoun && hasReturnVerb && hasFieldNoun) return true;
+
+  const hasDisplayVerb = /\b(?:shows?|lists?|reports?|summari[sz]es|carries)\b/i.test(text);
+  if (hasDisplayVerb && (mentionsAnyResponseField(text, responseFields) || hasFieldLikeResponseCandidate(text))) {
+    return true;
+  }
+
+  return false;
+}
+
+function hasRequestContext(text: string, requestFields: Set<string>): boolean {
+  if (/\b(?:accepts?|parameters?|pass|specify|set|call with|omit)\b/i.test(text)) return true;
+  if (
+    /\b(?:payload|request)\b/i.test(text) &&
+    !/\b(?:response|result|returns?|returned|structuredContent|details)\b/i.test(text)
+  ) {
+    return true;
+  }
+  if (/\buse\s+[a-z][a-z0-9_]*\s*=/i.test(text)) return true;
+  return /\buse\b/i.test(text) && mentionsAnyRequestField(text, requestFields);
+}
+
+function isNeutralOperationProseSegment(
+  text: string,
+  routeSig: string,
+  knownOperationTerms: Set<string>,
+  responseFields: Set<string>,
+): boolean {
+  if (!text) return true;
+  if (isExampleBlock(text)) return true;
+  if (isRateLimitBlock(text)) return true;
+  if (isActionCatalogBlock(text)) return true;
+  if (isHelpDocumentationProse(text)) return true;
+  if (isPermissionProse(text)) return true;
+  if (isErrorResponseProse(text)) return true;
+
+  const routeLeaf = getRouteLeaf(routeSig).toLowerCase();
+  if (routeLeaf && new RegExp(`\\b${routeLeaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)) {
+    if (!hasResponseContext(text, responseFields)) return true;
+  }
+
+  if (mentionsKnownOperation(text, knownOperationTerms) && !hasResponseContext(text, responseFields)) return true;
+
+  return false;
+}
+
+function classifyOperationProseSegment(text: string, context: OperationProseContext): ProseTarget {
+  if (isNeutralOperationProseSegment(text, context.routeSig, context.knownOperationTerms, context.responseFields))
+    return 'neutral';
+
+  const request = hasRequestContext(text, context.requestFields);
+  if (
+    request &&
+    hasExplicitFieldList(text) &&
+    !/\b(?:response|result|returns?|returned|structuredContent|details|shows?|lists?|reports?|summari[sz]es|carries)\b/i.test(
+      text,
+    )
+  ) {
+    return 'request';
+  }
+
+  const response = hasResponseContext(text, context.responseFields);
+
+  if (response && !request) return 'response';
+  if (request && !response) return 'request';
+  if (response && request) return 'ambiguous';
+  return 'ambiguous';
 }
 
 function getRouteLeaf(routeSig: string): string {
@@ -364,18 +498,60 @@ function collectKnownOperationTerms(spec: OpenApiSpec): Set<string> {
   return terms;
 }
 
-function collectOperationResponseCandidateText(description: string | undefined): string {
-  if (!description) return '';
-  const blocks = splitDescriptionBlocks(description);
-  const kept: string[] = [];
+function collectOperationResponseCandidateSegments(
+  description: string | undefined,
+  context: OperationProseContext,
+): ClassifiedOperationProseSegment[] {
+  if (!description) return [];
+  const segments: ClassifiedOperationProseSegment[] = [];
 
-  for (const block of blocks) {
-    if (isActionCatalogBlock(block)) continue;
-    const sanitized = sanitizeOperationResponseBlock(block);
-    if (sanitized) kept.push(sanitized);
+  for (const block of splitDescriptionBlocks(description)) {
+    const blockSegments =
+      isExampleBlock(block) || isRateLimitBlock(block) || isActionCatalogBlock(block)
+        ? [block]
+        : splitDescriptionSentences(block);
+
+    for (const text of blockSegments) {
+      const target = classifyOperationProseSegment(text, context);
+      if (target === 'response' || (target === 'ambiguous' && context.includeAmbiguous)) {
+        segments.push({
+          text,
+          target,
+          label: target === 'response' ? 'response context' : 'ambiguous context',
+        });
+      }
+    }
   }
 
-  return kept.join('\n\n');
+  return segments;
+}
+
+function collectOperationRequestCandidateSegments(
+  description: string | undefined,
+  context: OperationProseContext,
+): ClassifiedOperationProseSegment[] {
+  if (!description) return [];
+  const segments: ClassifiedOperationProseSegment[] = [];
+
+  for (const block of splitDescriptionBlocks(description)) {
+    const blockSegments =
+      isExampleBlock(block) || isRateLimitBlock(block) || isActionCatalogBlock(block)
+        ? [block]
+        : splitDescriptionSentences(block);
+
+    for (const text of blockSegments) {
+      const target = classifyOperationProseSegment(text, context);
+      if (target === 'request' || (target === 'ambiguous' && context.includeAmbiguous)) {
+        segments.push({
+          text,
+          target,
+          label: target === 'request' ? 'request context' : 'ambiguous context',
+        });
+      }
+    }
+  }
+
+  return segments;
 }
 
 function shouldSuppressOperationResponseCandidate(
@@ -384,6 +560,7 @@ function shouldSuppressOperationResponseCandidate(
   sourceText: string,
   requestFields: Set<string>,
   knownOperationTerms: Set<string>,
+  target: ProseTarget,
 ): boolean {
   const term = candidate.term;
   const lower = term.toLowerCase();
@@ -404,8 +581,8 @@ function shouldSuppressOperationResponseCandidate(
 
   if (/example/i.test(candidate.provenance)) return true;
   if (lower === routeLeaf) return true;
-  if (requestFields.has(term)) return true;
-  if (termPresentIn(term, requestFields)) return true;
+  if (target !== 'response' && requestFields.has(term)) return true;
+  if (target !== 'response' && termPresentIn(term, requestFields)) return true;
   if (isLooseCommandReference && isQuotedExampleValue(term, sourceText)) return true;
   if (isLooseCommandReference && knownOperationTerms.has(lower)) return true;
   if (isLooseCommandReference && /_passengers?$/.test(lower)) return true;
@@ -415,6 +592,63 @@ function shouldSuppressOperationResponseCandidate(
     const starter = lower.split('_')[0];
     if (starter && narrativeCompoundStarters.has(starter)) return true;
   }
+
+  return false;
+}
+
+function isLiteralRequestFieldCandidate(candidate: FieldCandidate, sourceText: string): boolean {
+  const term = candidate.term;
+  if (term.includes('_') || /[a-z][A-Z]/.test(term)) return true;
+
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`["'\`]${escaped}["'\`]\\s*:`, 'i').test(sourceText)) return true;
+  if (new RegExp(`\\b${escaped}\\s*[=:]`, 'i').test(sourceText)) return true;
+  if (
+    /\b(?:options?|parameters?)\s*:/i.test(sourceText) &&
+    new RegExp(`\\b${escaped}\\b\\s*(?:\\(|:|=|,)`, 'i').test(sourceText)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function isQuotedRequestFieldIdentifier(candidate: FieldCandidate, sourceText: string): boolean {
+  const term = candidate.term;
+  if (!term.includes('_') && !/[a-z][A-Z]/.test(term)) return false;
+
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b(?:pass|specify|set|omit|accepts?)\\s+["'\`]${escaped}["'\`]`, 'i').test(sourceText);
+}
+
+function isBareQuotedRequestValue(candidate: FieldCandidate, sourceText: string): boolean {
+  if (isQuotedRequestFieldIdentifier(candidate, sourceText)) return false;
+
+  const escaped = candidate.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`["'\`]${escaped}["'\`](?!\\s*:)`, 'i').test(sourceText);
+}
+
+function shouldSuppressOperationRequestCandidate(
+  candidate: FieldCandidate,
+  routeSig: string,
+  sourceText: string,
+  knownOperationTerms: Set<string>,
+): boolean {
+  const term = candidate.term;
+  const lower = term.toLowerCase();
+  const routeLeaf = getRouteLeaf(routeSig).toLowerCase();
+
+  if (/example/i.test(candidate.provenance)) return true;
+  if (!isLiteralRequestFieldCandidate(candidate, sourceText)) return true;
+  if (lower === routeLeaf) return true;
+  if (knownOperationTerms.has(lower)) return true;
+  if (isBareQuotedRequestValue(candidate, sourceText)) return true;
+  if (isQuotedExampleValue(term, sourceText)) return true;
+  if (shouldSuppressKnownCodeTerm(candidate, sourceText)) return true;
+
+  // Request prose should prefer literal field syntax. Do not turn "buy order"
+  // or similar narrative phrases into request schema mismatches by default.
+  if (/^from compound/.test(candidate.provenance) && !sourceText.includes(term)) return true;
 
   return false;
 }
@@ -446,6 +680,7 @@ function isQuotedExampleValue(term: string, text: string): boolean {
 export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
   const findings: Finding[] = [];
   const only = options.only;
+  const knownOperationTerms = collectKnownOperationTerms(spec);
 
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
     // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
@@ -485,6 +720,48 @@ export function findProseFieldMismatches(spec: OpenApiSpec, options: ReportOptio
           suggestedAction:
             'Align the request schema property name with the documented server help / prose, or update prose examples to use the canonical schema field name.',
           confidence: 'high',
+        });
+      }
+    }
+
+    const requestFields = new Set(Object.keys(props || {}));
+    const responseCandidateFields = collectResponseCandidateFields(spec, routeSig);
+    const requestSegments = collectOperationRequestCandidateSegments(op.description as string | undefined, {
+      routeSig,
+      requestFields,
+      responseFields: responseCandidateFields.fields,
+      knownOperationTerms,
+      includeAmbiguous: Boolean(options.includeLowConfidence),
+    });
+
+    for (const segment of requestSegments) {
+      if (isExampleBlock(segment.text)) continue; // JSON examples are handled above with high confidence.
+
+      const rich = harvestFieldCandidates(segment.text, { forceRelevant: true }).filter((c) => !isNoiseTerm(c.term));
+      for (const candidate of rich) {
+        const term = candidate.term;
+        if (termPresentIn(term, requestFields)) continue;
+        if (shouldSuppressOperationRequestCandidate(candidate, routeSig, segment.text, knownOperationTerms)) continue;
+
+        const confidence = segment.target === 'ambiguous' ? 'speculative' : 'medium';
+        const severity = segment.target === 'ambiguous' ? 'low' : 'medium';
+        const id = `prose-field-mismatch|${routeSig}|${term}`;
+        if (findings.some((finding) => finding.id === id)) continue;
+        findings.push({
+          id,
+          kind: 'prose-field-mismatch',
+          severity,
+          route: routeSig,
+          field: term,
+          message: `request prose references "${term}" but request schema has no such property`,
+          evidence: {
+            proseExcerpt: segment.text.slice(0, 280),
+            schemaProperty: props[term],
+            candidateProvenance: `${candidate.provenance}; ${segment.label}`,
+          },
+          suggestedAction:
+            'Add the field to the request schema if clients can send it, or update prose to use the canonical request field name.',
+          confidence,
         });
       }
     }
@@ -937,10 +1214,13 @@ function extractFieldListTerms(block: string): string[] {
 }
 
 /** Rich variant that returns provenance for each synthesized candidate. */
-export function extractResponseFieldCandidatesWithProvenance(text: string | undefined): FieldCandidate[] {
+export function extractResponseFieldCandidatesWithProvenance(
+  text: string | undefined,
+  options: CandidateExtractionOptions = {},
+): FieldCandidate[] {
   if (!text) return [];
   // Start with context-sensitive base candidates (JSON + loose proseKey in relevant blocks only)
-  const base = harvestFieldCandidates(text);
+  const base = harvestFieldCandidates(text, options);
   const byTerm = new Map<string, FieldCandidate>();
   for (const c of base) byTerm.set(c.term, c);
 
@@ -972,7 +1252,8 @@ export function extractResponseFieldCandidatesWithProvenance(text: string | unde
     if (typeof maybeBlock !== 'string' || !maybeBlock) continue;
     const block = maybeBlock as string;
     const { relevant, label } = classifyBlock(block, i, blocks);
-    const useBlock = relevant || afterExample;
+    const useBlock = options.forceRelevant || relevant || afterExample;
+    const provenanceLabel = options.forceRelevant && !relevant ? 'forced response context' : label;
     if (!useBlock) {
       if (isExampleBlock(block)) afterExample = true;
       if (isRateLimitBlock(block)) afterExample = false;
@@ -982,7 +1263,7 @@ export function extractResponseFieldCandidatesWithProvenance(text: string | unde
     for (const term of extractFieldListTerms(block)) {
       const existing = byTerm.get(term);
       if (!existing || !/example|JSON/i.test(existing.provenance)) {
-        byTerm.set(term, { term, provenance: `from field list in ${label}` });
+        byTerm.set(term, { term, provenance: `from field list in ${provenanceLabel}` });
       }
     }
 
@@ -1062,7 +1343,7 @@ export function extractResponseFieldCandidatesWithProvenance(text: string | unde
       const joined = `${w1raw}_${w2raw}`;
       if (joined.length <= 2 || joined.length >= 50) continue;
 
-      const prov = `from compound '${w1raw} ${w2raw}' in ${label}`;
+      const prov = `from compound '${w1raw} ${w2raw}' in ${provenanceLabel}`;
       const existing = byTerm.get(joined);
       if (!existing || !/example|JSON/i.test(existing.provenance)) {
         byTerm.set(joined, { term: joined, provenance: prov });
@@ -1355,8 +1636,8 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     }
   }
 
-  // Operation descriptions: extract candidate terms, resolve the success response schema
-  // (and request schema), and flag terms mentioned in prose that are absent from both.
+  // Operation descriptions: classify prose first, then compare response-target terms
+  // against the success response schema. Request-target prose is checked separately.
   // This generalizes beyond any single command family or term.
   for (const [apiPath, methods] of Object.entries(spec.paths || {})) {
     // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
@@ -1365,50 +1646,61 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     const routeSig = `${methods.post ? 'POST' : 'GET'} ${apiPath}`;
     if (!routeMatchesOnly(routeSig, only)) continue;
 
-    const responseCandidateText = collectOperationResponseCandidateText(op.description as string | undefined);
-    if (!responseCandidateText) continue;
-    const rich = extractResponseFieldCandidatesWithProvenance(responseCandidateText).filter(
-      (c) => !isNoiseTerm(c.term),
-    );
-    if (rich.length === 0) continue;
-
-    const responseCandidateFields = collectResponseCandidateFields(spec, routeSig);
-
     const reqProps = getRequestSchemaForPath(spec, apiPath);
     const reqFields = new Set(Object.keys(reqProps || {}));
+    const responseCandidateFields = collectResponseCandidateFields(spec, routeSig);
+    const segments = collectOperationResponseCandidateSegments(op.description as string | undefined, {
+      routeSig,
+      requestFields: reqFields,
+      responseFields: responseCandidateFields.fields,
+      knownOperationTerms,
+      includeAmbiguous: Boolean(options.includeLowConfidence),
+    });
+    if (segments.length === 0) continue;
 
-    for (const candidate of rich) {
-      const term = candidate.term;
-      if (
-        shouldSuppressOperationResponseCandidate(
-          candidate,
-          routeSig,
-          responseCandidateText,
-          reqFields,
-          knownOperationTerms,
+    for (const segment of segments) {
+      const rich = extractResponseFieldCandidatesWithProvenance(segment.text, {
+        forceRelevant: segment.target === 'response',
+      }).filter((c) => !isNoiseTerm(c.term));
+      if (rich.length === 0) continue;
+
+      for (const candidate of rich) {
+        const term = candidate.term;
+        if (
+          shouldSuppressOperationResponseCandidate(
+            candidate,
+            routeSig,
+            segment.text,
+            reqFields,
+            knownOperationTerms,
+            segment.target,
+          )
         )
-      )
-        continue;
-      if (shouldSuppressKnownCodeTerm(candidate, responseCandidateText)) continue;
-      if (termPresentIn(term, responseCandidateFields.fields)) continue;
-      const prov = candidate.provenance;
+          continue;
+        if (shouldSuppressKnownCodeTerm(candidate, segment.text)) continue;
+        if (termPresentIn(term, responseCandidateFields.fields)) continue;
 
-      findings.push({
-        id: `missing-response-field-prose|${routeSig}|${term}`,
-        kind: 'missing-response-field-prose',
-        severity: 'medium',
-        route: routeSig,
-        schemaName: responseCandidateFields.primarySchemaName,
-        field: term,
-        message: `prose references "${term}" but it is absent from the response schema for ${routeSig}`,
-        evidence: {
-          proseExcerpt: responseCandidateText.slice(0, 280),
-          responseCandidates: responseCandidateFields.responseCandidates,
-          candidateProvenance: prov,
-        },
-        suggestedAction: 'Add the field to the response schema if the server actually returns it, or update prose.',
-        confidence: 'medium',
-      });
+        const confidence = segment.target === 'ambiguous' ? 'speculative' : 'medium';
+        const severity = segment.target === 'ambiguous' ? 'low' : 'medium';
+        const provenance = `${candidate.provenance}; ${segment.label}`;
+
+        findings.push({
+          id: `missing-response-field-prose|${routeSig}|${term}`,
+          kind: 'missing-response-field-prose',
+          severity,
+          route: routeSig,
+          schemaName: responseCandidateFields.primarySchemaName,
+          field: term,
+          message: `prose references "${term}" but it is absent from the response schema for ${routeSig}`,
+          evidence: {
+            proseExcerpt: segment.text.slice(0, 280),
+            responseCandidates: responseCandidateFields.responseCandidates,
+            candidateProvenance: provenance,
+          },
+          suggestedAction: 'Add the field to the response schema if the server actually returns it, or update prose.',
+          confidence,
+        });
+      }
     }
   }
 
