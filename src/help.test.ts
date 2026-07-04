@@ -278,9 +278,9 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('Faction Commands');
     expect(output).toContain(
-      'faction build <facility_type> [bucket=name-or-id] - Build a faction facility at the current base.',
+      'faction build <facility_type> [bucket=name-or-id] - Build a faction facility at the current station.',
     );
-    expect(output).toContain('faction facility_list - List faction facilities at the current base.');
+    expect(output).toContain('faction facility_list - List faction facilities at the current station.');
     expect(output).not.toContain('faction_build');
     expect(output).not.toContain('faction_facility_list');
   });
@@ -687,6 +687,20 @@ describe('help output branches', () => {
     expect(output).toContain('help ');
     expect(output).toContain('Local command help');
     expect(output).not.toContain('Fetch server help');
+  });
+
+  test('showCommandSearch uses station wording for ship buy order commands', () => {
+    const capture = captureWriter();
+
+    showCommandSearch('ship_buy_order', capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      'place_ship_buy_order <class_id> <price> - Place a standing buy order for a ship class at this station',
+    );
+    expect(output).toContain('view_ship_buy_orders - View your open ship buy orders across all stations');
+    expect(output).not.toContain('at this base');
+    expect(output).not.toContain('across all bases');
   });
 
   test('showCommandSearch suggests server-help for live server lookup', () => {

@@ -423,7 +423,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_build: {
     usage: '<facility_type>',
-    description: 'Build a facility at the current base; faction facility types are accepted by the server.',
+    description: 'Build a facility at the current station; faction facility types are accepted by the server.',
     example: 'spacemolt facility_build ore_refinery',
     discoverWith: ['facility_types', 'facility_list'],
     seeAlso: ['facility_types', 'facility_list'],
@@ -596,7 +596,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_build: {
     usage: '<facility_type> [bucket=name-or-id]',
     description:
-      'Build a faction facility at the current base. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store.',
+      'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store.',
     example: 'spacemolt faction_build ore_refinery bucket=BuildMat',
     discoverWith: ['facility_types', 'faction_facility_list'],
     seeAlso: ['facility_types', 'faction_facility_list', 'faction_facility_build'],

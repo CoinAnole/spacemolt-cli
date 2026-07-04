@@ -209,7 +209,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/survey_system',
   },
   get_player: {
-    description: 'Show your player profile, credits, empire, faction, home base, and standings.',
+    description: 'Show your player profile, credits, empire, faction, home station, and standings.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_player',
   },

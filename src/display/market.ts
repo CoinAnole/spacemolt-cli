@@ -656,7 +656,7 @@ export const marketFormatters = [
       printCompactTable('Commissions', commissions, [
         ['Ship', ['ship_name', 'ship_class_id']],
         ['Status', ['status']],
-        ['Base', ['base_name', 'base_id']],
+        ['Station', ['base_name', 'base_id']],
         ['Ticks', ['ticks_remaining']],
         ['ID', ['commission_id']],
       ]);
@@ -675,7 +675,7 @@ export const marketFormatters = [
       if (!intel) return false;
       printCompactTable('Intel', intel, [
         ['System', ['system_name', 'system_id']],
-        ['POI/Base', ['poi_name', 'poi_id', 'base_name', 'base_id']],
+        ['POI/Station', ['poi_name', 'poi_id', 'base_name', 'base_id']],
         ['Type', ['poi_type', 'resource_type', 'item_id']],
         ['Value', ['quantity', 'price_each', 'confidence']],
         ['Updated', ['updated_at', 'created_at']],

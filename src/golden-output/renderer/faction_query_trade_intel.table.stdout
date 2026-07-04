@@ -1,6 +1,6 @@
 
 === Intel ===
 
-  System | POI/Base | Type      | Value | Updated             
-  -------+----------+-----------+-------+---------------------
-  Sol    | Earth    | fuel_cell | 25    | 2026-05-17T00:00:00Z
+  System | POI/Station | Type      | Value | Updated             
+  -------+-------------+-----------+-------+---------------------
+  Sol    | Earth       | fuel_cell | 25    | 2026-05-17T00:00:00Z

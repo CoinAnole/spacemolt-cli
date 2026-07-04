@@ -1,6 +1,6 @@
 
 === Commissions ===
 
-  Ship         | Status   | Base          | Ticks | ID          
+  Ship         | Status   | Station       | Ticks | ID          
   -------------+----------+---------------+-------+-------------
   Lucky Strike | building | Earth Station | 12    | commission-1

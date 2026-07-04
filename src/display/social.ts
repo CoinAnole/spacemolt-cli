@@ -487,7 +487,7 @@ export const socialFormatters = [
       emitLine(`ID: ${r.id}`);
       emitLine(`Leader: ${r.leader_username}`);
       emitLine(`Members: ${r.member_count}`);
-      if (r.owned_bases !== undefined) emitLine(`Owned Bases: ${r.owned_bases}`);
+      if (r.owned_bases !== undefined) emitLine(`Owned Stations: ${r.owned_bases}`);
       if (r.treasury !== undefined) emitLine(`Treasury: ${r.treasury}`);
       if (typeof r.description === 'string' && r.description) emitLine(`Description: ${r.description}`);
       if (typeof r.charter === 'string' && r.charter) emitLine(`Charter: ${r.charter}`);
@@ -497,7 +497,7 @@ export const socialFormatters = [
         printCompactTable('Faction Facilities', facilities, [
           ['Name', ['name', 'type_name', 'facility_type', 'type']],
           ['ID', ['facility_id', 'id']],
-          ['Base', ['base_id', 'base_name']],
+          ['Station', ['base_id', 'base_name']],
           ['Service', ['faction_service']],
           ['Active', ['active', 'enabled', 'status']],
         ]);
@@ -575,7 +575,7 @@ export const socialFormatters = [
       const columns: Array<[string, string[]]> = [
         ['Name', ['name_display', 'name', 'type']],
         ['ID', ['facility_id', 'id']],
-        ['Base', ['base_name', 'base_id']],
+        ['Station', ['base_name', 'base_id']],
         ['System', ['system_id']],
         ['Rent', ['rent_display', 'rent_per_cycle']],
         ['Missed', ['missed_rent_cycles']],

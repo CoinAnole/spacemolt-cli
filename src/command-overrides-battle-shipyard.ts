@@ -110,6 +110,12 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Ship Exchange',
     apiRoute: 'POST /api/v2/spacemolt_ship/browse_ships',
     positionals: ['base_id', 'class_id', 'max_price'],
+    schemaExtensions: {
+      base_id: {
+        type: 'string',
+        description: 'Station to browse listings at (defaults to current station)',
+      },
+    },
   },
   place_ship_buy_order: {
     usage: '<class_id> <price>',

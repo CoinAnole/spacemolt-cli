@@ -69,7 +69,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   dock: {
     usage: '',
-    description: 'Dock at the current station or base.',
+    description: 'Dock at the current station.',
     example: 'spacemolt dock',
     discoverWith: ['get_status', 'get_system'],
     seeAlso: ['undock', 'get_status', 'view_market'],
@@ -78,7 +78,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   undock: {
     usage: '',
-    description: 'Leave the current station or base.',
+    description: 'Leave the current station.',
     example: 'spacemolt undock',
     discoverWith: ['get_status'],
     seeAlso: ['dock', 'travel', 'get_system'],
@@ -153,7 +153,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['enable'],
   },
   self_destruct: {
-    usage: '(destroy ship, create wreck, respawn at home base)',
+    usage: '(destroy ship, create wreck, respawn at home station)',
     category: 'Combat',
     apiRoute: 'POST /api/v2/spacemolt/self_destruct',
   },

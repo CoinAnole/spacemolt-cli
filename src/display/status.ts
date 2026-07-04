@@ -251,7 +251,7 @@ function summarizeObjectiveForDisplay(objective: unknown): string {
   const system = objective.system_name ?? objective.system_id;
   if (system !== undefined) details.push(`system ${system}`);
   const targetBase = objective.target_base_name ?? objective.target_base_id;
-  if (targetBase !== undefined) details.push(`base ${targetBase}`);
+  if (targetBase !== undefined) details.push(`station ${targetBase}`);
   if (Array.isArray(objective.participants) && objective.participants.length > 0) {
     details.push(`participants ${objective.participants.join(', ')}`);
   }
@@ -321,7 +321,7 @@ export const statusFormatters = [
         const rank = player.faction_rank ? ` (${player.faction_rank})` : '';
         emitLine(`Faction: ${faction}${clan}${rank}`);
       }
-      if (player.home_base) emitLine(`Home Base: ${formatDisplayValue(player.home_base)}`);
+      if (player.home_base) emitLine(`Home Station: ${formatDisplayValue(player.home_base)}`);
 
       const stats = isRecord(player.stats) ? player.stats : undefined;
       if (stats) {
@@ -527,7 +527,7 @@ export const statusFormatters = [
           continue;
         }
         const online = (poi.online as number) > 0 ? ` ${c.cyan}(${poi.online} online)${c.reset}` : '';
-        const base = poi.has_base ? ` ${c.green}[base]${c.reset}` : '';
+        const base = poi.has_base ? ` ${c.green}[station]${c.reset}` : '';
         emitLine(`  - ${poi.name} (${poi.type})${base}${online}  ${c.dim}${poi.id}${c.reset}`);
       }
 
@@ -600,11 +600,11 @@ export const statusFormatters = [
         }
       }
 
-      if (poi.base_id) emitLine(`\nBase: ${poi.base_id} (use 'dock' to enter)`);
+      if (poi.base_id) emitLine(`\nStation: ${poi.base_id} (use 'dock' to enter)`);
 
       const base = r.base as Record<string, unknown> | undefined;
       if (base) {
-        emitLine(`\n${c.bright}Base: ${base.name}${c.reset}`);
+        emitLine(`\n${c.bright}Station: ${base.name}${c.reset}`);
         if (base.description) emitLine(`  ${base.description}`);
         emitLine(`  Empire: ${base.empire || 'None'}`);
         emitLine(`  Defense: ${base.defense_level}`);

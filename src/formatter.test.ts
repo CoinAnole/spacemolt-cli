@@ -1092,7 +1092,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('=== Load Ship Into Carrier Bay ===');
     expect(stdout).toContain('Ship: Dust Devil (dust_devil)');
     expect(stdout).toContain('Bay Slots Used: 3/8 (5 remaining)');
-    expect(stdout).toContain('Base: grand_exchange_station');
+    expect(stdout).toContain('Station: grand_exchange_station');
     expect(stdout).not.toContain('Cargo Remaining: 0');
     expect(stdout).not.toContain('Cargo Space: 5');
     expect(stdout).not.toContain('Storage Total: 3');
@@ -1420,7 +1420,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Credits: 4,242');
     expect(stdout).toContain('Citizenships: solarian, nebula');
     expect(stdout).toContain('Faction: smc [SMC]');
-    expect(stdout).toContain('Home Base: earth_station');
+    expect(stdout).toContain('Home Station: earth_station');
     expect(stdout).toContain('Piloting: Level 5 (1200 XP)');
     expect(stdout).toContain('Crafting: Level 2 (175 XP)');
     expect(stdout).toContain('crimson: 94');
@@ -3605,7 +3605,7 @@ describe('structuredContent formatters', () => {
       ,
         "base": 
       "
-      === Base: Nova Terra Central ===
+      === Station: Nova Terra Central ===
       ID: nova_terra_central
       POI: nova_terra_central
       Empire: solarian
@@ -3778,7 +3778,7 @@ describe('structuredContent formatters', () => {
       "
       === Faction Facilities ===
 
-        Name                   | ID             | Base          | System | Active | Rent    | Missed | Arrears | Labor/run | Idle
+        Name                   | ID             | Station       | System | Active | Rent    | Missed | Arrears | Labor/run | Idle
         -----------------------+----------------+---------------+--------+--------+---------+--------+---------+-----------+---------------------
         Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | true   | 1,200cr | 2      | 2,400cr | 60cr      | awaiting_build_order
 
@@ -3818,9 +3818,9 @@ describe('structuredContent formatters', () => {
       "
       === Intel ===
 
-        System | POI/Base | Type      | Value | Updated
-        -------+----------+-----------+-------+---------------------
-        Sol    | Earth    | fuel_cell | 25    | 2026-05-17T00:00:00Z"
+        System | POI/Station | Type      | Value | Updated
+        -------+-------------+-----------+-------+---------------------
+        Sol    | Earth       | fuel_cell | 25    | 2026-05-17T00:00:00Z"
       ,
         "market_orders": 
       "
@@ -3908,7 +3908,7 @@ describe('structuredContent formatters', () => {
       Description: Birthplace system
 
       Points of Interest:
-        - Earth (planet) [base] (2 online)  sol_earth
+        - Earth (planet) [station] (2 online)  sol_earth
 
       Connected Systems:
         - Alpha Centauri (4.3 ly)  alpha_centauri

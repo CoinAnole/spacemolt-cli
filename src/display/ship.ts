@@ -129,7 +129,7 @@ export const shipFormatters = [
       emitLine(`Ship: ${formatShipLabel(r)}`);
       const bayLine = baySlotsLine(r);
       if (bayLine) emitLine(bayLine);
-      if (r.base_id || r.base_name) emitLine(`Base: ${r.base_name ?? r.base_id}`);
+      if (r.base_id || r.base_name) emitLine(`Station: ${r.base_name ?? r.base_id}`);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
@@ -222,7 +222,7 @@ export const shipFormatters = [
     { commands: ['get_ship'], shapeFallback: true },
   ),
 
-  // Base info
+  // Station info
   namedFormatter(
     'base',
     ['base', 'services'],
@@ -230,7 +230,7 @@ export const shipFormatters = [
       const base = r.base as Record<string, unknown> | undefined;
       if (!base || !isRecord(base)) return false;
 
-      emitLine(`\n${c.bright}=== Base: ${base.name || base.id} ===${c.reset}`);
+      emitLine(`\n${c.bright}=== Station: ${base.name || base.id} ===${c.reset}`);
       emitLine(`ID: ${base.id || base.base_id || 'unknown'}`);
       if (base.poi_id) emitLine(`POI: ${base.poi_id}`);
       emitLine(`Empire: ${base.empire || 'None'}`);

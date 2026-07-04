@@ -194,7 +194,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Tag', ['tag', 'faction_tag']],
     ['Members', ['member_count']],
     ['Leader', ['leader_username']],
-    ['Bases', ['owned_bases']],
+    ['Stations', ['owned_bases']],
     ['ID', ['id', 'faction_id']],
   ],
   items: [
