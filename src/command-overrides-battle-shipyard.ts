@@ -111,6 +111,34 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_ship/browse_ships',
     positionals: ['base_id', 'class_id', 'max_price'],
   },
+  place_ship_buy_order: {
+    usage: '<class_id> <price>',
+    category: 'Ship Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_ship/place_ship_buy_order',
+    positionals: ['class_id', 'price'],
+  },
+  view_ship_buy_orders: {
+    category: 'Ship Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_ship/view_ship_buy_orders',
+  },
+  cancel_ship_buy_order: {
+    usage: '<order_id>',
+    category: 'Ship Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_ship/cancel_ship_buy_order',
+    positionals: ['order_id'],
+    aliases: {
+      order_id: 'id',
+    },
+  },
+  sell_ship_to_order: {
+    usage: '<order_id> <ship_id>',
+    category: 'Ship Exchange',
+    apiRoute: 'POST /api/v2/spacemolt_ship/sell_ship_to_order',
+    positionals: ['order_id', 'ship_id'],
+    aliases: {
+      order_id: 'id',
+    },
+  },
   buy_listed_ship: {
     usage: '<listing_id>',
     category: 'Ship Exchange',

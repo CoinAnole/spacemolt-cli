@@ -1,0 +1,16 @@
+
+message: "Loaded passengers."
+loaded:
+  - citizen_id: "citizen-lyra"
+    name: "Lyra Vale"
+    bio: "A courier with a nervous smile and a sealed satchel."
+    class: economy
+    destination: nova_central
+    destination_name: "Nova Central"
+    destination_system: Nova
+    base_fare: 125
+    speed_bonus: 25
+    ticks_remaining: 8
+count: 1
+total_fare: 125
+skipped_unfunded: 2

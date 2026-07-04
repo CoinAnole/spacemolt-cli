@@ -20,6 +20,23 @@ function formatTicks(value: unknown): string | undefined {
   return `${ticks} ${ticks === 1 ? 'tick' : 'ticks'}`;
 }
 
+function formatBuffAmount(stat: string | undefined, value: unknown): string | undefined {
+  const amount = finiteNumber(value);
+  if (amount === undefined) return undefined;
+  const sign = amount > 0 ? '+' : '';
+  const suffix = stat === 'hull_regen' ? '' : '%';
+  return `${sign}${amount}${suffix}`;
+}
+
+function formatBuffLine(buff: Record<string, unknown>): string | undefined {
+  const stat = typeof buff.stat === 'string' && buff.stat ? buff.stat : 'buff';
+  const amount = formatBuffAmount(stat, buff.amount);
+  const item = typeof buff.item_id === 'string' && buff.item_id ? ` from ${buff.item_id}` : '';
+  const expires = finiteNumber(buff.expires_at);
+  const expiresText = expires === undefined ? '' : `, expires tick ${expires}`;
+  return `Buff: ${[stat, amount].filter(Boolean).join(' ')}${item}${expiresText}`;
+}
+
 function pushPercentEffect(parts: string[], label: string, value: unknown): void {
   const percent = formatPercent(value);
   if (percent) parts.push(`${label} ${percent}`);
@@ -98,6 +115,12 @@ export function emitShipCombatEffects(ship: Record<string, unknown>): boolean {
 
   const disruptionTicks = formatTicks(ship.disruption_ticks_remaining);
   if (disruptionTicks) lines.push(`Disruption: ${disruptionTicks}`);
+
+  const activeBuffs = Array.isArray(ship.active_buffs) ? ship.active_buffs.filter(isRecord) : [];
+  for (const buff of activeBuffs) {
+    const line = formatBuffLine(buff);
+    if (line) lines.push(line);
+  }
 
   if (!lines.length) return false;
   emitLine(`${c.yellow}Effects:${c.reset}`);

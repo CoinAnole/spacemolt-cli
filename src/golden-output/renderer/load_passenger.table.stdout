@@ -1,0 +1,11 @@
+
+=== Passenger Boarding ===
+Loaded passengers.
+Total fare: 125
+Skipped unfunded: 2
+
+=== Loaded Passengers ===
+
+  Name      | Class   | Destination  | System | Base Fare | Bonus | Ticks | ID          
+  ----------+---------+--------------+--------+-----------+-------+-------+-------------
+  Lyra Vale | economy | Nova Central | Nova   | 125       | 25    | 8     | citizen-lyra

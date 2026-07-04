@@ -13,3 +13,11 @@ listings:
     max_hull: 100
     shield: 20
     seller: Marlowe
+buy_orders:
+  - order_id: "ship-order-1"
+    class_id: prospector
+    class_name: Prospector
+    price: 115000
+    tax_escrow: 5750
+    buyer: Ibis
+    being_built: true

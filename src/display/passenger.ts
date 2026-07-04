@@ -75,6 +75,36 @@ export const passengerFormatters = [
 
   formatter(
     (r) => {
+      const rows = passengerRows(r.loaded);
+      if (!rows) return false;
+
+      emitLine(`\n${c.bright}=== Passenger Boarding ===${c.reset}`);
+      if (hasValue(r.message)) emitLine(String(r.message));
+      if (hasValue(r.total_fare)) emitLine(`Total fare: ${r.total_fare}`);
+      if (hasValue(r.skipped_unfunded)) emitLine(`Skipped unfunded: ${r.skipped_unfunded}`);
+
+      printCompactTable(
+        'Loaded Passengers',
+        rows,
+        [
+          ['Name', ['name']],
+          ['Class', ['class']],
+          ['Destination', ['destination_name', 'destination']],
+          ['System', ['destination_system']],
+          ['Base Fare', ['base_fare']],
+          ['Bonus', ['speed_bonus']],
+          ['Ticks', ['ticks_remaining']],
+          ['ID', ['citizen_id']],
+        ],
+        { maxCellWidth: 72 },
+      );
+      return true;
+    },
+    { commands: ['load_passenger'] },
+  ),
+
+  formatter(
+    (r) => {
       const deliveredRows = passengerRows(r.delivered);
       const strandedRows = passengerRows(r.stranded);
       const singleRows = singleUnloadRows(r);
@@ -148,6 +178,9 @@ export const passengerFormatters = [
       if (!rows) return false;
 
       emitLine(`\n${c.bright}=== Waiting Passengers @ ${r.station || 'Station'} ===${c.reset}`);
+      if (hasValue(r.fare_surge)) emitLine(`Fare surge: ${r.fare_surge}x`);
+      if (hasValue(r.demand_level)) emitLine(`Demand: ${r.demand_level}`);
+      if (hasValue(r.market_conditions)) emitLine(`${r.market_conditions}`);
       if (rows.length === 0) {
         emitLine('No passengers waiting.');
         return true;

@@ -5,6 +5,7 @@ import { renderResult, renderStructuredResult } from './display';
 import {
   activeMissionsFixture,
   browseShipsFixture,
+  cargoFixture,
   catalogItemsFixture,
   createSellOrderFixture,
   empireInfoFixture,
@@ -23,8 +24,10 @@ import {
   unloadPassengerBulkFixture,
   viewMarketFixture,
   viewMarketSingleItemFixture,
+  viewShipBuyOrdersFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
+import { facilityListFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
 import type { GlobalOptions } from './types';
 
@@ -1203,6 +1206,7 @@ describe('structuredContent output mode precedence', () => {
           base_id: 'earth_station',
           target: 'faction',
           hint: "2,162,917 items in faction storage at crimson_war_citadel, nova_terra_central Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
+          credits: 12345,
           faction_fuel_reserve: 320,
           faction_fuel_capacity: 500,
           items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 }],
@@ -1220,6 +1224,7 @@ describe('structuredContent output mode precedence', () => {
     expect(exitCode).toBe(0);
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Faction Storage at earth_station ===');
+    expect(stdout).toContain('Faction credits: 12,345');
     expect(stdout).toContain('Fuel bunker: 320 / 500 units');
     expect(stdout).toContain(
       "12 items in faction storage at earth_station (2,162,917 total across 2 stations)\nFuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
@@ -1643,8 +1648,32 @@ describe('structuredContent formatters', () => {
         Price: 125,000 credits
         Hull: 80/100, Shield: 20
         Seller: Marlowe
-        Listing ID: listing-1"
+        Listing ID: listing-1
+
+      === Ship Buy Orders @ Earth Station ===
+
+      Prospector (prospector)
+        Price: 115,000 credits
+        Buyer: Ibis
+        Building: yes
+        Tax escrow: 5,750 credits
+        Order ID: ship-order-1"
     `);
+  });
+
+  test('formats ship buy order list responses before generic item order fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_ship_buy_orders', viewShipBuyOrdersFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Ship Buy Orders @ Earth Station ===');
+    expect(stdout).toContain('Prospector (prospector)');
+    expect(stdout).toContain('Price: 115,000 credits');
+    expect(stdout).toContain('Building: yes');
+    expect(stdout).toContain('Tax escrow: 5,750 credits');
+    expect(stdout).toContain('Order ID: ship-order-1');
+    expect(stdout).not.toContain('Open/Qty');
+    expect(stdout).not.toContain('=== Orders ===');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('formats market order books before generic item table formatters', () => {
@@ -2683,6 +2712,48 @@ describe('structuredContent formatters', () => {
     expect(waiting.stdout).toContain('Nova');
     expect(waiting.stdout).toContain('Est. Fare');
     expect(waiting.stdout).toContain('240');
+    expect(waiting.stdout).toContain('Fare surge: 1.8x');
+    expect(waiting.stdout).toContain('Demand: underserved');
+    expect(waiting.stdout).toContain('High demand after long wait times.');
+  });
+
+  test('load_passenger renders skipped unfunded count', () => {
+    const { stdout, stderr } = captureStructuredOutput('load_passenger', {
+      message: 'Loaded passengers.',
+      loaded: [
+        {
+          citizen_id: 'citizen-lyra',
+          name: 'Lyra Vale',
+          class: 'economy',
+          destination_name: 'Nova Central',
+          destination_system: 'Nova',
+          base_fare: 125,
+          ticks_remaining: 8,
+        },
+      ],
+      count: 1,
+      total_fare: 125,
+      skipped_unfunded: 2,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Passenger Boarding ===');
+    expect(stdout).toContain('Loaded passengers.');
+    expect(stdout).toContain('Total fare: 125');
+    expect(stdout).toContain('Skipped unfunded: 2');
+    expect(stdout).toContain('Lyra Vale');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_cargo renders carrier bay usage and carried ships', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_cargo', cargoFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Carrier bay: 1/2');
+    expect(stdout).toContain('=== Carried Ships ===');
+    expect(stdout).toContain('Rock Skipper');
+    expect(stdout).toContain('prospector');
+    expect(stdout).toContain('ship-carried-1');
   });
 
   test('passenger tables do not render removed legacy fare fields', () => {
@@ -3249,6 +3320,58 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('get_ship renders active item buffs', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ship: {
+        id: 'ship-1',
+        name: 'Deep Survey',
+        class_id: 'deep_survey',
+        hull: 420,
+        max_hull: 420,
+        shield: 300,
+        max_shield: 300,
+        fuel: 240,
+        max_fuel: 240,
+        cargo_used: 0,
+        cargo_capacity: 1250,
+        cpu_used: 16,
+        cpu_capacity: 34,
+        power_used: 23,
+        power_capacity: 75,
+        active_buffs: [{ item_id: 'combat_stim', stat: 'weapon_damage', amount: 15, expires_at: 15240 }],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Effects:');
+    expect(stdout).toContain('Buff: weapon_damage +15% from combat_stim, expires tick 15240');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_location renders ship effects when included', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_location', {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        poi_id: 'earth_station',
+        poi_name: 'Earth Station',
+      },
+      ship: {
+        id: 'ship-1',
+        class_id: 'deep_survey',
+        burn_ticks_remaining: 3,
+        burn_damage_per_tick: 4,
+        active_buffs: [{ item_id: 'combat_stim', stat: 'weapon_damage', amount: 15, expires_at: 15240 }],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Effects:');
+    expect(stdout).toContain('Burn: 3 ticks, 4 hull/tick');
+    expect(stdout).toContain('Buff: weapon_damage +15% from combat_stim, expires tick 15240');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('get_ship renders installed modules from nested ship data when top-level modules is empty', () => {
     const { stdout, stderr } = captureStructuredOutput('get_ship', {
       ship: {
@@ -3445,6 +3568,15 @@ describe('structuredContent formatters', () => {
     expect(Object.keys(namedFormatterFixtureCases).sort()).toEqual(namedFormatters);
   });
 
+  test('facility list renders output price per unit for production facilities', () => {
+    const { stdout, stderr } = captureStructuredOutput('facility_list', facilityListFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Price/unit');
+    expect(stdout).toContain('0.25cr');
+    expect(stdout).toContain('0cr');
+  });
+
   test('named formatter fixtures select custom formatters', () => {
     const outputs: Record<string, string> = {};
 
@@ -3530,6 +3662,13 @@ describe('structuredContent formatters', () => {
       Credits: 12,345
       Used: 50/100
 
+      Carrier bay: 1/2
+
+      === Carried Ships ===
+
+        Name         | Class      | ID
+        -------------+------------+---------------
+        Rock Skipper | prospector | ship-carried-1
       Cargo (1):
 
         Name     | ID       | Qty | Unit Size
@@ -3595,15 +3734,15 @@ describe('structuredContent formatters', () => {
 
       === Player Facilities ===
 
-        Name         | ID              | Level | Category   | Active | Maint | Recycler | Recipe           | Idle Reason | Owner
-        -------------+-----------------+-------+------------+--------+-------+----------+------------------+-------------+------
-        Ore Refinery | player-refinery | 2     | production | false  | true  | true     | iron_ore_reverse | no_inputs   |
+        Name         | ID              | Level | Category   | Active | Maint | Price/unit | Recycler | Recipe           | Idle Reason | Owner
+        -------------+-----------------+-------+------------+--------+-------+------------+----------+------------------+-------------+------
+        Ore Refinery | player-refinery | 2     | production | false  | true  | 0.25cr     | true     | iron_ore_reverse | no_inputs   |
 
       === Faction Facilities ===
 
-        Name          | ID              | Level | Category   | Active | Maint | Idle Reason                | Owner
-        --------------+-----------------+-------+------------+--------+-------+----------------------------+------
-        Alloy Smelter | faction-smelter | 1     | production | true   | true  | insufficient_labor_credits |
+        Name          | ID              | Level | Category   | Active | Maint | Price/unit | Idle Reason                | Owner
+        --------------+-----------------+-------+------------+--------+-------+------------+----------------------------+------
+        Alloy Smelter | faction-smelter | 1     | production | true   | true  | 0cr        | insufficient_labor_credits |
 
       Faction rent bill: 1,200cr/cycle
       Faction arrears: 2,400cr

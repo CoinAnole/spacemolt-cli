@@ -767,6 +767,7 @@ export const statusFormatters = [
         emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
       }
       emitUnknownSignatureHint(loc);
+      if (isRecord(r.ship)) emitShipCombatEffects(r.ship);
       if (nearbyPlayerCount > 0) {
         emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
         for (const player of nearbyPlayers.slice(0, NEARBY_TABLE_LIMIT)) {

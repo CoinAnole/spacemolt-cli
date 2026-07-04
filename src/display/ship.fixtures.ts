@@ -7,6 +7,16 @@ export const cargoFixture = {
     cargo_used: 50,
     cargo_capacity: 100,
   },
+  bay_used: 1,
+  bay_capacity: 2,
+  carried_ships: [
+    {
+      ship_id: 'ship-carried-1',
+      class_id: 'prospector',
+      class_name: 'Prospector',
+      custom_name: 'Rock Skipper',
+    },
+  ],
 };
 
 export const emptyCargoFixture = {

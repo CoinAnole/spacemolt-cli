@@ -87,6 +87,11 @@ function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
 
+function formatCreditWords(value: unknown): string | undefined {
+  const amount = finiteNumber(value);
+  return amount === undefined ? undefined : `${amount.toLocaleString()} credits`;
+}
+
 function firstDisplayValue(row: Record<string, unknown>, keys: string[]): unknown {
   for (const key of keys) {
     const value = row[key];
@@ -271,12 +276,18 @@ function isDirectMarketBuyShape(record: Record<string, unknown>): boolean {
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
-    (r) => {
-      if (!Array.isArray(r.listings)) return false;
-      const listings = r.listings as Array<Record<string, unknown>>;
-      const firstListing = listings[0];
-      if (!firstListing?.ship_id) return false;
-      emitLine(`\n${c.bright}=== Ships for Sale @ ${r.base_name || 'Station'} ===${c.reset}`);
+    (r, command) => {
+      const normalizedCommand = command?.replace(/^v2_/, '');
+      const listings = Array.isArray(r.listings)
+        ? (r.listings as Array<Record<string, unknown>>).filter((listing) => listing.ship_id)
+        : [];
+      const shipBuyOrderSource = normalizedCommand === 'view_ship_buy_orders' ? r.orders : r.buy_orders;
+      const buyOrders = Array.isArray(shipBuyOrderSource) ? shipBuyOrderSource.filter(isRecord) : [];
+      if (!listings.length && !buyOrders.length) return false;
+
+      const orderStations = [...new Set(buyOrders.map((order) => order.base_name || order.base_id).filter(Boolean))];
+      const stationName = r.base_name || r.base || orderStations[0] || 'Station';
+      if (listings.length) emitLine(`\n${c.bright}=== Ships for Sale @ ${stationName} ===${c.reset}`);
       for (const listing of listings) {
         const shipClass = listing.class_id || 'Unknown';
         const shipName = listing.ship_name || shipClass;
@@ -297,9 +308,27 @@ export const marketFormatters = [
         emitLine(`  Seller: ${seller}`);
         emitLine(`  Listing ID: ${listing.listing_id}`);
       }
+      if (buyOrders.length) {
+        emitLine(`\n${c.bright}=== Ship Buy Orders @ ${stationName} ===${c.reset}`);
+        for (const order of buyOrders) {
+          const shipClass = order.class_id || 'Unknown';
+          const shipName = order.class_name || shipClass;
+          const price = formatCreditWords(order.price);
+          const taxEscrow = formatCreditWords(order.tax_escrow);
+          const orderBase = order.base_name || order.base_id;
+          emitLine(`\n${c.cyan}${shipName}${c.reset} (${shipClass})`);
+          if (orderBase && (orderStations.length !== 1 || orderBase !== stationName))
+            emitLine(`  Station: ${orderBase}`);
+          if (price) emitLine(`  Price: ${c.yellow}${price}${c.reset}`);
+          if (order.buyer) emitLine(`  Buyer: ${order.buyer}`);
+          if (order.being_built !== undefined) emitLine(`  Building: ${order.being_built ? 'yes' : 'no'}`);
+          if (taxEscrow) emitLine(`  Tax escrow: ${taxEscrow}`);
+          emitLine(`  Order ID: ${order.order_id}`);
+        }
+      }
       return true;
     },
-    { commands: ['browse_ships'], shapeFallback: true },
+    { commands: ['browse_ships', 'view_ship_buy_orders'], shapeFallback: true },
   ),
 
   // Trade offers (get_trades real shape per GetTradesResponse)
@@ -504,6 +533,10 @@ export const marketFormatters = [
       emitLine(`\n${c.bright}=== ${title}${location ? ` ${location}` : ''} ===${c.reset}\n`);
       const factionFuelReserve = r.faction_fuel_reserve;
       const factionFuelCapacity = r.faction_fuel_capacity;
+      if (isFactionStorage && r.credits !== undefined) {
+        const credits = finiteNumber(r.credits);
+        emitLine(`Faction credits: ${credits === undefined ? r.credits : credits.toLocaleString()}`);
+      }
       if (isFactionStorage && (factionFuelReserve !== undefined || factionFuelCapacity !== undefined)) {
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }

@@ -24,6 +24,9 @@ export const listPassengersFixture = {
 export const listStationPassengersFixture = {
   station: 'Earth Station',
   count: 1,
+  fare_surge: 1.8,
+  demand_level: 'underserved',
+  market_conditions: 'High demand after long wait times.',
   waiting: [
     {
       citizen_id: 'citizen-orin',
@@ -37,6 +40,27 @@ export const listStationPassengersFixture = {
       estimated_fare: 240,
     },
   ],
+};
+
+export const loadPassengerFixture = {
+  message: 'Loaded passengers.',
+  loaded: [
+    {
+      citizen_id: 'citizen-lyra',
+      name: 'Lyra Vale',
+      bio: 'A courier with a nervous smile and a sealed satchel.',
+      class: 'economy',
+      destination: 'nova_central',
+      destination_name: 'Nova Central',
+      destination_system: 'Nova',
+      base_fare: 125,
+      speed_bonus: 25,
+      ticks_remaining: 8,
+    },
+  ],
+  count: 1,
+  total_fare: 125,
+  skipped_unfunded: 2,
 };
 
 export const unloadPassengerBulkFixture = {
@@ -76,6 +100,7 @@ export const unloadPassengerBulkFixture = {
 export const passengerFixtureCases = {
   list_passengers: { command: 'list_passengers', fixture: listPassengersFixture },
   list_station_passengers: { command: 'list_station_passengers', fixture: listStationPassengersFixture },
+  load_passenger: { command: 'load_passenger', fixture: loadPassengerFixture },
 };
 
 export const passengerHighValueFixtures: Record<string, HighValueFixtureEntry> = {

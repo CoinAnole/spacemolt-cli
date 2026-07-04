@@ -3,6 +3,13 @@
 Credits: 12,345
 Used: 50/100
 
+Carrier bay: 1/2
+
+=== Carried Ships ===
+
+  Name         | Class      | ID            
+  -------------+------------+---------------
+  Rock Skipper | prospector | ship-carried-1
 Cargo (1):
 
   Name     | ID       | Qty | Unit Size

@@ -110,6 +110,7 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
     name_display: facilityDisplayName(row),
     maintenance_display: formatMaintenance(row.maintenance_per_cycle),
     labor_cycle_display: formatCredits(row.labor_per_cycle),
+    output_price_per_unit_display: formatCredits(row.output_price_per_unit),
   }));
 }
 
@@ -136,6 +137,9 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   }
   if (hasAnyField(rows, ['labor_cycle_display', 'labor_per_cycle'])) {
     columns.push(['Labor/cycle', ['labor_cycle_display', 'labor_per_cycle']]);
+  }
+  if (hasAnyField(rows, ['output_price_per_unit_display', 'output_price_per_unit'])) {
+    columns.push(['Price/unit', ['output_price_per_unit_display', 'output_price_per_unit']]);
   }
   if (hasAnyField(rows, ['is_recycler'])) columns.push(['Recycler', ['is_recycler']]);
   if (hasAnyField(rows, ['configured_recipe_id', 'recipe_id'])) {

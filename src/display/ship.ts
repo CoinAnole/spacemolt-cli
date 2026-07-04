@@ -157,6 +157,17 @@ export const shipFormatters = [
         const suffix = available !== undefined ? ` (${available} available)` : '';
         emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${suffix}\n`);
       }
+      if (r.bay_used !== undefined || r.bay_capacity !== undefined) {
+        emitLine(`Carrier bay: ${r.bay_used ?? '?'}/${r.bay_capacity ?? '?'}`);
+      }
+      const carriedShips = firstArray(r, ['carried_ships']);
+      if (carriedShips) {
+        printCompactTable('Carried Ships', carriedShips, [
+          ['Name', ['custom_name', 'ship_name', 'class_name', 'name']],
+          ['Class', ['class_id', 'class_name']],
+          ['ID', ['ship_id', 'id']],
+        ]);
+      }
       printItemTable(cargo, '  ', 'Cargo');
       return true;
     },

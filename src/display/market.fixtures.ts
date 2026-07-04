@@ -18,6 +18,35 @@ export const browseShipsFixture = {
       seller: 'Marlowe',
     },
   ],
+  buy_orders: [
+    {
+      order_id: 'ship-order-1',
+      class_id: 'prospector',
+      class_name: 'Prospector',
+      price: 115000,
+      tax_escrow: 5750,
+      buyer: 'Ibis',
+      being_built: true,
+    },
+  ],
+};
+
+export const viewShipBuyOrdersFixture = {
+  count: 1,
+  orders: [
+    {
+      order_id: 'ship-order-1',
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      class_id: 'prospector',
+      class_name: 'Prospector',
+      price: 115000,
+      tax_escrow: 5750,
+      buyer: 'Ibis',
+      being_built: true,
+      created_at: '2026-07-03T12:00:00Z',
+    },
+  ],
 };
 
 export const viewMarketFixture = {
@@ -311,6 +340,7 @@ export const marketFixtureCases = {
 
 export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
+  view_ship_buy_orders: { command: 'view_ship_buy_orders', fixture: viewShipBuyOrdersFixture },
   create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },

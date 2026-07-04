@@ -47,6 +47,7 @@ player_facilities:
     maintenance_satisfied: true
     is_recycler: true
     configured_recipe_id: iron_ore_reverse
+    output_price_per_unit: 0.25
     idle_reason: no_inputs
 faction_facilities:
   - facility_id: "faction-smelter"
@@ -56,6 +57,7 @@ faction_facilities:
     level: 1
     active: true
     maintenance_satisfied: true
+    output_price_per_unit: 0
     idle_reason: insufficient_labor_credits
 faction_rent:
   facilities: 1

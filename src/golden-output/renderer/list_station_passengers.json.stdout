@@ -1,6 +1,9 @@
 {
   "station": "Earth Station",
   "count": 1,
+  "fare_surge": 1.8,
+  "demand_level": "underserved",
+  "market_conditions": "High demand after long wait times.",
   "waiting": [
     {
       "citizen_id": "citizen-orin",
