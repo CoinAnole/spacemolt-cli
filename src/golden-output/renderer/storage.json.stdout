@@ -1,10 +1,12 @@
 {
   "base_id": "earth_station",
+  "hint": "12 items in storage at earth_station",
   "items": [
     {
       "item_id": "fuel_cell",
-      "item_name": "Fuel Cell",
-      "quantity": 12
+      "name": "Fuel Cell",
+      "quantity": 12,
+      "size": 1
     }
   ],
   "ships": [

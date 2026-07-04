@@ -522,7 +522,7 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
     }
 
     const override = COMMAND_OVERRIDES[entry.command];
-    const apiRoute = override?.apiRoute ?? `POST /api/v2/${entry.command}`;
+    const apiRoute = entry.apiRoute ?? override?.apiRoute ?? `POST /api/v2/${entry.command}`;
 
     let resolved: { schema: JsonSchema; primarySchemaName?: string };
     try {

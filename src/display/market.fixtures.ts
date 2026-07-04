@@ -120,7 +120,8 @@ export const subscribeMarketFixture = {
 
 export const storageFixture = {
   base_id: 'earth_station',
-  items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12 }],
+  hint: '12 items in storage at earth_station',
+  items: [{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12, size: 1 }],
   ships: [
     {
       ship_id: 'ship-1',
@@ -359,14 +360,14 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
-  storage: { command: 'storage', fixture: storageFixture, schemaTarget: 'details' },
+  storage: { command: 'storage', fixture: storageFixture, apiRoute: 'POST /api/v2/spacemolt_storage/view' },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   storage_view: {
     command: 'storage',
-    fixture: { ...storageFixture, action: 'view', target: 'self' },
-    schemaTarget: 'details',
+    fixture: { ...storageFixture, gifts: [], messages: [] },
+    apiRoute: 'POST /api/v2/spacemolt_storage/view',
   },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },

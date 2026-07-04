@@ -102,14 +102,6 @@
     "register|register|required-missing|poi",
     "register|register|required-missing|ship",
     "register|register|required-missing|system",
-    "storage_view|storage|extra-in-fixture|items",
-    "storage_view|storage|extra-in-fixture|ships",
-    "storage_view|storage|extra-in-fixture|target",
-    "storage_view|storage|required-missing|recipient",
-    "storage|storage|extra-in-fixture|items",
-    "storage|storage|extra-in-fixture|ships",
-    "storage|storage|required-missing|action",
-    "storage|storage|required-missing|recipient",
     "view_market|view_market|required-missing|current_tick"
   ]
 }

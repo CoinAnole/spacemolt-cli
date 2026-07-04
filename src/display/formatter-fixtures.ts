@@ -14,12 +14,16 @@ export * from './status.fixtures.ts';
 
 /**
  * Optional metadata for high-value fixtures used by the schema divergence reporter.
+ * apiRoute overrides the command's default route when a fixture covers a runtime
+ * action route rather than the curated command's fallback route.
  * schemaTarget controls whether the reporter compares the fixture against the inner
  * action `details.*Response` (e.g. RefuelResponse) or the top-level structuredContent.
  */
 export interface HighValueFixtureEntry {
   command: string;
   fixture: Record<string, unknown>;
+  /** Response route used by the fixture-schema reporter (undefined = command default route). */
+  apiRoute?: string;
   /** Force comparison target for the fixture-schema reporter (undefined = use heuristic). */
   schemaTarget?: 'details' | 'structuredContent';
 }

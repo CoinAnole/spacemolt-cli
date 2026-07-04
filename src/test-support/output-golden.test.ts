@@ -99,6 +99,16 @@ describe('output golden test support', () => {
     expect(path.basename(DEFAULT_SCHEMA_BASELINE_PATH)).toBe('fixture-schema-baseline.json');
   });
 
+  test('storage inventory fixtures compare against the storage view response schema', () => {
+    const comparisons = compareHighValueFixturesToSpec({ only: ['storage'] });
+    const byLabel = new Map(comparisons.map((comparison) => [comparison.label, comparison]));
+
+    expect(byLabel.get('storage')?.apiRoute).toBe('POST /api/v2/spacemolt_storage/view');
+    expect(byLabel.get('storage_view')?.apiRoute).toBe('POST /api/v2/spacemolt_storage/view');
+    expect(byLabel.get('storage')?.primarySchemaName?.startsWith('StorageResponse')).toBe(true);
+    expect(byLabel.get('storage_view')?.primarySchemaName?.startsWith('StorageResponse')).toBe(true);
+  });
+
   test('schema divergence signatures are stable and sortable', () => {
     expect(
       divergenceSignature({
