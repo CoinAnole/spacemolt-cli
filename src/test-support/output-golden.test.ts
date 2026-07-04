@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { loadPassengerFixture } from '../display/passenger.fixtures';
 import {
   compareFixtureAgainstResponseCandidates,
   compareFixtureToSchema,
@@ -13,7 +14,6 @@ import {
   type JsonSchema,
   type OpenApiSpec,
 } from './fixture-schema-compare';
-import { loadPassengerFixture } from '../display/passenger.fixtures';
 import {
   assertGoldenFileSet,
   assertGoldenOutput,
@@ -341,10 +341,7 @@ describe('output golden test support', () => {
           },
         },
         PassengerDetails: {
-          oneOf: [
-            { $ref: '#/components/schemas/LoadedPassengers' },
-            { $ref: '#/components/schemas/NoPassengers' },
-          ],
+          oneOf: [{ $ref: '#/components/schemas/LoadedPassengers' }, { $ref: '#/components/schemas/NoPassengers' }],
         },
       },
       '#/components/schemas/PassengerDetails',
@@ -376,7 +373,86 @@ describe('output golden test support', () => {
     expect(comparison.summary).toBe('no structural divergences detected');
   });
 
-  test("explicit schemaTarget details scores oneOf branches instead of choosing the first branch", () => {
+  test('schema candidate scoring prefers declared fixture keys over fewer missing partial fields', () => {
+    const spec = responseSpecWithSchemas({
+      MapList: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['systems', 'total_count'],
+        properties: {
+          systems: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: [
+                'system_id',
+                'name',
+                'position',
+                'connections',
+                'visited',
+                'visited_at',
+                'poi_count',
+                'online',
+              ],
+              properties: {
+                system_id: { type: 'string' },
+                name: { type: 'string' },
+                position: { type: 'object' },
+                connections: { type: 'array', items: { type: 'string' } },
+                visited: { type: 'boolean' },
+                visited_at: { type: 'string' },
+                poi_count: { type: 'integer' },
+                online: { type: 'integer' },
+              },
+            },
+          },
+          total_count: { type: 'integer' },
+        },
+      },
+      SingleSystem: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['system_id', 'name', 'position', 'connections', 'visited', 'visited_at', 'poi_count', 'online'],
+        properties: {
+          system_id: { type: 'string' },
+          name: { type: 'string' },
+          position: { type: 'object' },
+          connections: { type: 'array', items: { type: 'string' } },
+          visited: { type: 'boolean' },
+          visited_at: { type: 'string' },
+          poi_count: { type: 'integer' },
+          online: { type: 'integer' },
+        },
+      },
+    });
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      {
+        systems: [
+          { system_id: 'sol', name: 'Sol' },
+          { system_id: 'alpha_centauri', name: 'Alpha Centauri' },
+        ],
+        total_count: 2,
+      },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          oneOf: [{ $ref: '#/components/schemas/MapList' }, { $ref: '#/components/schemas/SingleSystem' }],
+        },
+        primarySchemaName: 'MapResponse',
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('MapList');
+    expect(comparison.comparedAgainst).toBe('structuredContent');
+    expect(comparison.selectionReason).toBe('best-score');
+    expect(comparison.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain('extra-in-fixture:systems');
+    expect(comparison.divergences.map((d) => `${d.kind}:${d.path}`)).not.toContain('extra-in-fixture:total_count');
+  });
+
+  test('explicit schemaTarget details scores oneOf branches instead of choosing the first branch', () => {
     const spec = responseSpecWithSchemas(
       {
         DeliveredPassenger: {

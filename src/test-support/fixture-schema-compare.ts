@@ -228,44 +228,6 @@ export function resolveSuccessResponseSchema(
   return { schema: effective, primarySchemaName: primaryName };
 }
 
-/** Common top-level state keys in V2GameState / full responses. */
-const STATE_KEYS = [
-  'cargo',
-  'credits',
-  'player',
-  'ship',
-  'location',
-  'missions',
-  'modules',
-  'queue',
-  'skills',
-  'hints',
-  'riding',
-  'version',
-  'details',
-] as const;
-
-function hasStateLikeKeys(obj: Record<string, unknown>): boolean {
-  return Object.keys(obj).some((k) => (STATE_KEYS as readonly string[]).includes(k));
-}
-
-/** Heuristic: does this fixture look like a pure action/details payload rather than a full structuredContent/V2GameState?
- * Used only as fallback when entry.schemaTarget is not explicitly provided.
- */
-function fixtureLooksLikePureActionResult(fixture: Record<string, unknown>): boolean {
-  if (!fixture || typeof fixture !== 'object' || Array.isArray(fixture)) return false;
-  const keys = Object.keys(fixture);
-  if (keys.length === 0) return false;
-  if (hasStateLikeKeys(fixture)) return false;
-  if ('details' in fixture) return false;
-  // Common markers for action result payloads the CLI surfaces / tests
-  if ('action' in fixture) return true;
-  if (typeof fixture.success === 'boolean') return true;
-  if ('target_id' in fixture || 'fuel' in fixture || 'base_id' in fixture) return true;
-  if (keys.some((k) => k === 'name' || k.endsWith('_id') || k === 'total_value' || k === 'xp_gained')) return true;
-  return false;
-}
-
 function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSchema | undefined {
   const d = schema.properties?.details as JsonSchema | undefined;
   if (!d) return undefined;
@@ -571,11 +533,10 @@ function scoreComparison(comparison: FixtureSchemaComparison): number {
     extraInSchema: comparison.divergences.filter((d) => d.kind === 'extra-in-schema').length,
   };
 
+  // Fixture fields absent from a candidate schema are stronger evidence of a wrong
+  // branch than required fields omitted from intentionally partial fixtures.
   return (
-    counts.typeMismatch * 1000 +
-    counts.requiredMissing * 100 +
-    counts.extraInFixture * 10 +
-    counts.extraInSchema
+    counts.typeMismatch * 100000 + counts.extraInFixture * 10000 + counts.requiredMissing * 100 + counts.extraInSchema
   );
 }
 
