@@ -818,6 +818,32 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).not.toContain('item_id');
   });
 
+  test('operation response scan suppresses negative request-condition fields before return verbs', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_market/order_book_summary';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_market/order_book_summary',
+      'Without item_id: returns base_fare and compact summary.',
+      {
+        item_id: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          summary: { type: 'string' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('base_fare');
+    expect(fields).not.toContain('item_id');
+  });
+
   test('operation response scan suppresses skill references without dropping response fields', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt_drone/list';

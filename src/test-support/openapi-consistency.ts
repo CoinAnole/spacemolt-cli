@@ -609,7 +609,7 @@ function isRequestConditionPrefixCandidate(term: string, sourceText: string): bo
   const beforeReturn = sourceText.slice(0, returnMatch.index);
   const afterReturn = sourceText.slice(returnMatch.index + returnMatch[0].length);
   if (beforeReturn.length > 120) return false;
-  if (!/^\s*(?:with|for|when|if|given)\b/i.test(beforeReturn)) return false;
+  if (!/^\s*(?:with|without|for|when|if|given)\b/i.test(beforeReturn)) return false;
 
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const termPattern = new RegExp(`\\b${escaped}\\b`, 'i');
