@@ -11,6 +11,7 @@
  * Usage:
  *   bun run report:openapi-consistency
  *   bun run report:openapi-consistency --only passenger,facility,job
+ *   bun run report:openapi-consistency --include-component-prose
  *   bun run report:openapi-consistency --json
  *
  * This is a diagnostic / high-recall fuzzy tool. It is informational unless you add your own gating.
@@ -31,12 +32,14 @@ interface CliArgs {
   json: boolean;
   specPath?: string;
   includeLow: boolean;
+  includeComponentProse: boolean;
 }
 
-function parseArgs(argv: string[]): CliArgs {
+export function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     json: false,
     includeLow: false,
+    includeComponentProse: false,
   };
   const only: string[] = [];
 
@@ -66,6 +69,8 @@ function parseArgs(argv: string[]): CliArgs {
       args.json = true;
     } else if (a === '--include-low' || a === '--low-confidence') {
       args.includeLow = true;
+    } else if (a === '--include-component-prose') {
+      args.includeComponentProse = true;
     } else if (a === '--spec') {
       const next = argv[i + 1];
       if (next) {
@@ -88,6 +93,7 @@ function main() {
   const report = buildConsistencyReport(spec, {
     only: cli.only,
     includeLowConfidence: cli.includeLow,
+    includeComponentProse: cli.includeComponentProse,
   });
 
   const output = formatConsistencyReport(report, { json: cli.json });
@@ -98,4 +104,6 @@ function main() {
   return 0;
 }
 
-process.exitCode = main();
+if (import.meta.main) {
+  process.exitCode = main();
+}
