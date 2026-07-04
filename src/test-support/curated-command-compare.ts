@@ -226,6 +226,31 @@ function summaryFor(differences: CuratedCommandComparisonDifference[]): string {
   return [...counts.entries()].map(([kind, count]) => `${count} ${kind}`).join(', ');
 }
 
+function canonicalRequiredFields(required: string[] | undefined, aliases: Record<string, string> | undefined): string[] {
+  return [...new Set((required || []).map((field) => aliases?.[field] ?? field))].sort();
+}
+
+function compareRequiredField(
+  differences: CuratedCommandComparisonDifference[],
+  curatedConfig: CommandConfig,
+  generatedConfig: CommandConfig,
+): void {
+  const curatedCanonical = canonicalRequiredFields(curatedConfig.required, curatedConfig.aliases);
+  const generatedCanonical = canonicalRequiredFields(generatedConfig.required, undefined);
+  const canonicalMatches = valuesEqual(curatedCanonical, generatedCanonical);
+  if (valuesEqual(curatedConfig.required, generatedConfig.required) && canonicalMatches) return;
+
+  differences.push({
+    kind: canonicalMatches ? 'curated-cosmetic' : 'schema-required',
+    field: 'required',
+    message: canonicalMatches
+      ? `curated display required ${formatValue(curatedConfig.required)} maps to generated ${formatValue(generatedConfig.required)}`
+      : `curated canonical required ${formatValue(curatedCanonical)} vs generated ${formatValue(generatedCanonical)}`,
+    curated: curatedConfig.required,
+    generated: generatedConfig.required,
+  });
+}
+
 function matchesOnly(command: string, generatedCommand: string | undefined, only: string[] | undefined): boolean {
   if (!only || only.length === 0) return true;
   const haystacks = [command.toLowerCase(), generatedCommand?.toLowerCase()].filter(Boolean) as string[];
@@ -277,9 +302,11 @@ export function compareCuratedCommandsToGenerated(
     }
 
     for (const field of COMPARED_CONFIG_FIELDS) {
-      const kind =
-        field === 'required' && command === generatedCommand ? 'schema-required' : 'curated-cosmetic';
-      compareScalarField(differences, kind, field, curatedConfig[field], generatedConfig[field]);
+      if (field === 'required') {
+        compareRequiredField(differences, curatedConfig, generatedConfig);
+        continue;
+      }
+      compareScalarField(differences, 'curated-cosmetic', field, curatedConfig[field], generatedConfig[field]);
     }
     compareRoute(differences, curatedConfig.route, generatedConfig.route);
     compareSchema(differences, curatedConfig.schema, generatedConfig.schema, new Set(override.clientOnlyFields || []));
@@ -360,7 +387,7 @@ export function formatCuratedCommandComparisonReport(
   lines.push('  client-only             = field is intentionally handled by the CLI, not the server');
   lines.push('  curated-cosmetic        = friendly command metadata differs from generated metadata');
   lines.push('');
-  lines.push('Or: bun run report:curated-commands [--only get_status,market] [--include-cosmetic]');
+  lines.push('Or: bun run report:curated-commands [--only get_status,market]');
 
   return lines.join('\n');
 }
