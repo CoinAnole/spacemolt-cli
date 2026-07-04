@@ -765,6 +765,30 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).not.toContain('fare_surge');
   });
 
+  test('operation response scan suppresses skill references without dropping response fields', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_drone/list';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_drone/list',
+      'Shows cargo_count field, bay count, deployed count, bandwidth usage, and active script slots from drone_control skill.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          drones: { type: 'array' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('drone_control');
+    expect(fields).toContain('cargo_count');
+  });
+
   test('operation response scan ignores action catalogs and request examples', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt_facility/job_add';

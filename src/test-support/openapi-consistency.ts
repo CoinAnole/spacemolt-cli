@@ -581,6 +581,7 @@ function shouldSuppressOperationResponseCandidate(
 
   if (/example/i.test(candidate.provenance)) return true;
   if (lower === routeLeaf) return true;
+  if (isSkillOrProficiencyReference(term, sourceText)) return true;
   if (target !== 'response' && requestFields.has(term)) return true;
   if (target !== 'response' && termPresentIn(term, requestFields)) return true;
   if (isLooseCommandReference && isQuotedExampleValue(term, sourceText)) return true;
@@ -594,6 +595,11 @@ function shouldSuppressOperationResponseCandidate(
   }
 
   return false;
+}
+
+function isSkillOrProficiencyReference(term: string, sourceText: string): boolean {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b\\s+(?:skill|proficiency)s?\\b`, 'i').test(sourceText);
 }
 
 function isLiteralRequestFieldCandidate(candidate: FieldCandidate, sourceText: string): boolean {
