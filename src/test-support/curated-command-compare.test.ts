@@ -153,7 +153,7 @@ describe('curated command vs generated command comparison', () => {
     expect(text).toContain('Curated Command vs Generated OpenAPI Command Divergence Report');
     expect(text).toContain('## repair');
     expect(text).toContain('generated command: shipyard_repair');
-    expect(text).not.toContain('--include-cosmetic');
+    expect(text).toContain('--include-cosmetic');
   });
 
   test('classifies cosmetic differences and hides cosmetic-only commands by default', () => {

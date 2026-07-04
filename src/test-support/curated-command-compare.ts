@@ -387,7 +387,7 @@ export function formatCuratedCommandComparisonReport(
   lines.push('  client-only             = field is intentionally handled by the CLI, not the server');
   lines.push('  curated-cosmetic        = friendly command metadata differs from generated metadata');
   lines.push('');
-  lines.push('Or: bun run report:curated-commands [--only get_status,market]');
+  lines.push('Or: bun run report:curated-commands [--only get_status,market] [--include-cosmetic]');
 
   return lines.join('\n');
 }
