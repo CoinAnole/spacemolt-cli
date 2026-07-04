@@ -270,6 +270,10 @@ describe('curated command vs generated command comparison', () => {
         field: 'schema.summary',
       }),
     );
+
+    const defaultText = formatCuratedCommandComparisonReport(report);
+    expect(defaultText).toContain('## get_status');
+    expect(defaultText).toContain('client-only:');
   });
 
   test('classifies schema enum, type, and positional drift as actionable', () => {

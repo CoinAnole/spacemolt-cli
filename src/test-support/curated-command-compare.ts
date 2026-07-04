@@ -347,7 +347,7 @@ export function formatCuratedCommandComparisonReport(
   lines.push('');
 
   const visibleCommands = report.commands.filter((comparison) => {
-    if (comparison.differences.some(isActionableDifference)) return true;
+    if (comparison.differences.some((difference) => difference.kind !== 'curated-cosmetic')) return true;
     return Boolean(opts.includeCosmetic && comparison.differences.length > 0);
   });
 
