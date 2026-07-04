@@ -14,11 +14,13 @@
 
 - Modify: `src/test-support/openapi-consistency.ts`
   - Add `ProseTarget` and classified operation prose helpers.
+  - Add explicit request-prose checking for non-example request body field names absent from `requestBody`.
   - Replace broad operation-description response scanning with target-specific segment scanning.
+  - Let response-target segments force response-candidate extraction so display verbs such as `shows` and `reports` still synthesize field compounds.
   - Keep component-prose scanning opt-in and unchanged except for shared option behavior.
   - Mark ambiguous operation findings as speculative and include them only when `includeLowConfidence` is true.
 - Modify: `src/test-support/openapi-consistency.test.ts`
-  - Add failing tests for request prose, permission prose, help-route tool names, and error-response prose.
+  - Add failing tests for request prose, explicit request/prose mismatches, response display verbs, permission prose, help-route tool names, and error-response prose.
   - Update existing ambiguous `Use base_fare` and `Use repair_cost` tests to assert default suppression and high-recall inclusion.
 - Modify: `scripts/report-openapi-consistency.ts`
   - Add `--high-recall` as an alias for `--include-low`.
@@ -44,9 +46,10 @@ Add this test inside the existing `describe('operation response prose mismatch f
     addPostOperationWithResponse(
       spec,
       '/api/v2/spacemolt_market/create_buy_order',
-      "Use item_id 'fuel' to post a buy order. Credits are escrowed before fills.",
+      "Use item_id 'fuel' to post a buy order. Sort previews with sort_by 'price_asc'. Credits are escrowed before fills.",
       {
         item_id: { type: 'string' },
+        sort_by: { type: 'string' },
       },
       {
         type: 'object',
@@ -59,10 +62,86 @@ Add this test inside the existing `describe('operation response prose mismatch f
     const fields = findResponseProseMismatches(spec)
       .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
       .map((f) => f.field);
+    const requestFields = findProseFieldMismatches(spec)
+      .filter((f) => f.kind === 'prose-field-mismatch' && f.route === route)
+      .map((f) => f.field);
 
     expect(fields).not.toContain('item_id');
     expect(fields).not.toContain('fuel');
     expect(fields).not.toContain('buy_order');
+    expect(requestFields).not.toContain('fuel');
+    expect(requestFields).not.toContain('buy_order');
+    expect(requestFields).not.toContain('price_asc');
+  });
+```
+
+- [ ] **Step 1a: Add explicit request/prose mismatch regression test**
+
+Add this test near the request-prose response-suppression test. It covers the design requirement that clear request-body prose should be checked against `requestBody`, not merely suppressed from response findings.
+
+```ts
+  test('prose-field analyzer reports explicit request prose absent from request schema', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_faction/post_mission';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_faction/post_mission',
+      'Pass target_base_id when posting a delivery mission.',
+      {
+        mission_type: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+        },
+      },
+    );
+
+    const requestFindings = findProseFieldMismatches(spec).filter(
+      (f) => f.kind === 'prose-field-mismatch' && f.route === route,
+    );
+    const requestFinding = requestFindings.find((f) => f.field === 'target_base_id');
+    const responseFields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(requestFinding).toBeDefined();
+    expect(requestFinding?.confidence).toBe('medium');
+    expect(requestFinding?.severity).toBe('medium');
+    expect(requestFinding?.evidence.candidateProvenance).toContain('request context');
+    expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
+    expect(responseFields).not.toContain('target_base_id');
+  });
+```
+
+- [ ] **Step 1b: Add display-verb response-prose regression test**
+
+Add this test in the same `operation response prose mismatch filtering` block. It protects real SpaceMolt prose styles such as `Shows ...`, `Lists ...`, and `Also reports ...`, which often describe returned data without saying `response fields`.
+
+```ts
+  test('operation response scan treats display verbs as response context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/list_station_passengers';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/list_station_passengers',
+      "Shows each passenger's base fare. Also reports fare_surge for the station.",
+      {},
+      {
+        type: 'object',
+        properties: {
+          fare_surge: { type: 'number' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('base_fare');
+    expect(fields).not.toContain('fare_surge');
   });
 ```
 
@@ -169,7 +248,7 @@ Run:
 /home/hermes/.bun/bin/bun test src/test-support/openapi-consistency.test.ts
 ```
 
-Expected: FAIL. At least one of the new tests reports an unwanted `missing-response-field-prose` field such as `buy_order`, `manage_roles`, `spacemolt_auth`, or `missing_materials`.
+Expected: FAIL. At least one of the new tests reports an unwanted `missing-response-field-prose` field such as `buy_order`, `manage_roles`, `spacemolt_auth`, or `missing_materials`, or fails to report the new request/response true-positive fields such as `target_base_id` or `base_fare`.
 
 - [ ] **Step 6: Commit the failing tests**
 
@@ -204,6 +283,7 @@ interface ClassifiedOperationProseSegment {
 interface OperationProseContext {
   routeSig: string;
   requestFields: Set<string>;
+  responseFields: Set<string>;
   knownOperationTerms: Set<string>;
   includeAmbiguous: boolean;
 }
@@ -251,12 +331,25 @@ function mentionsKnownOperation(text: string, knownOperationTerms: Set<string>):
   return false;
 }
 
-function mentionsAnyRequestField(text: string, requestFields: Set<string>): boolean {
-  for (const field of requestFields) {
+function mentionsAnyField(text: string, fields: Set<string>): boolean {
+  for (const field of fields) {
     const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (new RegExp(`\\b${escaped}\\b`, 'i').test(text)) return true;
   }
   return false;
+}
+
+function mentionsAnyRequestField(text: string, requestFields: Set<string>): boolean {
+  return mentionsAnyField(text, requestFields);
+}
+
+function mentionsAnyResponseField(text: string, responseFields: Set<string>): boolean {
+  return mentionsAnyField(text, responseFields);
+}
+
+function hasFieldLikeResponseCandidate(text: string): boolean {
+  if (/\b[a-z][a-z0-9_]*_[a-z0-9_]*\b/.test(text)) return true;
+  return extractResponseFieldCandidatesWithProvenance(text, { forceRelevant: true }).some((c) => !isNoiseTerm(c.term));
 }
 ```
 
@@ -265,12 +358,19 @@ function mentionsAnyRequestField(text: string, requestFields: Set<string>): bool
 Add this code after the helpers from Step 3.
 
 ```ts
-function hasResponseContext(text: string): boolean {
+function hasResponseContext(text: string, responseFields: Set<string>): boolean {
   if (hasExplicitFieldList(text)) return true;
   const hasResponseNoun = /\b(?:response|result|returns?|returned|structuredContent|details)\b/i.test(text);
   const hasReturnVerb = /\b(?:returns?|returned|shows|includes?|contains?|has)\b/i.test(text);
   const hasFieldNoun = /\b(?:fields?|keys?|payload|result|response|details)\b/i.test(text);
-  return hasResponseNoun && hasReturnVerb && hasFieldNoun;
+  if (hasResponseNoun && hasReturnVerb && hasFieldNoun) return true;
+
+  const hasDisplayVerb = /\b(?:shows?|lists?|reports?|summari[sz]es|carries)\b/i.test(text);
+  if (hasDisplayVerb && (mentionsAnyResponseField(text, responseFields) || hasFieldLikeResponseCandidate(text))) {
+    return true;
+  }
+
+  return false;
 }
 
 function hasRequestContext(text: string, requestFields: Set<string>): boolean {
@@ -283,6 +383,7 @@ function isNeutralOperationProseSegment(
   text: string,
   routeSig: string,
   knownOperationTerms: Set<string>,
+  responseFields: Set<string>,
 ): boolean {
   if (!text) return true;
   if (isExampleBlock(text)) return true;
@@ -294,18 +395,19 @@ function isNeutralOperationProseSegment(
 
   const routeLeaf = getRouteLeaf(routeSig).toLowerCase();
   if (routeLeaf && new RegExp(`\\b${routeLeaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)) {
-    if (!hasResponseContext(text)) return true;
+    if (!hasResponseContext(text, responseFields)) return true;
   }
 
-  if (mentionsKnownOperation(text, knownOperationTerms) && !hasResponseContext(text)) return true;
+  if (mentionsKnownOperation(text, knownOperationTerms) && !hasResponseContext(text, responseFields)) return true;
 
   return false;
 }
 
 function classifyOperationProseSegment(text: string, context: OperationProseContext): ProseTarget {
-  if (isNeutralOperationProseSegment(text, context.routeSig, context.knownOperationTerms)) return 'neutral';
+  if (isNeutralOperationProseSegment(text, context.routeSig, context.knownOperationTerms, context.responseFields))
+    return 'neutral';
 
-  const response = hasResponseContext(text);
+  const response = hasResponseContext(text, context.responseFields);
   const request = hasRequestContext(text, context.requestFields);
 
   if (response && !request) return 'response';
@@ -314,6 +416,46 @@ function classifyOperationProseSegment(text: string, context: OperationProseCont
   return 'ambiguous';
 }
 ```
+
+- [ ] **Step 4a: Add target-aware candidate extraction**
+
+Add an internal extraction option so response-classified sentences can synthesize field compounds even when they lack the older generic cues used by `classifyBlock`.
+
+```ts
+interface CandidateExtractionOptions {
+  forceRelevant?: boolean;
+}
+```
+
+Update these helpers to accept the option with a default:
+
+```ts
+function harvestFieldCandidates(text: string | undefined, options: CandidateExtractionOptions = {}): FieldCandidate[] {
+  // ...
+  const useBlock = options.forceRelevant || relevant || afterExample;
+  const provenanceLabel = options.forceRelevant && !relevant ? 'forced response context' : label;
+  // use provenanceLabel anywhere this helper currently writes `label`
+}
+
+export function extractResponseFieldCandidates(text: string | undefined): string[] {
+  const rich = extractResponseFieldCandidatesWithProvenance(text);
+  return rich.map((c) => c.term);
+}
+
+export function extractResponseFieldCandidatesWithProvenance(
+  text: string | undefined,
+  options: CandidateExtractionOptions = {},
+): FieldCandidate[] {
+  if (!text) return [];
+  const base = harvestFieldCandidates(text, options);
+  // ...
+  const useBlock = options.forceRelevant || relevant || afterExample;
+  const provenanceLabel = options.forceRelevant && !relevant ? 'forced response context' : label;
+  // use provenanceLabel for field-list and compound provenance in this function too
+}
+```
+
+Keep the public `extractResponseFieldCandidates(text)` call compatible by not requiring the option. Only operation response scanning and `hasFieldLikeResponseCandidate` should pass `{ forceRelevant: true }`.
 
 - [ ] **Step 5: Replace `collectOperationResponseCandidateText` with segment collection**
 
@@ -401,6 +543,157 @@ Expected: FAIL because the operation scan still calls `collectOperationResponseC
 
 ---
 
+### Task 2a: Add Explicit Request-Prose Mismatch Checks
+
+**Files:**
+- Modify: `src/test-support/openapi-consistency.ts`
+- Test: `src/test-support/openapi-consistency.test.ts`
+
+- [ ] **Step 1: Add request segment collection**
+
+Add this helper near `collectOperationResponseCandidateSegments`.
+
+```ts
+function collectOperationRequestCandidateSegments(
+  description: string | undefined,
+  context: OperationProseContext,
+): ClassifiedOperationProseSegment[] {
+  if (!description) return [];
+  const segments: ClassifiedOperationProseSegment[] = [];
+
+  for (const block of splitDescriptionBlocks(description)) {
+    const blockSegments = isExampleBlock(block) || isRateLimitBlock(block) || isActionCatalogBlock(block)
+      ? [block]
+      : splitDescriptionSentences(block);
+
+    for (const text of blockSegments) {
+      const target = classifyOperationProseSegment(text, context);
+      if (target === 'request' || (target === 'ambiguous' && context.includeAmbiguous)) {
+        segments.push({
+          text,
+          target,
+          label: target === 'request' ? 'request context' : 'ambiguous context',
+        });
+      }
+    }
+  }
+
+  return segments;
+}
+```
+
+- [ ] **Step 2: Add request-prose suppression helper**
+
+Add this helper near `shouldSuppressOperationResponseCandidate`. It keeps the new request-prose path focused on literal field names and command syntax, not narrative compounds or example values.
+
+```ts
+function isLiteralRequestFieldCandidate(candidate: FieldCandidate, sourceText: string): boolean {
+  const term = candidate.term;
+  if (term.includes('_') || /[a-z][A-Z]/.test(term)) return true;
+
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`["'\`]${escaped}["'\`]\\s*:`, 'i').test(sourceText)) return true;
+  if (new RegExp(`\\b${escaped}\\s*[=:]`, 'i').test(sourceText)) return true;
+  if (
+    /\b(?:options?|parameters?)\s*:/i.test(sourceText) &&
+    new RegExp(`\\b${escaped}\\b\\s*(?:\\(|:|=|,)`, 'i').test(sourceText)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function isBareQuotedRequestValue(candidate: FieldCandidate, sourceText: string): boolean {
+  const escaped = candidate.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`["'\`]${escaped}["'\`](?!\\s*:)`, 'i').test(sourceText);
+}
+
+function shouldSuppressOperationRequestCandidate(
+  candidate: FieldCandidate,
+  routeSig: string,
+  sourceText: string,
+  knownOperationTerms: Set<string>,
+): boolean {
+  const term = candidate.term;
+  const lower = term.toLowerCase();
+  const routeLeaf = getRouteLeaf(routeSig).toLowerCase();
+
+  if (/example/i.test(candidate.provenance)) return true;
+  if (!isLiteralRequestFieldCandidate(candidate, sourceText)) return true;
+  if (lower === routeLeaf) return true;
+  if (knownOperationTerms.has(lower)) return true;
+  if (isBareQuotedRequestValue(candidate, sourceText)) return true;
+  if (isQuotedExampleValue(term, sourceText)) return true;
+  if (shouldSuppressKnownCodeTerm(candidate, sourceText)) return true;
+
+  // Request prose should prefer literal field syntax. Do not turn "buy order"
+  // or similar narrative phrases into request schema mismatches by default.
+  if (/^from compound/.test(candidate.provenance) && !sourceText.includes(term)) return true;
+
+  return false;
+}
+```
+
+- [ ] **Step 3: Add non-example request prose scan inside `findProseFieldMismatches`**
+
+Keep the existing JSON example loop unchanged. Add `const knownOperationTerms = collectKnownOperationTerms(spec);` once near the top of `findProseFieldMismatches`, after `const only = options.only;`. After the JSON example loop, classify request-target description segments and emit lower-confidence `prose-field-mismatch` findings for explicit request prose fields absent from the request schema.
+
+```ts
+    const responseCandidateFields = collectResponseCandidateFields(spec, routeSig);
+    const requestSegments = collectOperationRequestCandidateSegments(op.description as string | undefined, {
+      routeSig,
+      requestFields: new Set(Object.keys(props || {})),
+      responseFields: responseCandidateFields.fields,
+      knownOperationTerms,
+      includeAmbiguous: Boolean(options.includeLowConfidence),
+    });
+
+    for (const segment of requestSegments) {
+      if (isExampleBlock(segment.text)) continue; // JSON examples are handled above with high confidence.
+
+      const rich = harvestFieldCandidates(segment.text, { forceRelevant: true }).filter((c) => !isNoiseTerm(c.term));
+      for (const candidate of rich) {
+        const term = candidate.term;
+        if (termPresentIn(term, new Set(Object.keys(props || {})))) continue;
+        if (shouldSuppressOperationRequestCandidate(candidate, routeSig, segment.text, knownOperationTerms)) continue;
+
+        const confidence = segment.target === 'ambiguous' ? 'speculative' : 'medium';
+        const severity = segment.target === 'ambiguous' ? 'low' : 'medium';
+        findings.push({
+          id: `prose-field-mismatch|${routeSig}|${term}`,
+          kind: 'prose-field-mismatch',
+          severity,
+          route: routeSig,
+          field: term,
+          message: `request prose references "${term}" but request schema has no such property`,
+          evidence: {
+            proseExcerpt: segment.text.slice(0, 280),
+            schemaProperty: props[term],
+            candidateProvenance: `${candidate.provenance}; ${segment.label}`,
+          },
+          suggestedAction:
+            'Add the field to the request schema if clients can send it, or update prose to use the canonical request field name.',
+          confidence,
+        });
+      }
+    }
+```
+
+If this creates duplicate IDs with JSON example findings, keep the existing high-confidence example finding. The final `buildConsistencyReport` de-dup currently keeps the first finding for an ID, so leave the JSON example loop before this new prose loop.
+
+- [ ] **Step 4: Run focused tests**
+
+Run:
+
+```bash
+/home/hermes/.bun/bin/bun test src/test-support/openapi-consistency.test.ts
+```
+
+Expected: the explicit request/prose mismatch test now passes. Response-classification tests may still fail until Task 3 routes response checks through classified segments.
+
+---
+
 ### Task 3: Route Operation Response Checks Through Classified Segments
 
 **Files:**
@@ -468,13 +761,16 @@ with:
     const segments = collectOperationResponseCandidateSegments(op.description as string | undefined, {
       routeSig,
       requestFields: reqFields,
+      responseFields: responseCandidateFields.fields,
       knownOperationTerms,
       includeAmbiguous: Boolean(options.includeLowConfidence),
     });
     if (segments.length === 0) continue;
 
     for (const segment of segments) {
-      const rich = extractResponseFieldCandidatesWithProvenance(segment.text).filter((c) => !isNoiseTerm(c.term));
+      const rich = extractResponseFieldCandidatesWithProvenance(segment.text, {
+        forceRelevant: segment.target === 'response',
+      }).filter((c) => !isNoiseTerm(c.term));
       if (rich.length === 0) continue;
 
       for (const candidate of rich) {
@@ -765,15 +1061,23 @@ station_type
 insufficient_credits
 ```
 
+Also confirm the default report still preserves route-bound response-prose signal from the cached v0.471.0 spec. Unless the cached spec or prose has been intentionally fixed, it should still include a response-context finding such as:
+
+```text
+POST /api/v2/spacemolt/list_station_passengers field=base_fare
+```
+
+If that exact finding disappears because the schema was fixed, verify another real response-context finding remains, preferably from prose using `shows`, `reports`, `lists`, or `summarizes`.
+
 - [ ] **Step 3: Run high-recall report**
 
 Run:
 
 ```bash
-/home/hermes/.bun/bin/bun scripts/report-openapi-consistency.ts --high-recall --only test_use_field_prose
+/home/hermes/.bun/bin/bun scripts/report-openapi-consistency.ts --high-recall --only view_market
 ```
 
-Expected: exit 0. For the real cached spec this filter may produce no findings because the test route is synthetic; the parser and option path are already verified by Task 5.
+Expected: exit 0. Use a real route filter so the option path is exercised against cached OpenAPI data. If high-recall adds ambiguous findings, they must be `severity: low` / `confidence: speculative` in JSON mode and must not replace default medium-confidence response-context findings.
 
 - [ ] **Step 4: Run API metadata and golden tests**
 
@@ -824,10 +1128,12 @@ Check each item manually:
 
 ```text
 Default report suppresses permissions, tool names, route names, and request-only concepts as missing 200-response fields.
+Explicit non-example request prose reports request/prose mismatches without promoting narrative compounds or quoted values to fields.
 Explicit response field prose still reports missing route-bound response fields.
+Response prose using display verbs such as shows, lists, reports, and summarizes still reports route-bound response-schema drift.
 Request examples still produce prose-field-mismatch for payload keys absent from request schemas.
 High-recall behavior is available through --high-recall and --include-low.
-Focused tests cover request, response, neutral, error-response, and high-recall paths.
+Focused tests cover request, explicit request mismatch, response display verbs, neutral, error-response, and high-recall paths.
 Report scripts remain local, diagnostic, and exit zero by default.
 ```
 
@@ -837,6 +1143,7 @@ Prepare a short final note with:
 
 ```text
 Implemented schema-aware operation prose classification for report:openapi-consistency.
+Added explicit request-prose mismatch checks for non-example request body field references.
 Added --high-recall as an alias for --include-low.
 Updated ambiguous prose tests so default output is stricter while high-recall retains fuzzy findings.
 Verified with openapi-consistency tests, parser tests, api-sync, output-golden, and the default report.

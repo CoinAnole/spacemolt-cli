@@ -34,6 +34,7 @@ These findings are not necessarily useless in a high-recall mode, but they are m
 - Keep `report:openapi-consistency` high-recall.
 - Use explicit `requestBody` and `responses[200]` schemas to classify prose by target.
 - Preserve true request/prose mismatch findings, especially JSON example keys absent from request schemas.
+- Report clear non-example request/prose mismatches when request-oriented prose names a body field absent from `requestBody`.
 - Preserve true response/prose mismatch findings when prose explicitly describes response fields.
 - Stop default `missing-response-field-prose` findings for permissions, tool names, gameplay concepts, route/action names, and ordinary request prose.
 - Keep looser prose mining available behind an explicit flag such as `--include-low` or `--high-recall`.
@@ -107,13 +108,15 @@ Request context indicators:
 - canonical `**Example:**` payload JSON
 - `payload`, `request`, `parameter`, `accepts`, `pass`, `specify`, `set`, or `use <field>=...`
 - prose near request-body examples or command invocation syntax
-- field names already declared in the request schema
+- field names already declared in the request schema when the sentence does not also describe returned data
 
 Response context indicators:
 
 - `response`, `result`, `returns`, `returned`, `structuredContent`, `details`
 - `includes`, `contains`, `has`, or `shows` when paired with `field`, `fields`, `key`, `keys`, `payload`, `result`, or `response`
 - explicit field lists such as `returns carried_ships, bay_used, and bay_capacity fields`
+- display/report verbs such as `shows`, `lists`, `reports`, `summarizes`, or `carries` when the same sentence contains field-like candidates or existing response-schema fields
+- schema-summary prose such as `taxable_income_to_date, deductible_expenses_to_date, and net_taxable_profit summarize the period`
 - prose after a response example, if response examples are added later
 
 Neutral context indicators:
@@ -139,8 +142,12 @@ Keep the existing high-confidence example behavior:
 
 New behavior:
 
+- Explicit request prose outside JSON examples should also produce `prose-field-mismatch` when it names a request body field absent from the request schema. Examples include `Pass target_base_id ...`, `Options: scope ...`, `Accepts item_id ...`, and `Use deliver_to=storage ...`.
+- Non-example request/prose findings should be lower confidence than JSON example findings unless the prose uses command syntax such as `field=value`, `field:`, or `body {"field": ...}`.
+- Non-example request extraction should favor literal field-like tokens already written as snake_case, JSON keys, or command syntax. It should not synthesize ordinary narrative compounds such as `buy order` into request mismatches by default, and quoted example values such as `'fuel'` should remain examples, not fields.
 - request-oriented terms must not produce `missing-response-field-prose`
 - if a request-oriented term is absent from the request schema but present in the response schema, it is still a request/prose mismatch, not a response mismatch
+- ambiguous request-like prose should be hidden from default output and retained only in high-recall mode
 
 ### Response-Prose Checks
 
@@ -156,6 +163,8 @@ The response field set should use the shared OpenAPI schema utilities already us
 - collect nested property names from objects, arrays, and variants
 
 Response-prose candidates absent from that route-bound response field set produce `missing-response-field-prose`.
+
+Response-context extraction must not depend only on literal words like `response` or `fields`. The current OpenAPI prose often uses domain-facing display verbs, for example `Shows each passenger's ... base fare ...` or `Also reports ... fare_surge ...`. Once a sentence is classified as response-oriented, candidate extraction should be allowed to synthesize normal field compounds from that sentence even when it lacks older extraction cues such as `payload` or quoted JSON.
 
 The finding should include:
 
@@ -193,6 +202,7 @@ Flag behavior:
 Default output should include:
 
 - high-confidence request example mismatches
+- medium-confidence explicit request-prose mismatches
 - high-confidence or medium-confidence response-field prose mismatches from response context
 - existing high-confidence shared-schema findings
 
@@ -257,12 +267,26 @@ Build a route with:
 
 - request schema containing `item_id`
 - response schema containing only `ok`
-- description: `Use item_id 'fuel' to post a buy order.`
+- description: `Use item_id 'fuel' to post a buy order. Sort previews with sort_by 'price_asc'.`
 
 Expected:
 
 - no `missing-response-field-prose` for `item_id`
 - no response finding for `fuel` or `buy_order`
+- no request/prose mismatch for quoted values `fuel` / `price_asc` or narrative compound `buy_order`
+
+### Explicit Request Prose Reports Request Mismatch
+
+Build a route with:
+
+- request schema containing `mission_type`
+- response schema containing only `ok`
+- description: `Pass target_base_id when posting a delivery mission.`
+
+Expected:
+
+- `prose-field-mismatch` for `target_base_id`
+- no `missing-response-field-prose` for `target_base_id`
 
 ### Explicit Response Field List Still Reports Missing Fields
 
@@ -275,6 +299,18 @@ Expected:
 
 - no finding for `carried_ships`
 - `missing-response-field-prose` findings for `bay_used` and `bay_capacity`
+
+### Display Verbs Still Count As Response Context
+
+Build a route with:
+
+- response schema containing `fare_surge`
+- description: `Shows each passenger's base fare. Also reports fare_surge for the station.`
+
+Expected:
+
+- no finding for `fare_surge`
+- `missing-response-field-prose` for `base_fare`
 
 ### Permission Prose Is Neutral
 
