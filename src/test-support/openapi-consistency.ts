@@ -256,10 +256,7 @@ function isNearCodeLikeToken(text: string, index: number | undefined): boolean {
  * Harvest FieldCandidates (with provenance) from text using only context-relevant blocks.
  * This powers both legacy string[] extractors (compat) and rich paths for provenance.
  */
-function harvestFieldCandidates(
-  text: string | undefined,
-  options: CandidateExtractionOptions = {},
-): FieldCandidate[] {
+function harvestFieldCandidates(text: string | undefined, options: CandidateExtractionOptions = {}): FieldCandidate[] {
   if (!text) return [];
   const blocks = splitDescriptionBlocks(text);
   const out: FieldCandidate[] = [];
@@ -585,7 +582,11 @@ function shouldSuppressOperationResponseCandidate(
   if (/example/i.test(candidate.provenance)) return true;
   if (lower === routeLeaf) return true;
   if (isSkillOrProficiencyReference(term, sourceText)) return true;
-  if (target === 'response' && termPresentIn(term, requestFields) && isRequestConditionPrefixCandidate(term, sourceText))
+  if (
+    target === 'response' &&
+    termPresentIn(term, requestFields) &&
+    isRequestConditionPrefixCandidate(term, sourceText)
+  )
     return true;
   if (target !== 'response' && requestFields.has(term)) return true;
   if (target !== 'response' && termPresentIn(term, requestFields)) return true;
