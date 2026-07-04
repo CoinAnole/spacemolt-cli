@@ -294,7 +294,9 @@ export const socialFormatters = [
       if (!Array.isArray(r.messages)) return false;
       const rows = r.messages.filter(isRecord).map((message) => ({
         ...message,
-        timestamp_preview: formatTimestampPreview(message.timestamp ?? message.created_at ?? message.sent_at),
+        timestamp_preview: formatTimestampPreview(
+          message.timestamp_utc ?? message.timestamp ?? message.created_at ?? message.sent_at,
+        ),
         sender_display: formatChatSender(message),
       }));
       if (r.channel) emitLine(`${c.dim}channel ${r.channel}${c.reset}`);
@@ -696,18 +698,42 @@ export const socialFormatters = [
     'fleet',
     ['fleet'],
     (r) => {
-      const fleet = r.fleet as Record<string, unknown> | undefined;
+      const fleet = isRecord(r.fleet)
+        ? r.fleet
+        : r.in_fleet !== undefined || r.fleet_id || Array.isArray(r.members)
+          ? r
+          : undefined;
       if (!fleet) return false;
       emitLine(`\n${c.bright}=== Fleet ===${c.reset}`);
       emitLine(`ID: ${fleet.fleet_id || fleet.id || 'unknown'}`);
-      if (fleet.leader_name || fleet.leader_id) emitLine(`Leader: ${fleet.leader_name || fleet.leader_id}`);
+      if (fleet.leader || fleet.leader_name || fleet.leader_id) {
+        emitLine(`Leader: ${fleet.leader || fleet.leader_name || fleet.leader_id}`);
+      }
+      if (fleet.in_fleet === false) emitLine('In fleet: no');
       const members = (fleet.members || r.members) as Array<Record<string, unknown>> | undefined;
       if (Array.isArray(members)) {
-        printCompactTable('Members', members, [
+        const rows = members.filter(isRecord).map((member) => {
+          const ship = member.ship;
+          const shipDisplay = isRecord(ship) ? ship.name || ship.class_name || ship.class_id || ship.id : ship;
+          const locationDisplay =
+            member.system_name ||
+            member.system_id ||
+            member.current_system ||
+            member.poi_name ||
+            member.poi_id ||
+            fleet.system_id ||
+            fleet.poi_id;
+          return {
+            ...member,
+            ship_display: shipDisplay,
+            location_display: locationDisplay,
+          };
+        });
+        printCompactTable('Members', rows, [
           ['Name', ['username', 'name', 'player_name']],
           ['ID', ['player_id', 'id']],
-          ['Ship', ['ship_class', 'ship_name']],
-          ['Location', ['system_name', 'current_system', 'poi_name', 'current_poi']],
+          ['Ship', ['ship_display', 'ship_class', 'ship_name']],
+          ['Location', ['location_display', 'system_name', 'current_system', 'poi_name', 'current_poi']],
           ['Status', ['status', 'state']],
         ]);
       }

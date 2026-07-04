@@ -1,8 +1,9 @@
 
 === Battle ===
 ID: battle-1
-Status: active
-Range: medium
+System: sol
+Participant: yes
+Tick Duration: 30
 
 === Sides ===
 

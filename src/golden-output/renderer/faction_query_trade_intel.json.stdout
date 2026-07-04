@@ -1,11 +1,25 @@
 {
-  "intel": [
+  "entries": [
     {
-      "system_name": "Sol",
-      "poi_name": "Earth",
-      "item_id": "fuel_cell",
-      "price_each": 25,
-      "updated_at": "2026-05-17T00:00:00Z"
+      "base_id": "earth_station",
+      "station_name": "Earth",
+      "system_id": "sol",
+      "submitted_by": "player-ibis",
+      "submitter_name": "Ibis",
+      "submitted_at_tick": 12050,
+      "items": [
+        {
+          "item_id": "fuel_cell",
+          "item_name": "Fuel Cell",
+          "best_buy": 25,
+          "best_sell": 31,
+          "buy_volume": 140,
+          "sell_volume": 80
+        }
+      ]
     }
-  ]
+  ],
+  "intel_level": 2,
+  "showing": 1,
+  "total": 1
 }

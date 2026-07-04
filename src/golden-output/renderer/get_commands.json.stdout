@@ -1,13 +1,15 @@
 {
-  "commands": [
+  "actions": [
     {
-      "name": "get_status",
-      "category": "Query commands",
+      "tool": "spacemolt",
+      "action": "get_status",
+      "endpoint": "/api/v2/spacemolt/get_status",
       "description": "Inspect player, ship, and location."
     },
     {
-      "name": "travel",
-      "category": "Navigation",
+      "tool": "spacemolt",
+      "action": "travel",
+      "endpoint": "/api/v2/spacemolt/travel",
       "description": "Move to a POI."
     }
   ]

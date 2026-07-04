@@ -1,7 +1,7 @@
 
-=== Commands ===
+=== Actions ===
 
-  Command    | Category       | Description                        
-  -----------+----------------+------------------------------------
-  get_status | Query commands | Inspect player, ship, and location.
-  travel     | Navigation     | Move to a POI.                     
+  Action     | Tool      | Endpoint                     | Description                        
+  -----------+-----------+------------------------------+------------------------------------
+  get_status | spacemolt | /api/v2/spacemolt/get_status | Inspect player, ship, and location.
+  travel     | spacemolt | /api/v2/spacemolt/travel     | Move to a POI.                     

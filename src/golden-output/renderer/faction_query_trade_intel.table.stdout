@@ -1,6 +1,10 @@
 
-=== Intel ===
+=== Trade Intel ===
+Intel level: 2
+Showing: 1 / 1
 
-  System | POI/Station | Type      | Value | Updated             
-  -------+-------------+-----------+-------+---------------------
-  Sol    | Earth       | fuel_cell | 25    | 2026-05-17T00:00:00Z
+=== Items ===
+
+  System | Station | Item      | Best Buy | Best Sell | Buy Vol | Sell Vol | Updated     | By  
+  -------+---------+-----------+----------+-----------+---------+----------+-------------+-----
+  sol    | Earth   | Fuel Cell | 25 cr    | 31 cr     | 140     | 80       | tick 12,050 | Ibis

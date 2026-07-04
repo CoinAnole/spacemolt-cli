@@ -494,12 +494,16 @@ export const statusFormatters = [
 
   formatter(
     (r) => {
-      if (!Array.isArray(r.commands)) return false;
-      const rows = r.commands.filter(isRecord);
-      const commandColumns: Array<[string, string[]]> = [['Command', ['name']]];
-      if (rowsHaveValue(rows, ['category'])) commandColumns.push(['Category', ['category']]);
+      const isV2Actions = Array.isArray(r.actions);
+      const rowSource = isV2Actions ? r.actions : r.commands;
+      if (!Array.isArray(rowSource)) return false;
+      const rows = rowSource.filter(isRecord);
+      const commandColumns: Array<[string, string[]]> = isV2Actions ? [['Action', ['action']]] : [['Command', ['name']]];
+      if (isV2Actions && rowsHaveValue(rows, ['tool'])) commandColumns.push(['Tool', ['tool']]);
+      if (!isV2Actions && rowsHaveValue(rows, ['category'])) commandColumns.push(['Category', ['category']]);
+      if (isV2Actions && rowsHaveValue(rows, ['endpoint'])) commandColumns.push(['Endpoint', ['endpoint']]);
       commandColumns.push(['Description', ['description']]);
-      printCompactTable('Commands', rows, commandColumns, { maxCellWidth: 72 });
+      printCompactTable(isV2Actions ? 'Actions' : 'Commands', rows, commandColumns, { maxCellWidth: 72 });
       return true;
     },
     { commands: ['get_commands'] },

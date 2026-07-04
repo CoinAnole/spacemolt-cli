@@ -671,6 +671,41 @@ export const marketFormatters = [
     'intel',
     ['intel'],
     (r) => {
+      const entries = firstArray(r, ['entries']);
+      if (entries?.every((entry) => isRecord(entry) && Array.isArray(entry.items))) {
+        const rows = entries.flatMap((entry) =>
+          ((entry.items as unknown[]) ?? []).filter(isRecord).map((item) => ({
+            system_id: entry.system_id,
+            station_name: entry.station_name ?? entry.base_name ?? entry.base_id,
+            item_name: item.item_name ?? item.item_id,
+            best_buy: formatCreditCell(item.best_buy),
+            best_sell: formatCreditCell(item.best_sell),
+            buy_volume: formatDisplayNumber(item.buy_volume),
+            sell_volume: formatDisplayNumber(item.sell_volume),
+            submitted_tick:
+              entry.submitted_at_tick === undefined ? '' : `tick ${formatDisplayNumber(entry.submitted_at_tick)}`,
+            submitter: entry.submitter_name ?? entry.submitted_by,
+          })),
+        );
+        emitLine(`\n${c.bright}=== Trade Intel ===${c.reset}`);
+        if (r.intel_level !== undefined) emitLine(`Intel level: ${r.intel_level}`);
+        if (r.showing !== undefined || r.total !== undefined) {
+          emitLine(`Showing: ${formatDisplayNumber(r.showing)} / ${formatDisplayNumber(r.total)}`);
+        }
+        printCompactTable('Items', rows, [
+          ['System', ['system_id']],
+          ['Station', ['station_name']],
+          ['Item', ['item_name']],
+          ['Best Buy', ['best_buy']],
+          ['Best Sell', ['best_sell']],
+          ['Buy Vol', ['buy_volume']],
+          ['Sell Vol', ['sell_volume']],
+          ['Updated', ['submitted_tick']],
+          ['By', ['submitter']],
+        ]);
+        return true;
+      }
+
       const intel = firstArray(r, ['intel', 'results', 'trade_intel']);
       if (!intel) return false;
       printCompactTable('Intel', intel, [

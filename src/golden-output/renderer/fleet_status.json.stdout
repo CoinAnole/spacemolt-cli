@@ -1,15 +1,16 @@
 {
-  "fleet": {
-    "fleet_id": "fleet-1",
-    "leader_name": "Marlowe",
-    "members": [
-      {
-        "player_id": "player-1",
-        "username": "Marlowe",
-        "ship_class": "prospector",
-        "system_name": "Sol",
-        "status": "ready"
-      }
-    ]
-  }
+  "action": "status",
+  "in_fleet": true,
+  "fleet_id": "fleet-1",
+  "leader": "Marlowe",
+  "system_id": "sol",
+  "poi_id": "earth_station",
+  "members": [
+    {
+      "player_id": "player-1",
+      "username": "Marlowe",
+      "is_leader": true,
+      "ship": "Prospector"
+    }
+  ]
 }

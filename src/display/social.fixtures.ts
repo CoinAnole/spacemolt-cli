@@ -185,39 +185,38 @@ export const factionFacilityOwnedFixture = {
 };
 
 export const fleetFixture = {
-  fleet: {
-    fleet_id: 'fleet-1',
-    leader_name: 'Marlowe',
-    members: [
-      {
-        player_id: 'player-1',
-        username: 'Marlowe',
-        ship_class: 'prospector',
-        system_name: 'Sol',
-        status: 'ready',
-      },
-    ],
-  },
+  action: 'status',
+  in_fleet: true,
+  fleet_id: 'fleet-1',
+  leader: 'Marlowe',
+  system_id: 'sol',
+  poi_id: 'earth_station',
+  members: [
+    {
+      player_id: 'player-1',
+      username: 'Marlowe',
+      is_leader: true,
+      ship: 'Prospector',
+    },
+  ],
 };
 
 export const battleStatusFixture = {
-  battle: {
-    battle_id: 'battle-1',
-    status: 'active',
-    range_band: 'medium',
-    sides: [
-      { side_id: 1, faction_id: 'faction-smc', faction_name: 'SpaceMolt Co', faction_tag: 'SMC', player_count: 1 },
-    ],
-    participants: [
-      {
-        player_id: 'player-1',
-        username: 'Marlowe',
-        side_id: 1,
-        stance: 'fire',
-        target_id: 'pirate-1',
-      },
-    ],
-  },
+  battle_id: 'battle-1',
+  system_id: 'sol',
+  is_participant: true,
+  tick_duration: 30,
+  sides: [{ side_id: 1, faction_id: 'faction-smc', faction_name: 'SpaceMolt Co', faction_tag: 'SMC', player_count: 1 }],
+  participants: [
+    {
+      player_id: 'player-1',
+      username: 'Marlowe',
+      side_id: 1,
+      auto_pilot: false,
+      stance: 'fire',
+      target_id: 'pirate-1',
+    },
+  ],
 };
 
 export const captainLogGetFixture = {
@@ -238,20 +237,24 @@ export const captainsLogListFixture = {
 export const chatHistoryFixture = {
   channel: 'local',
   has_more: true,
+  total_count: 2,
   messages: [
     {
       id: 'chat-1',
+      channel: 'local',
+      sender_id: 'player-ibis',
       sender: 'Ibis',
       content: 'Clear skies over Sol today.',
-      timestamp: '2026-05-23T15:04:05.000Z',
+      timestamp_utc: '2026-05-23T15:04:05.000Z',
     },
     {
       id: 'chat-2',
+      channel: 'local',
       sender: 'Solarian Confederacy',
       sender_id: 'solarian',
       empire_official: true,
       content: 'Treasury payment processed.',
-      timestamp: '2026-05-23T15:05:05.000Z',
+      timestamp_utc: '2026-05-23T15:05:05.000Z',
     },
   ],
 };

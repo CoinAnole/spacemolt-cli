@@ -1297,6 +1297,31 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
+  test('get_commands renders v2 actions response', () => {
+    const rendered = renderStructuredResult(
+      'get_commands',
+      {
+        actions: [
+          {
+            tool: 'spacemolt',
+            action: 'get_status',
+            endpoint: '/api/v2/spacemolt/get_status',
+            description: 'Inspect player, ship, and location.',
+          },
+        ],
+      },
+      globalOptions(),
+    );
+    const stdout = rendered.stdout.join('\n').replace(ANSI_PATTERN, '');
+
+    expect(rendered.success).toBe(true);
+    expect(stdout).toContain('Actions');
+    expect(stdout).toContain('get_status');
+    expect(stdout).toContain('spacemolt');
+    expect(stdout).toContain('/api/v2/spacemolt/get_status');
+    expect(stdout).toContain('Inspect player, ship, and location.');
+  });
+
   test('pure renderer respects projection, quiet, timestamp, and drift warning paths', () => {
     const projected = renderStructuredResult('get_status', outputModeFixture, globalOptions({ fields: ['ship.fuel'] }));
     const quiet = renderResult(
@@ -1990,6 +2015,43 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('hydrogen_gas');
     expect(stdout).toContain('argon_gas');
     expect(stdout).toContain('richness 4');
+  });
+
+  test('formats faction_query_trade_intel v2 entries with nested items', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_query_trade_intel', {
+      entries: [
+        {
+          base_id: 'earth_station',
+          station_name: 'Earth Station',
+          system_id: 'sol',
+          submitted_by: 'player-ibis',
+          submitter_name: 'Ibis',
+          submitted_at_tick: 12050,
+          items: [
+            {
+              item_id: 'fuel_cell',
+              item_name: 'Fuel Cell',
+              best_buy: 25,
+              best_sell: 31,
+              buy_volume: 140,
+              sell_volume: 80,
+            },
+          ],
+        },
+      ],
+      intel_level: 2,
+      showing: 1,
+      total: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Trade Intel ===');
+    expect(stdout).toContain('Earth Station');
+    expect(stdout).toContain('Fuel Cell');
+    expect(stdout).toContain('25 cr');
+    expect(stdout).toContain('31 cr');
+    expect(stdout).toContain('140');
+    expect(stdout).toContain('tick 12,050');
   });
 
   test('formats faction created buy order without sell wording', () => {
@@ -3641,8 +3703,9 @@ describe('structuredContent formatters', () => {
       "
       === Battle ===
       ID: battle-1
-      Status: active
-      Range: medium
+      System: sol
+      Participant: yes
+      Tick Duration: 30
 
       === Sides ===
 
@@ -3812,15 +3875,19 @@ describe('structuredContent formatters', () => {
 
         Name    | ID       | Ship       | Location | Status
         --------+----------+------------+----------+-------
-        Marlowe | player-1 | prospector | Sol      | ready"
+        Marlowe | player-1 | Prospector | sol      |"
       ,
         "intel": 
       "
-      === Intel ===
+      === Trade Intel ===
+      Intel level: 2
+      Showing: 1 / 1
 
-        System | POI/Station | Type      | Value | Updated
-        -------+-------------+-----------+-------+---------------------
-        Sol    | Earth       | fuel_cell | 25    | 2026-05-17T00:00:00Z"
+      === Items ===
+
+        System | Station | Item      | Best Buy | Best Sell | Buy Vol | Sell Vol | Updated     | By
+        -------+---------+-----------+----------+-----------+---------+----------+-------------+-----
+        sol    | Earth   | Fuel Cell | 25 cr    | 31 cr     | 140     | 80       | tick 12,050 | Ibis"
       ,
         "market_orders": 
       "

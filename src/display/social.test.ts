@@ -192,6 +192,39 @@ test('omits faction facility state column when the API omits that field', () => 
   expect(stdout).toContain('Rent');
 });
 
+test('renders flat fleet_status response from v2 schema', () => {
+  const rendered = renderStructuredResult(
+    'fleet_status',
+    {
+      action: 'status',
+      in_fleet: true,
+      fleet_id: 'fleet-1',
+      leader: 'Marlowe',
+      system_id: 'sol',
+      poi_id: 'earth_station',
+      members: [
+        {
+          player_id: 'player-1',
+          username: 'Marlowe',
+          is_leader: true,
+          ship: 'Prospector',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Fleet ===');
+  expect(stdout).toContain('ID: fleet-1');
+  expect(stdout).toContain('Leader: Marlowe');
+  expect(stdout).toContain('Marlowe');
+  expect(stdout).toContain('Prospector');
+  expect(stdout).toContain('sol');
+});
+
 test('renders forum thread reply pagination metadata', () => {
   const rendered = renderStructuredResult(
     'forum_get_thread',
@@ -211,6 +244,35 @@ test('renders forum thread reply pagination metadata', () => {
   expect(stdout).toContain('Replies: 41');
   expect(stdout).toContain('reply page 2 | per page 20 | total replies 41');
   expect(stdout).toContain('More replies available.');
+});
+
+test('renders chat history timestamps from v2 timestamp_utc field', () => {
+  const rendered = renderStructuredResult(
+    'get_chat_history',
+    {
+      channel: 'local',
+      has_more: false,
+      total_count: 1,
+      messages: [
+        {
+          id: 'chat-1',
+          channel: 'local',
+          sender_id: 'player-ibis',
+          sender: 'Ibis',
+          content: 'Clear skies over Sol today.',
+          timestamp_utc: '2026-05-23T15:04:05.000Z',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('2026-05-23 15:04:05');
+  expect(stdout).toContain('Ibis');
+  expect(stdout).toContain('Clear skies over Sol today.');
 });
 
 test('renders get_guide server version', () => {
