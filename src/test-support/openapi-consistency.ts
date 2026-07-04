@@ -1,15 +1,15 @@
-import * as path from 'node:path';
 import { gameserverVersionFromSpec } from '../openapi-metadata';
 
-// Reuse some helpers from the fixture comparator (they are already well-tested)
 import {
-  type OpenApiSpec as FixtureOpenApiSpec,
+  buildResponseSchemaCandidates,
+  collectAllPropertyNames,
   getEffectiveSchema,
-  loadOpenApiSpec as loadFixtureOpenApiSpec,
+  loadOpenApiSpec as loadSharedOpenApiSpec,
   resolveSuccessResponseSchema,
-} from './fixture-schema-compare';
+  type OpenApiSpec as SharedOpenApiSpec,
+} from './openapi-schema';
 
-export type OpenApiSpec = FixtureOpenApiSpec;
+export type OpenApiSpec = SharedOpenApiSpec;
 
 export interface DocExample {
   raw: string;
@@ -57,6 +57,7 @@ export interface Finding {
       routes: string[];
     }>;
     cliAlias?: string;
+    responseCandidates?: string[];
     /** Provenance for how this field candidate was synthesized (e.g. from compound, JSON, or loose proseKey in a context block). */
     candidateProvenance?: string;
   };
@@ -82,17 +83,13 @@ export interface ConsistencyReport {
 export interface ReportOptions {
   only?: string[];
   includeLowConfidence?: boolean;
+  includeComponentProse?: boolean;
 }
 
-const _DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
-
-// Per-run memoization for expensive schema walks (big win on unfiltered runs over 200+ components).
-// Keyed on the schema node object (stable refs for components and resolved subschemas).
-const propNamesMemo = new WeakMap<object, Set<string>>();
 const descTextMemo = new WeakMap<object, string>();
 
 export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
-  return loadFixtureOpenApiSpec(customPath);
+  return loadSharedOpenApiSpec(customPath);
 }
 
 function normalizeTextForMatch(s: string): string {
@@ -779,57 +776,6 @@ function keySetSignature(props: Record<string, any>): string {
 }
 
 /**
- * Recursively collect all property names reachable in a (possibly effective) schema.
- * Handles properties, array items (any container), oneOf/allOf/anyOf, and refs via getEffectiveSchema.
- * Used to improve detection of fields present in nested response shapes (e.g. passengers[], passenger_arrivals, oneOf variants).
- * Memoized by input schema object for repeated walks over shared components.
- */
-// biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-function collectAllPropertyNames(schema: any, spec: OpenApiSpec, seen = new Set<string>()): Set<string> {
-  if (!schema || typeof schema !== 'object') return new Set<string>();
-
-  // Memo hit: return a copy (callers may mutate their local set)
-  const cached = propNamesMemo.get(schema);
-  if (cached) return new Set(cached);
-
-  const fields = new Set<string>();
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-  const eff = getEffectiveSchema(spec, schema as any, seen);
-
-  // Direct properties at this level
-  if (eff.properties && typeof eff.properties === 'object') {
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-    for (const [k, sub] of Object.entries(eff.properties as Record<string, any>)) {
-      fields.add(k);
-      // Recurse into nested object schemas to catch deep fields
-      if (sub && typeof sub === 'object') {
-        for (const f of collectAllPropertyNames(sub, spec, seen)) fields.add(f);
-      }
-    }
-  }
-
-  // Array items — any array container (passengers, loaded, delivered, stranded, passenger_arrivals.*, etc.)
-  if (eff.items) {
-    for (const f of collectAllPropertyNames(eff.items, spec, seen)) fields.add(f);
-    // Also surface direct item properties
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-    const itemEff = getEffectiveSchema(spec, eff.items as any, seen);
-    if (itemEff.properties && typeof itemEff.properties === 'object') {
-      for (const k of Object.keys(itemEff.properties)) fields.add(k);
-    }
-  }
-
-  // oneOf / allOf / anyOf variants
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-  for (const variant of [...(eff.oneOf || []), ...(eff.allOf || []), ...(eff.anyOf || [])] as any[]) {
-    for (const f of collectAllPropertyNames(variant, spec, seen)) fields.add(f);
-  }
-
-  propNamesMemo.set(schema, new Set(fields));
-  return fields;
-}
-
-/**
  * Collect human prose descriptions from a schema subtree (descriptions on the node,
  * its properties, items, and oneOf/allOf/anyOf variants). Avoids schema keywords.
  * Memoized by input node object.
@@ -1257,6 +1203,104 @@ function termPresentIn(term: string, fields: Set<string>): boolean {
   return false;
 }
 
+const KNOWN_ERROR_CODE_TERMS = new Set([
+  'session_required',
+  'session_invalid',
+  'not_authenticated',
+  'rate_limited',
+  'command_error',
+  'invalid_params',
+  'invalid_json',
+  'payload_too_large',
+  'method_not_allowed',
+  'missing_action',
+  'unknown_command',
+  'missing_materials',
+]);
+
+function sentenceContainingTerm(sourceText: string, matchIndex: number): string {
+  const startBoundary = Math.max(
+    sourceText.lastIndexOf('.', matchIndex),
+    sourceText.lastIndexOf('!', matchIndex),
+    sourceText.lastIndexOf('?', matchIndex),
+  );
+  const endCandidates = ['.', '!', '?']
+    .map((punct) => sourceText.indexOf(punct, matchIndex))
+    .filter((index) => index >= 0);
+  const endBoundary = endCandidates.length > 0 ? Math.min(...endCandidates) : sourceText.length;
+  return sourceText.slice(startBoundary + 1, endBoundary).trim();
+}
+
+function isKnownCodeResponseFieldContext(term: string, sourceText: string): boolean {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const termPattern = new RegExp(`\\b${escaped}\\b`, 'gi');
+  const responseFieldContext = new RegExp(
+    `\\b(?:response|result|payload|structuredContent)\\b[^.?!]{0,120}\\b(?:includes?|contains?|has|returns?)\\b[^.?!]{0,80}\\b${escaped}\\b|\\b(?:includes?|contains?|has|returns?)\\b[^.?!]{0,80}\\b${escaped}\\b[^.?!]{0,80}\\b(?:field|fields|details|payload|result)\\b|\\b${escaped}\\b[^.?!]{0,80}\\b(?:field|fields|details|payload|result)\\b`,
+    'i',
+  );
+  const errorCodeContext = /\b(?:error\s+)?codes?\b/i;
+
+  for (let match = termPattern.exec(sourceText); match !== null; match = termPattern.exec(sourceText)) {
+    const sentence = sentenceContainingTerm(sourceText, match.index);
+    if (responseFieldContext.test(sentence) && !errorCodeContext.test(sentence)) return true;
+  }
+
+  return false;
+}
+
+function shouldSuppressKnownCodeTerm(candidate: FieldCandidate, sourceText: string): boolean {
+  const term = candidate.term.toLowerCase();
+  if (!KNOWN_ERROR_CODE_TERMS.has(term)) return false;
+  return !isKnownCodeResponseFieldContext(term, sourceText);
+}
+
+function isGenericResponseEnvelope(schemaName: string, schema: unknown): boolean {
+  if (/^V2Response$/i.test(schemaName)) return true;
+  if (!schema || typeof schema !== 'object') return false;
+
+  const properties = (schema as { properties?: Record<string, unknown> }).properties;
+  if (!properties) return false;
+  const envelopeFieldCount = ['result', 'structuredContent', 'notifications', 'session', 'error'].filter(
+    (field) => field in properties,
+  ).length;
+  return (
+    envelopeFieldCount >= 3 && ('result' in properties || 'structuredContent' in properties || 'error' in properties)
+  );
+}
+
+function collectResponseCandidateFields(
+  spec: OpenApiSpec,
+  routeSig: string,
+): { fields: Set<string>; primarySchemaName?: string; responseCandidates: string[] } {
+  const fields = new Set<string>();
+  const responseCandidates = new Set<string>();
+  let primarySchemaName: string | undefined;
+
+  try {
+    const resolved = resolveSuccessResponseSchema(spec, routeSig);
+    primarySchemaName = resolved.primarySchemaName;
+    if (!resolved.schema || Object.keys(resolved.schema).length === 0) {
+      return { fields, primarySchemaName, responseCandidates: [] };
+    }
+
+    const candidates = buildResponseSchemaCandidates(spec, resolved.schema, resolved.primarySchemaName);
+    for (const candidate of candidates) {
+      responseCandidates.add(candidate.comparedAgainst || candidate.label);
+      if (!primarySchemaName && candidate.primarySchemaName) primarySchemaName = candidate.primarySchemaName;
+      for (const field of collectAllPropertyNames(candidate.schema, spec)) fields.add(field);
+    }
+
+    if (candidates.length === 0) {
+      for (const field of collectAllPropertyNames(resolved.schema, spec)) fields.add(field);
+    }
+  } catch {
+    // Schema resolution is diagnostic-only here. An empty field set lets the report
+    // surface the prose candidate rather than failing the whole report.
+  }
+
+  return { fields, primarySchemaName, responseCandidates: [...responseCandidates] };
+}
+
 // Response prose vs schema check. Generalized to any term extracted from prose
 // (component descriptions + operation descriptions), not a hardcoded list.
 export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOptions = {}): Finding[] {
@@ -1264,45 +1308,50 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
   const only = options.only;
   const knownOperationTerms = collectKnownOperationTerms(spec);
 
-  // Component schemas: extract terms from their documentation prose and verify presence
-  // in the full reachable field set (including nested items/oneOf etc.).
-  // Focus on Response/Result/State schemas and a few broad containers to avoid
-  // flooding from partial component descriptions that reference fields from larger envelopes.
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-  const components = (spec as any).components?.schemas || {};
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
-  for (const [schemaName, schema] of Object.entries(components) as [string, any][]) {
-    const name = schemaName;
-    const isResponseLike = /Response|Result|State|Status|Output/i.test(name);
-    if (!isResponseLike) continue;
-    if (only?.length && !routeMatchesOnly(name, only)) continue;
+  if (options.includeComponentProse) {
+    // Component schemas: extract terms from their documentation prose and verify presence
+    // in the full reachable field set (including nested items/oneOf etc.).
+    // Focus on Response/Result/State schemas and a few broad containers to avoid
+    // flooding from partial component descriptions that reference fields from larger envelopes.
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
+    const components = (spec as any).components?.schemas || {};
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic OpenAPI schema traversal
+    for (const [schemaName, schema] of Object.entries(components) as [string, any][]) {
+      const name = schemaName;
+      const isResponseLike = /Response|Result|State|Status|Output/i.test(name);
+      if (!isResponseLike) continue;
+      if (only?.length && !routeMatchesOnly(name, only)) continue;
 
-    const prose = collectDescriptionText(schema);
-    const rich = extractResponseFieldCandidatesWithProvenance(prose);
-    let terms = rich.map((c) => c.term);
-    terms = terms.filter((t) => !isNoiseTerm(t));
+      const prose = collectDescriptionText(schema);
+      const rich = extractResponseFieldCandidatesWithProvenance(prose);
+      let terms = rich.map((c) => c.term);
+      terms = terms.filter((t) => !isNoiseTerm(t));
 
-    if (terms.length === 0) continue;
+      if (terms.length === 0) continue;
 
-    const present = collectAllPropertyNames(schema, spec);
-    for (const term of terms) {
-      if (termPresentIn(term, present)) continue;
-      const prov = rich.find((c) => c.term === term)?.provenance;
+      const present = collectAllPropertyNames(schema, spec);
+      const genericEnvelope = isGenericResponseEnvelope(schemaName, schema);
+      for (const term of terms) {
+        if (termPresentIn(term, present)) continue;
+        const prov = rich.find((c) => c.term === term)?.provenance;
 
-      findings.push({
-        id: `missing-response-field-prose|${schemaName}|${term}`,
-        kind: 'missing-response-field-prose',
-        severity: 'high',
-        schemaName,
-        field: term,
-        message: `prose/patch notes reference ${term} but it is absent from ${schemaName}`,
-        evidence: {
-          description: typeof schema.description === 'string' ? schema.description.slice(0, 200) : undefined,
-          candidateProvenance: prov,
-        },
-        suggestedAction: 'Add the field to the response schema (and bulk variants) if the server actually returns it.',
-        confidence: 'medium',
-      });
+        findings.push({
+          id: `missing-response-field-prose|${schemaName}|${term}`,
+          kind: 'missing-response-field-prose',
+          severity: genericEnvelope ? 'info' : 'high',
+          schemaName,
+          field: term,
+          message: `prose/patch notes reference ${term} but it is absent from ${schemaName}`,
+          evidence: {
+            description: typeof schema.description === 'string' ? schema.description.slice(0, 200) : undefined,
+            candidateProvenance: prov,
+          },
+          suggestedAction: genericEnvelope
+            ? 'Prefer route-bound response findings for generic envelopes; this component prose is intentionally broad.'
+            : 'Add the field to the response schema (and bulk variants) if the server actually returns it.',
+          confidence: 'medium',
+        });
+      }
     }
   }
 
@@ -1323,17 +1372,7 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
     );
     if (rich.length === 0) continue;
 
-    let respFields = new Set<string>();
-    let primarySchemaName: string | undefined;
-    try {
-      const resolved = resolveSuccessResponseSchema(spec, routeSig);
-      if (resolved.schema && Object.keys(resolved.schema).length > 0) {
-        respFields = collectAllPropertyNames(resolved.schema, spec);
-        primarySchemaName = resolved.primarySchemaName;
-      }
-    } catch {
-      // resolution failed; proceed with empty respFields
-    }
+    const responseCandidateFields = collectResponseCandidateFields(spec, routeSig);
 
     const reqProps = getRequestSchemaForPath(spec, apiPath);
     const reqFields = new Set(Object.keys(reqProps || {}));
@@ -1350,7 +1389,8 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
         )
       )
         continue;
-      if (termPresentIn(term, respFields)) continue;
+      if (shouldSuppressKnownCodeTerm(candidate, responseCandidateText)) continue;
+      if (termPresentIn(term, responseCandidateFields.fields)) continue;
       const prov = candidate.provenance;
 
       findings.push({
@@ -1358,11 +1398,12 @@ export function findResponseProseMismatches(spec: OpenApiSpec, options: ReportOp
         kind: 'missing-response-field-prose',
         severity: 'medium',
         route: routeSig,
-        schemaName: primarySchemaName,
+        schemaName: responseCandidateFields.primarySchemaName,
         field: term,
         message: `prose references "${term}" but it is absent from the response schema for ${routeSig}`,
         evidence: {
           proseExcerpt: responseCandidateText.slice(0, 280),
+          responseCandidates: responseCandidateFields.responseCandidates,
           candidateProvenance: prov,
         },
         suggestedAction: 'Add the field to the response schema if the server actually returns it, or update prose.',
@@ -1500,6 +1541,9 @@ export function formatConsistencyReport(report: ConsistencyReport, opts: { json?
       }
       if (f.evidence.candidateProvenance) {
         lines.push(`  provenance: ${f.evidence.candidateProvenance}`);
+      }
+      if (f.evidence.responseCandidates?.length) {
+        lines.push(`  response candidates: ${f.evidence.responseCandidates.join(', ')}`);
       }
       if (f.evidence.schemaEnum) {
         lines.push(`  enum in schema: ${f.evidence.schemaEnum.join(' | ')}`);

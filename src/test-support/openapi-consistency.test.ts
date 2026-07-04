@@ -424,6 +424,34 @@ describe('openapi consistency report formatter', () => {
     );
     expect(output).toContain('narrowed siblings: POST /api/v2/spacemolt_facility/job_add (forward | reverse)');
   });
+
+  test('renders response candidate evidence', () => {
+    const report: ConsistencyReport = {
+      gameserverVersion: 'v0.test.1',
+      generatedAt: '2026-06-29T00:00:00.000Z',
+      findings: [
+        {
+          id: 'missing-response-field-prose|POST /api/v2/spacemolt/repair|refund_amount',
+          kind: 'missing-response-field-prose',
+          severity: 'medium',
+          route: 'POST /api/v2/spacemolt/repair',
+          field: 'refund_amount',
+          message: 'prose references "refund_amount" but it is absent from the response schema',
+          evidence: {
+            responseCandidates: ['structuredContent', 'details'],
+          },
+          confidence: 'medium',
+        },
+      ],
+      summary: {
+        total: 1,
+        byKind: { 'missing-response-field-prose': 1 },
+        bySeverity: { medium: 1 },
+      },
+    };
+
+    expect(formatConsistencyReport(report)).toContain('response candidates: structuredContent, details');
+  });
 });
 
 describe('response prose mismatch (base_fare style)', () => {
@@ -443,7 +471,7 @@ describe('response prose mismatch (base_fare style)', () => {
       },
     });
 
-    const findings = findResponseProseMismatches(spec);
+    const findings = findResponseProseMismatches(spec, { includeComponentProse: true });
     const baseFareFlags = findings.filter(
       (f) =>
         f.kind === 'missing-response-field-prose' &&
@@ -474,7 +502,7 @@ describe('response prose mismatch (base_fare style)', () => {
       ],
     });
 
-    const findings = findResponseProseMismatches(spec);
+    const findings = findResponseProseMismatches(spec, { includeComponentProse: true });
     const flags = findings.filter(
       (f) =>
         f.kind === 'missing-response-field-prose' &&
@@ -504,7 +532,7 @@ describe('response prose mismatch (base_fare style)', () => {
       },
     });
 
-    const findings = findResponseProseMismatches(spec);
+    const findings = findResponseProseMismatches(spec, { includeComponentProse: true });
     const flags = findings.filter(
       (f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'DockResponse' && f.field === 'base_fare',
     );
@@ -523,9 +551,57 @@ describe('response prose mismatch (base_fare style)', () => {
     // biome-ignore lint/suspicious/noExplicitAny: test fixture construction
     (spec.components?.schemas as any).SomeResponse.description = 'Returns base_fare and other things.';
 
-    const findings = findResponseProseMismatches(spec);
+    const findings = findResponseProseMismatches(spec, { includeComponentProse: true });
     const flag = findings.find((f) => f.kind === 'missing-response-field-prose' && f.schemaName === 'SomeResponse');
     expect(flag).toBeDefined();
+  });
+
+  test('component prose scan is opt-in', () => {
+    const spec = makeMinimalSpec();
+    addComponentSchema(spec, 'SomeResponse', {
+      description: 'Returns base_fare and other things.',
+      properties: {
+        count: { type: 'integer' },
+      },
+    });
+
+    expect(findResponseProseMismatches(spec)).toHaveLength(0);
+    expect(findResponseProseMismatches(spec, { includeComponentProse: true })).toHaveLength(1);
+  });
+
+  test('generic response envelopes are informational when component prose is included', () => {
+    const spec = makeMinimalSpec();
+    addComponentSchema(spec, 'V2Response', {
+      description:
+        'Optional structured details about the error. Shape varies by error code. For example, missing_materials includes item details.',
+      properties: {
+        result: { type: 'string' },
+      },
+    });
+
+    const finding = findResponseProseMismatches(spec, { includeComponentProse: true }).find(
+      (f) => f.schemaName === 'V2Response' && f.field === 'missing_materials',
+    );
+
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe('info');
+  });
+
+  test('command-specific responses with envelope-like fields stay high severity', () => {
+    const spec = makeMinimalSpec();
+    addComponentSchema(spec, 'CreateSessionResponse', {
+      description: 'Returns session_secret for clients.',
+      properties: {
+        session: { type: 'object' },
+      },
+    });
+
+    const finding = findResponseProseMismatches(spec, { includeComponentProse: true }).find(
+      (f) => f.schemaName === 'CreateSessionResponse' && f.field === 'session_secret',
+    );
+
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe('high');
   });
 });
 
@@ -596,7 +672,7 @@ describe('context-sensitive extraction and provenance', () => {
       properties: { count: { type: 'integer' } },
     });
 
-    const findings = findResponseProseMismatches(spec);
+    const findings = findResponseProseMismatches(spec, { includeComponentProse: true });
     const f = findings.find((ff) => ff.field === 'base_fare' && ff.schemaName === 'PassengerResponse');
     expect(f).toBeDefined();
     expect(f?.evidence.candidateProvenance).toMatch(/compound|proseKey|JSON/);
@@ -965,6 +1041,89 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).not.toContain('session_ID');
     expect(fields).not.toContain('Session_Id');
   });
+
+  test('operation response scan checks route-bound details fields and records candidates', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/repair';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/repair',
+      'Response includes repair_cost and refund_amount for accounting.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          structuredContent: {
+            type: 'object',
+            properties: {
+              details: {
+                type: 'object',
+                properties: {
+                  repair_cost: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+      },
+    );
+
+    const findings = findResponseProseMismatches(spec).filter(
+      (f) => f.kind === 'missing-response-field-prose' && f.route === route,
+    );
+    const fields = findings.map((f) => f.field);
+    const refundFinding = findings.find((f) => f.field === 'refund_amount');
+
+    expect(fields).not.toContain('repair_cost');
+    expect(fields).toContain('refund_amount');
+    expect(refundFinding?.evidence.responseCandidates).toEqual(['structuredContent', 'details']);
+  });
+
+  test('operation response scan suppresses known error code terms', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/get_status';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/get_status',
+      'Returns status. session_required means the X-Session-Id header is missing.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          status: { type: 'object' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('session_required');
+  });
+
+  test('operation response scan keeps known error terms in response-field context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/craft';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/craft',
+      'Response includes missing_materials details for failed crafting attempts.',
+      {},
+      {
+        type: 'object',
+        properties: {
+          crafted: { type: 'boolean' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('missing_materials');
+  });
 });
 
 describe('memoization of schema walks', () => {
@@ -977,8 +1136,8 @@ describe('memoization of schema walks', () => {
       },
     });
 
-    const r1 = findResponseProseMismatches(spec);
-    const r2 = findResponseProseMismatches(spec);
+    const r1 = findResponseProseMismatches(spec, { includeComponentProse: true });
+    const r2 = findResponseProseMismatches(spec, { includeComponentProse: true });
     expect(r1.length).toBe(r2.length);
     // If base_fare is present it should never produce a missing-prose flag
     const baseFlags = [...r1, ...r2].filter((f) => f.field === 'base_fare');
