@@ -741,6 +741,30 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).toContain('bay_capacity');
   });
 
+  test('operation response scan treats display verbs as response context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/list_station_passengers';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/list_station_passengers',
+      "Shows each passenger's base fare. Also reports fare_surge for the station.",
+      {},
+      {
+        type: 'object',
+        properties: {
+          fare_surge: { type: 'number' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).toContain('base_fare');
+    expect(fields).not.toContain('fare_surge');
+  });
+
   test('operation response scan ignores action catalogs and request examples', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt_facility/job_add';
@@ -944,6 +968,75 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).toEqual(['estimated_fuel']);
   });
 
+  test('operation response scan treats request-only prose as request context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_market/create_buy_order';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_market/create_buy_order',
+      "Use item_id 'fuel' to post a buy order. Sort previews with sort_by 'price_asc'. Credits are escrowed before fills.",
+      {
+        item_id: { type: 'string' },
+        sort_by: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+    const requestFields = findProseFieldMismatches(spec)
+      .filter((f) => f.kind === 'prose-field-mismatch' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('item_id');
+    expect(fields).not.toContain('fuel');
+    expect(fields).not.toContain('buy_order');
+    expect(fields).not.toContain('price_asc');
+    expect(requestFields).not.toContain('fuel');
+    expect(requestFields).not.toContain('buy_order');
+    expect(requestFields).not.toContain('price_asc');
+  });
+
+  test('prose-field analyzer reports explicit request prose absent from request schema', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_faction/post_mission';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_faction/post_mission',
+      'Pass target_base_id when posting a delivery mission.',
+      {
+        mission_type: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+        },
+      },
+    );
+
+    const requestFindings = findProseFieldMismatches(spec).filter(
+      (f) => f.kind === 'prose-field-mismatch' && f.route === route,
+    );
+    const requestFinding = requestFindings.find((f) => f.field === 'target_base_id');
+    const responseFields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(requestFinding).toBeDefined();
+    expect(requestFinding?.confidence).toBe('medium');
+    expect(requestFinding?.severity).toBe('medium');
+    expect(requestFinding?.evidence.candidateProvenance).toContain('request context');
+    expect(requestFindings.map((f) => f.field)).toEqual(['target_base_id']);
+    expect(responseFields).not.toContain('target_base_id');
+  });
+
   test('operation response scan keeps use prose for field-like response terms', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt/test_use_field_prose';
@@ -1042,6 +1135,57 @@ describe('operation response prose mismatch filtering', () => {
     expect(fields).not.toContain('Session_Id');
   });
 
+  test('operation response scan treats permission prose as neutral context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_faction/create_role';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_faction/create_role',
+      'Requires `manage_roles` permission. Priority must exceed the new role priority.',
+      {
+        name: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          role: { type: 'object' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('manage_roles');
+  });
+
+  test('operation response scan treats help route tool names as neutral context', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt_auth/help';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt_auth/help',
+      'Returns documentation for all actions available in spacemolt_auth (same as GET). Pass an optional topic in the body for focused help.',
+      {
+        topic: { type: 'string' },
+      },
+      {
+        type: 'object',
+        properties: {
+          actions: { type: 'array' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('spacemolt_auth');
+    expect(fields).not.toContain('topic');
+  });
+
   test('operation response scan checks route-bound details fields and records candidates', () => {
     const spec = makeMinimalSpec();
     const route = 'POST /api/v2/spacemolt/repair';
@@ -1123,6 +1267,32 @@ describe('operation response prose mismatch filtering', () => {
       .map((f) => f.field);
 
     expect(fields).toContain('missing_materials');
+  });
+
+  test('operation response scan does not report error-response prose as missing 200-response fields', () => {
+    const spec = makeMinimalSpec();
+    const route = 'POST /api/v2/spacemolt/craft';
+    addPostOperationWithResponse(
+      spec,
+      '/api/v2/spacemolt/craft',
+      'The error response details may include missing_materials when the station lacks inputs.',
+      {
+        id: { type: 'string' },
+        quantity: { type: 'integer' },
+      },
+      {
+        type: 'object',
+        properties: {
+          queued: { type: 'boolean' },
+        },
+      },
+    );
+
+    const fields = findResponseProseMismatches(spec)
+      .filter((f) => f.kind === 'missing-response-field-prose' && f.route === route)
+      .map((f) => f.field);
+
+    expect(fields).not.toContain('missing_materials');
   });
 });
 
