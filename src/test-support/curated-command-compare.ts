@@ -10,8 +10,18 @@ import { buildGeneratedCommandConfig, generatedCommandName } from '../dynamic-co
 import { GENERATED_API_ROUTES } from '../generated/api-commands.ts';
 import type { GeneratedApiRoute } from '../openapi-metadata.ts';
 
+export type CuratedCommandComparisonDifferenceKind =
+  | 'missing-generated-route'
+  | 'route-contract'
+  | 'schema-contract'
+  | 'schema-enum'
+  | 'schema-required'
+  | 'schema-positional'
+  | 'client-only'
+  | 'curated-cosmetic';
+
 export interface CuratedCommandComparisonDifference {
-  kind: 'command-name' | 'config-value' | 'route-value' | 'schema-field' | 'schema-value' | 'missing-generated-route';
+  kind: CuratedCommandComparisonDifferenceKind;
   field: string;
   message: string;
   curated?: unknown;
@@ -28,6 +38,16 @@ export interface CuratedCommandComparison {
 
 export interface CuratedCommandComparisonReport {
   commands: CuratedCommandComparison[];
+  summary: CuratedCommandComparisonSummary;
+}
+
+export interface CuratedCommandComparisonSummary {
+  totalCommands: number;
+  commandsWithDifferences: number;
+  actionableCommands: number;
+  cosmeticOnlyCommands: number;
+  clientOnlyFields: number;
+  differencesByKind: Record<CuratedCommandComparisonDifferenceKind, number>;
 }
 
 export interface CompareCuratedCommandsOptions {
@@ -58,22 +78,35 @@ function formatValue(value: unknown): string {
   return formatted.length > 100 ? `${formatted.slice(0, 97)}...` : formatted;
 }
 
-function pushDifference(
-  differences: CuratedCommandComparisonDifference[],
-  difference: CuratedCommandComparisonDifference,
-): void {
-  differences.push(difference);
+const ACTIONABLE_KINDS = new Set<CuratedCommandComparisonDifferenceKind>([
+  'missing-generated-route',
+  'route-contract',
+  'schema-contract',
+  'schema-enum',
+  'schema-required',
+  'schema-positional',
+]);
+
+function isActionableDifference(difference: CuratedCommandComparisonDifference): boolean {
+  return ACTIONABLE_KINDS.has(difference.kind);
+}
+
+function schemaValueKind(schemaField: string): CuratedCommandComparisonDifferenceKind {
+  if (schemaField === 'enum') return 'schema-enum';
+  if (schemaField === 'positionalIndex') return 'schema-positional';
+  if (schemaField === 'description') return 'curated-cosmetic';
+  return 'schema-contract';
 }
 
 function compareScalarField(
   differences: CuratedCommandComparisonDifference[],
-  kind: CuratedCommandComparisonDifference['kind'],
+  kind: CuratedCommandComparisonDifferenceKind,
   field: string,
   curated: unknown,
   generated: unknown,
 ): void {
   if (valuesEqual(curated, generated)) return;
-  pushDifference(differences, {
+  differences.push({
     kind,
     field,
     message: `curated ${formatValue(curated)} vs generated ${formatValue(generated)}`,
@@ -82,9 +115,52 @@ function compareScalarField(
   });
 }
 
+function summarizeReport(commands: CuratedCommandComparison[]): CuratedCommandComparisonSummary {
+  const differencesByKind = Object.fromEntries(
+    [
+      'missing-generated-route',
+      'route-contract',
+      'schema-contract',
+      'schema-enum',
+      'schema-required',
+      'schema-positional',
+      'client-only',
+      'curated-cosmetic',
+    ].map((kind) => [kind, 0]),
+  ) as Record<CuratedCommandComparisonDifferenceKind, number>;
+
+  let actionableCommands = 0;
+  let cosmeticOnlyCommands = 0;
+  let clientOnlyFields = 0;
+  let commandsWithDifferences = 0;
+
+  for (const command of commands) {
+    if (command.differences.length > 0) commandsWithDifferences++;
+    const hasActionable = command.differences.some(isActionableDifference);
+    const hasOnlyCosmetic =
+      command.differences.length > 0 && command.differences.every((d) => d.kind === 'curated-cosmetic');
+    if (hasActionable) actionableCommands++;
+    if (hasOnlyCosmetic) cosmeticOnlyCommands++;
+
+    for (const difference of command.differences) {
+      differencesByKind[difference.kind] += 1;
+      if (difference.kind === 'client-only') clientOnlyFields++;
+    }
+  }
+
+  return {
+    totalCommands: commands.length,
+    commandsWithDifferences,
+    actionableCommands,
+    cosmeticOnlyCommands,
+    clientOnlyFields,
+    differencesByKind,
+  };
+}
+
 function compareRoute(differences: CuratedCommandComparisonDifference[], curated: V2Route, generated: V2Route): void {
   for (const field of COMPARED_ROUTE_FIELDS) {
-    compareScalarField(differences, 'route-value', `route.${field}`, curated[field], generated[field]);
+    compareScalarField(differences, 'route-contract', `route.${field}`, curated[field], generated[field]);
   }
 }
 
@@ -93,10 +169,11 @@ function compareSchemaField(
   field: string,
   curated: CommandFieldSchema | undefined,
   generated: CommandFieldSchema | undefined,
+  clientOnlyFields: Set<string>,
 ): void {
   if (!curated && generated) {
-    pushDifference(differences, {
-      kind: 'schema-field',
+    differences.push({
+      kind: 'schema-contract',
       field: `schema.${field}`,
       message: 'field present in generated schema but absent from curated schema',
       curated,
@@ -105,10 +182,12 @@ function compareSchemaField(
     return;
   }
   if (curated && !generated) {
-    pushDifference(differences, {
-      kind: 'schema-field',
+    differences.push({
+      kind: clientOnlyFields.has(field) ? 'client-only' : 'schema-contract',
       field: `schema.${field}`,
-      message: 'field present in curated schema but absent from generated schema',
+      message: clientOnlyFields.has(field)
+        ? 'field is accepted by the CLI locally and is not sent to the API'
+        : 'field present in curated schema but absent from generated schema',
       curated,
       generated,
     });
@@ -119,7 +198,7 @@ function compareSchemaField(
   for (const schemaField of COMPARED_SCHEMA_FIELDS) {
     compareScalarField(
       differences,
-      'schema-value',
+      schemaValueKind(schemaField),
       `schema.${field}.${schemaField}`,
       curated[schemaField],
       generated[schemaField],
@@ -131,17 +210,18 @@ function compareSchema(
   differences: CuratedCommandComparisonDifference[],
   curated: CommandConfig['schema'],
   generated: CommandConfig['schema'],
+  clientOnlyFields: Set<string>,
 ): void {
   const fields = new Set([...Object.keys(curated || {}), ...Object.keys(generated || {})]);
   for (const field of [...fields].sort()) {
-    compareSchemaField(differences, field, curated?.[field], generated?.[field]);
+    compareSchemaField(differences, field, curated?.[field], generated?.[field], clientOnlyFields);
   }
 }
 
 function summaryFor(differences: CuratedCommandComparisonDifference[]): string {
   if (differences.length === 0) return 'no curated/generated divergences detected';
 
-  const counts = new Map<CuratedCommandComparisonDifference['kind'], number>();
+  const counts = new Map<CuratedCommandComparisonDifferenceKind, number>();
   for (const difference of differences) counts.set(difference.kind, (counts.get(difference.kind) || 0) + 1);
   return [...counts.entries()].map(([kind, count]) => `${count} ${kind}`).join(', ');
 }
@@ -188,7 +268,7 @@ export function compareCuratedCommandsToGenerated(
 
     if (command !== generatedCommand) {
       differences.push({
-        kind: 'command-name',
+        kind: 'curated-cosmetic',
         field: 'commandName',
         message: `curated command "${command}" differs from generated command "${generatedCommand}"`,
         curated: command,
@@ -197,10 +277,12 @@ export function compareCuratedCommandsToGenerated(
     }
 
     for (const field of COMPARED_CONFIG_FIELDS) {
-      compareScalarField(differences, 'config-value', field, curatedConfig[field], generatedConfig[field]);
+      const kind =
+        field === 'required' && command === generatedCommand ? 'schema-required' : 'curated-cosmetic';
+      compareScalarField(differences, kind, field, curatedConfig[field], generatedConfig[field]);
     }
     compareRoute(differences, curatedConfig.route, generatedConfig.route);
-    compareSchema(differences, curatedConfig.schema, generatedConfig.schema);
+    compareSchema(differences, curatedConfig.schema, generatedConfig.schema, new Set(override.clientOnlyFields || []));
 
     commands.push({
       command,
@@ -211,39 +293,54 @@ export function compareCuratedCommandsToGenerated(
     });
   }
 
-  return { commands: commands.sort((a, b) => a.command.localeCompare(b.command)) };
+  const sortedCommands = commands.sort((a, b) => a.command.localeCompare(b.command));
+  return { commands: sortedCommands, summary: summarizeReport(sortedCommands) };
 }
 
 function differencesByKind(differences: CuratedCommandComparisonDifference[]) {
-  return {
-    'missing-generated-route': differences.filter((d) => d.kind === 'missing-generated-route'),
-    'command-name': differences.filter((d) => d.kind === 'command-name'),
-    'config-value': differences.filter((d) => d.kind === 'config-value'),
-    'route-value': differences.filter((d) => d.kind === 'route-value'),
-    'schema-field': differences.filter((d) => d.kind === 'schema-field'),
-    'schema-value': differences.filter((d) => d.kind === 'schema-value'),
-  };
+  const grouped = new Map<CuratedCommandComparisonDifferenceKind, CuratedCommandComparisonDifference[]>();
+  for (const difference of differences) {
+    const current = grouped.get(difference.kind) || [];
+    current.push(difference);
+    grouped.set(difference.kind, current);
+  }
+  return grouped;
 }
 
-export function formatCuratedCommandComparisonReport(report: CuratedCommandComparisonReport): string {
+export function formatCuratedCommandComparisonReport(
+  report: CuratedCommandComparisonReport,
+  opts: { includeCosmetic?: boolean } = {},
+): string {
   const lines: string[] = [];
   lines.push('Curated Command vs Generated OpenAPI Command Divergence Report');
-  lines.push(`Generated for ${report.commands.length} curated command(s)`);
+  lines.push(`Generated for ${report.summary.totalCommands} curated command(s)`);
+  lines.push(`Actionable commands: ${report.summary.actionableCommands}`);
+  lines.push(`Cosmetic-only commands: ${report.summary.cosmeticOnlyCommands}`);
+  lines.push(`Client-only fields: ${report.summary.clientOnlyFields}`);
   lines.push('');
 
-  for (const comparison of report.commands) {
+  const visibleCommands = report.commands.filter((comparison) => {
+    if (comparison.differences.some(isActionableDifference)) return true;
+    return Boolean(opts.includeCosmetic && comparison.differences.length > 0);
+  });
+
+  if (visibleCommands.length === 0) {
+    lines.push('No actionable curated/generated divergences detected.');
+    lines.push('');
+  }
+
+  for (const comparison of visibleCommands) {
+    const visibleDifferences = opts.includeCosmetic
+      ? comparison.differences
+      : comparison.differences.filter((difference) => difference.kind !== 'curated-cosmetic');
+
     lines.push(`## ${comparison.command}`);
     lines.push(`   apiRoute: ${comparison.apiRoute}`);
     if (comparison.generatedCommand) lines.push(`   generated command: ${comparison.generatedCommand}`);
-    lines.push(`   summary: ${comparison.summary}`);
-    if (comparison.differences.length === 0) {
-      lines.push('   (no divergences)');
-      lines.push('');
-      continue;
-    }
+    lines.push(`   summary: ${summaryFor(visibleDifferences)}`);
 
-    const byKind = differencesByKind(comparison.differences);
-    for (const [kind, differences] of Object.entries(byKind)) {
+    const byKind = differencesByKind(visibleDifferences);
+    for (const [kind, differences] of byKind.entries()) {
       if (differences.length === 0) continue;
       lines.push(`   ${kind}:`);
       for (const difference of differences) {
@@ -254,14 +351,16 @@ export function formatCuratedCommandComparisonReport(report: CuratedCommandCompa
   }
 
   lines.push('Legend:');
-  lines.push('  command-name            = curated command name differs from the generated OpenAPI command name');
-  lines.push('  config-value            = curated user-facing command metadata differs from generated metadata');
-  lines.push('  route-value             = curated route/defaults differ from generated route metadata');
-  lines.push('  schema-field            = a request schema field exists on only one side');
-  lines.push('  schema-value            = request schema metadata differs for a shared field');
   lines.push('  missing-generated-route = curated apiRoute is absent from generated OpenAPI metadata');
+  lines.push('  route-contract          = route method/tool/action/defaults differ');
+  lines.push('  schema-contract         = request schema field or type differs');
+  lines.push('  schema-enum             = request schema enum differs');
+  lines.push('  schema-required         = required field list differs');
+  lines.push('  schema-positional       = positional index differs');
+  lines.push('  client-only             = field is intentionally handled by the CLI, not the server');
+  lines.push('  curated-cosmetic        = friendly command metadata differs from generated metadata');
   lines.push('');
-  lines.push('Or: bun run report:curated-commands [--only get_status,market]');
+  lines.push('Or: bun run report:curated-commands [--only get_status,market] [--include-cosmetic]');
 
   return lines.join('\n');
 }

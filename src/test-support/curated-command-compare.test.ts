@@ -148,10 +148,98 @@ describe('curated command vs generated command comparison', () => {
       generatedRoutes: { 'POST /api/v2/spacemolt_shipyard/repair': generatedRoute() },
     });
 
-    const text = formatCuratedCommandComparisonReport(report);
+    const text = formatCuratedCommandComparisonReport(report, { includeCosmetic: true });
 
     expect(text).toContain('Curated Command vs Generated OpenAPI Command Divergence Report');
     expect(text).toContain('## repair');
     expect(text).toContain('generated command: shipyard_repair');
+  });
+
+  test('classifies cosmetic differences and hides cosmetic-only commands by default', () => {
+    const overrides: Record<string, CommandOverride> = {
+      repair: {
+        apiRoute: 'POST /api/v2/spacemolt_shipyard/repair',
+        positionals: ['ship'],
+        usage: '<ship>',
+        description: 'Friendly repair command',
+        category: 'Shipyard',
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({
+      overrides,
+      generatedRoutes: { 'POST /api/v2/spacemolt_shipyard/repair': generatedRoute() },
+    });
+
+    expect(report.summary.actionableCommands).toBe(0);
+    expect(report.summary.cosmeticOnlyCommands).toBe(1);
+    expect(report.commands[0]?.differences.every((d) => d.kind === 'curated-cosmetic')).toBe(true);
+
+    const defaultText = formatCuratedCommandComparisonReport(report);
+    expect(defaultText).toContain('Actionable commands: 0');
+    expect(defaultText).toContain('Cosmetic-only commands: 1');
+    expect(defaultText).not.toContain('## repair');
+
+    const cosmeticText = formatCuratedCommandComparisonReport(report, { includeCosmetic: true });
+    expect(cosmeticText).toContain('## repair');
+    expect(cosmeticText).toContain('curated-cosmetic:');
+  });
+
+  test('classifies curated-only client fields using override clientOnlyFields', () => {
+    const overrides: Record<string, CommandOverride> = {
+      get_status: {
+        apiRoute: 'POST /api/v2/spacemolt/get_status',
+        schemaExtensions: {
+          summary: {
+            type: 'boolean',
+            description: 'Client-side display flag.',
+          },
+        },
+        clientOnlyFields: ['summary'],
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({
+      overrides,
+      generatedRoutes: {
+        'POST /api/v2/spacemolt/get_status': {
+          operationId: 'spacemolt_get_status',
+          summary: 'Get status',
+          route: { tool: 'spacemolt', action: 'get_status', method: 'POST' },
+          schema: {},
+        },
+      },
+    });
+
+    expect(report.summary.clientOnlyFields).toBe(1);
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({
+        kind: 'client-only',
+        field: 'schema.summary',
+      }),
+    );
+  });
+
+  test('classifies schema enum, type, required, and positional drift as actionable', () => {
+    const overrides: Record<string, CommandOverride> = {
+      shipyard_repair: {
+        apiRoute: 'POST /api/v2/spacemolt_shipyard/repair',
+        positionals: ['ship'],
+        schemaExtensions: {
+          ship_id: { type: 'integer', positionalIndex: 2 },
+          dry_run: { type: 'string', enum: ['yes', 'no'] },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({
+      overrides,
+      generatedRoutes: { 'POST /api/v2/spacemolt_shipyard/repair': generatedRoute() },
+    });
+
+    expect(report.summary.actionableCommands).toBe(1);
+    expect(report.commands[0]?.differences.map((d) => d.kind)).toEqual(
+      expect.arrayContaining(['schema-contract', 'schema-enum', 'schema-required', 'schema-positional']),
+    );
   });
 });
