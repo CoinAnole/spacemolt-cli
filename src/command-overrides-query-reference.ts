@@ -80,14 +80,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/list_passengers',
   },
   list_station_passengers: {
-    usage: '[station_id_or_name]',
-    description: 'List citizens waiting for transport at a station',
+    description: 'List citizens waiting for transport at your current docked station.',
     category: 'Passenger Transport',
     apiRoute: 'POST /api/v2/spacemolt/list_station_passengers',
-    positionals: ['station_id'],
-    aliases: {
-      station_id: 'id',
-    },
   },
   load_passenger: {
     usage: '<destination_station_id_or_name>',

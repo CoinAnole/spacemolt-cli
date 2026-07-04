@@ -1407,7 +1407,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
 
   test('passenger transport commands parse positional payloads and normalize API fields', () => {
     expect(parseOk(['list_passengers']).payload).toEqual({});
-    expect(parseOk(['list_station_passengers', 'nova_central']).payload.station_id).toBe('nova_central');
+    expect(parseOk(['list_station_passengers']).payload).toEqual({});
+    expect(parseArgs(['list_station_passengers', 'nova_central']).ok).toBe(false);
 
     const load = parseOk(['load_passenger', 'sol_central']);
     expect(load.payload.destination).toBe('sol_central');
