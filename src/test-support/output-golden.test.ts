@@ -320,6 +320,46 @@ describe('output golden test support', () => {
     expect(filterBlockingDivergences([comparison])).toEqual([]);
   });
 
+  test('non-zero schema candidate ties keep blocking divergence evidence', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        ActionDetails: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            known: { type: 'string' },
+            details: { type: 'object' },
+          },
+        },
+      },
+      '#/components/schemas/ActionDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { known: 'ok', unexpected: true },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            known: { type: 'string' },
+            details: { $ref: '#/components/schemas/ActionDetails' },
+          },
+        },
+        primarySchemaName: 'StructuredWithKnown',
+      },
+    );
+
+    expect(comparison.selectionReason).toBe('ambiguous');
+    expect(comparison.comparedAgainst).toBe('ambiguous');
+    expect(comparison.divergences.map((d) => d.kind)).toContain('schema-target-ambiguous');
+    expect(filterBlockingDivergences([comparison]).map((d) => `${d.kind}:${d.path}`)).toContain(
+      'extra-in-fixture:unexpected',
+    );
+  });
+
   test('schema candidate scoring can select a matching oneOf details branch', () => {
     const spec = responseSpecWithSchemas(
       {
@@ -342,6 +382,61 @@ describe('output golden test support', () => {
         },
         PassengerDetails: {
           oneOf: [{ $ref: '#/components/schemas/LoadedPassengers' }, { $ref: '#/components/schemas/NoPassengers' }],
+        },
+      },
+      '#/components/schemas/PassengerDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { message: 'Loaded passengers.', loaded: [], count: 0 },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          allOf: [
+            { $ref: '#/components/schemas/V2GameState' },
+            {
+              type: 'object',
+              properties: {
+                details: { $ref: '#/components/schemas/PassengerDetails' },
+              },
+            },
+          ],
+        },
+        primarySchemaName: 'V2GameState',
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('LoadedPassengers');
+    expect(comparison.comparedAgainst).toBe('details');
+    expect(comparison.selectionReason).toBe('best-score');
+    expect(comparison.summary).toBe('no structural divergences detected');
+  });
+
+  test('schema candidate scoring can select a matching anyOf details branch behind an empty wrapper', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        LoadedPassengers: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            loaded: { type: 'array', items: { type: 'object' } },
+            count: { type: 'integer' },
+          },
+        },
+        NoPassengers: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            reason: { type: 'string' },
+          },
+        },
+        PassengerDetails: {
+          type: 'object',
+          properties: {},
+          anyOf: [{ $ref: '#/components/schemas/LoadedPassengers' }, { $ref: '#/components/schemas/NoPassengers' }],
         },
       },
       '#/components/schemas/PassengerDetails',

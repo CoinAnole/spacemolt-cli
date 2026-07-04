@@ -239,7 +239,11 @@ function resolveDetailsSubschema(spec: OpenApiSpec, schema: JsonSchema): JsonSch
   // If it ended up empty or without properties, don't use it
   if (
     !resolvedD ||
-    (resolvedD.properties && Object.keys(resolvedD.properties).length === 0 && !resolvedD.allOf && !resolvedD.oneOf)
+    (resolvedD.properties &&
+      Object.keys(resolvedD.properties).length === 0 &&
+      !resolvedD.allOf &&
+      !resolvedD.oneOf &&
+      !resolvedD.anyOf)
   ) {
     return undefined;
   }
@@ -557,6 +561,30 @@ function candidatesForExplicitTarget(
   return candidates.filter((candidate) => candidate.comparedAgainst === explicitTarget);
 }
 
+function tiedCandidateDivergences(comparisons: CandidateComparison[]): Divergence[] {
+  const seen = new Set<string>();
+  const divergences: Divergence[] = [];
+
+  for (const { candidate, comparison } of comparisons) {
+    const candidateName = candidate.primarySchemaName ?? candidate.label;
+    for (const divergence of comparison.divergences) {
+      const key = `${divergence.kind}\0${divergence.path}\0${divergence.message}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      divergences.push({
+        ...divergence,
+        message: `ambiguous candidate ${candidateName}: ${divergence.message}`,
+      });
+    }
+  }
+
+  return divergences;
+}
+
+function hasBlockingCandidateDivergence(comparisons: CandidateComparison[]): boolean {
+  return comparisons.some((candidate) => candidate.comparison.divergences.some(isBlockingDivergence));
+}
+
 function ambiguousSchemaTargetComparison(
   fixtureValue: unknown,
   opts: ResponseCandidateOptions,
@@ -567,6 +595,16 @@ function ambiguousSchemaTargetComparison(
   const tied = scores.filter((score) => score.score === bestScore);
   const labels = tied.map((score) => score.primarySchemaName ?? score.label).join(', ');
 
+  const ambiguity: Divergence = {
+    path: '',
+    kind: 'schema-target-ambiguous',
+    message: `fixture matched multiple response schema candidates with the same score: ${labels}`,
+    fixtureValue,
+  };
+  const divergences = hasBlockingCandidateDivergence(comparisons)
+    ? [ambiguity, ...tiedCandidateDivergences(comparisons)]
+    : [ambiguity];
+
   return {
     label: opts.label,
     command: opts.command,
@@ -575,15 +613,9 @@ function ambiguousSchemaTargetComparison(
     comparedAgainst: 'ambiguous',
     candidateScores: scores,
     selectionReason: 'ambiguous',
-    divergences: [
-      {
-        path: '',
-        kind: 'schema-target-ambiguous',
-        message: `fixture matched multiple response schema candidates with the same score: ${labels}`,
-        fixtureValue,
-      },
-    ],
-    summary: 'ambiguous schema target',
+    divergences,
+    summary:
+      divergences.length === 1 ? 'ambiguous schema target' : 'ambiguous schema target with candidate divergences',
     isPartialExample: true,
   };
 }
