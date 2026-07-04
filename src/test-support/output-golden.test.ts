@@ -184,6 +184,207 @@ describe('output golden test support', () => {
     expect(comparison.summary).toBe('no structural divergences detected');
   });
 
+  test('explicit schemaTarget structuredContent overrides a better details score', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        ActionDetails: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+          },
+        },
+      },
+      '#/components/schemas/ActionDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { message: 'ok' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          allOf: [
+            { $ref: '#/components/schemas/V2GameState' },
+            {
+              type: 'object',
+              properties: {
+                details: { $ref: '#/components/schemas/ActionDetails' },
+              },
+            },
+          ],
+        },
+        primarySchemaName: 'V2GameState',
+        explicitTarget: 'structuredContent',
+      },
+    );
+
+    expect(comparison.comparedAgainst).toBe('structuredContent');
+    expect(comparison.primarySchemaName).toBe('V2GameState');
+    expect(comparison.selectionReason).toBe('explicit-target');
+    expect(comparison.divergences.map((d) => `${d.kind}:${d.path}`)).toContain('extra-in-fixture:message');
+  });
+
+  test('schema candidate ties are reported as ambiguity instead of definitive drift', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        ActionDetails: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            details: { type: 'object' },
+          },
+        },
+      },
+      '#/components/schemas/ActionDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { message: 'ok' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            details: { $ref: '#/components/schemas/ActionDetails' },
+          },
+        },
+        primarySchemaName: 'StructuredWithMessage',
+      },
+    );
+
+    expect(comparison.selectionReason).toBe('ambiguous');
+    expect(comparison.comparedAgainst).toBe('ambiguous');
+    expect(comparison.divergences).toEqual([
+      expect.objectContaining({
+        kind: 'schema-target-ambiguous',
+        path: '',
+      }),
+    ]);
+    expect(filterBlockingDivergences([comparison])).toEqual([]);
+  });
+
+  test('schema candidate scoring can select a matching oneOf details branch', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        LoadedPassengers: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            loaded: { type: 'array', items: { type: 'object' } },
+            count: { type: 'integer' },
+          },
+        },
+        NoPassengers: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            reason: { type: 'string' },
+          },
+        },
+        PassengerDetails: {
+          oneOf: [
+            { $ref: '#/components/schemas/LoadedPassengers' },
+            { $ref: '#/components/schemas/NoPassengers' },
+          ],
+        },
+      },
+      '#/components/schemas/PassengerDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { message: 'Loaded passengers.', loaded: [], count: 0 },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          allOf: [
+            { $ref: '#/components/schemas/V2GameState' },
+            {
+              type: 'object',
+              properties: {
+                details: { $ref: '#/components/schemas/PassengerDetails' },
+              },
+            },
+          ],
+        },
+        primarySchemaName: 'V2GameState',
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('LoadedPassengers');
+    expect(comparison.comparedAgainst).toBe('details');
+    expect(comparison.selectionReason).toBe('best-score');
+    expect(comparison.summary).toBe('no structural divergences detected');
+  });
+
+  test("explicit schemaTarget details scores oneOf branches instead of choosing the first branch", () => {
+    const spec = responseSpecWithSchemas(
+      {
+        DeliveredPassenger: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            delivered: { type: 'boolean' },
+          },
+        },
+        UnloadedPassengers: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            message: { type: 'string' },
+            delivered: { type: 'array', items: { type: 'object' } },
+            stranded: { type: 'array', items: { type: 'object' } },
+            fare_collected: { type: 'integer' },
+          },
+        },
+        UnloadPassengerDetails: {
+          oneOf: [
+            { $ref: '#/components/schemas/DeliveredPassenger' },
+            { $ref: '#/components/schemas/UnloadedPassengers' },
+          ],
+        },
+      },
+      '#/components/schemas/UnloadPassengerDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      {
+        message: 'Unloaded passengers.',
+        delivered: [],
+        stranded: [],
+        fare_collected: 0,
+      },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          allOf: [
+            { $ref: '#/components/schemas/V2GameState' },
+            {
+              type: 'object',
+              properties: {
+                details: { $ref: '#/components/schemas/UnloadPassengerDetails' },
+              },
+            },
+          ],
+        },
+        primarySchemaName: 'V2GameState',
+        explicitTarget: 'details',
+      },
+    );
+
+    expect(comparison.selectionReason).toBe('explicit-target');
+    expect(comparison.comparedAgainst).toBe('details');
+    expect(comparison.primarySchemaName).toBe('UnloadedPassengers');
+    expect(comparison.summary).toBe('no structural divergences detected');
+  });
+
   test('schema comparison follows nested refs inside array items', () => {
     const spec = {
       paths: {},
