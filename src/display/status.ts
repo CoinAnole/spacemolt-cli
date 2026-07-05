@@ -498,7 +498,9 @@ export const statusFormatters = [
       const rowSource = isV2Actions ? r.actions : r.commands;
       if (!Array.isArray(rowSource)) return false;
       const rows = rowSource.filter(isRecord);
-      const commandColumns: Array<[string, string[]]> = isV2Actions ? [['Action', ['action']]] : [['Command', ['name']]];
+      const commandColumns: Array<[string, string[]]> = isV2Actions
+        ? [['Action', ['action']]]
+        : [['Command', ['name']]];
       if (isV2Actions && rowsHaveValue(rows, ['tool'])) commandColumns.push(['Tool', ['tool']]);
       if (!isV2Actions && rowsHaveValue(rows, ['category'])) commandColumns.push(['Category', ['category']]);
       if (isV2Actions && rowsHaveValue(rows, ['endpoint'])) commandColumns.push(['Endpoint', ['endpoint']]);

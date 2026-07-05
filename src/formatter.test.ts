@@ -3954,11 +3954,13 @@ describe('structuredContent formatters', () => {
       "
       === Storage at earth_station ===
 
+      12 items in storage at earth_station
+
       Items (1):
 
         Name      | ID        | Qty | Unit Size
         ----------+-----------+-----+----------
-        Fuel Cell | fuel_cell |  12 |
+        Fuel Cell | fuel_cell |  12 |         1
 
       Ships (1):
 
