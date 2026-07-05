@@ -109,6 +109,10 @@ describe('output golden test support', () => {
     expect(byLabel.get('storage_view')?.primarySchemaName?.startsWith('StorageResponse')).toBe(true);
   });
 
+  test('standalone route fixtures are excluded from OpenAPI schema comparison', () => {
+    expect(compareHighValueFixturesToSpec({ only: ['get_mobile_base'] })).toEqual([]);
+  });
+
   test('schema divergence signatures are stable and sortable', () => {
     expect(
       divergenceSignature({

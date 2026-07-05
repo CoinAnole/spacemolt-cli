@@ -435,6 +435,10 @@ export const undockFixture = {
   action: 'undock',
 };
 
+export const mobileBaseFixture = {
+  system: 'frontier_outpost',
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
@@ -447,6 +451,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
+  get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
   get_tax_estimate: { command: 'get_tax_estimate', fixture: taxEstimateFixture },

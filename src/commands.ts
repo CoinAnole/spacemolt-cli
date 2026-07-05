@@ -1,6 +1,7 @@
 import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GeneratedApiRoute } from './openapi-metadata.ts';
+import { trimTrailingSlash } from './response.ts';
 
 export type CommandArg = string | { rest: string };
 
@@ -10,6 +11,19 @@ export interface V2Route {
   method?: 'GET' | 'POST';
   /** Static payload fields to inject (e.g., target=faction for faction storage commands) */
   defaults?: Record<string, string>;
+
+  /**
+   * For endpoints served outside the normal /api/v2 structure (e.g. public root endpoints).
+   * When set, the full URL is constructed as <game-root>/<rootPath> (game-root derived from apiBase by stripping /api/v2).
+   */
+  rootPath?: string;
+
+  /** Do not create or send any session (X-Session-Id). For truly public unauthenticated endpoints. */
+  publicUnauthenticated?: boolean;
+
+  /** The raw response body from the server is the data (e.g. { system: "..." }) rather than a wrapped V2Response.
+   * Client will place it under structuredContent for uniform handling. */
+  bareResponse?: boolean;
 }
 
 export interface CommandFieldSchema {
@@ -43,7 +57,13 @@ export type LocalCommandConfig = Omit<CommandConfig, 'route' | 'schema'>;
 export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
 export type CommandOverride = {
-  apiRoute: string;
+  /** Standard path from the server OpenAPI (POST /api/v2/...). Mutually exclusive with `route`. */
+  apiRoute?: string;
+  /**
+   * Literal route for standalone/public endpoints not documented in the v2 OpenAPI
+   * (e.g. GET /wheres-mobile-base). Use together with V2Route extensions (rootPath, publicUnauthenticated, bareResponse).
+   */
+  route?: V2Route;
   positionals?: CommandArg[];
   usage?: string;
   description?: string;
@@ -56,10 +76,13 @@ export type CommandOverride = {
   schemaExtensions?: Record<string, CommandFieldSchema>;
   arrayFields?: string[];
   clientOnlyFields?: string[];
+  /** For standalone overrides that don't derive from a generated schema */
+  required?: string[];
 };
 
 export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
   'apiRoute',
+  'route', // for standalone public endpoints not in the OpenAPI
   'positionals',
   'usage',
   'description',
@@ -141,14 +164,42 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
   },
 };
 
-export function routeToPath(route: Pick<V2Route, 'tool' | 'action'>, options?: { includeApiPrefix?: boolean }): string {
+export function routeToPath(
+  route: Pick<V2Route, 'tool' | 'action' | 'rootPath'>,
+  options?: { includeApiPrefix?: boolean },
+): string {
+  if (route.rootPath) {
+    const path = route.rootPath.replace(/^\/+/, '');
+    return options?.includeApiPrefix ? `/${path}` : path;
+  }
   const path =
     route.tool === route.action || SINGLE_ENDPOINT_TOOLS.has(route.tool) ? route.tool : `${route.tool}/${route.action}`;
   return options?.includeApiPrefix ? `/api/v2/${path}` : path;
 }
 
+/** Returns the URL path segment or full special path for signatures/debug. */
+function routePathForSignature(route: V2Route): string {
+  return routeToPath(route, { includeApiPrefix: true });
+}
+
 export function routeSignature(route: V2Route): string {
-  return `${route.method || 'POST'} ${routeToPath(route, { includeApiPrefix: true })}`;
+  const method = route.method || 'POST';
+  return `${method} ${routePathForSignature(route)}`;
+}
+
+/**
+ * Build the full request URL for a route.
+ * - Normal v2 routes: `${baseUrl}/${tool/action}`
+ * - rootPath routes: derive game root from baseUrl and append rootPath.
+ */
+export function buildRequestUrl(baseUrl: string, route: V2Route): string {
+  const trimmedBase = trimTrailingSlash(baseUrl);
+  if (route.rootPath) {
+    const root = trimmedBase.replace(/\/api\/v2\/?$/, '');
+    const p = route.rootPath.replace(/^\//, '');
+    return `${root}/${p}`;
+  }
+  return `${trimmedBase}/${routeToPath(route)}`;
 }
 
 function generatedArgs(generated?: GeneratedApiRoute): string[] | undefined {
@@ -230,30 +281,52 @@ function mergeCommandConfig(
   config: CommandOverride,
   generatedRoutes: Record<string, GeneratedApiRoute>,
 ): CommandConfig {
-  const generated = getGeneratedRoute(config.apiRoute, generatedRoutes);
-  const generatedAliases = generatedArgAliases(config.positionals, generated);
+  let generated: GeneratedApiRoute | undefined;
+  let baseRoute: V2Route;
+
+  if (config.route) {
+    // Standalone / public endpoint defined directly (not present in server OpenAPI)
+    baseRoute = { ...config.route };
+  } else if (config.apiRoute) {
+    generated = getGeneratedRoute(config.apiRoute, generatedRoutes);
+    baseRoute = { ...generated.route };
+  } else {
+    throw new Error(`Command override for "${command}" must provide either "apiRoute" or "route".`);
+  }
+
+  const generatedAliases = generated ? generatedArgAliases(config.positionals, generated) : {};
   const aliases = { ...generatedAliases, ...config.aliases };
   const {
     apiRoute: _apiRoute,
+    route: _route,
     defaults,
     positionals: _positionals,
     aliases: _aliases,
     schemaExtensions,
     ...uxConfig
   } = config;
+
+  const route: V2Route = {
+    ...baseRoute,
+    defaults,
+  };
+
+  const args = config.positionals ?? (generated ? generatedArgs(generated) : undefined);
+  const required = generated ? displayRequiredFields(generated.required, config.positionals, aliases) : config.required;
+  const description = config.description ?? CURATED_COMMAND_DESCRIPTIONS[command] ?? generated?.summary;
+  const usage = config.usage ?? (generated ? buildUsageFromSchema(config, generated) : undefined);
+  const stateSections = generated?.stateSections;
+
   return {
     ...uxConfig,
-    args: config.positionals ?? generatedArgs(generated),
-    required: displayRequiredFields(generated.required, config.positionals, aliases),
-    description: config.description ?? CURATED_COMMAND_DESCRIPTIONS[command] ?? generated.summary,
-    usage: buildUsageFromSchema(config, generated),
-    ...(generated.stateSections ? { stateSections: generated.stateSections } : {}),
+    args,
+    required,
+    description,
+    usage,
+    ...(stateSections ? { stateSections } : {}),
     aliases,
-    route: {
-      ...generated.route,
-      defaults,
-    },
-    schema: { ...generated.schema, ...schemaExtensions },
+    route,
+    schema: generated ? { ...generated.schema, ...schemaExtensions } : schemaExtensions,
   };
 }
 

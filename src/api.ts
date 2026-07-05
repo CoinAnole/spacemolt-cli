@@ -1,5 +1,5 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
-import { type CommandConfig, routeToPath, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import { buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import {
   createDefaultConfig,
@@ -26,6 +26,25 @@ const SESSION_RECOVERY_ERROR_CODES = new Set([
 ]);
 
 const PUBLIC_SESSION_COMMANDS = new Set(['get_empire_info', 'server-help']);
+
+/** Commands that require no session at all (public root endpoints, no X-Session-Id, no /session creation). */
+function isFullyUnauthenticated(command: string, route?: V2Route): boolean {
+  if (PUBLIC_SESSION_COMMANDS.has(command)) return false; // they still get transient sessions today
+  return route?.publicUnauthenticated === true;
+}
+
+function normalizeBareResponse(data: APIResponse, route: V2Route, fullyUnauthenticated: boolean): APIResponse {
+  if (
+    fullyUnauthenticated &&
+    route.bareResponse &&
+    isRecord(data) &&
+    data.error === undefined &&
+    data.structuredContent === undefined
+  ) {
+    return { structuredContent: data };
+  }
+  return data;
+}
 
 function isMissingDefaultProfileError(error: unknown): boolean {
   return error instanceof Error && error.message.startsWith('No default profile set.');
@@ -149,28 +168,36 @@ export class SpaceMoltClient {
       payload = { ...mapping.defaults, ...payload };
     }
 
-    const url = `${this.baseUrl}/${routeToPath(mapping)}`;
+    const url = buildRequestUrl(this.baseUrl, mapping);
     const method = mapping.method || 'POST';
     const publicSessionCommand = PUBLIC_SESSION_COMMANDS.has(command);
+    const fullyUnauth = isFullyUnauthenticated(command, mapping);
 
     const sessionProfile = this.sessionProfileForCommand(command, payload);
-    const commandSession = await this.getSessionForCommand(command, sessionProfile);
+    const commandSession = fullyUnauth
+      ? { session: { id: '', created_at: '', expires_at: '' } as Session, transient: true }
+      : await this.getSessionForCommand(command, sessionProfile);
     let session = commandSession.session;
     let transientSession = commandSession.transient;
     let sessionRecoveryAttempts = 0;
     let rateLimitRetries = 0;
 
     while (true) {
-      if (command !== 'login' && command !== 'register' && !publicSessionCommand) {
+      if (command !== 'login' && command !== 'register' && !publicSessionCommand && !fullyUnauth) {
         const authError = await this.sessionStore.authenticateProfileSession(session);
         if (authError) return authError;
       }
 
-      const data = await this.sendRequest(session, url, method, payload, sessionProfile, {
-        persistSession: !transientSession,
-      });
+      const data = normalizeBareResponse(
+        await this.sendRequest(session, url, method, payload, sessionProfile, {
+          persistSession: !transientSession && !fullyUnauth,
+          fullyUnauthenticated: fullyUnauth,
+        }),
+        mapping,
+        fullyUnauth,
+      );
 
-      if (data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
+      if (!fullyUnauth && data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
         if (
           (command === 'login' || command === 'register') &&
           SESSION_BOOTSTRAP_ERROR_CODES.has(data.error.code) &&
@@ -221,14 +248,19 @@ export class SpaceMoltClient {
     requestMethod: string,
     requestPayload?: Record<string, unknown>,
     sessionProfile?: string,
-    options: { persistSession?: boolean } = {},
+    options: { persistSession?: boolean; fullyUnauthenticated?: boolean } = {},
   ): Promise<APIResponse> {
     const finalRequestUrl = requestMethod === 'GET' ? appendQueryPayload(requestUrl, requestPayload) : requestUrl;
+    const fullyUnauth = options.fullyUnauthenticated === true;
 
     if (this.debug) {
       this.logger.debug(`Request: ${requestMethod} ${finalRequestUrl}`);
       this.logger.debug(`Route: v2`);
-      this.logger.debug(`Session: ${currentSession.id.substring(0, 8)}...`);
+      if (!fullyUnauth && currentSession.id) {
+        this.logger.debug(`Session: ${currentSession.id.substring(0, 8)}...`);
+      } else {
+        this.logger.debug(`Session: (none - public unauthenticated)`);
+      }
       if (requestPayload) {
         const safePayload = { ...requestPayload };
         if (safePayload.password) safePayload.password = '***';
@@ -239,7 +271,7 @@ export class SpaceMoltClient {
     const startTime = this.clock.now();
     const response = await this.transport.requestJson<APIResponse>(finalRequestUrl, {
       method: requestMethod,
-      sessionId: currentSession.id,
+      sessionId: fullyUnauth || !currentSession.id ? undefined : currentSession.id,
       payload: requestMethod === 'POST' && requestPayload ? requestPayload : undefined,
       userAgent: this.config.userAgent,
     });
@@ -249,11 +281,11 @@ export class SpaceMoltClient {
 
     if (this.debug) {
       this.logger.debug(`Response: ${response.status} (${elapsed}ms)`);
-      if (data.error) this.logger.debug(`Error: ${data.error.code} - ${data.error.message}`);
-      if (data.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
+      if (data?.error) this.logger.debug(`Error: ${data.error.code} - ${data.error.message}`);
+      if (data?.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
     }
 
-    if (data.session && options.persistSession !== false) {
+    if (data?.session && options.persistSession !== false && !fullyUnauth) {
       currentSession.expires_at = data.session.expires_at;
       if (data.session.player_id) currentSession.player_id = data.session.player_id;
       await this.sessionStore.saveSession(currentSession, sessionProfile);
@@ -266,7 +298,7 @@ export class SpaceMoltClient {
     const loginMapping = V2_TOOL_MAP.login;
     if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
     const loginPayload = applyPayloadTransforms('login', { username, password });
-    const loginUrl = `${this.baseUrl}/${routeToPath(loginMapping)}`;
+    const loginUrl = buildRequestUrl(this.baseUrl, loginMapping);
     return this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
   }
 

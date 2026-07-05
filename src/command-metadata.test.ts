@@ -939,7 +939,7 @@ describe('command metadata', () => {
     const failures: string[] = [];
 
     for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
-      if (!GENERATED_API_ROUTES[override.apiRoute]) {
+      if (override.apiRoute && !GENERATED_API_ROUTES[override.apiRoute]) {
         failures.push(`${command}: unknown generated API route ${override.apiRoute}`);
       }
 
@@ -998,6 +998,7 @@ describe('command metadata', () => {
     const failures: string[] = [];
 
     for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      if (!override.apiRoute) continue; // standalone public endpoints have no generated entry
       const generated = GENERATED_API_ROUTES[override.apiRoute];
       const schemaFields = new Set(Object.keys(generated?.schema || {}));
       const generatedPositionals = generatedArgNames(generated);
@@ -1030,6 +1031,7 @@ describe('command metadata', () => {
     const failures: string[] = [];
 
     for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      if (!override.apiRoute) continue; // standalone public endpoints have no generated entry
       const generated = GENERATED_API_ROUTES[override.apiRoute];
       const schemaFields = new Set(Object.keys(generated?.schema || {}));
       for (const field of Object.keys(override.defaults || {})) {
@@ -1068,6 +1070,7 @@ describe('command metadata', () => {
     const failures: string[] = [];
 
     for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      if (!override.apiRoute) continue; // standalone public endpoints have no generated entry
       const generated = GENERATED_API_ROUTES[override.apiRoute];
       const schemaFields = new Set(Object.keys(generated?.schema || {}));
 

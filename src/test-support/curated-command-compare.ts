@@ -268,11 +268,23 @@ export function compareCuratedCommandsToGenerated(
   const commands: CuratedCommandComparison[] = [];
 
   for (const [command, override] of Object.entries(overrides)) {
-    const generated = generatedRoutes[override.apiRoute];
+    const apiRouteKey = override.apiRoute;
+    const generated = apiRouteKey ? generatedRoutes[apiRouteKey] : undefined;
     const generatedCommand = generated ? generatedCommandName(generated) : undefined;
     if (!matchesOnly(command, generatedCommand, options.only)) continue;
 
     const differences: CuratedCommandComparisonDifference[] = [];
+    if (override.route && !override.apiRoute) {
+      // Standalone public endpoint (intentional; not in OpenAPI)
+      commands.push({
+        command,
+        apiRoute: `GET ${override.route.rootPath || '(root path)'}`,
+        generatedCommand,
+        differences: [],
+        summary: 'standalone public endpoint (not in OpenAPI)',
+      });
+      continue;
+    }
     if (!generated) {
       differences.push({
         kind: 'missing-generated-route',
@@ -282,7 +294,7 @@ export function compareCuratedCommandsToGenerated(
       });
       commands.push({
         command,
-        apiRoute: override.apiRoute,
+        apiRoute: override.apiRoute ?? '(standalone)',
         generatedCommand,
         differences,
         summary: summaryFor(differences),
@@ -316,7 +328,7 @@ export function compareCuratedCommandsToGenerated(
 
     commands.push({
       command,
-      apiRoute: override.apiRoute,
+      apiRoute: override.apiRoute ?? '(standalone)',
       generatedCommand,
       differences,
       summary: summaryFor(differences),

@@ -522,11 +522,15 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
     }
 
     const override = COMMAND_OVERRIDES[entry.command];
-    const apiRoute = entry.apiRoute ?? override?.apiRoute ?? `POST /api/v2/${entry.command}`;
+    const apiRoute = entry.apiRoute ?? override?.apiRoute;
+    if (!apiRoute && override?.route) {
+      continue;
+    }
+    const comparisonRoute = apiRoute ?? `POST /api/v2/${entry.command}`;
 
     let resolved: { schema: JsonSchema; primarySchemaName?: string };
     try {
-      resolved = resolveSuccessResponseSchema(spec, apiRoute);
+      resolved = resolveSuccessResponseSchema(spec, comparisonRoute);
     } catch {
       resolved = { schema: {} };
     }
@@ -535,7 +539,7 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
       results.push({
         label,
         command: entry.command,
-        apiRoute,
+        apiRoute: comparisonRoute,
         divergences: [
           {
             path: '',
@@ -561,7 +565,7 @@ export function compareHighValueFixturesToSpec(options: CompareOptions = {}): Fi
     const comparison = compareFixtureAgainstResponseCandidates(entry.fixture, {
       label,
       command: entry.command,
-      apiRoute,
+      apiRoute: comparisonRoute,
       spec,
       responseSchema: resolved.schema,
       primarySchemaName: resolved.primarySchemaName,

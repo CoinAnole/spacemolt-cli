@@ -444,6 +444,14 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.payload).toEqual({ id: 'ship_1' });
   });
 
+  test('rootPath command previews the standalone root endpoint', () => {
+    const response = createDryRunResponse('get_mobile_base', {});
+
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+    expect(response.structuredContent?.url).toBe('https://game.spacemolt.com/wheres-mobile-base');
+    expect(response.result).toContain('GET https://game.spacemolt.com/wheres-mobile-base');
+  });
+
   test('faction_build previews the faction facility build endpoint', () => {
     const response = createDryRunResponse('faction_build', { facility_type: 'ore_refinery' });
     expect(response.structuredContent?.server_request_sent).toBe(false);

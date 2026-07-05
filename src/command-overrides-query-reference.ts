@@ -149,6 +149,22 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_location',
   },
+  get_mobile_base: {
+    description:
+      'Show the current system of the Frontier mobile capital base. Public endpoint — no login or profile required.',
+    example: 'spacemolt get_mobile_base',
+    seeAlso: ['get_location', 'get_system'],
+    category: 'Query commands',
+    // Not present in the v2 OpenAPI; uses a standalone public root endpoint.
+    route: {
+      tool: 'public',
+      action: 'mobile-base',
+      method: 'GET',
+      rootPath: 'wheres-mobile-base',
+      publicUnauthenticated: true,
+      bareResponse: true,
+    },
+  },
   get_notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
     description: 'Poll queued game events such as chat, combat, trade, and faction updates.',

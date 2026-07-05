@@ -78,6 +78,7 @@ describe('curated command vs generated command comparison', () => {
   test('curated source descriptions adopt OpenAPI summaries when they only differ by trailing periods', () => {
     const periodOnlyDifferences: string[] = [];
     for (const [command, override] of Object.entries(COMMAND_OVERRIDES)) {
+      if (!override.apiRoute) continue;
       const curated = override.description ?? CURATED_COMMAND_DESCRIPTIONS[command];
       const generated = GENERATED_API_ROUTES[override.apiRoute]?.summary;
       if (curated && generated && curated !== generated && differsOnlyByTrailingPeriod(curated, generated)) {

@@ -289,13 +289,15 @@ describe('api sync', () => {
     async () => {
       const clientCommands = new Set(Object.keys(COMMANDS));
       const v2ToolMap = Object.fromEntries(
-        Object.entries(V2_TOOL_MAP).map(([command, mapping]) => [
-          command,
-          {
-            route: routeToPath(mapping, { includeApiPrefix: true }),
-            method: mapping.method || 'POST',
-          },
-        ]),
+        Object.entries(V2_TOOL_MAP)
+          .filter(([, mapping]) => !mapping.rootPath)
+          .map(([command, mapping]) => [
+            command,
+            {
+              route: routeToPath(mapping, { includeApiPrefix: true }),
+              method: mapping.method || 'POST',
+            },
+          ]),
       );
 
       const spec = await loadOpenApiSpec();
@@ -336,7 +338,7 @@ describe('api sync', () => {
         `V2 OpenAPI routes missing from client.ts V2_TOOL_MAP:\n  ${unmappedSpecRoutes.join('\n  ')}\n\nAdd CLI commands for these routes, or add a narrow alias/infra exemption if intentionally covered elsewhere.`,
       ).toEqual([]);
 
-      const unmappedCommands = [...clientCommands].filter((cmd) => !(cmd in v2ToolMap));
+      const unmappedCommands = [...clientCommands].filter((cmd) => !(cmd in V2_TOOL_MAP));
       expect(
         unmappedCommands,
         `Commands in client.ts missing from V2_TOOL_MAP:\n  ${unmappedCommands.join('\n  ')}\n\nMap every command to a v2 tool/action.`,

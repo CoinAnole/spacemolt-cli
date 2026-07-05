@@ -144,10 +144,12 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
 
       const clientCommands = new Set(Object.keys(COMMANDS));
       const v2ToolMap = Object.fromEntries(
-        Object.entries(V2_TOOL_MAP).map(([command, mapping]) => [
-          command,
-          { route: routeToPath(mapping, { includeApiPrefix: true }), method: mapping.method || 'POST' },
-        ]),
+        Object.entries(V2_TOOL_MAP)
+          .filter(([, mapping]) => !mapping.rootPath)
+          .map(([command, mapping]) => [
+            command,
+            { route: routeToPath(mapping, { includeApiPrefix: true }), method: mapping.method || 'POST' },
+          ]),
       );
 
       const v2Routes = new Set(

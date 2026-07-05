@@ -443,6 +443,19 @@ function craftResultRows(results: Array<Record<string, unknown>>): Array<Record<
 }
 
 export const genericFormatters = [
+  // Simple public endpoint for the Frontier mobile capital
+  formatter(
+    (r) => {
+      const structuredContent = isRecord(r.structuredContent) ? r.structuredContent : undefined;
+      const system = r.system ?? structuredContent?.system;
+      if (typeof system !== 'string') return false;
+      emitLine(`\n${c.bright}Mobile base location${c.reset}`);
+      emitLine(`System: ${c.bright}${system}${c.reset}`);
+      return true;
+    },
+    { commands: ['get_mobile_base'] },
+  ),
+
   formatter(
     (r, command) => {
       if (command !== 'craft' && command !== 'recycle') return false;

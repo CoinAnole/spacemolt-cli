@@ -486,8 +486,15 @@ export function showCommandExplanation(
   showCommandHelp(command, writer, allCommands, options);
   write(`\n${c.bright}Category:${c.reset} ${config.category || 'Uncategorized'}`);
   if ('route' in config) {
-    const routePath = routeToPath(config.route, { includeApiPrefix: true });
-    write(`${c.bright}API route:${c.reset} ${config.route.method || 'POST'} ${routePath}`);
+    const route = config.route as import('./commands.ts').V2Route;
+    if (route.rootPath) {
+      const meth = route.method || 'GET';
+      const p = route.rootPath.replace(/^\//, '');
+      write(`${c.bright}API route:${c.reset} ${meth} /${p} (public)`);
+    } else {
+      const routePath = routeToPath(route, { includeApiPrefix: true });
+      write(`${c.bright}API route:${c.reset} ${route.method || 'POST'} ${routePath}`);
+    }
   } else {
     write(`${c.bright}Type:${c.reset} local helper command`);
   }

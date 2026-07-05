@@ -1,6 +1,5 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
-import { type CommandConfig, routeToPath, V2_TOOL_MAP, type V2Route } from './commands.ts';
-import { trimTrailingSlash } from './response.ts';
+import { buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
@@ -61,7 +60,7 @@ function buildRoutePreview(
     dry_run: true,
     command,
     method: mapping.method || 'POST',
-    url: `${trimTrailingSlash(API_BASE)}/${routeToPath(mapping)}`,
+    url: buildRequestUrl(API_BASE, mapping),
     payload: requestPayload,
     server_request_sent: false,
   };
