@@ -50,6 +50,7 @@ export const loadPassengerFixture = {
       name: 'Lyra Vale',
       bio: 'A courier with a nervous smile and a sealed satchel.',
       class: 'economy',
+      berth_class: 'economy',
       destination: 'nova_central',
       destination_name: 'Nova Central',
       destination_system: 'Nova',

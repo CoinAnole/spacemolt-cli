@@ -529,13 +529,29 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description: 'Set or clear a custom name on a facility you own.',
     example: 'spacemolt facility_set_name facility-1 "Frontier Smelter"',
     discoverWith: ['facility_owned', 'facility_list'],
-    seeAlso: ['facility_owned', 'facility_set_access', 'facility_set_output_price'],
+    seeAlso: ['facility_owned', 'facility_set_access', 'facility_set_output_price', 'facility_set_description'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_name',
     positionals: [
       'facility_id',
       {
         rest: 'custom_name',
+      },
+    ],
+  },
+  facility_set_description: {
+    usage: '<facility_id> [description]  (omit or pass empty description to clear)',
+    description:
+      'Set or clear a custom description (up to 4000 characters) on any facility you or your faction owns, overriding default flavor text in facility list.',
+    example: 'spacemolt facility_set_description facility-1 "The crew\'s favorite stop between jumps."',
+    discoverWith: ['facility_owned', 'facility_list', 'faction_facility_list'],
+    seeAlso: ['facility_set_name', 'facility_list', 'station_set_description'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/facility_set_description',
+    positionals: [
+      'facility_id',
+      {
+        rest: 'description',
       },
     ],
   },
@@ -700,7 +716,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description: 'Set the description for your faction station or outpost.',
     example: 'spacemolt station_set_description "A lawless trade hub"',
     discoverWith: ['station_info'],
-    seeAlso: ['station_info', 'station_set_name'],
+    seeAlso: ['station_info', 'station_set_name', 'facility_set_description'],
     category: 'Station management',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_description',
     positionals: [

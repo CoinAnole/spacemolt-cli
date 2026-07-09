@@ -56,6 +56,17 @@ test('renders facility list per-cycle item and labor upkeep', () => {
   expect(rendered.stdout.join('\n')).toContain('320cr');
 });
 
+test('renders facility dining and leisure scores when present', () => {
+  const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Dining');
+  expect(stdout).toContain('Tourism Upkeep');
+  expect(stdout).toContain('Dockside Diner');
+  expect(stdout).toContain('2');
+});
+
 test('renders facility list faction rent summary', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   facilityList.faction_rent = {

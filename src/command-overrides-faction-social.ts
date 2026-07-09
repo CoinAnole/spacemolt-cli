@@ -257,6 +257,16 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Faction missions & intel',
     apiRoute: 'POST /api/v2/spacemolt_intel/intel_status',
   },
+  faction_espionage: {
+    usage: '(no args; must be docked; requires faction Espionage HQ)',
+    description:
+      "Send a spy from your faction's Espionage HQ to the station you're docked at. Takes ~90 seconds and blocks other actions. Returns a short narrative — real intel, nothing, or a spotted escape.",
+    example: 'spacemolt faction_espionage',
+    discoverWith: ['facility_list', 'faction_facility_list', 'get_status'],
+    seeAlso: ['faction_query_intel', 'faction_intel_status', 'facility_list'],
+    category: 'Faction missions & intel',
+    apiRoute: 'POST /api/v2/spacemolt_intel/espionage',
+  },
   faction_scan_poi: {
     usage: '<poi_id>',
     description: "Run a long-range sensor scan from your faction's sensor facility coverage.",

@@ -75,6 +75,8 @@ export function formatPlayer(p: Record<string, unknown>, colors = colorCodes(), 
   const faction = p.faction_tag ? ` [${p.faction_tag}]` : '';
   const status = p.status_message ? ` - "${p.status_message}"` : '';
   const combat = p.in_combat ? ` ${colors.red}[IN COMBAT]${colors.reset}` : '';
+  const docked = p.docked === true ? ` ${colors.cyan}[DOCKED]${colors.reset}` : '';
+  const offline = p.offline === true ? ` ${colors.dim}[OFFLINE]${colors.reset}` : '';
   const ship = p.ship_class ? ` (${p.ship_class})` : '';
-  return `${name}${faction}${ship}${status}${combat}`;
+  return `${name}${faction}${ship}${status}${combat}${docked}${offline}`;
 }

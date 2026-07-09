@@ -3,10 +3,21 @@
     {
       "username": "Marlowe",
       "faction_tag": "SMC",
-      "ship_class": "prospector"
+      "ship_class": "prospector",
+      "docked": false,
+      "in_combat": false
+    },
+    {
+      "username": "Ibis",
+      "faction_tag": "SMC",
+      "ship_class": "hauler",
+      "docked": true,
+      "offline": false,
+      "in_combat": false,
+      "status_message": "refitting"
     }
   ],
-  "count": 1,
+  "count": 2,
   "pirates": [
     {
       "name": "Raider",

@@ -138,6 +138,15 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   if (hasAnyField(rows, ['labor_cycle_display', 'labor_per_cycle'])) {
     columns.push(['Labor/cycle', ['labor_cycle_display', 'labor_per_cycle']]);
   }
+  if (hasAnyField(rows, ['dining_points'])) {
+    columns.push(['Dining', ['dining_points']]);
+  }
+  if (hasAnyField(rows, ['leisure_points'])) {
+    columns.push(['Leisure', ['leisure_points']]);
+  }
+  if (hasAnyField(rows, ['tourism_upkeep'])) {
+    columns.push(['Tourism Upkeep', ['tourism_upkeep']]);
+  }
   if (hasAnyField(rows, ['output_price_per_unit_display', 'output_price_per_unit'])) {
     columns.push(['Price/unit', ['output_price_per_unit_display', 'output_price_per_unit']]);
   }

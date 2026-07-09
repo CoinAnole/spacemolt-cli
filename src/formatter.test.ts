@@ -3790,10 +3790,11 @@ describe('structuredContent formatters', () => {
 
       === Station Facilities ===
 
-        Name                    | ID            | Level | Category       | Active | Maint | Upkeep                           | Labor/cycle | Recycler | Owner
-        ------------------------+---------------+-------+----------------+--------+-------+----------------------------------+-------------+----------+------
-        Fuel Bunker             | station-fuel  | 3     | service        | true   | true  |                                  |             | false    |
-        Confederacy Fleet Depot | station-depot | 3     | infrastructure | true   | false | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |          |
+        Name                    | ID            | Level | Category       | Active | Maint | Upkeep                           | Labor/cycle | Dining | Tourism Upkeep | Recycler | Owner
+        ------------------------+---------------+-------+----------------+--------+-------+----------------------------------+-------------+--------+----------------+----------+------
+        Fuel Bunker             | station-fuel  | 3     | service        | true   | true  |                                  |             |        |                | false    |
+        Confederacy Fleet Depot | station-depot | 3     | infrastructure | true   | false | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |        |                |          |
+        Dockside Diner          | station-diner | 1     | infrastructure | true   | true  |                                  | 80cr        | 2      | true           |          |
 
       === Player Facilities ===
 
@@ -3903,8 +3904,9 @@ describe('structuredContent formatters', () => {
       "
       === Nearby ===
 
-      Players (1):
+      Players (2):
         Marlowe [SMC] (prospector)
+        Ibis [SMC] (hauler) - "refitting" [DOCKED]
 
       Pirates (1):
         Raider (skiff) - hostile

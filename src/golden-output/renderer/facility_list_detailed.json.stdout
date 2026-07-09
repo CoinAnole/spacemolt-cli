@@ -67,6 +67,18 @@
         }
       ],
       "labor_per_cycle": 320
+    },
+    {
+      "facility_id": "station-diner",
+      "type": "dockside_diner",
+      "name": "Dockside Diner",
+      "category": "infrastructure",
+      "level": 1,
+      "active": true,
+      "maintenance_satisfied": true,
+      "dining_points": 2,
+      "tourism_upkeep": true,
+      "labor_per_cycle": 80
     }
   ],
   "player_facilities": [

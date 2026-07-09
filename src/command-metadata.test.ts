@@ -652,6 +652,39 @@ describe('command metadata', () => {
     expect(help).not.toContain('Build a player facility at the current base.');
   });
 
+  test('facility_set_description is curated on the facility group', () => {
+    const action = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.set_description;
+    const config = action?.config;
+    expect(action?.displayName).toBe('facility set_description');
+    expect(config?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'facility_set_description',
+      method: 'POST',
+    });
+    expect(config?.required).toEqual(['facility_id']);
+    expect(config?.description).toContain('custom description');
+
+    const help = captureHelp(action?.displayName || 'facility set_description');
+    expect(help).toContain('facility_id');
+    expect(help).toContain('4000');
+  });
+
+  test('faction_espionage is curated on the faction group', () => {
+    const action = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.espionage;
+    const config = action?.config;
+    expect(action?.displayName).toBe('faction espionage');
+    expect(config?.route).toEqual({
+      tool: 'spacemolt_intel',
+      action: 'espionage',
+      method: 'POST',
+    });
+    expect(config?.description).toContain('Espionage HQ');
+
+    const help = captureHelp(action?.displayName || 'faction espionage');
+    expect(help).toContain('Espionage HQ');
+    expect(help).toContain('docked');
+  });
+
   test('facility production commands have curated routes and help', () => {
     const expected: Record<
       string,

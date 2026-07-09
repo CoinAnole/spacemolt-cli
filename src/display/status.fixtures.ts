@@ -125,8 +125,25 @@ export const poiInfoFixture = {
 };
 
 export const nearbyFixture = {
-  nearby: [{ username: 'Marlowe', faction_tag: 'SMC', ship_class: 'prospector' }],
-  count: 1,
+  nearby: [
+    {
+      username: 'Marlowe',
+      faction_tag: 'SMC',
+      ship_class: 'prospector',
+      docked: false,
+      in_combat: false,
+    },
+    {
+      username: 'Ibis',
+      faction_tag: 'SMC',
+      ship_class: 'hauler',
+      docked: true,
+      offline: false,
+      in_combat: false,
+      status_message: 'refitting',
+    },
+  ],
+  count: 2,
   pirates: [{ name: 'Raider', ship_class: 'skiff', status: 'hostile' }],
   pirate_count: 1,
   empire_npcs: [{ name: 'Patrol', ship_class: 'interceptor' }],

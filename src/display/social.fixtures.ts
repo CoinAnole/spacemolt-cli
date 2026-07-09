@@ -80,6 +80,18 @@ export const facilityListFixture = {
       ],
       labor_per_cycle: 320,
     },
+    {
+      facility_id: 'station-diner',
+      type: 'dockside_diner',
+      name: 'Dockside Diner',
+      category: 'infrastructure',
+      level: 1,
+      active: true,
+      maintenance_satisfied: true,
+      dining_points: 2,
+      tourism_upkeep: true,
+      labor_per_cycle: 80,
+    },
   ],
   player_facilities: [
     {
@@ -427,6 +439,15 @@ export const socialHighValueFixtures = {
   faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
   faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },
   faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },
+  faction_espionage: {
+    command: 'faction_espionage',
+    fixture: {
+      action: 'espionage',
+      outcome: 'intel',
+      intel_type: 'facility_build',
+      story: 'Your spy slips through a service hatch and overhears plans for a new smelter.',
+    },
+  },
   forum_get_thread: { command: 'forum_get_thread', fixture: forumThreadFixture },
   get_guide: { command: 'get_guide', fixture: guideFixture },
   get_guide_list: { command: 'get_guide', fixture: guideListFixture },

@@ -38,6 +38,25 @@ function reputationChangesSummary(value: unknown): string | undefined {
   return parts.length ? parts.join(', ') : undefined;
 }
 
+function rowsHaveField(rows: Array<Record<string, unknown>>, field: string): boolean {
+  return rows.some((row) => hasValue(row[field]));
+}
+
+function withOptionalColumn(
+  columns: Array<[string, string[]]>,
+  rows: Array<Record<string, unknown>>,
+  label: string,
+  fields: string[],
+  afterLabel?: string,
+): Array<[string, string[]]> {
+  if (!fields.some((field) => rowsHaveField(rows, field))) return columns;
+  const next = [...columns];
+  const insertAt = afterLabel ? next.findIndex(([labelText]) => labelText === afterLabel) + 1 : next.length;
+  const index = insertAt > 0 ? insertAt : next.length;
+  next.splice(index, 0, [label, fields]);
+  return next;
+}
+
 export const passengerFormatters = [
   formatter(
     (r) => {
@@ -86,16 +105,22 @@ export const passengerFormatters = [
       printCompactTable(
         'Loaded Passengers',
         rows,
-        [
-          ['Name', ['name']],
-          ['Class', ['class']],
-          ['Destination', ['destination_name', 'destination']],
-          ['System', ['destination_system']],
-          ['Base Fare', ['base_fare']],
-          ['Bonus', ['speed_bonus']],
-          ['Ticks', ['ticks_remaining']],
-          ['ID', ['citizen_id']],
-        ],
+        withOptionalColumn(
+          [
+            ['Name', ['name']],
+            ['Class', ['class']],
+            ['Destination', ['destination_name', 'destination']],
+            ['System', ['destination_system']],
+            ['Base Fare', ['base_fare']],
+            ['Bonus', ['speed_bonus']],
+            ['Ticks', ['ticks_remaining']],
+            ['ID', ['citizen_id']],
+          ],
+          rows,
+          'Berth',
+          ['berth_class'],
+          'Class',
+        ),
         { maxCellWidth: 72 },
       );
       return true;
@@ -136,16 +161,22 @@ export const passengerFormatters = [
         printCompactTable(
           'Delivered Passengers',
           deliveredRows,
-          [
-            ['Name', ['name']],
-            ['Class', ['class']],
-            ['Destination', ['destination_name', 'destination']],
-            ['System', ['destination_system']],
-            ['Base Fare', ['base_fare']],
-            ['Bonus', ['speed_bonus']],
-            ['Ticks', ['ticks_remaining']],
-            ['ID', ['citizen_id']],
-          ],
+          withOptionalColumn(
+            [
+              ['Name', ['name']],
+              ['Class', ['class']],
+              ['Destination', ['destination_name', 'destination']],
+              ['System', ['destination_system']],
+              ['Base Fare', ['base_fare']],
+              ['Bonus', ['speed_bonus']],
+              ['Ticks', ['ticks_remaining']],
+              ['ID', ['citizen_id']],
+            ],
+            deliveredRows,
+            'Berth',
+            ['berth_class'],
+            'Class',
+          ),
           { maxCellWidth: 72 },
         );
       }
@@ -154,15 +185,21 @@ export const passengerFormatters = [
         printCompactTable(
           'Stranded Passengers',
           strandedRows,
-          [
-            ['Name', ['name']],
-            ['Class', ['class']],
-            ['Destination', ['destination_name', 'destination']],
-            ['System', ['destination_system']],
-            ['Base Fare', ['base_fare']],
-            ['Ticks', ['ticks_remaining']],
-            ['ID', ['citizen_id']],
-          ],
+          withOptionalColumn(
+            [
+              ['Name', ['name']],
+              ['Class', ['class']],
+              ['Destination', ['destination_name', 'destination']],
+              ['System', ['destination_system']],
+              ['Base Fare', ['base_fare']],
+              ['Ticks', ['ticks_remaining']],
+              ['ID', ['citizen_id']],
+            ],
+            strandedRows,
+            'Berth',
+            ['berth_class'],
+            'Class',
+          ),
           { maxCellWidth: 72 },
         );
       }

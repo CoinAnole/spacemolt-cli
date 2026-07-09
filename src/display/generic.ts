@@ -564,6 +564,27 @@ export const genericFormatters = [
 
   formatter(
     (r) => {
+      if (typeof r.story !== 'string' || !r.story.trim()) return false;
+      const hasEspionageMarkers =
+        r.action === 'espionage' ||
+        (r.outcome !== undefined && r.outcome !== null && r.outcome !== '') ||
+        (r.intel_type !== undefined && r.intel_type !== null && r.intel_type !== '');
+      if (!hasEspionageMarkers || r.action === 'dock') return false;
+
+      emitLine(`\n${c.bright}=== Espionage ===${c.reset}`);
+      if (r.outcome !== undefined && r.outcome !== null && r.outcome !== '') emitLine(`Outcome: ${r.outcome}`);
+      if (r.intel_type !== undefined && r.intel_type !== null && r.intel_type !== '') {
+        emitLine(`Intel type: ${r.intel_type}`);
+      }
+      emitLine('');
+      emitLine(r.story.trimEnd());
+      return true;
+    },
+    { commands: ['faction_espionage'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
       if (r.action !== 'dock' || typeof r.story !== 'string') return false;
 
       const base = String(r.base ?? r.base_name ?? 'station');

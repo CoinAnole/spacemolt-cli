@@ -118,6 +118,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   facility_job_list: { facility: ['facility_id'] },
   facility_set_output_price: { facility: ['facility_id'] },
   facility_set_access: { facility: ['facility_id'] },
+  facility_set_description: { facility: ['facility_id'] },
+  facility_set_name: { facility: ['facility_id'] },
   facility_transfer: { facility: ['facility_id'], player: ['player_id'] },
   facility_list_for_sale: { facility: ['facility_id'] },
   facility_buy_listing: { listing: ['listing_id'] },

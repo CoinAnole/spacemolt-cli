@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.471.3",
+  "generatedAtGameserver": "v0.482.0",
   "blockingDivergenceSignatures": [
     "browse_ships|browse_ships|required-missing|base_id",
     "browse_ships|browse_ships|required-missing|count",
@@ -83,7 +83,6 @@
     "get_nearby|get_nearby|required-missing|empire_npcs[0].in_combat",
     "get_nearby|get_nearby|required-missing|empire_npcs[0].npc_id",
     "get_nearby|get_nearby|required-missing|empire_npcs[0].role",
-    "get_nearby|get_nearby|required-missing|nearby[0].in_combat",
     "get_nearby|get_nearby|required-missing|pirates[0].is_boss",
     "get_nearby|get_nearby|required-missing|pirates[0].pirate_id",
     "get_nearby|get_nearby|required-missing|pirates[0].tier",

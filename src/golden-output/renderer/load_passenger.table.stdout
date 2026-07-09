@@ -6,6 +6,6 @@ Skipped unfunded: 2
 
 === Loaded Passengers ===
 
-  Name      | Class   | Destination  | System | Base Fare | Bonus | Ticks | ID          
-  ----------+---------+--------------+--------+-----------+-------+-------+-------------
-  Lyra Vale | economy | Nova Central | Nova   | 125       | 25    | 8     | citizen-lyra
+  Name      | Class   | Berth   | Destination  | System | Base Fare | Bonus | Ticks | ID          
+  ----------+---------+---------+--------------+--------+-----------+-------+-------+-------------
+  Lyra Vale | economy | economy | Nova Central | Nova   | 125       | 25    | 8     | citizen-lyra

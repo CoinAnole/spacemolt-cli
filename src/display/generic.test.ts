@@ -28,6 +28,27 @@ const context = {
   },
 };
 
+test('renders faction espionage narrative results', () => {
+  const rendered = renderStructuredResult(
+    'faction_espionage',
+    {
+      action: 'espionage',
+      outcome: 'intel',
+      intel_type: 'facility_build',
+      story: 'Your spy slips through a service hatch and overhears plans for a new smelter.',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Espionage ===');
+  expect(stdout).toContain('Outcome: intel');
+  expect(stdout).toContain('Intel type: facility_build');
+  expect(stdout).toContain('Your spy slips through a service hatch');
+});
+
 test('renders catalog ships with prestige lock notes when present', () => {
   const rendered = renderStructuredResult(
     'catalog',

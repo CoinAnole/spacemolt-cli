@@ -74,6 +74,21 @@ describe('ANSI display helpers', () => {
     expect(formatted).toContain(rawColors.reset);
   });
 
+  test('formatPlayer marks docked and offline players', () => {
+    expect(
+      formatPlayer(
+        {
+          username: 'coin',
+          ship_class: 'Prospector',
+          docked: true,
+          offline: true,
+        },
+        colorCodes(true),
+        true,
+      ),
+    ).toBe('coin (Prospector) [DOCKED] [OFFLINE]');
+  });
+
   test('formatPlayer handles anonymous and unknown players', () => {
     expect(formatPlayer({ anonymous: true }, colorCodes(true), true)).toBe('[Anonymous]');
     expect(formatPlayer({})).toBe('Unknown');
