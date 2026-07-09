@@ -385,3 +385,141 @@ test('renders craft queue with station context and a single table heading', () =
   expect(stdout).not.toContain('=== Jobs ===');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('renders rented facility and remaining escrow on a queued craft job', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        effective_time_per_run: 2,
+        escrowed: {
+          fee: 150,
+          inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20 }],
+          labor: 40,
+        },
+        est_completion_tick: 1200,
+        external: true,
+        facility_id: 'public-smelter-1',
+        job_id: 'rental-job-1',
+        mode: 'craft',
+        produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 2 }],
+        recipe: 'Refine Steel',
+        runs: 10,
+        venue: 'Public Smelter',
+        venue_type: 'facility',
+        message: 'Queued on a public rental facility.',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Rented facility: yes');
+  expect(stdout).toContain('Fee: 150cr');
+  expect(stdout).toContain('Labor: 40cr');
+  expect(stdout).toContain('Public Smelter');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders craft queue rental and escrow columns when present', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'queue',
+        jobs: [
+          {
+            job_id: 'own-job-1',
+            recipe: 'Refine Steel',
+            mode: 'facility',
+            runs_done: 1,
+            runs_remaining: 4,
+            runs_total: 5,
+            venue: 'Own Smelter',
+            facility_id: 'own-smelter',
+            external: false,
+            eta_ticks: 8,
+            status: 'running',
+            position: 0,
+          },
+          {
+            job_id: 'rental-job-1',
+            recipe: 'Assemble Power Cell',
+            mode: 'facility',
+            runs_done: 0,
+            runs_remaining: 3,
+            runs_total: 3,
+            venue: 'Public Assembler',
+            facility_id: 'public-assembler',
+            external: true,
+            escrowed_credits: 450,
+            eta_ticks: 6,
+            status: 'running',
+            position: 1,
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Rented');
+  expect(stdout).toContain('Escrow');
+  expect(stdout).toContain('yes');
+  expect(stdout).toContain('450cr');
+  expect(stdout).toContain('Public Assembler');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders bulk craft results with rental and fee columns', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'bulk',
+        mode: 'craft',
+        results: [
+          {
+            index: 0,
+            success: true,
+            job_id: 'bulk-own-1',
+            recipe: 'Refine Steel',
+            runs: 5,
+            venue: 'Own Smelter',
+            external: false,
+            message: 'Queued.',
+          },
+          {
+            index: 1,
+            success: true,
+            job_id: 'bulk-rent-1',
+            recipe: 'Assemble Power Cell',
+            runs: 3,
+            venue: 'Public Assembler',
+            external: true,
+            escrowed: { fee: 90, labor: 30 },
+            message: 'Queued on rental.',
+          },
+        ],
+        summary: { total: 2, succeeded: 2, failed: 0 },
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Rented');
+  expect(stdout).toContain('Fee');
+  expect(stdout).toContain('yes');
+  expect(stdout).toContain('90cr');
+  expect(stdout).toContain('Summary: 2 succeeded, 0 failed, 2 total');
+  expect(stdout).not.toContain('=== Response ===');
+});

@@ -427,6 +427,22 @@ function isDryRunRoutePreview(result: Record<string, unknown>): boolean {
   );
 }
 
+function formatCreditsAmount(value: unknown): string | undefined {
+  const number = finiteNumber(value);
+  if (number === undefined) return undefined;
+  return `${formatCount(number) ?? number}cr`;
+}
+
+function craftEscrowCredits(record: Record<string, unknown>): unknown {
+  if (record.escrowed_credits !== undefined) return record.escrowed_credits;
+  if (isRecord(record.escrowed) && record.escrowed.fee !== undefined) return record.escrowed.fee;
+  return undefined;
+}
+
+function craftRentalDisplay(record: Record<string, unknown>): string | undefined {
+  return record.external === true ? 'yes' : undefined;
+}
+
 function emitCraftCost(label: string, value: unknown): void {
   if (!isRecord(value)) return;
   const inputs = summarizeNamedItemQuantities(value.inputs);
@@ -435,11 +451,63 @@ function emitCraftCost(label: string, value: unknown): void {
   emitOptionalValue('Fee', value.fee === undefined ? undefined : `${formatCount(value.fee) ?? value.fee}cr`);
 }
 
+function emitCraftRentalDetails(result: Record<string, unknown>): void {
+  if (result.external === true) emitOptionalValue('Rented facility', 'yes');
+  // Prefer remaining escrowed_credits when present; fee from cost/escrowed is handled by emitCraftCost.
+  if (result.escrowed_credits !== undefined) {
+    emitOptionalValue('Credits still escrowed', formatCreditsAmount(result.escrowed_credits));
+  }
+}
+
 function craftResultRows(results: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return results.map((result) => ({
     ...result,
     success_display: result.success === undefined ? undefined : result.success ? 'yes' : 'no',
+    rental_display: craftRentalDisplay(result),
+    fee_display: formatCreditsAmount(craftEscrowCredits(result)),
   }));
+}
+
+function craftJobRows(
+  jobs: Array<Record<string, unknown>>,
+  result: Record<string, unknown>,
+): Array<Record<string, unknown>> {
+  return jobs.map((job) => ({
+    ...job,
+    station_display: formatCraftJobStation(job, result),
+    runs_display:
+      job.runs_total === undefined
+        ? undefined
+        : `${job.runs_done ?? 0}/${job.runs_total} (${job.runs_remaining ?? 0} left)`,
+    output_display: summarizeNamedItemQuantities(job.produces),
+    rental_display: craftRentalDisplay(job),
+    escrow_display: formatCreditsAmount(craftEscrowCredits(job)),
+  }));
+}
+
+function insertOptionalColumn(
+  columns: Array<[string, string[]]>,
+  rows: Array<Record<string, unknown>>,
+  label: string,
+  fields: string[],
+  afterLabel?: string,
+): void {
+  if (
+    !rows.some((row) => fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''))
+  ) {
+    return;
+  }
+  const entry: [string, string[]] = [label, fields];
+  if (!afterLabel) {
+    columns.push(entry);
+    return;
+  }
+  const index = columns.findIndex(([columnLabel]) => columnLabel === afterLabel);
+  if (index < 0) {
+    columns.push(entry);
+    return;
+  }
+  columns.splice(index + 1, 0, entry);
 }
 
 export const genericFormatters = [
@@ -472,15 +540,7 @@ export const genericFormatters = [
 
       const jobs = firstArray(r, ['jobs']);
       if (jobs) {
-        const rows = jobs.map((job) => ({
-          ...job,
-          station_display: formatCraftJobStation(job, r),
-          runs_display:
-            job.runs_total === undefined
-              ? undefined
-              : `${job.runs_done ?? 0}/${job.runs_total} (${job.runs_remaining ?? 0} left)`,
-          output_display: summarizeNamedItemQuantities(job.produces),
-        }));
+        const rows = craftJobRows(jobs, r);
         const columns: Array<[string, string[]]> = [
           ['Job', ['job_id']],
           ['Recipe', ['recipe']],
@@ -492,28 +552,36 @@ export const genericFormatters = [
           ['Status', ['status']],
           ['Pos', ['position']],
         ];
-        if (rows.some((row) => row.station_display !== undefined))
-          columns.splice(6, 0, ['Station', ['station_display']]);
+        insertOptionalColumn(columns, rows, 'Station', ['station_display'], 'Venue');
+        const afterVenueContext = rows.some((row) => row.station_display !== undefined) ? 'Station' : 'Venue';
+        insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], afterVenueContext);
+        const afterRentalContext = rows.some((row) => row.rental_display !== undefined) ? 'Rented' : afterVenueContext;
+        insertOptionalColumn(columns, rows, 'Escrow', ['escrow_display'], afterRentalContext);
         printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 64 });
         return true;
       }
 
       const results = firstArray(r, ['results']);
       if (results) {
-        printCompactTable(
-          craftTitleWithStation(command, r),
-          craftResultRows(results),
-          [
-            ['Index', ['index']],
-            ['OK', ['success_display']],
-            ['Job', ['job_id']],
-            ['Recipe', ['recipe']],
-            ['Runs', ['runs']],
-            ['Venue', ['venue']],
-            ['Message', ['message', 'error', 'error_code']],
-          ],
-          { maxCellWidth: 72 },
+        const rows = craftResultRows(results);
+        const columns: Array<[string, string[]]> = [
+          ['Index', ['index']],
+          ['OK', ['success_display']],
+          ['Job', ['job_id']],
+          ['Recipe', ['recipe']],
+          ['Runs', ['runs']],
+          ['Venue', ['venue']],
+          ['Message', ['message', 'error', 'error_code']],
+        ];
+        insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], 'Venue');
+        insertOptionalColumn(
+          columns,
+          rows,
+          'Fee',
+          ['fee_display'],
+          rows.some((row) => row.rental_display !== undefined) ? 'Rented' : 'Venue',
         );
+        printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 72 });
         if (isRecord(r.summary)) {
           const total = formatCount(r.summary.total);
           const succeeded = formatCount(r.summary.succeeded);
@@ -531,6 +599,7 @@ export const genericFormatters = [
       emitOptionalValue('Runs', formatRunCount(r.runs ?? r.quantity));
       emitOptionalValue('Venue', formatCraftVenue(r));
       emitOptionalValue('Facility', r.facility_id);
+      emitCraftRentalDetails(r);
       emitOptionalValue('Output', summarizeNamedItemQuantities(r.produces));
       emitOptionalValue('Time/run', formatTimePerRun(r.effective_time_per_run));
       emitOptionalValue('Completion tick', r.est_completion_tick);

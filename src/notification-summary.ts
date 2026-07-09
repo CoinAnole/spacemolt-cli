@@ -131,6 +131,53 @@ function jobIdsFrom(notification: Notification): string[] {
   return ids;
 }
 
+function jobRecordsFrom(notification: Notification): Array<Record<string, unknown>> {
+  const data = isRecord(notification.data) ? notification.data : undefined;
+  if (!data) return [];
+  if (Array.isArray(data.jobs)) return data.jobs.filter(isRecord);
+  if (typeof data.job_id === 'string' && data.job_id) {
+    return [
+      {
+        job_id: data.job_id,
+        external: data.external,
+        escrowed_credits: data.escrowed_credits,
+      },
+    ];
+  }
+  return [];
+}
+
+function rentalJobIdsFrom(notification: Notification): string[] {
+  const ids: string[] = [];
+  for (const job of jobRecordsFrom(notification)) {
+    if (job.external !== true) continue;
+    const id = (typeof job.job_id === 'string' && job.job_id) || (typeof job.id === 'string' && job.id) || undefined;
+    ids.push(id || `anonymous-rental-${ids.length}`);
+  }
+  return ids;
+}
+
+function escrowedCreditsFrom(notification: Notification): number | undefined {
+  const data = isRecord(notification.data) ? notification.data : undefined;
+  if (!data) return undefined;
+  const jobs = Array.isArray(data.jobs) ? data.jobs.filter(isRecord) : [];
+  if (jobs.length) {
+    let total = 0;
+    let found = false;
+    for (const job of jobs) {
+      if (typeof job.escrowed_credits === 'number' && Number.isFinite(job.escrowed_credits)) {
+        total += job.escrowed_credits;
+        found = true;
+      }
+    }
+    return found ? total : undefined;
+  }
+  if (typeof data.escrowed_credits === 'number' && Number.isFinite(data.escrowed_credits)) {
+    return data.escrowed_credits;
+  }
+  return undefined;
+}
+
 function craftingSummary(progress: Notification[]): Notification {
   const sortedByTime = [...progress].sort((left, right) => timestampMillis(left) - timestampMillis(right));
   const first = sortedByTime[0] ?? progress[0];
@@ -140,7 +187,9 @@ function craftingSummary(progress: Notification[]): Notification {
     .filter((value): value is number => value !== undefined)
     .sort((left, right) => left - right);
   const jobIds = new Set(progress.flatMap(jobIdsFrom));
+  const rentalJobIds = new Set(progress.flatMap(rentalJobIdsFrom));
   const latestMessage = latest ? stringDataField(latest, 'message') : undefined;
+  const latestEscrowedCredits = latest ? escrowedCreditsFrom(latest) : undefined;
   const data: Record<string, unknown> = {
     count: progress.length,
   };
@@ -150,6 +199,8 @@ function craftingSummary(progress: Notification[]): Notification {
   if (ticks[0] !== undefined) data.first_tick = ticks[0];
   if (ticks[ticks.length - 1] !== undefined) data.latest_tick = ticks[ticks.length - 1];
   if (jobIds.size > 0) data.jobs = jobIds.size;
+  if (rentalJobIds.size > 0) data.rental_jobs = rentalJobIds.size;
+  if (latestEscrowedCredits !== undefined) data.escrowed_credits = latestEscrowedCredits;
   if (latestMessage) data.latest_message = latestMessage;
 
   return {

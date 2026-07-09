@@ -1609,6 +1609,77 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats crafting update rental and escrow details', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            tick: 901500,
+            jobs: [
+              {
+                job_id: 'rental-job',
+                recipe: 'Assemble Power Cell',
+                mode: 'facility',
+                venue: 'Public Assembler',
+                storage: 'storage',
+                deposited: [],
+                runs_done: 1,
+                runs_remaining: 2,
+                escrowed_credits: 300,
+                external: true,
+                completed: true,
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_update');
+    expect(stdout).toContain('Assemble Power Cell');
+    expect(stdout).toContain('rental');
+    expect(stdout).toContain('300cr escrowed');
+    expect(stdout).toContain('2 runs left');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats crafting summary rental and escrow fields', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_summary',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            count: 3,
+            jobs: 2,
+            rental_jobs: 1,
+            escrowed_credits: 300,
+            latest_tick: 901501,
+            latest_message: 'Still running on rental.',
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('3 crafting progress updates summarized');
+    expect(stdout).toContain('1 on rented facility');
+    expect(stdout).toContain('300cr still escrowed');
+    expect(stdout).toContain('latest tick 901501');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats malformed notification arrays without crashing', () => {
     const fixture = {
       count: 2,

@@ -241,13 +241,47 @@ describe('notification formatting', () => {
     },
     {
       msgType: 'crafting_summary',
-      data: { count: 48, latest_tick: 901337, jobs: 2, latest_message: 'Crafting fuel cells.' },
+      data: {
+        count: 48,
+        latest_tick: 901337,
+        jobs: 2,
+        rental_jobs: 1,
+        escrowed_credits: 300,
+        latest_message: 'Crafting fuel cells.',
+      },
       snippets: [
         '[CRAFTING]',
         '48 crafting progress updates summarized',
         'latest tick 901337',
         '2 active jobs',
+        '1 on rented facility',
+        '300cr still escrowed',
         'Latest: Crafting fuel cells.',
+      ],
+    },
+    {
+      msgType: 'crafting_update',
+      data: {
+        tick: 901338,
+        jobs: [
+          {
+            job_id: 'rental-job',
+            recipe: 'Assemble Power Cell',
+            external: true,
+            escrowed_credits: 300,
+            runs_remaining: 2,
+            completed: false,
+          },
+        ],
+      },
+      snippets: [
+        '[CRAFTING]',
+        '1 job update',
+        'tick 901338',
+        'Assemble Power Cell',
+        'rental',
+        '300cr escrowed',
+        '2 runs left',
       ],
     },
     {

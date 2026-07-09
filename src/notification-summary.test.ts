@@ -77,6 +77,83 @@ describe('notification presentation', () => {
     expect(presented.summarizedCount).toBe(2);
   });
 
+  test('crafting summary includes rental jobs and remaining escrowed credits', () => {
+    const updateA = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: {
+        tick: 901400,
+        jobs: [
+          {
+            job_id: 'own-job',
+            recipe: 'Refine Steel',
+            mode: 'facility',
+            venue: 'Own Smelter',
+            storage: 'storage',
+            deposited: [],
+            runs_done: 1,
+            runs_remaining: 4,
+            escrowed_credits: 0,
+            external: false,
+            completed: false,
+          },
+          {
+            job_id: 'rental-job',
+            recipe: 'Assemble Power Cell',
+            mode: 'facility',
+            venue: 'Public Assembler',
+            storage: 'storage',
+            deposited: [],
+            runs_done: 0,
+            runs_remaining: 3,
+            escrowed_credits: 450,
+            external: true,
+            completed: false,
+          },
+        ],
+      },
+    };
+    const updateB = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:20.000Z',
+      data: {
+        tick: 901401,
+        jobs: [
+          {
+            job_id: 'rental-job',
+            recipe: 'Assemble Power Cell',
+            mode: 'facility',
+            venue: 'Public Assembler',
+            storage: 'storage',
+            deposited: [],
+            runs_done: 1,
+            runs_remaining: 2,
+            escrowed_credits: 300,
+            external: true,
+            completed: false,
+          },
+        ],
+      },
+    };
+
+    const presented = presentNotifications([updateA, updateB]);
+    const summary = presented.notifications[0];
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(summary).toMatchObject({
+      msg_type: 'crafting_summary',
+      data: {
+        count: 2,
+        jobs: 2,
+        rental_jobs: 1,
+        escrowed_credits: 300,
+        latest_tick: 901401,
+      },
+    });
+  });
+
   test('leaves value-level high-signal crafting updates visible', () => {
     const update = {
       type: 'crafting',

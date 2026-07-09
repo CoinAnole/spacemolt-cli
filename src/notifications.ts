@@ -202,11 +202,50 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       const parts = [`${count} crafting progress ${plural(count, 'update')} summarized`];
       const latestTick = safeScalar(d.latest_tick);
       const jobs = finiteNumber(d.jobs);
+      const rentalJobs = finiteNumber(d.rental_jobs);
+      const escrowedCredits = finiteNumber(d.escrowed_credits);
       const latestMessage = safeScalar(d.latest_message);
       if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
       if (jobs !== undefined) parts.push(`${jobs} active ${plural(jobs, 'job')}`);
+      if (rentalJobs !== undefined) {
+        parts.push(`${rentalJobs} on rented ${plural(rentalJobs, 'facility')}`);
+      }
+      if (escrowedCredits !== undefined) {
+        parts.push(`${escrowedCredits.toLocaleString()}cr still escrowed`);
+      }
       writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${parts.join('; ')}`);
       if (latestMessage !== undefined) writeLine(`  Latest: ${latestMessage}`);
+    },
+
+    crafting_update: (d, t, writeLine) => {
+      const jobs = Array.isArray(d.jobs) ? d.jobs.filter(asRecord) : [];
+      if (jobs.length) {
+        writeLine(
+          `${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${jobs.length} job${jobs.length === 1 ? '' : 's'} update${d.tick === undefined || d.tick === null ? '' : ` (tick ${d.tick})`}`,
+        );
+        for (const job of jobs.slice(0, 5)) {
+          const recipe = job.recipe ?? job.job_id ?? job.id ?? 'job';
+          const bits = [String(recipe)];
+          if (job.external === true) bits.push('rental');
+          if (typeof job.escrowed_credits === 'number' && Number.isFinite(job.escrowed_credits)) {
+            bits.push(`${job.escrowed_credits.toLocaleString()}cr escrowed`);
+          }
+          if (typeof job.runs_remaining === 'number' && Number.isFinite(job.runs_remaining)) {
+            bits.push(`${job.runs_remaining.toLocaleString()} run${job.runs_remaining === 1 ? '' : 's'} left`);
+          }
+          if (job.completed === true) bits.push('completed');
+          writeLine(`  ${bits.join(', ')}`);
+        }
+        if (jobs.length > 5) writeLine(`  +${jobs.length - 5} more job${jobs.length === 6 ? '' : 's'}`);
+        return;
+      }
+      const parts: string[] = [];
+      if (typeof d.message === 'string' && d.message) parts.push(d.message);
+      if (d.external === true) parts.push('rental facility');
+      if (typeof d.escrowed_credits === 'number' && Number.isFinite(d.escrowed_credits)) {
+        parts.push(`${d.escrowed_credits.toLocaleString()}cr still escrowed`);
+      }
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${parts.join('; ') || 'Crafting update'}`);
     },
 
     trade_offer_received: (d, t, writeLine) => {

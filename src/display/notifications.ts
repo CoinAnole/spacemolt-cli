@@ -66,15 +66,58 @@ function formatMarketUpdate(data: Record<string, unknown>): string {
   return `${station}${tick}: ${items.length} item update${plural}; ${itemName} ${depth}${remaining}`;
 }
 
+function formatCreditsAmount(value: unknown): string | undefined {
+  const number = finiteNumber(value);
+  if (number === undefined) return undefined;
+  return `${number.toLocaleString()}cr`;
+}
+
+function formatCraftingJobPreview(job: Record<string, unknown>): string {
+  const recipe = safeScalar(job.recipe) ?? safeScalar(job.job_id) ?? safeScalar(job.id) ?? 'job';
+  const parts = [String(recipe)];
+  if (job.external === true) parts.push('rental');
+  const escrow = formatCreditsAmount(job.escrowed_credits);
+  if (escrow !== undefined) parts.push(`${escrow} escrowed`);
+  const remaining = finiteNumber(job.runs_remaining);
+  if (remaining !== undefined) parts.push(`${remaining.toLocaleString()} run${remaining === 1 ? '' : 's'} left`);
+  if (job.completed === true) parts.push('completed');
+  return parts.join(', ');
+}
+
+function formatCraftingUpdate(data: Record<string, unknown>): string {
+  const jobs = records(data.jobs);
+  if (jobs.length) {
+    const previews = jobs.slice(0, 3).map(formatCraftingJobPreview);
+    const more = jobs.length > 3 ? `; +${jobs.length - 3} more` : '';
+    const tick = data.tick === undefined || data.tick === null ? '' : ` tick ${data.tick}`;
+    return `${jobs.length} job${jobs.length === 1 ? '' : 's'}${tick}: ${previews.join('; ')}${more}`;
+  }
+
+  const parts: string[] = [];
+  const message = safeScalar(data.message);
+  if (message !== undefined) parts.push(String(message));
+  if (data.external === true) parts.push('rental facility');
+  const escrow = formatCreditsAmount(data.escrowed_credits);
+  if (escrow !== undefined) parts.push(`${escrow} still escrowed`);
+  if (data.tick !== undefined && data.tick !== null) parts.push(`tick ${data.tick}`);
+  return parts.join('; ') || 'Crafting update';
+}
+
 function formatCraftingSummary(data: Record<string, unknown>): string {
   const count = finiteNumber(data.count) ?? 0;
   const updateWord = count === 1 ? 'update' : 'updates';
   const parts = [`${count} crafting progress ${updateWord} summarized`];
   const latestTick = safeScalar(data.latest_tick);
   const jobs = finiteNumber(data.jobs);
+  const rentalJobs = finiteNumber(data.rental_jobs);
+  const escrow = formatCreditsAmount(data.escrowed_credits);
   const latestMessage = safeScalar(data.latest_message);
   if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
   if (jobs !== undefined) parts.push(`${jobs} active ${jobs === 1 ? 'job' : 'jobs'}`);
+  if (rentalJobs !== undefined) {
+    parts.push(`${rentalJobs} on rented ${rentalJobs === 1 ? 'facility' : 'facilities'}`);
+  }
+  if (escrow !== undefined) parts.push(`${escrow} still escrowed`);
   if (latestMessage !== undefined) parts.push(`latest: ${latestMessage}`);
   return parts.join('; ');
 }
@@ -93,6 +136,7 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
   const type = formatNotificationType(notification);
   if (type === 'market_update') return formatMarketUpdate(data);
   if (type === 'crafting_summary') return formatCraftingSummary(data);
+  if (type === 'crafting_update') return formatCraftingUpdate(data);
 
   const sender = data.sender ?? data.sender_name ?? data.from_name ?? data.username;
   const content = data.content ?? data.message ?? data.summary ?? data.text ?? data.description;
