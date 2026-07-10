@@ -38,7 +38,7 @@
               "richness": 2,
               "remaining": 200,
               "max_remaining": 500,
-              "depletion_percent": 40,
+              "depletion_percent": 60,
               "remaining_display": "200 units"
             }
           ]

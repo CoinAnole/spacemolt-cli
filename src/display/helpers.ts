@@ -64,6 +64,19 @@ export function finiteNumber(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
+/**
+ * Format API `depletion_percent` for human output.
+ * Server semantics: 0 = full, 100 = empty (percent depleted).
+ * Display shows remaining percent so miners read "how much is left".
+ */
+export function formatDepletionRemainingSuffix(depletionPercent: unknown): string {
+  const depleted = finiteNumber(depletionPercent);
+  if (depleted === undefined) return '';
+  const remainingPct = 100 - depleted;
+  const color = remainingPct > 25 ? c.green : remainingPct >= 5 ? c.yellow : c.red;
+  return ` (${color}${remainingPct.toFixed(2)}% remaining${c.reset})`;
+}
+
 export function sumNumericField(values: unknown, field: string): number | undefined {
   if (!Array.isArray(values)) return undefined;
   let total = 0;

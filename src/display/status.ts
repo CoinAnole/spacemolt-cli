@@ -4,6 +4,7 @@ import {
   emitCreditBalance,
   emitLine,
   emitStationFuelPricing,
+  formatDepletionRemainingSuffix,
   formatPlayer,
   formatter,
   isRecord,
@@ -593,12 +594,8 @@ export const statusFormatters = [
             continue;
           }
 
-          let depletion = '';
-          if (res.depletion_percent !== undefined) {
-            const pct = Number(res.depletion_percent);
-            const color = pct > 25 ? c.green : pct >= 5 ? c.yellow : c.red;
-            depletion = ` (${color}${pct.toFixed(2)}% remaining${c.reset})`;
-          }
+          const depletion =
+            res.depletion_percent !== undefined ? formatDepletionRemainingSuffix(res.depletion_percent) : '';
           const remaining = res.max_remaining ? `${res.remaining}/${res.max_remaining}` : display;
           emitLine(
             `  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}${supportedPower}`,

@@ -12,5 +12,5 @@ resources:
     richness: 3
     remaining: 750
     max_remaining: 1000
-    depletion_percent: 75
+    depletion_percent: 25
     supported_power: 12

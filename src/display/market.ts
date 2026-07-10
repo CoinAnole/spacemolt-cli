@@ -3,6 +3,7 @@ import {
   emitLine,
   finiteNumber,
   firstArray,
+  formatDepletionRemainingSuffix,
   formatter,
   isRecord,
   namedFormatter,
@@ -767,12 +768,10 @@ export const marketFormatters = [
               continue;
             }
 
-            let depletion = '';
-            if (resource.depletion_percent !== undefined) {
-              const pct = Number(resource.depletion_percent);
-              const color = pct > 25 ? c.green : pct >= 5 ? c.yellow : c.red;
-              depletion = ` (${color}${pct.toFixed(2)}% remaining${c.reset})`;
-            }
+            const depletion =
+              resource.depletion_percent !== undefined
+                ? formatDepletionRemainingSuffix(resource.depletion_percent)
+                : '';
             const remaining = resource.max_remaining
               ? `${resource.remaining ?? '?'}/${resource.max_remaining}`
               : display;

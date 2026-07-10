@@ -118,7 +118,8 @@ export const poiInfoFixture = {
       richness: 3,
       remaining: 750,
       max_remaining: 1000,
-      depletion_percent: 75,
+      // API: 0 = full, 100 = empty (percent depleted); 750/1000 remaining → 25% depleted
+      depletion_percent: 25,
       supported_power: 12,
     },
   ],

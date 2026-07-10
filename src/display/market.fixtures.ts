@@ -297,6 +297,7 @@ export const factionQueryIntelFixture = {
               richness: 4,
               remaining: 500,
               max_remaining: 1000,
+              // API: 0 = full, 100 = empty; 500/1000 remaining → 50% depleted
               depletion_percent: 50,
               remaining_display: '500 units',
             },
@@ -306,7 +307,8 @@ export const factionQueryIntelFixture = {
               richness: 2,
               remaining: 200,
               max_remaining: 500,
-              depletion_percent: 40,
+              // API: 0 = full, 100 = empty; 200/500 remaining → 60% depleted
+              depletion_percent: 60,
               remaining_display: '200 units',
             },
           ],
