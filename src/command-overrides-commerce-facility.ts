@@ -86,8 +86,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   storage: {
     usage:
       '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
-    description: 'Run unified station storage operations: view, bulk item transfers, wreck loot, or jettison.',
-    example: 'spacemolt storage view target=faction --items iron_ore,fuel_cell',
+    description:
+      'View or move station/faction storage, gift items/credits/ships to players, loot wrecks, or jettison. Gift with deposit target=<player>; use source=storage to pull items from personal storage instead of cargo (default source=cargo).',
+    example: 'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
     discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
     seeAlso: ['get_cargo', 'loot_wreck', 'jettison'],
     category: 'Station storage',

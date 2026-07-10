@@ -562,7 +562,9 @@ describe('command metadata', () => {
     expect(config?.args).toContain('bucket');
     expect(config?.usage).toContain('[bucket=name-or-id]');
     expect(config?.usage).toContain('[dest_bucket=name-or-id]');
-    expect(config?.description).toContain('bulk item transfers');
+    expect(config?.description).toContain('gift items/credits/ships to players');
+    expect(config?.description).toContain('source=storage');
+    expect(config?.example).toContain('target=PlayerName source=storage');
     expect(config?.schema?.source?.description).toContain('source=faction target=faction');
     expect(config?.schema?.source?.description).toContain('move items between faction compartments');
     expect(config?.schema?.items?.description).toContain('Bulk deposit/withdraw');

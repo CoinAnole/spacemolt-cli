@@ -458,6 +458,20 @@ describe('help output branches', () => {
     expect(output).not.toContain('donate to an empire treasury');
   });
 
+  test('showCommandHelp documents gifting via storage deposit with source', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('storage', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('gift items/credits/ships to players');
+    expect(output).toContain('source=storage to pull items from personal storage');
+    expect(output).toContain(
+      'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
+    );
+    expect(output).toContain('or a player name/ID (gift)');
+  });
+
   test('showCommandGroup omits duplicate command-name descriptions', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {

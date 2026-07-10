@@ -132,7 +132,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   sell_ship_to_order: 'Sell a stored ship directly into a buy order at this station',
   set_home_base: 'Set your home station for respawning',
   set_status: 'Set your status message and clan tag',
-  storage: 'View or move station storage, faction storage, gifts, wreck loot, and storage jettison actions.',
+  storage:
+    'View or move station/faction storage, gift items/credits/ships to players (deposit target=<player>; source=storage pulls from personal storage), wreck loot, and jettison.',
   supply_commission: 'Donate materials directly to a stuck commission.',
   survey_system: 'Scan for hidden deep core deposits in the current system',
   switch_ship: 'Switch to a different ship stored at this station',
