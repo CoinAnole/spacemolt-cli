@@ -466,9 +466,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('gift items/credits/ships to players');
     expect(output).toContain('source=storage to pull items from personal storage');
-    expect(output).toContain(
-      'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
-    );
+    expect(output).toContain('spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"');
     expect(output).toContain('or a player name/ID (gift)');
   });
 

@@ -341,9 +341,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|workshop] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; split source/deliver_to to route inputs and outputs separately)',
+      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; split source/deliver_to to route inputs and outputs separately)',
     description:
-      'Queue crafting work or cancel queued jobs. Fast/cheap presets choose the globally fastest or cheapest usable facility, including public rentals that may charge fees. Inputs escrow from source (defaults to deliver_to) and outputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
+      'Queue crafting work or cancel queued jobs. Fast/cheap presets choose the globally fastest or cheapest usable facility, including public rentals that may charge fees. Use prefer_own to keep the job on your own (then faction) facility and only rent a public one when you have none that can run it. Inputs escrow from source (defaults to deliver_to) and outputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
     example: 'spacemolt craft basic_iron_smelting 50 source=storage deliver_to=faction:Crafting',
     discoverWith: ['catalog', 'storage', 'get_status'],
     seeAlso: ['recycle', 'catalog', 'storage', 'get_guide'],
@@ -393,9 +393,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       preset: {
         type: 'string',
-        enum: ['fast', 'cheap', 'workshop'],
+        enum: ['fast', 'cheap', 'prefer_own', 'workshop'],
         description:
-          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest usable facility; 'workshop' forces hand-crafting. A public rental facility can be selected and may charge a fee.",
+          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest usable facility (a public rental may be chosen and may charge a fee); 'prefer_own' keeps the job on your own (then faction) facility and only rents a public one when you have none that can run it; 'workshop' forces hand-crafting.",
       },
       quantity: {
         type: 'integer',

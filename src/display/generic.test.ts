@@ -228,6 +228,41 @@ test('renders queued craft details with job id and output', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders craft queue total_jobs and truncation message', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      action: 'queue',
+      total_jobs: 450,
+      message: 'Showing the 200 soonest-finishing jobs.',
+      jobs: [
+        {
+          job_id: 'job-1',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 0,
+          runs_remaining: 1,
+          runs_total: 1,
+          venue: 'Station Workshop',
+          facility_id: 'workshop:player:station',
+          eta_ticks: 2,
+          status: 'queued',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queue ===');
+  expect(stdout).toContain('job-1');
+  expect(stdout).toContain('Total jobs: 450 (showing 1)');
+  expect(stdout).toContain('Showing the 200 soonest-finishing jobs.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders craft queue lists across workshop own and faction venues', () => {
   const rendered = renderStructuredResult(
     'craft',

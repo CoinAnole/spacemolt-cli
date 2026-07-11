@@ -16,12 +16,16 @@ import {
   highValueCommandFixtures,
   listPassengersFixture,
   listStationPassengersFixture,
+  listStationPassengersWithLoungeFixture,
+  loadPassengerConnectingFixture,
   missionsFixture,
   poiInfoFixture,
   storageFixture,
   subscribeMarketFixture,
   systemInfoFixture,
   unloadPassengerBulkFixture,
+  unloadPassengerLoungeFixture,
+  unloadPassengerTransferFixture,
   viewMarketFixture,
   viewMarketSingleItemFixture,
   viewShipBuyOrdersFixture,
@@ -2926,6 +2930,58 @@ describe('structuredContent formatters', () => {
     expect(rendered.stdout).toContain('=== Stranded Passengers ===');
     expect(rendered.stdout).toContain('Orin Pax');
     expect(rendered.stdout).toContain('240');
+    expect(rendered.stdout).not.toContain('=== Response ===');
+  });
+
+  test('list_station_passengers renders faction transit lounge roster', () => {
+    const rendered = captureStructuredOutput('list_station_passengers', listStationPassengersWithLoungeFixture);
+
+    expect(rendered.stderr).toBe('');
+    expect(rendered.stdout).toContain('=== Waiting Passengers @ Earth Station ===');
+    expect(rendered.stdout).toContain('Orin Pax');
+    expect(rendered.stdout).toContain('=== Transit Lounge ===');
+    expect(rendered.stdout).toContain('Occupancy: 1/20');
+    expect(rendered.stdout).toContain('Ada Quill');
+    expect(rendered.stdout).toContain('Connecting');
+    expect(rendered.stdout).toContain('yes');
+    expect(rendered.stdout).not.toContain('=== Response ===');
+  });
+
+  test('load_passenger renders connecting marker', () => {
+    const rendered = captureStructuredOutput('load_passenger', loadPassengerConnectingFixture);
+
+    expect(rendered.stderr).toBe('');
+    expect(rendered.stdout).toContain('=== Passenger Boarding ===');
+    expect(rendered.stdout).toContain('Ada Quill');
+    expect(rendered.stdout).toContain('Connecting');
+    expect(rendered.stdout).toContain('yes');
+    expect(rendered.stdout).not.toContain('=== Response ===');
+  });
+
+  test('unload_passenger renders ship transfer handoff', () => {
+    const rendered = captureStructuredOutput('unload_passenger', unloadPassengerTransferFixture);
+
+    expect(rendered.stderr).toBe('');
+    expect(rendered.stdout).toContain('=== Passenger Unload ===');
+    expect(rendered.stdout).toContain('Target ship: Mate Runner (ship-mate-1)');
+    expect(rendered.stdout).toContain('=== Transferred Passengers ===');
+    expect(rendered.stdout).toContain('Lyra Vale');
+    expect(rendered.stdout).toContain('Skipped No Berth: 1');
+    expect(rendered.stdout).not.toContain('Transferred: 1 item(s)');
+    expect(rendered.stdout).not.toContain('=== Response ===');
+  });
+
+  test('unload_passenger renders lounge check-in handoff', () => {
+    const rendered = captureStructuredOutput('unload_passenger', unloadPassengerLoungeFixture);
+
+    expect(rendered.stderr).toBe('');
+    expect(rendered.stdout).toContain('=== Passenger Unload ===');
+    expect(rendered.stdout).toContain('Lounge: Transit Lounge');
+    expect(rendered.stdout).toContain('Occupancy: 2/20');
+    expect(rendered.stdout).toContain('Deadline bonus: 50 ticks');
+    expect(rendered.stdout).toContain('=== Checked-In Passengers ===');
+    expect(rendered.stdout).toContain('Orin Pax');
+    expect(rendered.stdout).not.toContain('Checked In: 1 item(s)');
     expect(rendered.stdout).not.toContain('=== Response ===');
   });
 

@@ -95,8 +95,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   unload_passenger: {
-    usage: '<passenger_name_or_id_or_all>',
-    description: 'Put a passenger off the ship at the current station. Pass "all" to put every passenger off at once.',
+    usage: '<passenger_name_or_id_or_all> [target=lounge|<ship>]',
+    description:
+      'Put a passenger off the ship at the current station. Pass "all" to put every passenger off at once. For connecting flights, pass target=lounge to check them into your faction Transit Lounge, or target=<ship id or name> to transfer them to a docked ship (yours or a faction mate); fares and deadlines continue unchanged.',
     category: 'Passenger Transport',
     apiRoute: 'POST /api/v2/spacemolt/unload_passenger',
     positionals: ['id'],

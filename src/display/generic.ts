@@ -558,6 +558,16 @@ export const genericFormatters = [
         const afterRentalContext = rows.some((row) => row.rental_display !== undefined) ? 'Rented' : afterVenueContext;
         insertOptionalColumn(columns, rows, 'Escrow', ['escrow_display'], afterRentalContext);
         printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 64 });
+        if (r.total_jobs !== undefined && r.total_jobs !== null && r.total_jobs !== '') {
+          const shown = jobs.length;
+          const total = Number(r.total_jobs);
+          if (Number.isFinite(total) && shown < total) {
+            emitLine(`Total jobs: ${total} (showing ${shown})`);
+          } else {
+            emitLine(`Total jobs: ${r.total_jobs}`);
+          }
+        }
+        if (r.message) emitLine(String(r.message));
         return true;
       }
 

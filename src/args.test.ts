@@ -801,6 +801,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       preset: 'cheap',
     });
 
+    const preferOwn = parseOk(['craft', 'basic_iron_smelting', '10', 'preset=prefer_own']);
+    const preferOwnPayload = convertPayloadTypes(normalizeParsedPayload('craft', preferOwn.payload), 'craft');
+    expect(preferOwnPayload).toEqual({
+      id: 'basic_iron_smelting',
+      quantity: 10,
+      preset: 'prefer_own',
+    });
+
     const bulk = parseOk([
       'craft',
       'jobs=[{"recipe_id":"basic_iron_smelting","quantity":100},{"recipe_id":"basic_copper_processing","quantity":50}]',
@@ -1427,6 +1435,21 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(normalizeParsedPayload('unload_passenger', unload.payload)).toEqual({ id: 'Lyra Vale' });
     expect(normalizeParsedPayload('unload_passenger', parseOk(['unload_passenger', 'all']).payload)).toEqual({
       id: 'all',
+    });
+    expect(
+      normalizeParsedPayload('unload_passenger', parseOk(['unload_passenger', 'all', 'target=lounge']).payload),
+    ).toEqual({
+      id: 'all',
+      target: 'lounge',
+    });
+    expect(
+      normalizeParsedPayload(
+        'unload_passenger',
+        parseOk(['unload_passenger', 'Lyra Vale', 'target=Mate Runner']).payload,
+      ),
+    ).toEqual({
+      id: 'Lyra Vale',
+      target: 'Mate Runner',
     });
     expect(parseArgs(['unload_passenger', 'name=Lyra Vale']).ok).toBe(false);
     expect(parseArgs(['unload_passenger', 'passenger=Lyra Vale']).ok).toBe(false);

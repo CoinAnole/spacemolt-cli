@@ -489,11 +489,16 @@ describe('command metadata', () => {
   test('unload_passenger help documents all-passenger bulk unload', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.unload_passenger;
     expect(config?.usage).toContain('all');
+    expect(config?.usage).toContain('target=lounge');
     expect(config?.description).toContain('Pass "all" to put every passenger off at once');
+    expect(config?.description).toContain('target=lounge');
+    expect(config?.schema?.target?.type).toBe('string');
 
     const help = captureHelp('unload_passenger');
     expect(help).toContain('Pass "all" to put every passenger off at once');
     expect(help).toContain('or "all" to put every passenger off at once');
+    expect(help).toContain('target');
+    expect(help).toContain('Transit Lounge');
   });
 
   test('craft help documents queued station-storage production', () => {
@@ -510,8 +515,11 @@ describe('command metadata', () => {
     expect(config?.schema?.job_id?.type).toBe('string');
     expect(config?.schema?.quantity?.description).toContain('Number of output items');
     expect(config?.schema?.quantity?.description).not.toContain('server-capped by crafting skill level');
+    expect(config?.schema?.preset?.enum).toEqual(['fast', 'cheap', 'prefer_own', 'workshop']);
     expect(config?.schema?.preset?.description).toContain('globally fastest or cheapest');
+    expect(config?.schema?.preset?.description).toContain('prefer_own');
     expect(config?.schema?.preset?.description).toContain('public rental');
+    expect(config?.usage).toContain('prefer_own');
 
     const help = captureHelp('craft');
     expect(help).toContain('Queue crafting work');
@@ -522,6 +530,7 @@ describe('command metadata', () => {
     expect(help).toContain('jobs');
     expect(help).toContain('action=queue');
     expect(help).toContain('job_id');
+    expect(help).toContain('prefer_own');
     expect(help).toContain('globally fastest or cheapest');
     expect(help).toContain('public rental');
     expect(help).toContain('Crafting never delivers to cargo');
