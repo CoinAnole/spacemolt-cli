@@ -54,11 +54,11 @@ import {
   getSessionPath,
   listProfileNames,
   loadCliConfig,
-  saveCliConfig,
   setDefaultProfile,
   showDefaultProfile,
   showProfiles,
   tryGetSessionPath,
+  updateCliConfig,
 } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
@@ -146,14 +146,26 @@ const configHandler: CommandHandler<ConfigPayload, { userAgent: string; custom: 
     }
   },
   run(payload, _options, _client, context) {
-    const config = loadCliConfig(context?.env.HOME, undefined, context?.env);
+    let config = loadCliConfig(context?.env.HOME, undefined, context?.env);
     if (payload.mode === 'set') {
-      config.userAgent = payload.value;
-      saveCliConfig(config, context?.env.HOME, undefined, context?.env);
+      config = updateCliConfig(
+        (current) => ({ ...current, userAgent: payload.value }),
+        context?.env.HOME,
+        undefined,
+        context?.env,
+      );
     }
     if (payload.mode === 'reset') {
-      delete config.userAgent;
-      saveCliConfig(config, context?.env.HOME, undefined, context?.env);
+      config = updateCliConfig(
+        (current) => {
+          const next = { ...current };
+          delete next.userAgent;
+          return next;
+        },
+        context?.env.HOME,
+        undefined,
+        context?.env,
+      );
     }
 
     return {

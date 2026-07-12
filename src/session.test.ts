@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, JsonResponse } from './types.ts';
 
@@ -31,6 +32,7 @@ const {
   setActiveProfile,
   setDefaultProfile,
   showDefaultProfile,
+  updateCliConfig,
 } = await import('./session.ts');
 
 const publicClient = await import('./client.ts');
@@ -190,6 +192,92 @@ describe('SessionManager', () => {
       expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
       expect(fs.statSync(path.dirname(configPath)).mode & 0o777).toBe(0o700);
     }
+
+    updateCliConfig((config) => ({ ...config, userAgent: 'FleetBot/1.0' }), undefined, undefined, testEnv);
+    expect(loadCliConfig(undefined, undefined, testEnv)).toEqual({
+      defaultProfile: 'marlowe',
+      userAgent: 'FleetBot/1.0',
+    });
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
+      expect(fs.statSync(path.dirname(configPath)).mode & 0o777).toBe(0o700);
+    }
+  });
+
+  test('concurrent config mutations preserve unrelated fields', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'config-concurrent-'));
+    const configHome = path.join(home, '.config');
+    const moduleUrl = pathToFileURL(path.join(import.meta.dir, 'session.ts')).href;
+    const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: configHome };
+    const first = Bun.spawn(
+      [
+        process.execPath,
+        '-e',
+        `const { updateCliConfig } = await import(${JSON.stringify(moduleUrl)}); updateCliConfig((c) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100); return { ...c, defaultProfile: 'arbiter47' }; });`,
+      ],
+      { env, stdout: 'pipe', stderr: 'pipe' },
+    );
+    await Bun.sleep(20);
+    const second = Bun.spawn(
+      [
+        process.execPath,
+        '-e',
+        `const { updateCliConfig } = await import(${JSON.stringify(moduleUrl)}); updateCliConfig((c) => ({ ...c, userAgent: 'FleetBot/1.0' }));`,
+      ],
+      { env, stdout: 'pipe', stderr: 'pipe' },
+    );
+
+    expect(await Promise.all([first.exited, second.exited])).toEqual([0, 0]);
+    expect(loadCliConfig(home, undefined, env)).toEqual({
+      defaultProfile: 'arbiter47',
+      userAgent: 'FleetBot/1.0',
+    });
+    expect(fs.existsSync(`${getCliConfigPath(home, undefined, env)}.lock`)).toBe(false);
+  });
+
+  test('config updates recover a lock owned by an exited process', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'config-dead-lock-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const configPath = getCliConfigPath(home, undefined, env);
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    const child = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore', stderr: 'ignore' });
+    expect(await child.exited).toBe(0);
+    fs.writeFileSync(`${configPath}.lock`, `${child.pid}\n`);
+
+    setDefaultProfile('arbiter47', home, undefined, env);
+
+    expect(getDefaultProfile(home, undefined, env)).toBe('arbiter47');
+    expect(fs.existsSync(`${configPath}.lock`)).toBe(false);
+  });
+
+  test('config updates recover an old malformed lock', () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'config-old-lock-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const configPath = getCliConfigPath(home, undefined, env);
+    const lockPath = `${configPath}.lock`;
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(lockPath, 'not-a-pid\n');
+    const old = new Date(Date.now() - 31_000);
+    fs.utimesSync(lockPath, old, old);
+
+    setDefaultProfile('arbiter47', home, undefined, env);
+
+    expect(getDefaultProfile(home, undefined, env)).toBe('arbiter47');
+    expect(fs.existsSync(lockPath)).toBe(false);
+  });
+
+  test('config updates fail clearly while a live process owns the lock', () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'config-live-lock-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const configPath = getCliConfigPath(home, undefined, env);
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(`${configPath}.lock`, `${process.pid}\n`);
+
+    expect(() => setDefaultProfile('arbiter47', home, undefined, env)).toThrow(
+      `Timed out waiting to update CLI configuration at ${configPath}.`,
+    );
+
+    fs.unlinkSync(`${configPath}.lock`);
   });
 
   test('showDefaultProfile writes no-default and current-default messages', () => {

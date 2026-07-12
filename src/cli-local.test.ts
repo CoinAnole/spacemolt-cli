@@ -423,7 +423,10 @@ describe('CLI local usability behavior', () => {
       fs.mkdirSync(path.join(configDir, 'sessions'), { recursive: true });
       fs.writeFileSync(path.join(configDir, 'sessions', 'marlowe.json'), '{}\n');
       fs.writeFileSync(path.join(configDir, 'sessions', 'pilot.json'), '{}\n');
-      fs.writeFileSync(path.join(configDir, 'config.json'), '{"defaultProfile":"marlowe"}\n');
+      fs.writeFileSync(
+        path.join(configDir, 'config.json'),
+        `${JSON.stringify({ defaultProfile: 'marlowe', userAgent: 'FleetBot/1.0' })}\n`,
+      );
 
       const testEnv = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
       const show = await runDirect(['profile', 'default'], testEnv);
@@ -433,6 +436,34 @@ describe('CLI local usability behavior', () => {
       const set = await runDirect(['profile', 'default', 'pilot'], testEnv);
       expect(set.exitCode).toBe(0);
       expect(set.stdout).toContain('Default profile: pilot');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+        userAgent: 'FleetBot/1.0',
+      });
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('config user-agent set and reset preserve unrelated default profile', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-user-agent-test-'));
+    try {
+      const configDir = path.join(home, '.config', 'spacemolt-cli');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.writeFileSync(path.join(configDir, 'config.json'), `${JSON.stringify({ defaultProfile: 'pilot' })}\n`);
+
+      const testEnv = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+      const set = await runDirect(['config', 'user-agent', 'FleetBot/1.0'], testEnv);
+      expect(set.exitCode).toBe(0);
+      expect(set.stdout).toContain('User agent: FleetBot/1.0');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+        userAgent: 'FleetBot/1.0',
+      });
+
+      const reset = await runDirect(['config', 'user-agent', '--reset'], testEnv);
+      expect(reset.exitCode).toBe(0);
+      expect(reset.stdout).toMatch(/User agent: SpaceMolt-Client\/\d+\.\d+\.\d+/);
       expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
         defaultProfile: 'pilot',
       });

@@ -12,6 +12,10 @@ import type { APIResponse, Session } from './types.ts';
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
 const SESSION_DIR_MODE = 0o700;
+const CONFIG_LOCK_RETRY_MS = 10;
+const CONFIG_LOCK_TIMEOUT_MS = 2_000;
+const CONFIG_LOCK_STALE_MS = 30_000;
+const CONFIG_LOCK_SLEEP = new Int32Array(new SharedArrayBuffer(4));
 export type EnvLike = Record<string, string | undefined>;
 
 export function getSpacemoltHome(
@@ -180,6 +184,96 @@ export function hardenPermissions(targetPath: string, mode: number): void {
   }
 }
 
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}
+
+function configLockOwnerIsAlive(lockPath: string): boolean | undefined {
+  try {
+    const pid = Number.parseInt(fs.readFileSync(lockPath, 'utf-8').trim(), 10);
+    if (!Number.isSafeInteger(pid) || pid <= 0) return undefined;
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (error) {
+      if (isErrnoException(error) && error.code === 'ESRCH') return false;
+      return true;
+    }
+  } catch {
+    return undefined;
+  }
+}
+
+function removeStaleConfigLock(lockPath: string): boolean {
+  const ownerAlive = configLockOwnerIsAlive(lockPath);
+  if (ownerAlive === true) return false;
+  try {
+    const oldEnough = Date.now() - fs.statSync(lockPath).mtimeMs >= CONFIG_LOCK_STALE_MS;
+    if (ownerAlive === undefined && !oldEnough) return false;
+    fs.unlinkSync(lockPath);
+    return true;
+  } catch (error) {
+    return isErrnoException(error) && error.code === 'ENOENT';
+  }
+}
+
+function acquireConfigLock(configPath: string): () => void {
+  const lockPath = `${configPath}.lock`;
+  const deadline = Date.now() + CONFIG_LOCK_TIMEOUT_MS;
+  while (true) {
+    try {
+      const fd = fs.openSync(lockPath, 'wx', SESSION_FILE_MODE);
+      try {
+        fs.writeFileSync(fd, `${process.pid}\n`, 'utf-8');
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+      return () => {
+        try {
+          fs.unlinkSync(lockPath);
+        } catch (error) {
+          if (!isErrnoException(error) || error.code !== 'ENOENT') throw error;
+        }
+      };
+    } catch (error) {
+      if (!isErrnoException(error) || error.code !== 'EEXIST') throw error;
+      if (removeStaleConfigLock(lockPath)) continue;
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out waiting to update CLI configuration at ${configPath}.`);
+      }
+      Atomics.wait(CONFIG_LOCK_SLEEP, 0, 0, CONFIG_LOCK_RETRY_MS);
+    }
+  }
+}
+
+function writeCliConfigAtomic(configPath: string, config: CliConfig): void {
+  const parentDir = path.dirname(configPath);
+  const tmpPath = path.join(
+    parentDir,
+    `.${path.basename(configPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+  );
+  let fd: number | undefined;
+  try {
+    fd = fs.openSync(tmpPath, 'wx', SESSION_FILE_MODE);
+    fs.writeFileSync(fd, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
+    fs.fsyncSync(fd);
+    fs.closeSync(fd);
+    fd = undefined;
+    hardenPermissions(tmpPath, SESSION_FILE_MODE);
+    fs.renameSync(tmpPath, configPath);
+    hardenPermissions(configPath, SESSION_FILE_MODE);
+  } catch (error) {
+    if (fd !== undefined) fs.closeSync(fd);
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* best effort */
+    }
+    throw error;
+  }
+}
+
 export function loadCliConfig(homeDir?: string, platform?: string, env?: EnvLike): CliConfig {
   try {
     const config = JSON.parse(fs.readFileSync(getCliConfigPath(homeDir, platform, env), 'utf-8'));
@@ -200,16 +294,37 @@ export function loadCliConfig(homeDir?: string, platform?: string, env?: EnvLike
   }
 }
 
+export function updateCliConfig(
+  update: (config: CliConfig) => CliConfig,
+  homeDir?: string,
+  platform?: string,
+  env?: EnvLike,
+): CliConfig {
+  const configPath = getCliConfigPath(homeDir, platform, env);
+  const parentDir = path.dirname(configPath);
+  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
+  hardenPermissions(parentDir, SESSION_DIR_MODE);
+  const release = acquireConfigLock(configPath);
+  try {
+    const next = update(loadCliConfig(homeDir, platform, env));
+    writeCliConfigAtomic(configPath, next);
+    return next;
+  } finally {
+    release();
+  }
+}
+
 export function saveCliConfig(config: CliConfig, homeDir?: string, platform?: string, env?: EnvLike): void {
   const configPath = getCliConfigPath(homeDir, platform, env);
   const parentDir = path.dirname(configPath);
   if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
   hardenPermissions(parentDir, SESSION_DIR_MODE);
-  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, {
-    encoding: 'utf-8',
-    mode: SESSION_FILE_MODE,
-  });
-  hardenPermissions(configPath, SESSION_FILE_MODE);
+  const release = acquireConfigLock(configPath);
+  try {
+    writeCliConfigAtomic(configPath, config);
+  } finally {
+    release();
+  }
 }
 
 export function getDefaultProfile(homeDir?: string, platform?: string, env?: EnvLike): string | undefined {
@@ -217,12 +332,8 @@ export function getDefaultProfile(homeDir?: string, platform?: string, env?: Env
 }
 
 export function setDefaultProfile(profile: string, homeDir?: string, platform?: string, env?: EnvLike): void {
-  saveCliConfig(
-    { ...loadCliConfig(homeDir, platform, env), defaultProfile: normalizeProfileName(profile) },
-    homeDir,
-    platform,
-    env,
-  );
+  const defaultProfile = normalizeProfileName(profile);
+  updateCliConfig((config) => ({ ...config, defaultProfile }), homeDir, platform, env);
 }
 
 export function showDefaultProfile(
