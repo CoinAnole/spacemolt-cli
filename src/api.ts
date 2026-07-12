@@ -353,7 +353,9 @@ export class SpaceMoltClient {
     }
 
     if (changed) {
-      this.sessionStore.ensureDefaultProfile?.(profileForDefault);
+      if (!this.config.profileIsExplicit) {
+        this.sessionStore.ensureDefaultProfile?.(profileForDefault);
+      }
       await this.sessionStore.saveSession(session, profileForDefault);
       if (this.debug) this.logger.debug(`Saved ${command} credentials to session`);
     }

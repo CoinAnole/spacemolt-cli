@@ -634,7 +634,6 @@ describe('SpaceMoltClient', () => {
 
   test('login with explicit profile writes selected profile instead of username profile', async () => {
     const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-profile-explicit-test-'));
-    process.env.XDG_CONFIG_HOME = configRoot;
     const apiBase = 'https://game.test/api/v2';
     const sessionsDir = path.join(configRoot, 'spacemolt-cli', 'sessions');
     fs.mkdirSync(sessionsDir, { recursive: true });
@@ -642,6 +641,7 @@ describe('SpaceMoltClient', () => {
       apiBase,
       profile: 'pilot',
       profileIsExplicit: true,
+      env: { XDG_CONFIG_HOME: configRoot },
       transport: async <T>() => ({
         status: 200,
         ok: true,
@@ -689,7 +689,148 @@ describe('SpaceMoltClient', () => {
         password: 'other-secret',
         player_id: 'player_other',
       });
-      expect(getDefaultProfile()).toBe('pilot');
+      expect(getDefaultProfile(undefined, undefined, { XDG_CONFIG_HOME: configRoot })).toBeUndefined();
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('register with explicit profile writes only that profile and leaves the default unset', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-register-explicit-'));
+    const env = { XDG_CONFIG_HOME: configRoot };
+    const apiBase = 'https://game.test/api/v2';
+    const manager = new SessionManager({
+      apiBase,
+      profile: 'Arbiter47',
+      profileIsExplicit: true,
+      env,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_arbiter47',
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase,
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+        profile: 'Arbiter47',
+        profileIsExplicit: true,
+      },
+      sessionStore: manager,
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: response({
+              structuredContent: { password: 'generated-47', player_id: 'player_47' },
+            }) as T,
+          };
+        },
+      },
+    });
+
+    try {
+      await client.execute('register', {
+        username: 'Arbiter47',
+        empire: 'voidborn',
+        registration_code: 'code-47',
+      });
+      const saved = JSON.parse(
+        fs.readFileSync(path.join(configRoot, 'spacemolt-cli', 'sessions', 'arbiter47.json'), 'utf-8'),
+      );
+      expect(saved).toMatchObject({
+        id: 'sess_arbiter47',
+        username: 'Arbiter47',
+        password: 'generated-47',
+        player_id: 'player_47',
+      });
+      expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  function createExplicitClient(configRoot: string, profile: string): SpaceMoltClient {
+    const apiBase = 'https://game.test/api/v2';
+    const manager = new SessionManager({
+      apiBase,
+      profile,
+      profileIsExplicit: true,
+      env: { XDG_CONFIG_HOME: configRoot },
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: `sess_${profile.toLowerCase()}`,
+            created_at: '2026-01-01T00:00:00.000Z',
+            expires_at: '2099-01-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    return new SpaceMoltClient({
+      config: {
+        apiBase,
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+        profile,
+        profileIsExplicit: true,
+      },
+      sessionStore: manager,
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: response({
+              structuredContent: { player: { id: `player_${profile.slice(-2)}` } },
+            }) as T,
+          };
+        },
+      },
+    });
+  }
+
+  test('parallel logins with similar explicit names persist isolated credentials', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-parallel-profiles-'));
+    const profiles = ['Arbiter47', 'Arbiter57', 'Arbiter67'];
+    try {
+      await Promise.all(
+        profiles.map((profile) =>
+          createExplicitClient(configRoot, profile).execute('login', {
+            username: profile,
+            password: `password_${profile.slice(-2)}`,
+          }),
+        ),
+      );
+      for (const profile of profiles) {
+        const suffix = profile.slice(-2);
+        const saved = JSON.parse(
+          fs.readFileSync(path.join(configRoot, 'spacemolt-cli', 'sessions', `${profile.toLowerCase()}.json`), 'utf-8'),
+        );
+        expect(saved).toMatchObject({
+          username: profile,
+          password: `password_${suffix}`,
+          player_id: `player_${suffix}`,
+        });
+      }
+      expect(getDefaultProfile(undefined, undefined, { XDG_CONFIG_HOME: configRoot })).toBeUndefined();
     } finally {
       fs.rmSync(configRoot, { recursive: true, force: true });
     }
