@@ -188,28 +188,36 @@ function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error;
 }
 
-function configLockOwnerIsAlive(lockPath: string): boolean | undefined {
+function removeStaleConfigLock(lockPath: string): boolean {
+  let observed: string;
   try {
-    const pid = Number.parseInt(fs.readFileSync(lockPath, 'utf-8').trim(), 10);
-    if (!Number.isSafeInteger(pid) || pid <= 0) return undefined;
+    observed = fs.readFileSync(lockPath, 'utf-8');
+  } catch (error) {
+    return isErrnoException(error) && error.code === 'ENOENT';
+  }
+
+  const pid = Number.parseInt(observed.trim(), 10);
+  let ownerAlive: boolean | undefined;
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    ownerAlive = undefined;
+  } else {
     try {
       process.kill(pid, 0);
-      return true;
+      ownerAlive = true;
     } catch (error) {
-      if (isErrnoException(error) && error.code === 'ESRCH') return false;
-      return true;
+      if (isErrnoException(error) && error.code === 'ESRCH') ownerAlive = false;
+      else ownerAlive = true;
     }
-  } catch {
-    return undefined;
   }
-}
 
-function removeStaleConfigLock(lockPath: string): boolean {
-  const ownerAlive = configLockOwnerIsAlive(lockPath);
   if (ownerAlive === true) return false;
   try {
     const oldEnough = Date.now() - fs.statSync(lockPath).mtimeMs >= CONFIG_LOCK_STALE_MS;
     if (ownerAlive === undefined && !oldEnough) return false;
+    // Re-check content still matches what we observed before unlink so we do not
+    // remove a lock another process has already reclaimed after our first read.
+    const still = fs.readFileSync(lockPath, 'utf-8');
+    if (still !== observed) return false;
     fs.unlinkSync(lockPath);
     return true;
   } catch (error) {
@@ -314,6 +322,7 @@ export function updateCliConfig(
   }
 }
 
+/** Replace entire config under lock; use `updateCliConfig` for field-preserving mutations. */
 export function saveCliConfig(config: CliConfig, homeDir?: string, platform?: string, env?: EnvLike): void {
   const configPath = getCliConfigPath(homeDir, platform, env);
   const parentDir = path.dirname(configPath);
