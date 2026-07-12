@@ -83,26 +83,38 @@ describe('SessionManager', () => {
     expect(manager.getSessionPath()).toBe(path.join(home, '.config', 'spacemolt-cli', 'sessions', 'arbogast.json'));
   });
 
-  test('session paths reuse a unique nearby saved profile name', async () => {
-    const home = fs.mkdtempSync(path.join(tempDir, 'profile-typo-'));
+  test('similar saved profile names never influence a requested profile path', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'profile-exact-'));
     const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
     const sessionsDir = path.join(home, '.config', 'spacemolt-cli', 'sessions');
-    const existingPath = path.join(sessionsDir, 'fuelrescue.json');
     fs.mkdirSync(sessionsDir, { recursive: true });
     fs.writeFileSync(
-      existingPath,
+      path.join(sessionsDir, 'arbiter67.json'),
       JSON.stringify({
-        id: 'sess_fuelrescue',
+        id: 'sess_arbiter67',
         created_at: '2026-01-01T00:00:00.000Z',
         expires_at: '2099-01-01T00:00:00.000Z',
       }),
     );
 
-    const manager = new SessionManager({ profile: 'fuelresue', env });
+    const manager = new SessionManager({ profile: 'Arbiter47', profileIsExplicit: true, env });
 
-    expect(manager.getSessionPath()).toBe(existingPath);
-    expect((await manager.loadSession())?.id).toBe('sess_fuelrescue');
-    expect(fs.existsSync(path.join(sessionsDir, 'fuelresue.json'))).toBe(false);
+    expect(manager.getSessionPath()).toBe(path.join(sessionsDir, 'arbiter47.json'));
+    expect(await manager.loadSession()).toBeNull();
+    await expect(manager.getSession()).rejects.toThrow('No saved session for profile "arbiter47"');
+  });
+
+  test('normalization does not case-match a legacy filename', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'profile-case-exact-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const sessionsDir = path.join(home, '.config', 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(path.join(sessionsDir, 'Arbiter47.json'), JSON.stringify({ id: 'legacy' }));
+
+    const manager = new SessionManager({ profile: 'ARBITER47', env });
+
+    expect(manager.getSessionPath()).toBe(path.join(sessionsDir, 'arbiter47.json'));
+    expect(await manager.loadSession()).toBeNull();
   });
 
   test('missing active and default profile produces an actionable error', async () => {
