@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.482.0",
+  "generatedAtGameserver": "v0.492.1",
   "blockingDivergenceSignatures": [
     "browse_ships|browse_ships|required-missing|base_id",
     "browse_ships|browse_ships|required-missing|count",
@@ -16,6 +16,7 @@
     "facility_list_detailed|facility_list|extra-in-fixture|construction",
     "facility_list_detailed|facility_list|extra-in-fixture|faction_facilities",
     "facility_list_detailed|facility_list|extra-in-fixture|faction_rent",
+    "facility_list_detailed|facility_list|extra-in-fixture|life_support",
     "facility_list_detailed|facility_list|extra-in-fixture|player_facilities",
     "facility_list_detailed|facility_list|extra-in-fixture|power",
     "facility_list_detailed|facility_list|extra-in-fixture|station_facilities",
@@ -57,6 +58,8 @@
     "faction_list|faction_list|required-missing|factions[0].secondary_color",
     "faction_list|faction_list|required-missing|factions[1].primary_color",
     "faction_list|faction_list|required-missing|factions[1].secondary_color",
+    "get_battle_status|get_battle_status|extra-in-fixture|participants[0].kind",
+    "get_battle_status|get_battle_status|extra-in-fixture|participants[1].kind",
     "get_cargo|get_cargo|extra-in-fixture|carried_ships[0].custom_name",
     "get_empire_info|get_empire_info|required-missing|empires[0].faction_income_tax_bps",
     "get_empire_info|get_empire_info|required-missing|empires[1].faction_income_tax_bps",

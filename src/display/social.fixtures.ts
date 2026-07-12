@@ -27,6 +27,16 @@ export const facilityListFixture = {
     battery_capacity: 600,
     efficiency: 0.85,
   },
+  life_support: {
+    supply: 40,
+    demand: 35,
+    plants: 2,
+    maintenance_cycle_ticks: 100,
+    maintenance: [
+      { item_id: 'oxygen', name: 'Oxygen', quantity_per_cycle: 100 },
+      { item_id: 'water_ice', name: 'Water Ice', quantity_per_cycle: 200 },
+    ],
+  },
   construction: {
     pending: [
       {
@@ -223,10 +233,19 @@ export const battleStatusFixture = {
     {
       player_id: 'player-1',
       username: 'Marlowe',
+      kind: 'player',
       side_id: 1,
       auto_pilot: false,
       stance: 'fire',
       target_id: 'pirate-1',
+    },
+    {
+      player_id: 'creature-1',
+      username: 'Pilot Whale',
+      kind: 'creature',
+      side_id: 2,
+      auto_pilot: true,
+      stance: 'fire',
     },
   ],
 };

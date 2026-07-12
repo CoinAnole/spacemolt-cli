@@ -5,6 +5,7 @@ import {
   emitLine,
   emitStationConstruction,
   emitStationFuelPricing,
+  emitStationLifeSupport,
   emitStationPower,
   finiteNumber,
   firstArray,
@@ -239,6 +240,7 @@ export const shipFormatters = [
         emitLine(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
       emitStationFuelPricing(r);
       emitStationPower(r.power);
+      emitStationLifeSupport(r.life_support);
 
       const condition = r.condition as Record<string, unknown> | undefined;
       if (condition && isRecord(condition)) {

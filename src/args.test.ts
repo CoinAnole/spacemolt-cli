@@ -971,8 +971,20 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['build_outpost', 'Aurora Cache']).payload).toEqual({
       name: 'Aurora Cache',
     });
-    expect(parseOk(['buy_ship_license', 'solarian']).payload).toEqual({
-      empire: 'solarian',
+    expect(parseOk(['buy_ship_license', 'solarian_frigate']).payload).toEqual({
+      ship_class: 'solarian_frigate',
+    });
+    expect(
+      convertPayloadTypes(
+        normalizeParsedPayload(
+          'commission_ship',
+          parseOk(['commission_ship', 'prospector', 'fund_from_faction=true']).payload,
+        ),
+        'commission_ship',
+      ),
+    ).toEqual({
+      id: 'prospector',
+      fund_from_faction: true,
     });
 
     expect(parseInternalOk(['station_info']).payload).toEqual({});
@@ -1011,6 +1023,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       ),
     ).toEqual({
       price: 3,
+    });
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_auto_buy_fuel', 'true']).payload,
+        'station_set_auto_buy_fuel',
+      ),
+    ).toEqual({
+      auto_buy_fuel: true,
     });
     expect(
       convertInternalPayloadTypes(

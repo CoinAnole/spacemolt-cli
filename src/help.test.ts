@@ -378,9 +378,7 @@ describe('help output branches', () => {
     expect(output).toContain(
       'storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
     );
-    expect(output).toContain(
-      'storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)',
-    );
+    expect(output).toContain('storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)');
     expect(output).toContain('jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison');
     expect(output).toContain('loot_wreck <wreck_id> <item_id> [quantity]');
     expect(output).not.toContain('salvage_wreck <wreck_id>');

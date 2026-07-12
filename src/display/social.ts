@@ -2,6 +2,7 @@ import {
   c,
   emitLine,
   emitStationConstruction,
+  emitStationLifeSupport,
   emitStationPower,
   firstArray,
   formatter,
@@ -221,6 +222,9 @@ function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[
     ['ID', ['player_id', 'id']],
     ['Side', ['side_id', 'side']],
   ];
+  if (hasAnyField(rows, ['kind'])) {
+    columns.push(['Kind', ['kind']]);
+  }
   if (hasAnyField(rows, ['ship_display', 'ship_name', 'ship_class'])) {
     columns.push(['Ship', ['ship_display', 'ship_name', 'ship_class']]);
   }
@@ -633,6 +637,7 @@ export const socialFormatters = [
 
       if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
       emitStationPower(r.power);
+      emitStationLifeSupport(r.life_support);
       emitStationConstruction(r.construction);
       for (const [title, rows] of groups) {
         if (!rows) continue;

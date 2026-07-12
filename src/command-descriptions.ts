@@ -16,7 +16,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   claim_insurance: 'View your active insurance policies',
   cloak: 'Toggle cloaking device',
   commission_quote: 'Get a cost estimate for commissioning a ship',
-  commission_ship: 'Commission a ship to be built at this shipyard',
+  commission_ship:
+    'Commission a ship to be built at this shipyard. Faction yards require fund_from_faction=true (ManageTreasury).',
   commission_status: 'Check the status of your ship commissions',
   complete_mission: 'Complete a mission and claim rewards',
   completed_missions: 'List all missions you have completed',

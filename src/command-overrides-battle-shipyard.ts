@@ -69,7 +69,9 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_salvage/sell',
   },
   commission_ship: {
-    usage: '<ship_class> [provide_materials=true/false]',
+    usage: '<ship_class> [provide_materials=true/false] [fund_from_faction=true/false]',
+    description:
+      'Commission a ship at this shipyard. At a faction shipyard use fund_from_faction=true (ManageTreasury): materials come from faction storage and the treasury pays labor. At empire/NPC yards, provide_materials=true supplies materials from cargo/storage instead of paying full credits.',
     category: 'Shipyard',
     apiRoute: 'POST /api/v2/spacemolt_ship/commission_ship',
     positionals: ['ship_class', 'provide_materials'],

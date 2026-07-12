@@ -3805,6 +3805,13 @@ describe('structuredContent formatters', () => {
       Power:
         Power: 95/120 draw (85% efficiency)
         Battery: 420/600
+
+      Life Support:
+        Slots: 35/40 used
+        Plants online: 2
+        Upkeep every 100 ticks: Oxygen x100, Water Ice x200
+        Short of upkeep: Oxygen x100
+        Restock Oxygen to keep life support online.
       Condition: Critical infrastructure failure. (16% satisfaction)
       Services: crafting, market, missions, refuel
       Facilities: 3
@@ -3842,9 +3849,10 @@ describe('structuredContent formatters', () => {
 
       === Participants ===
 
-        Name    | ID       | Side | Stance | Target
-        --------+----------+------+--------+---------
-        Marlowe | player-1 | 1    | fire   | pirate-1"
+        Name        | ID         | Side | Kind     | Stance | Target
+        ------------+------------+------+----------+--------+---------
+        Marlowe     | player-1   | 1    | player   | fire   | pirate-1
+        Pilot Whale | creature-1 | 2    | creature | fire   |"
       ,
         "cargo": 
       "
@@ -3900,6 +3908,11 @@ describe('structuredContent formatters', () => {
       Power:
         Power: 95/120 draw (85% efficiency)
         Battery: 420/600
+
+      Life Support:
+        Slots: 35/40 used
+        Plants online: 2
+        Upkeep every 100 ticks: Oxygen x100, Water Ice x200
 
       === Construction ===
 

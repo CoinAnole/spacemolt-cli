@@ -508,6 +508,27 @@ describe('command metadata', () => {
     expect(help).toContain('Transit Lounge');
   });
 
+  test('buy_ship_license and commission_ship document per-design licensing and faction funding', () => {
+    const license = BUNDLED_COMMAND_REGISTRY.commands.buy_ship_license;
+    expect(license?.usage).toContain('ship_class');
+    expect(license?.description).toContain('specific ship design');
+    expect(license?.required).toEqual(['ship_class']);
+    expect(license?.schema?.ship_class?.type).toBe('string');
+    expect(license?.schema?.empire).toBeUndefined();
+
+    const commission = BUNDLED_COMMAND_REGISTRY.commands.commission_ship;
+    expect(commission?.usage).toContain('fund_from_faction');
+    expect(commission?.description).toContain('fund_from_faction');
+    expect(commission?.schema?.fund_from_faction?.type).toBe('boolean');
+
+    const licenseHelp = captureHelp('buy_ship_license');
+    expect(licenseHelp).toContain('ship_class');
+    expect(licenseHelp).toContain('specific ship design');
+
+    const commissionHelp = captureHelp('commission_ship');
+    expect(commissionHelp).toContain('fund_from_faction');
+  });
+
   test('craft help documents queued station-storage production', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.args).toEqual(['recipe_id', 'quantity']);

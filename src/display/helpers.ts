@@ -257,6 +257,51 @@ export function emitStationPower(power: unknown): boolean {
   return true;
 }
 
+function summarizeLifeSupportMaintenance(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts = value
+    .filter(isRecord)
+    .map((item) => {
+      const quantity = item.quantity_per_cycle ?? item.quantity;
+      const name = item.name ?? item.item_id ?? 'item';
+      return `${name} x${formatDisplayNumber(quantity ?? '?')}`;
+    })
+    .filter(Boolean);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+export function emitStationLifeSupport(lifeSupport: unknown): boolean {
+  if (!isRecord(lifeSupport)) return false;
+  const supply = lifeSupport.supply;
+  const demand = lifeSupport.demand;
+  const plants = lifeSupport.plants;
+  const cycleTicks = lifeSupport.maintenance_cycle_ticks;
+  const maintenance = summarizeLifeSupportMaintenance(lifeSupport.maintenance);
+  const starved = summarizeLifeSupportMaintenance(lifeSupport.starved);
+  const remediation =
+    typeof lifeSupport.remediation === 'string' && lifeSupport.remediation.trim() ? lifeSupport.remediation : undefined;
+  const hasSlots = supply !== undefined || demand !== undefined;
+  if (!hasSlots && plants === undefined && !maintenance && !starved && !remediation) return false;
+
+  emitLine('');
+  emitLine(`${c.bright}Life Support:${c.reset}`);
+  if (hasSlots) {
+    const demandText = demand === undefined ? '?' : formatDisplayNumber(demand);
+    const supplyText = supply === undefined ? '?' : formatDisplayNumber(supply);
+    emitLine(`  Slots: ${demandText}/${supplyText} used`);
+  }
+  if (plants !== undefined) emitLine(`  Plants online: ${formatDisplayNumber(plants)}`);
+  if (maintenance) {
+    const cadence = cycleTicks === undefined ? '' : ` every ${formatDisplayNumber(cycleTicks)} ticks`;
+    emitLine(`  Upkeep${cadence}: ${maintenance}`);
+  } else if (cycleTicks !== undefined) {
+    emitLine(`  Upkeep every ${formatDisplayNumber(cycleTicks)} ticks`);
+  }
+  if (starved) emitLine(`  Short of upkeep: ${starved}`);
+  if (remediation) emitLine(`  ${remediation}`);
+  return true;
+}
+
 export function emitStationFuelPricing(result: Record<string, unknown>, indent = ''): boolean {
   const fuelPrice = result.fuel_price;
   const fuelTax = result.fuel_tax_per_unit;

@@ -5,6 +5,11 @@ Power:
   Power: 95/120 draw (85% efficiency)
   Battery: 420/600
 
+Life Support:
+  Slots: 35/40 used
+  Plants online: 2
+  Upkeep every 100 ticks: Oxygen x100, Water Ice x200
+
 === Construction ===
 
 === Pending ===
