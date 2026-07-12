@@ -4,7 +4,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   register: {
     usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)',
     description: 'Create a player using a dashboard registration code.',
-    example: 'spacemolt register myname solarian YOUR_REGISTRATION_CODE',
+    example: 'spacemolt register myname solarian YOUR_REGISTRATION_CODE --profile myname',
     seeAlso: ['login', 'get_status'],
     category: 'Authentication',
     apiRoute: 'POST /api/v2/spacemolt_auth/register',
@@ -13,7 +13,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   login: {
     usage: '<username> <password>',
     description: 'Authenticate and save credentials in the local session file.',
-    example: 'spacemolt login myname <password>',
+    example: 'spacemolt login myname <password> --profile myname',
     seeAlso: ['session', 'get_status'],
     category: 'Authentication',
     apiRoute: 'POST /api/v2/spacemolt_auth/login',

@@ -430,6 +430,13 @@ describe('command metadata', () => {
     }
   });
 
+  test('authentication examples show direct named profile creation', () => {
+    expect(BUNDLED_COMMAND_REGISTRY.commands.register?.example).toBe(
+      'spacemolt register myname solarian YOUR_REGISTRATION_CODE --profile myname',
+    );
+    expect(BUNDLED_COMMAND_REGISTRY.commands.login?.example).toBe('spacemolt login myname <password> --profile myname');
+  });
+
   test('repair help does not advertise unsupported target positional syntax', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.repair;
     expect(config?.description).toBe('Repair hull damage using station services, repair kits, or repair equipment.');

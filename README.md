@@ -111,6 +111,16 @@ bun run src/client.ts --profile marlowe get_status
 
 Use `SPACEMOLT_PROFILE=marlowe` when a script should reuse one named session without passing `--profile`.
 
+Register or log in directly into a named profile so concurrent processes do not share one default session:
+
+```bash
+bun run src/client.ts register Arbiter47 voidborn YOUR_REGISTRATION_CODE --profile arbiter47
+bun run src/client.ts login Arbiter47 '<password>' --profile arbiter47
+bun run src/client.ts get_status --profile arbiter47
+```
+
+Profile names are lowercase-normalized and otherwise exact: `arbiter47` and `Arbiter47` select the same profile file, but `arbiter-47` does not. Different explicit profiles may authenticate and run commands in parallel. Concurrent `profile default NAME` plus unqualified `login` sequences are not isolated—replace those with per-process `--profile` or `SPACEMOLT_PROFILE` selection.
+
 ## Usage
 
 Commands accept named arguments:
