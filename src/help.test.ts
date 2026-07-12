@@ -378,6 +378,9 @@ describe('help output branches', () => {
     expect(output).toContain(
       'storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
     );
+    expect(output).toContain(
+      'storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)',
+    );
     expect(output).toContain('jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison');
     expect(output).toContain('loot_wreck <wreck_id> <item_id> [quantity]');
     expect(output).not.toContain('salvage_wreck <wreck_id>');
@@ -466,6 +469,8 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('gift items/credits/ships to players');
     expect(output).toContain('source=storage to pull items from personal storage');
+    expect(output).toContain('spacemolt storage withdraw <item_id> <quantity>');
+    expect(output).toContain('personal storage to cargo; omit source and target');
     expect(output).toContain('spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"');
     expect(output).toContain('or a player name/ID (gift)');
   });

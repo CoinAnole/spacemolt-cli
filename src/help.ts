@@ -1140,7 +1140,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   ${c.cyan}Storage:${c.reset}
     storage view [station_id] [target=self|faction] [--items item_id,item_id] [--search text]
     storage deposit [item_id] [qty] [items=JSON] [target=self|faction|player] [source=cargo|storage|faction]
-    storage withdraw [item_id] [qty] [items=JSON] [source=storage|faction] [target=self|faction]
+    storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)
+    storage withdraw [item_id] [qty] [items=JSON] [source=faction] [target=self|faction]  Direct transfers
     storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]
     storage loot [wreck_id] [item_id] [quantity]
     storage jettison [item_id] [qty] [items=JSON]

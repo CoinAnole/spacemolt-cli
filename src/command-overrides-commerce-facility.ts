@@ -1,7 +1,7 @@
 import type { CommandOverride } from './commands';
 
 const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
-  "Optional source for deposit/withdraw: 'cargo' (default - your ship's cargo hold or wallet), 'storage' (personal storage; use with target=faction or a player name to transfer directly, bypassing cargo), or 'faction' (faction storage; use with target=self to transfer faction->personal, or with source=faction target=faction to move items between faction compartments - both require manage_treasury).";
+  "Optional source for direct transfers. For the common paths, omit source and target: deposit moves cargo->personal storage, while withdraw moves personal storage->cargo. Use 'storage' with target=faction or a player name to transfer from personal storage, or 'faction' with target=self to transfer faction->personal; use source=faction target=faction to move items between faction compartments (both faction withdrawals require manage_treasury).";
 
 const STORAGE_BUCKET_DESCRIPTION =
   'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. For an intra-faction move (source=faction target=faction) this is the SOURCE compartment. Empty means the main store. See bucket names in action=view target=faction.';
@@ -87,7 +87,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
     description:
-      'View or move station/faction storage, gift items/credits/ships to players, loot wrecks, or jettison. Gift with deposit target=<player>; use source=storage to pull items from personal storage instead of cargo (default source=cargo).',
+      'View or move station/faction storage, gift items/credits/ships to players, loot wrecks, or jettison. Plain spacemolt storage withdraw <item_id> <quantity> moves personal storage to cargo; omit source and target. Gift with deposit target=<player>; use source=storage to pull items from personal storage instead of cargo.',
     example: 'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
     discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
     seeAlso: ['get_cargo', 'loot_wreck', 'jettison'],
