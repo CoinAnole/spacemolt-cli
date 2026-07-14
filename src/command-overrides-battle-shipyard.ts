@@ -40,6 +40,32 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/status',
   },
+  get_battle_summary: {
+    usage: '<battle_id>',
+    description: 'View the aggregate result of a battle by ID (active or completed).',
+    example: 'spacemolt get_battle_summary <battle_id>',
+    discoverWith: ['get_battle_status', 'get_battle_log'],
+    seeAlso: ['get_battle_log', 'get_battle_status'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_battle/summary',
+    positionals: ['battle_id'],
+    aliases: {
+      battle_id: 'id',
+    },
+  },
+  get_battle_log: {
+    usage: '<battle_id> [tick_start] [limit] [tick_end]',
+    description: 'View the tick-by-tick combat replay of a battle by ID.',
+    example: 'spacemolt get_battle_log <battle_id>',
+    discoverWith: ['get_battle_summary', 'get_battle_status'],
+    seeAlso: ['get_battle_summary', 'get_battle_status'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_battle/log',
+    positionals: ['battle_id', 'tick_start', 'limit', 'tick_end'],
+    aliases: {
+      battle_id: 'id',
+    },
+  },
   reload: {
     usage: '<weapon_instance_id> <ammo_item_id>',
     category: 'Battle',
@@ -166,10 +192,10 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   buy_insurance: {
-    usage: '<ticks>  (purchase ship insurance)',
+    usage: '(purchase insurance at your current risk-based rate)',
+    description: 'Purchase ship insurance at the current quote rate. Use get_insurance_quote first.',
     category: 'Insurance',
     apiRoute: 'POST /api/v2/spacemolt_salvage/insure',
-    positionals: ['ticks'],
   },
   get_insurance_quote: {
     usage: '(get risk-based insurance quote)',

@@ -166,6 +166,26 @@ describe('client.ts source integrity', () => {
     expect(COMMANDS.faction_facility_owned?.args).toEqual([]);
   });
 
+  test('battle summary/log and facility repair map the v2 routes', () => {
+    expect(COMMANDS.get_battle_summary?.route).toEqual({
+      tool: 'spacemolt_battle',
+      action: 'summary',
+      method: 'POST',
+    });
+    expect(COMMANDS.get_battle_log?.route).toEqual({
+      tool: 'spacemolt_battle',
+      action: 'log',
+      method: 'POST',
+    });
+    expect(COMMANDS.facility_repair?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'repair',
+      method: 'POST',
+    });
+    expect(COMMANDS.get_battle_summary?.args).toEqual(['battle_id']);
+    expect(COMMANDS.facility_repair?.args).toEqual(['facility_id']);
+  });
+
   test('local AI usability helpers are present', () => {
     expect(suggestCommands('trvel')).toContain('travel');
     expect(showCommandHelp('travel', { out() {}, err() {} })).toBe(true);

@@ -1394,7 +1394,7 @@ describe('command metadata', () => {
   });
 
   test('schema validation catches invalid integers', () => {
-    const errors = validatePayloadAgainstSchema('buy_insurance', { ticks: 'abc' });
+    const errors = validatePayloadAgainstSchema('get_battle_log', { id: 'battle-1', limit: 'abc' });
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]?.code).toBe('invalid_integer');
   });

@@ -1,0 +1,1 @@
+{"message":"Active insurance policies.","policies":[{"policy_id":"policy-1","ship_class":"prospector","coverage":85000,"premium":1200,"risk_score":0.014,"expires_at":"2026-07-21T12:00:00Z","self_destruct_excluded":true,"risk_factors":[{"name":"Recent deaths","multiplier":1.4,"detail":"One loss in the last 7 days"}]}]}

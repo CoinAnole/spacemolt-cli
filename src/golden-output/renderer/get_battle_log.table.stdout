@@ -1,0 +1,13 @@
+
+=== Battle Log ===
+ID: battle-42
+Status: completed
+Total Ticks: 14
+Has More: no
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Ended
+  -----+---------+------+--------+-------+------+-------+------
+  0    | 1       | 1    | 420    |       |      |       |      
+  1    | 2       | 1    | 380    | 1     |      | 1     | yes  

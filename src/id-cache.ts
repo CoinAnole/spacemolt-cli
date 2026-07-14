@@ -114,6 +114,7 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   tow_wreck: { wreck: ['wreck_id', 'id'] },
   loot_wreck: { wreck: ['wreck_id', 'id'], item: ['item_id'] },
   facility_upgrade: { facility: ['facility_id'] },
+  facility_repair: { facility: ['facility_id'] },
   facility_job_add: { facility: ['facility_id'] },
   facility_job_list: { facility: ['facility_id'] },
   facility_set_output_price: { facility: ['facility_id'] },

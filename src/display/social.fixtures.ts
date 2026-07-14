@@ -250,6 +250,85 @@ export const battleStatusFixture = {
   ],
 };
 
+export const battleSummaryFixture = {
+  battle_id: 'battle-42',
+  system_id: 'sol',
+  system_name: 'Sol',
+  status: 'completed',
+  category: 'pvp',
+  start_tick: 900100,
+  duration_ticks: 14,
+  participant_count: 3,
+  total_damage: 8420,
+  ships_destroyed: 1,
+  outcome: 'side_1_victory',
+  winning_side: 1,
+  player_names: ['Marlowe', 'Ibis'],
+  destroyed_names: ['Rust Bucket'],
+  top_damage: { username: 'Marlowe', damage: 5100 },
+  sides: [
+    {
+      side_id: 1,
+      faction_id: 'faction-smc',
+      faction_tag: 'SMC',
+      participants: ['Marlowe', 'Ibis'],
+    },
+    {
+      side_id: 2,
+      participants: ['Corsair-7'],
+    },
+  ],
+};
+
+export const battleLogFixture = {
+  battle_id: 'battle-42',
+  status: 'completed',
+  total_ticks: 14,
+  has_more: false,
+  entries: [
+    {
+      tick: 0,
+      attacks: [
+        {
+          attacker_id: 'player-1',
+          target_id: 'pirate-1',
+          hit_success: true,
+          final_damage: 420,
+          hull_damage: 120,
+          shield_damage: 300,
+        },
+      ],
+      burns: [],
+      flee: [],
+    },
+    {
+      tick: 1,
+      attacks: [
+        {
+          attacker_id: 'pirate-1',
+          target_id: 'player-1',
+          hit_success: false,
+          final_damage: 0,
+        },
+        {
+          attacker_id: 'player-1',
+          target_id: 'pirate-1',
+          hit_success: true,
+          final_damage: 380,
+        },
+      ],
+      burns: [{ target_id: 'pirate-1', damage: 20, ticks_remaining: 2 }],
+      flee: [],
+      kills: [{ victim_id: 'pirate-1', killer_id: 'player-1' }],
+      battle_ended: {
+        outcome: 'side_1_victory',
+        winning_side: 1,
+        total_damage: 8420,
+      },
+    },
+  ],
+};
+
 export const captainLogGetFixture = {
   index: 0,
   created_at: '2026-05-29T14:45:00Z',
@@ -447,6 +526,8 @@ export const socialHighValueFixtures = {
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
+  get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
+  get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
   captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },

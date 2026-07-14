@@ -226,6 +226,29 @@ function summarizePowerFuelInputs(value: unknown): string | undefined {
   return parts.length ? parts.join(', ') : undefined;
 }
 
+/** Station combat/defence stats from get_base (hull/shield/armor/guns). Replaces legacy defense_level. */
+export function emitStationDefences(base: unknown, indent = ''): boolean {
+  if (!isRecord(base)) return false;
+  const hasHull = base.hull !== undefined || base.max_hull !== undefined;
+  const hasShield = base.shield !== undefined || base.max_shield !== undefined;
+  const hasArmor = base.armor !== undefined;
+  const hasGuns = base.weapon_dps !== undefined || base.weapon_reach !== undefined;
+  const wrecked = base.wrecked === true;
+  if (!hasHull && !hasShield && !hasArmor && !hasGuns && !wrecked) return false;
+
+  if (wrecked) emitLine(`${indent}${c.bright}Wrecked${c.reset}: facilities offline until repaired`);
+  if (hasHull) emitLine(`${indent}Hull: ${base.hull ?? '?'}/${base.max_hull ?? '?'}`);
+  if (hasShield) emitLine(`${indent}Shield: ${base.shield ?? '?'}/${base.max_shield ?? '?'}`);
+  if (hasArmor) emitLine(`${indent}Armor: ${base.armor ?? 0}`);
+  if (hasGuns) {
+    const dps = base.weapon_dps ?? '?';
+    const reach = base.weapon_reach;
+    const reachText = reach === undefined ? '' : ` (reach ${reach})`;
+    emitLine(`${indent}Guns: ${dps} DPS${reachText}`);
+  }
+  return true;
+}
+
 export function emitStationPower(power: unknown): boolean {
   if (!isRecord(power)) return false;
   const supply = power.supply;

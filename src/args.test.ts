@@ -102,7 +102,11 @@ describe('convertPayloadTypes', () => {
   });
 
   test('handles ticks and amount as numeric', () => {
-    expect(convertPayloadTypes({ ticks: '100' }, 'buy_insurance').ticks).toBe(100);
+    // buy_insurance is no-arg (risk-based purchase); use battle log integers for ticks-like fields
+    expect(convertPayloadTypes({ tick_start: '10', limit: '25' }, 'get_battle_log')).toEqual({
+      tick_start: 10,
+      limit: 25,
+    });
     expect(convertInternalPayloadTypes({ quantity: '2500' }, 'faction_deposit_credits').quantity).toBe(2500);
   });
 
@@ -1404,6 +1408,28 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       weapon_instance_id: 'weapon_1',
       ammo_item_id: 'ammo_light',
     });
+    expect(parseOk(['get_battle_summary', 'battle-1']).payload.battle_id).toBe('battle-1');
+    expect(parseOk(['get_battle_log', 'battle-1']).payload.battle_id).toBe('battle-1');
+    expect(parseOk(['get_battle_log', 'battle-1', '10', '25']).payload).toEqual({
+      battle_id: 'battle-1',
+      tick_start: '10',
+      limit: '25',
+    });
+  });
+
+  test('battle summary and log normalize battle_id to id and convert integers', () => {
+    expect(normalizeParsedPayload('get_battle_summary', { battle_id: 'battle-1' })).toEqual({ id: 'battle-1' });
+    const normalized = normalizeParsedPayload('get_battle_log', {
+      battle_id: 'battle-1',
+      tick_start: '5',
+      limit: '50',
+    });
+    expect(normalized).toEqual({ id: 'battle-1', tick_start: '5', limit: '50' });
+    expect(convertPayloadTypes(normalized, 'get_battle_log')).toEqual({
+      id: 'battle-1',
+      tick_start: 5,
+      limit: 50,
+    });
   });
 
   test('new explicit fleet and facility commands parse positional payloads', () => {
@@ -1411,6 +1437,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseInternalOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
     expect(parseInternalOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseInternalOk(['facility_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
+    expect(parseInternalOk(['facility_repair', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseInternalOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseInternalOk(['faction_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseInternalOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');

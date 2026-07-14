@@ -244,6 +244,63 @@ export const emptyCommissionStatusFixture = {
   count: 0,
 };
 
+export const commissionQuoteFixture = {
+  message: 'Commission quote ready.',
+  ship_class: 'prospector',
+  ship_name: 'Lucky Strike',
+  can_commission: true,
+  credits_only_total: 125000,
+  provide_materials_total: 45000,
+  credits_only_available: true,
+  can_afford_credits_only: true,
+  can_afford_provide_materials: true,
+  material_cost: 70000,
+  labor_cost: 40000,
+  yard_margin: 15000,
+  build_time: 48,
+  player_credits: 200000,
+  shipyard_tier_here: 2,
+  shipyard_tier_required: 1,
+  blockers: [],
+  build_materials: [
+    { item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, have: 12 },
+    { item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, have: 20 },
+  ],
+};
+
+export const insuranceQuoteFixture = {
+  message: 'Quote calculated from galaxy-wide loss statistics.',
+  notice: 'Recent deaths dominate pricing.',
+  quote: {
+    fitted_value: 85000,
+    coverage: 85000,
+    premium: 1200,
+    risk_score: 0.014,
+    refused: false,
+    expires_in: '7 days',
+    factors: [
+      { name: 'Recent deaths', multiplier: 1.4, detail: 'One loss in the last 7 days' },
+      { name: 'Market adjustment', multiplier: 0.95, detail: 'Galaxy loss rate is slightly below baseline' },
+    ],
+  },
+};
+
+export const viewInsuranceFixture = {
+  message: 'Active insurance policies.',
+  policies: [
+    {
+      policy_id: 'policy-1',
+      ship_class: 'prospector',
+      coverage: 85000,
+      premium: 1200,
+      risk_score: 0.014,
+      expires_at: '2026-07-21T12:00:00Z',
+      self_destruct_excluded: true,
+      risk_factors: [{ name: 'Recent deaths', multiplier: 1.4, detail: 'One loss in the last 7 days' }],
+    },
+  ],
+};
+
 export const intelFixture = {
   entries: [
     {
@@ -366,6 +423,9 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
+  commission_quote: { command: 'commission_quote', fixture: commissionQuoteFixture },
+  get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
+  view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
   storage_view: {
     command: 'storage',
     fixture: { ...storageFixture, gifts: [], messages: [] },

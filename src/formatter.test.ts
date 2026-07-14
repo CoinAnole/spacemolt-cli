@@ -3335,11 +3335,16 @@ describe('structuredContent formatters', () => {
         name: 'Earth Station',
         poi_id: 'earth_station',
         empire: 'solarian',
-        defense_level: 100,
+        armor: 200,
         fuel: 1200,
+        hull: 9000,
         max_fuel: 2400,
-        has_drones: true,
+        max_hull: 10000,
+        max_shield: 4000,
         public_access: true,
+        shield: 3500,
+        weapon_dps: 80,
+        weapon_reach: 1,
       },
       services: ['market', 'storage'],
       condition: {
@@ -3383,6 +3388,10 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
+    expect(stdout).toContain('Hull: 9000/10000');
+    expect(stdout).toContain('Shield: 3500/4000');
+    expect(stdout).toContain('Armor: 200');
+    expect(stdout).toContain('Guns: 80 DPS (reach 1)');
     expect(stdout).toContain('Fuel Price: 20 credits');
     expect(stdout).toContain('Fuel Tax: 6 credits/unit');
     expect(stdout).toContain('All-in Refuel Price: 26 credits/unit');
@@ -3393,6 +3402,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Construction ===');
     expect(stdout).toContain('Life Support Mk III');
     expect(stdout).toContain('4 missing');
+    expect(stdout).not.toContain('Defense:');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -3424,9 +3434,15 @@ describe('structuredContent formatters', () => {
         id: 'grand_exchange_station',
         name: 'Grand Exchange Station',
         empire: 'nebula',
-        defense_level: 100,
+        armor: 150,
         fuel: 20920,
+        hull: 5000,
         max_fuel: 0,
+        max_hull: 5000,
+        max_shield: 2000,
+        shield: 2000,
+        weapon_dps: 0,
+        weapon_reach: 0,
       },
       fuel_price: 20,
       fuel_price_all_in: 23,
@@ -3435,6 +3451,8 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
+    expect(stdout).toContain('Hull: 5000/5000');
+    expect(stdout).toContain('Guns: 0 DPS (reach 0)');
     expect(stdout).toContain('Fuel: 20920/0');
     expect(stdout).toContain('Fuel Price: 20 credits');
     expect(stdout).toContain('Fuel Tax: 3 credits/unit');
@@ -3798,7 +3816,10 @@ describe('structuredContent formatters', () => {
       ID: nova_terra_central
       POI: nova_terra_central
       Empire: solarian
-      Defense: 55
+      Hull: 8000/10000
+      Shield: 2500/3000
+      Armor: 400
+      Guns: 120 DPS (reach 2)
       Fuel: 290750/0
       Fuel Price: 6 credits
 

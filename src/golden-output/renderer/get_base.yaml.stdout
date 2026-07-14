@@ -1,6 +1,6 @@
 
 base:
-  defense_level: 55
+  armor: 400
   description: "A busy trade station."
   empire: solarian
   facilities:
@@ -8,12 +8,18 @@ base:
     - trade_nexus
     - fleet_yards
   fuel: 290750
-  has_drones: true
+  hull: 8000
   id: nova_terra_central
   max_fuel: 0
+  max_hull: 10000
+  max_shield: 3000
   name: "Nova Terra Central"
   poi_id: nova_terra_central
   public_access: true
+  shield: 2500
+  weapon_dps: 120
+  weapon_reach: 2
+  wrecked: false
 condition:
   condition: critical
   condition_text: "Critical infrastructure failure."

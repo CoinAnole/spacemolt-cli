@@ -1,0 +1,15 @@
+
+=== Insurance Policies ===
+Active insurance policies.
+
+=== Policies ===
+
+  Ship       | Coverage | Premium | Risk  | Expires              | ID      
+  -----------+----------+---------+-------+----------------------+---------
+  prospector | 85000    | 1200    | 0.014 | 2026-07-21T12:00:00Z | policy-1
+
+=== Risk Factors (policy-1) ===
+
+  Factor        | Multiplier | Detail                     
+  --------------+------------+----------------------------
+  Recent deaths | 1.4        | One loss in the last 7 days

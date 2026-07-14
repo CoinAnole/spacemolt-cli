@@ -1033,6 +1033,8 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_tax_estimate    Preview taxes owed
   get_notifications   Poll queued game events
   get_battle_status   Current battle state
+  get_battle_summary  Aggregate battle result by ID
+  get_battle_log      Tick-by-tick battle replay by ID
   list_drones         Drones in your ship bay and deployed nearby
   fleet status        Current fleet membership and members
   facility list       Facilities at your current base
@@ -1069,6 +1071,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     battle_retreat            Retreat from battle
     battle_stance <stance>    Set stance (fire/evade/brace/flee)
     battle_target <target>    Focus a battle target
+    get_battle_summary <id>   Aggregate battle result by ID
+    get_battle_log <id>       Tick-by-tick battle replay by ID
     reload <weapon> <ammo>    Reload weapon with ammo
 
   ${c.cyan}Drones:${c.reset}
@@ -1097,7 +1101,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     cancel_ship_listing <id>  Cancel your ship listing
 
   ${c.cyan}Insurance:${c.reset}
-    buy_insurance <ticks>     Purchase ship insurance
+    buy_insurance             Purchase ship insurance at quote rate
     get_insurance_quote       Get insurance pricing
     claim_insurance           File insurance claim
     view_insurance            View active policies
@@ -1112,6 +1116,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     facility owned            List your facilities across all stations
     facility types [category]  Browse facility types (use category=faction, infrastructure, etc.)
     facility build <type>     Build a facility
+    facility repair <id>      Repair a damaged facility
     facility upgrade <type>   Upgrade a player facility
     facility job_add <facility> <recipe> <qty>  Queue production work
     facility job_list <facility>               List facility production jobs

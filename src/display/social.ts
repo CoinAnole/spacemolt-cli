@@ -792,4 +792,109 @@ export const socialFormatters = [
     },
     { commands: ['get_battle_status'] },
   ),
+
+  // Battle summary (any battle by ID)
+  formatter(
+    (r) => {
+      if (r.battle_id === undefined && r.outcome === undefined && r.total_damage === undefined) return false;
+      if (!Array.isArray(r.sides) && r.participant_count === undefined && !Array.isArray(r.player_names)) {
+        return false;
+      }
+
+      emitLine(`\n${c.bright}=== Battle Summary ===${c.reset}`);
+      emitOptionalLine('ID', r.battle_id);
+      if (r.system_name || r.system_id) {
+        const system = r.system_name
+          ? r.system_id
+            ? `${r.system_name} (${r.system_id})`
+            : r.system_name
+          : r.system_id;
+        emitOptionalLine('System', system);
+      }
+      emitOptionalLine('Status', r.status);
+      emitOptionalLine('Category', r.category);
+      emitOptionalLine('Outcome', r.outcome);
+      emitOptionalLine('Winning Side', r.winning_side);
+      emitOptionalLine('Start Tick', r.start_tick);
+      emitOptionalLine('Duration', r.duration_ticks === undefined ? undefined : `${r.duration_ticks} ticks`);
+      emitOptionalLine('Participants', r.participant_count);
+      emitOptionalLine('Total Damage', r.total_damage);
+      emitOptionalLine('Ships Destroyed', r.ships_destroyed);
+      if (Array.isArray(r.player_names) && r.player_names.length) {
+        emitLine(`Players: ${r.player_names.join(', ')}`);
+      }
+      if (Array.isArray(r.destroyed_names) && r.destroyed_names.length) {
+        emitLine(`Destroyed: ${r.destroyed_names.join(', ')}`);
+      }
+      if (isRecord(r.top_damage)) {
+        emitLine(`Top Damage: ${r.top_damage.username ?? '?'} (${r.top_damage.damage ?? '?'})`);
+      }
+      const sides = firstArray(r, ['sides']);
+      if (sides) {
+        const rows = sides.map((side) => ({
+          ...side,
+          participants_display: Array.isArray(side.participants) ? side.participants.join(', ') : side.participants,
+        }));
+        printCompactTable('Sides', rows, [
+          ['Side', ['side_id']],
+          ['Faction', ['faction_tag', 'faction_id']],
+          ['Participants', ['participants_display', 'participants']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['get_battle_summary'] },
+  ),
+
+  // Battle log (tick-by-tick compact replay)
+  formatter(
+    (r) => {
+      const entries = firstArray(r, ['entries']);
+      if (!entries && r.total_ticks === undefined && r.has_more === undefined) return false;
+      if (r.battle_id === undefined && !entries) return false;
+
+      emitLine(`\n${c.bright}=== Battle Log ===${c.reset}`);
+      emitOptionalLine('ID', r.battle_id);
+      emitOptionalLine('Status', r.status);
+      emitOptionalLine('Total Ticks', r.total_ticks);
+      if (r.has_more !== undefined) emitLine(`Has More: ${formatYesNo(r.has_more) ?? r.has_more}`);
+
+      if (entries) {
+        const rows = entries.map((entry, index) => {
+          const attacks = Array.isArray(entry.attacks) ? entry.attacks.filter(isRecord) : [];
+          const totalDamage = attacks.reduce((sum, attack) => {
+            const dmg = typeof attack.final_damage === 'number' ? attack.final_damage : 0;
+            return sum + dmg;
+          }, 0);
+          const hits = attacks.filter((attack) => attack.hit_success === true).length;
+          const burns = Array.isArray(entry.burns) ? entry.burns.length : 0;
+          const flees = Array.isArray(entry.flee) ? entry.flee.length : 0;
+          const kills = Array.isArray(entry.kills) ? entry.kills.length : 0;
+          const ended = isRecord(entry.battle_ended);
+          return {
+            tick: entry.tick ?? entry.battle_tick ?? index,
+            attacks: attacks.length,
+            hits,
+            damage: totalDamage || undefined,
+            burns: burns || undefined,
+            flee: flees || undefined,
+            kills: kills || undefined,
+            ended: ended ? 'yes' : undefined,
+          };
+        });
+        printCompactTable('Ticks', rows, [
+          ['Tick', ['tick']],
+          ['Attacks', ['attacks']],
+          ['Hits', ['hits']],
+          ['Damage', ['damage']],
+          ['Burns', ['burns']],
+          ['Flee', ['flee']],
+          ['Kills', ['kills']],
+          ['Ended', ['ended']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['get_battle_log'] },
+  ),
 ];

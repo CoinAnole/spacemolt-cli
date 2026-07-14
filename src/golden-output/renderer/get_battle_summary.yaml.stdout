@@ -1,0 +1,28 @@
+
+battle_id: "battle-42"
+system_id: sol
+system_name: Sol
+status: completed
+category: pvp
+start_tick: 900100
+duration_ticks: 14
+participant_count: 3
+total_damage: 8420
+ships_destroyed: 1
+outcome: side_1_victory
+winning_side: 1
+player_names:
+  - Marlowe
+  - Ibis
+destroyed_names:
+  - "Rust Bucket"
+top_damage:
+  username: Marlowe
+  damage: 5100
+sides:
+  - side_id: 1
+    faction_id: "faction-smc"
+    faction_tag: SMC
+    participants: [Marlowe, Ibis]
+  - side_id: 2
+    participants: ["Corsair-7"]

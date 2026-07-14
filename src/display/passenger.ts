@@ -158,6 +158,7 @@ export const passengerFormatters = [
       emitLine(`\n${c.bright}=== Passengers Aboard ===${c.reset}`);
       const berths = berthSummary(r);
       if (berths) emitLine(`${c.dim}${berths}${c.reset}`);
+      if (hasValue(r.onboard_service)) emitLine(`Onboard service: ${r.onboard_service}`);
       if (rows.length === 0) {
         emitLine('No passengers aboard.');
         return true;

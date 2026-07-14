@@ -1,0 +1,23 @@
+
+=== Battle Summary ===
+ID: battle-42
+System: Sol (sol)
+Status: completed
+Category: pvp
+Outcome: side_1_victory
+Winning Side: 1
+Start Tick: 900100
+Duration: 14 ticks
+Participants: 3
+Total Damage: 8420
+Ships Destroyed: 1
+Players: Marlowe, Ibis
+Destroyed: Rust Bucket
+Top Damage: Marlowe (5100)
+
+=== Sides ===
+
+  Side | Faction | Participants 
+  -----+---------+--------------
+  1    | SMC     | Marlowe, Ibis
+  2    |         | Corsair-7    

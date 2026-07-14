@@ -1,0 +1,22 @@
+
+=== Commission Quote ===
+Commission quote ready.
+Ship: Lucky Strike (prospector)
+Shipyard tier: 2/1
+Build time: 48 ticks
+Materials: 70,000 cr
+Labor: 40,000 cr
+Yard fee: 15,000 cr
+Credits-only total: 125,000 cr
+Provide-materials total: 45,000 cr
+Your credits: 200,000 cr
+Can commission: yes
+Afford credits-only: yes
+Afford provide-materials: yes
+
+=== Build Materials ===
+
+  Item          | Qty | Have
+  --------------+-----+-----
+  Hull Plate    | 40  | 12  
+  Circuit Board | 20  | 20  

@@ -3,6 +3,7 @@ import {
   c,
   emitCreditBalance,
   emitLine,
+  emitStationDefences,
   emitStationFuelPricing,
   formatDepletionRemainingSuffix,
   formatPlayer,
@@ -610,7 +611,8 @@ export const statusFormatters = [
         emitLine(`\n${c.bright}Station: ${base.name}${c.reset}`);
         if (base.description) emitLine(`  ${base.description}`);
         emitLine(`  Empire: ${base.empire || 'None'}`);
-        emitLine(`  Defense: ${base.defense_level}`);
+        if (base.faction_id) emitLine(`  Faction: ${base.faction_id}`);
+        emitStationDefences(base, '  ');
         if (base.fuel !== undefined || base.max_fuel !== undefined)
           emitLine(`  Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
         emitStationFuelPricing(r, '  ');

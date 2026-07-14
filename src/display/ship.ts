@@ -4,6 +4,7 @@ import {
   emitCreditBalance,
   emitLine,
   emitStationConstruction,
+  emitStationDefences,
   emitStationFuelPricing,
   emitStationLifeSupport,
   emitStationPower,
@@ -235,7 +236,8 @@ export const shipFormatters = [
       emitLine(`ID: ${base.id || base.base_id || 'unknown'}`);
       if (base.poi_id) emitLine(`POI: ${base.poi_id}`);
       emitLine(`Empire: ${base.empire || 'None'}`);
-      emitLine(`Defense: ${base.defense_level ?? '?'}`);
+      if (base.faction_id) emitLine(`Faction: ${base.faction_id}`);
+      emitStationDefences(base);
       if (base.fuel !== undefined || base.max_fuel !== undefined)
         emitLine(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
       emitStationFuelPricing(r);

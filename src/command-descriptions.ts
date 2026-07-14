@@ -89,6 +89,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_active_missions: 'View your active missions and progress.',
   get_base: 'Get docked station details',
   get_battle_status: 'View current battle status',
+  get_battle_summary: 'View the aggregate result of a battle by ID',
+  get_battle_log: 'View the tick-by-tick combat replay of a battle by ID',
   get_drone: 'Get full details for a specific drone, including script and memory.',
   get_insurance_quote: 'Get a risk-based insurance quote for your current ship',
   get_map: 'View all star systems in the galaxy',

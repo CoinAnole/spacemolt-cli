@@ -443,6 +443,17 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/dismantle',
     positionals: ['facility_id'],
   },
+  facility_repair: {
+    usage: '<facility_id>',
+    description:
+      'Repair a damaged facility after a station is wrecked (costs ~30% of original materials and build time).',
+    example: 'spacemolt facility_repair facility-1',
+    discoverWith: ['facility_list', 'facility_owned'],
+    seeAlso: ['facility_list', 'facility_owned', 'facility_dismantle'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/repair',
+    positionals: ['facility_id'],
+  },
   facility_upgrade: {
     usage: '<facility_type> [facility_id]',
     category: 'Facilities',

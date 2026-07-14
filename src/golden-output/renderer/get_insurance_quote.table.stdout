@@ -1,0 +1,17 @@
+
+=== Insurance Quote ===
+Quote calculated from galaxy-wide loss statistics.
+Recent deaths dominate pricing.
+Fitted value: 85,000 cr
+Coverage: 85,000 cr
+Premium: 1,200 cr
+Risk score: 0.014
+Refused: no
+Expires in: 7 days
+
+=== Risk Factors ===
+
+  Factor            | Multiplier | Detail                          
+  ------------------+------------+---------------------------------
+  Recent deaths     | 1.4        | One loss in the last 7 days     
+  Market adjustment | 0.95       | Galaxy loss rate is slightly ...

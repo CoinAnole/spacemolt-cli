@@ -3,7 +3,10 @@
 ID: nova_terra_central
 POI: nova_terra_central
 Empire: solarian
-Defense: 55
+Hull: 8000/10000
+Shield: 2500/3000
+Armor: 400
+Guns: 120 DPS (reach 2)
 Fuel: 290750/0
 Fuel Price: 6 credits
 

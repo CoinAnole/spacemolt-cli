@@ -667,6 +667,121 @@ export const marketFormatters = [
     { commands: ['commission_status'] },
   ),
 
+  // Commission quote (includes yard_margin)
+  formatter(
+    (r) => {
+      if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
+        return false;
+      }
+      if (r.can_commission === undefined && r.material_cost === undefined && !Array.isArray(r.build_materials)) {
+        return false;
+      }
+
+      emitLine(`\n${c.bright}=== Commission Quote ===${c.reset}`);
+      if (r.message) emitLine(String(r.message));
+      if (r.ship_name || r.ship_class) {
+        emitLine(`Ship: ${r.ship_name ?? r.ship_class}${r.ship_class && r.ship_name ? ` (${r.ship_class})` : ''}`);
+      }
+      if (r.shipyard_tier_here !== undefined || r.shipyard_tier_required !== undefined) {
+        emitLine(`Shipyard tier: ${r.shipyard_tier_here ?? '?'}/${r.shipyard_tier_required ?? '?'}`);
+      }
+      if (r.build_time !== undefined) emitLine(`Build time: ${r.build_time} ticks`);
+      if (r.material_cost !== undefined) emitLine(`Materials: ${formatCreditCell(r.material_cost)}`);
+      if (r.labor_cost !== undefined) emitLine(`Labor: ${formatCreditCell(r.labor_cost)}`);
+      if (r.yard_margin !== undefined) emitLine(`Yard fee: ${formatCreditCell(r.yard_margin)}`);
+      if (r.credits_only_total !== undefined) emitLine(`Credits-only total: ${formatCreditCell(r.credits_only_total)}`);
+      if (r.provide_materials_total !== undefined) {
+        emitLine(`Provide-materials total: ${formatCreditCell(r.provide_materials_total)}`);
+      }
+      if (r.player_credits !== undefined) emitLine(`Your credits: ${formatCreditCell(r.player_credits)}`);
+      if (r.can_commission !== undefined) emitLine(`Can commission: ${r.can_commission ? 'yes' : 'no'}`);
+      if (r.can_afford_credits_only !== undefined) {
+        emitLine(`Afford credits-only: ${r.can_afford_credits_only ? 'yes' : 'no'}`);
+      }
+      if (r.can_afford_provide_materials !== undefined) {
+        emitLine(`Afford provide-materials: ${r.can_afford_provide_materials ? 'yes' : 'no'}`);
+      }
+      const blockers = firstArray(r, ['blockers']);
+      if (blockers?.length) {
+        emitLine(`Blockers: ${blockers.map(String).join('; ')}`);
+      }
+      const materials = firstArray(r, ['build_materials']);
+      if (materials) {
+        printCompactTable('Build Materials', materials, [
+          ['Item', ['name', 'item_id']],
+          ['Qty', ['quantity', 'amount']],
+          ['Have', ['have', 'quantity_available', 'in_stock']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['commission_quote'] },
+  ),
+
+  // Insurance quote
+  formatter(
+    (r) => {
+      const quote = isRecord(r.quote) ? r.quote : undefined;
+      if (!quote) return false;
+
+      emitLine(`\n${c.bright}=== Insurance Quote ===${c.reset}`);
+      if (r.message) emitLine(String(r.message));
+      if (r.notice) emitLine(String(r.notice));
+      if (quote.fitted_value !== undefined) emitLine(`Fitted value: ${formatCreditCell(quote.fitted_value)}`);
+      if (quote.coverage !== undefined) emitLine(`Coverage: ${formatCreditCell(quote.coverage)}`);
+      if (quote.premium !== undefined) emitLine(`Premium: ${formatCreditCell(quote.premium)}`);
+      if (quote.risk_score !== undefined) emitLine(`Risk score: ${quote.risk_score}`);
+      if (quote.refused !== undefined) emitLine(`Refused: ${quote.refused ? 'yes' : 'no'}`);
+      if (quote.expires_in !== undefined) emitLine(`Expires in: ${quote.expires_in}`);
+      const factors = Array.isArray(quote.factors) ? quote.factors.filter(isRecord) : [];
+      if (factors.length) {
+        printCompactTable('Risk Factors', factors, [
+          ['Factor', ['name']],
+          ['Multiplier', ['multiplier']],
+          ['Detail', ['detail']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['get_insurance_quote'] },
+  ),
+
+  // Active insurance policies (view_insurance / claim_insurance share the policies route)
+  formatter(
+    (r, command) => {
+      const cmd = command?.replace(/^v2_/, '');
+      if (cmd !== 'view_insurance' && cmd !== 'claim_insurance') return false;
+      const policies = firstArray(r, ['policies']);
+      if (!policies) return false;
+
+      emitLine(`\n${c.bright}=== Insurance Policies ===${c.reset}`);
+      if (r.message) emitLine(String(r.message));
+      if (policies.length === 0) {
+        emitLine('No active policies.');
+        return true;
+      }
+      printCompactTable('Policies', policies, [
+        ['Ship', ['ship_class']],
+        ['Coverage', ['coverage']],
+        ['Premium', ['premium']],
+        ['Risk', ['risk_score']],
+        ['Expires', ['expires_at']],
+        ['ID', ['policy_id']],
+      ]);
+      for (const policy of policies) {
+        const factors = Array.isArray(policy.risk_factors) ? policy.risk_factors.filter(isRecord) : [];
+        if (!factors.length) continue;
+        printCompactTable(`Risk Factors (${policy.policy_id ?? policy.ship_class ?? 'policy'})`, factors, [
+          ['Factor', ['name']],
+          ['Multiplier', ['multiplier']],
+          ['Detail', ['detail']],
+        ]);
+      }
+      return true;
+    },
+    { commands: ['view_insurance', 'claim_insurance'] },
+  ),
+
   // Intel
   namedFormatter(
     'intel',

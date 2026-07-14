@@ -5,6 +5,7 @@ export const listPassengersFixture = {
   economy_berths: '1/2',
   business_berths: '0/1',
   first_berths: '0/0',
+  onboard_service: 'Onboard Galley — serving drinks each service cycle',
   passengers: [
     {
       citizen_id: 'citizen-lyra',
