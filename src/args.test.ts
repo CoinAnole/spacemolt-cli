@@ -456,6 +456,33 @@ describe('dry-run previews', () => {
     expect(response.result).toContain('GET https://game.spacemolt.com/wheres-mobile-base');
   });
 
+  test('player_profile previews the public path-param endpoint', () => {
+    const response = createDryRunResponse('player_profile', { name: 'Arbiter47' });
+
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+    expect(response.structuredContent?.method).toBe('GET');
+    expect(response.structuredContent?.url).toBe('https://game.spacemolt.com/api/players/Arbiter47');
+    expect(response.structuredContent?.payload).toEqual({});
+    expect(response.result).toContain('GET https://game.spacemolt.com/api/players/Arbiter47');
+  });
+
+  test('faction_profile encodes path params and strips them from residual payload', () => {
+    const response = createDryRunResponse('faction_profile', { tag: 'NO/IR' });
+
+    expect(response.structuredContent?.url).toBe('https://game.spacemolt.com/api/factions/NO%2FIR');
+    expect(response.structuredContent?.payload).toEqual({});
+  });
+
+  test('player_profile dry-run without name returns missing path parameter error', () => {
+    const response = createDryRunResponse('player_profile', {});
+
+    expect(response.error).toEqual({
+      code: 'missing_path_parameter',
+      message: 'Missing path parameter: name',
+    });
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+  });
+
   test('faction_build previews the faction facility build endpoint', () => {
     const response = createDryRunResponse('faction_build', { facility_type: 'ore_refinery' });
     expect(response.structuredContent?.server_request_sent).toBe(false);

@@ -1,5 +1,5 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
-import { buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import {
   createDefaultConfig,
@@ -33,15 +33,46 @@ function isFullyUnauthenticated(command: string, route?: V2Route): boolean {
   return route?.publicUnauthenticated === true;
 }
 
-function normalizeBareResponse(data: APIResponse, route: V2Route, fullyUnauthenticated: boolean): APIResponse {
-  if (
-    fullyUnauthenticated &&
-    route.bareResponse &&
-    isRecord(data) &&
-    data.error === undefined &&
-    data.structuredContent === undefined
-  ) {
-    return { structuredContent: data };
+function formatDebugError(data: APIResponse): string | undefined {
+  if (!isRecord(data) || data.error === undefined) return undefined;
+  const err = (data as Record<string, unknown>).error;
+  if (typeof err === 'string') {
+    const message = (data as Record<string, unknown>).message;
+    return typeof message === 'string' && message ? `${err} - ${message}` : err;
+  }
+  if (isRecord(err)) {
+    const code = err.code !== undefined ? String(err.code) : 'unknown';
+    const message = err.message !== undefined ? String(err.message) : '';
+    return message ? `${code} - ${message}` : code;
+  }
+  return undefined;
+}
+
+function normalizeBareResponse(
+  data: APIResponse,
+  route: V2Route,
+  fullyUnauthenticated: boolean,
+  status: number,
+): APIResponse {
+  if (!fullyUnauthenticated || !route.bareResponse || !isRecord(data)) {
+    return data;
+  }
+
+  // Public web endpoints return flat errors: { error: "code", message: "..." }
+  // rather than the v2 envelope { error: { code, message } }. Only rewrite on
+  // non-2xx so a 2xx body that happens to include a string `error` field is not
+  // misclassified as a failure.
+  const rawError = (data as Record<string, unknown>).error;
+  const rawMessage = (data as Record<string, unknown>).message;
+  if (status >= 400 && typeof rawError === 'string' && data.structuredContent === undefined) {
+    const message = typeof rawMessage === 'string' && rawMessage ? rawMessage : rawError;
+    return { error: { code: rawError, message } };
+  }
+
+  // Bare success (and 2xx bodies with a string `error` field): wrap as structuredContent.
+  // Skip when the body is already a v2 envelope (object-form error or structuredContent).
+  if (data.structuredContent === undefined && !isRecord(rawError)) {
+    return { structuredContent: data as unknown as Record<string, unknown> };
   }
   return data;
 }
@@ -168,7 +199,15 @@ export class SpaceMoltClient {
       payload = { ...mapping.defaults, ...payload };
     }
 
-    const url = buildRequestUrl(this.baseUrl, mapping);
+    let url: string;
+    let residualPayload: Record<string, unknown>;
+    try {
+      ({ url, residualPayload } = applyPathParams(mapping, buildRequestUrl(this.baseUrl, mapping), payload));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { error: { code: 'missing_path_parameter', message } };
+    }
+
     const method = mapping.method || 'POST';
     const publicSessionCommand = PUBLIC_SESSION_COMMANDS.has(command);
     const fullyUnauth = isFullyUnauthenticated(command, mapping);
@@ -188,14 +227,11 @@ export class SpaceMoltClient {
         if (authError) return authError;
       }
 
-      const data = normalizeBareResponse(
-        await this.sendRequest(session, url, method, payload, sessionProfile, {
-          persistSession: !transientSession && !fullyUnauth,
-          fullyUnauthenticated: fullyUnauth,
-        }),
-        mapping,
-        fullyUnauth,
-      );
+      const { status, data: rawData } = await this.sendRequest(session, url, method, residualPayload, sessionProfile, {
+        persistSession: !transientSession && !fullyUnauth,
+        fullyUnauthenticated: fullyUnauth,
+      });
+      const data = normalizeBareResponse(rawData, mapping, fullyUnauth, status);
 
       if (!fullyUnauth && data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
         if (
@@ -249,7 +285,7 @@ export class SpaceMoltClient {
     requestPayload?: Record<string, unknown>,
     sessionProfile?: string,
     options: { persistSession?: boolean; fullyUnauthenticated?: boolean } = {},
-  ): Promise<APIResponse> {
+  ): Promise<{ status: number; data: APIResponse }> {
     const finalRequestUrl = requestMethod === 'GET' ? appendQueryPayload(requestUrl, requestPayload) : requestUrl;
     const fullyUnauth = options.fullyUnauthenticated === true;
 
@@ -281,7 +317,8 @@ export class SpaceMoltClient {
 
     if (this.debug) {
       this.logger.debug(`Response: ${response.status} (${elapsed}ms)`);
-      if (data?.error) this.logger.debug(`Error: ${data.error.code} - ${data.error.message}`);
+      const errorText = formatDebugError(data);
+      if (errorText) this.logger.debug(`Error: ${errorText}`);
       if (data?.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
     }
 
@@ -291,7 +328,7 @@ export class SpaceMoltClient {
       await this.sessionStore.saveSession(currentSession, sessionProfile);
     }
 
-    return data;
+    return { status: response.status, data };
   }
 
   private async loginWithSession(currentSession: Session, username: string, password: string): Promise<APIResponse> {
@@ -299,7 +336,8 @@ export class SpaceMoltClient {
     if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
     const loginPayload = applyPayloadTransforms('login', { username, password });
     const loginUrl = buildRequestUrl(this.baseUrl, loginMapping);
-    return this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
+    const { data } = await this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
+    return data;
   }
 
   private sessionProfileForCommand(command: string, payload: Record<string, unknown>): string | undefined {

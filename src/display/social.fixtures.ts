@@ -447,6 +447,60 @@ export const factionInfoFixture = {
   ],
 };
 
+/** Public web profile from GET /api/factions/{tag} (bare JSON, not v2 faction_info). */
+export const publicFactionProfileFixture = {
+  id: 'cb22dc89b36022a0beecea17d548b76b',
+  name: 'Interstellar Continental',
+  tag: 'NOIR',
+  primary_color: '#0D0D0D',
+  secondary_color: '#FFD700',
+  created_at: '2026-04-30T00:36:56.053381041Z',
+  leader: 'Marlowe',
+  founder: 'Marlowe',
+  treasury: 17265270,
+  member_count: 3,
+  members: [
+    {
+      username: 'Marlowe',
+      role: 'Leader',
+      role_priority: 100,
+      joined_at: '2026-04-30T00:36:56.053381041Z',
+      last_seen: '2026-04-30T00:36:56.053381041Z',
+    },
+    {
+      username: 'Arbiter47',
+      role: 'Officer',
+      role_priority: 50,
+      joined_at: '2026-07-11T23:51:36.899216109Z',
+      last_seen: '2026-07-11T23:51:36.899216189Z',
+    },
+    {
+      username: 'Fabrini',
+      role: 'Officer',
+      role_priority: 50,
+      joined_at: '2026-04-30T00:40:48.658591923Z',
+      last_seen: '2026-04-30T00:40:48.658592013Z',
+    },
+  ],
+  allies: [],
+  enemies: [],
+  wars: [],
+  stations: [],
+  titles: ['Lean Operator', 'Old Guard', 'Surveyors'],
+  emblems: ['ore_sample', 'star_chart', 'ledger'],
+  ranks: [
+    { category: 'total_wealth', label: 'Total Wealth', rank: 4, value: 822440818 },
+    { category: 'member_count', label: 'Member Count', rank: 13, value: 25 },
+  ],
+  ranks_top_n: 30,
+  ranks_generated_at: '2026-07-14T19:23:26.2023986Z',
+  achievements: {
+    earned: 10,
+    total: 19,
+    points: 345,
+  },
+};
+
 export const forumThreadFixture = {
   thread: {
     id: 'thread-1',
@@ -536,6 +590,7 @@ export const socialHighValueFixtures = {
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
   faction_info: { command: 'faction_info', fixture: factionInfoFixture },
+  faction_profile: { command: 'faction_profile', fixture: publicFactionProfileFixture },
   faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
   faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },
   faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },

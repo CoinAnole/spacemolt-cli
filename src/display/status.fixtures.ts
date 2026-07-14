@@ -80,6 +80,45 @@ export const playerProfileFixture = {
   },
 };
 
+/** Public web profile from GET /api/players/{name} (bare JSON, not v2 get_player). */
+export const publicPlayerProfileFixture = {
+  username: 'Arbiter47',
+  empire: 'voidborn',
+  empire_name: 'Voidborn Collective',
+  primary_color: '#FFFFFF',
+  secondary_color: '#000000',
+  created_at: '2026-07-11T23:34:42.753280018Z',
+  online: true,
+  faction: {
+    name: 'Interstellar Continental',
+    tag: 'NOIR',
+    role: 'Officer',
+    joined_at: '2026-07-11T23:51:36.899216109Z',
+  },
+  location: {
+    system_id: 'traders_rest',
+    system_name: "Trader's Rest",
+    docked_station_id: 'traders_rest_resort_station',
+    docked_station_name: "Trader's Rest Resort Station",
+  },
+  stats: {
+    credits_earned: 385586,
+    ships_destroyed: 0,
+    ore_mined: 43638,
+    systems_explored: 85,
+    jumps_completed: 313,
+    time_played: 163080,
+  },
+  ranks: [],
+  ranks_top_n: 30,
+  ranks_generated_at: '2026-07-14T19:23:26.2023986Z',
+  achievements: {
+    earned: 6,
+    total: 62,
+    points: 65,
+  },
+};
+
 export const systemInfoFixture = {
   system: {
     id: 'sol',
@@ -336,6 +375,7 @@ export const statusFixtureCases = {
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
+  player_profile: { command: 'player_profile', fixture: publicPlayerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },

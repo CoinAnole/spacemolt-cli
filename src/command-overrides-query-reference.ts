@@ -166,6 +166,29 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       bareResponse: true,
     },
   },
+  player_profile: {
+    description:
+      'Show a public pilot profile by username (identity, stats, ranks, achievements). No login required. Cloaked location and hidden pilots follow server rules.',
+    example: 'spacemolt player_profile Arbiter47',
+    seeAlso: ['get_player', 'faction_profile', 'get_achievements'],
+    category: 'Query commands',
+    required: ['name'],
+    positionals: ['name'],
+    usage: '<name>',
+    // Not present in the v2 OpenAPI; public web profile endpoint.
+    route: {
+      tool: 'public',
+      action: 'player-profile',
+      method: 'GET',
+      rootPath: 'api/players/{name}',
+      pathParams: ['name'],
+      publicUnauthenticated: true,
+      bareResponse: true,
+    },
+    schemaExtensions: {
+      name: { type: 'string', description: 'Pilot username (public profile name).' },
+    },
+  },
   get_notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
     description: 'Poll queued game events such as chat, combat, trade, and faction updates.',
@@ -222,6 +245,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_player: {
     description: 'Show your player profile, credits, empire, faction, home station, and standings.',
+    seeAlso: ['player_profile', 'get_skills', 'get_achievements'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_player',
   },

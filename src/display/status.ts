@@ -19,6 +19,13 @@ function formatNumber(value: unknown): string {
   return typeof value === 'number' ? value.toLocaleString() : String(value);
 }
 
+function formatTimestampPreview(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '';
+  const text = String(value);
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
+  return match ? `${match[1]} ${match[2]}` : text;
+}
+
 function formatSignedNumber(value: unknown): string {
   const text = formatNumber(value);
   const number = typeof value === 'number' ? value : Number(value);
@@ -353,6 +360,97 @@ export const statusFormatters = [
       return true;
     },
     { commands: ['get_player'] },
+  ),
+
+  // Public pilot profile (GET /api/players/{name})
+  formatter(
+    (r, command) => {
+      if (command !== 'player_profile') return false;
+      if (typeof r.username !== 'string' || !r.username) return false;
+
+      emitLine(`\n${c.bright}=== Public Player Profile ===${c.reset}`);
+      emitLine(`Username: ${c.bright}${r.username}${c.reset}`);
+      if (r.empire_name !== undefined || r.empire !== undefined) {
+        const empire =
+          r.empire_name && r.empire && r.empire_name !== r.empire
+            ? `${r.empire_name} (${r.empire})`
+            : (r.empire_name ?? r.empire);
+        emitLine(`Empire: ${formatDisplayValue(empire)}`);
+      }
+      if (r.online !== undefined) {
+        emitLine(`Online: ${r.online === true ? 'yes' : r.online === false ? 'no' : r.online}`);
+      }
+      if (r.primary_color !== undefined || r.secondary_color !== undefined) {
+        emitLine(`Colors: ${r.primary_color ?? '—'} / ${r.secondary_color ?? '—'}`);
+      }
+      if (r.created_at !== undefined) {
+        emitLine(`Created: ${formatTimestampPreview(r.created_at) || r.created_at}`);
+      }
+
+      if (isRecord(r.faction)) {
+        const faction = r.faction;
+        const name = faction.name ?? 'Unknown';
+        const tag = faction.tag ? ` [${faction.tag}]` : '';
+        const role = faction.role ? ` (${faction.role})` : '';
+        emitLine(`Faction: ${name}${tag}${role}`);
+      }
+
+      if (isRecord(r.location)) {
+        const loc = r.location;
+        const system = loc.system_name ?? loc.system_id;
+        const station = loc.docked_station_name ?? loc.docked_station_id;
+        if (system || station) {
+          emitLine(`\n${c.bright}Location:${c.reset}`);
+          if (system) emitLine(`  System: ${system}`);
+          if (station) emitLine(`  Station: ${station}`);
+        }
+      }
+
+      if (isRecord(r.stats)) {
+        const rows = Object.entries(r.stats)
+          .filter(([, value]) => value !== undefined && value !== null && value !== '')
+          .map(([key, value]) => ({
+            stat: key
+              .split('_')
+              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' '),
+            value: typeof value === 'number' ? formatNumber(value) : String(value),
+          }));
+        if (rows.length) {
+          printCompactTable('Lifetime Stats', rows, [
+            ['Stat', ['stat']],
+            ['Value', ['value']],
+          ]);
+        }
+      }
+
+      const ranks = Array.isArray(r.ranks) ? r.ranks.filter(isRecord) : [];
+      if (ranks.length) {
+        const rankRows = ranks.map((row) => ({
+          ...row,
+          value_display: typeof row.value === 'number' ? formatNumber(row.value) : row.value,
+        }));
+        printCompactTable('Leaderboard Ranks', rankRows, [
+          ['Category', ['label', 'category']],
+          ['Rank', ['rank']],
+          ['Value', ['value_display', 'value']],
+        ]);
+      } else if (r.ranks_top_n !== undefined) {
+        emitLine(`\n${c.dim}No top-${r.ranks_top_n} leaderboard placements.${c.reset}`);
+      }
+
+      if (isRecord(r.achievements)) {
+        const a = r.achievements;
+        emitLine(`\n${c.bright}Achievements:${c.reset}`);
+        if (a.earned !== undefined || a.total !== undefined) {
+          emitLine(`  Earned: ${a.earned ?? '?'}${a.total !== undefined ? ` / ${a.total}` : ''}`);
+        }
+        if (a.points !== undefined) emitLine(`  Points: ${formatNumber(a.points)}`);
+      }
+
+      return true;
+    },
+    { commands: ['player_profile'] },
   ),
 
   // Compact player status summary

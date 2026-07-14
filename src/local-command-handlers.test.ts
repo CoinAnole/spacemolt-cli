@@ -126,9 +126,18 @@ function dynamicRegistry(): CommandRegistrySnapshot {
 
 function specialCompletionWords(shell: string, completion: string, command: string): string[] {
   const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Prefer outermost (least-indented) case arm when nested group actions reuse a name
+  // (e.g. faction `profile` vs local `profile`).
+  const outermostCaseBody = (): string | undefined => {
+    const matches = [
+      ...completion.matchAll(new RegExp(`^(?<indent>[ \\t]*)${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'gm')),
+    ];
+    if (!matches.length) return undefined;
+    matches.sort((a, b) => (a.groups?.indent?.length ?? 0) - (b.groups?.indent?.length ?? 0));
+    return matches[0]?.groups?.body;
+  };
   if (shell === 'bash') {
-    const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
-    const body = match?.groups?.body;
+    const body = outermostCaseBody();
     return (
       body
         ?.match(/compgen -W "([^"]*)"/)?.[1]
@@ -137,8 +146,7 @@ function specialCompletionWords(shell: string, completion: string, command: stri
     );
   }
   if (shell === 'zsh') {
-    const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
-    const body = match?.groups?.body;
+    const body = outermostCaseBody();
     return (
       body
         ?.match(/_arguments "1:[^"]*:\(([^)]*)\)"/)?.[1]

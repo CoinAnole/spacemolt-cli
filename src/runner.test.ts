@@ -583,6 +583,63 @@ describe('runInvocation option isolation', () => {
     expect(JSON.parse(stdout.join('\n'))).toEqual({ empires: [{ id: 'solarian', sales_tax_bps: 500 }] });
   });
 
+  test('public player_profile and faction profile render without a configured profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-profiles-'));
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const execute = async (command: string, payload: Record<string, unknown>) => {
+      calls.push({ command, payload });
+      if (command === 'player_profile') {
+        return { structuredContent: { username: 'Arbiter47', online: true } };
+      }
+      return { structuredContent: { name: 'Interstellar Continental', tag: 'NOIR', member_count: 25 } };
+    };
+    const client = {
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: false,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+      execute,
+      executeCommandConfig: async (command: string, _config: unknown, payload: Record<string, unknown>) =>
+        execute(command, payload),
+    } as unknown as SpaceMoltClient;
+
+    const playerOut: string[] = [];
+    const playerErr: string[] = [];
+    const playerCode = await runInvocation(
+      ['--structured', 'player_profile', 'Arbiter47'],
+      client,
+      fakeContext(playerOut, playerErr, { XDG_CONFIG_HOME: configHome }),
+    );
+    expect(playerCode).toBe(0);
+    expect(playerErr).toEqual([]);
+    expect(JSON.parse(playerOut.join('\n'))).toEqual({ username: 'Arbiter47', online: true });
+
+    // Nested group surface: `faction profile` → internal command faction_profile
+    const factionOut: string[] = [];
+    const factionErr: string[] = [];
+    const factionCode = await runInvocation(
+      ['--structured', 'faction', 'profile', 'NOIR'],
+      client,
+      fakeContext(factionOut, factionErr, { XDG_CONFIG_HOME: configHome }),
+    );
+    expect(factionCode).toBe(0);
+    expect(factionErr).toEqual([]);
+    expect(JSON.parse(factionOut.join('\n'))).toEqual({
+      name: 'Interstellar Continental',
+      tag: 'NOIR',
+      member_count: 25,
+    });
+    expect(calls).toEqual([
+      { command: 'player_profile', payload: { name: 'Arbiter47' } },
+      { command: 'faction_profile', payload: { tag: 'NOIR' } },
+    ]);
+  });
+
   test('server-help renders through a transient anonymous session without a configured profile', async () => {
     const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-server-help-render-'));
     const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_URL: 'https://game.test/api/v2' };

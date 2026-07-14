@@ -316,8 +316,14 @@ function fishTopLevelCommandWords(completion: string): string[] {
 
 function bashCommandCompletionWords(completion: string, command: string): string[] {
   const escapedCommand = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = completion.match(new RegExp(`^\\s*${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'm'));
-  const body = match?.groups?.body;
+  // Prefer the outermost (least-indented) case arm. Nested group actions can reuse
+  // top-level names (e.g. faction `profile` vs local `profile`).
+  const matches = [
+    ...completion.matchAll(new RegExp(`^(?<indent>[ \\t]*)${escapedCommand}\\)\\n(?<body>[\\s\\S]*?)^\\s*;;`, 'gm')),
+  ];
+  if (!matches.length) return [];
+  matches.sort((a, b) => (a.groups?.indent?.length ?? 0) - (b.groups?.indent?.length ?? 0));
+  const body = matches[0]?.groups?.body;
   const words = body?.match(/compgen -W "([^"]*)"/)?.[1];
   return words?.split(/\s+/).filter((word) => word && !word.includes('$')) || [];
 }

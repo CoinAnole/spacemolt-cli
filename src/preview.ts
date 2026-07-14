@@ -1,5 +1,5 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
-import { buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
@@ -56,12 +56,27 @@ function buildRoutePreview(
   stateSections?: string[],
 ): Record<string, unknown> {
   const requestPayload = mapping.defaults ? { ...mapping.defaults, ...payload } : payload;
+  let url: string;
+  let residualPayload: Record<string, unknown>;
+  try {
+    ({ url, residualPayload } = applyPathParams(mapping, buildRequestUrl(API_BASE, mapping), requestPayload));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      dry_run: true,
+      command,
+      method: mapping.method || 'POST',
+      server_request_sent: false,
+      error: { code: 'missing_path_parameter', message },
+      notes: [message, 'No mutation was sent. This is a client-side route and payload preview.'],
+    };
+  }
   const preview: Record<string, unknown> = {
     dry_run: true,
     command,
     method: mapping.method || 'POST',
-    url: buildRequestUrl(API_BASE, mapping),
-    payload: requestPayload,
+    url,
+    payload: residualPayload,
     server_request_sent: false,
   };
   if (stateSections?.length) preview.state_sections = stateSections;
@@ -85,6 +100,16 @@ export function createCommandConfigDryRunResponse(
 }
 
 function createDryRunResponseFromPreview(command: string, preview: Record<string, unknown>): APIResponse {
+  if (isRecord(preview.error)) {
+    const err = preview.error as { code?: unknown; message?: unknown };
+    const code = typeof err.code === 'string' ? err.code : 'missing_path_parameter';
+    const message = typeof err.message === 'string' ? err.message : 'Missing path parameter';
+    return {
+      error: { code, message },
+      structuredContent: preview,
+      result: [`Dry run: ${command}`, `Error: ${code} - ${message}`, 'No request was sent.'].join('\n'),
+    };
+  }
   return {
     structuredContent: preview,
     result: [
@@ -98,6 +123,10 @@ function createDryRunResponseFromPreview(command: string, preview: Record<string
       'No request was sent.',
     ].join('\n'),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function getServerPreviewCommand(command: string, payload: Record<string, unknown>): string | null {

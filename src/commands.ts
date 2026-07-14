@@ -18,6 +18,12 @@ export interface V2Route {
    */
   rootPath?: string;
 
+  /**
+   * Payload field names substituted into `rootPath` placeholders like `{name}`.
+   * Values are encodeURIComponent'd and removed from the residual query/body payload.
+   */
+  pathParams?: string[];
+
   /** Do not create or send any session (X-Session-Id). For truly public unauthenticated endpoints. */
   publicUnauthenticated?: boolean;
 
@@ -95,6 +101,7 @@ export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
   'schemaExtensions',
   'arrayFields',
   'clientOnlyFields',
+  'required', // standalone/public overrides without generated OpenAPI required lists
 ] as const;
 
 import { COMMAND_OVERRIDES } from './command-overrides.ts';
@@ -191,6 +198,7 @@ export function routeSignature(route: V2Route): string {
  * Build the full request URL for a route.
  * - Normal v2 routes: `${baseUrl}/${tool/action}`
  * - rootPath routes: derive game root from baseUrl and append rootPath.
+ * Path placeholders (`{name}`) are left unsubstituted; use {@link applyPathParams}.
  */
 export function buildRequestUrl(baseUrl: string, route: V2Route): string {
   const trimmedBase = trimTrailingSlash(baseUrl);
@@ -200,6 +208,40 @@ export function buildRequestUrl(baseUrl: string, route: V2Route): string {
     return `${root}/${p}`;
   }
   return `${trimmedBase}/${routeToPath(route)}`;
+}
+
+/**
+ * Substitute `route.pathParams` into `{field}` placeholders in a built URL and
+ * return the residual payload with those keys removed (so GET does not re-send them as query).
+ * Throws when a declared path param is missing, null, or empty after stringification.
+ */
+export function applyPathParams(
+  route: V2Route,
+  url: string,
+  payload: Record<string, unknown>,
+): { url: string; residualPayload: Record<string, unknown> } {
+  const pathParams = route.pathParams;
+  if (!pathParams?.length) {
+    return { url, residualPayload: payload };
+  }
+
+  let nextUrl = url;
+  const residualPayload: Record<string, unknown> = { ...payload };
+  for (const key of pathParams) {
+    const value = residualPayload[key];
+    delete residualPayload[key];
+    if (value === undefined || value === null || String(value).length === 0) {
+      throw new Error(`Missing path parameter: ${key}`);
+    }
+    const encoded = encodeURIComponent(String(value));
+    nextUrl = nextUrl.split(`{${key}}`).join(encoded);
+  }
+  for (const key of pathParams) {
+    if (nextUrl.includes(`{${key}}`)) {
+      throw new Error(`Missing path parameter: ${key}`);
+    }
+  }
+  return { url: nextUrl, residualPayload };
 }
 
 function generatedArgs(generated?: GeneratedApiRoute): string[] | undefined {

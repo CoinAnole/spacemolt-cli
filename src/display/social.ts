@@ -522,6 +522,97 @@ export const socialFormatters = [
     { commands: ['faction_info'] },
   ),
 
+  // Public faction profile (GET /api/factions/{tag})
+  formatter(
+    (r, command) => {
+      if (command !== 'faction_profile') return false;
+      if (typeof r.name !== 'string' || typeof r.tag !== 'string') return false;
+
+      const title = `${r.name} [${r.tag}]`;
+      emitLine(`\n${c.bright}=== Public Faction Profile ===${c.reset}`);
+      emitLine(`Name: ${c.bright}${title}${c.reset}`);
+      if (r.id !== undefined) emitLine(`ID: ${r.id}`);
+      if (r.leader !== undefined) emitLine(`Leader: ${r.leader}`);
+      if (r.founder !== undefined) emitLine(`Founder: ${r.founder}`);
+      if (r.member_count !== undefined) emitLine(`Members: ${formatNumber(r.member_count) ?? r.member_count}`);
+      if (r.treasury !== undefined) emitLine(`Treasury: ${formatNumber(r.treasury) ?? r.treasury}`);
+      if (r.primary_color !== undefined || r.secondary_color !== undefined) {
+        emitLine(`Colors: ${r.primary_color ?? '—'} / ${r.secondary_color ?? '—'}`);
+      }
+      if (r.created_at !== undefined) emitLine(`Created: ${formatTimestampPreview(r.created_at) || r.created_at}`);
+      if (typeof r.description === 'string' && r.description) emitLine(`Description: ${r.description}`);
+      if (typeof r.charter === 'string' && r.charter) emitBody('Charter', r.charter);
+
+      const members = firstArray(r, ['members']);
+      if (members) {
+        const rows = members.map((member) => ({
+          ...member,
+          joined_preview: formatTimestampPreview(member.joined_at),
+        }));
+        printCompactTable('Members', rows, [
+          ['Username', ['username', 'name']],
+          ['Role', ['role']],
+          ['Joined', ['joined_preview', 'joined_at']],
+        ]);
+      }
+
+      for (const [titleLabel, key] of [
+        ['Allies', 'allies'],
+        ['Enemies', 'enemies'],
+        ['Wars', 'wars'],
+      ] as const) {
+        const list = firstArray(r, [key]);
+        if (!list?.length) continue;
+        printCompactTable(titleLabel, list, [
+          ['Name', ['name', 'faction_name', 'tag']],
+          ['Tag', ['tag']],
+          ['ID', ['id', 'faction_id']],
+        ]);
+      }
+
+      const stations = firstArray(r, ['stations']);
+      if (stations?.length) {
+        printCompactTable('Stations', stations, [
+          ['Name', ['name', 'station_name']],
+          ['ID', ['id', 'station_id', 'base_id']],
+          ['System', ['system_name', 'system_id']],
+        ]);
+      }
+
+      if (Array.isArray(r.titles) && r.titles.length) {
+        emitLine(`\n${c.bright}Titles:${c.reset} ${r.titles.map(String).join(', ')}`);
+      }
+      if (Array.isArray(r.emblems) && r.emblems.length) {
+        emitLine(`${c.bright}Emblems:${c.reset} ${r.emblems.map(String).join(', ')}`);
+      }
+
+      const ranks = Array.isArray(r.ranks) ? r.ranks.filter(isRecord) : [];
+      if (ranks.length) {
+        const rankRows = ranks.map((row) => ({
+          ...row,
+          value_display: typeof row.value === 'number' ? (formatNumber(row.value) ?? row.value) : row.value,
+        }));
+        printCompactTable('Leaderboard Ranks', rankRows, [
+          ['Category', ['label', 'category']],
+          ['Rank', ['rank']],
+          ['Value', ['value_display', 'value']],
+        ]);
+      }
+
+      if (isRecord(r.achievements)) {
+        const a = r.achievements;
+        emitLine(`\n${c.bright}Achievements:${c.reset}`);
+        if (a.earned !== undefined || a.total !== undefined) {
+          emitLine(`  Earned: ${a.earned ?? '?'}${a.total !== undefined ? ` / ${a.total}` : ''}`);
+        }
+        if (a.points !== undefined) emitLine(`  Points: ${formatNumber(a.points) ?? a.points}`);
+      }
+
+      return true;
+    },
+    { commands: ['faction_profile'] },
+  ),
+
   formatter(
     (r) => {
       const invites = firstArray(r, ['invites']);

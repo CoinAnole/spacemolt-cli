@@ -226,6 +226,252 @@ describe('SpaceMoltClient', () => {
     expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
   });
 
+  test('player_profile is fully unauthenticated and substitutes path params', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-player-profile-'));
+    const env = { XDG_CONFIG_HOME: tempDir };
+    const sessionCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const commandCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const sessionManager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env,
+      transport: (async (url: string, requestOptions?: JsonRequestOptions) => {
+        sessionCalls.push({ url, options: requestOptions });
+        throw new Error('session should not be created for public unauthenticated commands');
+      }) as typeof import('./transport.ts').requestJson,
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: sessionManager,
+      transport: {
+        async requestJson<T>(url: string, requestOptions?: JsonRequestOptions) {
+          commandCalls.push({ url, options: requestOptions });
+          return {
+            status: 200,
+            data: { username: 'Arbiter47', empire: 'voidborn', stats: { jumps_completed: 3 } } as T,
+          };
+        },
+      },
+    });
+
+    const result = await client.execute('player_profile', { name: 'Arbiter47' });
+
+    expect(sessionCalls).toEqual([]);
+    expect(commandCalls).toEqual([
+      {
+        url: 'https://game.test/api/players/Arbiter47',
+        options: {
+          method: 'GET',
+          sessionId: undefined,
+          payload: undefined,
+        },
+      },
+    ]);
+    expect(result).toEqual({
+      structuredContent: { username: 'Arbiter47', empire: 'voidborn', stats: { jumps_completed: 3 } },
+    });
+    expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+  });
+
+  test('player_profile normalizes bare public error bodies', async () => {
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: {
+        async getSession() {
+          throw new Error('No default profile set. Use: spacemolt profile default <name>');
+        },
+        async loadSession() {
+          return null;
+        },
+        async saveSession() {},
+        async createSession() {
+          throw new Error('should not create session');
+        },
+        async createTransientSession() {
+          throw new Error('should not create transient session');
+        },
+        async authenticateProfileSession() {
+          return null;
+        },
+        ensureDefaultProfile() {},
+      },
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 404,
+            data: { error: 'player_not_found', message: 'No pilot by that name.' } as T,
+          };
+        },
+      },
+    });
+
+    const result = await client.execute('player_profile', { name: 'missing' });
+    expect(result).toEqual({
+      error: { code: 'player_not_found', message: 'No pilot by that name.' },
+    });
+  });
+
+  test('player_profile missing path param returns structured error without a network call', async () => {
+    let networkCalls = 0;
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: {
+        async getSession() {
+          throw new Error('should not create session');
+        },
+        async loadSession() {
+          return null;
+        },
+        async saveSession() {},
+        async createSession() {
+          throw new Error('should not create session');
+        },
+        async createTransientSession() {
+          throw new Error('should not create transient session');
+        },
+        async authenticateProfileSession() {
+          return null;
+        },
+        ensureDefaultProfile() {},
+      },
+      transport: {
+        async requestJson<T>() {
+          networkCalls += 1;
+          return { status: 200, data: {} as T };
+        },
+      },
+    });
+
+    const result = await client.execute('player_profile', {});
+    expect(networkCalls).toBe(0);
+    expect(result).toEqual({
+      error: { code: 'missing_path_parameter', message: 'Missing path parameter: name' },
+    });
+  });
+
+  test('player_profile 2xx body with string error field is not treated as failure', async () => {
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: {
+        async getSession() {
+          throw new Error('should not create session');
+        },
+        async loadSession() {
+          return null;
+        },
+        async saveSession() {},
+        async createSession() {
+          throw new Error('should not create session');
+        },
+        async createTransientSession() {
+          throw new Error('should not create transient session');
+        },
+        async authenticateProfileSession() {
+          return null;
+        },
+        ensureDefaultProfile() {},
+      },
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: { error: 'not_an_api_error', message: 'still success payload', username: 'X' } as T,
+          };
+        },
+      },
+    });
+
+    const result = await client.execute('player_profile', { name: 'X' });
+    expect(result).toEqual({
+      structuredContent: { error: 'not_an_api_error', message: 'still success payload', username: 'X' },
+    });
+  });
+
+  test('faction_profile is fully unauthenticated and substitutes path params', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-faction-profile-'));
+    const env = { XDG_CONFIG_HOME: tempDir };
+    const sessionCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const commandCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const sessionManager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env,
+      transport: (async (url: string, requestOptions?: JsonRequestOptions) => {
+        sessionCalls.push({ url, options: requestOptions });
+        throw new Error('session should not be created for public unauthenticated commands');
+      }) as typeof import('./transport.ts').requestJson,
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: sessionManager,
+      transport: {
+        async requestJson<T>(url: string, requestOptions?: JsonRequestOptions) {
+          commandCalls.push({ url, options: requestOptions });
+          return {
+            status: 200,
+            data: { name: 'Interstellar Continental', tag: 'NOIR', member_count: 25 } as T,
+          };
+        },
+      },
+    });
+
+    const result = await client.execute('faction_profile', { tag: 'NOIR' });
+
+    expect(sessionCalls).toEqual([]);
+    expect(commandCalls).toEqual([
+      {
+        url: 'https://game.test/api/factions/NOIR',
+        options: {
+          method: 'GET',
+          sessionId: undefined,
+          payload: undefined,
+        },
+      },
+    ]);
+    expect(result).toEqual({
+      structuredContent: { name: 'Interstellar Continental', tag: 'NOIR', member_count: 25 },
+    });
+    expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+  });
+
   test('server-help can run with an anonymous session when no default profile exists', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-server-help-'));
     const env = { XDG_CONFIG_HOME: tempDir };

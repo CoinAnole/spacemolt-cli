@@ -45,8 +45,33 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   faction_info: {
     category: 'Factions',
+    seeAlso: ['faction_profile', 'faction_list', 'get_faction_achievements'],
     apiRoute: 'POST /api/v2/spacemolt_faction/info',
     positionals: ['faction_id'],
+  },
+  faction_profile: {
+    description:
+      'Show a public faction profile by tag (roster, diplomacy, treasury, stations, ranks). No login required.',
+    // Grouped as `faction profile` in the CLI surface.
+    example: 'spacemolt faction profile NOIR',
+    seeAlso: ['faction_info', 'faction_list', 'player_profile', 'get_faction_achievements'],
+    category: 'Factions',
+    required: ['tag'],
+    positionals: ['tag'],
+    usage: '<tag>',
+    // Not present in the v2 OpenAPI; public web profile endpoint.
+    route: {
+      tool: 'public',
+      action: 'faction-profile',
+      method: 'GET',
+      rootPath: 'api/factions/{tag}',
+      pathParams: ['tag'],
+      publicUnauthenticated: true,
+      bareResponse: true,
+    },
+    schemaExtensions: {
+      tag: { type: 'string', description: 'Faction tag (e.g. NOIR).' },
+    },
   },
   faction_list: {
     category: 'Factions',

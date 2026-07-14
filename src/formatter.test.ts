@@ -1459,6 +1459,78 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats public player_profile without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('player_profile', {
+      username: 'Arbiter47',
+      empire: 'voidborn',
+      empire_name: 'Voidborn Collective',
+      online: true,
+      created_at: '2026-07-11T23:34:42.753280018Z',
+      faction: { name: 'Interstellar Continental', tag: 'NOIR', role: 'Officer' },
+      location: {
+        system_name: "Trader's Rest",
+        docked_station_name: "Trader's Rest Resort Station",
+      },
+      stats: { credits_earned: 385586, jumps_completed: 313 },
+      ranks: [{ category: 'jumps_completed', label: 'Jumps Completed', rank: 12, value: 1500000 }],
+      ranks_top_n: 30,
+      achievements: { earned: 6, total: 62, points: 65 },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Public Player Profile ===');
+    expect(stdout).toContain('Username: Arbiter47');
+    expect(stdout).toContain('Empire: Voidborn Collective (voidborn)');
+    expect(stdout).toContain('Online: yes');
+    expect(stdout).toContain('Created: 2026-07-11 23:34:42');
+    expect(stdout).not.toContain('753280018');
+    expect(stdout).toContain('Faction: Interstellar Continental [NOIR] (Officer)');
+    expect(stdout).toContain("System: Trader's Rest");
+    expect(stdout).toContain('Credits Earned');
+    expect(stdout).toContain('385,586');
+    expect(stdout).toContain('Jumps Completed');
+    expect(stdout).toContain('1,500,000');
+    expect(stdout).toContain('Earned: 6 / 62');
+    expect(stdout).toContain('Points: 65');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats public faction_profile without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_profile', {
+      id: 'faction-1',
+      name: 'Interstellar Continental',
+      tag: 'NOIR',
+      leader: 'Marlowe',
+      founder: 'Marlowe',
+      treasury: 17265270,
+      member_count: 2,
+      members: [
+        { username: 'Marlowe', role: 'Leader', joined_at: '2026-04-30T00:36:56Z' },
+        { username: 'Arbiter47', role: 'Officer', joined_at: '2026-07-11T23:51:36Z' },
+      ],
+      titles: ['Lean Operator'],
+      emblems: ['ore_sample'],
+      ranks: [{ category: 'total_wealth', label: 'Total Wealth', rank: 4, value: 822440818 }],
+      achievements: { earned: 10, total: 19, points: 345 },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Public Faction Profile ===');
+    expect(stdout).toContain('Interstellar Continental [NOIR]');
+    expect(stdout).toContain('Leader: Marlowe');
+    expect(stdout).toContain('Treasury: 17,265,270');
+    expect(stdout).toContain('Marlowe');
+    expect(stdout).toContain('Arbiter47');
+    expect(stdout).toContain('Titles: Lean Operator');
+    expect(stdout).toContain('Emblems: ore_sample');
+    expect(stdout).toContain('Total Wealth');
+    expect(stdout).toContain('822,440,818');
+    expect(stdout).toContain('Earned: 10 / 19');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats refuel transfers without raw JSON fallback', () => {
     const { stdout, stderr } = captureStructuredOutput('refuel', {
       action: 'refuel',
