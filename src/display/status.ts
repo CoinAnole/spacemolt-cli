@@ -1,6 +1,7 @@
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
+  commandNameEquals,
   emitCreditBalance,
   emitLine,
   emitStationDefences,
@@ -365,7 +366,7 @@ export const statusFormatters = [
   // Public pilot profile (GET /api/players/{name})
   formatter(
     (r, command) => {
-      if (command !== 'player_profile') return false;
+      if (!commandNameEquals(command, 'player_profile')) return false;
       if (typeof r.username !== 'string' || !r.username) return false;
 
       emitLine(`\n${c.bright}=== Public Player Profile ===${c.reset}`);

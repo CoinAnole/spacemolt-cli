@@ -236,6 +236,26 @@ test('renders flat fleet_status response from v2 schema', () => {
   expect(stdout).toContain('sol');
 });
 
+test('fleet shape fallback does not claim public faction profiles', () => {
+  const rendered = renderStructuredResult(
+    'unmatched_command',
+    {
+      id: 'cb22dc89b36022a0beecea17d548b76b',
+      name: 'Interstellar Continental',
+      tag: 'NOIR',
+      leader: 'Marlowe',
+      members: [{ username: 'Marlowe', role: 'Leader' }],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('=== Fleet ===');
+  expect(stdout).not.toContain('| ID | Ship | Location | Status');
+});
+
 test('renders forum thread reply pagination metadata', () => {
   const rendered = renderStructuredResult(
     'forum_get_thread',

@@ -1,5 +1,6 @@
 import {
   c,
+  commandNameEquals,
   emitLine,
   emitStationConstruction,
   emitStationLifeSupport,
@@ -525,7 +526,7 @@ export const socialFormatters = [
   // Public faction profile (GET /api/factions/{tag})
   formatter(
     (r, command) => {
-      if (command !== 'faction_profile') return false;
+      if (!commandNameEquals(command, 'faction_profile')) return false;
       if (typeof r.name !== 'string' || typeof r.tag !== 'string') return false;
 
       const title = `${r.name} [${r.tag}]`;
@@ -635,9 +636,16 @@ export const socialFormatters = [
 
   formatter(
     (r, command) => {
-      if (command !== 'faction_intel_status' && command !== 'faction_trade_intel_status') return false;
+      if (
+        !commandNameEquals(command, 'faction_intel_status') &&
+        !commandNameEquals(command, 'faction_trade_intel_status')
+      ) {
+        return false;
+      }
       if (r.intel_level === undefined && r.coverage_pct === undefined) return false;
-      const title = command === 'faction_trade_intel_status' ? 'Faction Trade Intel' : 'Faction Intel';
+      const title = commandNameEquals(command, 'faction_trade_intel_status')
+        ? 'Faction Trade Intel'
+        : 'Faction Intel';
       emitLine(`\n${c.bright}=== ${title} Status ===${c.reset}`);
       emitOptionalLine('Intel Level', r.intel_level);
       emitOptionalLine('Coverage', r.coverage_pct === undefined ? undefined : `${r.coverage_pct}%`);
@@ -802,10 +810,13 @@ export const socialFormatters = [
   namedFormatter(
     'fleet',
     ['fleet'],
-    (r) => {
+    (r, command) => {
+      // Shape fallback must require fleet-specific signals. A bare `members`
+      // array is shared by public faction profiles (`faction profile`).
+      const isFleetCommand = commandNameEquals(command, 'fleet_status');
       const fleet = isRecord(r.fleet)
         ? r.fleet
-        : r.in_fleet !== undefined || r.fleet_id || Array.isArray(r.members)
+        : r.in_fleet !== undefined || r.fleet_id || (isFleetCommand && Array.isArray(r.members))
           ? r
           : undefined;
       if (!fleet) return false;

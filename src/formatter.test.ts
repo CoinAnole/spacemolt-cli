@@ -1531,6 +1531,40 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats faction profile using grouped display command name', () => {
+    // Grouped handlers pass displayCommand "faction profile" (space) to the renderer.
+    const fixture = {
+      id: 'faction-1',
+      name: 'Interstellar Continental',
+      tag: 'NOIR',
+      leader: 'Marlowe',
+      founder: 'Marlowe',
+      treasury: 17265270,
+      member_count: 2,
+      members: [
+        { username: 'Marlowe', role: 'Leader', joined_at: '2026-04-30T00:36:56Z' },
+        { username: 'Arbiter47', role: 'Officer', joined_at: '2026-07-11T23:51:36Z' },
+      ],
+      titles: ['Lean Operator'],
+      emblems: ['ore_sample'],
+      ranks: [{ category: 'total_wealth', label: 'Total Wealth', rank: 4, value: 822440818 }],
+      achievements: { earned: 10, total: 19, points: 345 },
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('faction profile', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Public Faction Profile ===');
+    expect(stdout).toContain('Interstellar Continental [NOIR]');
+    expect(stdout).toContain('Treasury: 17,265,270');
+    expect(stdout).toContain('Role');
+    expect(stdout).toContain('Leader');
+    expect(stdout).toContain('Officer');
+    expect(stdout).not.toContain('=== Fleet ===');
+    expect(stdout).not.toContain('| ID | Ship | Location | Status');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats refuel transfers without raw JSON fallback', () => {
     const { stdout, stderr } = captureStructuredOutput('refuel', {
       action: 'refuel',

@@ -40,11 +40,24 @@ export function namedFormatter(
   return resultFormatter;
 }
 
+/** Normalize CLI command names for formatter matching (`faction profile` → `faction_profile`). */
+export function normalizeCommandName(command: string): string {
+  const withoutV2 = command.startsWith('v2_') ? command.slice(3) : command;
+  return withoutV2.replaceAll(' ', '_');
+}
+
+export function commandNameEquals(command: string | undefined, expected: string): boolean {
+  if (!command) return false;
+  return normalizeCommandName(command) === normalizeCommandName(expected);
+}
+
 export function formatterMatchesCommand(formatter: ResultFormatter, command: string): boolean {
   const commands = formatter.commands;
   if (!commands?.length) return false;
-  const normalizedCommand = command.startsWith('v2_') ? command.slice(3) : command;
-  return commands.includes(command) || commands.includes(normalizedCommand);
+  // Grouped CLI surfaces pass display names like "faction profile"; formatters
+  // register the internal underscore form "faction_profile".
+  const normalized = normalizeCommandName(command);
+  return commands.includes(command) || commands.includes(normalized);
 }
 
 export function commandScopedFormatters(formatters: readonly ResultFormatter[], command: string): ResultFormatter[] {
