@@ -263,8 +263,8 @@ export const commissionQuoteFixture = {
   shipyard_tier_required: 1,
   blockers: [],
   build_materials: [
-    { item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, have: 12 },
-    { item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, have: 20 },
+    { item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 },
+    { item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, size: 1 },
   ],
 };
 

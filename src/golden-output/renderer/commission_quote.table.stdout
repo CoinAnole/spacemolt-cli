@@ -11,12 +11,13 @@ Credits-only total: 125,000 cr
 Provide-materials total: 45,000 cr
 Your credits: 200,000 cr
 Can commission: yes
+Credits-only available: yes
 Afford credits-only: yes
 Afford provide-materials: yes
 
 === Build Materials ===
 
-  Item          | Qty | Have
+  Item          | Qty | Size
   --------------+-----+-----
-  Hull Plate    | 40  | 12  
-  Circuit Board | 20  | 20  
+  Hull Plate    | 40  | 2   
+  Circuit Board | 20  | 1   

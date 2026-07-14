@@ -21,13 +21,13 @@
       "item_id": "hull_plate",
       "name": "Hull Plate",
       "quantity": 40,
-      "have": 12
+      "size": 2
     },
     {
       "item_id": "circuit_board",
       "name": "Circuit Board",
       "quantity": 20,
-      "have": 20
+      "size": 1
     }
   ]
 }

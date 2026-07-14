@@ -667,7 +667,7 @@ export const marketFormatters = [
     { commands: ['commission_status'] },
   ),
 
-  // Commission quote (includes yard_margin)
+  // Commission quote (includes yard_margin; build_materials items use size, not inventory "have")
   formatter(
     (r) => {
       if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
@@ -695,6 +695,9 @@ export const marketFormatters = [
       }
       if (r.player_credits !== undefined) emitLine(`Your credits: ${formatCreditCell(r.player_credits)}`);
       if (r.can_commission !== undefined) emitLine(`Can commission: ${r.can_commission ? 'yes' : 'no'}`);
+      if (r.credits_only_available !== undefined) {
+        emitLine(`Credits-only available: ${r.credits_only_available ? 'yes' : 'no'}`);
+      }
       if (r.can_afford_credits_only !== undefined) {
         emitLine(`Afford credits-only: ${r.can_afford_credits_only ? 'yes' : 'no'}`);
       }
@@ -710,7 +713,7 @@ export const marketFormatters = [
         printCompactTable('Build Materials', materials, [
           ['Item', ['name', 'item_id']],
           ['Qty', ['quantity', 'amount']],
-          ['Have', ['have', 'quantity_available', 'in_stock']],
+          ['Size', ['size']],
         ]);
       }
       return true;
