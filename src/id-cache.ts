@@ -117,6 +117,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   facility_repair: { facility: ['facility_id'] },
   facility_disassemble: { facility: ['facility_id'] },
   faction_disassemble: { facility: ['facility_id'] },
+  facility_dismantle: { facility: ['facility_id'] },
+  faction_dismantle: { facility: ['facility_id'] },
   facility_job_add: { facility: ['facility_id'] },
   facility_job_list: { facility: ['facility_id'] },
   facility_set_output_price: { facility: ['facility_id'] },
