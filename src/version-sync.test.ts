@@ -182,8 +182,20 @@ describe('client.ts source integrity', () => {
       action: 'repair',
       method: 'POST',
     });
+    expect(COMMANDS.facility_disassemble?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'disassemble',
+      method: 'POST',
+    });
+    expect(COMMANDS.faction_disassemble?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'faction_disassemble',
+      method: 'POST',
+    });
     expect(COMMANDS.get_battle_summary?.args).toEqual(['battle_id']);
     expect(COMMANDS.facility_repair?.args).toEqual(['facility_id']);
+    expect(COMMANDS.facility_disassemble?.args).toEqual(['facility_id']);
+    expect(COMMANDS.faction_disassemble?.args).toEqual(['facility_id']);
   });
 
   test('local AI usability helpers are present', () => {
