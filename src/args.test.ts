@@ -1464,9 +1464,11 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseInternalOk(['fleet_invite', 'PlayerName']).payload.player_id).toBe('PlayerName');
     expect(parseInternalOk(['facility_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseInternalOk(['facility_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
+    expect(parseInternalOk(['facility_disassemble', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseInternalOk(['facility_repair', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseInternalOk(['faction_build', 'ore_refinery']).payload.facility_type).toBe('ore_refinery');
     expect(parseInternalOk(['faction_dismantle', 'facility-1']).payload.facility_id).toBe('facility-1');
+    expect(parseInternalOk(['faction_disassemble', 'facility-1']).payload.facility_id).toBe('facility-1');
     expect(parseInternalOk(['facility_job_list', 'fac_1']).payload.facility_id).toBe('fac_1');
     expect(parseInternalArgs(['facility_transfer', 'facility-1', 'forward'])).toEqual({
       ok: false,
