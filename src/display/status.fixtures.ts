@@ -393,6 +393,15 @@ export const statusFixtureCases = {
   system_info: { command: 'get_system', fixture: systemInfoFixture },
 };
 
+/** Pending action queue status (V2GameState.queue subset for get_queue). */
+export const getQueueFixture = {
+  queue: { has_pending: true },
+};
+
+export const getQueueEmptyFixture = {
+  queue: { has_pending: false },
+};
+
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
@@ -405,6 +414,8 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_map: { command: 'get_map', fixture: getMapFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
+  get_queue: { command: 'get_queue', fixture: getQueueFixture },
+  get_queue_empty: { command: 'get_queue', fixture: getQueueEmptyFixture },
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
