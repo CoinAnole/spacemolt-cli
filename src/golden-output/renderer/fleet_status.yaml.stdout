@@ -3,10 +3,21 @@ action: status
 in_fleet: true
 fleet_id: "fleet-1"
 leader: Marlowe
+is_leader: true
+max_size: 5
 system_id: sol
 poi_id: earth_station
+invites:
+  - player_id: "player-3"
+    username: Ibis
 members:
   - player_id: "player-1"
     username: Marlowe
     is_leader: true
     ship: Prospector
+    fuel_per_jump: 12
+  - player_id: "player-2"
+    username: Rook
+    is_leader: false
+    passenger: true
+    riding_ship_id: "ship-marlowe-1"
