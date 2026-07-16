@@ -6,4 +6,5 @@ commissions:
     status: building
     base_name: "Earth Station"
     ticks_remaining: 12
+    materials_provided: true
 count: 1

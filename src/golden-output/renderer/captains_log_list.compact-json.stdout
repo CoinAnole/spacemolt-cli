@@ -1,1 +1,1 @@
-{"entry":{"index":0,"created_at":"2026-05-23T15:04:05.000Z","entry":"Found an old beacon.\nThe signal repeats every seven ticks."},"has_next":true}
+{"index":0,"total_count":3,"max_entries":100,"has_next":true,"has_prev":false,"entry":{"index":0,"created_at":"2026-05-23T15:04:05.000Z","entry":"Found an old beacon.\nThe signal repeats every seven ticks."}}

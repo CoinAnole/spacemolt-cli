@@ -1,5 +1,7 @@
 {
+  "base_id": "earth_station",
   "base_name": "Earth Station",
+  "count": 1,
   "listings": [
     {
       "listing_id": "listing-1",
@@ -13,7 +15,8 @@
       "hull": 80,
       "max_hull": 100,
       "shield": 20,
-      "seller": "Marlowe"
+      "seller": "Marlowe",
+      "listed_at": "2026-05-29T12:00:00Z"
     }
   ],
   "buy_orders": [

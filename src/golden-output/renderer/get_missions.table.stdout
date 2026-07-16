@@ -1,7 +1,7 @@
 
 === Missions ===
 
-  Title                 | ID                    | Type   | Difficulty
-  ----------------------+-----------------------+--------+-----------
-  Pirate Sweep          | pirate_sweep          | combat | 3         
-  Deep Core Prospecting | deep_core_prospecting | mining | 5         
+  Title                 | ID                    | Type   | Difficulty | Expires | Rewards                          | Description                     
+  ----------------------+-----------------------+--------+------------+---------+----------------------------------+---------------------------------
+  Pirate Sweep          | pirate_sweep          | combat | 3          | 48      | 2500 cr; combat XP +40           | Clear pirate contacts harassi...
+  Deep Core Prospecting | deep_core_prospecting | mining | 5          | 96      | 1800 cr; mining XP +55; ore_i... | Survey deep-core deposits and...

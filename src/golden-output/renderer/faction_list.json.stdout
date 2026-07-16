@@ -6,7 +6,9 @@
       "member_count": 20,
       "name": "Drift Matrix",
       "owned_bases": 0,
-      "tag": "DMX7"
+      "tag": "DMX7",
+      "primary_color": "#2E8B57",
+      "secondary_color": "#C0C0C0"
     },
     {
       "id": "faction-2",
@@ -14,7 +16,9 @@
       "member_count": 1,
       "name": "Mercs United",
       "owned_bases": 0,
-      "tag": "MERC"
+      "tag": "MERC",
+      "primary_color": "#8B0000",
+      "secondary_color": "#FFD700"
     }
   ],
   "limit": 50,

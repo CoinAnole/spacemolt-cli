@@ -2,6 +2,7 @@
 action: view_market
 base: "Earth Station"
 base_id: earth_station
+current_tick: 900690
 categories:
   - ore
   - fuel

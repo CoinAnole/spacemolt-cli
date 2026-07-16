@@ -116,12 +116,25 @@ export const missionsFixture = {
       mission_id: 'pirate_sweep',
       title: 'Pirate Sweep',
       type: 'combat',
+      description: 'Clear pirate contacts harassing local shipping lanes.',
+      expires_in_ticks: 48,
+      rewards: {
+        credits: 2500,
+        skill_xp: { combat: 40 },
+      },
     },
     {
       difficulty: 5,
       mission_id: 'deep_core_prospecting',
       title: 'Deep Core Prospecting',
       type: 'mining',
+      description: 'Survey deep-core deposits and return ore samples.',
+      expires_in_ticks: 96,
+      rewards: {
+        credits: 1800,
+        skill_xp: { mining: 55 },
+        items: { ore_iron: 25 },
+      },
     },
   ],
 };
@@ -275,6 +288,8 @@ export const factionsFixture = {
       name: 'Drift Matrix',
       owned_bases: 0,
       tag: 'DMX7',
+      primary_color: '#2E8B57',
+      secondary_color: '#C0C0C0',
     },
     {
       id: 'faction-2',
@@ -283,6 +298,8 @@ export const factionsFixture = {
       name: 'Mercs United',
       owned_bases: 0,
       tag: 'MERC',
+      primary_color: '#8B0000',
+      secondary_color: '#FFD700',
     },
   ],
   limit: 50,

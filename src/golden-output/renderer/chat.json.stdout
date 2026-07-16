@@ -1,5 +1,8 @@
 {
   "action": "chat",
   "target": "local",
-  "content": "Clear skies."
+  "content": "Clear skies.",
+  "channel": "local",
+  "message": "Clear skies.",
+  "sent_at": 1748012645
 }

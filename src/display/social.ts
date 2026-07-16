@@ -19,6 +19,24 @@ function formatTimestampPreview(value: unknown): string {
   return match ? `${match[1]} ${match[2]}` : text;
 }
 
+/** Stable chat time for table/golden output (avoids locale-dependent toLocaleTimeString). */
+function formatChatSentAt(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    // ChatResponse.sent_at is integer unix seconds (treat large values as ms).
+    const ms = value > 1e12 ? value : value * 1000;
+    const date = new Date(ms);
+    if (!Number.isFinite(date.getTime())) return String(value);
+    return `${date.toISOString().slice(11, 19)}Z`;
+  }
+  const text = String(value);
+  const iso = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
+  if (iso) return `${iso[2]}${iso[2]!.length === 5 ? ':00' : ''}Z`;
+  const date = new Date(text);
+  if (Number.isFinite(date.getTime())) return `${date.toISOString().slice(11, 19)}Z`;
+  return text;
+}
+
 function firstLinePreview(value: unknown): string {
   if (value === undefined || value === null) return '';
   return String(value).split(/\r?\n/, 1)[0]?.trim() ?? '';
@@ -315,8 +333,9 @@ export const socialFormatters = [
       if (!channel || (r.action && r.action !== 'chat')) return false;
       if (!r.action && !r.message && !r.content && !r.sent_at && !r.timestamp) return false;
       if (r.message || r.content) {
-        const timestamp = r.sent_at || r.timestamp;
-        const time = timestamp ? `${c.dim}${new Date(timestamp as string).toLocaleTimeString()}${c.reset} ` : '';
+        const timestamp = r.sent_at ?? r.timestamp;
+        const formatted = formatChatSentAt(timestamp);
+        const time = formatted ? `${c.dim}${formatted}${c.reset} ` : '';
         emitLine(`${c.green}[${channel}]${c.reset} ${time}${r.message || r.content}`);
       } else {
         emitLine(`${c.green}Chat sent:${c.reset} ${channel}`);

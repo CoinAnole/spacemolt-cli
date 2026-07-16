@@ -1,7 +1,13 @@
 export const chatSentFixture = {
+  // Client-oriented aliases accepted by the chat_sent formatter (allowed extras vs ChatResponse).
   action: 'chat',
   target: 'local',
   content: 'Clear skies.',
+  // Schema-required ChatResponse fields.
+  channel: 'local',
+  message: 'Clear skies.',
+  // Unix seconds (ChatResponse.sent_at is integer).
+  sent_at: 1748012645,
 };
 
 /** Flat facilities array for the `facilities` named formatter (not the /list response shape). */
@@ -371,12 +377,16 @@ export const captainLogGetFixture = {
 };
 
 export const captainsLogListFixture = {
+  index: 0,
+  total_count: 3,
+  max_entries: 100,
+  has_next: true,
+  has_prev: false,
   entry: {
     index: 0,
     created_at: '2026-05-23T15:04:05.000Z',
     entry: 'Found an old beacon.\nThe signal repeats every seven ticks.',
   },
-  has_next: true,
 };
 
 export const chatHistoryFixture = {

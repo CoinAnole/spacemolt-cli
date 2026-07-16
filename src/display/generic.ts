@@ -211,6 +211,9 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['ID', ['mission_id', 'id', 'template_id']],
     ['Type', ['type']],
     ['Difficulty', ['difficulty']],
+    ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
+    ['Rewards', ['rewards_summary']],
+    ['Description', ['description']],
   ],
 };
 
@@ -795,9 +798,11 @@ export const genericFormatters = [
       if (!key) return false;
       const rows = r[key] as unknown[];
       if (!rows.every(isRecord)) return false;
-      const recordRows = (rows as Array<Record<string, unknown>>).map((row) =>
-        key === 'items' ? { ...row, effects_summary: summarizeAmmoEffects(row) } : row,
-      );
+      const recordRows = (rows as Array<Record<string, unknown>>).map((row) => {
+        if (key === 'items') return { ...row, effects_summary: summarizeAmmoEffects(row) };
+        if (key === 'missions') return { ...row, rewards_summary: summarizeRewards(row.rewards) };
+        return row;
+      });
       const columnCandidates = GENERIC_LIST_COLUMNS_BY_KEY[key] ?? GENERIC_LIST_COLUMNS;
       const columns = scalarColumns(recordRows, columnCandidates);
       if (recordRows.length > 0 && columns.length < 1) return false;

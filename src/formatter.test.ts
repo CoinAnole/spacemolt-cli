@@ -4005,7 +4005,7 @@ describe('structuredContent formatters', () => {
         ---------+----------+-----+----------
         Iron Ore | ore_iron |  50 |"
       ,
-        "chat_sent": "[local] Clear skies.",
+        "chat_sent": "[local] 15:04:05Z Clear skies.",
         "drone": 
       "
       === Drone ===

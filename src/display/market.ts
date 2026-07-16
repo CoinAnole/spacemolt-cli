@@ -659,6 +659,7 @@ export const marketFormatters = [
         ['Status', ['status']],
         ['Station', ['base_name', 'base_id']],
         ['Ticks', ['ticks_remaining']],
+        ['Materials', ['materials_provided']],
         ['ID', ['commission_id']],
       ]);
       if (r.count !== undefined && commissions.length !== r.count) emitLine(`${c.dim}count ${r.count}${c.reset}`);

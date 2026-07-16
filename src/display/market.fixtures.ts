@@ -1,7 +1,9 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
 
 export const browseShipsFixture = {
+  base_id: 'earth_station',
   base_name: 'Earth Station',
+  count: 1,
   listings: [
     {
       listing_id: 'listing-1',
@@ -16,6 +18,7 @@ export const browseShipsFixture = {
       max_hull: 100,
       shield: 20,
       seller: 'Marlowe',
+      listed_at: '2026-05-29T12:00:00Z',
     },
   ],
   buy_orders: [
@@ -53,6 +56,7 @@ export const viewMarketFixture = {
   action: 'view_market',
   base: 'Earth Station',
   base_id: 'earth_station',
+  current_tick: 900690,
   categories: ['ore', 'fuel'],
   message: 'Market at Earth Station',
   items: [
@@ -237,6 +241,7 @@ export const commissionStatusFixture = {
       status: 'building',
       base_name: 'Earth Station',
       ticks_remaining: 12,
+      materials_provided: true,
     },
   ],
   count: 1,
@@ -429,6 +434,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   commission_quote: { command: 'commission_quote', fixture: commissionQuoteFixture },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
+  claim_insurance: { command: 'claim_insurance', fixture: viewInsuranceFixture },
   storage_view: {
     command: 'storage',
     fixture: { ...storageFixture, gifts: [], messages: [] },
