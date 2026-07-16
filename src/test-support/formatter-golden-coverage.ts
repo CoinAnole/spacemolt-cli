@@ -3,9 +3,7 @@ import { resultFormatters } from '../display/formatters.ts';
 import { renderStructuredResult } from '../display/index.ts';
 
 const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
-  buy: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',
   get_status_summary: 'Internal display variant selected from get_status --summary; covered by CLI golden output.',
-  sell: 'Trading success output is currently covered by lower-level behavior tests; add a golden fixture when stable sample response is available.',
   storage_carrier_load:
     'Internal display variant selected from storage deposit payload context; covered by renderResponse behavior tests.',
 };

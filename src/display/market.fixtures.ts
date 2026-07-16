@@ -165,6 +165,54 @@ export const marketOrdersFixture = {
   sort_by: 'newest',
 };
 
+export const buyFixture = {
+  details: {
+    action: 'buy',
+    item: 'Fuel Cell',
+    item_id: 'fuel_cell',
+    quantity: 10,
+    total_cost: 21,
+    unfilled: 3,
+    delivered_to_cargo: 7,
+    fills: [
+      { quantity: 4, price_each: 3, subtotal: 12, source: 'station' },
+      { quantity: 3, price_each: 3, subtotal: 9, source: 'player' },
+    ],
+    auto_listed: {
+      order_id: 'auto-buy-1',
+      quantity: 3,
+      price_each: 4,
+      escrow: 12,
+      listing_fee: 1,
+    },
+    level_up: false,
+    message: 'Bought items.',
+  },
+};
+
+export const sellFixture = {
+  details: {
+    action: 'sell',
+    item: 'Iron Ore',
+    item_id: 'ore_iron',
+    quantity_sold: 6,
+    total_earned: 90,
+    unsold: 4,
+    fills: [
+      { quantity: 5, price_each: 15, subtotal: 75, source: 'station' },
+      { quantity: 1, price_each: 15, subtotal: 15, source: 'player' },
+    ],
+    auto_listed: {
+      order_id: 'auto-sell-1',
+      quantity: 4,
+      price_each: 20,
+      listing_fee: 2,
+    },
+    level_up: false,
+    message: 'Sold items.',
+  },
+};
+
 export const createSellOrderFixture = {
   details: {
     action: 'create_sell_order',
@@ -423,6 +471,8 @@ export const marketFixtureCases = {
 export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
   view_ship_buy_orders: { command: 'view_ship_buy_orders', fixture: viewShipBuyOrdersFixture },
+  buy: { command: 'buy', fixture: buyFixture },
+  sell: { command: 'sell', fixture: sellFixture },
   create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },

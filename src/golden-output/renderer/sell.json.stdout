@@ -1,0 +1,32 @@
+{
+  "details": {
+    "action": "sell",
+    "item": "Iron Ore",
+    "item_id": "ore_iron",
+    "quantity_sold": 6,
+    "total_earned": 90,
+    "unsold": 4,
+    "fills": [
+      {
+        "quantity": 5,
+        "price_each": 15,
+        "subtotal": 75,
+        "source": "station"
+      },
+      {
+        "quantity": 1,
+        "price_each": 15,
+        "subtotal": 15,
+        "source": "player"
+      }
+    ],
+    "auto_listed": {
+      "order_id": "auto-sell-1",
+      "quantity": 4,
+      "price_each": 20,
+      "listing_fee": 2
+    },
+    "level_up": false,
+    "message": "Sold items."
+  }
+}
