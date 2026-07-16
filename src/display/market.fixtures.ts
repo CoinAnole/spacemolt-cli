@@ -484,7 +484,6 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   commission_quote: { command: 'commission_quote', fixture: commissionQuoteFixture },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
-  claim_insurance: { command: 'claim_insurance', fixture: viewInsuranceFixture },
   storage_view: {
     command: 'storage',
     fixture: { ...storageFixture, gifts: [], messages: [] },
