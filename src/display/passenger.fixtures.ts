@@ -206,4 +206,18 @@ export const passengerHighValueFixtures: Record<string, HighValueFixtureEntry> =
     fixture: unloadPassengerBulkFixture,
     schemaTarget: 'details',
   },
+  list_station_passengers_lounge: {
+    command: 'list_station_passengers',
+    fixture: listStationPassengersWithLoungeFixture,
+  },
+  unload_passenger_lounge: {
+    command: 'unload_passenger',
+    fixture: unloadPassengerLoungeFixture,
+    schemaTarget: 'details',
+  },
+  unload_passenger_transfer: {
+    command: 'unload_passenger',
+    fixture: unloadPassengerTransferFixture,
+    schemaTarget: 'details',
+  },
 };

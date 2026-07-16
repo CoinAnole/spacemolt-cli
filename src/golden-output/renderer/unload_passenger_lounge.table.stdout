@@ -1,0 +1,14 @@
+
+=== Passenger Unload ===
+Checked passengers into the Transit Lounge.
+Lounge: Transit Lounge
+Occupancy: 2/20
+Count: 1
+Deadline bonus: 50 ticks
+Skipped Full: 0
+
+=== Checked-In Passengers ===
+
+  Name     | Class    | Connecting | Destination   | System | Base Fare | Bonus | Ticks | ID          
+  ---------+----------+------------+---------------+--------+-----------+-------+-------+-------------
+  Orin Pax | business | yes        | Earth Station | Sol    | 240       | 0     | 40    | citizen-orin
