@@ -1012,6 +1012,8 @@ describe('command metadata', () => {
   test('notifications is curated instead of exposed as a generated fallback', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.notifications;
 
+    expect(config).toBeDefined();
+    if (!config) throw new Error('notifications command is missing from the bundled registry');
     expect(config).toMatchObject({
       category: 'Query commands',
       route: { tool: 'notifications', action: 'notifications', method: 'GET' },
