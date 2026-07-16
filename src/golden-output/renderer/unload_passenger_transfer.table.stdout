@@ -1,0 +1,12 @@
+
+=== Passenger Unload ===
+Transferred passengers to a docked ship.
+Target ship: Mate Runner (ship-mate-1)
+Count: 1
+Skipped No Berth: 1
+
+=== Transferred Passengers ===
+
+  Name      | Class   | Connecting | Destination  | System | Base Fare | Bonus | Ticks | ID          
+  ----------+---------+------------+--------------+--------+-----------+-------+-------+-------------
+  Lyra Vale | economy | yes        | Nova Central | Nova   | 125       | 25    | 8     | citizen-lyra

@@ -1,0 +1,18 @@
+
+message: "Transferred passengers to a docked ship."
+target_ship: "ship-mate-1"
+target_ship_name: "Mate Runner"
+count: 1
+transferred:
+  - citizen_id: "citizen-lyra"
+    name: "Lyra Vale"
+    bio: "A courier continuing on a connecting flight."
+    class: economy
+    connecting: true
+    destination: nova_central
+    destination_name: "Nova Central"
+    destination_system: Nova
+    base_fare: 125
+    speed_bonus: 25
+    ticks_remaining: 8
+skipped_no_berth: 1
