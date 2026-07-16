@@ -731,6 +731,35 @@ export const genericFormatters = [
     { commands: ['get_active_missions', 'accept_mission', 'abandon_mission'] },
   ),
 
+  // Distress signal broadcast (details unwrapped by postActionDetailsViewModel)
+  formatter(
+    (r) => {
+      if (r.action !== 'distress_signal' && r.distress_type === undefined) return false;
+      if (r.distress_type === undefined && r.missions_sent === undefined) return false;
+
+      emitLine(`\n${c.bright}=== Distress Signal ===${c.reset}`);
+      if (r.distress_type !== undefined) emitLine(`Type: ${r.distress_type}`);
+      const poiLabel =
+        r.poi_name && r.poi && r.poi_name !== r.poi
+          ? `${r.poi_name} (${r.poi})`
+          : (r.poi_name ?? r.poi);
+      const systemLabel =
+        r.system_name && r.system && r.system_name !== r.system
+          ? `${r.system_name} (${r.system})`
+          : (r.system_name ?? r.system);
+      if (poiLabel || systemLabel) {
+        const location =
+          poiLabel && systemLabel ? `${poiLabel} @ ${systemLabel}` : (poiLabel ?? systemLabel);
+        emitLine(`Location: ${location}`);
+      }
+      if (r.missions_sent !== undefined) emitLine(`Missions sent: ${r.missions_sent}`);
+      if (r.expires_seconds !== undefined) emitLine(`Expires in: ${r.expires_seconds}s`);
+      if (typeof r.message === 'string' && r.message) emitLine(r.message);
+      return true;
+    },
+    { commands: ['distress_signal'] },
+  ),
+
   formatter(
     (r) => {
       if (r.type !== 'ships' || !Array.isArray(r.items) || !r.items.every(isRecord)) return false;

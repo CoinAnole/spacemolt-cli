@@ -1,0 +1,11 @@
+
+details:
+  action: distress_signal
+  distress_type: fuel
+  system: sol
+  system_name: Sol
+  poi: earth_station
+  poi_name: "Earth Station"
+  missions_sent: 3
+  expires_seconds: 10800
+  message: "Distress signal broadcast. Nearby captains may receive rescue missions."

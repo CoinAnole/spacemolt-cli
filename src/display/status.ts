@@ -1038,6 +1038,48 @@ export const statusFormatters = [
     { commands: ['complete_mission'] },
   ),
 
+  // Completed mission history list (flat CompletedMissionsResponse)
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.missions)) return false;
+      const rows = r.missions.filter(isRecord).map((mission) => ({
+        ...mission,
+        giver_display: formatMissionGiver(mission.giver) ?? '',
+      }));
+      printCompactTable(
+        'Completed Missions',
+        rows,
+        [
+          ['Title', ['title', 'name']],
+          ['ID', ['template_id', 'mission_id', 'id']],
+          ['Type', ['type']],
+          ['Diff', ['difficulty']],
+          ['Completed', ['completion_time']],
+          ['Giver', ['giver_display']],
+        ],
+        { maxCellWidth: 48 },
+      );
+      if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
+      return true;
+    },
+    { commands: ['completed_missions'] },
+  ),
+
+  // Decline mission dialog (flat DeclineMissionResponse)
+  formatter(
+    (r) => {
+      if (r.template_id === undefined && r.title === undefined) return false;
+      if (typeof r.message !== 'string' || !r.message) return false;
+      emitLine(`\n${c.bright}=== Mission Declined: ${r.title ?? r.template_id ?? 'Mission'} ===${c.reset}`);
+      if (r.template_id) emitLine(`ID: ${r.template_id}`);
+      const giver = formatMissionGiver(r.giver);
+      if (giver) emitLine(`Giver: ${giver}`);
+      emitLine(`"${r.message}"`);
+      return true;
+    },
+    { commands: ['decline_mission'] },
+  ),
+
   // Arrival (travel/jump)
   namedFormatter(
     'arrival',
