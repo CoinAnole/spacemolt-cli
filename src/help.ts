@@ -1103,7 +1103,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   ${c.cyan}Insurance:${c.reset}
     buy_insurance             Purchase ship insurance at quote rate
     get_insurance_quote       Get insurance pricing
-    claim_insurance           File insurance claim
+    claim_insurance           View your active insurance policies
     view_insurance            View active policies
 
   ${c.cyan}Fleet & Facilities:${c.reset}
