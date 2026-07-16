@@ -2558,6 +2558,52 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('complete_mission formats reward envelope without active-missions re-list', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-delivery-1',
+        title: 'Food Delivery',
+        credits_earned: 2500,
+        message: 'Mission complete. Rewards claimed.',
+        items_received: { food_rations: 5, repair_patch: 1 },
+        skill_xp_gained: { piloting: 25, hauling: 10 },
+        chain_next: 'mission-refinery-check',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Mission Complete: Food Delivery ===');
+    expect(stdout).toContain('ID: mission-delivery-1');
+    expect(stdout).toContain('Credits earned: 2,500');
+    expect(stdout).toContain('Items received: food_rations x5, repair_patch x1');
+    expect(stdout).toContain('Skill XP: piloting +25, hauling +10');
+    expect(stdout).toContain('Next: mission-refinery-check');
+    expect(stdout).toContain('Mission complete. Rewards claimed.');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission formats community partial reward fields when present', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-community-1',
+        title: 'Community Ore Drive',
+        credits_earned: 100,
+        message: 'Contribution recorded.',
+        community_percent: 12.5,
+        community_progress: { ore_iron: '90/720' },
+        community_contributed: { ore_iron: 40 },
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Mission Complete: Community Ore Drive ===');
+    expect(stdout).toContain('Credits earned: 100');
+    expect(stdout).toContain('Community: 12.5% (ore_iron: 90/720; contributed ore_iron x40)');
+    expect(stdout).toContain('Contribution recorded.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test.each([
     [
       'travel',
