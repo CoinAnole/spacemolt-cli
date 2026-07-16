@@ -124,6 +124,74 @@ describe('id cache', () => {
     expect(hints).toContainEqual(expect.objectContaining({ kind: 'listing', id: 'listing-1', name: 'Fuel Bunker' }));
   });
 
+  test('extracts package IDs from inspect and cargo package: items', () => {
+    const inspectHints = extractIdHints(
+      'inspect',
+      {
+        id: 'package:pkg_abc',
+        kind: 'package',
+        package: {
+          package_id: 'pkg_abc',
+          label: 'Main Belt Survey Supplies',
+          size: 100,
+          created_at: '2026-07-16T12:00:00Z',
+        },
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+    const cargoHints = extractIdHints(
+      'get_cargo',
+      {
+        cargo: [
+          { item_id: 'package:pkg_xyz', item_name: 'Smelter Feedstock', quantity: 1, size: 100 },
+          { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 5, size: 5 },
+        ],
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(inspectHints).toContainEqual(
+      expect.objectContaining({
+        kind: 'package',
+        id: 'pkg_abc',
+        name: 'Main Belt Survey Supplies',
+        context: expect.objectContaining({ size: 100, created_at: '2026-07-16T12:00:00Z' }),
+      }),
+    );
+    // Nested package payload should win; no thin top-level overwrite dropping context.
+    expect(inspectHints.filter((hint) => hint.kind === 'package' && hint.id === 'pkg_abc')).toHaveLength(1);
+    expect(cargoHints).toContainEqual(
+      expect.objectContaining({ kind: 'package', id: 'pkg_xyz', name: 'Smelter Feedstock' }),
+    );
+    expect(cargoHints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'package:pkg_xyz' }));
+    expect(cargoHints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'ore_iron' }));
+  });
+
+  test('resolves package: inspect form to bare cached package_id', () => {
+    const hints = [
+      {
+        kind: 'package' as const,
+        id: 'pkg_abc',
+        name: 'Main Belt Survey Supplies',
+        sourceCommand: 'inspect',
+        seenAt: '2026-05-18T00:00:00.000Z',
+        context: { size: 100 },
+      },
+    ];
+
+    expect(resolveCachedId('package', 'package:pkg_abc', hints)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'pkg_abc', match: 'exact' }),
+    );
+    expect(resolveCachedId('package', 'pkg_abc', hints)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'pkg_abc', match: 'exact' }),
+    );
+    // Uncached package: form still normalizes to the bare instance id for API fields.
+    expect(resolveCachedId('package', 'package:unknown_pkg', hints)).toEqual({
+      type: 'unresolved',
+      value: 'unknown_pkg',
+    });
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
@@ -399,15 +467,17 @@ describe('id cache', () => {
     expect(idKindForCommandField('sell', 'id')).toBe('item');
     expect(idKindForCommandField('fleet_invite', 'id')).toBe('player');
     expect(idKindForCommandField('switch_ship', 'id')).toBe('ship');
+    expect(idKindForCommandField('craft', 'package_id')).toBe('package');
+    expect(idKindForCommandField('facility_job_add', 'package_id')).toBe('package');
     expect(idKindForCommandField('unknown_command', 'target_system_id')).toBe('system');
     expect(idKindForCommandField('unknown_command', 'ship_id')).toBe('ship');
+    expect(idKindForCommandField('unknown_command', 'package_id')).toBe('package');
     expect(idKindForCommandField('travel', 'target_system_id')).toBeUndefined();
   });
 
   test('resolver rules cover alias-normalized target fields for commands with friendly ID fields', () => {
     const resolvableAliases = [
       ['switch_ship', 'ship_id', 'id', 'ship'],
-      ['sell_ship', 'ship_id', 'id', 'ship'],
       ['scrap_ship', 'ship_id', 'id', 'ship'],
       ['list_ship_for_sale', 'ship_id', 'id', 'ship'],
       ['buy_listed_ship', 'listing_id', 'id', 'listing'],
@@ -420,6 +490,8 @@ describe('id cache', () => {
       ['battle_target', 'target_id', 'id', 'player'],
       ['load_drone', 'drone_item_id', 'id', 'item'],
       ['reload', 'ammo_item_id', 'target', 'item'],
+      ['craft', 'package_id', 'package_id', 'package'],
+      ['facility_job_add', 'package_id', 'package_id', 'package'],
     ] as const;
 
     for (const [command, _friendlyField, normalizedField, kind] of resolvableAliases) {

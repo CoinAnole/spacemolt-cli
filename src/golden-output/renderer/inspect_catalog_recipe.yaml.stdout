@@ -1,0 +1,15 @@
+
+id: pack_package
+kind: catalog
+catalog:
+  type: recipes
+  recipes:
+    - id: pack_package
+      name: "Pack Package"
+      category: logistics
+      crafting_time: 10
+      facility_only: true
+      package_operation: pack
+      description: "Bundle mixed items into a labeled package."
+      inputs: [{item_id: cargo_container, name: "Cargo Container", quantity: 1}, {item_id: iron_ore, name: "Iron Ore", quantity: 20}]
+      outputs: [{item_id: package, name: Package, quantity: 1}]

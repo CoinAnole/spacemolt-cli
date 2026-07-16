@@ -233,15 +233,6 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt_ship/rename_ship',
     positionals: ['name'],
   },
-  sell_ship: {
-    usage: '<ship_id>  (sell stored ship at 50% base value)',
-    category: 'Ship management',
-    apiRoute: 'POST /api/v2/spacemolt_ship/sell_ship',
-    positionals: ['ship_id'],
-    aliases: {
-      ship_id: 'id',
-    },
-  },
   list_ships: {
     usage: '(all owned ships with locations)',
     category: 'Ship management',
@@ -341,12 +332,13 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; split source/deliver_to to route inputs and outputs separately)',
+      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; package recipes pack_package/unpack_package; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
     description:
-      'Queue crafting work or cancel queued jobs. Fast/cheap presets choose the globally fastest or cheapest usable facility, including public rentals that may charge fees. Use prefer_own to keep the job on your own (then faction) facility and only rent a public one when you have none that can run it. Inputs escrow from source (defaults to deliver_to) and outputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
-    example: 'spacemolt craft basic_iron_smelting 50 source=storage deliver_to=faction:Crafting',
-    discoverWith: ['catalog', 'storage', 'get_status'],
-    seeAlso: ['recycle', 'catalog', 'storage', 'get_guide'],
+      'Queue crafting work or cancel queued jobs. Fast/cheap presets choose the globally fastest or cheapest usable facility, including public rentals that may charge fees. Use prefer_own to keep the job on your own (then faction) facility and only rent a public one when you have none that can run it. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target). Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
+    example:
+      'spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'',
+    discoverWith: ['catalog', 'storage', 'get_status', 'inspect'],
+    seeAlso: ['recycle', 'catalog', 'storage', 'inspect', 'get_guide'],
     category: 'Crafting',
     apiRoute: 'POST /api/v2/spacemolt/craft',
     positionals: ['recipe_id', 'quantity'],
@@ -359,12 +351,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       deliver_to: {
         type: 'string',
         description:
-          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Crafting never delivers to cargo.",
+          "Ordinary craft output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. For package recipes, deliver_to is accepted as an alias for target (which may also be cargo).",
       },
       source: {
         type: 'string',
         description:
-          'Where inputs and labor/rental credits are pulled FROM. Same values as deliver_to; defaults to deliver_to.',
+          "Where inputs and labor/rental credits are pulled FROM. Ordinary craft: same values as deliver_to (storage/faction/faction:<bucket>), defaults to deliver_to. Package recipes also accept 'cargo'.",
       },
       dry_run: {
         type: 'boolean',
@@ -376,12 +368,30 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       id: {
         type: 'string',
-        description: 'Recipe ID to craft. Inputs are escrowed from station storage when the job is queued.',
+        description: 'Recipe ID to craft. Inputs are escrowed when the job is queued.',
+      },
+      items: {
+        type: 'array',
+        description:
+          'For pack_package: JSON array of {item_id, quantity} to pack (total unpacked size may not exceed 100).',
+      },
+      label: {
+        type: 'string',
+        description: 'For pack_package: player-visible package label.',
+      },
+      package_id: {
+        type: 'string',
+        description: 'For unpack_package: package instance ID to open.',
+      },
+      target: {
+        type: 'string',
+        description:
+          'For package recipes: output destination (storage, cargo, faction, or faction:<bucket>); defaults to source. deliver_to is accepted as an alias.',
       },
       jobs: {
         type: 'array',
         description:
-          'Bulk mode JSON array of jobs, each with recipe_id, quantity, and optional facility_id, preset, or deliver_to.',
+          'Bulk mode JSON array of jobs, each with recipe_id, quantity, and optional facility_id, preset, deliver_to, source, or package fields (items, package_id, label, target).',
       },
       job_id: {
         type: 'string',
@@ -395,7 +405,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         enum: ['fast', 'cheap', 'prefer_own', 'workshop'],
         description:
-          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest usable facility (a public rental may be chosen and may charge a fee); 'prefer_own' keeps the job on your own (then faction) facility and only rents a public one when you have none that can run it; 'workshop' forces hand-crafting.",
+          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest usable facility (a public rental may be chosen and may charge a fee); 'prefer_own' keeps the job on your own (then faction) facility and only rents a public one when you have none that can run it; 'workshop' forces hand-crafting (for unpack_package: slower and does not recover the cargo_container).",
       },
       quantity: {
         type: 'integer',
@@ -405,9 +415,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   recycle: {
     usage:
-      '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
+      '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
     description:
-      'Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets.',
+      'Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets. Presets: fast/cheap pick the globally fastest or cheapest eligible recycler (may rent); prefer_own keeps the job on your own (then faction) recycler whenever one can run it. Recycling always needs a real recycler facility (workshop does not apply).',
     example: 'spacemolt recycle basic_iron_smelting 20 source=faction:Scrap deliver_to=storage',
     discoverWith: ['catalog', 'facility_list', 'storage'],
     seeAlso: ['craft', 'catalog', 'storage', 'get_guide'],
@@ -440,7 +450,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       jobs: {
         type: 'array',
         description:
-          'Bulk mode JSON array of recycling jobs, each with recipe_id, quantity, and optional facility_id or deliver_to.',
+          'Bulk mode JSON array of recycling jobs, each with recipe_id, quantity, and optional facility_id, preset, deliver_to, or source.',
       },
       job_id: {
         type: 'string',
@@ -451,6 +461,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'array',
         description:
           'Queued recycling job IDs to cancel in bulk; use action=queue on craft or facility job list output to find IDs.',
+      },
+      preset: {
+        type: 'string',
+        enum: ['fast', 'cheap', 'prefer_own'],
+        description:
+          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest eligible recycler (a public rental may be chosen); 'prefer_own' keeps the job on your own (then faction) recycler whenever one can run it. Workshop does not apply to recycling.",
       },
       quantity: {
         type: 'integer',

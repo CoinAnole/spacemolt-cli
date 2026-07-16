@@ -17,7 +17,8 @@ export type IdKind =
   | 'drone'
   | 'wreck'
   | 'facility'
-  | 'listing';
+  | 'listing'
+  | 'package';
 
 export interface IdHint {
   kind: IdKind;
@@ -49,6 +50,7 @@ const ID_KINDS = new Set<IdKind>([
   'wreck',
   'facility',
   'listing',
+  'package',
 ]);
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
@@ -119,7 +121,7 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   faction_disassemble: { facility: ['facility_id'] },
   facility_dismantle: { facility: ['facility_id'] },
   faction_dismantle: { facility: ['facility_id'] },
-  facility_job_add: { facility: ['facility_id'] },
+  facility_job_add: { facility: ['facility_id'], package: ['package_id'] },
   facility_job_list: { facility: ['facility_id'] },
   facility_set_output_price: { facility: ['facility_id'] },
   facility_set_access: { facility: ['facility_id'] },
@@ -133,9 +135,9 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   buy_listed_ship: { listing: ['listing_id', 'id'] },
   cancel_ship_listing: { listing: ['listing_id', 'id'] },
   switch_ship: { ship: ['ship_id', 'id'] },
-  sell_ship: { ship: ['ship_id', 'id'] },
   scrap_ship: { ship: ['ship_id', 'id'] },
   list_ship_for_sale: { ship: ['ship_id', 'id'] },
+  craft: { package: ['package_id'] },
 };
 
 interface Clock {
@@ -305,17 +307,39 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
     for (const player of arrayRecords(location.nearby_players)) pushPlayer(push, player);
   }
 
-  for (const item of arrayRecords(result.cargo)) pushItem(push, item, ['quantity', 'size']);
+  for (const item of arrayRecords(result.cargo)) {
+    pushItem(push, item, ['quantity', 'size']);
+    pushPackageFromItem(push, item);
+  }
   for (const item of arrayRecords(result.items)) {
     const itemWithContext = isRecord(result.base_id) ? item : { ...item, base_id: result.base_id };
     pushItem(push, itemWithContext, ['quantity', 'category', 'base_id']);
+    pushPackageFromItem(push, itemWithContext);
   }
-  for (const item of arrayRecords(result.inventory)) pushItem(push, item, ['quantity']);
+  for (const item of arrayRecords(result.inventory)) {
+    pushItem(push, item, ['quantity']);
+    pushPackageFromItem(push, item);
+  }
   for (const ship of arrayRecords(result.ships)) pushShip(push, ship);
   const drone = isRecord(result.drone) ? result.drone : undefined;
   if (drone) pushDrone(push, drone);
   for (const drone of arrayRecords(result.drones)) pushDrone(push, drone);
   for (const wreck of arrayRecords(result.wrecks)) pushWreck(push, wreck);
+
+  const pkg = isRecord(result.package) ? result.package : undefined;
+  if (pkg) {
+    // Prefer the nested package payload (label/size/created_at). Fill missing package_id from top-level id.
+    pushPackage(push, {
+      ...pkg,
+      package_id: pkg.package_id || pkg.id || result.id,
+    });
+  } else if (stringValue(result.kind) === 'package' || stringValue(result.id).startsWith('package:')) {
+    // Fallback when only top-level inspect metadata is present.
+    pushPackage(push, {
+      package_id: stringValue(result.id),
+      label: stringValue(result.label),
+    });
+  }
 
   for (const player of arrayRecords(result.nearby)) pushPlayer(push, player);
   for (const player of arrayRecords(result.players)) pushPlayer(push, player);
@@ -351,17 +375,21 @@ export function resolveCachedId(kind: IdKind, query: string, hints = loadIdCache
   const trimmed = query.trim();
   if (!trimmed) return { type: 'unresolved', value: query };
 
+  // Package instance IDs are cached bare; accept inspect/cargo `package:<id>` form on resolve.
+  const lookup = kind === 'package' ? normalizePackageId(trimmed) || trimmed : trimmed;
+
   const candidates = dedupeHintsById(hintsForKind(kind, hints));
-  const exact = findMatches(candidates, trimmed, 'exact');
-  if (exact.length > 0) return resolveMatches(kind, trimmed, exact, 'exact');
+  const exact = findMatches(candidates, lookup, 'exact');
+  if (exact.length > 0) return resolveMatches(kind, lookup, exact, 'exact');
 
-  const prefix = findMatches(candidates, trimmed, 'prefix');
-  if (prefix.length > 0) return resolveMatches(kind, trimmed, prefix, 'prefix');
+  const prefix = findMatches(candidates, lookup, 'prefix');
+  if (prefix.length > 0) return resolveMatches(kind, lookup, prefix, 'prefix');
 
-  const substring = findMatches(candidates, trimmed, 'substring');
-  if (substring.length > 0) return resolveMatches(kind, trimmed, substring, 'substring');
+  const substring = findMatches(candidates, lookup, 'substring');
+  if (substring.length > 0) return resolveMatches(kind, lookup, substring, 'substring');
 
-  return { type: 'unresolved', value: query };
+  // Even without a cache hit, return the bare package instance id for API fields.
+  return { type: 'unresolved', value: kind === 'package' ? lookup : query };
 }
 
 export function idKindForCommandField(command: string, field?: string): IdKind | undefined {
@@ -379,6 +407,7 @@ export function idKindForCommandField(command: string, field?: string): IdKind |
   if (normalizedField.includes('system')) return 'system';
   if (normalizedField.includes('player') || normalizedField.includes('target')) return 'player';
   if (normalizedField === 'ship_id' || normalizedField.endsWith('_ship_id')) return 'ship';
+  if (normalizedField === 'package_id' || normalizedField.endsWith('_package_id')) return 'package';
   if (normalizedField.includes('item')) return 'item';
   return undefined;
 }
@@ -559,6 +588,7 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     wreck: ['get_wrecks'],
     facility: ['facility_list', 'faction_facility_list'],
     listing: ['facility_browse_for_sale', 'browse_ships', 'get_trades'],
+    package: ['inspect', 'get_cargo', 'storage view'],
   };
   out(`Run one of these to populate it:`);
   for (const command of commandsByKind[kind]) out(`  spacemolt ${command}`);
@@ -663,6 +693,39 @@ function pushListing(
         listing.facility_type,
     ),
     context: pick(listing, ['item_id', 'ship_id', 'facility_id', 'price', 'price_each', 'seller_name']),
+  });
+}
+
+function normalizePackageId(value: unknown): string {
+  const raw = stringValue(value);
+  if (!raw) return '';
+  return raw.startsWith('package:') ? raw.slice('package:'.length) : raw;
+}
+
+function pushPackage(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  pkg: Record<string, unknown>,
+): void {
+  const id = normalizePackageId(pkg.package_id || pkg.id);
+  if (!id) return;
+  push({
+    kind: 'package',
+    id,
+    name: stringValue(pkg.label || pkg.name || pkg.item_name),
+    context: pick(pkg, ['size', 'created_at']),
+  });
+}
+
+function pushPackageFromItem(
+  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
+  item: Record<string, unknown>,
+): void {
+  const itemId = stringValue(item.item_id || item.id);
+  if (!itemId.startsWith('package:')) return;
+  pushPackage(push, {
+    package_id: itemId,
+    label: stringValue(item.item_name || item.name || item.label),
+    size: item.size,
   });
 }
 

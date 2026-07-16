@@ -127,7 +127,7 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
     seeAlso: ['help', 'commands', 'sync-api', 'get_commands'],
   },
   ids: {
-    usage: '<poi|system|item|player|ship|faction|drone|wreck|facility|listing> [--search text]',
+    usage: '<poi|system|item|player|ship|faction|drone|wreck|facility|listing|package> [--search text]',
     description: 'Show recently discovered IDs from cached command output.',
     example: 'spacemolt ids item --search fuel',
     category: 'Reference & Help',

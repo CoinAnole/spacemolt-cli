@@ -148,7 +148,8 @@ function resolveCachedIdsForPayload(
           const resolved = resolveCachedId(kind, item, hints);
           if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
           if (resolved.type === 'resolved') resolvedArray.push(resolved.value);
-          else resolvedArray.push(item);
+          // Use resolver-normalized unresolved values (e.g. package:id → bare package_id).
+          else resolvedArray.push(resolved.value !== item ? resolved.value : item);
         } else {
           resolvedArray.push(item);
         }
@@ -163,6 +164,8 @@ function resolveCachedIdsForPayload(
       const resolved = resolveCachedId(kind, value, hints);
       if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
       if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
+      // Apply package: prefix stripping even when the id is not in cache.
+      else if (resolved.value !== value) resolvedPayload[field] = resolved.value;
     }
   }
 

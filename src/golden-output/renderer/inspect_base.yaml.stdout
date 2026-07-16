@@ -1,0 +1,31 @@
+
+id: earth_station
+kind: base
+base:
+  base:
+    id: earth_station
+    poi_id: earth_orbit
+    name: "Earth Station"
+    description: "A busy trade hub."
+    empire: solarian
+    faction_id: sol_gov
+    fuel: 100
+    max_fuel: 500
+    hull: 900
+    max_hull: 1000
+    shield: 200
+    max_shield: 300
+    armor: 50
+    weapon_dps: 40
+    weapon_reach: 2
+    public_access: true
+    facilities:
+      - market
+      - shipyard
+      - logistics
+  condition:
+    condition: good
+    condition_text: Good
+    satisfaction_pct: 88
+    satisfied_count: 7
+    total_service_infra: 8

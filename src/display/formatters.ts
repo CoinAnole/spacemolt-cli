@@ -1,6 +1,7 @@
 import { empireFormatters } from './empire.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
+import { inspectFormatters } from './inspect.ts';
 import { marketFormatters } from './market.ts';
 import { notificationFormatters } from './notifications.ts';
 import { passengerFormatters } from './passenger.ts';
@@ -16,6 +17,7 @@ export const resultFormatters: ResultFormatter[] = [
   ...notificationFormatters,
   ...passengerFormatters,
   ...shipFormatters,
+  ...inspectFormatters,
   ...socialFormatters,
   ...empireFormatters,
   ...genericFormatters,

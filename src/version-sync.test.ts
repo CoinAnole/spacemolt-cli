@@ -78,6 +78,7 @@ describe('client.ts source integrity', () => {
       'get_recipes',
       'shipyard_showroom',
       'set_anonymous',
+      'sell_ship',
     ];
     for (const cmd of removedCommands) {
       expect(COMMANDS[cmd]).toBeUndefined();

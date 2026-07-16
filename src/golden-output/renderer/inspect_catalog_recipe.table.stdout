@@ -1,0 +1,19 @@
+
+=== Inspect: pack_package ===
+Kind: catalog
+
+Catalog (recipes)
+
+=== Recipes ===
+
+  Name         | ID           | Category  | Time
+  -------------+--------------+-----------+-----
+  Pack Package | pack_package | logistics | 10  
+
+Details
+Bundle mixed items into a labeled package.
+Inputs: 1× Cargo Container, 20× Iron Ore
+Outputs: 1× Package
+Crafting time: 10
+Facility only: yes
+Package operation: pack

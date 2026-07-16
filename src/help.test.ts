@@ -106,7 +106,7 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
     expect(output).toContain(
-      'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing IDs',
+      'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs',
     );
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });
@@ -203,7 +203,7 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
     expect(output).toContain(
-      'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing IDs',
+      'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs',
     );
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });
@@ -863,7 +863,7 @@ describe('help output branches', () => {
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
     expect(output).toContain(
-      'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing IDs',
+      'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs',
     );
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
   });

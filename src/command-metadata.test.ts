@@ -535,16 +535,28 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('fund_from_faction');
   });
 
-  test('craft help documents queued station-storage production', () => {
+  test('craft help documents queued station-storage production and packages', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.args).toEqual(['recipe_id', 'quantity']);
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
-    expect(config?.usage).toContain('source=storage|faction|faction:<bucket>');
+    expect(config?.usage).toContain('source=storage|faction|faction:<bucket>|cargo');
     expect(config?.usage).toContain('deliver_to=storage|faction|faction:<bucket>');
+    expect(config?.usage).toContain('items=JSON');
+    expect(config?.usage).toContain('package_id');
+    expect(config?.usage).toContain('label');
+    expect(config?.usage).toContain('target=');
     expect(config?.description).toContain('faction:<bucket>');
+    expect(config?.description).toContain('pack_package');
+    expect(config?.description).toContain('unpack_package');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
+    expect(config?.schema?.deliver_to?.description).toContain('alias for target');
     expect(config?.schema?.source?.type).toBe('string');
+    expect(config?.schema?.source?.description).toContain('cargo');
+    expect(config?.schema?.items?.type).toBe('array');
+    expect(config?.schema?.label?.type).toBe('string');
+    expect(config?.schema?.package_id?.type).toBe('string');
+    expect(config?.schema?.target?.type).toBe('string');
     expect(config?.schema?.action?.enum).toEqual(['queue']);
     expect(config?.schema?.job_id?.type).toBe('string');
     expect(config?.schema?.quantity?.description).toContain('Number of output items');
@@ -554,10 +566,11 @@ describe('command metadata', () => {
     expect(config?.schema?.preset?.description).toContain('prefer_own');
     expect(config?.schema?.preset?.description).toContain('public rental');
     expect(config?.usage).toContain('prefer_own');
+    expect(config?.seeAlso).toContain('inspect');
 
     const help = captureHelp('craft');
     expect(help).toContain('Queue crafting work');
-    expect(help).toContain('source=storage|faction|faction:<bucket>');
+    expect(help).toContain('source=storage|faction|faction:<bucket>|cargo');
     expect(help).toContain('deliver_to=storage|faction|faction:<bucket>');
     expect(help).toContain('escrow');
     expect(help).toContain('dry_run');
@@ -567,8 +580,13 @@ describe('command metadata', () => {
     expect(help).toContain('prefer_own');
     expect(help).toContain('globally fastest or cheapest');
     expect(help).toContain('public rental');
-    expect(help).toContain('Crafting never delivers to cargo');
-    expect(help).not.toContain('cargo|storage');
+    expect(help).toContain('pack_package');
+    expect(help).toContain('package_id');
+    expect(help).toContain('items');
+    expect(help).toContain('label');
+    expect(help).toContain('target');
+    expect(help).toContain('cargo');
+    expect(help).not.toContain('Crafting never delivers to cargo');
     expect(help).not.toContain('server-capped by crafting skill level');
     expect(help).not.toContain('1-10');
     expect(help).not.toContain('If cargo is full');
@@ -585,10 +603,13 @@ describe('command metadata', () => {
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
     expect(config?.usage).toContain('source=storage|faction|faction:<bucket>');
     expect(config?.usage).toContain('deliver_to=storage|faction|faction:<bucket>');
+    expect(config?.usage).toContain('preset=fast|cheap|prefer_own');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
     expect(config?.schema?.source?.type).toBe('string');
     expect(config?.schema?.job_id?.type).toBe('string');
+    expect(config?.schema?.preset?.enum).toEqual(['fast', 'cheap', 'prefer_own']);
+    expect(config?.schema?.jobs?.description).toContain('preset');
 
     const help = captureHelp('recycle');
     expect(help).toContain('Queue a recycling job');
@@ -598,6 +619,21 @@ describe('command metadata', () => {
     expect(help).toContain('dry_run');
     expect(help).toContain('jobs');
     expect(help).toContain('job_id');
+    expect(help).toContain('preset');
+    expect(help).toContain('prefer_own');
+  });
+
+  test('inspect is curated with route and package-aware docs', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.inspect;
+    expect(config?.route).toEqual({ tool: 'spacemolt', action: 'inspect', method: 'POST' });
+    expect(config?.category).toBe('Query commands');
+    expect(config?.required).toContain('id');
+    expect(config?.args).toContain('id');
+    expect(config?.usage).toContain('package:');
+    expect(config?.description).toMatch(/package/i);
+    expect(config?.description).toContain('package:');
+    expect(config?.seeAlso).toContain('craft');
+    expect(captureHelp('inspect')).toContain('package:');
   });
 
   test('storage help documents bucket transfers for faction storage extensions', () => {
@@ -782,7 +818,7 @@ describe('command metadata', () => {
         actionName: 'set_output_price',
         action: 'set_output_price',
         args: ['facility_id', 'price'],
-        help: 'Set the per-unit output price renters pay',
+        help: 'Set the rental price renters pay',
       },
       set_access: {
         group: 'facility',
@@ -810,16 +846,38 @@ describe('command metadata', () => {
 
     const facilityActions = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions;
     expect(facilityActions?.job_add?.config.usage).toContain('faction:<bucket>');
+    expect(facilityActions?.job_add?.config.usage).toContain('items=JSON');
+    expect(facilityActions?.job_add?.config.usage).toContain('package_id');
+    expect(facilityActions?.job_add?.config.usage).toContain('label');
+    expect(facilityActions?.job_add?.config.usage).toContain('target=');
+    expect(facilityActions?.job_add?.config.description).toContain('pack_package');
     expect(facilityActions?.job_add?.config.schema?.deliver_to?.description).toContain('faction:<bucket');
     expect(facilityActions?.job_add?.config.schema?.source?.description).toContain('deliver_to');
+    expect(facilityActions?.job_add?.config.schema?.source?.description).toContain('cargo');
+    expect(facilityActions?.job_add?.config.schema?.items?.type).toBe('array');
+    expect(facilityActions?.job_add?.config.schema?.package_id?.type).toBe('string');
+    expect(facilityActions?.job_add?.config.schema?.target?.type).toBe('string');
+    expect(facilityActions?.job_add?.config.seeAlso).toContain('craft');
+    expect(facilityActions?.job_add?.config.seeAlso).toContain('inspect');
     const jobAddHelp = captureHelp(facilityActions?.job_add?.displayName || 'facility job_add');
     expect(jobAddHelp).toContain('faction:<bucket>');
     expect(jobAddHelp).toContain('deliver_to');
     expect(jobAddHelp).toContain('source');
+    expect(jobAddHelp).toContain('pack_package');
+    expect(jobAddHelp).toContain('package_id');
+    expect(jobAddHelp).toContain('items');
+    expect(jobAddHelp).toContain('target');
     expect(facilityActions?.job_add?.config.schema?.direction?.enum).toEqual(['forward', 'reverse']);
     expect(facilityActions?.job_cancel?.config.schema?.job_ids?.type).toBe('array');
     expect(captureHelp(facilityActions?.job_cancel?.displayName || 'facility job_cancel')).toContain('job_ids');
     expect(facilityActions?.transfer?.config.schema?.direction?.enum).toEqual(['to_faction', 'to_player']);
+
+    const setOutputPrice = facilityActions?.set_output_price?.config;
+    expect(setOutputPrice?.description).toMatch(/package/i);
+    expect(setOutputPrice?.description).toMatch(/Logistics|once-per-package/i);
+    expect(captureHelp(facilityActions?.set_output_price?.displayName || 'facility set_output_price')).toMatch(
+      /package/i,
+    );
   });
 
   test('stale commands removed from the v2 API are not advertised', () => {

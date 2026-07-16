@@ -1,0 +1,40 @@
+{
+  "id": "package:pkg_abc",
+  "kind": "package",
+  "source": "cargo",
+  "package": {
+    "package_id": "pkg_abc",
+    "label": "Main Belt Survey Supplies",
+    "size": 100,
+    "created_at": "2026-07-16T12:00:00Z",
+    "owner": {
+      "type": "player",
+      "id": "p1",
+      "name": "PilotOne"
+    },
+    "creator": {
+      "player_id": "p1",
+      "username": "PilotOne",
+      "faction": {
+        "type": "player_faction",
+        "id": "f1",
+        "name": "Survey Corps",
+        "tag": "SRV"
+      }
+    },
+    "contents": [
+      {
+        "item_id": "iron_ore",
+        "name": "Iron Ore",
+        "quantity": 20,
+        "size": 20
+      },
+      {
+        "item_id": "copper_ore",
+        "name": "Copper Ore",
+        "quantity": 10,
+        "size": 10
+      }
+    ]
+  }
+}

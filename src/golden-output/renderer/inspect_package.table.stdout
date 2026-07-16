@@ -1,0 +1,18 @@
+
+=== Inspect: package:pkg_abc ===
+Kind: package
+Source: cargo
+
+Package: Main Belt Survey Supplies
+ID: pkg_abc
+Size: 100
+Created: 2026-07-16T12:00:00Z
+Owner: PilotOne (player)
+Creator: PilotOne / Survey Corps [SRV]
+
+=== Contents ===
+
+  Name       | Item       | Qty | Size
+  -----------+------------+-----+-----
+  Iron Ore   | iron_ore   | 20  | 20  
+  Copper Ore | copper_ore | 10  | 10  

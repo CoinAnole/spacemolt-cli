@@ -1,0 +1,19 @@
+
+=== Inspect: earth_station ===
+Kind: base
+
+Station: Earth Station
+ID: earth_station
+POI: earth_orbit
+Empire: solarian
+Faction: sol_gov
+Hull: 900/1000
+Shield: 200/300
+Armor: 50
+Guns: 40 DPS (reach 2)
+Fuel: 100/500
+Condition: Good (88% satisfaction)
+Facilities: 3
+  market, shipyard, logistics
+
+A busy trade hub.

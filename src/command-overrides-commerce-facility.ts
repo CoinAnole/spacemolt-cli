@@ -473,12 +473,20 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_job_add: {
     usage:
-      '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction|faction:<bucket>] [source=storage|faction|faction:<bucket>]',
+      '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction|faction:<bucket>] [source=storage|faction|faction:<bucket>|cargo] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>]',
     description:
-      'Queue production work on a facility you own. Use source and deliver_to to pull inputs from one store and deposit outputs to another; faction:<bucket> targets a Storage Extension bucket.',
-    example: 'spacemolt facility_job_add facility-1 refine_steel 10 source=storage deliver_to=faction:Crafting',
-    discoverWith: ['facility_list', 'facility_owned', 'catalog'],
-    seeAlso: ['facility_job_list', 'facility_job_cancel', 'facility_job_reorder', 'facility_set_access'],
+      'Queue production work on a facility you own (or a rental/logistics bay you can use). Ordinary jobs use source and deliver_to to pull inputs from one store and deposit outputs to another; faction:<bucket> targets a Storage Extension bucket. Package recipes pack_package and unpack_package also accept items/label or package_id with source/target (cargo allowed; target defaults to source). Empire stations offer a station-owned T1 Package Logistics Bay for 1 credit per package operation.',
+    example:
+      'spacemolt facility_job_add facility-1 pack_package 1 items=\'[{"item_id":"iron_ore","quantity":20}]\' label=\'Smelter Feedstock\' source=cargo target=storage',
+    discoverWith: ['facility_list', 'facility_owned', 'catalog', 'inspect'],
+    seeAlso: [
+      'facility_job_list',
+      'facility_job_cancel',
+      'facility_job_reorder',
+      'facility_set_access',
+      'craft',
+      'inspect',
+    ],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/job_add',
     positionals: ['facility_id', 'recipe_id', 'quantity', 'direction', 'deliver_to', 'source'],
@@ -486,7 +494,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       deliver_to: {
         type: 'string',
         description:
-          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>' for a Storage Extension bucket.",
+          "Ordinary job output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. For package jobs, deliver_to is accepted as an alias for target.",
       },
       direction: {
         type: 'string',
@@ -497,7 +505,24 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       source: {
         type: 'string',
         description:
-          'Input source: where inputs and credits are pulled from. Same values as deliver_to; defaults to deliver_to.',
+          "Input source: where inputs and credits are pulled from. Ordinary jobs: same values as deliver_to (defaults to deliver_to). Package jobs also accept 'cargo'.",
+      },
+      items: {
+        type: 'array',
+        description: 'For pack_package job_add: selected manifest items as JSON [{item_id, quantity}, ...].',
+      },
+      label: {
+        type: 'string',
+        description: 'For pack_package job_add: player-visible package label.',
+      },
+      package_id: {
+        type: 'string',
+        description: 'For unpack_package job_add: package instance ID to open.',
+      },
+      target: {
+        type: 'string',
+        description:
+          'Package job_add output destination (storage, cargo, faction, or faction:<bucket>); defaults to source.',
       },
     },
   },
@@ -540,10 +565,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_set_output_price: {
     usage: '<facility_id> <price>',
     description:
-      'Set the per-unit output price renters pay for facility production (price * qty per run, rounded). Use 0 for free (renters cover only their inputs/labor). Fractional allowed (e.g. 0.25).',
+      'Set the rental price renters pay on a facility you own. Ordinary production: per-produced-unit price × output quantity per run, rounded to a whole credit. Logistics package bays: a once-per-package-operation fee for each pack_package or unpack_package job (not multiplied by item counts). Use 0 for free (renters cover only their inputs/labor). Fractional allowed (e.g. 0.25).',
     example: 'spacemolt facility_set_output_price facility-1 0.25',
     discoverWith: ['facility_list', 'facility_owned'],
-    seeAlso: ['facility_set_access', 'facility_job_list'],
+    seeAlso: ['facility_set_access', 'facility_job_list', 'facility_job_add'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_output_price',
     positionals: ['facility_id', 'price'],

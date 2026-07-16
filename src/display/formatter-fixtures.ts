@@ -1,4 +1,5 @@
 import { genericFixtureCases, genericHighValueFixtures } from './generic.fixtures.ts';
+import { inspectFixtureCases, inspectHighValueFixtures } from './inspect.fixtures.ts';
 import { marketFixtureCases, marketHighValueFixtures } from './market.fixtures.ts';
 import { passengerHighValueFixtures } from './passenger.fixtures.ts';
 import { shipFixtureCases, shipHighValueFixtures } from './ship.fixtures.ts';
@@ -6,6 +7,7 @@ import { socialFixtureCases, socialHighValueFixtures } from './social.fixtures.t
 import { statusFixtureCases, statusHighValueFixtures } from './status.fixtures.ts';
 
 export * from './generic.fixtures.ts';
+export * from './inspect.fixtures.ts';
 export * from './market.fixtures.ts';
 export * from './passenger.fixtures.ts';
 export * from './ship.fixtures.ts';
@@ -34,6 +36,7 @@ export const formatterFixtureCases = {
   ...shipFixtureCases,
   ...socialFixtureCases,
   ...genericFixtureCases,
+  ...inspectFixtureCases,
 };
 
 export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
@@ -43,4 +46,5 @@ export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...shipHighValueFixtures,
   ...socialHighValueFixtures,
   ...genericHighValueFixtures,
+  ...inspectHighValueFixtures,
 };

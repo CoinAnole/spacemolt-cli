@@ -33,6 +33,17 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_base',
   },
+  inspect: {
+    usage: '<id>  (package:<id>, item, module, ship class, system, POI, or docked base)',
+    description:
+      'Look up a visible package, catalog entry, module, ship class, known system, current-system POI, or docked base by ID. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available.',
+    example: 'spacemolt inspect iron_ore',
+    discoverWith: ['get_cargo', 'get_system', 'catalog', 'get_base'],
+    seeAlso: ['get_cargo', 'get_system', 'get_poi', 'get_base', 'catalog', 'craft'],
+    category: 'Query commands',
+    apiRoute: 'POST /api/v2/spacemolt/inspect',
+    positionals: ['id'],
+  },
   get_ship: {
     description: 'Show ship stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo.',
     example: 'spacemolt get_ship',
