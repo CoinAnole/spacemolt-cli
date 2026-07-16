@@ -4231,12 +4231,21 @@ describe('structuredContent formatters', () => {
       === Fleet ===
       ID: fleet-1
       Leader: Marlowe
+      You are leader: yes
+      Size: 2/5
 
       === Members ===
 
-        Name    | ID       | Ship       | Location | Status
-        --------+----------+------------+----------+-------
-        Marlowe | player-1 | Prospector | sol      |"
+        Name    | ID       | Ship       | Location | Status | Passenger | Riding
+        --------+----------+------------+----------+--------+-----------+---------------
+        Marlowe | player-1 | Prospector | sol      |        |           |
+        Rook    | player-2 |            | sol      |        | yes       | ship-marlowe-1
+
+      === Pending Invites ===
+
+        Name | ID
+        -----+---------
+        Ibis | player-3"
       ,
         "intel": 
       "
