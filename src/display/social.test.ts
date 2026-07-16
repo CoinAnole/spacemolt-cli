@@ -233,14 +233,25 @@ test('renders flat fleet_status response from v2 schema', () => {
       in_fleet: true,
       fleet_id: 'fleet-1',
       leader: 'Marlowe',
+      is_leader: true,
+      max_size: 5,
       system_id: 'sol',
       poi_id: 'earth_station',
+      invites: [{ player_id: 'player-3', username: 'Ibis' }],
       members: [
         {
           player_id: 'player-1',
           username: 'Marlowe',
           is_leader: true,
           ship: 'Prospector',
+          fuel_per_jump: 12,
+        },
+        {
+          player_id: 'player-2',
+          username: 'Rook',
+          is_leader: false,
+          passenger: true,
+          riding_ship_id: 'ship-marlowe-1',
         },
       ],
     },
@@ -253,9 +264,21 @@ test('renders flat fleet_status response from v2 schema', () => {
   expect(stdout).toContain('=== Fleet ===');
   expect(stdout).toContain('ID: fleet-1');
   expect(stdout).toContain('Leader: Marlowe');
+  expect(stdout).toContain('You are leader: yes');
+  expect(stdout).toContain('Size: 2/5');
   expect(stdout).toContain('Marlowe');
   expect(stdout).toContain('Prospector');
   expect(stdout).toContain('sol');
+  expect(stdout).toContain('Rook');
+  expect(stdout).toContain('Passenger');
+  expect(stdout).toContain('Riding');
+  expect(stdout).toContain('ship-marlowe-1');
+  expect(stdout).toContain('Pending Invites');
+  expect(stdout).toContain('Ibis');
+  // Deadhead passenger has blank Ship column (no ship field)
+  const rookLine = stdout.split('\n').find((line) => line.includes('Rook'));
+  expect(rookLine).toBeDefined();
+  expect(rookLine).toMatch(/Rook\s+\|\s+player-2\s+\|\s+\|\s+/);
 });
 
 test('fleet shape fallback does not claim public faction profiles', () => {

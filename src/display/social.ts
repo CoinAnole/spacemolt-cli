@@ -867,8 +867,17 @@ export const socialFormatters = [
       if (fleet.leader || fleet.leader_name || fleet.leader_id) {
         emitLine(`Leader: ${fleet.leader || fleet.leader_name || fleet.leader_id}`);
       }
+      if (fleet.is_leader !== undefined) {
+        emitLine(`You are leader: ${formatYesNo(fleet.is_leader) ?? fleet.is_leader}`);
+      }
       if (fleet.in_fleet === false) emitLine('In fleet: no');
       const members = (fleet.members || r.members) as Array<Record<string, unknown>> | undefined;
+      if (fleet.max_size !== undefined) {
+        const memberCount = Array.isArray(members) ? members.length : undefined;
+        emitLine(
+          memberCount === undefined ? `Size: ${fleet.max_size}` : `Size: ${memberCount}/${fleet.max_size}`,
+        );
+      }
       if (Array.isArray(members)) {
         const rows = members.filter(isRecord).map((member) => {
           const ship = member.ship;
@@ -885,14 +894,29 @@ export const socialFormatters = [
             ...member,
             ship_display: shipDisplay,
             location_display: locationDisplay,
+            passenger_display: formatYesNo(member.passenger),
           };
         });
-        printCompactTable('Members', rows, [
+        const memberColumns: Array<[string, string[]]> = [
           ['Name', ['username', 'name', 'player_name']],
           ['ID', ['player_id', 'id']],
           ['Ship', ['ship_display', 'ship_class', 'ship_name']],
           ['Location', ['location_display', 'system_name', 'current_system', 'poi_name', 'current_poi']],
           ['Status', ['status', 'state']],
+        ];
+        if (hasAnyField(rows, ['passenger_display', 'passenger'])) {
+          memberColumns.push(['Passenger', ['passenger_display', 'passenger']]);
+        }
+        if (hasAnyField(rows, ['riding_ship_id'])) {
+          memberColumns.push(['Riding', ['riding_ship_id']]);
+        }
+        printCompactTable('Members', rows, memberColumns);
+      }
+      const invites = (fleet.invites || r.invites) as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(invites) && invites.length > 0) {
+        printCompactTable('Pending Invites', invites.filter(isRecord), [
+          ['Name', ['username', 'name', 'player_name']],
+          ['ID', ['player_id', 'id']],
         ]);
       }
       return true;
