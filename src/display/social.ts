@@ -678,9 +678,7 @@ export const socialFormatters = [
         return false;
       }
       if (r.intel_level === undefined && r.coverage_pct === undefined) return false;
-      const title = commandNameEquals(command, 'faction_trade_intel_status')
-        ? 'Faction Trade Intel'
-        : 'Faction Intel';
+      const title = commandNameEquals(command, 'faction_trade_intel_status') ? 'Faction Trade Intel' : 'Faction Intel';
       emitLine(`\n${c.bright}=== ${title} Status ===${c.reset}`);
       emitOptionalLine('Intel Level', r.intel_level);
       emitOptionalLine('Coverage', r.coverage_pct === undefined ? undefined : `${r.coverage_pct}%`);

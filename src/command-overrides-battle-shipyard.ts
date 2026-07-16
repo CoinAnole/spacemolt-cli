@@ -55,7 +55,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_battle_log: {
     usage: '<battle_id> [tick_start] [limit] [tick_end]',
-    description: 'View the tick-by-tick combat replay of a battle by ID.',
+    description: 'View the tick-by-tick combat replay of a battle by ID',
     example: 'spacemolt get_battle_log <battle_id>',
     discoverWith: ['get_battle_summary', 'get_battle_status'],
     seeAlso: ['get_battle_summary', 'get_battle_status'],
