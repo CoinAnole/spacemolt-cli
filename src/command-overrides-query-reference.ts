@@ -204,7 +204,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
     description: 'Poll queued game events such as chat, combat, trade, and faction updates.',
     example: 'spacemolt get_notifications limit=10 types=chat,market',
-    seeAlso: ['get_status', 'get_action_log'],
+    seeAlso: ['get_status', 'get_action_log', 'notifications'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_notifications',
     positionals: ['clear', 'limit', 'types'],
@@ -212,17 +212,36 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     schemaExtensions: {
       types: {
         type: 'array',
-        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'tip', 'system', 'market', 'crafting'],
+        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'market', 'crafting', 'system'],
         description: 'Filter by notification types. Omit for all types.',
       },
     },
   },
   notifications: {
-    description: 'Poll pending notifications',
-    example: 'spacemolt notifications',
-    seeAlso: ['get_notifications', 'get_status'],
+    usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
+    description:
+      'Poll pending notifications via GET (query params). Prefer get_notifications for the primary poll UX; this route accepts the same limit/clear/types filters.',
+    example: 'spacemolt notifications limit=10 clear=false types=chat',
+    seeAlso: ['get_notifications', 'get_status', 'get_action_log'],
     category: 'Query commands',
     apiRoute: 'GET /api/v2/notifications',
+    positionals: ['clear', 'limit', 'types'],
+    arrayFields: ['types'],
+    schemaExtensions: {
+      limit: {
+        type: 'integer',
+        description: 'Max notifications to return (default: 50, max: 100).',
+      },
+      clear: {
+        type: 'boolean',
+        description: 'Remove returned notifications from queue (default: true). Set to false to peek without clearing.',
+      },
+      types: {
+        type: 'array',
+        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'market', 'crafting', 'system'],
+        description: 'Filter by notification types. Omit for all types.',
+      },
+    },
   },
   get_empire_info: {
     usage: '[empire_id]  (omit for all empires)',

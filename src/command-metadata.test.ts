@@ -1014,10 +1014,19 @@ describe('command metadata', () => {
 
     expect(config).toMatchObject({
       category: 'Query commands',
-      description: 'Poll pending notifications',
-      example: 'spacemolt notifications',
       route: { tool: 'notifications', action: 'notifications', method: 'GET' },
+      arrayFields: ['types'],
+      schema: {
+        limit: { type: 'integer' },
+        clear: { type: 'boolean' },
+        types: {
+          type: 'array',
+          enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'market', 'crafting', 'system'],
+        },
+      },
     });
+    expect(config.description).toContain('get_notifications');
+    expect(config.example).toContain('limit=10');
 
     const snapshot = buildCommandRegistrySnapshot();
     expect(snapshot.commands.notifications).toEqual(config);

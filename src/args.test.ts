@@ -141,6 +141,57 @@ describe('convertPayloadTypes', () => {
     expect(applyPayloadTransforms('get_notifications', typed)).toEqual({ types: ['market'] });
   });
 
+  test('get_notifications types accept skill.md faction/friend/forum filters', () => {
+    const { payload } = parseOk(['get_notifications', 'types=faction,friend,forum']);
+    const typed = convertPayloadTypes(payload, 'get_notifications');
+    expect(applyPayloadTransforms('get_notifications', typed)).toEqual({
+      types: ['faction', 'friend', 'forum'],
+    });
+  });
+
+  test('get_notifications rejects tip as an invalid types enum value', () => {
+    expect(parseArgs(['get_notifications', 'types=tip'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'types',
+          message:
+            'Invalid value "tip" for "types". Expected one of: chat, combat, trade, faction, friend, forum, market, crafting, system',
+          code: 'invalid_enum',
+        },
+      ],
+    });
+  });
+
+  test('GET notifications accepts limit/clear/types without unknown_field errors', () => {
+    const { payload } = parseOk(['notifications', 'limit=10', 'clear=false', 'types=chat']);
+    expect(payload).toEqual({
+      limit: '10',
+      clear: 'false',
+      types: 'chat',
+    });
+    const typed = convertPayloadTypes(payload, 'notifications');
+    expect(applyPayloadTransforms('notifications', typed)).toEqual({
+      limit: 10,
+      clear: false,
+      types: ['chat'],
+    });
+  });
+
+  test('GET notifications rejects tip as an invalid types enum value', () => {
+    expect(parseArgs(['notifications', 'types=tip'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'types',
+          message:
+            'Invalid value "tip" for "types". Expected one of: chat, combat, trade, faction, friend, forum, market, crafting, system',
+          code: 'invalid_enum',
+        },
+      ],
+    });
+  });
+
   test('payload transforms do not mutate the original payload', () => {
     const original = { types: 'chat, combat', limit: 10, clear: false };
     const result = applyPayloadTransforms('get_notifications', original);
