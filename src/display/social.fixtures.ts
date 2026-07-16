@@ -4,6 +4,7 @@ export const chatSentFixture = {
   content: 'Clear skies.',
 };
 
+/** Flat facilities array for the `facilities` named formatter (not the /list response shape). */
 export const facilitiesFixture = {
   facilities: [
     {
@@ -18,7 +19,36 @@ export const facilitiesFixture = {
   ],
 };
 
+/**
+ * Minimal FacilityResponse list branch (action=list) for high-value facility_list.
+ * Required top-level: action, base_id, station_facilities, player_facilities, faction_facilities.
+ */
+export const facilityListSimpleFixture = {
+  action: 'list',
+  base_id: 'earth_station',
+  station_facilities: [
+    {
+      facility_id: 'facility-1',
+      type: 'fuel_bunker',
+      name: 'Fuel Bunker',
+      description: 'Bulk refined-fuel storage for dockside resupply.',
+      category: 'service',
+      level: 2,
+      maintenance_satisfied: true,
+      is_recycler: false,
+      owner_id: 'player-marlowe',
+    },
+  ],
+  player_facilities: [] as Array<Record<string, unknown>>,
+  faction_facilities: [] as Array<Record<string, unknown>>,
+};
+
+/**
+ * Detailed FacilityResponse list branch (action=list) with station systems, groups, and rent.
+ * Matches OpenAPI FacilityResponse oneOf branch 0 / list path example structure.
+ */
 export const facilityListFixture = {
+  action: 'list',
   base_id: 'earth_station',
   power: {
     supply: 120,
@@ -70,9 +100,9 @@ export const facilityListFixture = {
       facility_id: 'station-fuel',
       type: 'fuel_bunker',
       name: 'Fuel Bunker',
+      description: 'Station fuel storage and bunkering service.',
       category: 'service',
       level: 3,
-      active: true,
       maintenance_satisfied: true,
       is_recycler: false,
     },
@@ -80,9 +110,9 @@ export const facilityListFixture = {
       facility_id: 'station-depot',
       type: 'confederacy_fleet_depot',
       name: 'Confederacy Fleet Depot',
+      description: 'Empire logistics depot for fleet resupply.',
       category: 'infrastructure',
       level: 3,
-      active: true,
       maintenance_satisfied: false,
       maintenance_per_cycle: [
         { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12 },
@@ -94,9 +124,9 @@ export const facilityListFixture = {
       facility_id: 'station-diner',
       type: 'dockside_diner',
       name: 'Dockside Diner',
+      description: 'Cheap meals and shore leave for dock workers.',
       category: 'infrastructure',
       level: 1,
-      active: true,
       maintenance_satisfied: true,
       dining_points: 2,
       tourism_upkeep: true,
@@ -108,14 +138,18 @@ export const facilityListFixture = {
       facility_id: 'player-refinery',
       type: 'ore_refinery',
       name: 'Ore Refinery',
+      description: 'Player-owned ore refining plant.',
       category: 'production',
       level: 2,
-      active: false,
       maintenance_satisfied: true,
       is_recycler: true,
-      configured_recipe_id: 'iron_ore_reverse',
-      output_price_per_unit: 0.25,
-      idle_reason: 'no_inputs',
+      recipe_id: 'iron_ore_reverse',
+      production: {
+        queued_runs: 0,
+        queued_items: 0,
+        backlog_ticks: 0,
+        output_price_per_unit: 0.25,
+      },
     },
   ],
   faction_facilities: [
@@ -123,12 +157,17 @@ export const facilityListFixture = {
       facility_id: 'faction-smelter',
       type: 'alloy_smelter',
       name: 'Alloy Smelter',
+      description: 'Faction alloy production line.',
       category: 'production',
       level: 1,
-      active: true,
       maintenance_satisfied: true,
-      output_price_per_unit: 0,
-      idle_reason: 'insufficient_labor_credits',
+      production: {
+        queued_runs: 0,
+        queued_items: 0,
+        backlog_ticks: 0,
+        output_price_per_unit: 0,
+      },
+      rent_per_cycle: 1200,
     },
   ],
   faction_rent: {
@@ -571,8 +610,16 @@ export const socialFixtureCases = {
 
 export const socialHighValueFixtures = {
   chat: { command: 'chat', fixture: chatSentFixture },
-  facility_list: { command: 'facility_list', fixture: facilitiesFixture },
-  facility_list_detailed: { command: 'facility_list', fixture: facilityListFixture },
+  facility_list: {
+    command: 'facility_list',
+    fixture: facilityListSimpleFixture,
+    apiRoute: 'POST /api/v2/spacemolt_facility/list',
+  },
+  facility_list_detailed: {
+    command: 'facility_list',
+    fixture: facilityListFixture,
+    apiRoute: 'POST /api/v2/spacemolt_facility/list',
+  },
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },

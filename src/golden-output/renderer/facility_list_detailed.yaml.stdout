@@ -1,4 +1,5 @@
 
+action: list
 base_id: earth_station
 power:
   supply: 120
@@ -35,26 +36,26 @@ station_facilities:
   - facility_id: "station-fuel"
     type: fuel_bunker
     name: "Fuel Bunker"
+    description: "Station fuel storage and bunkering service."
     category: service
     level: 3
-    active: true
     maintenance_satisfied: true
     is_recycler: false
   - facility_id: "station-depot"
     type: confederacy_fleet_depot
     name: "Confederacy Fleet Depot"
+    description: "Empire logistics depot for fleet resupply."
     category: infrastructure
     level: 3
-    active: true
     maintenance_satisfied: false
     maintenance_per_cycle: [{item_id: fuel_cell, name: "Fuel Cell", quantity: 12}, {item_id: plasma_cell_pack, name: "Plasma Cell Pack", quantity: 4}]
     labor_per_cycle: 320
   - facility_id: "station-diner"
     type: dockside_diner
     name: "Dockside Diner"
+    description: "Cheap meals and shore leave for dock workers."
     category: infrastructure
     level: 1
-    active: true
     maintenance_satisfied: true
     dining_points: 2
     tourism_upkeep: true
@@ -63,24 +64,23 @@ player_facilities:
   - facility_id: "player-refinery"
     type: ore_refinery
     name: "Ore Refinery"
+    description: "Player-owned ore refining plant."
     category: production
     level: 2
-    active: false
     maintenance_satisfied: true
     is_recycler: true
-    configured_recipe_id: iron_ore_reverse
-    output_price_per_unit: 0.25
-    idle_reason: no_inputs
+    recipe_id: iron_ore_reverse
+    production: {queued_runs: 0, queued_items: 0, backlog_ticks: 0, output_price_per_unit: 0.25}
 faction_facilities:
   - facility_id: "faction-smelter"
     type: alloy_smelter
     name: "Alloy Smelter"
+    description: "Faction alloy production line."
     category: production
     level: 1
-    active: true
     maintenance_satisfied: true
-    output_price_per_unit: 0
-    idle_reason: insufficient_labor_credits
+    production: {queued_runs: 0, queued_items: 0, backlog_ticks: 0, output_price_per_unit: 0}
+    rent_per_cycle: 1200
 faction_rent:
   facilities: 1
   total_rent_per_cycle: 1200

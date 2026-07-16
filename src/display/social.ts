@@ -106,14 +106,27 @@ function facilityDisplayName(row: Record<string, unknown>): string | undefined {
   return `${customName} (${baseName})`;
 }
 
+function facilityProduction(row: Record<string, unknown>): Record<string, unknown> | undefined {
+  return isRecord(row.production) ? row.production : undefined;
+}
+
 function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-  return rows.map((row) => ({
-    ...row,
-    name_display: facilityDisplayName(row),
-    maintenance_display: formatMaintenance(row.maintenance_per_cycle),
-    labor_cycle_display: formatCredits(row.labor_per_cycle),
-    output_price_per_unit_display: formatCredits(row.output_price_per_unit),
-  }));
+  return rows.map((row) => {
+    const production = facilityProduction(row);
+    // Prefer top-level live fields when present; fall back to FacilityResponse list
+    // production / recipe_id shapes from OpenAPI.
+    const outputPricePerUnit = row.output_price_per_unit ?? production?.output_price_per_unit;
+    const recipeId = row.configured_recipe_id ?? row.recipe_id ?? production?.recipe;
+    return {
+      ...row,
+      name_display: facilityDisplayName(row),
+      maintenance_display: formatMaintenance(row.maintenance_per_cycle),
+      labor_cycle_display: formatCredits(row.labor_per_cycle),
+      output_price_per_unit: outputPricePerUnit,
+      output_price_per_unit_display: formatCredits(outputPricePerUnit),
+      recipe_id: recipeId,
+    };
+  });
 }
 
 function facilityColumns(rows: Array<Record<string, unknown>>, options: { grouped?: boolean } = {}) {
@@ -123,6 +136,8 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
     ['Level', ['level', 'tier']],
   ];
   if (options.grouped) columns.push(['Category', ['category']]);
+  // Live payloads sometimes include active/status; list schema uses damaged /
+  // under_construction / power_throttled instead.
   if (hasAnyField(rows, ['active', 'enabled', 'status'])) {
     columns.push(
       options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
@@ -130,6 +145,12 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   }
   if (options.grouped && hasAnyField(rows, ['maintenance_satisfied'])) {
     columns.push(['Maint', ['maintenance_satisfied']]);
+  }
+  if (hasAnyField(rows, ['damaged'])) {
+    columns.push(['Damaged', ['damaged']]);
+  }
+  if (hasAnyField(rows, ['under_construction'])) {
+    columns.push(['Building', ['under_construction']]);
   }
   if (hasAnyField(rows, ['power_throttled'])) {
     columns.push(['Power Throttled', ['power_throttled']]);
@@ -156,11 +177,15 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
   if (hasAnyField(rows, ['configured_recipe_id', 'recipe_id'])) {
     columns.push(['Recipe', ['configured_recipe_id', 'recipe_id']]);
   }
+  // idle_reason is not on FacilityResponse list items; still show if live sends it.
   if (hasAnyField(rows, ['idle_reason'])) columns.push(['Idle Reason', ['idle_reason']]);
   if (hasAnyField(rows, ['rental_fee_per_run', 'output_price', 'price'])) {
     columns.push(['Rent/run', ['rental_fee_per_run', 'output_price', 'price']]);
   }
   if (hasAnyField(rows, ['public'])) columns.push(['Public', ['public']]);
+  if (hasAnyField(rows, ['rent_per_cycle'])) {
+    columns.push(['Rent/cycle', ['rent_per_cycle']]);
+  }
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
 }
@@ -729,21 +754,22 @@ export const socialFormatters = [
   // Facility List
   namedFormatter(
     'facility_list',
-    ['station_facilities', 'player_facilities', 'faction_facilities'],
+    ['station_facilities', 'player_facilities', 'faction_facilities', 'public_facilities'],
     (r) => {
       const groups: Array<[string, Array<Record<string, unknown>> | undefined]> = [
         ['Station Facilities', firstArray(r, ['station_facilities'])],
+        ['Public Facilities', firstArray(r, ['public_facilities'])],
         ['Player Facilities', firstArray(r, ['player_facilities'])],
         ['Faction Facilities', firstArray(r, ['faction_facilities'])],
       ];
-      if (!groups.some(([, rows]) => Array.isArray(rows))) return false;
+      if (!groups.some(([, rows]) => Array.isArray(rows) && rows.length > 0)) return false;
 
       if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
       emitStationPower(r.power);
       emitStationLifeSupport(r.life_support);
       emitStationConstruction(r.construction);
       for (const [title, rows] of groups) {
-        if (!rows) continue;
+        if (!rows?.length) continue;
         const displayRows = facilityRows(rows);
         printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true }));
       }

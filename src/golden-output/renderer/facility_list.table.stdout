@@ -1,6 +1,8 @@
 
-=== Facilities ===
+=== Facilities at earth_station ===
 
-  Name        | ID         | Level | Status | Recycler | Idle Reason    | Owner  
-  ------------+------------+-------+--------+----------+----------------+--------
-  Fuel Bunker | facility-1 | 2     | online | false    | fuel_tank_full | Marlowe
+=== Station Facilities ===
+
+  Name        | ID         | Level | Category | Maint | Recycler | Owner         
+  ------------+------------+-------+----------+-------+----------+---------------
+  Fuel Bunker | facility-1 | 2     | service  | true  | false    | player-marlowe

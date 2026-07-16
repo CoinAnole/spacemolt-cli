@@ -1,1 +1,1 @@
-{"facilities":[{"facility_id":"facility-1","name":"Fuel Bunker","level":2,"status":"online","owner_name":"Marlowe","is_recycler":false,"idle_reason":"fuel_tank_full"}]}
+{"action":"list","base_id":"earth_station","station_facilities":[{"facility_id":"facility-1","type":"fuel_bunker","name":"Fuel Bunker","description":"Bulk refined-fuel storage for dockside resupply.","category":"service","level":2,"maintenance_satisfied":true,"is_recycler":false,"owner_id":"player-marlowe"}],"player_facilities":[],"faction_facilities":[]}
