@@ -184,9 +184,30 @@ export const nearbyFixture = {
     },
   ],
   count: 2,
-  pirates: [{ name: 'Raider', ship_class: 'skiff', status: 'hostile' }],
+  pirates: [
+    {
+      pirate_id: 'pirate-raider-1',
+      name: 'Raider',
+      tier: 'skiff',
+      is_boss: false,
+      status: 'hostile',
+      hull: 40,
+      max_hull: 50,
+      shield: 10,
+      max_shield: 20,
+    },
+  ],
   pirate_count: 1,
-  empire_npcs: [{ name: 'Patrol', ship_class: 'interceptor' }],
+  empire_npcs: [
+    {
+      npc_id: 'npc-patrol-1',
+      name: 'Patrol',
+      role: 'patrol',
+      empire: 'solarian',
+      in_combat: false,
+      ship_class: 'interceptor',
+    },
+  ],
   empire_npc_count: 1,
   creatures: [
     {

@@ -14,7 +14,7 @@ export const cargoFixture = {
       ship_id: 'ship-carried-1',
       class_id: 'prospector',
       class_name: 'Prospector',
-      custom_name: 'Rock Skipper',
+      name: 'Rock Skipper',
     },
   ],
 };

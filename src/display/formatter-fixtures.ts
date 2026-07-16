@@ -1,5 +1,5 @@
 import { genericFixtureCases, genericHighValueFixtures } from './generic.fixtures.ts';
-import { inspectFixtureCases, inspectHighValueFixtures } from './inspect.fixtures.ts';
+import { inspectHighValueFixtures } from './inspect.fixtures.ts';
 import { marketFixtureCases, marketHighValueFixtures } from './market.fixtures.ts';
 import { passengerHighValueFixtures } from './passenger.fixtures.ts';
 import { shipFixtureCases, shipHighValueFixtures } from './ship.fixtures.ts';
@@ -36,7 +36,6 @@ export const formatterFixtureCases = {
   ...shipFixtureCases,
   ...socialFixtureCases,
   ...genericFixtureCases,
-  ...inspectFixtureCases,
 };
 
 export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {

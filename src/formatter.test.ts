@@ -3976,10 +3976,10 @@ describe('structuredContent formatters', () => {
 
       === Participants ===
 
-        Name        | ID         | Side | Kind     | Stance | Target
-        ------------+------------+------+----------+--------+---------
-        Marlowe     | player-1   | 1    | player   | fire   | pirate-1
-        Pilot Whale | creature-1 | 2    | creature | fire   |"
+        Name        | ID         | Side | Stance | Target
+        ------------+------------+------+--------+---------
+        Marlowe     | player-1   | 1    | fire   | pirate-1
+        Pilot Whale | creature-1 | 2    | fire   |"
       ,
         "cargo": 
       "

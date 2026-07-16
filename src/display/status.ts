@@ -758,7 +758,7 @@ export const statusFormatters = [
         emitLine(`\n${c.red}Pirates (${r.pirate_count}):${c.reset}`);
         for (const p of pirates) {
           const name = p.name || p.pirate_id || 'Unknown';
-          const ship = p.ship_class ? ` (${p.ship_class})` : '';
+          const ship = p.ship_class || p.tier ? ` (${p.ship_class || p.tier})` : '';
           const status = p.status ? ` - ${p.status}` : '';
           emitLine(`  ${name}${ship}${status}`);
         }

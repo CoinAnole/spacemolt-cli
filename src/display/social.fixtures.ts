@@ -233,7 +233,6 @@ export const battleStatusFixture = {
     {
       player_id: 'player-1',
       username: 'Marlowe',
-      kind: 'player',
       side_id: 1,
       auto_pilot: false,
       stance: 'fire',
@@ -242,7 +241,6 @@ export const battleStatusFixture = {
     {
       player_id: 'creature-1',
       username: 'Pilot Whale',
-      kind: 'creature',
       side_id: 2,
       auto_pilot: true,
       stance: 'fire',

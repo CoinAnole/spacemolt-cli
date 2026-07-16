@@ -16,7 +16,7 @@ empires:
     default_foreign_sales_tax_bps: 300
     empire_id: solarian
     eviction_grace_cycles: 2
-    facility_rent_multiplier_bps: 20000
+    faction_income_tax_bps: 250
     foreign_sales_tax_bps: {crimson: 200, nebula: 200, outerrim: 200}
     fuel_tax_per_unit: 6
     income_tax_bps: 500
@@ -53,7 +53,7 @@ empires:
     default_foreign_sales_tax_bps: 0
     empire_id: voidborn
     eviction_grace_cycles: 2
-    facility_rent_multiplier_bps: 10000
+    faction_income_tax_bps: 100
     fuel_tax_per_unit: 2
     income_tax_bps: 200
     jail_duration_hours: 24

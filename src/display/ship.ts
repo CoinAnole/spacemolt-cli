@@ -165,7 +165,7 @@ export const shipFormatters = [
       const carriedShips = firstArray(r, ['carried_ships']);
       if (carriedShips) {
         printCompactTable('Carried Ships', carriedShips, [
-          ['Name', ['custom_name', 'ship_name', 'class_name', 'name']],
+          ['Name', ['name', 'custom_name', 'ship_name', 'class_name']],
           ['Class', ['class_id', 'class_name']],
           ['ID', ['ship_id', 'id']],
         ]);
