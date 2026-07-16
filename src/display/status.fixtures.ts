@@ -314,6 +314,19 @@ export const completedMissionDetailFixture = {
   chain_next: 'mission-refinery-check',
 };
 
+/** Live-shaped nested SC for complete_mission (P1 envelope: details only, no schemaTarget). */
+export const completeMissionFixture = {
+  details: {
+    mission_id: 'mission-delivery-1',
+    title: 'Food Delivery',
+    credits_earned: 2500,
+    message: 'Mission complete. Rewards claimed.',
+    items_received: { food_rations: 5, repair_patch: 1 },
+    skill_xp_gained: { piloting: 25, hauling: 10 },
+    chain_next: 'mission-refinery-check',
+  },
+};
+
 export const skillsFixture = {
   skills: {
     mining: {
@@ -418,6 +431,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_queue_empty: { command: 'get_queue', fixture: getQueueEmptyFixture },
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
+  complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   jump: { command: 'jump', fixture: jumpFixture },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },

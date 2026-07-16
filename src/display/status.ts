@@ -300,6 +300,72 @@ function summarizeRewardForDisplay(rewards: unknown): string {
   return parts.filter(Boolean).join('; ');
 }
 
+/**
+ * Summarize CompleteMissionResponse reward/community fields for table output.
+ * Do not call summarizeRewardForDisplay — different field names and community maps.
+ */
+function summarizeCompletionRewards(r: Record<string, unknown>): {
+  creditsLine?: string;
+  itemsLine?: string;
+  skillXpLine?: string;
+  communityLine?: string;
+} {
+  const result: {
+    creditsLine?: string;
+    itemsLine?: string;
+    skillXpLine?: string;
+    communityLine?: string;
+  } = {};
+
+  if (r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '') {
+    result.creditsLine = `Credits earned: ${formatNumber(r.credits_earned)}`;
+  }
+
+  if (isRecord(r.items_received)) {
+    const items = Object.entries(r.items_received)
+      .filter(([, quantity]) => quantity !== undefined && quantity !== null && quantity !== '')
+      .map(([item, quantity]) => `${item} x${formatNumber(quantity)}`);
+    if (items.length) result.itemsLine = `Items received: ${items.join(', ')}`;
+  }
+
+  if (isRecord(r.skill_xp_gained)) {
+    const skills = Object.entries(r.skill_xp_gained)
+      .filter(([, xp]) => xp !== undefined && xp !== null && xp !== '')
+      .map(([skill, xp]) => `${skill} ${formatSignedNumber(xp)}`);
+    if (skills.length) result.skillXpLine = `Skill XP: ${skills.join(', ')}`;
+  }
+
+  if (
+    r.community_percent !== undefined ||
+    isRecord(r.community_progress) ||
+    isRecord(r.community_contributed)
+  ) {
+    const parts: string[] = [];
+    if (r.community_percent !== undefined && r.community_percent !== null && r.community_percent !== '') {
+      parts.push(`${formatNumber(r.community_percent)}%`);
+    }
+    const detailParts: string[] = [];
+    if (isRecord(r.community_progress)) {
+      const progress = Object.entries(r.community_progress)
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${key}: ${value}`);
+      if (progress.length) detailParts.push(progress.join(', '));
+    }
+    if (isRecord(r.community_contributed)) {
+      const contributed = Object.entries(r.community_contributed)
+        .filter(([, quantity]) => quantity !== undefined && quantity !== null && quantity !== '')
+        .map(([item, quantity]) => `${item} x${formatNumber(quantity)}`);
+      if (contributed.length) detailParts.push(`contributed ${contributed.join(', ')}`);
+    }
+    if (detailParts.length) {
+      parts.push(`(${detailParts.join('; ')})`);
+    }
+    if (parts.length) result.communityLine = `Community: ${parts.join(' ')}`;
+  }
+
+  return result;
+}
+
 export const statusFormatters = [
   // Queue state
   formatter(
@@ -948,6 +1014,28 @@ export const statusFormatters = [
       return true;
     },
     { commands: ['view_completed_mission'] },
+  ),
+
+  // complete_mission: rewards-first CompleteMissionResponse (not active-missions re-list)
+  formatter(
+    (r) => {
+      const hasCredits = r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '';
+      const hasIdentity = Boolean(r.mission_id && r.message);
+      if (!hasCredits && !hasIdentity) return false;
+
+      emitLine(`\n${c.bright}=== Mission Complete: ${r.title ?? r.mission_id ?? 'Mission'} ===${c.reset}`);
+      if (r.mission_id) emitLine(`ID: ${r.mission_id}`);
+
+      const rewards = summarizeCompletionRewards(r);
+      if (rewards.creditsLine) emitLine(rewards.creditsLine);
+      if (rewards.itemsLine) emitLine(rewards.itemsLine);
+      if (rewards.skillXpLine) emitLine(rewards.skillXpLine);
+      if (rewards.communityLine) emitLine(rewards.communityLine);
+      if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
+      if (r.message) emitLine(String(r.message));
+      return true;
+    },
+    { commands: ['complete_mission'] },
   ),
 
   // Arrival (travel/jump)
