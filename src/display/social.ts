@@ -21,20 +21,12 @@ function formatTimestampPreview(value: unknown): string {
 
 /** Stable chat time for table/golden output (avoids locale-dependent toLocaleTimeString). */
 function formatChatSentAt(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '';
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    // ChatResponse.sent_at is integer unix seconds (treat large values as ms).
-    const ms = value > 1e12 ? value : value * 1000;
-    const date = new Date(ms);
-    if (!Number.isFinite(date.getTime())) return String(value);
-    return `${date.toISOString().slice(11, 19)}Z`;
-  }
-  const text = String(value);
-  const iso = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
-  if (iso) return `${iso[2]}${iso[2]!.length === 5 ? ':00' : ''}Z`;
-  const date = new Date(text);
-  if (Number.isFinite(date.getTime())) return `${date.toISOString().slice(11, 19)}Z`;
-  return text;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '';
+  // ChatResponse.sent_at is integer unix seconds (treat large values as ms).
+  const ms = value > 1e12 ? value : value * 1000;
+  const date = new Date(ms);
+  if (!Number.isFinite(date.getTime())) return '';
+  return `${date.toISOString().slice(11, 19)}Z`;
 }
 
 function firstLinePreview(value: unknown): string {
@@ -331,10 +323,9 @@ export const socialFormatters = [
     (r) => {
       const channel = r.channel || r.target;
       if (!channel || (r.action && r.action !== 'chat')) return false;
-      if (!r.action && !r.message && !r.content && !r.sent_at && !r.timestamp) return false;
+      if (!r.action && !r.message && !r.content && !r.sent_at) return false;
       if (r.message || r.content) {
-        const timestamp = r.sent_at ?? r.timestamp;
-        const formatted = formatChatSentAt(timestamp);
+        const formatted = formatChatSentAt(r.sent_at);
         const time = formatted ? `${c.dim}${formatted}${c.reset} ` : '';
         emitLine(`${c.green}[${channel}]${c.reset} ${time}${r.message || r.content}`);
       } else {
@@ -775,13 +766,17 @@ export const socialFormatters = [
     'facility_list',
     ['station_facilities', 'player_facilities', 'faction_facilities', 'public_facilities'],
     (r) => {
+      const stationFacilities = firstArray(r, ['station_facilities']);
+      const playerFacilities = firstArray(r, ['player_facilities']);
+      const factionFacilities = firstArray(r, ['faction_facilities']);
+      if (!stationFacilities || !playerFacilities || !factionFacilities) return false;
+
       const groups: Array<[string, Array<Record<string, unknown>> | undefined]> = [
-        ['Station Facilities', firstArray(r, ['station_facilities'])],
+        ['Station Facilities', stationFacilities],
         ['Public Facilities', firstArray(r, ['public_facilities'])],
-        ['Player Facilities', firstArray(r, ['player_facilities'])],
-        ['Faction Facilities', firstArray(r, ['faction_facilities'])],
+        ['Player Facilities', playerFacilities],
+        ['Faction Facilities', factionFacilities],
       ];
-      if (!groups.some(([, rows]) => Array.isArray(rows) && rows.length > 0)) return false;
 
       if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
       emitStationPower(r.power);

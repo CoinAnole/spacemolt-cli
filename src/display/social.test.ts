@@ -89,6 +89,27 @@ test('renders facility list faction rent summary', () => {
   expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
 });
 
+test('renders facility metadata when all required facility groups are empty', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  facilityList.station_facilities = [];
+  facilityList.player_facilities = [];
+  facilityList.faction_facilities = [];
+  facilityList.public_facilities = [];
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Power: 95/120 draw (85% efficiency)');
+  expect(stdout).toContain('=== Construction ===');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).not.toContain('=== Station Facilities ===');
+  expect(stdout).not.toContain('=== Public Facilities ===');
+  expect(stdout).not.toContain('=== Player Facilities ===');
+  expect(stdout).not.toContain('=== Faction Facilities ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders facility custom names alongside type names across facility views', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   const playerFacilities = facilityList.player_facilities as Array<Record<string, unknown>>;
@@ -305,6 +326,55 @@ test('renders chat history timestamps from v2 timestamp_utc field', () => {
   expect(stdout).toContain('2026-05-23 15:04:05');
   expect(stdout).toContain('Ibis');
   expect(stdout).toContain('Clear skies over Sol today.');
+});
+
+test('chat confirmation formats documented numeric sent_at as UTC', () => {
+  const rendered = renderStructuredResult(
+    'chat',
+    {
+      channel: 'local',
+      message: 'Clear skies.',
+      sent_at: 1748012645,
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).toBe('[local] 15:04:05Z Clear skies.');
+});
+
+test('chat confirmation ignores the undocumented timestamp alias', () => {
+  const rendered = renderStructuredResult(
+    'chat',
+    {
+      action: 'chat',
+      channel: 'local',
+      content: 'Clear skies.',
+      timestamp: '2026-05-23T15:04:05-04:00',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).toBe('[local] Clear skies.');
+});
+
+test('chat confirmation ignores string-valued sent_at', () => {
+  const rendered = renderStructuredResult(
+    'chat',
+    {
+      channel: 'local',
+      message: 'Clear skies.',
+      sent_at: '2026-05-23T15:04:05-04:00',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).toBe('[local] Clear skies.');
 });
 
 test('renders get_guide server version', () => {
