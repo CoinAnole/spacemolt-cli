@@ -189,7 +189,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_market/create_sell_order',
   },
   create_buy_order: {
-    usage: '<item_id_or_cached_name> <quantity> <price_each> [deliver_to=base_id]  (place a buy offer)',
+    usage: '<item_id_or_cached_name> <quantity> <price_each> [deliver_to=cargo|storage]  (place a buy offer)',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
   },
@@ -247,10 +247,11 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['order_id'],
   },
   modify_order: {
-    usage: '<order_id> <new_price>  (change price on existing order)',
+    usage: '<order_id> <price_each>  (change price; aliases new_price=... and price=... also accepted)',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/modify_order',
-    positionals: ['order_id', 'new_price'],
+    positionals: ['order_id', 'price_each'],
+    aliases: { new_price: 'price_each', price: 'price_each' },
   },
   estimate_purchase: {
     usage: '<item_id> <quantity>  (preview purchase cost)',

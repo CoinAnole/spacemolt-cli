@@ -1295,6 +1295,32 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(search.payload.search).toBe('iron');
   });
 
+  test('modify_order positionals send order_id and price_each', () => {
+    const { payload } = parseOk(['modify_order', 'ord_abc123', '7']);
+    const normalized = convertPayloadTypes(normalizeParsedPayload('modify_order', payload), 'modify_order');
+    expect(normalized).toEqual({ order_id: 'ord_abc123', price_each: 7 });
+    expect(normalized).not.toHaveProperty('new_price');
+  });
+
+  test('modify_order maps new_price and price aliases to price_each', () => {
+    const viaNewPrice = parseOk(['modify_order', 'ord_abc123', 'new_price=9']);
+    expect(convertPayloadTypes(normalizeParsedPayload('modify_order', viaNewPrice.payload), 'modify_order')).toEqual({
+      order_id: 'ord_abc123',
+      price_each: 9,
+    });
+
+    const viaPrice = parseOk(['modify_order', 'ord_abc123', 'price=11']);
+    expect(convertPayloadTypes(normalizeParsedPayload('modify_order', viaPrice.payload), 'modify_order')).toEqual({
+      order_id: 'ord_abc123',
+      price_each: 11,
+    });
+
+    // Price aliases must not collapse onto order_id (the pre-fix generated-alias bug).
+    expect(COMMANDS.modify_order?.aliases?.new_price).toBe('price_each');
+    expect(COMMANDS.modify_order?.aliases?.price).toBe('price_each');
+    expect(COMMANDS.modify_order?.aliases?.new_price).not.toBe('order_id');
+  });
+
   test('storage view parses action-specific station positional and filters', () => {
     const { command, payload } = parseOk(['storage', 'view', 'nexus_base', '--item', 'iron_ore', '--search', 'iron']);
 
