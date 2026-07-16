@@ -2238,6 +2238,8 @@ describe('structuredContent formatters', () => {
   test('formats faction created buy order without sell wording', () => {
     const { stdout, stderr } = captureStructuredOutput('faction_create_buy_order', {
       action: 'create_buy_order',
+      faction_id: 'faction-1',
+      faction_tag: 'MOLT',
       item: 'Fuel',
       item_id: 'fuel',
       quantity: 100,
@@ -2246,7 +2248,6 @@ describe('structuredContent formatters', () => {
       quantity_listed: 100,
       total_spent: 0,
       total_escrowed: 300,
-      remaining_escrowed: 300,
       listing_fee: 6,
       order_id: 'faction-buy-1',
       message: 'Created buy order.',
@@ -2255,6 +2256,8 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Buy Order Created ===');
     expect(stdout).toContain('Remaining open: 100');
+    expect(stdout).toContain('Total escrowed: 300 cr');
+    expect(stdout).not.toContain('Remaining escrowed');
     expect(stdout).not.toContain('Sell Order Created');
     expect(stdout).not.toContain('earned:');
   });
@@ -2262,6 +2265,8 @@ describe('structuredContent formatters', () => {
   test('formats faction created sell order with sell wording', () => {
     const { stdout, stderr } = captureStructuredOutput('faction_create_sell_order', {
       action: 'create_sell_order',
+      faction_id: 'faction-1',
+      faction_tag: 'MOLT',
       item: 'Fuel',
       item_id: 'fuel',
       quantity: 100,
@@ -4109,9 +4114,9 @@ describe('structuredContent formatters', () => {
       "
       === Faction Facilities ===
 
-        Name                   | ID             | Station       | System | Active | Rent    | Missed | Arrears | Labor/run | Idle
-        -----------------------+----------------+---------------+--------+--------+---------+--------+---------+-----------+---------------------
-        Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | true   | 1,200cr | 2      | 2,400cr | 60cr      | awaiting_build_order
+        Name                   | ID             | Station       | System | Rent    | Missed | Arrears | Labor/run
+        -----------------------+----------------+---------------+--------+---------+--------+---------+----------
+        Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr
 
       Faction rent bill: 1,200cr/cycle
       Faction arrears: 2,400cr

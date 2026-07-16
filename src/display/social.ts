@@ -695,10 +695,14 @@ export const socialFormatters = [
         ['Missed', ['missed_rent_cycles']],
         ['Arrears', ['arrears_display', 'arrears_owed']],
         ['Labor/run', ['labor_display', 'labor_per_run']],
-        ['Idle', ['idle_reason']],
       ];
+      // Schema FacilityResponse.2 facilities do not declare active/idle_reason;
+      // still render them when a live payload includes them.
       if (hasAnyField(rows, ['active', 'status'])) {
         columns.splice(4, 0, ['Active', ['active', 'status']]);
+      }
+      if (hasAnyField(rows, ['idle_reason'])) {
+        columns.push(['Idle', ['idle_reason']]);
       }
       printCompactTable('Faction Facilities', rows, columns);
 

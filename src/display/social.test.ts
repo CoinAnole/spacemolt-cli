@@ -200,6 +200,7 @@ test('omits faction facility state column when the API omits that field', () => 
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).not.toContain('Active');
+  expect(stdout).not.toContain('Idle');
   expect(stdout).toContain('Rent');
 });
 

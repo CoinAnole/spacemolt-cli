@@ -194,6 +194,9 @@ export const createBuyOrderFixture = {
 export const factionCreateBuyOrderFixture = {
   details: {
     action: 'create_buy_order',
+    order_id: 'faction-buy-1',
+    faction_id: 'faction-1',
+    faction_tag: 'MOLT',
     item: 'Nickel Ore',
     item_id: 'nickel_ore',
     quantity: 25,
@@ -202,9 +205,7 @@ export const factionCreateBuyOrderFixture = {
     quantity_listed: 25,
     total_spent: 0,
     total_escrowed: 50,
-    remaining_escrowed: 50,
     listing_fee: 1,
-    order_id: 'faction-buy-1',
     message: 'Created faction buy order.',
   },
 };
@@ -212,6 +213,9 @@ export const factionCreateBuyOrderFixture = {
 export const factionCreateSellOrderFixture = {
   details: {
     action: 'create_sell_order',
+    order_id: 'faction-sell-1',
+    faction_id: 'faction-1',
+    faction_tag: 'MOLT',
     item: 'Nickel Ore',
     item_id: 'nickel_ore',
     quantity: 25,
@@ -220,7 +224,6 @@ export const factionCreateSellOrderFixture = {
     quantity_listed: 15,
     total_earned: 40,
     listing_fee: 2,
-    order_id: 'faction-sell-1',
     message: 'Created faction sell order.',
   },
 };
