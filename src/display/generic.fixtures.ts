@@ -228,6 +228,21 @@ export const abandonMissionPostActionFixture = {
   queue: { has_pending: false },
 };
 
+/** Nested P1 live-shaped SC: details = DistressSignalResponse (no schemaTarget). */
+export const distressSignalFixture = {
+  details: {
+    action: 'distress_signal',
+    distress_type: 'fuel',
+    system: 'sol',
+    system_name: 'Sol',
+    poi: 'earth_station',
+    poi_name: 'Earth Station',
+    missions_sent: 3,
+    expires_seconds: 10800,
+    message: 'Distress signal broadcast. Nearby captains may receive rescue missions.',
+  },
+};
+
 export const craftQueuedFixture = {
   details: {
     action: 'craft',
@@ -462,6 +477,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
+  distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
   craft: { command: 'craft', fixture: craftQueuedFixture },
   recycle: { command: 'recycle', fixture: recycleQuoteFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },

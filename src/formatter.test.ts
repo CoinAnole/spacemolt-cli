@@ -7,7 +7,10 @@ import {
   browseShipsFixture,
   cargoFixture,
   catalogItemsFixture,
+  completedMissionsFixture,
   createSellOrderFixture,
+  declineMissionFixture,
+  distressSignalFixture,
   empireInfoFixture,
   factionQueryIntelFixture,
   formatterFixtureCases,
@@ -2974,6 +2977,45 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('piloting XP +50');
     expect(stdout).toContain('missions 2/5');
     expect(stdout).not.toContain('OK: Active missions');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('completed_missions formats history table with giver and completion time', () => {
+    const { stdout, stderr } = captureStructuredOutput('completed_missions', completedMissionsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Completed Missions ===');
+    expect(stdout).toContain('Ore Run');
+    expect(stdout).toContain('mission-ore-run');
+    expect(stdout).toContain('Pirate Sweep');
+    expect(stdout).toContain('Dockmaster Vale');
+    expect(stdout).toContain('2026-05-29T18:00:00Z');
+    expect(stdout).toContain('total 2');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('decline_mission formats dialog-style response with giver', () => {
+    const { stdout, stderr } = captureStructuredOutput('decline_mission', declineMissionFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Mission Declined: Pirate Sweep ===');
+    expect(stdout).toContain('ID: pirate_sweep');
+    expect(stdout).toContain('Giver: Dockmaster Vale');
+    expect(stdout).toContain('"Perhaps another time, captain."');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('distress_signal formats nested broadcast envelope without raw dump', () => {
+    const { stdout, stderr } = captureStructuredOutput('distress_signal', distressSignalFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Distress Signal ===');
+    expect(stdout).toContain('Type: fuel');
+    expect(stdout).toContain('Location: Earth Station (earth_station) @ Sol (sol)');
+    expect(stdout).toContain('Missions sent: 3');
+    expect(stdout).toContain('Expires in: 10800s');
+    expect(stdout).toContain('Distress signal broadcast. Nearby captains may receive rescue missions.');
     expect(stdout).not.toContain('=== Response ===');
   });
 

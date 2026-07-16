@@ -327,6 +327,36 @@ export const completeMissionFixture = {
   },
 };
 
+/** Flat CompletedMissionsResponse (P3). Sample IDs pair with view_completed_mission. */
+export const completedMissionsFixture = {
+  total_count: 2,
+  missions: [
+    {
+      template_id: 'mission-ore-run',
+      title: 'Ore Run',
+      type: 'hauling',
+      difficulty: 2,
+      completion_time: '2026-05-29T18:00:00Z',
+      giver: { name: 'Vale', title: 'Dockmaster' },
+    },
+    {
+      template_id: 'mission-pirate-sweep',
+      title: 'Pirate Sweep',
+      type: 'combat',
+      difficulty: 3,
+      completion_time: '2026-05-28T12:00:00Z',
+    },
+  ],
+};
+
+/** Flat DeclineMissionResponse (P3). No outer details / no schemaTarget. */
+export const declineMissionFixture = {
+  template_id: 'pirate_sweep',
+  title: 'Pirate Sweep',
+  message: 'Perhaps another time, captain.',
+  giver: { name: 'Vale', title: 'Dockmaster' },
+};
+
 export const skillsFixture = {
   skills: {
     mining: {
@@ -432,6 +462,8 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
+  completed_missions: { command: 'completed_missions', fixture: completedMissionsFixture },
+  decline_mission: { command: 'decline_mission', fixture: declineMissionFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   jump: { command: 'jump', fixture: jumpFixture },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
