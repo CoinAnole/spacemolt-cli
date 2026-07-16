@@ -79,6 +79,8 @@ describe('client.ts source integrity', () => {
       'shipyard_showroom',
       'set_anonymous',
       'sell_ship',
+      // v1 dual name for salvage/policies; v2 single curated command is view_insurance
+      'claim_insurance',
     ];
     for (const cmd of removedCommands) {
       expect(COMMANDS[cmd]).toBeUndefined();

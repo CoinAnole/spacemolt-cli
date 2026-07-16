@@ -750,11 +750,11 @@ export const marketFormatters = [
     { commands: ['get_insurance_quote'] },
   ),
 
-  // Active insurance policies (view_insurance / claim_insurance share the policies route)
+  // Active insurance policies (v2 POST …/salvage/policies → curated view_insurance only)
   formatter(
     (r, command) => {
       const cmd = command?.replace(/^v2_/, '');
-      if (cmd !== 'view_insurance' && cmd !== 'claim_insurance') return false;
+      if (cmd !== 'view_insurance') return false;
       const policies = firstArray(r, ['policies']);
       if (!policies) return false;
 
@@ -783,7 +783,7 @@ export const marketFormatters = [
       }
       return true;
     },
-    { commands: ['view_insurance', 'claim_insurance'] },
+    { commands: ['view_insurance'] },
   ),
 
   // Intel

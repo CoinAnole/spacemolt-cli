@@ -3019,14 +3019,14 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
-  test('generic list renders rich message + policies list without falling to raw response', () => {
-    const { stdout, stderr } = captureStructuredOutput('claim_insurance', {
+  test('view_insurance formats policies list without falling to raw response', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_insurance', {
       message: 'Active policies',
       policies: [{ policy_id: 'policy-1', coverage: 50000 }],
     });
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Policies ===');
+    expect(stdout).toContain('=== Insurance Policies ===');
     expect(stdout).toContain('policy-1');
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('OK: Active policies');

@@ -202,11 +202,6 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Insurance',
     apiRoute: 'POST /api/v2/spacemolt_salvage/quote',
   },
-  claim_insurance: {
-    usage: '(file insurance claim)',
-    category: 'Insurance',
-    apiRoute: 'POST /api/v2/spacemolt_salvage/policies',
-  },
   view_insurance: {
     usage: '(view active policies)',
     category: 'Insurance',
