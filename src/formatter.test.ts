@@ -3053,6 +3053,58 @@ describe('structuredContent formatters', () => {
     expect(waiting.stdout).toContain('High demand after long wait times.');
   });
 
+  test('passenger and ship renderers show canonical berth availability', () => {
+    const passengers = captureStructuredOutput('list_passengers', {
+      passengers: [],
+      count: 0,
+      berths: {
+        economy: { total: 12, free: 10 },
+        business: { total: 2, free: 2 },
+        first: { total: 1, free: 0 },
+      },
+    });
+    const ship = captureStructuredOutput('get_ship', {
+      ship: {
+        id: 'ship-1',
+        name: 'Wayfarer',
+        class_id: 'liner',
+        berths: { economy: { total: 4, free: 3 } },
+      },
+      modules: [],
+    });
+
+    expect(passengers.stdout).toContain('Economy: 10/12 free | Business: 2/2 free | First: 0/1 free');
+    expect(ship.stdout).toContain('Berths: Economy: 3/4 free');
+  });
+
+  test('list_passengers retains legacy scalar berth fallback without undefined output', () => {
+    const rendered = captureStructuredOutput('list_passengers', {
+      passengers: [],
+      count: 0,
+      economy_berths: '1/2',
+      business_berths: '0/1',
+      first_berths: '0/0',
+    });
+
+    expect(rendered.stdout).toContain('Economy: 1/2 | Business: 0/1 | First: 0/0');
+    expect(rendered.stdout).not.toContain('undefined');
+    expect(rendered.stdout).not.toContain('NaN');
+  });
+
+  test('list_passengers ignores malformed legacy berth values', () => {
+    const rendered = captureStructuredOutput('list_passengers', {
+      passengers: [],
+      count: 0,
+      economy_berths: Number.NaN,
+      business_berths: { total: 1, free: 0 },
+      first_berths: undefined,
+    });
+
+    expect(rendered.stdout).not.toContain('NaN');
+    expect(rendered.stdout).not.toContain('undefined');
+    expect(rendered.stdout).not.toContain('[object Object]');
+  });
+
   test('load_passenger renders skipped unfunded count', () => {
     const { stdout, stderr } = captureStructuredOutput('load_passenger', {
       message: 'Loaded passengers.',
@@ -4313,6 +4365,7 @@ describe('structuredContent formatters', () => {
       CPU: 16/34
       Power: 23/75
       Slots: 1 weapon, 1 defense, 5 utility
+      Berths: Economy: 3/4 free | Business: 1/1 free | First: 0/0 free
 
       === Modules ===
 

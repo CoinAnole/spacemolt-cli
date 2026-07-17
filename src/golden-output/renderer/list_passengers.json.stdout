@@ -1,8 +1,19 @@
 {
   "count": 1,
-  "economy_berths": "1/2",
-  "business_berths": "0/1",
-  "first_berths": "0/0",
+  "berths": {
+    "economy": {
+      "total": 2,
+      "free": 1
+    },
+    "business": {
+      "total": 1,
+      "free": 0
+    },
+    "first": {
+      "total": 0,
+      "free": 0
+    }
+  },
   "onboard_service": "Onboard Galley — serving drinks each service cycle",
   "passengers": [
     {

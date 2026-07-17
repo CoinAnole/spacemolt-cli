@@ -1,3 +1,4 @@
+import { formatBerthSummary } from './berths.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
@@ -199,6 +200,8 @@ export const shipFormatters = [
       emitLine(
         `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
       );
+      const berths = formatBerthSummary(ship.berths);
+      if (berths) emitLine(`Berths: ${berths}`);
       emitShipCombatEffects(ship);
       if (ship.last_process_tick !== undefined) emitLine(`Passive Processing: last tick ${ship.last_process_tick}`);
       const passiveRecipes = summarizePassiveRecipes(ship.passive_recipes ?? r.passive_recipes);

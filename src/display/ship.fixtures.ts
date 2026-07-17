@@ -59,6 +59,11 @@ export const shipFixture = {
   ],
   ship: {
     armor: 18,
+    berths: {
+      economy: { total: 4, free: 3 },
+      business: { total: 1, free: 1 },
+      first: { total: 0, free: 0 },
+    },
     cargo_capacity: 1250,
     cargo_used: 0,
     class_id: 'deep_survey',

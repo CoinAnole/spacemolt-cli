@@ -1,3 +1,4 @@
+import { formatBerthSummary } from './berths.ts';
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 function passengerRows(value: unknown): Array<Record<string, unknown>> | undefined {
@@ -6,14 +7,19 @@ function passengerRows(value: unknown): Array<Record<string, unknown>> | undefin
 }
 
 function berthSummary(result: Record<string, unknown>): string {
-  const berths = [
+  const canonical = formatBerthSummary(result.berths);
+  if (canonical) return canonical;
+  return [
     ['Economy', result.economy_berths],
     ['Business', result.business_berths],
     ['First', result.first_berths],
   ]
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([label, value]) => `${label}: ${value}`);
-  return berths.join(' | ');
+    .filter(
+      ([, value]) =>
+        (typeof value === 'string' && value !== '') || (typeof value === 'number' && Number.isFinite(value)),
+    )
+    .map(([label, value]) => `${label}: ${value}`)
+    .join(' | ');
 }
 
 function hasValue(value: unknown): boolean {
