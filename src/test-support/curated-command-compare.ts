@@ -170,6 +170,7 @@ function compareSchemaField(
   curated: CommandFieldSchema | undefined,
   generated: CommandFieldSchema | undefined,
   clientOnlyFields: Set<string>,
+  positionallyEquivalentFields: Set<string>,
 ): void {
   if (!curated && generated) {
     differences.push({
@@ -196,6 +197,7 @@ function compareSchemaField(
   if (!curated || !generated) return;
 
   for (const schemaField of COMPARED_SCHEMA_FIELDS) {
+    if (schemaField === 'positionalIndex' && positionallyEquivalentFields.has(field)) continue;
     compareScalarField(
       differences,
       schemaValueKind(schemaField),
@@ -211,10 +213,18 @@ function compareSchema(
   curated: CommandConfig['schema'],
   generated: CommandConfig['schema'],
   clientOnlyFields: Set<string>,
+  positionallyEquivalentFields: Set<string>,
 ): void {
   const fields = new Set([...Object.keys(curated || {}), ...Object.keys(generated || {})]);
   for (const field of [...fields].sort()) {
-    compareSchemaField(differences, field, curated?.[field], generated?.[field], clientOnlyFields);
+    compareSchemaField(
+      differences,
+      field,
+      curated?.[field],
+      generated?.[field],
+      clientOnlyFields,
+      positionallyEquivalentFields,
+    );
   }
 }
 
@@ -252,6 +262,58 @@ function compareRequiredField(
     curated: curatedConfig.required,
     generated: generatedConfig.required,
   });
+}
+
+function commandArgName(arg: NonNullable<CommandConfig['args']>[number]): string {
+  return typeof arg === 'string' ? arg : arg.rest;
+}
+
+function generatedPositionalFields(config: CommandConfig): string[] {
+  return Object.entries(config.schema || {})
+    .filter(([, schema]) => schema.positionalIndex !== undefined)
+    .sort((a, b) => (a[1].positionalIndex ?? 0) - (b[1].positionalIndex ?? 0))
+    .map(([field]) => field);
+}
+
+function effectiveCuratedPositionalFields(config: CommandConfig, generatedFields: string[]): string[] {
+  const generatedFieldSet = new Set(generatedFields);
+  const fields: string[] = [];
+  for (const arg of config.args || []) {
+    const field = commandArgName(arg);
+    const canonicalField = config.aliases?.[field] ?? field;
+    if (typeof arg !== 'string' && !generatedFieldSet.has(canonicalField)) continue;
+    fields.push(canonicalField);
+  }
+  return fields;
+}
+
+function compareEffectivePositionalOrder(
+  differences: CuratedCommandComparisonDifference[],
+  curatedConfig: CommandConfig,
+  generatedConfig: CommandConfig,
+): Set<string> {
+  const generatedFields = generatedPositionalFields(generatedConfig);
+  if (generatedFields.length === 0) return new Set();
+
+  const curatedFields = effectiveCuratedPositionalFields(curatedConfig, generatedFields);
+  const comparableCuratedFields = curatedFields.slice(0, generatedFields.length);
+  const equivalent = valuesEqual(comparableCuratedFields, generatedFields);
+  if (!equivalent) {
+    differences.push({
+      kind: 'schema-positional',
+      field: 'args',
+      message: `curated effective positionals ${formatValue(comparableCuratedFields)} vs generated ${formatValue(generatedFields)}`,
+      curated: comparableCuratedFields,
+      generated: generatedFields,
+    });
+    return new Set();
+  }
+
+  return new Set(
+    generatedFields.filter(
+      (field) => curatedConfig.schema?.[field]?.positionalIndex === generatedConfig.schema?.[field]?.positionalIndex,
+    ),
+  );
 }
 
 function matchesOnly(command: string, generatedCommand: string | undefined, only: string[] | undefined): boolean {
@@ -324,7 +386,14 @@ export function compareCuratedCommandsToGenerated(
       compareScalarField(differences, 'curated-cosmetic', field, curatedConfig[field], generatedConfig[field]);
     }
     compareRoute(differences, curatedConfig.route, generatedConfig.route);
-    compareSchema(differences, curatedConfig.schema, generatedConfig.schema, new Set(override.clientOnlyFields || []));
+    const positionallyEquivalentFields = compareEffectivePositionalOrder(differences, curatedConfig, generatedConfig);
+    compareSchema(
+      differences,
+      curatedConfig.schema,
+      generatedConfig.schema,
+      new Set(override.clientOnlyFields || []),
+      positionallyEquivalentFields,
+    );
 
     commands.push({
       command,
