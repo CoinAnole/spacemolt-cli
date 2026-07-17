@@ -130,9 +130,12 @@ function facilityProduction(row: Record<string, unknown>): Record<string, unknow
 
 function formatMaintenanceLevel(value: unknown): string | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
-  const percent = Math.round(value * 1000) / 10;
+  const percent = value * 100;
   if (!Number.isFinite(percent)) return undefined;
-  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)}%`;
+  const nearestInteger = Math.round(percent);
+  const integerTolerance = Number.EPSILON * Math.max(1, Math.abs(percent)) * 2;
+  const isEffectivelyInteger = Math.abs(percent - nearestInteger) <= integerTolerance;
+  return `${isEffectivelyInteger ? nearestInteger.toFixed(0) : percent.toFixed(1)}%`;
 }
 
 function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
@@ -147,6 +150,8 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
       name_display: facilityDisplayName(row),
       type_display: facilityTypeKey(row),
       maintenance_level_display: formatMaintenanceLevel(row.maintenance_level),
+      maintenance_satisfied_display:
+        typeof row.maintenance_satisfied === 'boolean' ? row.maintenance_satisfied : undefined,
       maintenance_display: formatMaintenance(row.maintenance_per_cycle),
       labor_cycle_display: formatCredits(row.labor_per_cycle),
       output_price_per_unit: outputPricePerUnit,
@@ -171,8 +176,8 @@ function facilityColumns(
       options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
     );
   }
-  if (options.grouped && hasAnyField(rows, ['maintenance_level_display', 'maintenance_satisfied'])) {
-    columns.push(['Maint', ['maintenance_level_display', 'maintenance_satisfied']]);
+  if (options.grouped && hasAnyField(rows, ['maintenance_level_display', 'maintenance_satisfied_display'])) {
+    columns.push(['Maint', ['maintenance_level_display', 'maintenance_satisfied_display']]);
   }
   if (hasAnyField(rows, ['damaged'])) {
     columns.push(['Damaged', ['damaged']]);

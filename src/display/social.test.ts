@@ -233,6 +233,7 @@ test('facility maintenance level formats finite percentages without leaking malf
         { facility_id: 'zero', name: 'Zero', maintenance_level: 0, maintenance_satisfied: true },
         { facility_id: 'full', name: 'Full', maintenance_level: 1, maintenance_satisfied: false },
         { facility_id: 'integral', name: 'Integral', maintenance_level: 0.29 },
+        { facility_id: 'non-integral', name: 'Non-integral', maintenance_level: 0.2904 },
         { facility_id: 'partial', name: 'Partial', maintenance_level: 0.605 },
         { facility_id: 'fallback', name: 'Fallback', maintenance_level: Number.NaN, maintenance_satisfied: false },
         { facility_id: 'malformed', name: 'Malformed', maintenance_level: {} },
@@ -248,11 +249,32 @@ test('facility maintenance level formats finite percentages without leaking malf
   expect(stdout).toContain('0%');
   expect(stdout).toContain('100%');
   expect(stdout).toMatch(/Integral\s+\|\s+integral\s+\|[^\n]*29%/);
-  expect(stdout).not.toContain('29.0%');
+  expect(stdout).not.toMatch(/Integral\s+\|\s+integral\s+\|[^\n]*29\.0%/);
+  expect(stdout).toMatch(/Non-integral\s+\|\s+non-integral\s+\|[^\n]*29\.0%/);
   expect(stdout).toContain('60.5%');
   expect(stdout).toMatch(/Fallback\s+\|\s+fallback\s+\|[^\n]*false/);
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('facility list ignores malformed boolean maintenance fallback', () => {
+  const rendered = renderStructuredResult(
+    'facility_list',
+    {
+      action: 'list',
+      base_id: 'earth_station',
+      station_facilities: [{ facility_id: 'malformed', name: 'Malformed', maintenance_satisfied: {} }],
+      player_facilities: [],
+      faction_facilities: [],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Maint');
   expect(stdout).not.toContain('[object Object]');
 });
 
