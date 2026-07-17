@@ -297,7 +297,7 @@ Add both bulk labels to `REQUIRED_HIGH_VALUE_FIXTURE_LABELS`, mapped to their as
 
 ### Golden Matrix
 
-The existing renderer matrix automatically creates table, JSON, YAML, and compact-JSON cases for every high-value fixture. The four new labels therefore add sixteen committed golden files. Updating the single faction fixtures also intentionally updates their machine-readable goldens to include `kind: "single"`; their table goldens remain unchanged.
+The existing renderer matrix automatically creates table, JSON, YAML, and compact-JSON cases for every high-value fixture, with separate stdout and stderr files. The four new labels therefore add sixteen renderer cases and thirty-two committed golden files. Updating the single faction fixtures also intentionally updates their machine-readable goldens to include `kind: "single"`; their table goldens remain unchanged.
 
 ## Test Plan
 
