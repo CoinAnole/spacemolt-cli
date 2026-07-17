@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CommandParseError } from './args';
-import type { CommandRegistrySnapshot } from './command-registry';
+import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
 import { displayCommandParseErrors, preparePayload, validationErrorFromParseErrors } from './payload';
 import type { GlobalOptions } from './types';
 
@@ -62,6 +62,27 @@ describe('payload preparation', () => {
 
     expect(result).toEqual({ type: 'exit', exitCode: 1 });
     expect(capture.stderr.join('\n')).toContain('Did you mean: cached_action');
+  });
+
+  test('default unknown command text suggestions include bundled local commands', () => {
+    const capture = captureWriter();
+
+    const result = preparePayload('profil', {}, { ...baseOptions, plain: true }, undefined, capture.writer);
+
+    expect(result).toEqual({ type: 'exit', exitCode: 1 });
+    expect(capture.stderr.join('\n')).toContain('Did you mean: profile');
+  });
+
+  test('unknown command diagnostics retain supplied executable command groups', () => {
+    const capture = captureWriter();
+    const registry = { commands: {} } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+
+    const result = preparePayload('faction', {}, { ...baseOptions, plain: true }, undefined, capture.writer, registry, {
+      registry: BUNDLED_COMMAND_REGISTRY,
+    });
+
+    expect(result).toEqual({ type: 'exit', exitCode: 1 });
+    expect(capture.stderr.join('\n')).toContain('"faction" is a command group.');
   });
 
   test('help=true exits after rendering command help', () => {
