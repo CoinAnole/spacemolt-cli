@@ -123,7 +123,7 @@ export const subscribeMarketFixture = {
 };
 
 export const storageFixture = {
-  action: 'view',
+  action: 'view_storage',
   base_id: 'earth_station',
   hint: '12 items in storage at earth_station',
   items: [{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12, size: 1 }],

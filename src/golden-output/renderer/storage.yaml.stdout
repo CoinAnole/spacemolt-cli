@@ -1,5 +1,5 @@
 
-action: view
+action: view_storage
 base_id: earth_station
 hint: "12 items in storage at earth_station"
 items:

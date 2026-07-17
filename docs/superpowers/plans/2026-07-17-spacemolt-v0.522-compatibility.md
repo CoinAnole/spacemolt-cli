@@ -1084,7 +1084,7 @@ Add to `poiInfoFixture`:
 Add to `storageFixture` in `src/display/market.fixtures.ts`:
 
 ```ts
-  action: 'view',
+  action: 'view_storage',
 ```
 
 - [ ] **Step 4: Tag passenger unload variants**

@@ -221,6 +221,8 @@ describe('output golden test support', () => {
     expect(byLabel.get('storage_view')?.apiRoute).toBe('POST /api/v2/spacemolt_storage/view');
     expect(byLabel.get('storage')?.primarySchemaName).toBe('ViewStorageResponse');
     expect(byLabel.get('storage_view')?.primarySchemaName).toBe('ViewStorageResponse');
+    expect(byLabel.get('storage')?.selectionReason).toBe('discriminator');
+    expect(byLabel.get('storage_view')?.selectionReason).toBe('discriminator');
   });
 
   test('standalone route fixtures are excluded from OpenAPI schema comparison', () => {
