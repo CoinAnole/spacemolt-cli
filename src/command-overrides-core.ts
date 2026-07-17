@@ -339,7 +339,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; package recipes pack_package/unpack_package; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
     description:
-      'Queue crafting work or cancel queued jobs. Fast/cheap presets choose the globally fastest or cheapest usable facility, including public rentals that may charge fees. Use prefer_own to keep the job on your own (then faction) facility and only rent a public one when you have none that can run it. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target). Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
+      'Queue crafting work or cancel queued jobs. Default routing prefers your own facility, then your faction\'s, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target). Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
     example:
       'spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'',
     discoverWith: ['catalog', 'storage', 'get_status', 'inspect'],
@@ -410,7 +410,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         enum: ['fast', 'cheap', 'prefer_own', 'workshop'],
         description:
-          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest usable facility (a public rental may be chosen and may charge a fee); 'prefer_own' keeps the job on your own (then faction) facility and only rents a public one when you have none that can run it; 'workshop' forces hand-crafting (for unpack_package: slower and does not recover the cargo_container).",
+          "Auto-routing preset: 'fast' chooses the soonest-finishing eligible facility globally, so a busy own facility may route to an idle public rental. 'cheap' chooses the lowest fee you would actually pay; your own, faction, and ally-granted facilities are free to you and beat paid rentals. 'prefer_own' keeps the job on your own, faction, or ally-granted facility and only rents publicly when none can run it. Default routing uses that ownership order before public rental and Station Workshop fallback. 'workshop' forces hand-crafting (for unpack_package: slower and does not recover the cargo_container).",
       },
       quantity: {
         type: 'integer',
@@ -422,7 +422,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
     description:
-      'Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets. Presets: fast/cheap pick the globally fastest or cheapest eligible recycler (may rent); prefer_own keeps the job on your own (then faction) recycler whenever one can run it. Recycling always needs a real recycler facility (workshop does not apply).',
+      'Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets. Default routing prefers your own recycler, then your faction\'s, then an ally-granted recycler, then a public rental. The fast preset chooses the soonest-finishing eligible recycler globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted recyclers free to you; prefer_own stays on those own/faction/ally-granted recyclers and rents publicly only when none can run the job. Recycling always needs a real recycler facility; workshop does not apply.',
     example: 'spacemolt recycle basic_iron_smelting 20 source=faction:Scrap deliver_to=storage',
     discoverWith: ['catalog', 'facility_list', 'storage'],
     seeAlso: ['craft', 'catalog', 'storage', 'get_guide'],
@@ -471,7 +471,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         enum: ['fast', 'cheap', 'prefer_own'],
         description:
-          "Auto-routing preset: 'fast' or 'cheap' selects the globally fastest or cheapest eligible recycler (a public rental may be chosen); 'prefer_own' keeps the job on your own (then faction) recycler whenever one can run it. Workshop does not apply to recycling.",
+          "Auto-routing preset: 'fast' chooses the soonest-finishing eligible recycler globally, so a busy own recycler may route to an idle public rental. 'cheap' chooses the lowest fee you would actually pay; your own, faction, and ally-granted recyclers are free to you and beat paid rentals. 'prefer_own' keeps the job on your own, faction, or ally-granted recycler and only rents publicly when none can run it. Default routing uses that ownership order before public rental. 'workshop' doesn't apply because recycling always needs a real recycler facility.",
       },
       quantity: {
         type: 'integer',
