@@ -10,6 +10,7 @@ interface Operation {
   operationId?: string;
   summary?: string;
   'x-state-sections'?: unknown;
+  parameters?: OpenApiParameter[];
   requestBody?: {
     content?: {
       'application/json'?: {
@@ -17,6 +18,14 @@ interface Operation {
       };
     };
   };
+}
+
+interface OpenApiParameter {
+  name?: string;
+  in?: string;
+  required?: boolean;
+  description?: string;
+  schema?: JsonSchema;
 }
 
 interface JsonSchema {
@@ -93,11 +102,41 @@ function cliMetadata(schema: JsonSchema): GeneratedApiRoute['cli'] | undefined {
   return Object.keys(cli).length === 0 ? undefined : cli;
 }
 
+function queryParameterSchema(operation: Operation): Pick<GeneratedApiRoute, 'required' | 'schema'> {
+  const parameters = (operation.parameters || []).filter(
+    (parameter): parameter is OpenApiParameter & { name: string; schema: JsonSchema } =>
+      parameter.in === 'query' && typeof parameter.name === 'string' && parameter.name !== '' && !!parameter.schema,
+  );
+
+  if (parameters.length === 0) return {};
+
+  const required = parameters
+    .filter((parameter) => parameter.required === true)
+    .map((parameter) => parameter.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  return {
+    ...(required.length > 0 ? { required } : {}),
+    schema: Object.fromEntries(
+      parameters
+        .map((parameter) => {
+          const description = parameter.description ?? parameter.schema.description;
+          return [
+            parameter.name,
+            fieldSchema(description ? { ...parameter.schema, description } : parameter.schema),
+          ] as const;
+        })
+        .sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  };
+}
+
 function requestSchema(operation: Operation): Pick<GeneratedApiRoute, 'required' | 'schema' | 'cli'> {
   const schema = operation.requestBody?.content?.['application/json']?.schema;
+  const cli = schema ? cliMetadata(schema) : undefined;
   if (!schema?.properties) {
-    const cli = schema ? cliMetadata(schema) : undefined;
-    return cli ? { cli } : {};
+    const querySchema = queryParameterSchema(operation);
+    return cli ? { ...querySchema, cli } : querySchema;
   }
 
   const generated: Pick<GeneratedApiRoute, 'required' | 'schema' | 'cli'> = {
@@ -108,7 +147,6 @@ function requestSchema(operation: Operation): Pick<GeneratedApiRoute, 'required'
         .sort(([a], [b]) => a.localeCompare(b)),
     ),
   };
-  const cli = cliMetadata(schema);
   if (cli) generated.cli = cli;
 
   return generated;

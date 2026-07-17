@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
+  generate,
   type GeneratedApiRoute,
   generateApiMetadataFile,
   type OpenApiSpec,
@@ -38,6 +39,142 @@ describe('generate-api-metadata', () => {
     expect(renderedWithCli).toContain("'tool_action'");
     expect(renderedWithoutCli).not.toContain('  cli?: {');
     expect(renderedWithCli).toContain("export const GENERATED_API_GAMESERVER_VERSION = 'v0.324.1';");
+  });
+
+  test('generateApiRoutes extracts query parameters when no request body schema exists', () => {
+    const spec = {
+      info: { 'x-gameserver-version': 'v0.522.0' },
+      paths: {
+        '/api/v2/notifications': {
+          get: {
+            operationId: 'getNotifications',
+            summary: 'Poll pending notifications',
+            parameters: [
+              {
+                name: 'limit',
+                in: 'query',
+                required: true,
+                description: 'Maximum number of notifications to return.',
+                schema: { type: 'integer', minimum: 1, maximum: 100 },
+              },
+              {
+                name: 'clear',
+                in: 'query',
+                description: 'Whether returned notifications should be cleared.',
+                schema: { type: 'boolean', description: 'Schema-level clear description.' },
+              },
+              {
+                name: 'types',
+                in: 'query',
+                description: 'Filter by notification type.',
+                schema: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['chat', 'combat'] },
+                },
+              },
+              {
+                name: 'session_id',
+                in: 'header',
+                description: 'Ignored header parameter.',
+                schema: { type: 'string' },
+              },
+              {
+                name: '',
+                in: 'query',
+                description: 'Ignored empty-name parameter.',
+                schema: { type: 'string' },
+              },
+              {
+                name: 'missing_schema',
+                in: 'query',
+                description: 'Ignored schema-less parameter.',
+              },
+            ],
+          },
+        },
+      },
+    } as OpenApiSpec;
+
+    const routes = generate(spec);
+
+    expect(routes['GET /api/v2/notifications']).toEqual({
+      operationId: 'getNotifications',
+      summary: 'Poll pending notifications',
+      route: {
+        tool: 'notifications',
+        action: 'notifications',
+        method: 'GET',
+      },
+      required: ['limit'],
+      schema: {
+        clear: {
+          type: 'boolean',
+          description: 'Whether returned notifications should be cleared.',
+        },
+        limit: {
+          type: 'integer',
+          description: 'Maximum number of notifications to return.',
+        },
+        types: {
+          type: 'array',
+          enum: ['chat', 'combat'],
+          description: 'Filter by notification type.',
+        },
+      },
+    });
+  });
+
+  test('generateApiRoutes keeps request body schema ahead of query parameters', () => {
+    const spec = {
+      info: { 'x-gameserver-version': 'v0.522.0' },
+      paths: {
+        '/api/v2/spacemolt_probe/ping': {
+          post: {
+            operationId: 'probePing',
+            summary: 'Ping probe',
+            parameters: [
+              {
+                name: 'query_only',
+                in: 'query',
+                description: 'Should not appear when a body schema exists.',
+                schema: { type: 'string' },
+              },
+            ],
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: {
+                      id: { type: 'string', description: 'Body ID.', 'x-positional-index': 0 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    } as OpenApiSpec;
+
+    expect(generate(spec)['POST /api/v2/spacemolt_probe/ping']).toEqual({
+      operationId: 'probePing',
+      summary: 'Ping probe',
+      route: {
+        tool: 'spacemolt_probe',
+        action: 'ping',
+        method: 'POST',
+      },
+      required: ['id'],
+      schema: {
+        id: {
+          type: 'string',
+          description: 'Body ID.',
+          positionalIndex: 0,
+        },
+      },
+    });
   });
 
   test('generateApiMetadataFile writes deterministic TypeScript from a spec file', () => {
