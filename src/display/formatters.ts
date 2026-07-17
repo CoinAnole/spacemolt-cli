@@ -6,6 +6,7 @@ import { marketFormatters } from './market.ts';
 import { notificationFormatters } from './notifications.ts';
 import { passengerFormatters } from './passenger.ts';
 import { shipFormatters } from './ship.ts';
+import { shippingFormatters } from './shipping.ts';
 import { socialFormatters } from './social.ts';
 import { statusFormatters } from './status.ts';
 
@@ -20,5 +21,6 @@ export const resultFormatters: ResultFormatter[] = [
   ...inspectFormatters,
   ...socialFormatters,
   ...empireFormatters,
+  ...shippingFormatters,
   ...genericFormatters,
 ];
