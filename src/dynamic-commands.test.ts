@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { buildDynamicCommands, generatedCommandName } from './dynamic-commands';
+import { GENERATED_API_ROUTES } from './generated/api-commands';
 import type { GeneratedApiRoute } from './openapi-metadata';
 
 const route = (tool: string, action: string, method: 'GET' | 'POST' = 'POST'): GeneratedApiRoute => ({
@@ -15,6 +16,28 @@ const route = (tool: string, action: string, method: 'GET' | 'POST' = 'POST'): G
 });
 
 describe('dynamic OpenAPI commands', () => {
+  test('exposes v0.522 shipping actions but keeps the shipping help route hidden', () => {
+    const shippingRoutes = Object.fromEntries(
+      Object.entries(GENERATED_API_ROUTES).filter(([signature]) => signature.includes('/spacemolt_shipping/')),
+    );
+    const commands = buildDynamicCommands(shippingRoutes, new Set());
+
+    expect(Object.keys(commands).sort()).toEqual([
+      'shipping_accept',
+      'shipping_cancel',
+      'shipping_deliver',
+      'shipping_get',
+      'shipping_list',
+      'shipping_pay_debt',
+      'shipping_post',
+      'shipping_profile',
+      'shipping_quote',
+      'shipping_return',
+      'shipping_track',
+    ]);
+    expect(commands.shipping_help).toBeUndefined();
+  });
+
   test('derives stable command names from v2 routes', () => {
     expect(generatedCommandName(route('spacemolt_shipyard', 'repair'))).toBe('shipyard_repair');
     expect(generatedCommandName(route('spacemolt_catalog', 'spacemolt_catalog'))).toBe('catalog');

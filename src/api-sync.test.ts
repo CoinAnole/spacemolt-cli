@@ -18,6 +18,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { generate, type OpenApiSpec } from '../scripts/generate-api-metadata';
 import { COMMANDS, routeToPath, V2_TOOL_MAP } from './commands';
+import { buildDynamicCommands } from './dynamic-commands';
 import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands';
 
 const OPENAPI_URL = 'https://game.spacemolt.com/api/v2/openapi.json';
@@ -326,10 +327,14 @@ describe('api sync', () => {
         `Unified storage dynamic route coverage references routes missing from v2 OpenAPI:\n  ${staleDynamicStorageRoutes.join('\n  ')}`,
       ).toEqual([]);
 
-      const mappedRoutes = new Set([
-        ...Object.values(v2ToolMap).map((mapping) => `${mapping.method} ${mapping.route}`),
-        ...dynamicStorageRoutes,
-      ]);
+      const curatedRouteSignatures = new Set(
+        Object.values(v2ToolMap).map((mapping) => `${mapping.method} ${mapping.route}`),
+      );
+      const dynamicCommands = buildDynamicCommands(generate(spec), clientCommands, curatedRouteSignatures);
+      const generatedDynamicRoutes = Object.values(dynamicCommands).map(
+        (config) => `${config.route.method || 'POST'} ${routeToPath(config.route, { includeApiPrefix: true })}`,
+      );
+      const mappedRoutes = new Set([...curatedRouteSignatures, ...generatedDynamicRoutes, ...dynamicStorageRoutes]);
       const unmappedSpecRoutes = [...v2Routes]
         .filter((route) => !isInfrastructureSpecRoute(route))
         .filter((route) => !mappedRoutes.has(route));

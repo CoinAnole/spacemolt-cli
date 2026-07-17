@@ -436,23 +436,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_dismantle: {
     usage: '<facility_id>',
-    description: 'Dismantle a facility you own into assembly crates.',
+    description:
+      'Dismantle a facility you own, returning 100% of build and upgrade materials in ordinary labeled packages.',
     example: 'spacemolt facility_dismantle facility-1',
     discoverWith: ['facility_owned'],
-    seeAlso: ['facility_owned', 'facility_build', 'facility_disassemble'],
+    seeAlso: ['facility_owned', 'facility_build', 'facility_repair'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/dismantle',
-    positionals: ['facility_id'],
-  },
-  facility_disassemble: {
-    usage: '<facility_id>',
-    description:
-      'Permanently disassemble a facility you own, recovering 50% of cumulative build/upgrade materials (rounded down). Takes cumulative build time; returns no credits or assembly crates. Damaged facilities must be repaired first.',
-    example: 'spacemolt facility_disassemble facility-1',
-    discoverWith: ['facility_owned', 'facility_repair'],
-    seeAlso: ['facility_owned', 'facility_repair', 'facility_dismantle'],
-    category: 'Facilities',
-    apiRoute: 'POST /api/v2/spacemolt_facility/disassemble',
     positionals: ['facility_id'],
   },
   facility_repair: {
@@ -461,7 +451,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       'Repair a damaged facility after a station is wrecked (costs ~30% of original materials and build time).',
     example: 'spacemolt facility_repair facility-1',
     discoverWith: ['facility_list', 'facility_owned'],
-    seeAlso: ['facility_list', 'facility_owned', 'facility_dismantle', 'facility_disassemble'],
+    seeAlso: ['facility_list', 'facility_owned', 'facility_dismantle'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/repair',
     positionals: ['facility_id'],
@@ -678,23 +668,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   faction_dismantle: {
     usage: '<facility_id>',
-    description: 'Dismantle a faction facility into assembly crates.',
+    description:
+      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage in ordinary labeled packages.',
     example: 'spacemolt faction_dismantle facility-1',
     discoverWith: ['faction_facility_owned'],
-    seeAlso: ['faction_facility_owned', 'faction_build', 'faction_disassemble'],
+    seeAlso: ['faction_facility_owned', 'faction_build', 'facility_repair'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_dismantle',
-    positionals: ['facility_id'],
-  },
-  faction_disassemble: {
-    usage: '<facility_id>',
-    description:
-      'Permanently disassemble a faction facility, returning 50% of cumulative materials to faction storage (rounded down). Damaged facilities must be repaired first.',
-    example: 'spacemolt faction_disassemble facility-1',
-    discoverWith: ['faction_facility_owned', 'facility_repair'],
-    seeAlso: ['faction_facility_owned', 'faction_dismantle', 'facility_repair'],
-    category: 'Facilities',
-    apiRoute: 'POST /api/v2/spacemolt_facility/faction_disassemble',
     positionals: ['facility_id'],
   },
   faction_facility_upgrade: {

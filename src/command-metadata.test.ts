@@ -1009,7 +1009,7 @@ describe('command metadata', () => {
     }
   });
 
-  test('notifications is curated instead of exposed as a generated fallback', () => {
+  test('notifications is curated while shipping remains generated-only', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.notifications;
 
     expect(config).toBeDefined();
@@ -1035,8 +1035,21 @@ describe('command metadata', () => {
     expect(
       Object.entries(snapshot.commands)
         .filter(([, commandConfig]) => commandConfig.category === 'Generated API')
-        .map(([command]) => command),
-    ).toEqual([]);
+        .map(([command]) => command)
+        .sort(),
+    ).toEqual([
+      'shipping_accept',
+      'shipping_cancel',
+      'shipping_deliver',
+      'shipping_get',
+      'shipping_list',
+      'shipping_pay_debt',
+      'shipping_post',
+      'shipping_profile',
+      'shipping_quote',
+      'shipping_return',
+      'shipping_track',
+    ]);
   });
 
   test('command registry can limit fallback commands to dynamic generated routes', () => {
