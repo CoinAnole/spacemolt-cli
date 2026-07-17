@@ -31,7 +31,12 @@ export interface FixtureSchemaCandidateScore {
   summary: string;
 }
 
-export type FixtureSchemaSelectionReason = 'explicit-target' | 'best-score' | 'ambiguous' | 'fallback';
+export type FixtureSchemaSelectionReason =
+  | 'explicit-target'
+  | 'discriminator'
+  | 'best-score'
+  | 'ambiguous'
+  | 'fallback';
 
 export interface FixtureSchemaComparison {
   label: string;
@@ -338,6 +343,18 @@ function candidatesForExplicitTarget(
   return candidates.filter((candidate) => candidate.comparedAgainst === explicitTarget);
 }
 
+function candidatesForDiscriminator(
+  fixtureValue: unknown,
+  candidates: OpenApiSchemaCandidate[],
+): OpenApiSchemaCandidate[] {
+  if (!fixtureValue || typeof fixtureValue !== 'object' || Array.isArray(fixtureValue)) return [];
+  const fixture = fixtureValue as Record<string, unknown>;
+  return candidates.filter((candidate) => {
+    const discriminator = candidate.discriminator;
+    return discriminator !== undefined && fixture[discriminator.propertyName] === discriminator.value;
+  });
+}
+
 function tiedCandidateDivergences(comparisons: CandidateComparison[]): Divergence[] {
   const seen = new Set<string>();
   const divergences: Divergence[] = [];
@@ -493,6 +510,17 @@ export function compareFixtureAgainstResponseCandidates(
       opts,
       compareCandidates(fixtureValue, opts, explicitCandidates),
       'explicit-target',
+    );
+    if (selected) return selected;
+  }
+
+  const discriminatorCandidates = candidatesForDiscriminator(fixtureValue, candidates);
+  if (discriminatorCandidates.length > 0) {
+    const selected = selectCandidateComparison(
+      fixtureValue,
+      opts,
+      compareCandidates(fixtureValue, opts, discriminatorCandidates),
+      'discriminator',
     );
     if (selected) return selected;
   }

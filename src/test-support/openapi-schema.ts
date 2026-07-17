@@ -3,6 +3,11 @@ import * as path from 'node:path';
 
 const DEFAULT_OPENAPI_PATH = path.join(import.meta.dir, '..', '..', 'spacemolt-docs', 'openapi.json');
 
+export interface OpenApiDiscriminator {
+  propertyName: string;
+  mapping?: Record<string, string>;
+}
+
 export type JsonSchema = Record<string, unknown> & {
   type?: string | string[];
   properties?: Record<string, JsonSchema>;
@@ -14,6 +19,7 @@ export type JsonSchema = Record<string, unknown> & {
   oneOf?: JsonSchema[];
   anyOf?: JsonSchema[];
   description?: string;
+  discriminator?: OpenApiDiscriminator;
 };
 
 export interface OpenApiOperation {
@@ -35,6 +41,7 @@ export interface OpenApiSchemaCandidate {
   comparedAgainst: string;
   schema: JsonSchema;
   primarySchemaName?: string;
+  discriminator?: { propertyName: string; value: string };
 }
 
 const specCache = new Map<string, OpenApiSpec>();
@@ -155,6 +162,25 @@ function schemaHasComparableShape(schema: JsonSchema | undefined): schema is Jso
   return schemaTypes.some((type) => type !== 'object');
 }
 
+function mappedDiscriminator(
+  schema: JsonSchema,
+  branch: JsonSchema,
+): OpenApiSchemaCandidate['discriminator'] | undefined {
+  const discriminator = schema.discriminator;
+  if (
+    typeof discriminator?.propertyName !== 'string' ||
+    discriminator.propertyName.length === 0 ||
+    !discriminator.mapping ||
+    typeof discriminator.mapping !== 'object' ||
+    Array.isArray(discriminator.mapping) ||
+    !branch.$ref
+  ) {
+    return undefined;
+  }
+  const value = Object.entries(discriminator.mapping).find(([, ref]) => ref === branch.$ref)?.[0];
+  return value ? { propertyName: discriminator.propertyName, value } : undefined;
+}
+
 function expandBranchCandidates(spec: OpenApiSpec, candidate: OpenApiSchemaCandidate): OpenApiSchemaCandidate[] {
   const effective = getEffectiveSchema(spec, candidate.schema);
   const branches = effective.oneOf ?? effective.anyOf;
@@ -174,6 +200,7 @@ function expandBranchCandidates(spec: OpenApiSpec, candidate: OpenApiSchemaCandi
         comparedAgainst: candidate.comparedAgainst,
         schema: resolved,
         primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
+        discriminator: mappedDiscriminator(effective, branch) ?? candidate.discriminator,
       }),
     );
   }
@@ -210,7 +237,10 @@ export function buildResponseSchemaCandidates(
 
   const unique = new Map<string, OpenApiSchemaCandidate>();
   for (const candidate of candidates) {
-    unique.set(`${candidate.label}:${candidate.primarySchemaName ?? ''}`, candidate);
+    const tag = candidate.discriminator
+      ? `${candidate.discriminator.propertyName}=${candidate.discriminator.value}`
+      : '';
+    unique.set(`${candidate.label}:${candidate.primarySchemaName ?? ''}:${tag}`, candidate);
   }
   return [...unique.values()];
 }

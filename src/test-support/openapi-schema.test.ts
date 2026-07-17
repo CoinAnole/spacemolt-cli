@@ -123,6 +123,24 @@ function makeSpec(): OpenApiSpec {
             },
           ],
         },
+        DiscriminatedResponse: {
+          discriminator: {
+            propertyName: 'kind',
+            mapping: {
+              alpha: '#/components/schemas/AlphaResponse',
+              beta: '#/components/schemas/BetaResponse',
+            },
+          },
+          oneOf: [{ $ref: '#/components/schemas/AlphaResponse' }, { $ref: '#/components/schemas/BetaResponse' }],
+        },
+        AlphaResponse: {
+          type: 'object',
+          properties: { kind: { type: 'string' }, alpha: { type: 'string' } },
+        },
+        BetaResponse: {
+          type: 'object',
+          properties: { kind: { type: 'string' }, beta: { type: 'string' } },
+        },
       },
     },
   };
@@ -189,6 +207,30 @@ describe('OpenAPI schema utilities', () => {
 
     expect(candidates.map((c) => c.label)).toEqual(['structuredContent', 'details.oneOf[0]', 'details.oneOf[1]']);
     expect(candidates.map((c) => c.comparedAgainst)).toEqual(['structuredContent', 'details', 'details']);
+  });
+
+  test('buildResponseSchemaCandidates retains discriminator values for mapped branches', () => {
+    const spec = makeSpec();
+    const candidates = buildResponseSchemaCandidates(spec, {
+      $ref: '#/components/schemas/DiscriminatedResponse',
+    });
+
+    expect(candidates.map((candidate) => [candidate.primarySchemaName, candidate.discriminator])).toEqual([
+      ['AlphaResponse', { propertyName: 'kind', value: 'alpha' }],
+      ['BetaResponse', { propertyName: 'kind', value: 'beta' }],
+    ]);
+  });
+
+  test('buildResponseSchemaCandidates ignores malformed discriminator metadata', () => {
+    const spec = makeSpec();
+    const schema = spec.components?.schemas?.DiscriminatedResponse;
+    if (schema) schema.discriminator = { mapping: { alpha: '#/components/schemas/AlphaResponse' } } as never;
+
+    const candidates = buildResponseSchemaCandidates(spec, {
+      $ref: '#/components/schemas/DiscriminatedResponse',
+    });
+
+    expect(candidates.map((candidate) => candidate.discriminator)).toEqual([undefined, undefined]);
   });
 
   test('collectAllPropertyNames walks nested arrays and oneOf variants', () => {

@@ -88,6 +88,43 @@ function responseSpecWithSchemas(schemas: Record<string, JsonSchema>, detailsRef
   };
 }
 
+function discriminatedResponseSpec(): OpenApiSpec {
+  return {
+    paths: {},
+    components: {
+      schemas: {
+        CommandResponse: {
+          discriminator: {
+            propertyName: 'kind',
+            mapping: {
+              alpha: '#/components/schemas/AlphaResponse',
+              beta: '#/components/schemas/BetaResponse',
+            },
+          },
+          oneOf: [{ $ref: '#/components/schemas/AlphaResponse' }, { $ref: '#/components/schemas/BetaResponse' }],
+        },
+        AlphaResponse: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string' },
+            alpha: { type: 'string' },
+            beta: { type: 'string' },
+          },
+        },
+        BetaResponse: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string' },
+            beta: { type: 'string' },
+          },
+        },
+      },
+    },
+  };
+}
+
 const sampleContext = {
   label: 'sample',
   command: 'sample',
@@ -95,6 +132,36 @@ const sampleContext = {
 };
 
 describe('output golden test support', () => {
+  test('schema comparison prefers the fixture discriminator over a structurally cheaper branch', () => {
+    const spec = discriminatedResponseSpec();
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { kind: 'beta', alpha: 'structurally misleading', beta: 'selected' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: { $ref: '#/components/schemas/CommandResponse' },
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('BetaResponse');
+    expect(comparison.selectionReason).toBe('discriminator');
+  });
+
+  test('schema comparison falls back to structural scoring for an unknown discriminator value', () => {
+    const spec = discriminatedResponseSpec();
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { kind: 'unknown', alpha: 'selected structurally' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: { $ref: '#/components/schemas/CommandResponse' },
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('AlphaResponse');
+    expect(comparison.selectionReason).toBe('best-score');
+  });
+
   test('fixture schema baseline path is exported for report tooling', () => {
     expect(path.basename(DEFAULT_SCHEMA_BASELINE_PATH)).toBe('fixture-schema-baseline.json');
   });
@@ -105,8 +172,8 @@ describe('output golden test support', () => {
 
     expect(byLabel.get('storage')?.apiRoute).toBe('POST /api/v2/spacemolt_storage/view');
     expect(byLabel.get('storage_view')?.apiRoute).toBe('POST /api/v2/spacemolt_storage/view');
-    expect(byLabel.get('storage')?.primarySchemaName?.startsWith('StorageResponse')).toBe(true);
-    expect(byLabel.get('storage_view')?.primarySchemaName?.startsWith('StorageResponse')).toBe(true);
+    expect(byLabel.get('storage')?.primarySchemaName).toBe('ViewStorageResponse');
+    expect(byLabel.get('storage_view')?.primarySchemaName).toBe('ViewStorageResponse');
   });
 
   test('standalone route fixtures are excluded from OpenAPI schema comparison', () => {
