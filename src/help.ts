@@ -2,7 +2,11 @@ import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
 import { type CommandGroupEntryConfig, commandGroup, groupedCommandParts } from './command-groups.ts';
-import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import {
+  BUNDLED_COMMAND_REGISTRY,
+  type CommandRegistrySnapshot,
+  CURATED_COMMAND_REGISTRY,
+} from './command-registry.ts';
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
@@ -921,9 +925,9 @@ function showGeneratedCommandReference(
   writer?: CliWriter,
   options?: HelpOutputOptions,
 ): void {
-  const bundledCommands = commandHelpMap(BUNDLED_COMMAND_REGISTRY);
+  const curatedCommands = commandHelpMap(CURATED_COMMAND_REGISTRY);
   const generatedCommands = Object.entries(commands)
-    .filter(([command]) => !bundledCommands[command])
+    .filter(([command]) => !curatedCommands[command])
     .sort(([a], [b]) => a.localeCompare(b));
   if (generatedCommands.length === 0) return;
 

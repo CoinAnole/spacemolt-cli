@@ -277,6 +277,20 @@ describe('shell completion generation', () => {
     ).toContain('--fuzzy');
   });
 
+  test('bundled generated commands appear in runtime and static completion', () => {
+    const values = completeWords({ shell: 'fish', words: ['spacemolt', 'shipping_q'], current: 'shipping_q' }).map(
+      (candidate) => candidate.value,
+    );
+    const bash = generateCompletion('bash');
+    const fish = generateCompletion('fish');
+
+    expect(values).toContain('shipping_quote');
+    expect(bash).toContain('shipping_quote');
+    expect(fish).toContain(
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand" -a shipping_quote',
+    );
+  });
+
   test('runtime completion suggests raw notification override', () => {
     const labels = completeWords({ shell: 'fish', words: ['spacemolt', '--raw-n'], current: '--raw-n' }).map(
       (entry) => entry.value,
