@@ -69,4 +69,5 @@ export function buildCommandRegistrySnapshot(options?: {
   };
 }
 
-export const BUNDLED_COMMAND_REGISTRY = buildCommandRegistrySnapshot({ includeDynamic: false });
+export const CURATED_COMMAND_REGISTRY = buildCommandRegistrySnapshot({ includeDynamic: false });
+export const BUNDLED_COMMAND_REGISTRY = buildCommandRegistrySnapshot();

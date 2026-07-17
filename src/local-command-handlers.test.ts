@@ -1383,6 +1383,42 @@ describe('local command handlers', () => {
     expect(result).toEqual({ found: true, command });
   });
 
+  test('explain unknown command suggestions use the supplied registry snapshot', async () => {
+    const registry = dynamicRegistry();
+    const handler = resolveHandler(['explain', 'lab_calibrat'], options, registry);
+    expect(handler).toBeDefined();
+    if (!handler) return;
+
+    const parsed = handler.parse(['explain', 'lab_calibrat'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stderr } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Did you mean: lab_calibrate');
+  });
+
+  test('--help unknown command suggestions use the supplied registry snapshot', async () => {
+    const registry = dynamicRegistry();
+    const handler = resolveHandler(['--help', 'lab_calibrat'], options, registry);
+    expect(handler).toBeDefined();
+    if (!handler) return;
+
+    const parsed = handler.parse(['--help', 'lab_calibrat'], options);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const result = await handler.run(parsed.payload, options);
+    const { context, stderr } = captureContext();
+
+    const exitCode = await handler.render(result, options, undefined, context);
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Did you mean: lab_calibrate');
+  });
+
   test('explain renders commands supplied by a registry snapshot', async () => {
     const command = 'dynamic_explain_render_snapshot_test';
     const registry = {

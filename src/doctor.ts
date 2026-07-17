@@ -3,8 +3,13 @@ import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
 import { buildCommandRegistrySnapshot, commandRegistryApiCommands } from './command-registry.ts';
 import { COMMANDS, routeSignature, routeToPath, V2_TOOL_MAP } from './commands.ts';
-import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
-import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes } from './openapi-cache.ts';
+import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands.ts';
+import {
+  defaultOpenApiCacheDir,
+  loadCachedGeneratedRoutes,
+  loadOpenApiCacheVersion,
+  resolveGeneratedRouteSources,
+} from './openapi-cache.ts';
 import { colorsForPlain } from './output-style.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, type SpaceMoltConfig, VERSION } from './runtime.ts';
@@ -105,12 +110,20 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
   checks.push(pass('version', `v${VERSION}`));
 
   try {
-    const cachedRoutes = loadCachedGeneratedRoutes(defaultOpenApiCacheDir(env));
+    const cacheDir = defaultOpenApiCacheDir(env);
+    const cachedRoutes = loadCachedGeneratedRoutes(cacheDir);
+    const cacheVersion = loadOpenApiCacheVersion(cacheDir);
+    const routeSources = resolveGeneratedRouteSources({
+      bundledRoutes: GENERATED_API_ROUTES,
+      bundledVersion: GENERATED_API_GAMESERVER_VERSION,
+      cachedRoutes,
+      cacheVersion,
+    });
     cachedOpenApiRoutes = cachedRoutes ? Object.keys(cachedRoutes).length : 0;
-    if (cachedRoutes) {
+    if (cachedRoutes && routeSources.cacheIsUsable) {
       const registry = buildCommandRegistrySnapshot({
-        generatedRoutes: { ...(GENERATED_API_ROUTES as typeof cachedRoutes), ...cachedRoutes },
-        dynamicGeneratedRoutes: cachedRoutes,
+        generatedRoutes: routeSources.generatedRoutes,
+        dynamicGeneratedRoutes: routeSources.dynamicGeneratedRoutes,
         includeDynamic: true,
       });
       const cachedRouteSignatures = new Set(Object.keys(cachedRoutes));
@@ -125,7 +138,7 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
       pass(
         'openapi-cache',
         `${cachedOpenApiRoutes} cached OpenAPI ${cachedOpenApiRoutes === 1 ? 'route' : 'routes'}`,
-        `${dynamicCommands} dynamic ${dynamicCommands === 1 ? 'command' : 'commands'}`,
+        `${dynamicCommands} cache-provided dynamic ${dynamicCommands === 1 ? 'command' : 'commands'}`,
       ),
     );
   } catch (err) {

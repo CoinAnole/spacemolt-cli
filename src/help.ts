@@ -2,7 +2,11 @@ import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
 import { type CommandGroupEntryConfig, commandGroup, groupedCommandParts } from './command-groups.ts';
-import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
+import {
+  BUNDLED_COMMAND_REGISTRY,
+  type CommandRegistrySnapshot,
+  CURATED_COMMAND_REGISTRY,
+} from './command-registry.ts';
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
@@ -590,12 +594,17 @@ function printNextSteps(command: string, missingArg?: string, writer?: CliWriter
   );
 }
 
-export function displayUnknownCommand(command: string, writer?: CliWriter, options?: { plain?: boolean }): void {
+export function displayUnknownCommand(
+  command: string,
+  writer?: CliWriter,
+  options?: { plain?: boolean },
+  commands?: CommandHelpSource,
+): void {
   const writeErr = err(writer);
   const colors = colorsForPlain(Boolean(options?.plain));
   writeErr(`${colors.red}Error:${colors.reset} Unknown command "${command}"`);
 
-  const executableGroup = commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, command);
+  const executableGroup = commandGroup(commandHelpGroups(commands), command);
   if (executableGroup) {
     writeErr(`"${command}" is a command group. Try: spacemolt help ${executableGroup.name}`);
     writeErr(`Search commands: spacemolt commands --search ${command}`);
@@ -609,7 +618,7 @@ export function displayUnknownCommand(command: string, writer?: CliWriter, optio
     return;
   }
 
-  const suggestions = suggestCommands(command);
+  const suggestions = suggestCommands(command, 3, commands);
   if (suggestions.length > 0) writeErr(`Did you mean: ${suggestions.join(', ')}`);
   writeErr(`\nRun "spacemolt --help" for the local command overview.`);
   writeErr(`Run "spacemolt commands --search ${command}" to search local command metadata.`);
@@ -832,9 +841,10 @@ function cacheHelpSections(options?: HelpOutputOptions): string {
 ${c.bright}Live server help:${c.reset}
   spacemolt server-help [topic]    Live gameserver help for an action, category, or keyword
 
-${c.bright}Dynamic API Cache:${c.reset}
-  spacemolt sync-api              Refresh cached OpenAPI command metadata
-  Cached v2 routes appear in help, command search, completion, and dispatch.
+${c.bright}Dynamic API Commands:${c.reset}
+  Safe generated commands bundled with this CLI are available immediately.
+  spacemolt sync-api              Discover API routes published after this CLI release
+  Accepted cached routes replace the generated fallback catalog.
 
 ${c.bright}ID Cache:${c.reset}
   Discovery commands like get_system, get_cargo, view_market, get_nearby, and list_ships save useful IDs.
@@ -921,9 +931,9 @@ function showGeneratedCommandReference(
   writer?: CliWriter,
   options?: HelpOutputOptions,
 ): void {
-  const bundledCommands = commandHelpMap(BUNDLED_COMMAND_REGISTRY);
+  const curatedCommands = commandHelpMap(CURATED_COMMAND_REGISTRY);
   const generatedCommands = Object.entries(commands)
-    .filter(([command]) => !bundledCommands[command])
+    .filter(([command]) => !curatedCommands[command])
     .sort(([a], [b]) => a.localeCompare(b));
   if (generatedCommands.length === 0) return;
 

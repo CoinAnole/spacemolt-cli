@@ -99,9 +99,11 @@ describe('help output branches', () => {
     showHelp(capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Dynamic API Cache:');
-    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
-    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).toContain('Dynamic API Commands:');
+    expect(output).toContain('Safe generated commands bundled with this CLI are available immediately.');
+    expect(output).toContain('spacemolt sync-api              Discover API routes published after this CLI release');
+    expect(output).toContain('Accepted cached routes replace the generated fallback catalog.');
+    expect(output).not.toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
@@ -196,9 +198,11 @@ describe('help output branches', () => {
     renderProgressiveHelp({ authenticated: true }, capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Dynamic API Cache:');
-    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
-    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).toContain('Dynamic API Commands:');
+    expect(output).toContain('Safe generated commands bundled with this CLI are available immediately.');
+    expect(output).toContain('spacemolt sync-api              Discover API routes published after this CLI release');
+    expect(output).toContain('Accepted cached routes replace the generated fallback catalog.');
+    expect(output).not.toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
@@ -805,6 +809,26 @@ describe('help output branches', () => {
     expect(output).toContain('generated_only <id> - Generated command');
   });
 
+  test('bundled generated commands appear in full help, local help, and search', () => {
+    const full = captureWriter();
+    const command = captureWriter();
+    const explanation = captureWriter();
+    const search = captureWriter();
+
+    showFullHelp(full.writer, BUNDLED_COMMAND_REGISTRY);
+    expect(showCommandHelp('shipping_quote', command.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+    expect(
+      showCommandExplanation('shipping_quote', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+    showCommandSearch('shipping quote', search.writer, BUNDLED_COMMAND_REGISTRY);
+
+    expect(full.stdout.join('\n')).toContain('Generated API Commands');
+    expect(full.stdout.join('\n')).toContain('shipping_quote');
+    expect(command.stdout.join('\n')).toContain('spacemolt shipping_quote');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/quote');
+    expect(search.stdout.join('\n')).toContain('shipping_quote');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 
@@ -813,6 +837,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     const generatedIndex = output.indexOf('Generated API Commands');
     const generatedSection = generatedIndex === -1 ? '' : output.slice(generatedIndex);
+    expect(generatedSection).toContain('shipping_quote');
     expect(generatedSection).not.toContain('faction create_buy_order');
     expect(generatedSection).not.toContain('facility upgrade');
     expect(generatedSection).not.toContain('station info');
@@ -871,9 +896,11 @@ describe('help output branches', () => {
     showFullHelp(capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Dynamic API Cache:');
-    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
-    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).toContain('Dynamic API Commands:');
+    expect(output).toContain('Safe generated commands bundled with this CLI are available immediately.');
+    expect(output).toContain('spacemolt sync-api              Discover API routes published after this CLI release');
+    expect(output).toContain('Accepted cached routes replace the generated fallback catalog.');
+    expect(output).not.toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
@@ -1097,5 +1124,15 @@ describe('help output branches', () => {
     expect(output).toContain('"faction" is a command group.');
     expect(output).toContain('spacemolt help faction');
     expect(output).toContain('spacemolt commands --search faction');
+  });
+
+  test('displayUnknownCommand uses supplied command groups instead of bundled groups', () => {
+    const capture = captureWriter();
+
+    displayUnknownCommand('faction', capture.writer, { plain: true }, { allCommands: {}, commandGroups: {} });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('"faction" is a help group.');
+    expect(output).not.toContain('"faction" is a command group.');
   });
 });

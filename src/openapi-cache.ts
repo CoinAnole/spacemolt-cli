@@ -8,6 +8,7 @@ import {
 } from './openapi-metadata.ts';
 import { DEFAULT_USER_AGENT } from './runtime.ts';
 import { getSpacemoltHome } from './session.ts';
+import { compareVersions } from './update.ts';
 
 export interface OpenApiCacheFile {
   fetchedAt: string;
@@ -20,6 +21,38 @@ export type OpenApiCacheVersionStatus =
   | { status: 'not_synced' }
   | { status: 'invalid' }
   | { status: 'valid'; gameserverVersion: string; fetchedAt: string };
+
+export interface GeneratedRouteSources {
+  generatedRoutes: Record<string, GeneratedApiRoute>;
+  dynamicGeneratedRoutes: Record<string, GeneratedApiRoute>;
+  cacheIsUsable: boolean;
+}
+
+export function resolveGeneratedRouteSources(options: {
+  bundledRoutes: Record<string, GeneratedApiRoute>;
+  bundledVersion: string;
+  cachedRoutes?: Record<string, GeneratedApiRoute>;
+  cacheVersion: OpenApiCacheVersionStatus;
+}): GeneratedRouteSources {
+  const cacheIsUsable =
+    options.cachedRoutes !== undefined &&
+    options.cacheVersion.status === 'valid' &&
+    compareVersions(options.bundledVersion, options.cacheVersion.gameserverVersion) >= 0;
+
+  if (!cacheIsUsable || !options.cachedRoutes) {
+    return {
+      generatedRoutes: options.bundledRoutes,
+      dynamicGeneratedRoutes: options.bundledRoutes,
+      cacheIsUsable: false,
+    };
+  }
+
+  return {
+    generatedRoutes: { ...options.bundledRoutes, ...options.cachedRoutes },
+    dynamicGeneratedRoutes: options.cachedRoutes,
+    cacheIsUsable: true,
+  };
+}
 
 type OpenApiFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 

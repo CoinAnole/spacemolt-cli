@@ -20,6 +20,9 @@ type PayloadResolveResult =
   | { type: 'payload'; payload: Record<string, unknown> }
   | { type: 'ambiguous'; field: string; result: Extract<CachedIdResolveResult, { type: 'ambiguous' }> };
 
+type PayloadCommandRegistry = Pick<CommandRegistrySnapshot, 'commands'> &
+  Partial<Pick<CommandRegistrySnapshot, 'allCommands' | 'commandGroups'>>;
+
 const EMPIRE_RECIPIENT_ALIASES = new Set([
   'solarian',
   'solarian_confederacy',
@@ -45,10 +48,10 @@ export function preparePayload(
   options: GlobalOptions,
   sessionPath?: string,
   writer?: CliWriter,
-  registry: Pick<CommandRegistrySnapshot, 'commands'> = BUNDLED_COMMAND_REGISTRY,
+  registry: PayloadCommandRegistry = BUNDLED_COMMAND_REGISTRY,
   display?: {
     command?: string;
-    registry?: Pick<CommandRegistrySnapshot, 'commands'>;
+    registry?: PayloadCommandRegistry;
   },
 ): PreparedPayload {
   const displayCommand = display?.command ?? command;
@@ -59,7 +62,15 @@ export function preparePayload(
       printJsonError('unknown_command', `Unknown command: ${displayCommand}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayUnknownCommand(displayCommand, writer, { plain: options.plain });
+    displayUnknownCommand(
+      displayCommand,
+      writer,
+      { plain: options.plain },
+      {
+        allCommands: displayRegistry.allCommands ?? displayRegistry.commands,
+        commandGroups: displayRegistry.commandGroups,
+      },
+    );
     return { type: 'exit', exitCode: 1 };
   }
 

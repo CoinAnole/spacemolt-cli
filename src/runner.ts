@@ -12,18 +12,23 @@ import {
   getRuntimeConfig,
   resolveHandler,
 } from './command-handlers.ts';
-import { buildCommandRegistrySnapshot } from './command-registry.ts';
+import { buildCommandRegistrySnapshot, type CommandRegistrySnapshot } from './command-registry.ts';
 import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
 import { displayUnknownCommand, printJsonError } from './help.ts';
-import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes, loadOpenApiCacheVersion } from './openapi-cache.ts';
+import {
+  defaultOpenApiCacheDir,
+  loadCachedGeneratedRoutes,
+  loadOpenApiCacheVersion,
+  resolveGeneratedRouteSources,
+} from './openapi-cache.ts';
 import { outputStateFromGlobalOptionError, wantsMachineReadableErrorOutput } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
 import { API_BASE } from './runtime.ts';
 import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
-import { checkForUpdates, compareVersions } from './update.ts';
+import { checkForUpdates } from './update.ts';
 
 export interface Invocation {
   options: GlobalOptions;
@@ -241,18 +246,16 @@ async function runInvocationWithContext(
   const cacheVersion = deps.loadOpenApiCacheVersion(
     deps.defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
   );
-  const cacheCanExtendBundled =
-    cacheVersion.status === 'valid' &&
-    compareVersions(GENERATED_API_GAMESERVER_VERSION, cacheVersion.gameserverVersion) >= 0;
-  const usableCachedGeneratedRoutes =
-    cachedGeneratedRoutes && cacheCanExtendBundled ? cachedGeneratedRoutes : undefined;
-  const generatedRoutes = usableCachedGeneratedRoutes
-    ? { ...GENERATED_API_ROUTES, ...usableCachedGeneratedRoutes }
-    : undefined;
+  const routeSources = resolveGeneratedRouteSources({
+    bundledRoutes: GENERATED_API_ROUTES,
+    bundledVersion: GENERATED_API_GAMESERVER_VERSION,
+    cachedRoutes: cachedGeneratedRoutes,
+    cacheVersion,
+  });
   const commandRegistry = buildCommandRegistrySnapshot({
-    generatedRoutes,
-    dynamicGeneratedRoutes: usableCachedGeneratedRoutes,
-    includeDynamic: Boolean(usableCachedGeneratedRoutes),
+    generatedRoutes: routeSources.generatedRoutes,
+    dynamicGeneratedRoutes: routeSources.dynamicGeneratedRoutes,
+    includeDynamic: true,
   });
   const isDynamicCompletion = invocation.args[0] === '__complete';
 
@@ -270,11 +273,11 @@ async function runInvocationWithContext(
   const activeClient = client ?? deps.createClient(config);
 
   if (invocation.options.watch) {
-    if (!handler) return renderUnknownCommand(invocation, resolvedContext);
+    if (!handler) return renderUnknownCommand(invocation, resolvedContext, commandRegistry);
     return runWatchLoop(invocation, handler, activeClient, resolvedContext, deps);
   }
 
-  if (!handler) return renderUnknownCommand(invocation, resolvedContext);
+  if (!handler) return renderUnknownCommand(invocation, resolvedContext, commandRegistry);
 
   try {
     const parsed = handler.parse(invocation.args, invocation.options, resolvedContext);
@@ -335,12 +338,21 @@ async function runWatchLoop(
   return 0;
 }
 
-function renderUnknownCommand(invocation: Invocation, context: CliRuntimeContext): number {
+function renderUnknownCommand(
+  invocation: Invocation,
+  context: CliRuntimeContext,
+  commandRegistry: CommandRegistrySnapshot,
+): number {
   const commandName = invocation.args[0] || 'help';
   if (wantsMachineReadableErrorOutput(invocation.options)) {
     printJsonError('unknown_command', `Unknown command: ${commandName}`, context.writer);
   } else {
-    displayUnknownCommand(commandName, context.writer, { plain: context.config?.plain ?? context.output?.plain });
+    displayUnknownCommand(
+      commandName,
+      context.writer,
+      { plain: context.config?.plain ?? context.output?.plain },
+      commandRegistry,
+    );
   }
   return 1;
 }

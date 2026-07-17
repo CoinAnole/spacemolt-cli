@@ -12,7 +12,12 @@ import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerc
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
 import { QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
-import { BUNDLED_COMMAND_REGISTRY, buildCommandRegistrySnapshot } from './command-registry';
+import {
+  BUNDLED_COMMAND_REGISTRY,
+  buildCommandRegistrySnapshot,
+  CURATED_COMMAND_REGISTRY,
+  commandRegistryApiCommands,
+} from './command-registry';
 import {
   ALLOWED_COMMAND_OVERRIDE_FIELDS,
   COMMAND_OVERRIDES,
@@ -1009,7 +1014,7 @@ describe('command metadata', () => {
     }
   });
 
-  test('notifications is curated while shipping remains generated-only', () => {
+  test('notifications stays curated while safe shipping commands are bundled generated fallbacks', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.notifications;
 
     expect(config).toBeDefined();
@@ -1030,10 +1035,8 @@ describe('command metadata', () => {
     expect(config.description).toContain('get_notifications');
     expect(config.example).toContain('limit=10');
 
-    const snapshot = buildCommandRegistrySnapshot();
-    expect(snapshot.commands.notifications).toEqual(config);
     expect(
-      Object.entries(snapshot.commands)
+      Object.entries(BUNDLED_COMMAND_REGISTRY.commands)
         .filter(([, commandConfig]) => commandConfig.category === 'Generated API')
         .map(([command]) => command)
         .sort(),
@@ -1050,6 +1053,30 @@ describe('command metadata', () => {
       'shipping_return',
       'shipping_track',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote).toMatchObject({
+      required: ['package_id', 'destination_base_id'],
+      category: 'Generated API',
+      route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+    });
+  });
+
+  test('bundled generated fallbacks retain route safety suppressions', () => {
+    const curatedRoutes = new Set(
+      commandRegistryApiCommands(CURATED_COMMAND_REGISTRY).map(
+        (config) => `${config.route.method || 'POST'}:${config.route.tool}:${config.route.action}`,
+      ),
+    );
+    const routes = commandRegistryApiCommands(BUNDLED_COMMAND_REGISTRY)
+      .filter(
+        (config) => !curatedRoutes.has(`${config.route.method || 'POST'}:${config.route.tool}:${config.route.action}`),
+      )
+      .map((config) => config.route);
+
+    expect(routes.some((route) => route.tool === 'session')).toBe(false);
+    expect(
+      routes.some((route) => route.tool === 'spacemolt_storage' && ['jettison', 'loot', 'view'].includes(route.action)),
+    ).toBe(false);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_help).toBeUndefined();
   });
 
   test('command registry can limit fallback commands to dynamic generated routes', () => {
