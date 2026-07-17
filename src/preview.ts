@@ -24,7 +24,6 @@ const RISK_NOTES: Record<string, string[]> = {
   facility_buy_listing: ['Buys a player-listed facility and spends credits.'],
   facility_cancel_listing: ['Cancels a facility sale listing.'],
   faction_build: ['Builds a faction facility and spends faction resources/credits.'],
-  faction_facility_build: ['Builds a faction facility and spends faction resources/credits.'],
   faction_facility_upgrade: ['Upgrades a faction facility and spends faction resources/credits.'],
   refuel: [
     'Station credit refueling ignores quantity and fills the tank to full.',

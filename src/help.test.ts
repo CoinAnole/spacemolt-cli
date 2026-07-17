@@ -525,18 +525,15 @@ describe('help output branches', () => {
     expect(output).toContain('Did you mean: travel');
   });
 
-  test('showCommandSearch ranks nested faction build before facility-specific action', () => {
+  test('showCommandSearch finds nested faction build and hides removed dual name', () => {
     const capture = captureWriter();
 
-    showCommandSearch('faction facility build', capture.writer);
+    showCommandSearch('faction build', capture.writer);
 
-    const lines = capture.stdout.join('\n').split('\n');
-    const factionBuildIndex = lines.findIndex((line) => line.includes('faction build <facility_type>'));
-    const facilityBuildIndex = lines.findIndex((line) => line.includes('faction facility_build <facility_type>'));
-
-    expect(factionBuildIndex).toBeGreaterThan(-1);
-    expect(facilityBuildIndex).toBeGreaterThan(-1);
-    expect(factionBuildIndex).toBeLessThan(facilityBuildIndex);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('faction build <facility_type>');
+    expect(output).not.toContain('faction facility_build');
+    expect(output).not.toContain('faction_facility_build');
   });
 
   test('command search returns nested action display names and hides grouped flat names', () => {
@@ -582,9 +579,10 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('spacemolt faction build ore_refinery');
     expect(output).toContain('spacemolt faction facility_list');
-    expect(output).toContain('facility types, faction facility_list, faction facility_build');
+    expect(output).toContain('facility types, faction facility_list');
     expect(output).not.toContain('spacemolt faction_build');
     expect(output).not.toContain('spacemolt faction_facility_list');
+    expect(output).not.toContain('faction facility_build');
     expect(output).not.toContain('faction_facility_build');
   });
 

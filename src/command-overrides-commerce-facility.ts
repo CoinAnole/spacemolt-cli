@@ -665,19 +665,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store.',
     example: 'spacemolt faction_build ore_refinery bucket=BuildMat',
     discoverWith: ['facility_types', 'faction_facility_list'],
-    seeAlso: ['facility_types', 'faction_facility_list', 'faction_facility_build'],
-    category: 'Facilities',
-    apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
-    positionals: ['facility_type', 'bucket'],
-    schemaExtensions: {
-      bucket: {
-        type: 'string',
-        description: FACTION_BUILD_BUCKET_DESCRIPTION,
-      },
-    },
-  },
-  faction_facility_build: {
-    usage: '<facility_type> [bucket=name-or-id]',
+    seeAlso: ['facility_types', 'faction_facility_list'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
     positionals: ['facility_type', 'bucket'],

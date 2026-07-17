@@ -81,6 +81,8 @@ describe('client.ts source integrity', () => {
       'sell_ship',
       // v1 dual name for salvage/policies; v2 single curated command is view_insurance
       'claim_insurance',
+      // dual name removed; single curated command is faction_build
+      'faction_facility_build',
     ];
     for (const cmd of removedCommands) {
       expect(COMMANDS[cmd]).toBeUndefined();

@@ -77,13 +77,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
 
 const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
   storage: ['jettison', 'loot_wreck'],
-  faction: [
-    'faction_build',
-    'faction_facility_build',
-    'faction_facility_list',
-    'faction_facility_owned',
-    'faction_facility_upgrade',
-  ],
+  faction: ['faction_build', 'faction_facility_list', 'faction_facility_owned', 'faction_facility_upgrade'],
 };
 
 export function printJsonResponse(response: APIResponse, compact = false, writer?: CliWriter): void {
@@ -1136,7 +1130,6 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction build <type>      Build a faction facility
     faction build company_store  Build Company Store where a Market Runner exists
     Company Store -> Company Outlet -> Company Exchange raises private listing cap: 20 / 50 / 100
-    faction facility_build <type>  Build a faction facility
     faction facility_upgrade <type>  Upgrade a faction facility
 
   ${c.cyan}Citizenship:${c.reset}
