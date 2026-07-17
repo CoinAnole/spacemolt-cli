@@ -2490,6 +2490,23 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Faction Buy Orders ===');
   });
 
+  test('declines malformed faction bulk responses with single-order bait to raw fallback', () => {
+    const fixture = structuredClone(factionCreateBuyOrderBulkFixture) as Record<string, unknown>;
+    const details = fixture.details as Record<string, unknown>;
+    const results = details.results as Array<Record<string, unknown>>;
+    const firstResult = results[0];
+    if (!firstResult) throw new Error('Expected a faction bulk buy fixture result.');
+    firstResult.success = 'yes';
+    details.order_id = 'single-order-bait';
+    details.listing_fee = 1;
+
+    const { stdout } = captureStructuredOutput('faction_create_buy_order', fixture);
+
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Faction Buy Orders ===');
+    expect(stdout).not.toContain('=== Buy Order Created ===');
+  });
+
   test.each([
     [
       'buy',

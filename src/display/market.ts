@@ -593,6 +593,7 @@ export const marketFormatters = [
     (r, command) => {
       const side = createOrderSide(r, command);
       if (!side) return false;
+      if (r.kind !== undefined && r.kind !== 'single') return false;
       if (r.order_id === undefined && r.listing_fee === undefined) return false;
 
       const itemName = r.item || r.item_name || r.item_id || 'unknown';

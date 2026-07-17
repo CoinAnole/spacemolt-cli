@@ -101,6 +101,18 @@ test('declines malformed required ranch fields to the raw response fallback', ()
   expect(stdout).not.toContain('=== Wildlife Ranch ===');
 });
 
+test('declines malformed ranch cull fields to the raw response fallback', () => {
+  const fixture = structuredClone(ranchSetCullFixture) as Record<string, unknown>;
+  const details = fixture.details as Record<string, unknown>;
+  details.herd = 'many';
+
+  const rendered = renderStructuredResult('facility_ranch_set_cull', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Ranch Cull Policy Updated ===');
+});
+
 test('renders faction-owned facility rent summary and delinquency fields', () => {
   const rendered = renderStructuredResult(
     'faction_facility_owned',

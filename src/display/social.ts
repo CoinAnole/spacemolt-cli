@@ -945,9 +945,11 @@ export const socialFormatters = [
   // Facilities
   formatter((result) => renderRanchStatus(result), {
     commands: ['facility_ranch_status'],
+    suppressShapeFallbackOnDecline: true,
   }),
   formatter((result) => renderRanchSetCull(result), {
     commands: ['facility_ranch_set_cull'],
+    suppressShapeFallbackOnDecline: true,
   }),
 
   namedFormatter(
