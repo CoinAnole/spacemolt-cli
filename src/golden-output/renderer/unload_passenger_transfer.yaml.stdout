@@ -1,4 +1,5 @@
 
+kind: transfer
 message: "Transferred passengers to a docked ship."
 target_ship: "ship-mate-1"
 target_ship_name: "Mate Runner"

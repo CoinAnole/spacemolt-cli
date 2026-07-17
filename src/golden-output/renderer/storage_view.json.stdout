@@ -1,4 +1,5 @@
 {
+  "action": "view",
   "base_id": "earth_station",
   "hint": "12 items in storage at earth_station",
   "items": [

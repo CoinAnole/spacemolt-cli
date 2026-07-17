@@ -1,10 +1,7 @@
 {
-  "generatedAtGameserver": "v0.512.0",
+  "generatedAtGameserver": "v0.522.0",
   "blockingDivergenceSignatures": [
     "create_faction|create_faction|required-missing|message",
-    "facility_types|facility_types|required-missing|action",
-    "facility_types|facility_types|required-missing|filters",
-    "facility_types|facility_types|required-missing|pagination",
     "facility_upgrades|facility_upgrades|required-missing|action",
     "facility_upgrades|facility_upgrades|required-missing|base_id",
     "facility_upgrades|facility_upgrades|required-missing|upgrades[0].upgrade_to.category",
@@ -76,9 +73,7 @@
     "get_map|get_map|required-missing|systems[1].position",
     "get_map|get_map|required-missing|systems[1].visited",
     "get_map|get_map|required-missing|systems[1].visited_at",
-    "get_poi|get_poi|required-missing|poi.position",
     "get_poi|get_poi|required-missing|resources[0].remaining_display",
-    "get_system|get_system|required-missing|action",
     "get_system|get_system|required-missing|poi.fuel_reserve",
     "get_system|get_system|required-missing|poi.has_base",
     "get_system|get_system|required-missing|poi.online",

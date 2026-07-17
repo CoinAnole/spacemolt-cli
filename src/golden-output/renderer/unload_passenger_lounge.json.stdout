@@ -1,4 +1,5 @@
 {
+  "kind": "lounge_checkin",
   "message": "Checked passengers into the Transit Lounge.",
   "lounge": "Transit Lounge",
   "capacity": 20,

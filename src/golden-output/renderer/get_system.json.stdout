@@ -1,4 +1,6 @@
 {
+  "action": "get_system",
+  "kind": "normal",
   "system": {
     "id": "sol",
     "name": "Sol",

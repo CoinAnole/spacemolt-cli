@@ -68,6 +68,7 @@ export const loadPassengerFixture = {
 };
 
 export const unloadPassengerBulkFixture = {
+  kind: 'all',
   message: 'Unloaded all passengers.',
   delivered: [
     {
@@ -148,6 +149,7 @@ export const loadPassengerConnectingFixture = {
 };
 
 export const unloadPassengerTransferFixture = {
+  kind: 'transfer',
   message: 'Transferred passengers to a docked ship.',
   target_ship: 'ship-mate-1',
   target_ship_name: 'Mate Runner',
@@ -171,6 +173,7 @@ export const unloadPassengerTransferFixture = {
 };
 
 export const unloadPassengerLoungeFixture = {
+  kind: 'lounge_checkin',
   message: 'Checked passengers into the Transit Lounge.',
   lounge: 'Transit Lounge',
   capacity: 20,

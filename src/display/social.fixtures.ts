@@ -224,6 +224,10 @@ export const facilityUpgradesFixture = {
 };
 
 export const facilityTypesFixture = {
+  action: 'types',
+  kind: 'discovery',
+  filters: { category: '', name: '', level: '' },
+  pagination: { page: '1', per_page: '20' },
   categories: {
     infrastructure: {
       count: 55,

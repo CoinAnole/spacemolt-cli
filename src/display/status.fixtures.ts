@@ -122,6 +122,8 @@ export const publicPlayerProfileFixture = {
 };
 
 export const systemInfoFixture = {
+  action: 'get_system',
+  kind: 'normal',
   system: {
     id: 'sol',
     name: 'Sol',
@@ -144,6 +146,7 @@ export const systemInfoFixture = {
 };
 
 export const poiInfoFixture = {
+  kind: 'normal',
   poi: {
     id: 'sol_asteroid_belt',
     name: 'Sol Asteroid Belt',
