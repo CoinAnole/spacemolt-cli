@@ -281,7 +281,10 @@ function effectiveCuratedPositionalFields(config: CommandConfig, generatedFields
   for (const arg of config.args || []) {
     const field = commandArgName(arg);
     const canonicalField = config.aliases?.[field] ?? field;
-    if (typeof arg !== 'string' && !generatedFieldSet.has(canonicalField)) continue;
+    if (typeof arg !== 'string') {
+      if (generatedFieldSet.has(canonicalField)) fields.push(canonicalField);
+      break;
+    }
     fields.push(canonicalField);
   }
   return fields;
@@ -296,14 +299,13 @@ function compareEffectivePositionalOrder(
   if (generatedFields.length === 0) return new Set();
 
   const curatedFields = effectiveCuratedPositionalFields(curatedConfig, generatedFields);
-  const comparableCuratedFields = curatedFields.slice(0, generatedFields.length);
-  const equivalent = valuesEqual(comparableCuratedFields, generatedFields);
+  const equivalent = valuesEqual(curatedFields, generatedFields);
   if (!equivalent) {
     differences.push({
       kind: 'schema-positional',
       field: 'args',
-      message: `curated effective positionals ${formatValue(comparableCuratedFields)} vs generated ${formatValue(generatedFields)}`,
-      curated: comparableCuratedFields,
+      message: `curated effective positionals ${formatValue(curatedFields)} vs generated ${formatValue(generatedFields)}`,
+      curated: curatedFields,
       generated: generatedFields,
     });
     return new Set();

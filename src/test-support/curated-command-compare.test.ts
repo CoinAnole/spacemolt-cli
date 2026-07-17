@@ -404,4 +404,66 @@ describe('curated command vs generated command comparison', () => {
       }),
     );
   });
+
+  test('reports an unmatched trailing curated positional', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        positionals: ['id', 'quantity', 'unexpected'],
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', positionalIndex: 0 },
+          quantity: { type: 'integer', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({ overrides, generatedRoutes });
+
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({
+        kind: 'schema-positional',
+        field: 'args',
+        curated: ['id', 'quantity', 'unexpected'],
+        generated: ['id', 'quantity'],
+      }),
+    );
+  });
+
+  test('treats a rest positional as terminal before later generated positionals', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        positionals: [{ rest: 'id' }, 'quantity'],
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', positionalIndex: 0 },
+          quantity: { type: 'integer', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({ overrides, generatedRoutes });
+
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({
+        kind: 'schema-positional',
+        field: 'args',
+        curated: ['id'],
+        generated: ['id', 'quantity'],
+      }),
+    );
+  });
 });
