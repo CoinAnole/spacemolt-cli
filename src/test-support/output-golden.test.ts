@@ -740,6 +740,54 @@ describe('output golden test support', () => {
     expect(comparison.summary).toBe('no structural divergences detected');
   });
 
+  test('explicit details target unwraps a mutation envelope before schema comparison', () => {
+    const spec = responseSpecWithSchemas(
+      {
+        ShippingDetails: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            action: { type: 'string' },
+            contract: { type: 'object' },
+          },
+          required: ['action', 'contract'],
+        },
+      },
+      '#/components/schemas/ShippingDetails',
+    );
+
+    const comparison = compareFixtureAgainstResponseCandidates(
+      {
+        details: { action: 'post', contract: { id: 'shipment-1' } },
+        player: { credits: 100 },
+        ship: { id: 'ship-1' },
+        cargo: [],
+      },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: {
+          allOf: [
+            { $ref: '#/components/schemas/V2GameState' },
+            {
+              type: 'object',
+              properties: {
+                details: { $ref: '#/components/schemas/ShippingDetails' },
+              },
+            },
+          ],
+        },
+        primarySchemaName: 'V2GameState',
+        explicitTarget: 'details',
+      },
+    );
+
+    expect(comparison.comparedAgainst).toBe('details');
+    expect(comparison.primarySchemaName).toBe('ShippingDetails');
+    expect(comparison.selectionReason).toBe('explicit-target');
+    expect(filterBlockingDivergences([comparison])).toEqual([]);
+  });
+
   test('schema comparison follows nested refs inside array items', () => {
     const spec = {
       paths: {},

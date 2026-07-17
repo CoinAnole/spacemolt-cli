@@ -335,6 +335,22 @@ function candidateScores(comparisons: CandidateComparison[]): FixtureSchemaCandi
   }));
 }
 
+function fixtureValueForExplicitTarget(
+  fixtureValue: unknown,
+  explicitTarget: HighValueFixtureEntry['schemaTarget'],
+): unknown {
+  if (
+    explicitTarget === 'details' &&
+    typeof fixtureValue === 'object' &&
+    fixtureValue !== null &&
+    !Array.isArray(fixtureValue)
+  ) {
+    const details = (fixtureValue as Record<string, unknown>).details;
+    if (typeof details === 'object' && details !== null && !Array.isArray(details)) return details;
+  }
+  return fixtureValue;
+}
+
 function candidatesForExplicitTarget(
   candidates: OpenApiSchemaCandidate[],
   explicitTarget: HighValueFixtureEntry['schemaTarget'],
@@ -514,10 +530,11 @@ export function compareFixtureAgainstResponseCandidates(
 
   const explicitCandidates = candidatesForExplicitTarget(candidates, opts.explicitTarget);
   if (explicitCandidates.length > 0) {
+    const explicitFixtureValue = fixtureValueForExplicitTarget(fixtureValue, opts.explicitTarget);
     const selected = selectCandidateComparison(
-      fixtureValue,
+      explicitFixtureValue,
       opts,
-      compareCandidates(fixtureValue, opts, explicitCandidates),
+      compareCandidates(explicitFixtureValue, opts, explicitCandidates),
       'explicit-target',
     );
     if (selected) return selected;
