@@ -103,11 +103,11 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = preparePayload('storage', { action: 'view', station_id: 'node_beta' }, options(), sessionPath);
+    const prepared = prepareInternalPayload('storage_view', { station_id: 'node_beta' }, options(), sessionPath);
 
     expect(prepared).toEqual({
       type: 'payload',
-      payload: { action: 'view', station_id: 'node_beta_industrial_station', target: 'self' },
+      payload: { station_id: 'node_beta_industrial_station', target: 'self' },
     });
   });
 
@@ -186,15 +186,15 @@ describe('cached ID payload resolver', () => {
       payload: { item_id: 'fuel', quantity: 100, price_each: 6 },
     });
     expect(
-      preparePayload(
-        'storage',
-        { action: 'deposit', target: 'empire:crimson', item_id: 'fuel', quantity: '50' },
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'empire:crimson', item_id: 'fuel', quantity: '50' },
         options(),
         sessionPath,
       ),
     ).toEqual({
       type: 'payload',
-      payload: { action: 'deposit', target: 'empire:crimson', item_id: 'fuel', quantity: 50 },
+      payload: { target: 'empire:crimson', item_id: 'fuel', quantity: 50 },
     });
   });
 
@@ -217,9 +217,11 @@ describe('cached ID payload resolver', () => {
     );
 
     for (const action of ['deposit', 'withdraw', 'loot', 'jettison']) {
-      expect(preparePayload('storage', { action, item_id: 'iron', quantity: '2' }, options(), sessionPath)).toEqual({
+      expect(
+        prepareInternalPayload(`storage_${action}`, { item_id: 'iron', quantity: '2' }, options(), sessionPath),
+      ).toEqual({
         type: 'payload',
-        payload: { action, item_id: 'ore_iron', quantity: 2 },
+        payload: { item_id: 'ore_iron', quantity: 2 },
       });
     }
   });
@@ -242,9 +244,9 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    expect(preparePayload('storage', { action: 'loot', wreck_id: 'iron' }, options(), sessionPath)).toEqual({
+    expect(prepareInternalPayload('storage_loot', { wreck_id: 'iron' }, options(), sessionPath)).toEqual({
       type: 'payload',
-      payload: { action: 'loot', wreck_id: 'wreck_iron' },
+      payload: { wreck_id: 'wreck_iron' },
     });
   });
 
@@ -458,10 +460,10 @@ describe('cached ID payload resolver', () => {
       payload: { target: 'solarian' },
     });
     expect(
-      preparePayload('storage', { action: 'deposit', target: 'solarian', credits: '200' }, options(), sessionPath),
+      prepareInternalPayload('storage_deposit', { target: 'solarian', credits: '200' }, options(), sessionPath),
     ).toEqual({
       type: 'payload',
-      payload: { action: 'deposit', target: 'solarian', credits: 200 },
+      payload: { target: 'solarian', credits: 200 },
     });
   });
 
@@ -484,10 +486,9 @@ describe('cached ID payload resolver', () => {
     );
 
     expect(
-      preparePayload(
-        'storage',
+      prepareInternalPayload(
+        'storage_deposit',
         {
-          action: 'deposit',
           target: 'Marlowe',
           items: [
             { item_id: 'ore_iron', quantity: 1 },
@@ -500,7 +501,6 @@ describe('cached ID payload resolver', () => {
     ).toEqual({
       type: 'payload',
       payload: {
-        action: 'deposit',
         target: 'player-marlowe',
         items: [
           { item_id: 'ore_iron', quantity: 1 },
@@ -536,9 +536,11 @@ describe('cached ID payload resolver', () => {
     );
 
     for (const target of ['self', 'faction', 'faction:smc']) {
-      expect(preparePayload('storage', { action: 'deposit', target, credits: '200' }, options(), sessionPath)).toEqual({
+      expect(
+        prepareInternalPayload('storage_deposit', { target, credits: '200' }, options(), sessionPath),
+      ).toEqual({
         type: 'payload',
-        payload: { action: 'deposit', target, credits: 200 },
+        payload: { target, credits: 200 },
       });
     }
   });

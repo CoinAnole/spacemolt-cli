@@ -197,7 +197,15 @@ function structuredPayloadFields(command: string, config: CommandConfig | LocalC
           .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
           .map(([field]) => field)
       : [];
-  if (command === 'storage' && !fields.includes('items')) fields.push('items');
+  const bulkItemsCommands = new Set([
+    'storage_deposit',
+    'storage_withdraw',
+    'storage_jettison',
+    'storage deposit',
+    'storage withdraw',
+    'storage jettison',
+  ]);
+  if (bulkItemsCommands.has(command) && !fields.includes('items')) fields.push('items');
   return fields;
 }
 

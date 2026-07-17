@@ -70,41 +70,6 @@ export type CommandParseResult =
   | { ok: true; command: string; payload: Record<string, unknown> }
   | { ok: false; errors: CommandParseError[] };
 
-const STORAGE_ACTION_POSITIONALS: Record<string, string[]> = {
-  view: ['station_id'],
-  deposit: ['item_id', 'quantity'],
-  withdraw: ['item_id', 'quantity'],
-  loot: ['wreck_id', 'item_id', 'quantity'],
-  jettison: ['item_id', 'quantity'],
-};
-
-function storageActionFromPayload(payload: Record<string, unknown>): string | undefined {
-  const action = payload.action;
-  return typeof action === 'string' && STORAGE_ACTION_POSITIONALS[action] ? action : undefined;
-}
-
-function storagePositionalArgDef(
-  payload: Record<string, unknown>,
-  fallback: CommandArg | undefined,
-): CommandArg | undefined {
-  const action = storageActionFromPayload(payload);
-  if (!action) return fallback;
-  const fields = STORAGE_ACTION_POSITIONALS[action] || [];
-  return fields.find((field) => payload[field] === undefined) ?? fallback;
-}
-
-function positionalArgDefForCommand(
-  command: string,
-  payload: Record<string, unknown>,
-  argDefs: CommandArg[],
-  positionalIndex: number,
-): CommandArg | undefined {
-  const fallback = argDefs[positionalIndex];
-  if (command !== 'storage') return fallback;
-  if (positionalIndex === 0 && payload.action === undefined) return fallback;
-  return storagePositionalArgDef(payload, fallback);
-}
-
 function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedArgs {
   const command = args[0] || '';
   const payload: Record<string, unknown> = {};
@@ -115,14 +80,6 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
   let inPositionalOnlyMode = false;
 
   const setPayloadField = (key: string, val: string) => {
-    if (command === 'storage' && key === 'action' && payload.action !== undefined) {
-      errors.push({
-        field: 'action',
-        message: 'Storage action can only be specified once.',
-        code: 'invalid_field_type',
-      });
-      return;
-    }
     const existing = payload[key];
     if (existing !== undefined) {
       if (Array.isArray(existing)) {
@@ -214,7 +171,7 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
       continue;
     }
 
-    const argDef = positionalArgDefForCommand(command, payload, argDefs, positionalIndex);
+    const argDef = argDefs[positionalIndex];
     const keyValue = !inPositionalOnlyMode ? parseKeyValue(arg) : null;
     if (argDef && typeof argDef === 'object' && argDef.rest && (!keyValue || keyValue.key !== argDef.rest)) {
       if (isPrivateChat()) {

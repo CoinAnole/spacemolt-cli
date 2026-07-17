@@ -131,6 +131,7 @@ describe('CLI local usability behavior', () => {
   test('storage direct transfer source is accepted without raw mode', async () => {
     const deposit = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
       'deposit',
       'ore_iron',
@@ -140,12 +141,14 @@ describe('CLI local usability behavior', () => {
     ]);
     expect(deposit.exitCode).toBe(0);
     expect(deposit.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
-    expect(deposit.stdout).toContain('"action": "deposit"');
+    expect(deposit.stdout).toContain('"command": "storage_deposit"');
+    expect(deposit.stdout).not.toContain('"action": "deposit"');
     expect(deposit.stdout).toContain('"source": "faction"');
     expect(deposit.stdout).toContain('"target": "self"');
 
     const withdraw = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
       'withdraw',
       'ore_iron',
@@ -155,7 +158,8 @@ describe('CLI local usability behavior', () => {
     ]);
     expect(withdraw.exitCode).toBe(0);
     expect(withdraw.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/withdraw"');
-    expect(withdraw.stdout).toContain('"action": "withdraw"');
+    expect(withdraw.stdout).toContain('"command": "storage_withdraw"');
+    expect(withdraw.stdout).not.toContain('"action": "withdraw"');
     expect(withdraw.stdout).toContain('"source": "faction"');
     expect(withdraw.stdout).toContain('"target": "self"');
   });
@@ -163,6 +167,7 @@ describe('CLI local usability behavior', () => {
   test('storage view routes through storage view and strips client-only filters', async () => {
     const result = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
       'view',
       'nexus_base',
@@ -175,59 +180,74 @@ describe('CLI local usability behavior', () => {
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_view"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/view"');
-    expect(result.stdout).toContain('"action": "view"');
+    expect(result.stdout).not.toContain('"action": "view"');
     expect(result.stdout).toContain('"station_id": "nexus_base"');
     expect(result.stdout).toContain('"target": "self"');
     expect(result.stdout).not.toContain('"item_id"');
     expect(result.stdout).not.toContain('"items"');
     expect(result.stdout).not.toContain('"search"');
 
-    const faction = await runDirect(['--dry-run', 'storage', 'view', 'nexus_base', 'target=faction']);
+    const faction = await runDirect(['--dry-run', '--json', 'storage', 'view', 'nexus_base', 'target=faction']);
     expect(faction.exitCode).toBe(0);
     expect(faction.stdout).toContain('"target": "faction"');
   });
 
-  test('storage dry-run routes positional and action forms for all storage actions', async () => {
-    const cases: Array<{ args: string[]; action: string }> = [
-      { args: ['storage', 'view', 'nexus_base'], action: 'view' },
-      { args: ['storage', 'action=view', 'nexus_base'], action: 'view' },
-      { args: ['storage', 'deposit', 'ore_iron', '2'], action: 'deposit' },
-      { args: ['storage', 'action=deposit', 'ore_iron', '2'], action: 'deposit' },
-      { args: ['storage', 'withdraw', 'ore_iron', '2'], action: 'withdraw' },
-      { args: ['storage', 'action=withdraw', 'ore_iron', '2'], action: 'withdraw' },
-      { args: ['storage', 'loot', 'wreck_1', 'ore_iron', '2'], action: 'loot' },
-      { args: ['storage', 'action=loot', 'wreck_1', 'ore_iron', '2'], action: 'loot' },
-      { args: ['storage', 'jettison', 'ore_iron', '2'], action: 'jettison' },
-      { args: ['storage', 'action=jettison', 'ore_iron', '2'], action: 'jettison' },
+  test('storage dry-run routes nested group forms for all storage actions', async () => {
+    const cases: Array<{ args: string[]; action: string; command: string }> = [
+      { args: ['storage', 'view', 'nexus_base'], action: 'view', command: 'storage_view' },
+      { args: ['storage', 'deposit', 'ore_iron', '2'], action: 'deposit', command: 'storage_deposit' },
+      { args: ['storage', 'withdraw', 'ore_iron', '2'], action: 'withdraw', command: 'storage_withdraw' },
+      { args: ['storage', 'loot', 'wreck_1', 'ore_iron', '2'], action: 'loot', command: 'storage_loot' },
+      { args: ['storage', 'jettison', 'ore_iron', '2'], action: 'jettison', command: 'storage_jettison' },
     ];
 
     for (const testCase of cases) {
-      const result = await runDirect(['--dry-run', ...testCase.args]);
+      const result = await runDirect(['--dry-run', '--json', ...testCase.args]);
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(
         `"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/${testCase.action}"`,
       );
-      expect(result.stdout).toContain(`"action": "${testCase.action}"`);
+      expect(result.stdout).toContain(`"command": "${testCase.command}"`);
+      expect(result.stdout).not.toContain(`"action": "${testCase.action}"`);
     }
+  });
+
+  test('storage action= form fails as unknown group action', async () => {
+    const result = await runDirect(['--dry-run', '--json', 'storage', 'action=deposit', 'ore_iron', '2']);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr + result.stdout).toMatch(/unknown|action=deposit|help storage/i);
+  });
+
+  test('omit-action storage deposit fails without action token', async () => {
+    const result = await runDirect([
+      '--dry-run',
+      '--json',
+      'storage',
+      'target=faction',
+      '--payload-json',
+      '{"items":[{"item_id":"ore_iron","quantity":1}]}',
+    ]);
+    expect(result.exitCode).not.toBe(0);
   });
 
   test('patch-note storage fuel deposit command is accepted without raw mode', async () => {
     const result = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
-      'action=deposit',
+      'deposit',
       'target=faction',
       'item_id=fuel',
       'quantity=25',
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_deposit"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
-    expect(result.stdout).toContain('"action": "deposit"');
+    expect(result.stdout).not.toContain('"action": "deposit"');
     expect(result.stdout).toContain('"target": "faction"');
     expect(result.stdout).toContain('"item_id": "fuel"');
     expect(result.stdout).toContain('"quantity": 25');
@@ -236,15 +256,16 @@ describe('CLI local usability behavior', () => {
   test('storage bulk items array is accepted without raw mode', async () => {
     const result = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
-      'action=deposit',
+      'deposit',
       'target=faction',
       '--payload-json',
       '{"items":[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]}',
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_deposit"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
     expect(result.stdout).toContain('"target": "faction"');
     expect(result.stdout).toContain('"items": [');
@@ -257,6 +278,7 @@ describe('CLI local usability behavior', () => {
   test('storage faction compartment bulk move keeps items bucket and destination bucket', async () => {
     const result = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
       'deposit',
       'source=faction',
@@ -267,7 +289,7 @@ describe('CLI local usability behavior', () => {
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_deposit"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/deposit"');
     expect(result.stdout).toContain('"source": "faction"');
     expect(result.stdout).toContain('"target": "faction"');
@@ -308,38 +330,40 @@ describe('CLI local usability behavior', () => {
   test('patch-note storage loot command routes through storage loot', async () => {
     const result = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
-      'action=loot',
+      'loot',
       'wreck_id=wreck_1',
       'item_id=ore_iron',
       'quantity=2',
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_loot"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/loot"');
-    expect(result.stdout).toContain('"action": "loot"');
+    expect(result.stdout).not.toContain('"action": "loot"');
     expect(result.stdout).toContain('"wreck_id": "wreck_1"');
     expect(result.stdout).toContain('"item_id": "ore_iron"');
     expect(result.stdout).toContain('"quantity": 2');
   });
 
   test('patch-note storage loot accepts towing default without wreck_id', async () => {
-    const result = await runDirect(['--dry-run', 'storage', 'action=loot']);
+    const result = await runDirect(['--dry-run', '--json', 'storage', 'loot']);
 
     expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"command": "storage_loot"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/loot"');
-    expect(result.stdout).toContain('"action": "loot"');
+    expect(result.stdout).not.toContain('"action": "loot"');
     expect(result.stdout).not.toContain('"wreck_id"');
   });
 
   test('patch-note storage jettison command routes through storage jettison', async () => {
-    const result = await runDirect(['--dry-run', 'storage', 'action=jettison', 'item_id=ore_iron', 'quantity=2']);
+    const result = await runDirect(['--dry-run', '--json', 'storage', 'jettison', 'item_id=ore_iron', 'quantity=2']);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_jettison"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/jettison"');
-    expect(result.stdout).toContain('"action": "jettison"');
+    expect(result.stdout).not.toContain('"action": "jettison"');
     expect(result.stdout).toContain('"item_id": "ore_iron"');
     expect(result.stdout).toContain('"quantity": 2');
   });
@@ -347,15 +371,16 @@ describe('CLI local usability behavior', () => {
   test('storage jettison accepts bulk items without single item fields', async () => {
     const result = await runDirect([
       '--dry-run',
+      '--json',
       'storage',
       'jettison',
       'items=[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]',
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('"command": "storage"');
+    expect(result.stdout).toContain('"command": "storage_jettison"');
     expect(result.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/jettison"');
-    expect(result.stdout).toContain('"action": "jettison"');
+    expect(result.stdout).not.toContain('"action": "jettison"');
     expect(result.stdout).toContain('"items": [');
     expect(result.stdout).toContain('"item_id": "ore_iron"');
     expect(result.stdout).toContain('"quantity": 1');

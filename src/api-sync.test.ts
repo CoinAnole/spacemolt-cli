@@ -48,18 +48,10 @@ function isInfrastructureSpecRoute(route: string): boolean {
   return route.endsWith('/help');
 }
 
-const UNIFIED_STORAGE_DYNAMIC_ACTIONS = ['view', 'loot', 'jettison'] as const;
+const STORAGE_CURATED_ROUTE_ACTIONS = ['view', 'deposit', 'withdraw', 'loot', 'jettison'] as const;
 
-function unifiedStorageDynamicRoutes(): string[] {
-  const storageRoute = V2_TOOL_MAP.storage;
-  const storageActionEnum = COMMANDS.storage?.schema?.action?.enum || [];
-  if (!storageRoute || storageRoute.tool !== 'spacemolt_storage' || (storageRoute.method || 'POST') !== 'POST') {
-    return [];
-  }
-
-  return UNIFIED_STORAGE_DYNAMIC_ACTIONS.filter((action) => storageActionEnum.includes(action)).map(
-    (action) => `POST /api/v2/spacemolt_storage/${action}`,
-  );
+function curatedStorageRouteSignatures(): string[] {
+  return STORAGE_CURATED_ROUTE_ACTIONS.map((action) => `POST /api/v2/spacemolt_storage/${action}`);
 }
 
 async function fetchLiveOpenApiSpec(options: FetchLiveOpenApiSpecOptions = {}): Promise<OpenApiSpec> {
@@ -320,13 +312,6 @@ describe('api sync', () => {
         `Stale V2 mappings in client.ts (not in v2 OpenAPI):\n  ${staleMappings.join('\n  ')}\n\nFix the tool/action pair or move the route to UNDOCUMENTED_IN_SPEC if the spec is behind.`,
       ).toEqual([]);
 
-      const dynamicStorageRoutes = unifiedStorageDynamicRoutes();
-      const staleDynamicStorageRoutes = dynamicStorageRoutes.filter((route) => !v2Routes.has(route));
-      expect(
-        staleDynamicStorageRoutes,
-        `Unified storage dynamic route coverage references routes missing from v2 OpenAPI:\n  ${staleDynamicStorageRoutes.join('\n  ')}`,
-      ).toEqual([]);
-
       const curatedRouteSignatures = new Set(
         Object.values(v2ToolMap).map((mapping) => `${mapping.method} ${mapping.route}`),
       );
@@ -334,7 +319,7 @@ describe('api sync', () => {
       const generatedDynamicRoutes = Object.values(dynamicCommands).map(
         (config) => `${config.route.method || 'POST'} ${routeToPath(config.route, { includeApiPrefix: true })}`,
       );
-      const mappedRoutes = new Set([...curatedRouteSignatures, ...generatedDynamicRoutes, ...dynamicStorageRoutes]);
+      const mappedRoutes = new Set([...curatedRouteSignatures, ...generatedDynamicRoutes]);
       const unmappedSpecRoutes = [...v2Routes]
         .filter((route) => !isInfrastructureSpecRoute(route))
         .filter((route) => !mappedRoutes.has(route));
@@ -352,17 +337,27 @@ describe('api sync', () => {
     15_000,
   );
 
-  test('unified storage dynamic route coverage is narrow and schema-backed', () => {
-    expect(V2_TOOL_MAP.storage).toMatchObject({
-      tool: 'spacemolt_storage',
-      method: 'POST',
-    });
-    expect(COMMANDS.storage?.schema?.action?.enum).toEqual(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
-    expect(unifiedStorageDynamicRoutes()).toEqual([
+  test('curated storage group commands claim all spacemolt_storage routes', () => {
+    for (const action of STORAGE_CURATED_ROUTE_ACTIONS) {
+      const command = `storage_${action}`;
+      expect(V2_TOOL_MAP[command]).toMatchObject({
+        tool: 'spacemolt_storage',
+        action,
+        method: 'POST',
+      });
+      expect(COMMANDS[command]?.route).toMatchObject({
+        tool: 'spacemolt_storage',
+        action,
+      });
+    }
+    expect(curatedStorageRouteSignatures()).toEqual([
       'POST /api/v2/spacemolt_storage/view',
+      'POST /api/v2/spacemolt_storage/deposit',
+      'POST /api/v2/spacemolt_storage/withdraw',
       'POST /api/v2/spacemolt_storage/loot',
       'POST /api/v2/spacemolt_storage/jettison',
     ]);
+    expect(COMMANDS.storage).toBeUndefined();
   });
 
   test.skipIf(skip)(

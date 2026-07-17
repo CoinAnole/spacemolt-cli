@@ -118,7 +118,7 @@ export function preparePayload(
 }
 
 function materializePayloadDefaults(command: string, payload: Record<string, unknown>): Record<string, unknown> {
-  if (command === 'storage' && payload.action === 'view' && payload.target === undefined) {
+  if (command === 'storage_view' && payload.target === undefined) {
     return { ...payload, target: 'self' };
   }
   return payload;
@@ -149,7 +149,7 @@ function resolveCachedIdsForPayload(
   const hints = loadIdCacheSync(sessionPath);
 
   for (const [field, value] of Object.entries(payload)) {
-    const kind = idKindForPayloadField(command, field, payload);
+    const kind = idKindForCommandField(command, field);
     if (!kind) continue;
 
     if (Array.isArray(value)) {
@@ -167,7 +167,7 @@ function resolveCachedIdsForPayload(
       }
       resolvedPayload[field] = resolvedArray;
     } else if (typeof value === 'string') {
-      const reservedValue = reservedIdValue(command, field, value, kind, payload);
+      const reservedValue = reservedIdValue(command, field, value, kind);
       if (reservedValue) {
         resolvedPayload[field] = reservedValue;
         continue;
@@ -183,25 +183,13 @@ function resolveCachedIdsForPayload(
   return { type: 'payload', payload: resolvedPayload };
 }
 
-function idKindForPayloadField(command: string, field: string, payload: Record<string, unknown>): IdKind | undefined {
-  if (command !== 'storage') return idKindForCommandField(command, field);
-
-  const action = typeof payload.action === 'string' ? payload.action : undefined;
-  if (field === 'station_id' && action === 'view') return 'poi';
-  if (field === 'wreck_id' && action === 'loot') return 'wreck';
-  if (field === 'item_id' && ['deposit', 'withdraw', 'loot', 'jettison'].includes(action || '')) return 'item';
-  if (field === 'target' && action === 'deposit') return 'player';
-  return undefined;
-}
-
 function reservedIdValue(
   command: string,
   field: string,
   value: string,
   kind: string | undefined,
-  payload: Record<string, unknown>,
 ): string | undefined {
-  if (isReservedStorageTarget(command, field, value, kind, payload)) {
+  if (isReservedStorageTarget(command, field, value, kind)) {
     return value.trim();
   }
   if (command === 'jump' && (field === 'id' || field === 'target_system') && isNumericJumpBearing(value)) {
@@ -219,9 +207,8 @@ function isReservedStorageTarget(
   field: string,
   value: string,
   kind: string | undefined,
-  payload: Record<string, unknown>,
 ): boolean {
-  if (command !== 'storage' || field !== 'target' || kind !== 'player' || payload.action !== 'deposit') return false;
+  if (command !== 'storage_deposit' || field !== 'target' || kind !== 'player') return false;
   const normalized = value.trim().toLowerCase();
   if (normalized === 'self' || normalized === 'faction' || normalized.startsWith('faction:')) return true;
   return isEmpireRecipientAlias(value);

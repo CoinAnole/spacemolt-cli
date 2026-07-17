@@ -4,7 +4,7 @@ const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
   "Optional source for direct transfers. For the common paths, omit source and target: deposit moves cargo->personal storage, while withdraw moves personal storage->cargo. Use 'storage' with target=faction or a player name to transfer from personal storage, or 'faction' with target=self to transfer faction->personal; use source=faction target=faction to move items between faction compartments (both faction withdrawals require manage_treasury).";
 
 const STORAGE_BUCKET_DESCRIPTION =
-  'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. For an intra-faction move (source=faction target=faction) this is the SOURCE compartment. Empty means the main store. See bucket names in action=view target=faction.';
+  'Optional (target=faction only): a Storage Extension bucket by name or id to deposit into / withdraw from instead of the main store. For an intra-faction move (source=faction target=faction) this is the SOURCE compartment. Empty means the main store. See bucket names via: spacemolt storage view target=faction.';
 
 const STORAGE_DEST_BUCKET_DESCRIPTION =
   "Optional destination compartment by name or id for an intra-faction move (source=faction target=faction): items move from 'bucket' into 'dest_bucket'. Leave either empty to mean the main store (covers main↔bucket and bucket↔bucket). Requires manage_treasury.";
@@ -83,85 +83,120 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt/jettison',
     positionals: ['item_id', 'quantity', 'items'],
   },
-  storage: {
-    usage:
-      '<view|deposit|withdraw|loot|jettison> [station_id|item_id|wreck_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
+  storage_view: {
+    usage: '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]',
     description:
-      'View or move station/faction storage, gift items/credits/ships to players, loot wrecks, or jettison. Plain spacemolt storage withdraw <item_id> <quantity> moves personal storage to cargo; omit source and target. Gift with deposit target=<player>; use source=storage to pull items from personal storage instead of cargo.',
-    example: 'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
-    discoverWith: ['get_status', 'get_wrecks', 'get_cargo'],
-    seeAlso: ['get_cargo', 'loot_wreck', 'jettison'],
+      'View personal or faction station storage. Optional station_id views personal storage at a remote station without docking.',
+    example: 'spacemolt storage_view target=faction',
+    discoverWith: ['get_status', 'get_cargo'],
+    seeAlso: ['storage_deposit', 'storage_withdraw', 'get_cargo'],
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/view',
+    positionals: ['station_id', 'target'],
+    aliases: { item: 'item_id' },
+    schemaExtensions: {
+      search: {
+        type: 'string',
+        description:
+          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
+      },
+      items: {
+        type: 'string',
+        description:
+          'Client-side comma-separated exact item ID filter for view output (not sent to the server). Not a bulk transfer array.',
+      },
+      item_id: {
+        type: 'string',
+        description: 'Client-side exact item ID filter for view output (not sent to the server).',
+      },
+      station_id: {
+        type: 'string',
+        description: 'Optional station ID; view personal storage at a remote station without docking.',
+      },
+    },
+    clientOnlyFields: ['search', 'items', 'item_id'],
+  },
+  storage_deposit: {
+    usage:
+      '[item_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON)',
+    description:
+      'Deposit cargo into station/faction storage, gift items/credits/ships to players, or move between faction compartments. Plain deposit moves cargo→personal storage when source/target are omitted.',
+    example: 'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
+    discoverWith: ['get_status', 'get_cargo'],
+    seeAlso: ['storage_view', 'storage_withdraw', 'get_cargo'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
     positionals: [
-      'action',
-      'station_id',
       'item_id',
       'quantity',
       'target',
       'source',
       'bucket',
       'dest_bucket',
-      'wreck_id',
-      'module_id',
       'message',
       'items',
-      'search',
       'credits',
     ],
-    aliases: {
-      action: 'action',
-      station_id: 'station_id',
-      item: 'item_id',
-      recipient: 'target',
-      ship_id: 'item_id',
-    },
+    aliases: { item: 'item_id', recipient: 'target', ship_id: 'item_id' },
     schemaExtensions: {
-      action: {
-        type: 'string',
-        enum: ['view', 'deposit', 'withdraw', 'loot', 'jettison'],
-        description: 'Storage operation to run.',
-      },
-      search: {
-        type: 'string',
-        description:
-          'Client-side search across item IDs and names in text, JSON, and structured output. Comma-separated terms match any.',
-      },
-      station_id: {
-        type: 'string',
-        description: 'Optional station ID for action=view; view storage at a remote station without docking.',
-      },
-      items: {
-        type: 'array',
-        description:
-          'Bulk deposit/withdraw JSON array of {item_id, quantity} objects moved in a single action, or a client-side comma-separated exact item ID filter for storage view output.',
-      },
-      source: {
-        type: 'string',
-        description: STORAGE_TRANSFER_SOURCE_DESCRIPTION,
-      },
-      bucket: {
-        type: 'string',
-        description: STORAGE_BUCKET_DESCRIPTION,
-      },
-      dest_bucket: {
-        type: 'string',
-        description: STORAGE_DEST_BUCKET_DESCRIPTION,
-      },
-      wreck_id: {
-        type: 'string',
-        description: 'Optional wreck UUID for action=loot. Omit to loot the wreck you are towing.',
-      },
-      module_id: {
-        type: 'string',
-        description: 'Optional module instance ID for action=loot.',
-      },
+      source: { type: 'string', description: STORAGE_TRANSFER_SOURCE_DESCRIPTION },
+      bucket: { type: 'string', description: STORAGE_BUCKET_DESCRIPTION },
+      dest_bucket: { type: 'string', description: STORAGE_DEST_BUCKET_DESCRIPTION },
       credits: {
         type: 'integer',
         description: 'Credits to gift to another player.',
       },
     },
-    clientOnlyFields: ['search', 'items'],
+  },
+  storage_withdraw: {
+    usage:
+      '[item_id] [quantity] [target=self|faction] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [items=JSON]  (item_id/quantity required unless items=JSON)',
+    description:
+      'Withdraw from personal or faction storage into cargo (default personal→cargo when source/target omitted), or move faction compartments.',
+    example: 'spacemolt storage_withdraw ore_iron 10',
+    discoverWith: ['get_status', 'storage_view'],
+    seeAlso: ['storage_view', 'storage_deposit', 'get_cargo'],
+    category: 'Station storage',
+    apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
+    positionals: ['item_id', 'quantity', 'target', 'source', 'bucket', 'dest_bucket', 'items'],
+    aliases: { item: 'item_id', recipient: 'target' },
+    schemaExtensions: {
+      source: { type: 'string', description: STORAGE_TRANSFER_SOURCE_DESCRIPTION },
+      bucket: { type: 'string', description: STORAGE_BUCKET_DESCRIPTION },
+      dest_bucket: { type: 'string', description: STORAGE_DEST_BUCKET_DESCRIPTION },
+    },
+  },
+  storage_loot: {
+    usage: '[wreck_id] [item_id] [quantity] [module_id=…]',
+    description:
+      'Loot items and modules from a wreck into cargo via spacemolt_storage/loot. Omit wreck_id while towing. Distinct from loot_wreck (spacemolt_salvage/loot).',
+    example: 'spacemolt storage_loot',
+    category: 'Wrecks',
+    apiRoute: 'POST /api/v2/spacemolt_storage/loot',
+    positionals: ['wreck_id', 'item_id', 'quantity', 'module_id'],
+    seeAlso: ['loot_wreck', 'get_wrecks', 'storage_view'],
+    discoverWith: ['get_wrecks', 'loot_wreck'],
+    schemaExtensions: {
+      wreck_id: {
+        type: 'string',
+        description: 'Optional wreck UUID. Omit to loot the wreck you are towing.',
+      },
+      module_id: {
+        type: 'string',
+        description: 'Optional module instance ID to loot.',
+      },
+    },
+  },
+  storage_jettison: {
+    usage: '[item_id] [quantity] [items=JSON]  (item_id/quantity required unless items=JSON; same style as cargo jettison)',
+    description:
+      'Jettison items via spacemolt_storage/jettison. Prefer top-level jettison (spacemolt/jettison) for ordinary cargo dumps unless you specifically need this path.',
+    example: "spacemolt storage_jettison items='[{\"item_id\":\"ore_iron\",\"quantity\":50}]'",
+    category: 'Cargo',
+    apiRoute: 'POST /api/v2/spacemolt_storage/jettison',
+    positionals: ['item_id', 'quantity', 'items'],
+    seeAlso: ['jettison', 'get_cargo', 'storage_view'],
+    discoverWith: ['get_cargo', 'jettison'],
   },
   faction_deposit_credits: {
     usage: '<amount>  (deposit credits to faction treasury)',

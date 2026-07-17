@@ -569,7 +569,7 @@ export const marketFormatters = [
       }
       return true;
     },
-    { commands: ['storage'], shapeFallback: true },
+    { commands: ['storage_view'], shapeFallback: true },
   ),
 
   // Direct market sell

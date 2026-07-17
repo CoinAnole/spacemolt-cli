@@ -25,10 +25,8 @@ export interface CommandRunResult {
 
 function stripClientOnlyFields(
   payload: Record<string, unknown>,
-  command?: string,
   commandConfig?: Pick<CommandConfig, 'clientOnlyFields'>,
 ): Record<string, unknown> {
-  if (command === 'storage') return stripStorageClientOnlyFields(payload);
   if (!commandConfig?.clientOnlyFields?.length) return payload;
   const stripped = { ...payload };
   for (const field of commandConfig.clientOnlyFields) delete stripped[field];
@@ -42,56 +40,25 @@ export async function runCommand(
   client: SpaceMoltClient = defaultClient,
   commandConfig?: CommandConfig,
 ): Promise<CommandRunResult> {
-  const requestPayload = stripClientOnlyFields(payload, command, commandConfig);
-  const requestCommandConfig = routeCommandConfigForPayload(command, commandConfig, requestPayload);
+  const requestPayload = stripClientOnlyFields(payload, commandConfig);
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, requestPayload) : null;
   const response = options.dryRun
     ? serverPreviewCommand
       ? await client.execute(serverPreviewCommand, requestPayload)
-      : requestCommandConfig
-        ? createCommandConfigDryRunResponse(command, requestCommandConfig, requestPayload)
+      : commandConfig
+        ? createCommandConfigDryRunResponse(command, commandConfig, requestPayload)
         : createDryRunResponse(command, requestPayload)
-    : requestCommandConfig && typeof client.executeCommandConfig === 'function'
-      ? await client.executeCommandConfig(command, requestCommandConfig, requestPayload)
+    : commandConfig && typeof client.executeCommandConfig === 'function'
+      ? await client.executeCommandConfig(command, commandConfig, requestPayload)
       : await client.execute(command, requestPayload);
 
   return {
     command,
     displayCommand: serverPreviewCommand || command,
-    commandConfig: requestCommandConfig ?? commandConfig,
+    commandConfig,
     payload,
     response,
   };
-}
-
-function routeCommandConfigForPayload(
-  command: string,
-  commandConfig: CommandConfig | undefined,
-  payload: Record<string, unknown>,
-): CommandConfig | undefined {
-  if (command !== 'storage' || !commandConfig) return commandConfig;
-  const action = typeof payload.action === 'string' ? payload.action : undefined;
-  if (!action || !STORAGE_ROUTE_ACTIONS.has(action)) return commandConfig;
-  return {
-    ...commandConfig,
-    route: {
-      ...commandConfig.route,
-      action,
-    },
-  };
-}
-
-const STORAGE_ROUTE_ACTIONS = new Set(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
-
-function stripStorageClientOnlyFields(payload: Record<string, unknown>): Record<string, unknown> {
-  const action = typeof payload.action === 'string' ? payload.action : undefined;
-  if (action !== 'view') return payload;
-  const stripped = { ...payload };
-  if (stripped.target === undefined) stripped.target = 'self';
-  delete stripped.item_id;
-  delete stripped.search;
-  delete stripped.items;
-  return stripped;
 }
 
 export async function renderResponse(
@@ -244,8 +211,7 @@ function shouldUseGetStatusSummary(commandRun: CommandRunResult, displayOptions:
 }
 
 function isStorageCarrierLoad(commandRun: CommandRunResult, response: APIResponse): boolean {
-  if (commandRun.command === 'storage' && commandRun.payload?.action !== 'deposit') return false;
-  if (commandRun.command !== 'storage') return false;
+  if (commandRun.command !== 'storage_deposit') return false;
 
   const payload = commandRun.payload ?? {};
   if (payload.target !== 'self') return false;
@@ -268,7 +234,7 @@ function enrichStorageViewDisplayResponse(
   response: APIResponse,
   sourceResponse: APIResponse = response,
 ): APIResponse {
-  if (commandRun.command !== 'storage' || commandRun.payload?.action !== 'view') return response;
+  if (commandRun.command !== 'storage_view') return response;
 
   const result = getStructuredResult(response);
   if (!result) return response;
@@ -339,7 +305,7 @@ function applyStructuredOutputFilters(
   response: APIResponse,
   payload?: Record<string, unknown>,
 ): APIResponse {
-  if (command !== 'storage' || payload?.action !== 'view') return response;
+  if (command !== 'storage_view') return response;
   return applyHumanDisplayFilters(command, response, payload);
 }
 
@@ -349,7 +315,7 @@ function applyHumanDisplayFilters(
   payload?: Record<string, unknown>,
 ): APIResponse {
   if (command === 'get_cargo') return applyCargoDisplayFilters(response, payload ?? {});
-  if (!payload || !shouldApplyItemDisplayFilters(command, payload)) return response;
+  if (!payload || !shouldApplyItemDisplayFilters(command)) return response;
   const itemFilter = typeof payload.item_id === 'string' ? payload.item_id : undefined;
   const searchFilter = typeof payload.search === 'string' ? payload.search : undefined;
   const itemsFilter = parseItemIdFilter(payload.items);
@@ -367,9 +333,8 @@ function applyHumanDisplayFilters(
   return { ...response, structuredContent: nextStructuredContent };
 }
 
-function shouldApplyItemDisplayFilters(command: string, payload: Record<string, unknown>): boolean {
-  if (command === 'view_market') return true;
-  return command === 'storage' && payload.action === 'view';
+function shouldApplyItemDisplayFilters(command: string): boolean {
+  return command === 'storage_view' || command === 'view_market';
 }
 
 function parseItemIdFilter(value: unknown): Set<string> | undefined {

@@ -98,8 +98,11 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   faction_accept_peace: { faction: ['target_faction_id', 'id'] },
   sell: { item: ['item_id', 'id'] },
   buy: { item: ['item_id', 'id'] },
-  // Payload preparation narrows storage resolution by action; these broad fields support completion hints.
-  storage: { poi: ['station_id'], item: ['item_id', 'id'], player: ['target'], wreck: ['wreck_id'] },
+  storage_view: { poi: ['station_id'] },
+  storage_deposit: { item: ['item_id', 'id'], player: ['target'] },
+  storage_withdraw: { item: ['item_id', 'id'] },
+  storage_loot: { wreck: ['wreck_id'], item: ['item_id', 'id'] },
+  storage_jettison: { item: ['item_id', 'id'] },
   jettison: { item: ['item_id', 'id'] },
   use_item: { item: ['item_id', 'id'] },
   create_sell_order: { item: ['item_id', 'id'] },
