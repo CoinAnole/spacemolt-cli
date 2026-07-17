@@ -162,10 +162,10 @@ function schemaHasComparableShape(schema: JsonSchema | undefined): schema is Jso
   return schemaTypes.some((type) => type !== 'object');
 }
 
-function mappedDiscriminator(
+function mappedDiscriminators(
   schema: JsonSchema,
   branch: JsonSchema,
-): OpenApiSchemaCandidate['discriminator'] | undefined {
+): Array<NonNullable<OpenApiSchemaCandidate['discriminator']>> {
   const discriminator = schema.discriminator;
   if (
     typeof discriminator?.propertyName !== 'string' ||
@@ -175,10 +175,11 @@ function mappedDiscriminator(
     Array.isArray(discriminator.mapping) ||
     !branch.$ref
   ) {
-    return undefined;
+    return [];
   }
-  const value = Object.entries(discriminator.mapping).find(([, ref]) => ref === branch.$ref)?.[0];
-  return value ? { propertyName: discriminator.propertyName, value } : undefined;
+  return Object.entries(discriminator.mapping).flatMap(([value, ref]) =>
+    value && ref === branch.$ref ? [{ propertyName: discriminator.propertyName, value }] : [],
+  );
 }
 
 function expandBranchCandidates(spec: OpenApiSpec, candidate: OpenApiSchemaCandidate): OpenApiSchemaCandidate[] {
@@ -194,15 +195,19 @@ function expandBranchCandidates(spec: OpenApiSpec, candidate: OpenApiSchemaCandi
     const branch = branches[i] as JsonSchema;
     const resolved = getEffectiveSchema(spec, branch);
     const refName = schemaRefName(branch);
-    out.push(
-      ...expandBranchCandidates(spec, {
-        label: `${candidate.label}.${effective.oneOf ? 'oneOf' : 'anyOf'}[${i}]`,
-        comparedAgainst: candidate.comparedAgainst,
-        schema: resolved,
-        primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
-        discriminator: mappedDiscriminator(effective, branch) ?? candidate.discriminator,
-      }),
-    );
+    const mapped = mappedDiscriminators(effective, branch);
+    const discriminators = mapped.length > 0 ? mapped : [candidate.discriminator];
+    for (const discriminator of discriminators) {
+      out.push(
+        ...expandBranchCandidates(spec, {
+          label: `${candidate.label}.${effective.oneOf ? 'oneOf' : 'anyOf'}[${i}]`,
+          comparedAgainst: candidate.comparedAgainst,
+          schema: resolved,
+          primarySchemaName: refName ?? `${candidate.primarySchemaName ?? candidate.label}.${i}`,
+          discriminator,
+        }),
+      );
+    }
   }
 
   return out;

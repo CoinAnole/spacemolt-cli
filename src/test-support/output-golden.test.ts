@@ -99,6 +99,7 @@ function discriminatedResponseSpec(): OpenApiSpec {
             mapping: {
               alpha: '#/components/schemas/AlphaResponse',
               beta: '#/components/schemas/BetaResponse',
+              beta_alias: '#/components/schemas/BetaResponse',
             },
           },
           oneOf: [{ $ref: '#/components/schemas/AlphaResponse' }, { $ref: '#/components/schemas/BetaResponse' }],
@@ -160,6 +161,52 @@ describe('output golden test support', () => {
 
     expect(comparison.primarySchemaName).toBe('AlphaResponse');
     expect(comparison.selectionReason).toBe('best-score');
+  });
+
+  test('schema comparison selects a branch for a non-first discriminator alias', () => {
+    const spec = discriminatedResponseSpec();
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { kind: 'beta_alias', alpha: 'structurally misleading', beta: 'selected' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: { $ref: '#/components/schemas/CommandResponse' },
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('BetaResponse');
+    expect(comparison.selectionReason).toBe('discriminator');
+  });
+
+  test('schema comparison collapses discriminator aliases during structural fallback', () => {
+    const spec = discriminatedResponseSpec();
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { beta: 'selected structurally' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: { $ref: '#/components/schemas/CommandResponse' },
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('BetaResponse');
+    expect(comparison.selectionReason).toBe('best-score');
+  });
+
+  test('explicit schemaTarget scores aliased branches without artificial ambiguity', () => {
+    const spec = discriminatedResponseSpec();
+    const comparison = compareFixtureAgainstResponseCandidates(
+      { beta: 'selected structurally' },
+      {
+        ...sampleContext,
+        spec,
+        responseSchema: { $ref: '#/components/schemas/CommandResponse' },
+        explicitTarget: 'structuredContent',
+      },
+    );
+
+    expect(comparison.primarySchemaName).toBe('BetaResponse');
+    expect(comparison.selectionReason).toBe('explicit-target');
   });
 
   test('fixture schema baseline path is exported for report tooling', () => {

@@ -340,7 +340,16 @@ function candidatesForExplicitTarget(
   explicitTarget: HighValueFixtureEntry['schemaTarget'],
 ): OpenApiSchemaCandidate[] {
   if (!explicitTarget) return [];
-  return candidates.filter((candidate) => candidate.comparedAgainst === explicitTarget);
+  return collapseDiscriminatorAliases(candidates.filter((candidate) => candidate.comparedAgainst === explicitTarget));
+}
+
+function collapseDiscriminatorAliases(candidates: OpenApiSchemaCandidate[]): OpenApiSchemaCandidate[] {
+  const unique = new Map<string, OpenApiSchemaCandidate>();
+  for (const candidate of candidates) {
+    const key = `${candidate.comparedAgainst}\0${candidate.label}\0${candidate.primarySchemaName ?? ''}`;
+    if (!unique.has(key)) unique.set(key, candidate);
+  }
+  return [...unique.values()];
 }
 
 function candidatesForDiscriminator(
@@ -525,9 +534,14 @@ export function compareFixtureAgainstResponseCandidates(
     if (selected) return selected;
   }
 
+  const structuralCandidates = collapseDiscriminatorAliases(candidates);
   return (
-    selectCandidateComparison(fixtureValue, opts, compareCandidates(fixtureValue, opts, candidates), 'best-score') ??
-    fallbackComparison(fixtureValue, opts, fallbackCandidate)
+    selectCandidateComparison(
+      fixtureValue,
+      opts,
+      compareCandidates(fixtureValue, opts, structuralCandidates),
+      'best-score',
+    ) ?? fallbackComparison(fixtureValue, opts, fallbackCandidate)
   );
 }
 

@@ -221,6 +221,23 @@ describe('OpenAPI schema utilities', () => {
     ]);
   });
 
+  test('buildResponseSchemaCandidates retains every discriminator alias mapped to a branch', () => {
+    const spec = makeSpec();
+    const schema = spec.components?.schemas?.DiscriminatedResponse;
+    if (!schema?.discriminator?.mapping) throw new Error('expected discriminated response mapping');
+    schema.discriminator.mapping.alpha_alias = '#/components/schemas/AlphaResponse';
+
+    const candidates = buildResponseSchemaCandidates(spec, {
+      $ref: '#/components/schemas/DiscriminatedResponse',
+    });
+
+    expect(candidates.map((candidate) => [candidate.primarySchemaName, candidate.discriminator])).toEqual([
+      ['AlphaResponse', { propertyName: 'kind', value: 'alpha' }],
+      ['AlphaResponse', { propertyName: 'kind', value: 'alpha_alias' }],
+      ['BetaResponse', { propertyName: 'kind', value: 'beta' }],
+    ]);
+  });
+
   test('buildResponseSchemaCandidates ignores malformed discriminator metadata', () => {
     const spec = makeSpec();
     const schema = spec.components?.schemas?.DiscriminatedResponse;
