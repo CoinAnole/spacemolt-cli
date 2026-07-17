@@ -111,6 +111,13 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('bare storage_view empty payload still materializes target=self', () => {
+    expect(prepareInternalPayload('storage_view', {}, options())).toEqual({
+      type: 'payload',
+      payload: { target: 'self' },
+    });
+  });
+
   test('resolves sell item from cached item name before type conversion', async () => {
     const sessionPath = useTempSession();
     await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath);

@@ -110,10 +110,13 @@ export function preparePayload(
     return { type: 'exit', exitCode: 1 };
   }
 
-  const payload =
+  // Always materialize defaults — even for empty payloads. Bare `storage view` must still
+  // apply target=self (materializePayloadDefaults); skipping empty payloads would regress that.
+  const converted =
     Object.keys(resolvedPayload.payload).length > 0
-      ? materializePayloadDefaults(command, convertPayloadTypes(resolvedPayload.payload, command, registry))
+      ? convertPayloadTypes(resolvedPayload.payload, command, registry)
       : {};
+  const payload = materializePayloadDefaults(command, converted);
   return { type: 'payload', payload };
 }
 

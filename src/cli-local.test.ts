@@ -164,6 +164,24 @@ describe('CLI local usability behavior', () => {
     expect(withdraw.stdout).toContain('"target": "self"');
   });
 
+  test('bare storage view dry-run materializes target=self with no client-only keys', async () => {
+    const json = await runDirect(['--dry-run', '--json', 'storage', 'view']);
+    expect(json.exitCode).toBe(0);
+    expect(json.stdout).toContain('"command": "storage_view"');
+    expect(json.stdout).toContain('"url": "https://game.spacemolt.com/api/v2/spacemolt_storage/view"');
+    expect(json.stdout).toContain('"target": "self"');
+    expect(json.stdout).not.toContain('"action": "view"');
+    expect(json.stdout).not.toContain('"item_id"');
+    expect(json.stdout).not.toContain('"search"');
+
+    const human = await runDirect(['--dry-run', 'storage', 'view']);
+    const humanOut = stripAnsi(human.stdout);
+    expect(human.exitCode).toBe(0);
+    expect(humanOut).toContain('Dry run: storage view');
+    expect(humanOut).not.toContain('Dry run: storage_view');
+    expect(humanOut).toMatch(/"target"\s*:\s*"self"/);
+  });
+
   test('storage view routes through storage view and strips client-only filters', async () => {
     const result = await runDirect([
       '--dry-run',
@@ -325,6 +343,15 @@ describe('CLI local usability behavior', () => {
     expect(buyStdout).toContain('Dry run: faction create_buy_order');
     expect(buyStdout).toContain('POST https://game.spacemolt.com/api/v2/spacemolt_faction_commerce/create_buy_order');
     expect(buyStdout).toContain('"private":true');
+  });
+
+  test('storage deposit human dry-run uses spaced group form only', async () => {
+    const result = await runDirect(['--dry-run', 'storage', 'deposit', 'ore_iron', '1']);
+    const stdout = stripAnsi(result.stdout);
+    expect(result.exitCode).toBe(0);
+    expect(stdout).toContain('Dry run: storage deposit');
+    expect(stdout).not.toContain('Dry run: storage_deposit');
+    expect(stdout).toContain('POST https://game.spacemolt.com/api/v2/spacemolt_storage/deposit');
   });
 
   test('patch-note storage loot command routes through storage loot', async () => {
