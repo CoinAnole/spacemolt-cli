@@ -1,6 +1,6 @@
 # Bundled Dynamic Routes by Default — Design
 
-**Status:** Draft — awaiting written-spec review
+**Status:** Approved for implementation planning
 **Date:** 2026-07-17
 
 ## Problem
