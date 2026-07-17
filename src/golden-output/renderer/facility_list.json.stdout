@@ -9,6 +9,7 @@
       "description": "Bulk refined-fuel storage for dockside resupply.",
       "category": "service",
       "level": 2,
+      "maintenance_level": 1,
       "maintenance_satisfied": true,
       "is_recycler": false,
       "owner_id": "player-marlowe"

@@ -154,6 +154,108 @@ test('renders facility custom names alongside type names across facility views',
   expect(factionOwnedRendered.stdout.join('\n')).toContain('Capital Yard (Shipyard Berth)');
 });
 
+test('owned facility tables separate display names from build type keys', () => {
+  const owned = renderStructuredResult(
+    'facility_owned',
+    {
+      action: 'owned',
+      facilities: [
+        {
+          facility_id: 'facility-1',
+          type: 'ore_refinery',
+          name: 'Ore Refinery',
+          custom_name: 'Frontier Smelter',
+          base_id: 'earth_station',
+          base_name: 'Earth Station',
+          rent_per_cycle: 10,
+        },
+      ],
+      rent: { facilities: 1, total_rent_per_cycle: 10, est_rent_per_day: 60 },
+    },
+    options,
+    context,
+  );
+  const faction = renderStructuredResult(
+    'faction_facility_owned',
+    structuredClone(factionFacilityOwnedFixture),
+    options,
+    context,
+  );
+
+  expect(owned.stdout.join('\n')).toMatch(/Name\s+\|\s+Type\s+\|\s+ID/);
+  expect(owned.stdout.join('\n')).toContain('Frontier Smelter (Ore Refinery)');
+  expect(owned.stdout.join('\n')).toContain('ore_refinery');
+  expect(faction.stdout.join('\n')).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Station/);
+  expect(faction.stdout.join('\n')).toContain('faction_shipyard_berth');
+});
+
+test('owned facility tables omit malformed build type keys', () => {
+  const rendered = renderStructuredResult(
+    'facility_owned',
+    {
+      action: 'owned',
+      facilities: [
+        {
+          facility_id: 'facility-1',
+          type: {},
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).not.toContain('[object Object]');
+});
+
+test('facility list prefers numeric maintenance level and falls back to boolean state', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const station = fixture.station_facilities as Array<Record<string, unknown>>;
+  if (!station[0] || !station[1]) throw new Error('Facility fixture is incomplete.');
+  station[0].maintenance_level = 0.6;
+  station[1].maintenance_level = 'invalid';
+
+  const rendered = renderStructuredResult('facility_list', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('60%');
+  expect(stdout).toContain('false');
+  expect(stdout).not.toContain('NaN');
+});
+
+test('facility maintenance level formats finite percentages without leaking malformed values', () => {
+  const rendered = renderStructuredResult(
+    'facility_list',
+    {
+      action: 'list',
+      base_id: 'earth_station',
+      station_facilities: [
+        { facility_id: 'zero', name: 'Zero', maintenance_level: 0, maintenance_satisfied: true },
+        { facility_id: 'full', name: 'Full', maintenance_level: 1, maintenance_satisfied: false },
+        { facility_id: 'integral', name: 'Integral', maintenance_level: 0.29 },
+        { facility_id: 'partial', name: 'Partial', maintenance_level: 0.605 },
+        { facility_id: 'fallback', name: 'Fallback', maintenance_level: Number.NaN, maintenance_satisfied: false },
+        { facility_id: 'malformed', name: 'Malformed', maintenance_level: {} },
+      ],
+      player_facilities: [],
+      faction_facilities: [],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('0%');
+  expect(stdout).toContain('100%');
+  expect(stdout).toMatch(/Integral\s+\|\s+integral\s+\|[^\n]*29%/);
+  expect(stdout).not.toContain('29.0%');
+  expect(stdout).toContain('60.5%');
+  expect(stdout).toMatch(/Fallback\s+\|\s+fallback\s+\|[^\n]*false/);
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('[object Object]');
+});
+
 test('omits facility state and maintenance columns when the API omits those fields', () => {
   const rendered = renderStructuredResult(
     'facility_list',

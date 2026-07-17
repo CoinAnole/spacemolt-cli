@@ -62,6 +62,7 @@
       "description": "Station fuel storage and bunkering service.",
       "category": "service",
       "level": 3,
+      "maintenance_level": 1,
       "maintenance_satisfied": true,
       "is_recycler": false
     },
@@ -72,6 +73,7 @@
       "description": "Empire logistics depot for fleet resupply.",
       "category": "infrastructure",
       "level": 3,
+      "maintenance_level": 0.6,
       "maintenance_satisfied": false,
       "maintenance_per_cycle": [
         {

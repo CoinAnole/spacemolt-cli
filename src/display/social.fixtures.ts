@@ -25,6 +25,22 @@ export const facilitiesFixture = {
   ],
 };
 
+export const facilityOwnedFixture = {
+  action: 'owned',
+  facilities: [
+    {
+      facility_id: 'player-refinery',
+      type: 'ore_refinery',
+      name: 'Ore Refinery',
+      custom_name: 'Frontier Smelter',
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      rent_per_cycle: 120,
+    },
+  ],
+  rent: { facilities: 1, total_rent_per_cycle: 120, est_rent_per_day: 720 },
+};
+
 /**
  * Minimal FacilityResponse list branch (action=list) for high-value facility_list.
  * Required top-level: action, base_id, station_facilities, player_facilities, faction_facilities.
@@ -40,6 +56,7 @@ export const facilityListSimpleFixture = {
       description: 'Bulk refined-fuel storage for dockside resupply.',
       category: 'service',
       level: 2,
+      maintenance_level: 1,
       maintenance_satisfied: true,
       is_recycler: false,
       owner_id: 'player-marlowe',
@@ -109,6 +126,7 @@ export const facilityListFixture = {
       description: 'Station fuel storage and bunkering service.',
       category: 'service',
       level: 3,
+      maintenance_level: 1,
       maintenance_satisfied: true,
       is_recycler: false,
     },
@@ -119,6 +137,7 @@ export const facilityListFixture = {
       description: 'Empire logistics depot for fleet resupply.',
       category: 'infrastructure',
       level: 3,
+      maintenance_level: 0.6,
       maintenance_satisfied: false,
       maintenance_per_cycle: [
         { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12 },
@@ -622,6 +641,7 @@ export const guideListFixture = {
 export const socialFixtureCases = {
   chat_sent: { command: 'chat', fixture: chatSentFixture },
   facilities: { command: 'facility_list', fixture: facilitiesFixture },
+  facility_owned: { command: 'facility_owned', fixture: facilityOwnedFixture },
   facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
@@ -688,6 +708,7 @@ export const actionLogFixture = {
 
 export const socialHighValueFixtures = {
   chat: { command: 'chat', fixture: chatSentFixture },
+  facility_owned: { command: 'facility_owned', fixture: facilityOwnedFixture },
   facility_list: {
     command: 'facility_list',
     fixture: facilityListSimpleFixture,

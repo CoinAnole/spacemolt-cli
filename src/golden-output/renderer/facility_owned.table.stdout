@@ -1,0 +1,6 @@
+
+=== Facilities ===
+
+  Name                            | Type         | ID              | Level | Rent/cycle | Owner
+  --------------------------------+--------------+-----------------+-------+------------+------
+  Frontier Smelter (Ore Refinery) | ore_refinery | player-refinery |       | 120        |      

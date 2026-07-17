@@ -1,9 +1,9 @@
 
 === Faction Facilities ===
 
-  Name                   | ID             | Station       | System | Rent    | Missed | Arrears | Labor/run
-  -----------------------+----------------+---------------+--------+---------+--------+---------+----------
-  Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr     
+  Name                   | Type                   | ID             | Station       | System | Rent    | Missed | Arrears | Labor/run
+  -----------------------+------------------------+----------------+---------------+--------+---------+--------+---------+----------
+  Faction Shipyard Berth | faction_shipyard_berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr     
 
 Faction rent bill: 1,200cr/cycle
 Faction arrears: 2,400cr

@@ -39,6 +39,7 @@ station_facilities:
     description: "Station fuel storage and bunkering service."
     category: service
     level: 3
+    maintenance_level: 1
     maintenance_satisfied: true
     is_recycler: false
   - facility_id: "station-depot"
@@ -47,6 +48,7 @@ station_facilities:
     description: "Empire logistics depot for fleet resupply."
     category: infrastructure
     level: 3
+    maintenance_level: 0.6
     maintenance_satisfied: false
     maintenance_per_cycle: [{item_id: fuel_cell, name: "Fuel Cell", quantity: 12}, {item_id: plasma_cell_pack, name: "Plasma Cell Pack", quantity: 4}]
     labor_per_cycle: 320

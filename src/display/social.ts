@@ -116,8 +116,23 @@ function facilityDisplayName(row: Record<string, unknown>): string | undefined {
   return `${customName} (${baseName})`;
 }
 
+function facilityTypeKey(row: Record<string, unknown>): string | undefined {
+  for (const field of ['type', 'facility_type', 'type_id']) {
+    const value = row[field];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return undefined;
+}
+
 function facilityProduction(row: Record<string, unknown>): Record<string, unknown> | undefined {
   return isRecord(row.production) ? row.production : undefined;
+}
+
+function formatMaintenanceLevel(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  const percent = Math.round(value * 1000) / 10;
+  if (!Number.isFinite(percent)) return undefined;
+  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)}%`;
 }
 
 function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
@@ -130,6 +145,8 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
     return {
       ...row,
       name_display: facilityDisplayName(row),
+      type_display: facilityTypeKey(row),
+      maintenance_level_display: formatMaintenanceLevel(row.maintenance_level),
       maintenance_display: formatMaintenance(row.maintenance_per_cycle),
       labor_cycle_display: formatCredits(row.labor_per_cycle),
       output_price_per_unit: outputPricePerUnit,
@@ -139,12 +156,13 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
   });
 }
 
-function facilityColumns(rows: Array<Record<string, unknown>>, options: { grouped?: boolean } = {}) {
-  const columns: Array<[string, string[]]> = [
-    ['Name', ['name_display', 'name', 'type_name', 'facility_type', 'type']],
-    ['ID', ['facility_id', 'id', 'type_id']],
-    ['Level', ['level', 'tier']],
-  ];
+function facilityColumns(
+  rows: Array<Record<string, unknown>>,
+  options: { grouped?: boolean; includeType?: boolean } = {},
+) {
+  const columns: Array<[string, string[]]> = [['Name', ['name_display']]];
+  if (options.includeType) columns.push(['Type', ['type_display']]);
+  columns.push(['ID', ['facility_id', 'id', 'type_id']], ['Level', ['level', 'tier']]);
   if (options.grouped) columns.push(['Category', ['category']]);
   // Live payloads sometimes include active/status; list schema uses damaged /
   // under_construction / power_throttled instead.
@@ -153,8 +171,8 @@ function facilityColumns(rows: Array<Record<string, unknown>>, options: { groupe
       options.grouped ? ['Active', ['active', 'enabled', 'status']] : ['Status', ['status', 'enabled', 'active']],
     );
   }
-  if (options.grouped && hasAnyField(rows, ['maintenance_satisfied'])) {
-    columns.push(['Maint', ['maintenance_satisfied']]);
+  if (options.grouped && hasAnyField(rows, ['maintenance_level_display', 'maintenance_satisfied'])) {
+    columns.push(['Maint', ['maintenance_level_display', 'maintenance_satisfied']]);
   }
   if (hasAnyField(rows, ['damaged'])) {
     columns.push(['Damaged', ['damaged']]);
@@ -715,12 +733,14 @@ export const socialFormatters = [
       const rows = facilities.map((facility) => ({
         ...facility,
         name_display: facilityDisplayName(facility),
+        type_display: facilityTypeKey(facility),
         rent_display: formatCredits(facility.rent_per_cycle),
         arrears_display: formatCredits(facility.arrears_owed),
         labor_display: formatCredits(facility.labor_per_run),
       }));
       const columns: Array<[string, string[]]> = [
-        ['Name', ['name_display', 'name', 'type']],
+        ['Name', ['name_display']],
+        ['Type', ['type_display']],
         ['ID', ['facility_id', 'id']],
         ['Station', ['base_name', 'base_id']],
         ['System', ['system_id']],
@@ -749,11 +769,15 @@ export const socialFormatters = [
   namedFormatter(
     'facilities',
     ['facilities'],
-    (r) => {
+    (r, command) => {
       const facilities = firstArray(r, ['facilities', 'facility_types', 'upgrades']);
       if (!facilities) return false;
       const rows = facilityRows(facilities);
-      printCompactTable('Facilities', rows, facilityColumns(rows));
+      printCompactTable(
+        'Facilities',
+        rows,
+        facilityColumns(rows, { includeType: commandNameEquals(command, 'facility_owned') }),
+      );
       return true;
     },
     { commands: ['facility_list'], shapeFallback: true },
@@ -874,9 +898,7 @@ export const socialFormatters = [
       const members = (fleet.members || r.members) as Array<Record<string, unknown>> | undefined;
       if (fleet.max_size !== undefined) {
         const memberCount = Array.isArray(members) ? members.length : undefined;
-        emitLine(
-          memberCount === undefined ? `Size: ${fleet.max_size}` : `Size: ${memberCount}/${fleet.max_size}`,
-        );
+        emitLine(memberCount === undefined ? `Size: ${fleet.max_size}` : `Size: ${memberCount}/${fleet.max_size}`);
       }
       if (Array.isArray(members)) {
         const rows = members.filter(isRecord).map((member) => {

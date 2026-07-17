@@ -5,4 +5,4 @@
 
   Name        | ID         | Level | Category | Maint | Recycler | Owner         
   ------------+------------+-------+----------+-------+----------+---------------
-  Fuel Bunker | facility-1 | 2     | service  | true  | false    | player-marlowe
+  Fuel Bunker | facility-1 | 2     | service  | 100%  | false    | player-marlowe

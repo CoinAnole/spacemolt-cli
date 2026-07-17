@@ -85,7 +85,11 @@ const queueFixture = {
   queue: { has_pending: true },
 };
 
-const { create_sell_order: createMarketOrderFixtureCase, ...otherFormatterFixtureCases } = formatterFixtureCases;
+const {
+  create_sell_order: createMarketOrderFixtureCase,
+  facility_owned: _facilityOwnedFixtureCase,
+  ...otherFormatterFixtureCases
+} = formatterFixtureCases;
 const namedFormatterFixtureCases = {
   ...otherFormatterFixtureCases,
   create_market_order: createMarketOrderFixtureCase,
@@ -4274,8 +4278,8 @@ describe('structuredContent formatters', () => {
 
         Name                    | ID            | Level | Category       | Maint | Upkeep                           | Labor/cycle | Dining | Tourism Upkeep | Recycler | Owner
         ------------------------+---------------+-------+----------------+-------+----------------------------------+-------------+--------+----------------+----------+------
-        Fuel Bunker             | station-fuel  | 3     | service        | true  |                                  |             |        |                | false    |
-        Confederacy Fleet Depot | station-depot | 3     | infrastructure | false | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |        |                |          |
+        Fuel Bunker             | station-fuel  | 3     | service        | 100%  |                                  |             |        |                | false    |
+        Confederacy Fleet Depot | station-depot | 3     | infrastructure | 60%   | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |        |                |          |
         Dockside Diner          | station-diner | 1     | infrastructure | true  |                                  | 80cr        | 2      | true           |          |
 
       === Player Facilities ===
@@ -4324,9 +4328,9 @@ describe('structuredContent formatters', () => {
       "
       === Faction Facilities ===
 
-        Name                   | ID             | Station       | System | Rent    | Missed | Arrears | Labor/run
-        -----------------------+----------------+---------------+--------+---------+--------+---------+----------
-        Faction Shipyard Berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr
+        Name                   | Type                   | ID             | Station       | System | Rent    | Missed | Arrears | Labor/run
+        -----------------------+------------------------+----------------+---------------+--------+---------+--------+---------+----------
+        Faction Shipyard Berth | faction_shipyard_berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr
 
       Faction rent bill: 1,200cr/cycle
       Faction arrears: 2,400cr

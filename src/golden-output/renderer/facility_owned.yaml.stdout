@@ -1,0 +1,14 @@
+
+action: owned
+facilities:
+  - facility_id: "player-refinery"
+    type: ore_refinery
+    name: "Ore Refinery"
+    custom_name: "Frontier Smelter"
+    base_id: earth_station
+    base_name: "Earth Station"
+    rent_per_cycle: 120
+rent:
+  facilities: 1
+  total_rent_per_cycle: 120
+  est_rent_per_day: 720
