@@ -309,11 +309,7 @@ function compareEffectivePositionalOrder(
     return new Set();
   }
 
-  return new Set(
-    generatedFields.filter(
-      (field) => curatedConfig.schema?.[field]?.positionalIndex === generatedConfig.schema?.[field]?.positionalIndex,
-    ),
-  );
+  return new Set(generatedFields);
 }
 
 function matchesOnly(command: string, generatedCommand: string | undefined, only: string[] | undefined): boolean {

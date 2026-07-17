@@ -317,6 +317,7 @@ describe('curated command vs generated command comparison', () => {
     const overrides: Record<string, CommandOverride> = {
       shipyard_repair: {
         apiRoute: 'POST /api/v2/spacemolt_shipyard/repair',
+        positionals: ['dry_run', 'ship_id'],
         schemaExtensions: {
           ship_id: { type: 'integer', positionalIndex: 2 },
           dry_run: { type: 'string', enum: ['yes', 'no'] },
@@ -333,6 +334,9 @@ describe('curated command vs generated command comparison', () => {
     expect(report.commands[0]?.differences.map((d) => d.kind)).toEqual(
       expect.arrayContaining(['schema-contract', 'schema-enum', 'schema-positional']),
     );
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({ kind: 'schema-positional', field: 'args' }),
+    );
   });
 
   test('does not report positional drift when curated positionals alias to generated fields', () => {
@@ -341,7 +345,7 @@ describe('curated command vs generated command comparison', () => {
         apiRoute: 'POST /api/v2/spacemolt/craft',
         positionals: ['recipe_id', 'quantity'],
         schemaExtensions: {
-          id: { description: 'Curated recipe ID description' },
+          id: { description: 'Curated recipe ID description', positionalIndex: 99 },
           quantity: { description: 'Curated quantity description' },
           action: { type: 'string', enum: ['queue'] },
         },
