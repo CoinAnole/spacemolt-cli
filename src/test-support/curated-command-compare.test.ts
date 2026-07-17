@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CURATED_COMMAND_DESCRIPTIONS } from '../command-descriptions.ts';
-import { COMMAND_OVERRIDES, type CommandOverride } from '../commands.ts';
+import { buildCuratedCommands, COMMAND_OVERRIDES, type CommandOverride } from '../commands.ts';
 import { GENERATED_API_ROUTES } from '../generated/api-commands.ts';
 import type { GeneratedApiRoute } from '../openapi-metadata.ts';
 import { compareCuratedCommandsToGenerated, formatCuratedCommandComparisonReport } from './curated-command-compare.ts';
@@ -110,6 +110,42 @@ describe('curated command vs generated command comparison', () => {
     expect(report.commands[0]?.differences.map((d) => d.field)).toEqual(
       expect.arrayContaining(['schema.dry_run.type', 'schema.priority']),
     );
+  });
+
+  test('schema extensions preserve generated positional metadata', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        schemaExtensions: {
+          id: { description: 'Curated recipe ID description' },
+          quantity: { description: 'Curated quantity description' },
+        },
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', description: 'Generated recipe ID description', positionalIndex: 0 },
+          quantity: { type: 'integer', description: 'Generated quantity description', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const commands = buildCuratedCommands(overrides, generatedRoutes);
+
+    expect(commands.craft?.schema?.id).toEqual({
+      type: 'string',
+      description: 'Curated recipe ID description',
+      positionalIndex: 0,
+    });
+    expect(commands.craft?.schema?.quantity).toEqual({
+      type: 'integer',
+      description: 'Curated quantity description',
+      positionalIndex: 1,
+    });
   });
 
   test('reports missing generated route metadata', () => {

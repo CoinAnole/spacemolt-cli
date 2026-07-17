@@ -318,6 +318,20 @@ function getGeneratedRoute(apiRoute: string, generatedRoutes: Record<string, Gen
   return generated;
 }
 
+function mergeSchemaExtensions(
+  generatedSchema: GeneratedApiRoute['schema'] | undefined,
+  schemaExtensions: Record<string, CommandFieldSchema> | undefined,
+): Record<string, CommandFieldSchema> | undefined {
+  if (!generatedSchema) return schemaExtensions;
+  if (!schemaExtensions) return generatedSchema;
+
+  const schema: Record<string, CommandFieldSchema> = { ...generatedSchema };
+  for (const [field, extension] of Object.entries(schemaExtensions)) {
+    schema[field] = { ...schema[field], ...extension };
+  }
+  return schema;
+}
+
 function mergeCommandConfig(
   command: string,
   config: CommandOverride,
@@ -368,7 +382,7 @@ function mergeCommandConfig(
     ...(stateSections ? { stateSections } : {}),
     aliases,
     route,
-    schema: generated ? { ...generated.schema, ...schemaExtensions } : schemaExtensions,
+    schema: mergeSchemaExtensions(generated?.schema, schemaExtensions),
   };
 }
 
