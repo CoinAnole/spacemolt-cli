@@ -1,0 +1,13 @@
+
+=== Freight Tracking ===
+Contract: shipment-track-1
+Status: in_transit
+Package: package-relief-1
+Route: earth_station -> nova_central
+
+=== Tracking Events ===
+
+  Observed             | Tick  | Class           | Location          | Custodian           | Reference        | Fingerprint     
+  ---------------------+-------+-----------------+-------------------+---------------------+------------------+-----------------
+  2026-07-17T10:10:00Z | 1,201 | ship            | sol / earth_orbit | player:carrier-vale | ship-wayfarer    | beacon-ship-1   
+  2026-07-17T10:30:00Z | 1,203 | faction_storage | nova_central      | faction:nova_relief | nova-relief-main | beacon-storage-1

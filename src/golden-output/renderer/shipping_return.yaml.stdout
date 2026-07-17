@@ -1,0 +1,54 @@
+
+details:
+  action: return
+  contract:
+    id: "shipment-returned-1"
+    package_id: "package-relief-1"
+    shipper:
+      kind: player
+      id: marlowe
+    recipient:
+      kind: station
+      id: nova_central
+    origin_base_id: earth_station
+    destination_base_id: nova_central
+    shipping_house_id: earth_mission_board
+    visibility: public
+    service_level: standard
+    status: returned
+    posted_at: 2026-07-17T10:00:00Z
+    listing_expires_at: 2026-07-18T10:00:00Z
+    base_reward: 12000
+    max_speed_bonus: 0
+    service_fee: 800
+    reward_escrow: 12000
+    speed_bonus_escrow: 0
+    failure_debt: 500
+    reserved_exposure: 500
+    policy_status: none
+    insurable: false
+    risk_band: unpriced
+    contractor:
+      kind: player
+      id: "carrier-vale"
+    accepted_at: 2026-07-17T10:05:00Z
+    settled_at: 2026-07-17T11:00:00Z
+    terminal_reason: "Carrier surrendered freight at the origin station."
+    reputation_eligible: true
+    carrier_payout: 0
+  carrier_payout: 0
+  shipper_refund: 12000
+  debt_created: 0
+player:
+  username: Marlowe
+  credits: 195500
+ship:
+  id: "ship-wayfarer"
+  name: Wayfarer
+  cargo_used: 100
+  cargo_capacity: 500
+cargo:
+  - item_id: sealed_package
+    package_id: "package-relief-1"
+    quantity: 1
+    size: 100

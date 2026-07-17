@@ -1,0 +1,38 @@
+
+=== Carrier Profile ===
+Actor: player:carrier-vale
+Tier: licensed
+Successful deliveries: 12
+Priority deliveries: 4
+Delivered value: 125,000 cr
+Returns: 1
+Breaches: 0
+Defaults: 0
+Active contracts: 2
+Active liability: 33,000 cr
+Outstanding debt: 500 cr
+Updated: 2026-07-17T12:00:00Z
+
+Capacity:
+Active contracts: 2 (unlimited)
+Aggregate liability: 33,000 cr / 100,000 cr
+Remaining aggregate liability: 67,000 cr
+Single-package liability: 50,000 cr
+
+Tier Progression:
+Current tier: licensed
+Next tier: trusted
+Successful deliveries: 12
+Required deliveries: 25
+Remaining deliveries: 13
+Delivered value: 125,000 cr
+Required delivered value: 250,000 cr
+Remaining delivered value: 125,000 cr
+Acceptance blocked: yes
+Block reason: Outstanding freight debt must be paid before accepting another contract.
+
+=== Outstanding Debts ===
+
+  ID             | Shipment            | Original | Outstanding | Creditor              | Created              | Paid
+  ---------------+---------------------+----------+-------------+-----------------------+----------------------+-----
+  freight-debt-1 | shipment-breached-1 | 1,000 cr | 500 cr      | station:earth_station | 2026-07-17T09:00:00Z |     

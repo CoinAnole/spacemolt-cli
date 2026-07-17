@@ -1,0 +1,77 @@
+{
+  "action": "list",
+  "shipments": [
+    {
+      "contract": {
+        "id": "shipment-eligible-1",
+        "package_id": "package-relief-1",
+        "shipper": {
+          "kind": "player",
+          "id": "marlowe"
+        },
+        "recipient": {
+          "kind": "station",
+          "id": "nova_central"
+        },
+        "origin_base_id": "earth_station",
+        "destination_base_id": "nova_central",
+        "shipping_house_id": "earth_mission_board",
+        "visibility": "public",
+        "service_level": "standard",
+        "status": "posted",
+        "posted_at": "2026-07-17T10:00:00Z",
+        "listing_expires_at": "2026-07-18T10:00:00Z",
+        "base_reward": 9000,
+        "max_speed_bonus": 0,
+        "service_fee": 800,
+        "reward_escrow": 9000,
+        "speed_bonus_escrow": 0,
+        "failure_debt": 500,
+        "reserved_exposure": 500,
+        "policy_status": "none",
+        "insurable": false,
+        "risk_band": "unpriced"
+      },
+      "eligible": true
+    },
+    {
+      "contract": {
+        "id": "shipment-blocked-1",
+        "package_id": "package-reactor-1",
+        "shipper": {
+          "kind": "player",
+          "id": "marlowe"
+        },
+        "recipient": {
+          "kind": "station",
+          "id": "nova_central"
+        },
+        "origin_base_id": "earth_station",
+        "destination_base_id": "nova_central",
+        "shipping_house_id": "earth_mission_board",
+        "visibility": "public",
+        "service_level": "priority",
+        "status": "posted",
+        "posted_at": "2026-07-17T10:00:00Z",
+        "listing_expires_at": "2026-07-18T10:00:00Z",
+        "base_reward": 22000,
+        "max_speed_bonus": 4000,
+        "service_fee": 800,
+        "reward_escrow": 22000,
+        "speed_bonus_escrow": 4000,
+        "failure_debt": 72000,
+        "reserved_exposure": 72000,
+        "policy_status": "active",
+        "insurable": true,
+        "risk_band": "trusted",
+        "premium": 1200,
+        "covered_value": 65000
+      },
+      "eligible": false,
+      "reason": "Single-package liability exceeds the licensed carrier limit."
+    }
+  ],
+  "page": 1,
+  "per_page": 20,
+  "total": 2
+}

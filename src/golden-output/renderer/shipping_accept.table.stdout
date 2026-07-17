@@ -1,0 +1,28 @@
+
+=== Accepted Freight Contract ===
+Contract: shipment-self-1
+Status: in_transit
+Package: package-relief-1
+Route: earth_station -> nova_central
+Shipper: player:marlowe
+Recipient: player:marlowe
+Contractor: player:marlowe
+Visibility: public
+Service: standard
+Base reward: 12,000 cr
+Maximum speed bonus: 0 cr
+Service fee: 800 cr
+Reward escrow: 12,000 cr
+Speed bonus escrow: 0 cr
+Policy status: none
+Insurable: no
+Risk band: unpriced
+Reserved exposure: 500 cr
+Failure debt: 500 cr
+Reputation eligible: no
+Posted: 2026-07-17T10:00:00Z
+Listing expires: 2026-07-18T10:00:00Z
+Accepted: 2026-07-17T10:05:00Z
+Accepted tick: 1,200
+Target tick: 1,220
+Deadline tick: 1,240

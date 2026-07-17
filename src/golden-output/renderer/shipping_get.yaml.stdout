@@ -1,0 +1,39 @@
+
+action: get
+contract:
+  id: "shipment-transit-1"
+  package_id: "package-relief-1"
+  shipper:
+    kind: player
+    id: marlowe
+  recipient:
+    kind: station
+    id: nova_central
+  origin_base_id: earth_station
+  destination_base_id: nova_central
+  shipping_house_id: earth_mission_board
+  visibility: public
+  service_level: standard
+  status: in_transit
+  posted_at: 2026-07-17T10:00:00Z
+  listing_expires_at: 2026-07-18T10:00:00Z
+  base_reward: 12000
+  max_speed_bonus: 0
+  service_fee: 800
+  reward_escrow: 12000
+  speed_bonus_escrow: 0
+  failure_debt: 500
+  reserved_exposure: 500
+  policy_status: none
+  insurable: false
+  risk_band: unpriced
+  contractor:
+    kind: player
+    id: "carrier-vale"
+  accepted_at: 2026-07-17T10:05:00Z
+  accepted_tick: 1200
+  target_tick: 1220
+  deadline_tick: 1240
+  reputation_eligible: true
+  latest_beacon_at: 2026-07-17T10:20:00Z
+  latest_beacon_fingerprint: "beacon-transit-1"

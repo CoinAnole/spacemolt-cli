@@ -1,0 +1,59 @@
+{
+  "details": {
+    "action": "post",
+    "contract": {
+      "id": "shipment-posted-1",
+      "package_id": "package-medical-1",
+      "shipper": {
+        "kind": "player",
+        "id": "marlowe"
+      },
+      "recipient": {
+        "kind": "faction",
+        "id": "nova_relief"
+      },
+      "origin_base_id": "earth_station",
+      "destination_base_id": "nova_central",
+      "shipping_house_id": "earth_mission_board",
+      "visibility": "invited",
+      "service_level": "priority",
+      "status": "posted",
+      "posted_at": "2026-07-17T10:00:00Z",
+      "listing_expires_at": "2026-07-18T10:00:00Z",
+      "base_reward": 12500,
+      "max_speed_bonus": 2500,
+      "service_fee": 800,
+      "reward_escrow": 12500,
+      "speed_bonus_escrow": 2500,
+      "failure_debt": 33000,
+      "reserved_exposure": 33000,
+      "policy_status": "pending",
+      "insurable": true,
+      "risk_band": "licensed",
+      "invited_carrier": {
+        "kind": "faction",
+        "id": "swift_haulage"
+      },
+      "premium": 450,
+      "covered_value": 30000
+    }
+  },
+  "player": {
+    "username": "Marlowe",
+    "credits": 183750
+  },
+  "ship": {
+    "id": "ship-wayfarer",
+    "name": "Wayfarer",
+    "cargo_used": 100,
+    "cargo_capacity": 500
+  },
+  "cargo": [
+    {
+      "item_id": "sealed_package",
+      "package_id": "package-relief-1",
+      "quantity": 1,
+      "size": 100
+    }
+  ]
+}

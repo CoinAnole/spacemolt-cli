@@ -1,0 +1,68 @@
+
+details:
+  action: pay_debt
+  amount_paid: 250
+  profile:
+    actor:
+      kind: player
+      id: "carrier-vale"
+    tier: licensed
+    successful_deliveries: 12
+    delivered_value: 125000
+    priority_deliveries: 4
+    returns: 1
+    breaches: 0
+    defaults: 0
+    active_contracts: 2
+    active_liability: 33000
+    outstanding_debt: 250
+    updated_at: 2026-07-17T12:00:00Z
+  capacity:
+    active_contracts: 2
+    active_contracts_unlimited: true
+    active_liability: 33000
+    liability_unlimited: false
+    aggregate_liability_limit: 100000
+    remaining_aggregate_liability: 67000
+    single_package_liability_limit: 50000
+  progression:
+    current_tier: licensed
+    next_tier: trusted
+    at_maximum_tier: false
+    successful_deliveries: 12
+    required_successful_deliveries: 25
+    remaining_successful_deliveries: 13
+    delivered_value: 125000
+    required_delivered_value: 250000
+    remaining_delivered_value: 125000
+  debt_blocks_acceptance: true
+  debt_block_reason: "250 cr of freight debt remains unpaid."
+  updated_debts:
+    - id: "freight-debt-1"
+      shipment_id: "shipment-breached-1"
+      debtor: {kind: player, id: "carrier-vale"}
+      creditor: {kind: station, id: earth_station}
+      original: 1000
+      outstanding: 250
+      created_at: 2026-07-17T09:00:00Z
+  outstanding_debts:
+    - id: "freight-debt-1"
+      shipment_id: "shipment-breached-1"
+      debtor: {kind: player, id: "carrier-vale"}
+      creditor: {kind: station, id: earth_station}
+      original: 1000
+      outstanding: 250
+      created_at: 2026-07-17T09:00:00Z
+player:
+  username: Marlowe
+  credits: 183500
+ship:
+  id: "ship-wayfarer"
+  name: Wayfarer
+  cargo_used: 100
+  cargo_capacity: 500
+cargo:
+  - item_id: sealed_package
+    package_id: "package-relief-1"
+    quantity: 1
+    size: 100

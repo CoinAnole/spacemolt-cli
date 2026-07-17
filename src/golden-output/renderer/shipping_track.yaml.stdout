@@ -1,0 +1,59 @@
+
+action: track
+contract:
+  id: "shipment-track-1"
+  package_id: "package-relief-1"
+  shipper:
+    kind: player
+    id: marlowe
+  recipient:
+    kind: station
+    id: nova_central
+  origin_base_id: earth_station
+  destination_base_id: nova_central
+  shipping_house_id: earth_mission_board
+  visibility: public
+  service_level: standard
+  status: in_transit
+  posted_at: 2026-07-17T10:00:00Z
+  listing_expires_at: 2026-07-18T10:00:00Z
+  base_reward: 12000
+  max_speed_bonus: 0
+  service_fee: 800
+  reward_escrow: 12000
+  speed_bonus_escrow: 0
+  failure_debt: 500
+  reserved_exposure: 500
+  policy_status: none
+  insurable: false
+  risk_band: unpriced
+  contractor:
+    kind: player
+    id: "carrier-vale"
+  accepted_at: 2026-07-17T10:05:00Z
+  accepted_tick: 1200
+  target_tick: 1220
+  deadline_tick: 1240
+  reputation_eligible: true
+events:
+  - id: "tracking-event-1"
+    shipment_id: "shipment-track-1"
+    package_id: "package-relief-1"
+    class: ship
+    fingerprint: "beacon-ship-1"
+    observed_at: 2026-07-17T10:10:00Z
+    observed_tick: 1201
+    system_id: sol
+    poi_id: earth_orbit
+    custodian: {kind: player, id: "carrier-vale"}
+    reference_id: "ship-wayfarer"
+  - id: "tracking-event-2"
+    shipment_id: "shipment-track-1"
+    package_id: "package-relief-1"
+    class: faction_storage
+    fingerprint: "beacon-storage-1"
+    observed_at: 2026-07-17T10:30:00Z
+    observed_tick: 1203
+    base_id: nova_central
+    custodian: {kind: faction, id: nova_relief}
+    reference_id: "nova-relief-main"

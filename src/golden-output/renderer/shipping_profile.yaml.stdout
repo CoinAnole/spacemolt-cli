@@ -1,0 +1,45 @@
+
+action: profile
+profile:
+  actor:
+    kind: player
+    id: "carrier-vale"
+  tier: licensed
+  successful_deliveries: 12
+  delivered_value: 125000
+  priority_deliveries: 4
+  returns: 1
+  breaches: 0
+  defaults: 0
+  active_contracts: 2
+  active_liability: 33000
+  outstanding_debt: 500
+  updated_at: 2026-07-17T12:00:00Z
+capacity:
+  active_contracts: 2
+  active_contracts_unlimited: true
+  active_liability: 33000
+  liability_unlimited: false
+  aggregate_liability_limit: 100000
+  remaining_aggregate_liability: 67000
+  single_package_liability_limit: 50000
+progression:
+  current_tier: licensed
+  next_tier: trusted
+  at_maximum_tier: false
+  successful_deliveries: 12
+  required_successful_deliveries: 25
+  remaining_successful_deliveries: 13
+  delivered_value: 125000
+  required_delivered_value: 250000
+  remaining_delivered_value: 125000
+debt_blocks_acceptance: true
+debt_block_reason: "Outstanding freight debt must be paid before accepting another contract."
+debts:
+  - id: "freight-debt-1"
+    shipment_id: "shipment-breached-1"
+    debtor: {kind: player, id: "carrier-vale"}
+    creditor: {kind: station, id: earth_station}
+    original: 1000
+    outstanding: 500
+    created_at: 2026-07-17T09:00:00Z

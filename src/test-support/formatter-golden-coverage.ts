@@ -4,17 +4,6 @@ import { renderStructuredResult } from '../display/index.ts';
 
 const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   get_status_summary: 'Internal display variant selected from get_status --summary; covered by CLI golden output.',
-  shipping_accept: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_get: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_list: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_post: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_quote: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_track: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_cancel: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_return: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_deliver: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_pay_debt: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
-  shipping_profile: 'Curated shipping fixture and golden coverage is added in Task 5 of the implementation plan.',
   storage_carrier_load:
     'Internal display variant selected from storage deposit payload context; covered by renderResponse behavior tests.',
 };

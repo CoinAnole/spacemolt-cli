@@ -1,0 +1,9 @@
+
+=== Freight Delivered ===
+Contract: shipment-delivered-1
+Status: delivered
+Package: package-relief-1
+Route: earth_station -> nova_central
+Carrier payout: 14,500 cr
+Claim paid: 0 cr
+Debt created: 0 cr

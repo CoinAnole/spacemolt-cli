@@ -1,0 +1,10 @@
+
+=== Freight Returned ===
+Contract: shipment-returned-1
+Status: returned
+Package: package-relief-1
+Route: earth_station -> nova_central
+Carrier payout: 0 cr
+Shipper refund: 12,000 cr
+Debt created: 0 cr
+Terminal reason: Carrier surrendered freight at the origin station.

@@ -1,0 +1,25 @@
+
+=== Posted Freight Contract ===
+Contract: shipment-posted-1
+Status: posted
+Package: package-medical-1
+Route: earth_station -> nova_central
+Shipper: player:marlowe
+Recipient: faction:nova_relief
+Invited carrier: faction:swift_haulage
+Visibility: invited
+Service: priority
+Base reward: 12,500 cr
+Maximum speed bonus: 2,500 cr
+Service fee: 800 cr
+Reward escrow: 12,500 cr
+Speed bonus escrow: 2,500 cr
+Policy status: pending
+Insurable: yes
+Risk band: licensed
+Premium: 450 cr
+Covered value: 30,000 cr
+Reserved exposure: 33,000 cr
+Failure debt: 33,000 cr
+Posted: 2026-07-17T10:00:00Z
+Listing expires: 2026-07-18T10:00:00Z

@@ -1,0 +1,33 @@
+
+=== Freight Quote ===
+Package: package-medical-1
+Route: earth_station -> nova_central
+Shipper: player:marlowe
+Recipient: faction:nova_relief
+Invited carrier: faction:swift_haulage
+Service: priority
+Visibility: invited
+Route hops: 3
+Target: 20 ticks
+Deadline: 40 ticks
+Base reward: 12,500 cr
+Maximum speed bonus: 2,500 cr
+Service fee: 800 cr
+Premium: 450 cr
+Total cost: 16,250 cr
+Appraised value: 30,000 cr
+Covered value: 30,000 cr
+Insurance selected: yes
+Insurable: yes
+Risk band: licensed
+Required carrier tier: licensed
+Reserved exposure: 33,000 cr
+Failure debt: 33,000 cr
+Consequences: Opening the seal or missing the deadline forfeits payment and creates freight debt.
+
+=== Appraisal ===
+
+  Item             | Qty | Unit Value | Total Value | Insurable | Confidence / Basis           | Reason
+  -----------------+-----+------------+-------------+-----------+------------------------------+-------
+  medical_supplies | 20  | 1,200 cr   | 24,000 cr   | yes       | high / completed-fill VWAP   |       
+  food_rations     | 30  | 200 cr     | 6,000 cr    | yes       | medium / completed-fill VWAP |       

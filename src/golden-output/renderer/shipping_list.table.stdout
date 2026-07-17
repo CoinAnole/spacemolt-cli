@@ -1,0 +1,10 @@
+
+=== Freight Contracts ===
+page 1, 2 of 2
+
+=== Listings ===
+
+  ID                  | Status | Package           | Route                         | Service  | Reward    | Liability | Eligible | Reason                                                  
+  --------------------+--------+-------------------+-------------------------------+----------+-----------+-----------+----------+---------------------------------------------------------
+  shipment-eligible-1 | posted | package-relief-1  | earth_station -> nova_central | standard | 9,000 cr  | 500 cr    | yes      |                                                         
+  shipment-blocked-1  | posted | package-reactor-1 | earth_station -> nova_central | priority | 22,000 cr | 72,000 cr | no       | Single-package liability exceeds the licensed carrier...
