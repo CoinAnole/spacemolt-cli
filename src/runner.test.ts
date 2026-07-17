@@ -408,6 +408,51 @@ describe('runInvocation option isolation', () => {
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('(No local command matches)');
+
+      const invocation = await captureInvocation(['--plain', 'shipping_quote'], {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      });
+
+      expect(invocation.exitCode).toBe(1);
+      expect(invocation.stderr).toContain('Unknown command "shipping_quote"');
+      expect(invocation.stderr).not.toContain('Did you mean: shipping_quote');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('unknown command suggestions include commands added by an accepted cache', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-cache-suggestions-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      `${JSON.stringify({
+        fetchedAt: '2026-07-17T00:00:00.000Z',
+        gameserverVersion: 'v999.0.0',
+        routes: {
+          'POST /api/v2/runner_dynamic/invoke': {
+            summary: 'Cached-only command',
+            route: { tool: 'runner_dynamic', action: 'invoke', method: 'POST' },
+            cli: { command: 'runner_cached_dynamic' },
+          },
+        },
+      })}\n`,
+    );
+
+    try {
+      const result = await captureInvocation(['--plain', 'runner_cached_dynamc'], {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      });
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Unknown command "runner_cached_dynamc"');
+      expect(result.stderr).toContain('Did you mean: runner_cached_dynamic');
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

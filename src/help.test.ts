@@ -1125,4 +1125,14 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt help faction');
     expect(output).toContain('spacemolt commands --search faction');
   });
+
+  test('displayUnknownCommand uses supplied command groups instead of bundled groups', () => {
+    const capture = captureWriter();
+
+    displayUnknownCommand('faction', capture.writer, { plain: true }, { allCommands: {}, commandGroups: {} });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('"faction" is a help group.');
+    expect(output).not.toContain('"faction" is a command group.');
+  });
 });

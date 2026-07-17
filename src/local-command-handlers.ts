@@ -292,9 +292,14 @@ function createExplainHandler(
           printJsonError('unknown_command', `Unknown command: ${result.command}`, context?.writer);
           return 1;
         }
-        displayUnknownCommand(result.command, context?.writer, {
-          plain: context?.config?.plain ?? context?.output?.plain,
-        });
+        displayUnknownCommand(
+          result.command,
+          context?.writer,
+          {
+            plain: context?.config?.plain ?? context?.output?.plain,
+          },
+          helpSource,
+        );
         return 1;
       }
       showCommandExplanation(result.command, context?.writer, helpSource, localOutputOptions(options, context));
@@ -897,9 +902,14 @@ function createLocalHelpHandler(
           printJsonError('unknown_command', `Unknown command: ${result.target}`, context?.writer);
           return 1;
         }
-        displayUnknownCommand(result.target, context?.writer, {
-          plain: context?.config?.plain ?? context?.output?.plain,
-        });
+        displayUnknownCommand(
+          result.target,
+          context?.writer,
+          {
+            plain: context?.config?.plain ?? context?.output?.plain,
+          },
+          helpSource,
+        );
         return 1;
       }
       return 0;

@@ -12,7 +12,7 @@ import {
   getRuntimeConfig,
   resolveHandler,
 } from './command-handlers.ts';
-import { buildCommandRegistrySnapshot } from './command-registry.ts';
+import { buildCommandRegistrySnapshot, type CommandRegistrySnapshot } from './command-registry.ts';
 import { GENERATED_API_GAMESERVER_VERSION, GENERATED_API_ROUTES } from './generated/api-commands.ts';
 import type { GlobalOptionParseError } from './global-options.ts';
 import { applyGlobalOptions, parseGlobalOptions } from './global-options.ts';
@@ -273,11 +273,11 @@ async function runInvocationWithContext(
   const activeClient = client ?? deps.createClient(config);
 
   if (invocation.options.watch) {
-    if (!handler) return renderUnknownCommand(invocation, resolvedContext);
+    if (!handler) return renderUnknownCommand(invocation, resolvedContext, commandRegistry);
     return runWatchLoop(invocation, handler, activeClient, resolvedContext, deps);
   }
 
-  if (!handler) return renderUnknownCommand(invocation, resolvedContext);
+  if (!handler) return renderUnknownCommand(invocation, resolvedContext, commandRegistry);
 
   try {
     const parsed = handler.parse(invocation.args, invocation.options, resolvedContext);
@@ -338,12 +338,21 @@ async function runWatchLoop(
   return 0;
 }
 
-function renderUnknownCommand(invocation: Invocation, context: CliRuntimeContext): number {
+function renderUnknownCommand(
+  invocation: Invocation,
+  context: CliRuntimeContext,
+  commandRegistry: CommandRegistrySnapshot,
+): number {
   const commandName = invocation.args[0] || 'help';
   if (wantsMachineReadableErrorOutput(invocation.options)) {
     printJsonError('unknown_command', `Unknown command: ${commandName}`, context.writer);
   } else {
-    displayUnknownCommand(commandName, context.writer, { plain: context.config?.plain ?? context.output?.plain });
+    displayUnknownCommand(
+      commandName,
+      context.writer,
+      { plain: context.config?.plain ?? context.output?.plain },
+      commandRegistry,
+    );
   }
   return 1;
 }

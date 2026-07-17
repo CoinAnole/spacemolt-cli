@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CommandParseError } from './args';
+import type { CommandRegistrySnapshot } from './command-registry';
 import { displayCommandParseErrors, preparePayload, validationErrorFromParseErrors } from './payload';
 import type { GlobalOptions } from './types';
 
@@ -44,6 +45,23 @@ describe('payload preparation', () => {
         message: 'Unknown command: does_not_exist',
       },
     });
+  });
+
+  test('unknown command text suggestions use the supplied registry', () => {
+    const capture = captureWriter();
+    const registry = {
+      commands: {
+        cached_action: {
+          description: 'Cache-added action',
+          route: { tool: 'cached', action: 'action' },
+        },
+      },
+    } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+
+    const result = preparePayload('cached_acton', {}, baseOptions, undefined, capture.writer, registry);
+
+    expect(result).toEqual({ type: 'exit', exitCode: 1 });
+    expect(capture.stderr.join('\n')).toContain('Did you mean: cached_action');
   });
 
   test('help=true exits after rendering command help', () => {

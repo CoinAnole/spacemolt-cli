@@ -594,12 +594,17 @@ function printNextSteps(command: string, missingArg?: string, writer?: CliWriter
   );
 }
 
-export function displayUnknownCommand(command: string, writer?: CliWriter, options?: { plain?: boolean }): void {
+export function displayUnknownCommand(
+  command: string,
+  writer?: CliWriter,
+  options?: { plain?: boolean },
+  commands?: CommandHelpSource,
+): void {
   const writeErr = err(writer);
   const colors = colorsForPlain(Boolean(options?.plain));
   writeErr(`${colors.red}Error:${colors.reset} Unknown command "${command}"`);
 
-  const executableGroup = commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, command);
+  const executableGroup = commandGroup(commandHelpGroups(commands), command);
   if (executableGroup) {
     writeErr(`"${command}" is a command group. Try: spacemolt help ${executableGroup.name}`);
     writeErr(`Search commands: spacemolt commands --search ${command}`);
@@ -613,7 +618,7 @@ export function displayUnknownCommand(command: string, writer?: CliWriter, optio
     return;
   }
 
-  const suggestions = suggestCommands(command);
+  const suggestions = suggestCommands(command, 3, commands);
   if (suggestions.length > 0) writeErr(`Did you mean: ${suggestions.join(', ')}`);
   writeErr(`\nRun "spacemolt --help" for the local command overview.`);
   writeErr(`Run "spacemolt commands --search ${command}" to search local command metadata.`);

@@ -59,7 +59,7 @@ export function preparePayload(
       printJsonError('unknown_command', `Unknown command: ${displayCommand}`, writer);
       return { type: 'exit', exitCode: 1 };
     }
-    displayUnknownCommand(displayCommand, writer, { plain: options.plain });
+    displayUnknownCommand(displayCommand, writer, { plain: options.plain }, displayRegistry.commands);
     return { type: 'exit', exitCode: 1 };
   }
 
