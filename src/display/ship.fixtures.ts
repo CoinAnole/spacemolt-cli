@@ -230,6 +230,66 @@ export const wrecksFixture = {
   ],
 };
 
+// Nested live-shaped SC (no schemaTarget): matches unit formatter envelopes and live V2 deltas.
+// scrap details.materials uses OpenAPI shape { item, name, quantity }; outer cargo keeps item_id/item_name.
+export const towWreckFixture = {
+  details: {
+    action: 'tow_wreck',
+    wreck_id: 'wreck-1',
+    message: 'Tow line attached.',
+    insured: false,
+    cargo_count: 2,
+    module_count: 1,
+    salvage_value: 1250,
+    ship_class: 'skiff',
+    speed_penalty: '25%',
+  },
+  ship: { fuel: 92, max_fuel: 100 },
+  location: {
+    system_id: 'sol',
+    system_name: 'Sol',
+    poi_id: 'sol_belt',
+    poi_name: 'Belt',
+  },
+};
+
+export const releaseTowFixture = {
+  details: {
+    action: 'release_tow',
+    wreck_id: 'wreck-1',
+    message: 'Tow released.',
+  },
+  ship: { fuel: 92, max_fuel: 100 },
+};
+
+export const scrapWreckFixture = {
+  details: {
+    action: 'scrap_wreck',
+    wreck_id: 'wreck-1',
+    message: 'Scrapped wreck.',
+    materials: [{ item: 'scrap_metal', name: 'Scrap Metal', quantity: 4 }],
+    total_value: 1250,
+    stored_at: 'sol_yard',
+    ship_class: 'skiff',
+  },
+  cargo: [{ item_id: 'scrap_metal', item_name: 'Scrap Metal', quantity: 4 }],
+  skills: { salvaging: { level: 2, xp: 140 } },
+};
+
+export const sellWreckFixture = {
+  details: {
+    action: 'sell_wreck',
+    wreck_id: 'wreck-1',
+    message: 'Sold wreck.',
+    new_balance: 2400,
+    total_payout: 500,
+    salvage_value: 400,
+    cargo_value: 100,
+    ship_class: 'skiff',
+  },
+  player: { credits: 2400 },
+};
+
 export const reloadFixture = {
   details: {
     action: 'reload',
@@ -288,6 +348,10 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
+  tow_wreck: { command: 'tow_wreck', fixture: towWreckFixture },
+  release_tow: { command: 'release_tow', fixture: releaseTowFixture },
+  scrap_wreck: { command: 'scrap_wreck', fixture: scrapWreckFixture },
+  sell_wreck: { command: 'sell_wreck', fixture: sellWreckFixture },
   refuel: { command: 'refuel', fixture: refuelFixture, schemaTarget: 'details' },
   refuel_station: { command: 'refuel', fixture: stationRefuelFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },

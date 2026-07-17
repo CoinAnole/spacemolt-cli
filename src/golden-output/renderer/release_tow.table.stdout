@@ -1,0 +1,7 @@
+
+=== Release Tow ===
+Action: release_tow
+Wreck Id: wreck-1
+Message: Tow released.
+Fuel Now: 92
+Fuel Max: 100
