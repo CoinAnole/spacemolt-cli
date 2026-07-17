@@ -32,6 +32,11 @@ function output(command: string, fixture: Record<string, unknown>): string {
   return renderStructuredResult(command, structuredClone(fixture), options, context).stdout.join('\n');
 }
 
+function rawFallbackJson(stdout: string): unknown {
+  expect(stdout).toContain('=== Response ===');
+  return JSON.parse(stdout.slice(stdout.indexOf('{')));
+}
+
 const contract = {
   id: 'shipment-1',
   package_id: 'package-1',
@@ -182,6 +187,43 @@ test('keeps mutation envelopes unchanged in JSON output', () => {
 test('declines malformed required shipping roots and preserves the raw fallback', () => {
   expect(output('shipping_quote', { action: 'quote', quote: 'invalid' })).toContain('=== Response ===');
   expect(output('shipping_get', { action: 'get', contract: [] })).toContain('=== Response ===');
+  expect(rawFallbackJson(output('shipping_list', { action: 'list', shipments: 'invalid' }))).toEqual({
+    action: 'list',
+    shipments: 'invalid',
+  });
+  expect(
+    rawFallbackJson(output('shipping_list', { action: 'list', shipments: [{ contract: 'invalid', eligible: true }] })),
+  ).toEqual({
+    action: 'list',
+    shipments: [{ contract: 'invalid', eligible: true }],
+  });
+  expect(rawFallbackJson(output('shipping_track', { action: 'track', contract: 'invalid', events: [] }))).toEqual({
+    action: 'track',
+    contract: 'invalid',
+    events: [],
+  });
+  expect(rawFallbackJson(output('shipping_track', { action: 'track', contract, events: ['invalid'] }))).toEqual({
+    action: 'track',
+    contract,
+    events: ['invalid'],
+  });
+  expect(
+    rawFallbackJson(
+      output('shipping_profile', {
+        action: 'profile',
+        profile: carrierProfile,
+        capacity: carrierCapacity,
+        progression: carrierProgression,
+        debts: ['invalid'],
+      }),
+    ),
+  ).toEqual({
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: ['invalid'],
+  });
 });
 
 test('preserves the complete mutation envelope when a shipping formatter declines', () => {
@@ -384,6 +426,59 @@ test('renders debt payment changes separately from remaining debts', () => {
   expect(stdout).toContain('=== Updated Debts ===');
   expect(stdout).toContain('=== Outstanding Debts ===');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('preserves complete malformed shipping mutation envelopes in the raw fallback', () => {
+  const cases: Array<[string, Record<string, unknown>]> = [
+    [
+      'shipping_pay_debt',
+      {
+        details: {
+          action: 'pay_debt',
+          amount_paid: 500,
+          profile: carrierProfile,
+          capacity: carrierCapacity,
+          progression: carrierProgression,
+          updated_debts: ['invalid'],
+          outstanding_debts: [],
+        },
+        player: { credits: 5000 },
+        ship: { id: 'ship-1' },
+        cargo: [{ item_id: 'package-1', quantity: 1 }],
+      },
+    ],
+    [
+      'shipping_deliver',
+      {
+        details: { action: 'deliver', contract: 'invalid', carrier_payout: 15000 },
+        player: { credits: 10 },
+        ship: { id: 'ship-1' },
+        cargo: [{ item_id: 'package-1', quantity: 1 }],
+      },
+    ],
+    [
+      'shipping_return',
+      {
+        details: { action: 'return', contract: 'invalid', shipper_refund: 12500 },
+        player: { credits: 10 },
+        ship: { id: 'ship-1' },
+        cargo: [{ item_id: 'package-1', quantity: 1 }],
+      },
+    ],
+    [
+      'shipping_cancel',
+      {
+        details: { action: 'cancel', contract: 'invalid', shipper_refund: 0 },
+        player: { credits: 10 },
+        ship: { id: 'ship-1' },
+        cargo: [{ item_id: 'package-1', quantity: 1 }],
+      },
+    ],
+  ];
+
+  for (const [command, fixture] of cases) {
+    expect(rawFallbackJson(output(command, fixture))).toEqual(fixture);
+  }
 });
 
 test('renders action-specific settlements and keeps zero amounts visible', () => {

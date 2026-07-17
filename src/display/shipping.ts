@@ -37,8 +37,13 @@ function formatRoute(origin: unknown, destination: unknown): string | undefined 
   return from && to ? `${from} -> ${to}` : undefined;
 }
 
-function recordArray(value: unknown): Array<Record<string, unknown>> | undefined {
+function optionalRecordArray(value: unknown): Array<Record<string, unknown>> | undefined {
   return Array.isArray(value) ? value.filter(isRecord) : undefined;
+}
+
+function requiredRecordArray(value: unknown): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.every(isRecord) ? value : undefined;
 }
 
 function emitHeading(title: string): void {
@@ -82,7 +87,7 @@ function renderQuote(result: Record<string, unknown>): boolean {
   emitField('Uninsurable reason', quote.uninsurable_reason);
   emitField('Consequences', quote.consequences);
 
-  const appraisal = recordArray(quote.appraisal_lines);
+  const appraisal = optionalRecordArray(quote.appraisal_lines);
   if (!appraisal) return true;
   if (appraisal.length === 0) {
     emitLine('No appraisal lines.');
@@ -167,8 +172,9 @@ function contractTitle(command: string | undefined): string {
 }
 
 function renderShippingList(result: Record<string, unknown>): boolean {
-  const shipments = recordArray(result.shipments);
+  const shipments = requiredRecordArray(result.shipments);
   if (!shipments) return false;
+  if (!shipments.every((listing) => isRecord(listing.contract))) return false;
   emitHeading('Freight Contracts');
   const page = text(result.page) ?? '?';
   const total = text(result.total) ?? shipments.length.toLocaleString();
@@ -222,7 +228,7 @@ function formatLocation(event: Record<string, unknown>): string | undefined {
 }
 
 function renderShippingTrack(result: Record<string, unknown>): boolean {
-  const events = recordArray(result.events);
+  const events = requiredRecordArray(result.events);
   if (!isRecord(result.contract) || !events) return false;
   renderContract(result.contract, 'Freight Tracking', true);
   if (events.length === 0) {
@@ -359,7 +365,7 @@ function renderDebts(title: string, debts: Array<Record<string, unknown>>, empty
 }
 
 function renderShippingProfile(result: Record<string, unknown>): boolean {
-  const debts = recordArray(result.debts);
+  const debts = requiredRecordArray(result.debts);
   if (!isRecord(result.profile) || !isRecord(result.capacity) || !isRecord(result.progression) || !debts) {
     return false;
   }
@@ -370,8 +376,8 @@ function renderShippingProfile(result: Record<string, unknown>): boolean {
 }
 
 function renderDebtPayment(result: Record<string, unknown>): boolean {
-  const updated = recordArray(result.updated_debts);
-  const outstanding = recordArray(result.outstanding_debts);
+  const updated = requiredRecordArray(result.updated_debts);
+  const outstanding = requiredRecordArray(result.outstanding_debts);
   if (
     !isRecord(result.profile) ||
     !isRecord(result.capacity) ||
@@ -424,11 +430,24 @@ export const shippingFormatters = [
       suppressShapeFallbackOnDecline: true,
     },
   ),
-  formatter((result) => renderShippingList(result), { commands: ['shipping_list'] }),
-  formatter((result) => renderShippingTrack(result), { commands: ['shipping_track'] }),
-  formatter((result) => renderShippingProfile(result), { commands: ['shipping_profile'] }),
-  formatter((result) => renderDebtPayment(result), { commands: ['shipping_pay_debt'] }),
+  formatter((result) => renderShippingList(result), {
+    commands: ['shipping_list'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+  formatter((result) => renderShippingTrack(result), {
+    commands: ['shipping_track'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+  formatter((result) => renderShippingProfile(result), {
+    commands: ['shipping_profile'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+  formatter((result) => renderDebtPayment(result), {
+    commands: ['shipping_pay_debt'],
+    suppressShapeFallbackOnDecline: true,
+  }),
   formatter((result, command) => renderSettlement(result, command), {
     commands: ['shipping_deliver', 'shipping_return', 'shipping_cancel'],
+    suppressShapeFallbackOnDecline: true,
   }),
 ];
