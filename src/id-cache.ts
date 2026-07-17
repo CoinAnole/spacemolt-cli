@@ -123,6 +123,7 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   faction_dismantle: { facility: ['facility_id'] },
   facility_job_add: { facility: ['facility_id'], package: ['package_id'] },
   facility_job_list: { facility: ['facility_id'] },
+  facility_job_reorder: { facility: ['facility_id'] },
   facility_set_output_price: { facility: ['facility_id'] },
   facility_set_access: { facility: ['facility_id'] },
   facility_set_description: { facility: ['facility_id'] },

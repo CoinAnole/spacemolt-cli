@@ -1012,8 +1012,9 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       job_ids: ['job-1', 'job-2'],
     });
 
-    const reorder = parseInternalOk(['facility_job_reorder', 'job-1', '3']);
+    const reorder = parseInternalOk(['facility_job_reorder', 'facility-1', 'job-1', '3']);
     expect(convertInternalPayloadTypes(reorder.payload, 'facility_job_reorder')).toEqual({
+      facility_id: 'facility-1',
       job_id: 'job-1',
       position: 3,
     });

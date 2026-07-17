@@ -554,14 +554,14 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   facility_job_reorder: {
-    usage: '<job_id> <position>',
+    usage: '<facility_id> <job_id> <position>',
     description: 'Move a queued facility job to a new 1-based position.',
-    example: 'spacemolt facility_job_reorder job-1 1',
+    example: 'spacemolt facility_job_reorder facility-1 job-1 1',
     discoverWith: ['facility_job_list'],
     seeAlso: ['facility_job_list', 'facility_job_add'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/job_reorder',
-    positionals: ['job_id', 'position'],
+    positionals: ['facility_id', 'job_id', 'position'],
   },
   facility_set_output_price: {
     usage: '<facility_id> <price>',

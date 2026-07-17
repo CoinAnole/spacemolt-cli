@@ -810,7 +810,7 @@ describe('command metadata', () => {
         group: 'facility',
         actionName: 'job_reorder',
         action: 'job_reorder',
-        args: ['job_id', 'position'],
+        args: ['facility_id', 'job_id', 'position'],
         help: 'Move a queued facility job',
       },
       set_output_price: {
