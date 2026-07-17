@@ -633,6 +633,37 @@ describe('shell completion generation', () => {
     expect(stdout.join('')).toBe('');
   });
 
+  test('hidden __complete exposes bundled generated commands without a cache', async () => {
+    const home = tempDir();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', 'shipping_q'], undefined, {
+      env: {
+        HOME: home,
+        XDG_CONFIG_HOME: path.join(home, '.config'),
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      },
+      writer: {
+        out(message = '') {
+          stdout.push(message);
+        },
+        err(message = '') {
+          stderr.push(message);
+        },
+        writeOut(chunk) {
+          stdout.push(chunk);
+        },
+      },
+      clock: { now: () => new Date('2026-07-17T00:00:00.000Z') },
+      sleep: async () => {},
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(stdout.join('')).toContain('shipping_quote\t');
+  });
+
   test('hidden __complete uses the profile typed in completion words before the command', async () => {
     const home = tempDir();
     const env = {

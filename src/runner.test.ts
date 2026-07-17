@@ -160,6 +160,104 @@ describe('runInvocation option isolation', () => {
     ]);
   });
 
+  test('dispatches bundled generated shipping commands without an OpenAPI cache', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-bundled-dynamic-'));
+    const configHome = path.join(tempDir, 'config');
+    const calls: Array<{ command: string; route: unknown; payload: Record<string, unknown> }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string, config: { route: unknown }, payload: Record<string, unknown>) {
+        calls.push({ command, route: config.route, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    try {
+      const exitCode = await runInvocation(
+        ['--json', 'shipping_quote', 'package_id=package-1', 'destination_base_id=earth-station', 'insured=true'],
+        client,
+        fakeContext(stdout, stderr, {
+          HOME: tempDir,
+          XDG_CONFIG_HOME: configHome,
+          SPACEMOLT_PROFILE: 'pilot',
+          SPACEMOLT_NO_UPDATE_CHECK: 'true',
+        }),
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(calls).toEqual([
+        {
+          command: 'shipping_quote',
+          route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+          payload: {
+            package_id: 'package-1',
+            destination_base_id: 'earth-station',
+            insured: true,
+          },
+        },
+      ]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('clean-profile local help and search discover bundled generated commands', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-bundled-help-'));
+    const env = {
+      HOME: tempDir,
+      XDG_CONFIG_HOME: path.join(tempDir, 'config'),
+      SPACEMOLT_NO_UPDATE_CHECK: 'true',
+    };
+
+    try {
+      const help = await captureInvocation(['--plain', 'help', 'shipping_quote'], env);
+      const search = await captureInvocation(['--plain', 'commands', '--search', 'shipping quote'], env);
+
+      expect(help.exitCode).toBe(0);
+      expect(help.stderr).toBe('');
+      expect(help.stdout).toContain('spacemolt shipping_quote');
+      expect(search.exitCode).toBe(0);
+      expect(search.stdout).toContain('shipping_quote');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('clean-profile dry run previews a bundled generated route without sending a request', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-bundled-preview-'));
+    const env = {
+      HOME: tempDir,
+      XDG_CONFIG_HOME: path.join(tempDir, 'config'),
+      SPACEMOLT_NO_UPDATE_CHECK: 'true',
+    };
+
+    try {
+      const result = await captureInvocation(
+        ['--json', '--dry-run', 'shipping_quote', 'package_id=package-1', 'destination_base_id=earth-station'],
+        env,
+      );
+      const body = JSON.parse(result.stdout);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(body.structuredContent).toMatchObject({
+        command: 'shipping_quote',
+        method: 'POST',
+        payload: {
+          package_id: 'package-1',
+          destination_base_id: 'earth-station',
+        },
+        server_request_sent: false,
+      });
+      expect(body.structuredContent.url).toContain('/api/v2/spacemolt_shipping/quote');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('loads cached OpenAPI routes when resolving dynamic commands', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-openapi-cache-'));
     const configHome = path.join(tempDir, 'config');
@@ -226,6 +324,93 @@ describe('runInvocation option isolation', () => {
         payload: { target_id: 'ship_123' },
       },
     ]);
+  });
+
+  test('an accepted cache is authoritative for generated visibility and schemas', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-authoritative-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      `${JSON.stringify({
+        fetchedAt: '2026-07-17T00:00:00.000Z',
+        gameserverVersion: 'v999.0.0',
+        routes: {
+          'POST /api/v2/spacemolt_shipping/quote': {
+            operationId: 'spacemolt_shipping_quote',
+            summary: 'Cached shipping quote',
+            route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+            required: ['cache_only'],
+            schema: { cache_only: { type: 'string' } },
+          },
+        },
+      })}\n`,
+    );
+    const calls: Array<Record<string, unknown>> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(_command: string, _config: unknown, payload: Record<string, unknown>) {
+        calls.push(payload);
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    try {
+      const exitCode = await runInvocation(
+        ['--json', 'shipping_quote', 'cache_only=accepted'],
+        client,
+        fakeContext(stdout, stderr, {
+          HOME: tempDir,
+          XDG_CONFIG_HOME: configHome,
+          SPACEMOLT_PROFILE: 'pilot',
+          SPACEMOLT_NO_UPDATE_CHECK: 'true',
+        }),
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(calls).toEqual([{ cache_only: 'accepted' }]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('an accepted cache can remove a bundled generated route from visibility', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-cache-removal-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      `${JSON.stringify({
+        fetchedAt: '2026-07-17T00:00:00.000Z',
+        gameserverVersion: 'v999.0.0',
+        routes: {
+          'POST /api/v2/runner_dynamic/invoke': {
+            summary: 'Cached-only command',
+            route: { tool: 'runner_dynamic', action: 'invoke', method: 'POST' },
+            cli: { command: 'runner_cached_dynamic' },
+          },
+        },
+      })}\n`,
+    );
+
+    try {
+      const result = await captureInvocation(['--plain', 'commands', '--search', 'shipping_quote'], {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain('(No local command matches)');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test('stale cached OpenAPI routes do not override bundled curated command schemas', async () => {
@@ -339,6 +524,55 @@ describe('runInvocation option isolation', () => {
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
     expect(stdout.join('\n')).not.toContain('ship_claim_commission');
+
+    const bundledStdout: string[] = [];
+    const bundledStderr: string[] = [];
+    const bundledExitCode = await runInvocation(
+      ['--plain', 'commands', '--search', 'shipping_quote'],
+      undefined,
+      fakeContext(bundledStdout, bundledStderr, {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      }),
+    );
+
+    expect(bundledExitCode).toBe(0);
+    expect(bundledStderr).toEqual([]);
+    expect(bundledStdout.join('\n')).toContain('shipping_quote');
+  });
+
+  test('an invalid cache falls back to bundled generated routes', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-invalid-cache-'));
+    const configHome = path.join(tempDir, 'config');
+    const cacheDir = path.join(configHome, 'spacemolt-cli');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, 'openapi-cache.json'),
+      JSON.stringify({
+        fetchedAt: '2026-07-17T00:00:00.000Z',
+        routes: {
+          'POST /api/v2/spacemolt_ship/claim_commission': {
+            route: { tool: 'spacemolt_ship', action: 'claim_commission', method: 'POST' },
+          },
+        },
+      }),
+    );
+
+    try {
+      const result = await captureInvocation(['--plain', 'help', 'shipping_quote'], {
+        HOME: tempDir,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain('spacemolt shipping_quote');
+      expect(result.stdout).not.toContain('claim_commission');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test('nested command group invocation executes original API route', async () => {
