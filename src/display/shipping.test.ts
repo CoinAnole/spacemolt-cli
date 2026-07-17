@@ -196,3 +196,83 @@ test('preserves the complete mutation envelope when a shipping formatter decline
   expect(stdout).toContain('=== Response ===');
   expect(JSON.parse(stdout.slice(stdout.indexOf('{')))).toEqual(fixture);
 });
+
+test('renders listing eligibility beside reasons and preserves zero and false values', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    page: 2,
+    per_page: 20,
+    total: 21,
+    shipments: [
+      { contract: { ...contract, id: 'eligible-1', base_reward: 0 }, eligible: true },
+      {
+        contract: { ...contract, id: 'blocked-1', failure_debt: 500 },
+        eligible: false,
+        reason: 'Outstanding freight debt blocks acceptance.',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Freight Contracts ===');
+  expect(stdout).toContain('page 2, 2 of 21');
+  expect(stdout).toMatch(/Eligible\s+\|\s+Reason/);
+  expect(stdout).toContain('0 cr');
+  expect(stdout).toContain('no');
+  expect(stdout).toContain('Outstanding freight debt blocks acceptance.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders an explicit empty listing message with pagination', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    page: 1,
+    per_page: 20,
+    total: 0,
+    shipments: [],
+  });
+  expect(stdout).toContain('page 1, 0 of 0');
+  expect(stdout).toContain('No visible freight contracts.');
+});
+
+test('renders tracking events in server order with returned location components only', () => {
+  const stdout = output('shipping_track', {
+    action: 'track',
+    contract,
+    events: [
+      {
+        id: 'first-event',
+        shipment_id: 'shipment-1',
+        package_id: 'package-1',
+        class: 'ship',
+        fingerprint: 'fingerprint-one',
+        observed_at: '2026-07-17T10:10:00Z',
+        observed_tick: 1201,
+        system_id: 'sol',
+        poi_id: 'earth_orbit',
+        custodian: { kind: 'player', id: 'carrier-1' },
+        reference_id: 'ship-1',
+      },
+      {
+        id: 'second-event',
+        shipment_id: 'shipment-1',
+        package_id: 'package-1',
+        class: 'faction_storage',
+        fingerprint: 'fingerprint-two',
+        observed_at: '2026-07-17T10:20:00Z',
+        observed_tick: 1202,
+        base_id: 'nova_central',
+        custodian: { kind: 'faction', id: 'recipient-1' },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Freight Tracking ===');
+  expect(stdout).toContain('sol / earth_orbit');
+  expect(stdout).toContain('nova_central');
+  expect(stdout.indexOf('fingerprint-one')).toBeLessThan(stdout.indexOf('fingerprint-two'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders an explicit empty tracking message', () => {
+  expect(output('shipping_track', { action: 'track', contract, events: [] })).toContain('No tracking events.');
+});

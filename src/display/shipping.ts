@@ -166,6 +166,96 @@ function contractTitle(command: string | undefined): string {
   return 'Freight Contract';
 }
 
+function renderShippingList(result: Record<string, unknown>): boolean {
+  const shipments = recordArray(result.shipments);
+  if (!shipments) return false;
+  emitHeading('Freight Contracts');
+  const page = text(result.page) ?? '?';
+  const total = text(result.total) ?? shipments.length.toLocaleString();
+  emitLine(`${c.dim}page ${page}, ${shipments.length.toLocaleString()} of ${total}${c.reset}`);
+  if (shipments.length === 0) {
+    emitLine('No visible freight contracts.');
+    return true;
+  }
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (const listing of shipments) {
+    if (!isRecord(listing.contract)) continue;
+    const shipment = listing.contract;
+    rows.push({
+      id: text(shipment.id),
+      status: text(shipment.status),
+      package: text(shipment.package_id),
+      route: formatRoute(shipment.origin_base_id, shipment.destination_base_id),
+      service: text(shipment.service_level),
+      reward: formatCredits(shipment.base_reward),
+      liability: formatCredits(shipment.failure_debt),
+      eligible: formatBoolean(listing.eligible),
+      reason: text(listing.reason),
+    });
+  }
+
+  printCompactTable(
+    'Listings',
+    rows,
+    [
+      ['ID', ['id']],
+      ['Status', ['status']],
+      ['Package', ['package']],
+      ['Route', ['route']],
+      ['Service', ['service']],
+      ['Reward', ['reward']],
+      ['Liability', ['liability']],
+      ['Eligible', ['eligible']],
+      ['Reason', ['reason']],
+    ],
+    { maxCellWidth: 56 },
+  );
+  return true;
+}
+
+function formatLocation(event: Record<string, unknown>): string | undefined {
+  const parts = [text(event.system_id), text(event.poi_id), text(event.base_id)].filter(
+    (value): value is string => value !== undefined,
+  );
+  return parts.length ? parts.join(' / ') : undefined;
+}
+
+function renderShippingTrack(result: Record<string, unknown>): boolean {
+  const events = recordArray(result.events);
+  if (!isRecord(result.contract) || !events) return false;
+  renderContract(result.contract, 'Freight Tracking', true);
+  if (events.length === 0) {
+    emitLine('No tracking events.');
+    return true;
+  }
+
+  const rows = events.map((event) => ({
+    observed: text(event.observed_at),
+    tick: text(event.observed_tick),
+    class: text(event.class),
+    location: formatLocation(event),
+    custodian: formatActor(event.custodian),
+    reference: text(event.reference_id),
+    fingerprint: text(event.fingerprint),
+  }));
+  printCompactTable(
+    'Tracking Events',
+    rows,
+    [
+      ['Observed', ['observed']],
+      ['Tick', ['tick']],
+      ['Class', ['class']],
+      ['Location', ['location']],
+      ['Custodian', ['custodian']],
+      ['Reference', ['reference']],
+      ['Fingerprint', ['fingerprint']],
+    ],
+    { maxCellWidth: 56 },
+  );
+  return true;
+}
+
 export const shippingFormatters = [
   formatter((result) => renderQuote(result), {
     commands: ['shipping_quote'],
@@ -182,4 +272,6 @@ export const shippingFormatters = [
       suppressShapeFallbackOnDecline: true,
     },
   ),
+  formatter((result) => renderShippingList(result), { commands: ['shipping_list'] }),
+  formatter((result) => renderShippingTrack(result), { commands: ['shipping_track'] }),
 ];
