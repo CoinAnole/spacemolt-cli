@@ -438,17 +438,20 @@ function displayStructuredResultInternal(
       emitLine(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
   }
 
+  const scopedFormatters = commandScopedFormatters(resultFormatters, command);
   const commandFormatterInputs = detailsViewModel ? [detailsViewModel, viewModel] : [viewModel];
   for (const input of commandFormatterInputs) {
-    for (const formatter of commandScopedFormatters(resultFormatters, command)) {
+    for (const formatter of scopedFormatters) {
       if (formatter(input, command, options)) return true;
     }
   }
 
-  const fallbackFormatterInputs = detailsViewModel ? [detailsViewModel] : [viewModel];
-  for (const input of fallbackFormatterInputs) {
-    for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
-      if (formatter(input, command, options)) return true;
+  if (!scopedFormatters.some((formatter) => formatter.suppressShapeFallbackOnDecline)) {
+    const fallbackFormatterInputs = detailsViewModel ? [detailsViewModel] : [viewModel];
+    for (const input of fallbackFormatterInputs) {
+      for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
+        if (formatter(input, command, options)) return true;
+      }
     }
   }
 

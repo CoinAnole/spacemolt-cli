@@ -52,11 +52,6 @@ function emitField(label: string, value: unknown, format: ValueFormatter = text)
   return true;
 }
 
-function emitRawResponse(result: Record<string, unknown>): void {
-  emitHeading('Response');
-  emitLine(JSON.stringify(result, null, 2));
-}
-
 function renderQuote(result: Record<string, unknown>): boolean {
   if (!isRecord(result.quote)) return false;
   const quote = result.quote;
@@ -172,23 +167,19 @@ function contractTitle(command: string | undefined): string {
 }
 
 export const shippingFormatters = [
-  formatter(
-    (result) => {
-      if (renderQuote(result)) return true;
-      emitRawResponse(result);
-      return true;
-    },
-    { commands: ['shipping_quote'] },
-  ),
+  formatter((result) => renderQuote(result), {
+    commands: ['shipping_quote'],
+    suppressShapeFallbackOnDecline: true,
+  }),
   formatter(
     (result, command) => {
-      if (!isRecord(result.contract)) {
-        emitRawResponse(result);
-        return true;
-      }
+      if (!isRecord(result.contract)) return false;
       renderContract(result.contract, contractTitle(command));
       return true;
     },
-    { commands: ['shipping_post', 'shipping_get', 'shipping_accept'] },
+    {
+      commands: ['shipping_post', 'shipping_get', 'shipping_accept'],
+      suppressShapeFallbackOnDecline: true,
+    },
   ),
 ];

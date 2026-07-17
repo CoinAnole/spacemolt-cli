@@ -183,3 +183,16 @@ test('declines malformed required shipping roots and preserves the raw fallback'
   expect(output('shipping_quote', { action: 'quote', quote: 'invalid' })).toContain('=== Response ===');
   expect(output('shipping_get', { action: 'get', contract: [] })).toContain('=== Response ===');
 });
+
+test('preserves the complete mutation envelope when a shipping formatter declines', () => {
+  const fixture = {
+    details: { action: 'post', contract: 'invalid' },
+    player: { credits: 10 },
+    ship: { id: 'ship-1' },
+    cargo: [{ item_id: 'package-1', quantity: 1 }],
+  };
+  const stdout = output('shipping_post', fixture);
+
+  expect(stdout).toContain('=== Response ===');
+  expect(JSON.parse(stdout.slice(stdout.indexOf('{')))).toEqual(fixture);
+});

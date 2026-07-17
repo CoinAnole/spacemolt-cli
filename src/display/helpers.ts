@@ -11,11 +11,13 @@ export type ResultFormatter = ((
   hintKeys?: string[];
   commands?: readonly string[];
   shapeFallback?: boolean;
+  suppressShapeFallbackOnDecline?: boolean;
 };
 
 export interface ResultFormatterOptions {
   commands?: readonly string[];
   shapeFallback?: boolean;
+  suppressShapeFallbackOnDecline?: boolean;
 }
 
 export function formatter(
@@ -25,6 +27,7 @@ export function formatter(
   const resultFormatter = format as ResultFormatter;
   resultFormatter.commands = options.commands;
   resultFormatter.shapeFallback = options.shapeFallback ?? false;
+  resultFormatter.suppressShapeFallbackOnDecline = options.suppressShapeFallbackOnDecline ?? false;
   return resultFormatter;
 }
 
