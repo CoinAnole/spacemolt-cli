@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CURATED_COMMAND_DESCRIPTIONS } from '../command-descriptions.ts';
-import { COMMAND_OVERRIDES, type CommandOverride } from '../commands.ts';
+import { buildCuratedCommands, COMMAND_OVERRIDES, type CommandOverride } from '../commands.ts';
 import { GENERATED_API_ROUTES } from '../generated/api-commands.ts';
 import type { GeneratedApiRoute } from '../openapi-metadata.ts';
 import { compareCuratedCommandsToGenerated, formatCuratedCommandComparisonReport } from './curated-command-compare.ts';
@@ -110,6 +110,42 @@ describe('curated command vs generated command comparison', () => {
     expect(report.commands[0]?.differences.map((d) => d.field)).toEqual(
       expect.arrayContaining(['schema.dry_run.type', 'schema.priority']),
     );
+  });
+
+  test('schema extensions preserve generated positional metadata', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        schemaExtensions: {
+          id: { description: 'Curated recipe ID description' },
+          quantity: { description: 'Curated quantity description' },
+        },
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', description: 'Generated recipe ID description', positionalIndex: 0 },
+          quantity: { type: 'integer', description: 'Generated quantity description', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const commands = buildCuratedCommands(overrides, generatedRoutes);
+
+    expect(commands.craft?.schema?.id).toEqual({
+      type: 'string',
+      description: 'Curated recipe ID description',
+      positionalIndex: 0,
+    });
+    expect(commands.craft?.schema?.quantity).toEqual({
+      type: 'integer',
+      description: 'Curated quantity description',
+      positionalIndex: 1,
+    });
   });
 
   test('reports missing generated route metadata', () => {
@@ -281,6 +317,7 @@ describe('curated command vs generated command comparison', () => {
     const overrides: Record<string, CommandOverride> = {
       shipyard_repair: {
         apiRoute: 'POST /api/v2/spacemolt_shipyard/repair',
+        positionals: ['dry_run', 'ship_id'],
         schemaExtensions: {
           ship_id: { type: 'integer', positionalIndex: 2 },
           dry_run: { type: 'string', enum: ['yes', 'no'] },
@@ -296,6 +333,137 @@ describe('curated command vs generated command comparison', () => {
     expect(report.summary.actionableCommands).toBe(1);
     expect(report.commands[0]?.differences.map((d) => d.kind)).toEqual(
       expect.arrayContaining(['schema-contract', 'schema-enum', 'schema-positional']),
+    );
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({ kind: 'schema-positional', field: 'args' }),
+    );
+  });
+
+  test('does not report positional drift when curated positionals alias to generated fields', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        positionals: ['recipe_id', 'quantity'],
+        schemaExtensions: {
+          id: { description: 'Curated recipe ID description', positionalIndex: 99 },
+          quantity: { description: 'Curated quantity description' },
+          action: { type: 'string', enum: ['queue'] },
+        },
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', description: 'Generated recipe ID description', positionalIndex: 0 },
+          quantity: { type: 'integer', description: 'Generated quantity description', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({ overrides, generatedRoutes });
+    const fields = report.commands[0]?.differences.map((d) => d.field) ?? [];
+
+    expect(fields).toContain('schema.action');
+    expect(report.commands[0]?.differences).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'schema-positional',
+      }),
+    );
+  });
+
+  test('reports positional drift when curated positionals do not map to generated fields', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        positionals: ['wrong_id', 'quantity'],
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', positionalIndex: 0 },
+          wrong_id: { type: 'string' },
+          quantity: { type: 'integer', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({ overrides, generatedRoutes });
+
+    expect(report.summary.actionableCommands).toBe(1);
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({
+        kind: 'schema-positional',
+        field: 'args',
+      }),
+    );
+  });
+
+  test('reports an unmatched trailing curated positional', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        positionals: ['id', 'quantity', 'unexpected'],
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', positionalIndex: 0 },
+          quantity: { type: 'integer', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({ overrides, generatedRoutes });
+
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({
+        kind: 'schema-positional',
+        field: 'args',
+        curated: ['id', 'quantity', 'unexpected'],
+        generated: ['id', 'quantity'],
+      }),
+    );
+  });
+
+  test('treats a rest positional as terminal before later generated positionals', () => {
+    const overrides: Record<string, CommandOverride> = {
+      craft: {
+        apiRoute: 'POST /api/v2/spacemolt/craft',
+        positionals: [{ rest: 'id' }, 'quantity'],
+      },
+    };
+    const generatedRoutes: Record<string, GeneratedApiRoute> = {
+      'POST /api/v2/spacemolt/craft': {
+        operationId: 'spacemolt_craft',
+        summary: 'Craft recipe',
+        route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+        schema: {
+          id: { type: 'string', positionalIndex: 0 },
+          quantity: { type: 'integer', positionalIndex: 1 },
+        },
+      },
+    };
+
+    const report = compareCuratedCommandsToGenerated({ overrides, generatedRoutes });
+
+    expect(report.commands[0]?.differences).toContainEqual(
+      expect.objectContaining({
+        kind: 'schema-positional',
+        field: 'args',
+        curated: ['id'],
+        generated: ['id', 'quantity'],
+      }),
     );
   });
 });
