@@ -850,6 +850,22 @@ describe('help output branches', () => {
     expect(output).toContain('market_update');
   });
 
+  test('full help Ship Exchange lists buy-order commands', () => {
+    const capture = captureWriter();
+    showFullHelp(capture.writer);
+    const output = capture.stdout.join('\n');
+
+    expect(output).toContain('place_ship_buy_order <class_id> <price>');
+    expect(output).toContain('view_ship_buy_orders');
+    expect(output).toContain('sell_ship_to_order <order_id> <ship_id>');
+    expect(output).toContain('cancel_ship_buy_order <order_id>');
+    // Existing listing commands still present
+    expect(output).toContain('list_ship_for_sale');
+    expect(output).toContain('browse_ships');
+    expect(output).toContain('buy_listed_ship <id>');
+    expect(output).toContain('cancel_ship_listing <id>');
+  });
+
   test('showFullHelp includes cache sections near command discovery', () => {
     const capture = captureWriter();
 
