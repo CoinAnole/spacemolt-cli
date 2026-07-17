@@ -1,9 +1,10 @@
-count 3
+count 4
 
 === Notifications ===
 
-  Timestamp           | Type          | Message                                                                     
-  --------------------+---------------+-----------------------------------------------------------------------------
-  2026-05-23 18:59:39 | system        | Server maintenance scheduled.                                               
-  2026-05-23 19:01:02 | chat_message  | Ibis: Clear skies over Sol today.                                           
-  2026-05-23 19:03:02 | market_update | Haven Exchange tick 901337: 1 item update; Iron Ore sell 40 @ 12, buy 25 @ 9
+  Timestamp           | Type                     | Message                                                                                                  
+  --------------------+--------------------------+----------------------------------------------------------------------------------------------------------
+  2026-05-23 18:59:39 | system                   | Server maintenance scheduled.                                                                            
+  2026-05-23 19:01:02 | chat_message             | Ibis: Clear skies over Sol today.                                                                        
+  2026-05-23 19:03:02 | market_update            | Haven Exchange tick 901337: 1 item update; Iron Ore sell 40 @ 12, buy 25 @ 9                             
+  2026-07-17 20:00:00 | ship_commission_complete | Commission commission-1 delivered Prospector (prospector), ship ship-42, at Earth Station (earth_station)

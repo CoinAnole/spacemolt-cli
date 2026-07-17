@@ -1,4 +1,5 @@
 import { type Notification, presentNotifications } from '../notification-summary.ts';
+import { formatShipCommissionReceipt } from '../ship-commission-receipt.ts';
 import type { GlobalOptions } from '../types.ts';
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
@@ -137,6 +138,10 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
   if (type === 'market_update') return formatMarketUpdate(data);
   if (type === 'crafting_summary') return formatCraftingSummary(data);
   if (type === 'crafting_update') return formatCraftingUpdate(data);
+  if (type === 'ship_commission_complete') {
+    const receipt = formatShipCommissionReceipt(data);
+    if (receipt) return receipt;
+  }
 
   const sender = data.sender ?? data.sender_name ?? data.from_name ?? data.username;
   const content = data.content ?? data.message ?? data.summary ?? data.text ?? data.description;

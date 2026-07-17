@@ -10,11 +10,11 @@ export const emptyNotificationsFixture = {
 };
 
 /**
- * Mixed notification poll sample: system + chat + market update.
+ * Mixed notification poll sample: system + chat + market update + ship commission receipt.
  * Notification items include required schema fields (id, type, msg_type, timestamp, data).
  */
 export const getNotificationsFixture = {
-  count: 3,
+  count: 4,
   current_tick: 901337,
   notifications: [
     {
@@ -49,6 +49,21 @@ export const getNotificationsFixture = {
         ],
       },
       timestamp: '2026-05-23T19:03:02.000Z',
+    },
+    {
+      id: 'notif-ship-1',
+      type: 'system',
+      msg_type: 'ship_commission_complete',
+      data: {
+        tick: 901400,
+        commission_id: 'commission-1',
+        ship_id: 'ship-42',
+        ship_class: 'prospector',
+        ship_name: 'Prospector',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+      },
+      timestamp: '2026-07-17T20:00:00.000Z',
     },
   ],
   remaining: 0,

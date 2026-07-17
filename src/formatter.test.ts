@@ -15,6 +15,7 @@ import {
   factionQueryIntelFixture,
   formatterFixtureCases,
   getLocationFixture,
+  getNotificationsFixture,
   getStatusFixture,
   highValueCommandFixtures,
   listPassengersFixture,
@@ -1759,6 +1760,19 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Iron Ore');
     expect(stdout).not.toContain('"sell_orders"');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats ship commission completion as a readable notification receipt', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', getNotificationsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('ship_commission_complete');
+    expect(stdout).toContain('Commission commission-1');
+    expect(stdout).toContain('ship ship-42');
+    expect(stdout).toContain('Prospector (prospector)');
+    expect(stdout).toContain('Earth Station (earth_station)');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
   });
 
   test('formats crafting progress notifications as a summary row', () => {
