@@ -739,17 +739,13 @@ export const genericFormatters = [
 
       emitLine(`\n${c.bright}=== Distress Signal ===${c.reset}`);
       if (r.distress_type !== undefined) emitLine(`Type: ${r.distress_type}`);
-      const poiLabel =
-        r.poi_name && r.poi && r.poi_name !== r.poi
-          ? `${r.poi_name} (${r.poi})`
-          : (r.poi_name ?? r.poi);
+      const poiLabel = r.poi_name && r.poi && r.poi_name !== r.poi ? `${r.poi_name} (${r.poi})` : (r.poi_name ?? r.poi);
       const systemLabel =
         r.system_name && r.system && r.system_name !== r.system
           ? `${r.system_name} (${r.system})`
           : (r.system_name ?? r.system);
       if (poiLabel || systemLabel) {
-        const location =
-          poiLabel && systemLabel ? `${poiLabel} @ ${systemLabel}` : (poiLabel ?? systemLabel);
+        const location = poiLabel && systemLabel ? `${poiLabel} @ ${systemLabel}` : (poiLabel ?? systemLabel);
         emitLine(`Location: ${location}`);
       }
       if (r.missions_sent !== undefined) emitLine(`Missions sent: ${r.missions_sent}`);
