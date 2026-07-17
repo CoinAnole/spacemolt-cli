@@ -228,7 +228,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['trade_id'],
   },
   loot_wreck: {
-    usage: '<wreck_id> <item_id> [quantity]  (use get_wrecks to see wrecks)',
+    usage: '[wreck_id] [item_id] [quantity]  (omit wreck_id while towing; use get_wrecks to see wrecks)',
     category: 'Wrecks',
     apiRoute: 'POST /api/v2/spacemolt_salvage/loot',
     positionals: ['wreck_id', 'item_id', 'quantity'],
