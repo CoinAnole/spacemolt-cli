@@ -62,6 +62,21 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'notifications',
       method: 'GET',
     },
+    schema: {
+      clear: {
+        type: 'boolean',
+        description:
+          "Whether to remove returned notifications from the queue (default true). Set to 'false' to peek without removing.",
+      },
+      limit: {
+        type: 'integer',
+        description: 'Maximum number of notifications to return (1-100, default 50)',
+      },
+      types: {
+        type: 'array',
+        description: 'Filter by notification type (e.g. chat, combat, trade). Repeat parameter for multiple types.',
+      },
+    },
   },
   'POST /api/v2/session': {
     operationId: 'createSession',
@@ -96,6 +111,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_auth',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_auth/help': {
@@ -224,6 +245,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_battle',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_battle/help': {
@@ -433,6 +460,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_catalog/help': {
     operationId: 'spacemolt_catalog_help_post',
@@ -475,6 +508,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_citizenship',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_citizenship/help': {
@@ -585,6 +624,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_drone',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_drone/help': {
@@ -1051,6 +1096,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_facility',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_facility/help': {
@@ -1804,6 +1855,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_faction_admin/help': {
     operationId: 'spacemolt_faction_admin_help_post',
@@ -2005,6 +2062,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_faction_commerce',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_faction_commerce/help': {
@@ -2214,6 +2277,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_faction',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_faction/help': {
@@ -2591,6 +2660,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_fleet/help': {
     operationId: 'spacemolt_fleet_help_post',
@@ -2679,6 +2754,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_intel',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_intel/help': {
@@ -2977,6 +3058,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_market/help': {
     operationId: 'spacemolt_market_help_post',
@@ -3126,6 +3213,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_salvage',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_salvage/help': {
@@ -3446,6 +3539,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_ship/help': {
     operationId: 'spacemolt_ship_help_post',
@@ -3723,6 +3822,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_shipping',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_shipping/help': {
@@ -4447,6 +4552,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_social/help': {
     operationId: 'spacemolt_social_help_post',
@@ -4673,6 +4784,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       action: 'help',
       method: 'GET',
     },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
+    },
   },
   'POST /api/v2/spacemolt_storage/help': {
     operationId: 'spacemolt_storage_help_post',
@@ -4836,6 +4953,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt_transfer',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt_transfer/help': {
@@ -5530,6 +5653,12 @@ export const GENERATED_API_ROUTES: Record<string, GeneratedApiRoute> = {
       tool: 'spacemolt',
       action: 'help',
       method: 'GET',
+    },
+    schema: {
+      topic: {
+        type: 'string',
+        description: 'Optional: focus help on an action name, category, or search keyword. Searches across all tools.',
+      },
     },
   },
   'POST /api/v2/spacemolt/help': {
