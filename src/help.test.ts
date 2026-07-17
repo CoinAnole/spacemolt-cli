@@ -365,6 +365,7 @@ describe('help output branches', () => {
     expect(output).toContain('storage <view|deposit|withdraw|loot|jettison>');
     expect(output).toContain('jettison [item_id] [quantity] [items=JSON]');
     expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity]');
+    expect(output).toContain('omit wreck_id while towing');
     expect(output).not.toContain('salvage_wreck <wreck_id>');
   });
 
