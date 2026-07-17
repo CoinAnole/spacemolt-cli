@@ -137,7 +137,7 @@ bun run src/client.ts travel sol_asteroid_belt
 bun run src/client.ts sell ore_iron 50
 ```
 
-Local help is generated from bundled and cached command metadata:
+Local help is generated from bundled command metadata and, when present, an accepted same/newer OpenAPI cache:
 
 ```bash
 bun run src/client.ts help
@@ -201,9 +201,9 @@ Completions include commands, global options, enum values, saved profile names f
 
 ### Dynamic API Commands
 
-Curated commands are bundled with the CLI for friendly names, aliases, examples, and formatting. The CLI can also expose newly published v2 API routes from a cached OpenAPI spec as generated commands.
+Curated commands are bundled with the CLI for friendly names, aliases, examples, and formatting. Safe generated fallback commands from the CLI's reviewed bundled OpenAPI metadata are also available immediately; no cache refresh is required.
 
-Refresh the local OpenAPI command cache:
+Run `sync-api` to discover safe v2 routes published after the installed CLI release. An accepted same-version or newer cache becomes authoritative for generated fallback visibility, while older or invalid caches are ignored:
 
 ```bash
 spacemolt sync-api
@@ -274,7 +274,7 @@ Regenerate bundled API metadata after updating `spacemolt-docs/openapi.json`:
 bun run generate:api
 ```
 
-This only updates the bundled metadata committed with the CLI. It does not refresh a user's runtime OpenAPI cache; use `spacemolt sync-api` for that.
+This updates the bundled metadata committed with the CLI. Released CLIs expose safe generated fallback commands from this metadata immediately. It does not refresh a user's runtime OpenAPI cache; use `spacemolt sync-api` to discover routes published after that CLI release.
 
 Check command metadata against the cached spec:
 

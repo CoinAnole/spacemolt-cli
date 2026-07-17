@@ -836,9 +836,10 @@ function cacheHelpSections(options?: HelpOutputOptions): string {
 ${c.bright}Live server help:${c.reset}
   spacemolt server-help [topic]    Live gameserver help for an action, category, or keyword
 
-${c.bright}Dynamic API Cache:${c.reset}
-  spacemolt sync-api              Refresh cached OpenAPI command metadata
-  Cached v2 routes appear in help, command search, completion, and dispatch.
+${c.bright}Dynamic API Commands:${c.reset}
+  Safe generated commands bundled with this CLI are available immediately.
+  spacemolt sync-api              Discover API routes published after this CLI release
+  Accepted cached routes replace the generated fallback catalog.
 
 ${c.bright}ID Cache:${c.reset}
   Discovery commands like get_system, get_cargo, view_market, get_nearby, and list_ships save useful IDs.

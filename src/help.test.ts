@@ -99,9 +99,11 @@ describe('help output branches', () => {
     showHelp(capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Dynamic API Cache:');
-    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
-    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).toContain('Dynamic API Commands:');
+    expect(output).toContain('Safe generated commands bundled with this CLI are available immediately.');
+    expect(output).toContain('spacemolt sync-api              Discover API routes published after this CLI release');
+    expect(output).toContain('Accepted cached routes replace the generated fallback catalog.');
+    expect(output).not.toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
@@ -196,9 +198,11 @@ describe('help output branches', () => {
     renderProgressiveHelp({ authenticated: true }, capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Dynamic API Cache:');
-    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
-    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).toContain('Dynamic API Commands:');
+    expect(output).toContain('Safe generated commands bundled with this CLI are available immediately.');
+    expect(output).toContain('spacemolt sync-api              Discover API routes published after this CLI release');
+    expect(output).toContain('Accepted cached routes replace the generated fallback catalog.');
+    expect(output).not.toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
@@ -892,9 +896,11 @@ describe('help output branches', () => {
     showFullHelp(capture.writer);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Dynamic API Cache:');
-    expect(output).toContain('spacemolt sync-api              Refresh cached OpenAPI command metadata');
-    expect(output).toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
+    expect(output).toContain('Dynamic API Commands:');
+    expect(output).toContain('Safe generated commands bundled with this CLI are available immediately.');
+    expect(output).toContain('spacemolt sync-api              Discover API routes published after this CLI release');
+    expect(output).toContain('Accepted cached routes replace the generated fallback catalog.');
+    expect(output).not.toContain('Cached v2 routes appear in help, command search, completion, and dispatch.');
     expect(output).not.toContain('spacemolt commands --search api');
     expect(output).not.toContain('spacemolt help <generated>');
     expect(output).toContain('ID Cache:');
