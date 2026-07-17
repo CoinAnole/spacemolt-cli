@@ -143,20 +143,20 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
     if (receipt) return receipt;
   }
 
-  const sender = data.sender ?? data.sender_name ?? data.from_name ?? data.username;
-  const content = data.content ?? data.message ?? data.summary ?? data.text ?? data.description;
-  if (sender !== undefined && sender !== null && sender !== '' && content !== undefined && content !== null) {
+  const sender = safeScalar(data.sender ?? data.sender_name ?? data.from_name ?? data.username);
+  const content = safeScalar(data.content ?? data.message ?? data.summary ?? data.text ?? data.description);
+  if (sender !== undefined && content !== undefined) {
     return `${sender}: ${firstLinePreview(content)}`;
   }
 
-  const command = data.command;
-  const error = data.message ?? data.code;
-  if (command !== undefined && command !== null && command !== '' && error !== undefined && error !== null) {
+  const command = safeScalar(data.command);
+  const error = safeScalar(data.message ?? data.code);
+  if (command !== undefined && error !== undefined) {
     return `${command}: ${firstLinePreview(error)}`;
   }
 
-  const direct = data.message ?? data.summary ?? data.content ?? data.text ?? data.description;
-  if (direct !== undefined && direct !== null && direct !== '') return firstLinePreview(direct);
+  const direct = safeScalar(data.message ?? data.summary ?? data.content ?? data.text ?? data.description);
+  if (direct !== undefined) return firstLinePreview(direct);
 
   const compact = JSON.stringify(data);
   return compact === '{}' ? '' : compact;

@@ -1795,6 +1795,58 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('[object Object]');
   });
 
+  test('falls back safely for malformed polled ship commission receipts', () => {
+    const fixture = {
+      count: 3,
+      notifications: [
+        {
+          type: 'system',
+          msg_type: 'ship_commission_complete',
+          data: {
+            commission_id: 'commission-object',
+            sender: { malformed: true },
+            content: { malformed: true },
+          },
+          timestamp: '2026-07-17T20:00:00.000Z',
+        },
+        {
+          type: 'system',
+          msg_type: 'ship_commission_complete',
+          data: {
+            commission_id: 'commission-nan',
+            command: Number.NaN,
+            code: 'E_SAFE',
+          },
+          timestamp: '2026-07-17T20:00:01.000Z',
+        },
+        {
+          type: 'system',
+          msg_type: 'ship_commission_complete',
+          data: {
+            commission_id: { malformed: true },
+            ship_id: 'ship-infinite',
+            message: Number.POSITIVE_INFINITY,
+          },
+          timestamp: '2026-07-17T20:00:02.000Z',
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('Infinity');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).toContain(
+      '{"commission_id":"commission-object","sender":{"malformed":true},"content":{"malformed":true}}',
+    );
+    expect(stdout).toContain('{"commission_id":"commission-nan","command":null,"code":"E_SAFE"}');
+    expect(stdout).toContain('{"commission_id":{"malformed":true},"ship_id":"ship-infinite","message":null}');
+  });
+
   test('formats crafting progress notifications as a summary row', () => {
     const { stdout, stderr } = captureStructuredOutput('get_notifications', craftingNotificationsFixture);
 
