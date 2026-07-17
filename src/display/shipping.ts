@@ -256,6 +256,158 @@ function renderShippingTrack(result: Record<string, unknown>): boolean {
   return true;
 }
 
+function formatCountCapacity(current: unknown, limit: unknown, unlimited: unknown): string | undefined {
+  const count = text(current);
+  if (count === undefined) return undefined;
+  if (unlimited === true) return `${count} (unlimited)`;
+  const maximum = text(limit);
+  return maximum === undefined ? count : `${count} / ${maximum}`;
+}
+
+function formatLiabilityCapacity(current: unknown, limit: unknown, unlimited: unknown): string | undefined {
+  const liability = formatCredits(current);
+  if (liability === undefined) return undefined;
+  if (unlimited === true) return `${liability} (unlimited)`;
+  const maximum = formatCredits(limit);
+  return maximum === undefined ? liability : `${liability} / ${maximum}`;
+}
+
+function renderCarrierSections(
+  profile: Record<string, unknown>,
+  capacity: Record<string, unknown>,
+  progression: Record<string, unknown>,
+  result: Record<string, unknown>,
+): void {
+  emitField('Actor', profile.actor, formatActor);
+  emitField('Tier', profile.tier);
+  emitField('Successful deliveries', profile.successful_deliveries);
+  emitField('Priority deliveries', profile.priority_deliveries);
+  emitField('Delivered value', profile.delivered_value, formatCredits);
+  emitField('Returns', profile.returns);
+  emitField('Breaches', profile.breaches);
+  emitField('Defaults', profile.defaults);
+  emitField('Active contracts', profile.active_contracts);
+  emitField('Active liability', profile.active_liability, formatCredits);
+  emitField('Outstanding debt', profile.outstanding_debt, formatCredits);
+  emitField('Updated', profile.updated_at);
+  emitField('Last consequence', profile.last_consequence_at);
+  emitField('Last recovery', profile.last_recovery_at);
+
+  emitLine(`\n${c.bright}Capacity:${c.reset}`);
+  emitField(
+    'Active contracts',
+    formatCountCapacity(capacity.active_contracts, capacity.active_contract_limit, capacity.active_contracts_unlimited),
+  );
+  emitField(
+    'Aggregate liability',
+    formatLiabilityCapacity(
+      capacity.active_liability,
+      capacity.aggregate_liability_limit,
+      capacity.liability_unlimited,
+    ),
+  );
+  if (capacity.liability_unlimited !== true) {
+    emitField('Remaining aggregate liability', capacity.remaining_aggregate_liability, formatCredits);
+    emitField('Single-package liability', capacity.single_package_liability_limit, formatCredits);
+  }
+
+  emitLine(`\n${c.bright}Tier Progression:${c.reset}`);
+  if (progression.at_maximum_tier === true) {
+    emitLine('Maximum carrier tier reached.');
+  } else {
+    emitField('Current tier', progression.current_tier);
+    emitField('Next tier', progression.next_tier);
+    emitField('Successful deliveries', progression.successful_deliveries);
+    emitField('Required deliveries', progression.required_successful_deliveries);
+    emitField('Remaining deliveries', progression.remaining_successful_deliveries);
+    emitField('Delivered value', progression.delivered_value, formatCredits);
+    emitField('Required delivered value', progression.required_delivered_value, formatCredits);
+    emitField('Remaining delivered value', progression.remaining_delivered_value, formatCredits);
+  }
+  emitField('Acceptance blocked', result.debt_blocks_acceptance, formatBoolean);
+  emitField('Block reason', result.debt_block_reason);
+}
+
+function renderDebts(title: string, debts: Array<Record<string, unknown>>, emptyMessage: string): void {
+  if (debts.length === 0) {
+    emitLine(emptyMessage);
+    return;
+  }
+  const rows = debts.map((debt) => ({
+    id: text(debt.id),
+    shipment: text(debt.shipment_id),
+    original: formatCredits(debt.original),
+    outstanding: formatCredits(debt.outstanding),
+    creditor: formatActor(debt.creditor),
+    created: text(debt.created_at),
+    paid: text(debt.paid_at),
+  }));
+  printCompactTable(
+    title,
+    rows,
+    [
+      ['ID', ['id']],
+      ['Shipment', ['shipment']],
+      ['Original', ['original']],
+      ['Outstanding', ['outstanding']],
+      ['Creditor', ['creditor']],
+      ['Created', ['created']],
+      ['Paid', ['paid']],
+    ],
+    { maxCellWidth: 48 },
+  );
+}
+
+function renderShippingProfile(result: Record<string, unknown>): boolean {
+  const debts = recordArray(result.debts);
+  if (!isRecord(result.profile) || !isRecord(result.capacity) || !isRecord(result.progression) || !debts) {
+    return false;
+  }
+  emitHeading('Carrier Profile');
+  renderCarrierSections(result.profile, result.capacity, result.progression, result);
+  renderDebts('Outstanding Debts', debts, 'No outstanding freight debt.');
+  return true;
+}
+
+function renderDebtPayment(result: Record<string, unknown>): boolean {
+  const updated = recordArray(result.updated_debts);
+  const outstanding = recordArray(result.outstanding_debts);
+  if (
+    !isRecord(result.profile) ||
+    !isRecord(result.capacity) ||
+    !isRecord(result.progression) ||
+    updated === undefined ||
+    outstanding === undefined ||
+    typeof result.amount_paid !== 'number' ||
+    !Number.isFinite(result.amount_paid)
+  ) {
+    return false;
+  }
+  emitHeading('Freight Debt Payment');
+  emitField('Amount paid', result.amount_paid, formatCredits);
+  renderCarrierSections(result.profile, result.capacity, result.progression, result);
+  renderDebts('Updated Debts', updated, 'No freight debts changed.');
+  renderDebts('Outstanding Debts', outstanding, 'No outstanding freight debt.');
+  return true;
+}
+
+function settlementTitle(command: string | undefined): string {
+  if (command === 'shipping_deliver') return 'Freight Delivered';
+  if (command === 'shipping_return') return 'Freight Returned';
+  return 'Freight Contract Canceled';
+}
+
+function renderSettlement(result: Record<string, unknown>, command: string | undefined): boolean {
+  if (!isRecord(result.contract)) return false;
+  renderContract(result.contract, settlementTitle(command), true);
+  emitField('Carrier payout', result.carrier_payout, formatCredits);
+  emitField('Shipper refund', result.shipper_refund, formatCredits);
+  emitField('Claim paid', result.claim_paid, formatCredits);
+  emitField('Debt created', result.debt_created, formatCredits);
+  emitField('Terminal reason', result.contract.terminal_reason);
+  return true;
+}
+
 export const shippingFormatters = [
   formatter((result) => renderQuote(result), {
     commands: ['shipping_quote'],
@@ -274,4 +426,9 @@ export const shippingFormatters = [
   ),
   formatter((result) => renderShippingList(result), { commands: ['shipping_list'] }),
   formatter((result) => renderShippingTrack(result), { commands: ['shipping_track'] }),
+  formatter((result) => renderShippingProfile(result), { commands: ['shipping_profile'] }),
+  formatter((result) => renderDebtPayment(result), { commands: ['shipping_pay_debt'] }),
+  formatter((result, command) => renderSettlement(result, command), {
+    commands: ['shipping_deliver', 'shipping_return', 'shipping_cancel'],
+  }),
 ];

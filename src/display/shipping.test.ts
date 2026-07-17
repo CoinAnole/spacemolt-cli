@@ -276,3 +276,154 @@ test('renders tracking events in server order with returned location components 
 test('renders an explicit empty tracking message', () => {
   expect(output('shipping_track', { action: 'track', contract, events: [] })).toContain('No tracking events.');
 });
+
+const carrierProfile = {
+  actor: { kind: 'player', id: 'carrier-1' },
+  tier: 'licensed',
+  successful_deliveries: 12,
+  delivered_value: 125000,
+  priority_deliveries: 4,
+  returns: 1,
+  breaches: 0,
+  defaults: 0,
+  active_contracts: 2,
+  active_liability: 33000,
+  outstanding_debt: 500,
+  updated_at: '2026-07-17T11:00:00Z',
+};
+
+const carrierCapacity = {
+  active_contracts: 2,
+  active_contracts_unlimited: true,
+  active_liability: 33000,
+  liability_unlimited: false,
+  aggregate_liability_limit: 100000,
+  remaining_aggregate_liability: 67000,
+  single_package_liability_limit: 50000,
+};
+
+const carrierProgression = {
+  current_tier: 'licensed',
+  next_tier: 'trusted',
+  at_maximum_tier: false,
+  successful_deliveries: 12,
+  required_successful_deliveries: 25,
+  remaining_successful_deliveries: 13,
+  delivered_value: 125000,
+  required_delivered_value: 250000,
+  remaining_delivered_value: 125000,
+};
+
+const freightDebt = {
+  id: 'debt-1',
+  shipment_id: 'shipment-1',
+  debtor: { kind: 'player', id: 'carrier-1' },
+  creditor: { kind: 'station', id: 'earth_station' },
+  original: 1000,
+  outstanding: 500,
+  created_at: '2026-07-17T09:00:00Z',
+};
+
+test('renders carrier profile capacity, progression, debt blocking, and debts', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debt_blocks_acceptance: true,
+    debt_block_reason: 'Pay outstanding freight debt before accepting another contract.',
+    debts: [freightDebt],
+  });
+
+  expect(stdout).toContain('=== Carrier Profile ===');
+  expect(stdout).toContain('Actor: player:carrier-1');
+  expect(stdout).toContain('Delivered value: 125,000 cr');
+  expect(stdout).toContain('Active contracts: 2 (unlimited)');
+  expect(stdout).toContain('Aggregate liability: 33,000 cr / 100,000 cr');
+  expect(stdout).toContain('Next tier: trusted');
+  expect(stdout).toContain('Acceptance blocked: yes');
+  expect(stdout).toContain('=== Outstanding Debts ===');
+  expect(stdout).toContain('debt-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders maximum tier and an explicit empty debt message', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: { ...carrierProfile, tier: 'prime', outstanding_debt: 0 },
+    capacity: { ...carrierCapacity, liability_unlimited: true },
+    progression: { ...carrierProgression, current_tier: 'prime', at_maximum_tier: true },
+    debt_blocks_acceptance: false,
+    debts: [],
+  });
+  expect(stdout).toContain('Maximum carrier tier reached.');
+  expect(stdout).toContain('No outstanding freight debt.');
+  expect(stdout).toContain('Acceptance blocked: no');
+});
+
+test('renders debt payment changes separately from remaining debts', () => {
+  const stdout = output('shipping_pay_debt', {
+    details: {
+      action: 'pay_debt',
+      amount_paid: 500,
+      profile: { ...carrierProfile, outstanding_debt: 250 },
+      capacity: carrierCapacity,
+      progression: carrierProgression,
+      debt_blocks_acceptance: true,
+      debt_block_reason: '250 cr remains unpaid.',
+      updated_debts: [{ ...freightDebt, outstanding: 250 }],
+      outstanding_debts: [{ ...freightDebt, outstanding: 250 }],
+    },
+    player: { credits: 5000 },
+    ship: {},
+    cargo: [],
+  });
+
+  expect(stdout).toContain('=== Freight Debt Payment ===');
+  expect(stdout).toContain('Amount paid: 500 cr');
+  expect(stdout).toContain('=== Updated Debts ===');
+  expect(stdout).toContain('=== Outstanding Debts ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders action-specific settlements and keeps zero amounts visible', () => {
+  const cases: Array<[string, string, Record<string, unknown>]> = [
+    ['shipping_deliver', 'Freight Delivered', { carrier_payout: 15000, claim_paid: 0 }],
+    ['shipping_return', 'Freight Returned', { carrier_payout: 0, shipper_refund: 12500 }],
+    ['shipping_cancel', 'Freight Contract Canceled', { shipper_refund: 0, debt_created: 0 }],
+  ];
+
+  for (const [command, heading, settlement] of cases) {
+    const action = command.slice('shipping_'.length);
+    const stdout = output(command, {
+      details: {
+        action,
+        contract: {
+          ...contract,
+          status: action === 'cancel' ? 'canceled' : action === 'return' ? 'returned' : 'delivered',
+        },
+        ...settlement,
+      },
+      player: { credits: 10 },
+      ship: {},
+      cargo: [],
+    });
+    expect(stdout).toContain(`=== ${heading} ===`);
+    expect(stdout).toContain('0 cr');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('omits malformed optional carrier and settlement fields without diagnostic tokens', () => {
+  const stdout = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, contractor: {}, terminal_reason: [], carrier_payout: Number.NaN },
+      carrier_payout: Number.NaN,
+      claim_paid: {},
+    },
+  });
+  expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('[object Object]');
+});
