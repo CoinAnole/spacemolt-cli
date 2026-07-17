@@ -33,6 +33,12 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/create',
     positionals: ['name', 'tag'],
+    // OpenAPI wire order is id (tag) then text (name); override index aliases so
+    // UX create_faction <name> <tag> maps correctly to { text, id }.
+    aliases: {
+      name: 'text',
+      tag: 'id',
+    },
   },
   join_faction: {
     category: 'Factions',

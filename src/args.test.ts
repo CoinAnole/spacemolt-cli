@@ -324,6 +324,15 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeInternalPayload('faction_withdraw_invite', { player_id: 'PlayerName' })).toEqual({
       id: 'PlayerName',
     });
+    // OpenAPI wire is id=tag, text=name; explicit aliases must not invert UX name/tag.
+    expect(normalizeParsedPayload('create_faction', { name: 'Surveyors', tag: 'SMC1' })).toEqual({
+      text: 'Surveyors',
+      id: 'SMC1',
+    });
+    expect(normalizeParsedPayload('create_faction', { name: 'Surveyor Mining', tag: 'SMC1' })).toEqual({
+      text: 'Surveyor Mining',
+      id: 'SMC1',
+    });
     expect(normalizeParsedPayload('scrap_ship', { ship_id: 'ship_1' })).toEqual({ id: 'ship_1' });
     expect(normalizeParsedPayload('get_empire_info', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
   });
@@ -1502,6 +1511,23 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['upload_drone', 'drone_1', 'scan', 'asteroids']).payload).toEqual({
       drone_id: 'drone_1',
       script: 'scan asteroids',
+    });
+  });
+
+  test('create_faction parses name/tag and normalizes to text/id wire fields (not inverted)', () => {
+    const single = parseOk(['create_faction', 'Surveyors', 'SMC1']);
+    expect(single.payload).toEqual({ name: 'Surveyors', tag: 'SMC1' });
+    expect(normalizeParsedPayload('create_faction', single.payload)).toEqual({
+      text: 'Surveyors',
+      id: 'SMC1',
+    });
+
+    // Multi-word name arrives as one argv token (shell quotes); still must not invert.
+    const multi = parseOk(['create_faction', 'Surveyor Mining', 'SMC1']);
+    expect(multi.payload).toEqual({ name: 'Surveyor Mining', tag: 'SMC1' });
+    expect(normalizeParsedPayload('create_faction', multi.payload)).toEqual({
+      text: 'Surveyor Mining',
+      id: 'SMC1',
     });
   });
 
