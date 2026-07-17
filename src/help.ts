@@ -1099,6 +1099,10 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     browse_ships              Browse ships for sale at station
     buy_listed_ship <id>      Buy a player-listed ship
     cancel_ship_listing <id>  Cancel your ship listing
+    place_ship_buy_order <class_id> <price>  Place a standing ship buy order
+    view_ship_buy_orders      View your open ship buy orders
+    sell_ship_to_order <order_id> <ship_id>  Sell a stored ship into a buy order
+    cancel_ship_buy_order <order_id>  Cancel your ship buy order
 
   ${c.cyan}Insurance:${c.reset}
     buy_insurance             Purchase ship insurance at quote rate
