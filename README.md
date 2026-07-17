@@ -211,6 +211,52 @@ spacemolt sync-api
 
 Generated commands use predictable names derived from the route, such as `shipyard_repair` for `POST /api/v2/spacemolt_shipyard/repair`. A later CLI release may promote generated commands to curated commands with better aliases and examples.
 
+### Storage command group
+
+Station storage is a **grouped multi-command**, like `facility` and `faction` — not a single multi-action command with an `action=` field. Nested forms with an explicit action word are the supported UX:
+
+```bash
+spacemolt storage view
+spacemolt storage view target=faction
+spacemolt storage deposit ore_iron 50
+spacemolt storage withdraw ore_iron 10
+spacemolt storage loot
+spacemolt storage jettison ore_iron 5
+```
+
+`help storage` lists every group action (and a few related top-level commands). That listing is denser than the old multi-action help page — same pattern as `help facility`.
+
+| Nested form | Category | Notes |
+| --- | --- | --- |
+| `storage view` | Station storage | Client-side filters: `--search`, `--item` / `item_id`, `items` |
+| `storage deposit` | Station storage | Cargo → storage; gifts; faction buckets; bulk `items=JSON` |
+| `storage withdraw` | Station storage | Storage → cargo; faction compartments; bulk `items=JSON` |
+| `storage loot` | Wrecks | Distinct from top-level `loot_wreck` |
+| `storage jettison` | Cargo | Distinct from top-level `jettison` (prefer `jettison` for ordinary dumps) |
+
+Related top-level helpers (unchanged): `jettison`, `loot_wreck`, `faction_deposit_credits`, `faction_withdraw_credits`.
+
+#### Migration from multi-action `storage`
+
+| Old (broken) | New |
+| --- | --- |
+| `storage view` (nested) | Still works |
+| `storage action=view` | Fails — use `storage view` |
+| `storage action=deposit …` / `action=withdraw …` / `action=loot …` / `action=jettison …` | Use `storage deposit …` / `withdraw` / `loot` / `jettison` |
+| `storage --payload-json '…'` (omit-action deposit) | Fails — use `storage deposit --payload-json '…'` |
+| `storage target=faction --payload-json '…'` | Fails — use `storage deposit target=faction --payload-json '…'` |
+| Any key=value-only deposit/withdraw without an action token | Insert `deposit` or `withdraw` as the first subcommand token |
+| Request body field `"action"` | Omitted; the path is `/api/v2/spacemolt_storage/{action}` |
+| Human dry-run `Dry run: storage` + body action | Human dry-run is spaced: `Dry run: storage deposit` |
+
+There is **no compatibility shim**. Unknown tokens such as `action=view` or `target=faction` as `argv[1]` produce the same generic unknown-group-action errors as other groups (`Run "spacemolt help storage"`).
+
+Mixed named `key=value` plus bare positionals follow **ordinary** sequential positionals (facility-like): named args do not skip later positional slots. Prefer either all named fields or pure positionals after the action word; do not rely on the old multi-action “skip already-filled fields” behavior.
+
+**Docs submodule lag:** guides under `spacemolt-docs/` (for example `miner.md`, `crafting.md`) may still show `storage action=deposit` until a separate docs submodule update. Trust CLI `help storage` / this README for the current grammar.
+
+Flat internal names (`storage_view`, `storage_deposit`, …) are registry keys only — not top-level public commands (same as `facility_job_add`).
+
 ## ID Cache
 
 The CLI learns useful IDs from structured responses and stores them beside the active session file. After running discovery commands, ask the cache for recently seen IDs:
