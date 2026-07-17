@@ -2,7 +2,13 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { defaultOpenApiCacheDir, loadCachedGeneratedRoutes, refreshOpenApiCache } from './openapi-cache';
+import {
+  defaultOpenApiCacheDir,
+  loadCachedGeneratedRoutes,
+  refreshOpenApiCache,
+  resolveGeneratedRouteSources,
+} from './openapi-cache';
+import type { GeneratedApiRoute } from './openapi-metadata';
 
 const tempDirs: string[] = [];
 
@@ -12,11 +18,100 @@ function tempDir(): string {
   return dir;
 }
 
+const bundledRoutes: Record<string, GeneratedApiRoute> = {
+  'POST /api/v2/spacemolt_shipping/quote': {
+    summary: 'Bundled shipping quote',
+    route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+    required: ['package_id'],
+    schema: { package_id: { type: 'string' } },
+  },
+};
+
+const cachedRoutes: Record<string, GeneratedApiRoute> = {
+  'POST /api/v2/spacemolt_cached/probe': {
+    summary: 'Cached probe',
+    route: { tool: 'spacemolt_cached', action: 'probe', method: 'POST' },
+  },
+};
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
 describe('OpenAPI cache', () => {
+  test('uses bundled routes when cached metadata is absent, invalid, or older', () => {
+    for (const testCase of [
+      { cachedRoutes: undefined, cacheVersion: { status: 'not_synced' } as const },
+      { cachedRoutes, cacheVersion: { status: 'invalid' } as const },
+      {
+        cachedRoutes,
+        cacheVersion: {
+          status: 'valid',
+          gameserverVersion: 'v0.521.0',
+          fetchedAt: '2026-07-16T00:00:00.000Z',
+        } as const,
+      },
+    ]) {
+      expect(
+        resolveGeneratedRouteSources({
+          bundledRoutes,
+          bundledVersion: 'v0.522.0',
+          ...testCase,
+        }),
+      ).toEqual({
+        generatedRoutes: bundledRoutes,
+        dynamicGeneratedRoutes: bundledRoutes,
+        cacheIsUsable: false,
+      });
+    }
+  });
+
+  test('uses an equal or newer cache as the authoritative dynamic route catalog', () => {
+    for (const gameserverVersion of ['v0.522.0', 'v0.523.0']) {
+      const result = resolveGeneratedRouteSources({
+        bundledRoutes,
+        bundledVersion: 'v0.522.0',
+        cachedRoutes,
+        cacheVersion: {
+          status: 'valid',
+          gameserverVersion,
+          fetchedAt: '2026-07-17T00:00:00.000Z',
+        },
+      });
+
+      expect(result.cacheIsUsable).toBe(true);
+      expect(result.dynamicGeneratedRoutes).toBe(cachedRoutes);
+      expect(result.dynamicGeneratedRoutes['POST /api/v2/spacemolt_shipping/quote']).toBeUndefined();
+      expect(result.generatedRoutes).toEqual({ ...bundledRoutes, ...cachedRoutes });
+    }
+  });
+
+  test('lets usable cached records override matching bundled metadata', () => {
+    const signature = 'POST /api/v2/spacemolt_shipping/quote';
+    const cachedOverride: Record<string, GeneratedApiRoute> = {
+      [signature]: {
+        summary: 'Cached shipping quote',
+        route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+        required: ['cache_only'],
+        schema: { cache_only: { type: 'string' } },
+      },
+    };
+
+    const result = resolveGeneratedRouteSources({
+      bundledRoutes,
+      bundledVersion: 'v0.522.0',
+      cachedRoutes: cachedOverride,
+      cacheVersion: {
+        status: 'valid',
+        gameserverVersion: 'v0.523.0',
+        fetchedAt: '2026-07-17T00:00:00.000Z',
+      },
+    });
+
+    expect(result.generatedRoutes[signature]).toBe(cachedOverride[signature]);
+    expect(result.dynamicGeneratedRoutes).toBe(cachedOverride);
+  });
+
   test('defaults to the CLI config directory', () => {
     expect(defaultOpenApiCacheDir({ XDG_CONFIG_HOME: '/tmp/spacemolt-config-test' })).toBe(
       '/tmp/spacemolt-config-test/spacemolt-cli',
