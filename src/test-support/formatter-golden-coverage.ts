@@ -34,6 +34,8 @@ export const FRIENDLY_FORMATTING_TARGETS = [
 const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   catalog_recipes: 'catalog',
   facility_list_detailed: 'facility_list',
+  faction_create_buy_order_bulk: 'faction_create_buy_order',
+  faction_create_sell_order_bulk: 'faction_create_sell_order',
 };
 
 export interface FormatterGoldenCoverageReport {

@@ -1,0 +1,53 @@
+{
+  "details": {
+    "action": "faction_create_buy_order",
+    "mode": "bulk",
+    "kind": "bulk",
+    "results": [
+      {
+        "index": 0,
+        "success": true,
+        "item": "Nickel Ore",
+        "item_id": "nickel_ore",
+        "quantity": 25,
+        "price_each": 2,
+        "quantity_filled": 0,
+        "quantity_listed": 25,
+        "total_spent": 0,
+        "total_escrowed": 50,
+        "escrow_refunded": 0,
+        "listing_fee": 1,
+        "bucket": "Procurement",
+        "consolidated": false,
+        "order_id": "faction-buy-bulk-1",
+        "message": "Created faction buy order."
+      },
+      {
+        "index": 1,
+        "success": false,
+        "item": "Fuel Cell",
+        "item_id": "fuel_cell",
+        "quantity": 100,
+        "price_each": 20,
+        "error_code": "listing_limit_reached",
+        "error": "The faction listing limit has been reached."
+      }
+    ],
+    "summary": {
+      "total": 2,
+      "succeeded": 1,
+      "failed": 1
+    }
+  },
+  "player": {
+    "username": "Marlowe",
+    "credits": 198000
+  },
+  "ship": {
+    "id": "ship-wayfarer",
+    "name": "Wayfarer",
+    "cargo_used": 0,
+    "cargo_capacity": 500
+  },
+  "cargo": []
+}

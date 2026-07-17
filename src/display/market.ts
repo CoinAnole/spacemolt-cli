@@ -274,6 +274,130 @@ function isDirectMarketBuyShape(record: Record<string, unknown>): boolean {
   );
 }
 
+function bulkInteger(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) ? value : undefined;
+}
+
+function bulkNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function bulkText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function bulkItem(result: Record<string, unknown>): string {
+  const name = bulkText(result.item);
+  const id = bulkText(result.item_id);
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name ?? id ?? '';
+}
+
+function bulkFilledListed(result: Record<string, unknown>): string {
+  const filled = bulkInteger(result.quantity_filled);
+  const listed = bulkInteger(result.quantity_listed);
+  if (filled !== undefined && listed !== undefined) return `${filled.toLocaleString()}/${listed.toLocaleString()}`;
+  if (filled !== undefined) return `filled ${filled.toLocaleString()}`;
+  if (listed !== undefined) return `listed ${listed.toLocaleString()}`;
+  return '';
+}
+
+function bulkBucket(result: Record<string, unknown>): string {
+  const bucket = bulkText(result.bucket) ?? '';
+  if (typeof result.consolidated !== 'boolean') return bucket;
+  const mode = result.consolidated ? 'consolidated' : 'separate';
+  return bucket ? `${bucket} (${mode})` : mode;
+}
+
+function bulkFinancial(result: Record<string, unknown>, side: OrderSide): string {
+  const parts: string[] = [];
+  const add = (label: string, value: unknown) => {
+    const amount = bulkNumber(value);
+    if (amount !== undefined) parts.push(`${label} ${formatCredits(amount)}`);
+  };
+
+  if (side === 'buy') {
+    add('spent', result.total_spent);
+    add('escrow', result.total_escrowed);
+    add('refund', result.escrow_refunded);
+  } else {
+    add('earned', result.total_earned);
+  }
+  add('fee', result.listing_fee);
+  return parts.join('; ');
+}
+
+function bulkOrderOrError(result: Record<string, unknown>): string {
+  if (result.success === true) return bulkText(result.order_id) ?? bulkText(result.message) ?? '';
+
+  const code = bulkText(result.error_code);
+  const message = bulkText(result.error) ?? bulkText(result.message);
+  if (code && message) return `${code}: ${message}`;
+  return code ?? message ?? '';
+}
+
+function renderFactionBulkOrders(result: Record<string, unknown>, command?: string): boolean {
+  const side = createOrderSide(result, command);
+  const expectedAction = side === 'buy' ? 'faction_create_buy_order' : 'faction_create_sell_order';
+  if (!side || result.kind !== 'bulk' || result.mode !== 'bulk' || result.action !== expectedAction) return false;
+  const summary = result.summary;
+  const resultsValue = result.results;
+  if (!isRecord(summary) || !Array.isArray(resultsValue)) return false;
+
+  const total = bulkInteger(summary.total);
+  const succeeded = bulkInteger(summary.succeeded);
+  const failed = bulkInteger(summary.failed);
+  if (total === undefined || succeeded === undefined || failed === undefined) return false;
+  if (
+    !resultsValue.every(
+      (entry) => isRecord(entry) && bulkInteger(entry.index) !== undefined && typeof entry.success === 'boolean',
+    )
+  ) {
+    return false;
+  }
+
+  const results = resultsValue as Array<Record<string, unknown>>;
+  const title = side === 'buy' ? 'Faction Buy Orders' : 'Faction Sell Orders';
+  emitLine(`\n${c.bright}=== ${title} ===${c.reset}`);
+  emitLine(
+    `${total.toLocaleString()} requested | ${succeeded.toLocaleString()} succeeded | ${failed.toLocaleString()} failed`,
+  );
+  if (results.length === 0) {
+    emitLine('No order results.');
+    return true;
+  }
+
+  const rows = results.map((entry) => ({
+    index: (entry.index as number).toLocaleString(),
+    status: entry.success ? 'created' : 'failed',
+    item_display: bulkItem(entry),
+    quantity_display: bulkInteger(entry.quantity)?.toLocaleString() ?? '',
+    filled_listed: bulkFilledListed(entry),
+    price_display: bulkNumber(entry.price_each) === undefined ? '' : formatCredits(entry.price_each as number),
+    bucket_display: bulkBucket(entry),
+    financial_display: bulkFinancial(entry, side),
+    outcome_display: bulkOrderOrError(entry),
+  }));
+
+  printCompactTable(
+    'Results',
+    rows,
+    [
+      ['#', ['index']],
+      ['Status', ['status']],
+      ['Item', ['item_display']],
+      ['Qty', ['quantity_display']],
+      ['Filled/Listed', ['filled_listed']],
+      ['Price', ['price_display']],
+      ['Bucket', ['bucket_display']],
+      ['Financial', ['financial_display']],
+      ['Order / Error', ['outcome_display']],
+    ],
+    { maxCellWidth: 64 },
+  );
+  return true;
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -458,6 +582,11 @@ export const marketFormatters = [
   ),
 
   // Market order creation
+  namedFormatter('faction_bulk_orders', ['kind', 'results', 'summary'], renderFactionBulkOrders, {
+    commands: ['faction_create_buy_order', 'faction_create_sell_order'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+
   namedFormatter(
     'create_market_order',
     ['listing_fee', 'order_id'],

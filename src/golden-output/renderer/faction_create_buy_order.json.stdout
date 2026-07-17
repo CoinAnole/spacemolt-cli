@@ -1,6 +1,7 @@
 {
   "details": {
     "action": "create_buy_order",
+    "kind": "single",
     "order_id": "faction-buy-1",
     "faction_id": "faction-1",
     "faction_tag": "MOLT",

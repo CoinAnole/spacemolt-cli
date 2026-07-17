@@ -12,6 +12,8 @@ import {
   declineMissionFixture,
   distressSignalFixture,
   empireInfoFixture,
+  factionCreateBuyOrderBulkFixture,
+  factionCreateSellOrderBulkFixture,
   factionQueryIntelFixture,
   formatterFixtureCases,
   getLocationFixture,
@@ -94,6 +96,10 @@ const {
 const namedFormatterFixtureCases = {
   ...otherFormatterFixtureCases,
   create_market_order: createMarketOrderFixtureCase,
+  faction_bulk_orders: {
+    command: 'faction_create_buy_order',
+    fixture: factionCreateBuyOrderBulkFixture,
+  },
   direct_buy: {
     command: 'buy',
     fixture: {
@@ -2427,6 +2433,63 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Remaining listed: 75');
   });
 
+  test('formats faction bulk buy results in server order with mixed outcomes', () => {
+    const fixture = structuredClone(factionCreateBuyOrderBulkFixture);
+    const [firstResult, secondResult] = fixture.details.results;
+    if (!firstResult || !secondResult) throw new Error('Expected two faction bulk buy fixture results.');
+    firstResult.index = 7;
+    secondResult.index = 3;
+
+    const { stdout, stderr } = captureStructuredOutput('faction_create_buy_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Buy Orders ===');
+    expect(stdout).toContain('2 requested | 1 succeeded | 1 failed');
+    expect(stdout).toContain('spent 0 cr; escrow 50 cr; refund 0 cr; fee 1 cr');
+    expect(stdout).toContain('Procurement (separate)');
+    expect(stdout).toContain('faction-buy-bulk-1');
+    expect(stdout).toContain('listing_limit_reached: The faction listing');
+    expect(stdout.indexOf('7')).toBeLessThan(stdout.indexOf('3'));
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+  });
+
+  test('formats faction bulk sell financials and consolidated bucket', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_create_sell_order', factionCreateSellOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Sell Orders ===');
+    expect(stdout).toContain('earned 40 cr; fee 2 cr');
+    expect(stdout).toContain('Sales (consolidated)');
+    expect(stdout).toContain('insufficient_storage: Faction storage');
+    expect(stdout).not.toContain('spent');
+  });
+
+  test('renders an explicit empty faction bulk result state', () => {
+    const fixture = structuredClone(factionCreateBuyOrderBulkFixture);
+    fixture.details.results = [];
+    fixture.details.summary = { total: 0, succeeded: 0, failed: 0 };
+
+    const { stdout } = captureStructuredOutput('faction_create_buy_order', fixture);
+
+    expect(stdout).toContain('0 requested | 0 succeeded | 0 failed');
+    expect(stdout).toContain('No order results.');
+  });
+
+  test('declines malformed faction bulk core fields to raw fallback', () => {
+    const fixture = structuredClone(factionCreateBuyOrderBulkFixture) as Record<string, unknown>;
+    const details = fixture.details as Record<string, unknown>;
+    const results = details.results as Array<Record<string, unknown>>;
+    const firstResult = results[0];
+    if (!firstResult) throw new Error('Expected a faction bulk buy fixture result.');
+    firstResult.success = 'yes';
+
+    const { stdout } = captureStructuredOutput('faction_create_buy_order', fixture);
+
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Faction Buy Orders ===');
+  });
+
   test.each([
     [
       'buy',
@@ -4219,9 +4282,11 @@ describe('structuredContent formatters', () => {
     expect(outputs.create_market_order).toContain('=== Sell Order Created ===');
     expect(outputs.direct_buy).toContain('=== Buy Complete ===');
     expect(outputs.direct_sell).toContain('=== Sell Complete ===');
+    expect(outputs.faction_bulk_orders).toContain('=== Faction Buy Orders ===');
     delete outputs.create_market_order;
     delete outputs.direct_buy;
     delete outputs.direct_sell;
+    delete outputs.faction_bulk_orders;
 
     expect(outputs).toMatchInlineSnapshot(`
       {

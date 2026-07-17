@@ -1,0 +1,10 @@
+
+=== Faction Buy Orders ===
+2 requested | 1 succeeded | 1 failed
+
+=== Results ===
+
+  # | Status  | Item                    | Qty | Filled/Listed | Price | Bucket                 | Financial                                       | Order / Error                                                   
+  --+---------+-------------------------+-----+---------------+-------+------------------------+-------------------------------------------------+-----------------------------------------------------------------
+  0 | created | Nickel Ore (nickel_ore) | 25  | 0/25          | 2 cr  | Procurement (separate) | spent 0 cr; escrow 50 cr; refund 0 cr; fee 1 cr | faction-buy-bulk-1                                              
+  1 | failed  | Fuel Cell (fuel_cell)   | 100 |               | 20 cr |                        |                                                 | listing_limit_reached: The faction listing limit has been rea...

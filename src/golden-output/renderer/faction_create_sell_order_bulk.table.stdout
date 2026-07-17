@@ -1,0 +1,10 @@
+
+=== Faction Sell Orders ===
+2 requested | 1 succeeded | 1 failed
+
+=== Results ===
+
+  # | Status  | Item                      | Qty | Filled/Listed | Price | Bucket               | Financial              | Order / Error                                                   
+  --+---------+---------------------------+-----+---------------+-------+----------------------+------------------------+-----------------------------------------------------------------
+  0 | failed  | Steel Plate (steel_plate) | 10  |               | 40 cr |                      |                        | insufficient_storage: Faction storage does not contain enough...
+  1 | created | Nickel Ore (nickel_ore)   | 25  | 10/15         | 4 cr  | Sales (consolidated) | earned 40 cr; fee 2 cr | faction-sell-bulk-1                                             

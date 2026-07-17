@@ -251,6 +251,7 @@ export const createBuyOrderFixture = {
 export const factionCreateBuyOrderFixture = {
   details: {
     action: 'create_buy_order',
+    kind: 'single',
     order_id: 'faction-buy-1',
     faction_id: 'faction-1',
     faction_tag: 'MOLT',
@@ -270,6 +271,7 @@ export const factionCreateBuyOrderFixture = {
 export const factionCreateSellOrderFixture = {
   details: {
     action: 'create_sell_order',
+    kind: 'single',
     order_id: 'faction-sell-1',
     faction_id: 'faction-1',
     faction_tag: 'MOLT',
@@ -283,6 +285,88 @@ export const factionCreateSellOrderFixture = {
     listing_fee: 2,
     message: 'Created faction sell order.',
   },
+};
+
+export const factionCreateBuyOrderBulkFixture = {
+  details: {
+    action: 'faction_create_buy_order',
+    mode: 'bulk',
+    kind: 'bulk',
+    results: [
+      {
+        index: 0,
+        success: true,
+        item: 'Nickel Ore',
+        item_id: 'nickel_ore',
+        quantity: 25,
+        price_each: 2,
+        quantity_filled: 0,
+        quantity_listed: 25,
+        total_spent: 0,
+        total_escrowed: 50,
+        escrow_refunded: 0,
+        listing_fee: 1,
+        bucket: 'Procurement',
+        consolidated: false,
+        order_id: 'faction-buy-bulk-1',
+        message: 'Created faction buy order.',
+      },
+      {
+        index: 1,
+        success: false,
+        item: 'Fuel Cell',
+        item_id: 'fuel_cell',
+        quantity: 100,
+        price_each: 20,
+        error_code: 'listing_limit_reached',
+        error: 'The faction listing limit has been reached.',
+      },
+    ],
+    summary: { total: 2, succeeded: 1, failed: 1 },
+  },
+  player: { username: 'Marlowe', credits: 198000 },
+  ship: { id: 'ship-wayfarer', name: 'Wayfarer', cargo_used: 0, cargo_capacity: 500 },
+  cargo: [],
+};
+
+export const factionCreateSellOrderBulkFixture = {
+  details: {
+    action: 'faction_create_sell_order',
+    mode: 'bulk',
+    kind: 'bulk',
+    results: [
+      {
+        index: 0,
+        success: false,
+        item: 'Steel Plate',
+        item_id: 'steel_plate',
+        quantity: 10,
+        price_each: 40,
+        error_code: 'insufficient_storage',
+        error: 'Faction storage does not contain enough Steel Plate.',
+      },
+      {
+        index: 1,
+        success: true,
+        item: 'Nickel Ore',
+        item_id: 'nickel_ore',
+        quantity: 25,
+        price_each: 4,
+        quantity_filled: 10,
+        quantity_listed: 15,
+        total_earned: 40,
+        listing_fee: 2,
+        bucket: 'Sales',
+        consolidated: true,
+        order_id: 'faction-sell-bulk-1',
+        message: 'Created faction sell order.',
+      },
+    ],
+    summary: { total: 2, succeeded: 1, failed: 1 },
+  },
+  player: { username: 'Marlowe', credits: 198040 },
+  ship: { id: 'ship-wayfarer', name: 'Wayfarer', cargo_used: 0, cargo_capacity: 500 },
+  cargo: [],
 };
 
 export const commissionStatusFixture = {
@@ -499,6 +583,18 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
   faction_create_buy_order: { command: 'faction_create_buy_order', fixture: factionCreateBuyOrderFixture },
+  faction_create_buy_order_bulk: {
+    command: 'faction_create_buy_order',
+    fixture: factionCreateBuyOrderBulkFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction_commerce/create_buy_order',
+    schemaTarget: 'details',
+  },
   faction_create_sell_order: { command: 'faction_create_sell_order', fixture: factionCreateSellOrderFixture },
+  faction_create_sell_order_bulk: {
+    command: 'faction_create_sell_order',
+    fixture: factionCreateSellOrderBulkFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction_commerce/create_sell_order',
+    schemaTarget: 'details',
+  },
   get_trades: { command: 'get_trades', fixture: tradeOffersFixture },
 };

@@ -18,6 +18,10 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('facility_list_detailed');
     expect(report.requiredCoverageKeys).toContain('catalog_recipes');
     expect(report.highValueFixtureLabels).toContain('catalog_recipes');
+    expect(report.requiredCoverageKeys).toContain('faction_create_buy_order_bulk');
+    expect(report.highValueFixtureLabels).toContain('faction_create_buy_order_bulk');
+    expect(report.requiredCoverageKeys).toContain('faction_create_sell_order_bulk');
+    expect(report.highValueFixtureLabels).toContain('faction_create_sell_order_bulk');
   });
 
   test('friendly formatting gap targets have high-value non-fallback table output', () => {
