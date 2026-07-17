@@ -359,14 +359,18 @@ describe('help output branches', () => {
     expect(output).not.toContain('faction_create_buy_order <item>');
   });
 
-  test('storage group includes unified and standalone storage workflows', () => {
+  test('storage group includes nested actions and standalone storage workflows', () => {
     const capture = captureWriter();
 
     expect(showCommandGroup('storage', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('Storage Commands');
-    expect(output).toContain('storage <view|deposit|withdraw|loot|jettison>');
+    expect(output).toContain('storage view');
+    expect(output).toContain('storage deposit');
+    expect(output).toContain('storage withdraw');
+    expect(output).toContain('storage loot');
+    expect(output).toContain('storage jettison');
     expect(output).toContain('jettison [item_id] [quantity] [items=JSON]');
     expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity]');
     expect(output).toContain('omit wreck_id while towing');
@@ -447,17 +451,19 @@ describe('help output branches', () => {
   test('showCommandHelp documents payload-json for bulk storage item arrays', () => {
     const capture = captureWriter();
 
-    expect(showCommandHelp('storage', capture.writer)).toBe(true);
+    expect(showCommandHelp('storage deposit', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('Use --payload-json for array/object fields: items.');
-    expect(output).toContain('spacemolt storage --payload-json \'{"items":[{"item_id":"ore_iron","quantity":1}]}\'');
+    expect(output).toContain(
+      'spacemolt storage deposit --payload-json \'{"items":[{"item_id":"ore_iron","quantity":1}]}\'',
+    );
   });
 
   test('showCommandHelp documents storage credit gifts to players', () => {
     const capture = captureWriter();
 
-    expect(showCommandHelp('storage', capture.writer)).toBe(true);
+    expect(showCommandHelp('storage deposit', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('credits - Credits to gift to another player.');
@@ -467,15 +473,11 @@ describe('help output branches', () => {
   test('showCommandHelp documents gifting via storage deposit with source', () => {
     const capture = captureWriter();
 
-    expect(showCommandHelp('storage', capture.writer)).toBe(true);
+    expect(showCommandHelp('storage deposit', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('gift items/credits/ships to players');
-    expect(output).toContain('source=storage to pull items from personal storage');
-    expect(output).toContain('spacemolt storage withdraw <item_id> <quantity>');
-    expect(output).toContain('personal storage to cargo; omit source and target');
     expect(output).toContain('spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"');
-    expect(output).toContain('or a player name/ID (gift)');
   });
 
   test('showCommandGroup omits duplicate command-name descriptions', () => {

@@ -212,18 +212,26 @@ describe('response renderer', () => {
         return { structuredContent: { ok: true } };
       },
     } as unknown as SpaceMoltClient;
+    const storageActions = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions;
 
-    for (const action of ['view', 'deposit', 'withdraw', 'loot', 'jettison']) {
+    for (const action of ['view', 'deposit', 'withdraw', 'loot', 'jettison'] as const) {
       await runCommand(
-        'storage',
-        { action, item_id: 'ore_iron', quantity: '2' },
+        `storage_${action}`,
+        { item_id: 'ore_iron', quantity: '2' },
         baseOptions,
         client,
-        BUNDLED_COMMAND_REGISTRY.commands.storage,
+        storageActions?.[action]?.config,
       );
     }
 
     expect(calls.map((call) => call.routeAction)).toEqual(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
+    expect(calls.map((call) => call.command)).toEqual([
+      'storage_view',
+      'storage_deposit',
+      'storage_withdraw',
+      'storage_loot',
+      'storage_jettison',
+    ]);
   });
 
   test('runCommand strips storage view filters before API execution', async () => {
@@ -240,24 +248,24 @@ describe('response renderer', () => {
     } as unknown as SpaceMoltClient;
 
     await runCommand(
-      'storage',
+      'storage_view',
       {
-        action: 'view',
         station_id: 'nexus_base',
         item_id: 'iron_ore',
         items: ['iron_ore', 'fuel_cell'],
         search: 'iron',
+        target: 'self',
       },
       baseOptions,
       client,
-      BUNDLED_COMMAND_REGISTRY.commands.storage,
+      BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.view?.config,
     );
 
     expect(calls).toEqual([
       {
-        command: 'storage',
+        command: 'storage_view',
         routeAction: 'view',
-        payload: { action: 'view', station_id: 'nexus_base', target: 'self' },
+        payload: { station_id: 'nexus_base', target: 'self' },
       },
     ]);
   });
@@ -276,18 +284,18 @@ describe('response renderer', () => {
     } as unknown as SpaceMoltClient;
 
     await runCommand(
-      'storage',
-      { action: 'view', station_id: 'nexus_base', target: 'faction' },
+      'storage_view',
+      { station_id: 'nexus_base', target: 'faction' },
       baseOptions,
       client,
-      BUNDLED_COMMAND_REGISTRY.commands.storage,
+      BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.view?.config,
     );
 
     expect(calls).toEqual([
       {
-        command: 'storage',
+        command: 'storage_view',
         routeAction: 'view',
-        payload: { action: 'view', station_id: 'nexus_base', target: 'faction' },
+        payload: { station_id: 'nexus_base', target: 'faction' },
       },
     ]);
   });
@@ -308,33 +316,34 @@ describe('response renderer', () => {
       { item_id: 'ore_iron', quantity: 1 },
       { item_id: 'ore_copper', quantity: 2 },
     ];
+    const storageActions = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions;
 
     await runCommand(
-      'storage',
-      { action: 'deposit', target: 'faction', items },
+      'storage_deposit',
+      { target: 'faction', items },
       baseOptions,
       client,
-      BUNDLED_COMMAND_REGISTRY.commands.storage,
+      storageActions?.deposit?.config,
     );
 
     await runCommand(
-      'storage',
-      { action: 'withdraw', target: 'self', source: 'faction', items },
+      'storage_withdraw',
+      { target: 'self', source: 'faction', items },
       baseOptions,
       client,
-      BUNDLED_COMMAND_REGISTRY.commands.storage,
+      storageActions?.withdraw?.config,
     );
 
     expect(calls).toEqual([
       {
-        command: 'storage',
+        command: 'storage_deposit',
         routeAction: 'deposit',
-        payload: { action: 'deposit', target: 'faction', items },
+        payload: { target: 'faction', items },
       },
       {
-        command: 'storage',
+        command: 'storage_withdraw',
         routeAction: 'withdraw',
-        payload: { action: 'withdraw', target: 'self', source: 'faction', items },
+        payload: { target: 'self', source: 'faction', items },
       },
     ]);
   });
@@ -1515,9 +1524,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', item_id: 'iron_ore' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { item_id: 'iron_ore' },
         response: {
           structuredContent: {
             items: [
@@ -1542,9 +1551,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', search: 'fuel' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { search: 'fuel' },
         response: {
           structuredContent: {
             items: [
@@ -1569,9 +1578,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', items: 'iron_ore,steel_plate' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { items: 'iron_ore,steel_plate' },
         response: {
           structuredContent: {
             items: [
@@ -1600,9 +1609,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', items: ['iron_ore', 'fuel_cell'] },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { items: ['iron_ore', 'fuel_cell'] },
         response: {
           structuredContent: {
             items: [
@@ -1631,9 +1640,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', items: 'fuel_cell' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { items: 'fuel_cell' },
         response: {
           structuredContent: {
             items: [
@@ -1656,9 +1665,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', target: 'faction', items: 'fuel_cell,steel_plate' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { target: 'faction', items: 'fuel_cell,steel_plate' },
         response: {
           structuredContent: {
             base_id: 'nova_terra_central',
@@ -1689,9 +1698,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', station_id: 'crimson_war_citadel' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { station_id: 'crimson_war_citadel' },
         response: {
           structuredContent: {
             base_id: 'crimson_war_citadel',
@@ -1722,9 +1731,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', search: 'Copper Wiring,Steel Plate' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { search: 'Copper Wiring,Steel Plate' },
         response: {
           structuredContent: {
             items: [
@@ -1751,9 +1760,9 @@ describe('response renderer', () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', search: 'copper wiring' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { search: 'copper wiring' },
         response: {
           structuredContent: {
             items: [

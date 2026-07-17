@@ -19,8 +19,18 @@ const command = (action: string): CommandConfig => ({
 
 describe('nested command groups', () => {
   test('recognizes only exact configured flat prefixes', () => {
-    expect(GROUPED_COMMANDS).toEqual(['citizenship', 'facility', 'faction', 'fleet', 'forum', 'station', 'trade']);
+    expect(GROUPED_COMMANDS).toEqual([
+      'citizenship',
+      'facility',
+      'faction',
+      'fleet',
+      'forum',
+      'station',
+      'storage',
+      'trade',
+    ]);
     expect(groupedCommandParts('faction_info')).toEqual({ group: 'faction', action: 'info' });
+    expect(groupedCommandParts('storage_view')).toEqual({ group: 'storage', action: 'view' });
     expect(groupedCommandParts('get_faction_achievements')).toBeUndefined();
     expect(groupedCommandParts('faction')).toBeUndefined();
     expect(groupedCommandParts('faction_')).toBeUndefined();
@@ -56,7 +66,14 @@ describe('nested command groups', () => {
     expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'facility')?.actions.job_add?.command).toBe(
       'facility_job_add',
     );
+    expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'storage')?.actions.view?.command).toBe('storage_view');
+    expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'storage')?.actions.deposit?.command).toBe(
+      'storage_deposit',
+    );
+    expect(BUNDLED_COMMAND_REGISTRY.commands.storage).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.storage_view).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.allCommands.faction).toBeDefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.storage).toBeDefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.get_faction_achievements).toBeDefined();
   });
 

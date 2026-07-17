@@ -642,26 +642,25 @@ describe('command metadata', () => {
   });
 
   test('storage help documents bucket transfers for faction storage extensions', () => {
-    const config = BUNDLED_COMMAND_REGISTRY.commands.storage;
-    expect(config?.args).toContain('bucket');
-    expect(config?.usage).toContain('[bucket=name-or-id]');
-    expect(config?.usage).toContain('[dest_bucket=name-or-id]');
-    expect(config?.description).toContain('gift items/credits/ships to players');
-    expect(config?.description).toContain('source=storage');
-    expect(config?.example).toContain('target=PlayerName source=storage');
-    expect(config?.schema?.source?.description).toContain('source=faction target=faction');
-    expect(config?.schema?.source?.description).toContain('move items between faction compartments');
-    expect(config?.schema?.items?.description).toContain('Bulk deposit/withdraw');
-    expect(config?.schema?.bucket?.description).toContain('Storage Extension bucket');
-    expect(config?.schema?.bucket?.description).toContain('SOURCE compartment');
-    expect(config?.schema?.dest_bucket?.description).toContain('main↔bucket and bucket↔bucket');
+    const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
+    const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
+    expect(deposit?.args).toContain('bucket');
+    expect(deposit?.usage).toContain('[bucket=…]');
+    expect(deposit?.usage).toContain('[dest_bucket=…]');
+    expect(deposit?.description).toContain('gift items/credits/ships to players');
+    expect(deposit?.example).toContain('target=PlayerName source=storage');
+    expect(deposit?.schema?.source?.description).toContain('source=faction target=faction');
+    expect(deposit?.schema?.source?.description).toContain('move items between faction compartments');
+    expect(deposit?.schema?.bucket?.description).toContain('Storage Extension bucket');
+    expect(deposit?.schema?.bucket?.description).toContain('SOURCE compartment');
+    expect(deposit?.schema?.dest_bucket?.description).toContain('main↔bucket and bucket↔bucket');
+    expect(withdraw?.schema?.bucket?.description).toContain('Storage Extension bucket');
 
-    const help = captureHelp('storage');
-    expect(help).toContain('[bucket=name-or-id]');
-    expect(help).toContain('[dest_bucket=name-or-id]');
+    const help = captureHelp('storage deposit');
+    expect(help).toContain('[bucket=…]');
+    expect(help).toContain('[dest_bucket=…]');
     expect(help).toContain('Storage Extension bucket');
     expect(help).toContain('source=faction target=faction');
-    expect(help).toContain('Bulk deposit/withdraw');
   });
 
   test('market and jettison help advertises v0.441 request options', () => {

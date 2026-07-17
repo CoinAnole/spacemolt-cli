@@ -498,7 +498,9 @@ describe('runInvocation option isolation', () => {
     const exitCode = await runInvocation(
       [
         '--dry-run',
+        '--json',
         'storage',
+        'deposit',
         'target=faction',
         '--payload-json',
         '{"items":[{"item_id":"ore_iron","quantity":1},{"item_id":"ore_copper","quantity":2}]}',
@@ -515,8 +517,8 @@ describe('runInvocation option isolation', () => {
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
     const rendered = stdout.join('\n');
-    expect(rendered).toContain('"command": "storage"');
-    expect(rendered).toContain('"items": [');
+    expect(rendered).toContain('"command": "storage_deposit"');
+    expect(rendered).toContain('"items"');
     expect(rendered).toContain('"item_id": "ore_iron"');
     expect(rendered).toContain('"quantity": 1');
     expect(rendered).toContain('"item_id": "ore_copper"');

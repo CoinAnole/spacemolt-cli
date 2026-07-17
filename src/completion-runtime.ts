@@ -44,14 +44,6 @@ const VALUE_TAKING_GLOBAL_OPTIONS = new Set(
   ),
 );
 
-const STORAGE_ACTION_POSITIONALS: Record<string, string[]> = {
-  view: ['station_id'],
-  deposit: ['item_id', 'quantity'],
-  withdraw: ['item_id', 'quantity'],
-  loot: ['wreck_id', 'item_id', 'quantity'],
-  jettison: ['item_id', 'quantity'],
-};
-
 function sanitize(value: string): string {
   return value.replace(/[\t\r\n]+/g, ' ');
 }
@@ -183,7 +175,7 @@ function commandContext(
     const keyValueField = currentWord.includes('=') ? currentWord.split('=', 1)[0] : undefined;
     return {
       command: nested.command,
-      field: keyValueField || completionFieldForCommand(nested.command, wordsBeforeCurrent, fallbackField),
+      field: keyValueField || fallbackField,
     };
   }
 
@@ -211,7 +203,7 @@ function commandContext(
     const fallbackField = args[positionalIndex]?.name;
     return {
       command: word,
-      field: keyValueField || completionFieldForCommand(word, wordsBeforeCurrent, fallbackField),
+      field: keyValueField || fallbackField,
     };
   }
 
@@ -272,72 +264,8 @@ function nestedCommandContext(
   };
 }
 
-function completionFieldForCommand(
-  command: string,
-  wordsBeforeCurrent: string[],
-  fallbackField: string | undefined,
-): string | undefined {
-  if (command !== 'storage') return fallbackField;
-  const context = storageCompletionContext(wordsBeforeCurrent);
-  if (!context.action) return fallbackField;
-  const actionFields = STORAGE_ACTION_POSITIONALS[context.action] || [];
-  return actionFields.find((field) => !context.payloadFields.has(field));
-}
-
-function storageCompletionContext(wordsBeforeCurrent: string[]): {
-  action?: string;
-  payloadFields: Set<string>;
-} {
-  let action: string | undefined;
-  const payloadFields = new Set<string>();
-
-  for (let i = 0; i < wordsBeforeCurrent.length; i += 1) {
-    const word = wordsBeforeCurrent[i];
-    if (!word) continue;
-
-    if (VALUE_TAKING_GLOBAL_OPTIONS.has(word)) {
-      i += 1;
-      continue;
-    }
-
-    const optionName = word.split('=', 1)[0] || word;
-    if (VALUE_TAKING_GLOBAL_OPTIONS.has(optionName)) continue;
-    if (GLOBAL_OPTION_WORDS.has(word) || GLOBAL_OPTION_WORDS.has(optionName)) continue;
-
-    if (word.includes('=')) {
-      const [field, value] = word.split('=', 2);
-      if (!field) continue;
-      const normalizedField = normalizeCompletionField(field);
-      if (normalizedField === 'action' && value && STORAGE_ACTION_POSITIONALS[value]) action = value;
-      else {
-        const canonicalField = storageCanonicalField(normalizedField);
-        if (canonicalField) payloadFields.add(canonicalField);
-      }
-      continue;
-    }
-
-    if (!action && STORAGE_ACTION_POSITIONALS[word]) {
-      action = word;
-      continue;
-    }
-
-    if (action) {
-      const field = STORAGE_ACTION_POSITIONALS[action]?.find((candidate) => !payloadFields.has(candidate));
-      if (field) payloadFields.add(field);
-    }
-  }
-
-  return { action, payloadFields };
-}
-
 function normalizeCompletionField(field: string): string {
   return field.replace(/^-+/, '').replace(/-/g, '_');
-}
-
-function storageCanonicalField(field: string): string | undefined {
-  if (field === 'item' || field === 'ship_id') return 'item_id';
-  if (field === 'recipient') return 'target';
-  return field;
 }
 
 function isProfileDefaultValue(input: CompletionRequest): boolean {

@@ -1,6 +1,15 @@
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 
-export const GROUPED_COMMANDS = ['citizenship', 'facility', 'faction', 'fleet', 'forum', 'station', 'trade'] as const;
+export const GROUPED_COMMANDS = [
+  'citizenship',
+  'facility',
+  'faction',
+  'fleet',
+  'forum',
+  'station',
+  'storage',
+  'trade',
+] as const;
 
 export type GroupedCommandName = (typeof GROUPED_COMMANDS)[number];
 
@@ -29,6 +38,7 @@ const GROUP_DESCRIPTIONS: Record<GroupedCommandName, string> = {
   fleet: 'Run fleet actions.',
   forum: 'Run forum actions.',
   station: 'Run station administration actions.',
+  storage: 'Run station and faction storage actions.',
   trade: 'Run player trade actions.',
 };
 

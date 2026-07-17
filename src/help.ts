@@ -190,15 +190,13 @@ function commandHelpMap(source?: CommandHelpSource): CommandHelpMap {
   return commands;
 }
 
-function structuredPayloadFields(command: string, config: CommandConfig | LocalCommandConfig): string[] {
-  const fields =
-    'schema' in config && config.schema
-      ? Object.entries(config.schema)
-          .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
-          .map(([field]) => field)
-      : [];
-  if (command === 'storage' && !fields.includes('items')) fields.push('items');
-  return fields;
+function structuredPayloadFields(_command: string, config: CommandConfig | LocalCommandConfig): string[] {
+  // Schema-driven only: array/object fields (e.g. storage deposit/withdraw/jettison `items`)
+  // come from OpenAPI/curated schema — no command-name special cases.
+  if (!('schema' in config) || !config.schema) return [];
+  return Object.entries(config.schema)
+    .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
+    .map(([field]) => field);
 }
 
 function structuredPayloadExample(command: string, field: string): string {

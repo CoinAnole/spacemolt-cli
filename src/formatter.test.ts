@@ -1035,7 +1035,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'storage', displayCommand: 'storage', payload: { action: 'view', item_id: 'iron_ore' } },
+      { command: 'storage_view', displayCommand: 'storage view', payload: { item_id: 'iron_ore' } },
     );
 
     expect(exitCode).toBe(0);
@@ -1064,7 +1064,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'storage', displayCommand: 'storage', payload: { action: 'view' } },
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
     );
 
     expect(exitCode).toBe(0);
@@ -1092,9 +1092,9 @@ describe('structuredContent output mode precedence', () => {
       },
       {},
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'deposit', item_id: shipId, quantity: 1, target: 'self' },
+        command: 'storage_deposit',
+        displayCommand: 'storage deposit',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
       },
     );
 
@@ -1150,9 +1150,9 @@ describe('structuredContent output mode precedence', () => {
       },
       {},
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'deposit', item_id: shipId, quantity: 1, target: 'self' },
+        command: 'storage_deposit',
+        displayCommand: 'storage deposit',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
       },
     );
 
@@ -1178,9 +1178,9 @@ describe('structuredContent output mode precedence', () => {
       { structuredContent },
       { structured: true },
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'deposit', item_id: shipId, quantity: 1, target: 'self' },
+        command: 'storage_deposit',
+        displayCommand: 'storage deposit',
+        payload: { item_id: shipId, quantity: 1, target: 'self' },
       },
     );
 
@@ -1201,7 +1201,7 @@ describe('structuredContent output mode precedence', () => {
         },
       },
       {},
-      { command: 'storage', displayCommand: 'storage', payload: { action: 'view', target: 'faction', search: 'iron' } },
+      { command: 'storage_view', displayCommand: 'storage view', payload: { target: 'faction', search: 'iron' } },
     );
 
     expect(exitCode).toBe(0);
@@ -1226,9 +1226,9 @@ describe('structuredContent output mode precedence', () => {
       },
       {},
       {
-        command: 'storage',
-        displayCommand: 'storage',
-        payload: { action: 'view', target: 'faction', station_id: 'earth_station' },
+        command: 'storage_view',
+        displayCommand: 'storage view',
+        payload: { target: 'faction', station_id: 'earth_station' },
       },
     );
 

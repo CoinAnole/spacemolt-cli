@@ -224,8 +224,6 @@ describe('removed storage command names', () => {
     'deposit_items',
     'withdraw_items',
     'send_gift',
-    'storage_loot',
-    'storage_jettison',
   ];
 
   test('legacy storage command names are not bundled curated commands', () => {
@@ -233,6 +231,16 @@ describe('removed storage command names', () => {
       expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty(command);
       expect(BUNDLED_COMMAND_REGISTRY.allCommands).not.toHaveProperty(command);
     }
+  });
+
+  test('storage flat commands are group-only and not top-level', () => {
+    for (const command of ['storage_view', 'storage_deposit', 'storage_withdraw', 'storage_loot', 'storage_jettison']) {
+      expect(BUNDLED_COMMAND_REGISTRY.commands).not.toHaveProperty(command);
+      expect(BUNDLED_COMMAND_REGISTRY.allCommands).not.toHaveProperty(command);
+      expect(COMMANDS).toHaveProperty(command);
+    }
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.storage).toBeDefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.view?.command).toBe('storage_view');
   });
 });
 
@@ -248,18 +256,17 @@ describe('command metadata', () => {
   });
 
   test('storage view filters are client-only metadata', () => {
-    const config = BUNDLED_COMMAND_REGISTRY.commands.storage;
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.view?.config;
     if (!config) {
-      throw new Error('storage command metadata is missing');
+      throw new Error('storage_view command metadata is missing');
     }
 
-    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items']));
+    expect(config.clientOnlyFields).toEqual(expect.arrayContaining(['search', 'items', 'item_id']));
     expect(config.aliases).toMatchObject({
       item: 'item_id',
-      recipient: 'target',
-      ship_id: 'item_id',
     });
-    expect(config.schema?.action?.enum).toEqual(['view', 'deposit', 'withdraw', 'loot', 'jettison']);
+    expect(config.route).toMatchObject({ tool: 'spacemolt_storage', action: 'view' });
+    expect(config.schema?.action).toBeUndefined();
   });
 
   test('view_market search filter is client-only metadata', () => {
@@ -1342,12 +1349,18 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(COMMANDS.modify_order?.aliases?.new_price).not.toBe('order_id');
   });
 
-  test('storage view parses action-specific station positional and filters', () => {
-    const { command, payload } = parseOk(['storage', 'view', 'nexus_base', '--item', 'iron_ore', '--search', 'iron']);
+  test('storage view parses station positional and filters', () => {
+    const { command, payload } = parseInternalOk([
+      'storage_view',
+      'nexus_base',
+      '--item',
+      'iron_ore',
+      '--search',
+      'iron',
+    ]);
 
-    expect(command).toBe('storage');
-    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
-      action: 'view',
+    expect(command).toBe('storage_view');
+    expect(normalizeInternalPayload('storage_view', payload)).toMatchObject({
       station_id: 'nexus_base',
       item_id: 'iron_ore',
       search: 'iron',
@@ -1355,10 +1368,15 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage view accepts faction target and items filter', () => {
-    const { payload } = parseOk(['storage', 'view', 'nexus_base', 'target=faction', '--items', 'iron_ore,fuel_cell']);
+    const { payload } = parseInternalOk([
+      'storage_view',
+      'nexus_base',
+      'target=faction',
+      '--items',
+      'iron_ore,fuel_cell',
+    ]);
 
-    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
-      action: 'view',
+    expect(normalizeInternalPayload('storage_view', payload)).toMatchObject({
       station_id: 'nexus_base',
       target: 'faction',
       items: 'iron_ore,fuel_cell',
@@ -1366,18 +1384,27 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage deposit parses item quantity target source and gift aliases', () => {
-    const direct = parseOk(['storage', 'deposit', 'ore_iron', '50', 'target=faction', 'source=storage']);
-    expect(normalizeParsedPayload('storage', direct.payload)).toMatchObject({
-      action: 'deposit',
+    const direct = parseInternalOk([
+      'storage_deposit',
+      'ore_iron',
+      '50',
+      'target=faction',
+      'source=storage',
+    ]);
+    expect(normalizeInternalPayload('storage_deposit', direct.payload)).toMatchObject({
       item_id: 'ore_iron',
       quantity: '50',
       target: 'faction',
       source: 'storage',
     });
 
-    const gift = parseOk(['storage', 'deposit', 'target=PlayerName', 'ship_id=ship_456', 'message=Enjoy']);
-    expect(normalizeParsedPayload('storage', gift.payload)).toMatchObject({
-      action: 'deposit',
+    const gift = parseInternalOk([
+      'storage_deposit',
+      'target=PlayerName',
+      'ship_id=ship_456',
+      'message=Enjoy',
+    ]);
+    expect(normalizeInternalPayload('storage_deposit', gift.payload)).toMatchObject({
       target: 'PlayerName',
       item_id: 'ship_456',
       message: 'Enjoy',
@@ -1385,17 +1412,18 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage deposit parses bulk items JSON and bucket destination', () => {
-    const parsed = parseOk([
-      'storage',
-      'deposit',
+    const parsed = parseInternalOk([
+      'storage_deposit',
       'target=faction',
       'bucket=Workshop',
       'items=[{"item_id":"iron_ore","quantity":5},{"item_id":"fuel_cell","quantity":2}]',
     ]);
-    const payload = convertPayloadTypes(normalizeParsedPayload('storage', parsed.payload), 'storage');
+    const payload = convertInternalPayloadTypes(
+      normalizeInternalPayload('storage_deposit', parsed.payload),
+      'storage_deposit',
+    );
 
     expect(payload).toEqual({
-      action: 'deposit',
       target: 'faction',
       bucket: 'Workshop',
       items: [
@@ -1406,10 +1434,15 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage withdraw parses item and quantity positionals', () => {
-    const { payload } = parseOk(['storage', 'withdraw', 'ore_iron', '50', 'source=faction', 'target=self']);
+    const { payload } = parseInternalOk([
+      'storage_withdraw',
+      'ore_iron',
+      '50',
+      'source=faction',
+      'target=self',
+    ]);
 
-    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
-      action: 'withdraw',
+    expect(normalizeInternalPayload('storage_withdraw', payload)).toMatchObject({
       item_id: 'ore_iron',
       quantity: '50',
       source: 'faction',
@@ -1418,59 +1451,32 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage loot and jettison parse action-specific positionals', () => {
-    const loot = parseOk(['storage', 'loot', 'wreck_1', 'ore_iron', '2']);
-    expect(normalizeParsedPayload('storage', loot.payload)).toMatchObject({
-      action: 'loot',
+    const loot = parseInternalOk(['storage_loot', 'wreck_1', 'ore_iron', '2']);
+    expect(normalizeInternalPayload('storage_loot', loot.payload)).toMatchObject({
       wreck_id: 'wreck_1',
       item_id: 'ore_iron',
       quantity: '2',
     });
 
-    const jettison = parseOk(['storage', 'jettison', 'ore_iron', '2']);
-    expect(normalizeParsedPayload('storage', jettison.payload)).toMatchObject({
-      action: 'jettison',
+    const jettison = parseInternalOk(['storage_jettison', 'ore_iron', '2']);
+    expect(normalizeInternalPayload('storage_jettison', jettison.payload)).toMatchObject({
       item_id: 'ore_iron',
       quantity: '2',
     });
   });
 
-  test('storage action key-value form still works with following positionals', () => {
-    const { payload } = parseOk(['storage', 'action=deposit', 'ore_iron', '50']);
-
-    expect(normalizeParsedPayload('storage', payload)).toMatchObject({
-      action: 'deposit',
-      item_id: 'ore_iron',
-      quantity: '50',
-    });
-  });
-
-  test('storage positionals skip action-specific fields already set by key-value args', () => {
-    const deposit = parseOk(['storage', 'deposit', 'item_id=ore_iron', '2']);
-    expect(normalizeParsedPayload('storage', deposit.payload)).toMatchObject({
-      action: 'deposit',
+  test('storage key-value args fill fields without action-aware positionals', () => {
+    const deposit = parseInternalOk(['storage_deposit', 'item_id=ore_iron', 'quantity=2']);
+    expect(normalizeInternalPayload('storage_deposit', deposit.payload)).toMatchObject({
       item_id: 'ore_iron',
       quantity: '2',
     });
 
-    const loot = parseOk(['storage', 'loot', 'wreck_id=wreck_1', 'ore_iron', '2']);
-    expect(normalizeParsedPayload('storage', loot.payload)).toMatchObject({
-      action: 'loot',
+    const loot = parseInternalOk(['storage_loot', 'wreck_id=wreck_1', 'item_id=ore_iron', 'quantity=2']);
+    expect(normalizeInternalPayload('storage_loot', loot.payload)).toMatchObject({
       wreck_id: 'wreck_1',
       item_id: 'ore_iron',
       quantity: '2',
-    });
-  });
-
-  test('storage rejects duplicate action declarations', () => {
-    expect(parseArgs(['storage', 'view', 'action=deposit'])).toEqual({
-      ok: false,
-      errors: [
-        {
-          field: 'action',
-          message: 'Storage action can only be specified once.',
-          code: 'invalid_field_type',
-        },
-      ],
     });
   });
 

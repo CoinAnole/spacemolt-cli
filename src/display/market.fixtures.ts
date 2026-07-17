@@ -463,7 +463,7 @@ export const tradeOffersFixture = {
 export const marketFixtureCases = {
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
-  storage: { command: 'storage', fixture: storageFixture },
+  storage: { command: 'storage_view', fixture: storageFixture },
   market_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   intel: { command: 'faction_query_trade_intel', fixture: intelFixture },
   faction_query_intel: { command: 'faction_query_intel', fixture: factionQueryIntelFixture },
@@ -478,7 +478,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
-  storage: { command: 'storage', fixture: storageFixture, apiRoute: 'POST /api/v2/spacemolt_storage/view' },
+  storage: { command: 'storage_view', fixture: storageFixture, apiRoute: 'POST /api/v2/spacemolt_storage/view' },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
@@ -486,7 +486,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
   storage_view: {
-    command: 'storage',
+    command: 'storage_view',
     fixture: { ...storageFixture, gifts: [], messages: [] },
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
   },

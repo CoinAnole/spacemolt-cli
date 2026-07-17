@@ -58,11 +58,9 @@ export function buildGeneratedCommandConfig(generated: GeneratedApiRoute): Comma
   };
 }
 
-const SUPPRESSED_GENERATED_ROUTE_SIGNATURES = new Set([
-  'POST /api/v2/spacemolt_storage/jettison',
-  'POST /api/v2/spacemolt_storage/loot',
-  'POST /api/v2/spacemolt_storage/view',
-]);
+// Extension point for intentionally hiding generated routes. Storage routes are
+// claimed by curated storage_* group commands — keep the Set even when empty.
+const SUPPRESSED_GENERATED_ROUTE_SIGNATURES = new Set<string>([]);
 
 function shouldExposeGeneratedRoute(signature: string, generated: GeneratedApiRoute): boolean {
   if (SUPPRESSED_GENERATED_ROUTE_SIGNATURES.has(signature)) return false;
