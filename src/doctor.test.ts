@@ -64,6 +64,7 @@ function writeOpenApiCache(
       },
     },
   },
+  gameserverVersion = 'v999.0.0',
 ): void {
   const cacheDir = path.join(configHome, 'spacemolt-cli');
   fs.mkdirSync(cacheDir, { recursive: true });
@@ -71,7 +72,7 @@ function writeOpenApiCache(
     path.join(cacheDir, 'openapi-cache.json'),
     JSON.stringify({
       fetchedAt: '2026-05-20T00:00:00.000Z',
-      gameserverVersion: 'v0.324.1',
+      gameserverVersion,
       routes,
     }),
   );
@@ -235,7 +236,7 @@ describe('doctor', () => {
       expect(cacheCheck).toMatchObject({
         ok: true,
         message: '1 cached OpenAPI route',
-        detail: '1 dynamic command',
+        detail: '1 cache-provided dynamic command',
       });
     } finally {
       fs.rmSync(configHome, { recursive: true, force: true });
@@ -269,7 +270,7 @@ describe('doctor', () => {
       expect(cacheCheck).toMatchObject({
         ok: true,
         message: '1 cached OpenAPI route',
-        detail: '1 dynamic command',
+        detail: '1 cache-provided dynamic command',
       });
     } finally {
       fs.rmSync(configHome, { recursive: true, force: true });
@@ -285,7 +286,39 @@ describe('doctor', () => {
 
       expect(result.stdout).toContain('openapi-cache');
       expect(result.stdout).toContain('1 cached OpenAPI route');
-      expect(result.stdout).toContain('1 dynamic command');
+      expect(result.stdout).toContain('1 cache-provided dynamic command');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('doctor reports stale cached routes without counting them as cache-provided commands', async () => {
+    const configHome = tempDir();
+    try {
+      writeOpenApiCache(
+        configHome,
+        {
+          'POST /api/v2/spacemolt_ship/claim_commission': {
+            summary: 'Removed cached route',
+            route: { tool: 'spacemolt_ship', action: 'claim_commission', method: 'POST' },
+          },
+        },
+        'v0.366.0',
+      );
+
+      const result = await runDirect(['--json', 'doctor'], { XDG_CONFIG_HOME: configHome });
+      const parsed = JSON.parse(result.stdout);
+      const cacheCheck = parsed.structuredContent.checks.find(
+        (check: { name: string }) => check.name === 'openapi-cache',
+      );
+
+      expect(parsed.structuredContent.cachedOpenApiRoutes).toBe(1);
+      expect(parsed.structuredContent.dynamicCommands).toBe(0);
+      expect(cacheCheck).toMatchObject({
+        ok: true,
+        message: '1 cached OpenAPI route',
+        detail: '0 cache-provided dynamic commands',
+      });
     } finally {
       fs.rmSync(configHome, { recursive: true, force: true });
     }
