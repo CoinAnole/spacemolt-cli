@@ -235,6 +235,21 @@ const actionLogFixture = {
       category: 'skill',
       event_type: 'skill.level_up',
     },
+    {
+      id: 5,
+      created_at: '2026-07-17T20:00:01.000Z',
+      summary: 'Prospector completed at Earth Station.',
+      category: 'ship',
+      event_type: 'ship.commission_completed',
+      data: {
+        commission_id: 'commission-1',
+        ship_id: 'ship-42',
+        ship_class: 'prospector',
+        ship_name: 'Prospector',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+      },
+    },
   ],
 };
 
@@ -1719,6 +1734,11 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Marlowe rented your Ore Refinery');
     expect(stdout).toContain('skill.level_up');
     expect(stdout).toContain('Drone Control reached level 15');
+    expect(stdout).toContain('ship.commission_completed');
+    expect(stdout).toContain('Commission');
+    expect(stdout).toContain('commission-1');
+    expect(stdout).toContain('Ship');
+    expect(stdout).toContain('ship-42');
     expect(stdout).toContain('More entries available.');
     expect(stdout).not.toContain('=== Response ===');
   });

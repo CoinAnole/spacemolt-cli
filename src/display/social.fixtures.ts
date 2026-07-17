@@ -658,13 +658,15 @@ export const socialFixtureCases = {
  * Multi-entry GetActionLogResponse sample (schema-shaped).
  * Entry ids are integers; optional job/mode/runs/venue/storage live under `data`
  * so they do not create extra-in-fixture drift against additionalProperties: false.
+ * Selected receipt IDs are projected into dedicated table columns while all action
+ * data remains nested in machine formats.
  */
 export const actionLogFixture = {
   category: 'crafting',
   has_more: true,
   page: 1,
   page_size: 50,
-  total: 4,
+  total: 5,
   total_pages: 1,
   entries: [
     {
@@ -706,6 +708,21 @@ export const actionLogFixture = {
       summary: 'Drone Control reached level 15.',
       category: 'skill',
       event_type: 'skill.level_up',
+    },
+    {
+      id: 5,
+      created_at: '2026-07-17T20:00:01.000Z',
+      summary: 'Prospector completed at Earth Station.',
+      category: 'ship',
+      event_type: 'ship.commission_completed',
+      data: {
+        commission_id: 'commission-1',
+        ship_id: 'ship-42',
+        ship_class: 'prospector',
+        ship_name: 'Prospector',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+      },
     },
   ],
 };

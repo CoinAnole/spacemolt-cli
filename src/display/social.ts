@@ -52,6 +52,15 @@ function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): bo
   );
 }
 
+function identifierText(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
 function formatNumber(value: unknown): string | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString();
   if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
@@ -529,17 +538,24 @@ export const socialFormatters = [
     (r) => {
       if (!Array.isArray(r.entries)) return false;
       const category = r.category || 'all';
-      const rows = r.entries.filter(isRecord).map((entry) => ({
-        ...entry,
-        timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
-        category: entry.category ?? category,
-      }));
+      const rows = r.entries.filter(isRecord).map((entry) => {
+        const data = isRecord(entry.data) ? entry.data : undefined;
+        return {
+          ...entry,
+          timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
+          category: entry.category ?? category,
+          commission_id: identifierText(entry.commission_id) ?? identifierText(data?.commission_id),
+          ship_id: identifierText(entry.ship_id) ?? identifierText(data?.ship_id),
+        };
+      });
       const columns: Array<[string, string[]]> = [
         ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
         ['Summary', ['summary', 'message', 'description']],
         ['Category', ['category']],
       ];
       if (hasAnyField(rows, ['event_type', 'type'])) columns.push(['Event', ['event_type', 'type']]);
+      if (hasAnyField(rows, ['commission_id'])) columns.push(['Commission', ['commission_id']]);
+      if (hasAnyField(rows, ['ship_id'])) columns.push(['Ship', ['ship_id']]);
       if (hasAnyField(rows, ['job_id'])) columns.push(['Job', ['job_id']]);
       if (hasAnyField(rows, ['mode'])) columns.push(['Mode', ['mode']]);
       if (hasAnyField(rows, ['runs'])) columns.push(['Runs', ['runs']]);

@@ -2,10 +2,11 @@ category crafting
 
 === Entries ===
 
-  Timestamp           | Summary                                                       | Category | Event                
-  --------------------+---------------------------------------------------------------+----------+----------------------
-  2026-05-23 15:04:05 | Completed basic iron smelting.                                | crafting | crafting.completed   
-  2026-06-24 09:15:00 | Queued 10 runs of steel_plate at personal facility.           | crafting | crafting.queued      
-  2026-06-22 11:30:00 | Marlowe rented your Ore Refinery: 5 runs, 250 credits earned. | other    | other.facility_rented
-  2026-06-22 12:00:00 | Drone Control reached level 15.                               | skill    | skill.level_up       
+  Timestamp           | Summary                                                       | Category | Event                     | Commission   | Ship   
+  --------------------+---------------------------------------------------------------+----------+---------------------------+--------------+--------
+  2026-05-23 15:04:05 | Completed basic iron smelting.                                | crafting | crafting.completed        |              |        
+  2026-06-24 09:15:00 | Queued 10 runs of steel_plate at personal facility.           | crafting | crafting.queued           |              |        
+  2026-06-22 11:30:00 | Marlowe rented your Ore Refinery: 5 runs, 250 credits earned. | other    | other.facility_rented     |              |        
+  2026-06-22 12:00:00 | Drone Control reached level 15.                               | skill    | skill.level_up            |              |        
+  2026-07-17 20:00:01 | Prospector completed at Earth Station.                        | ship     | ship.commission_completed | commission-1 | ship-42
 More entries available.

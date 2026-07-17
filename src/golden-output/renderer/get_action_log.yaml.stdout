@@ -3,7 +3,7 @@ category: crafting
 has_more: true
 page: 1
 page_size: 50
-total: 4
+total: 5
 total_pages: 1
 entries:
   - id: 1
@@ -28,3 +28,9 @@ entries:
     summary: "Drone Control reached level 15."
     category: skill
     event_type: skill.level_up
+  - id: 5
+    created_at: 2026-07-17T20:00:01.000Z
+    summary: "Prospector completed at Earth Station."
+    category: ship
+    event_type: ship.commission_completed
+    data: {commission_id: "commission-1", ship_id: "ship-42", ship_class: prospector, ship_name: Prospector, base_id: earth_station, base_name: "Earth Station"}
