@@ -126,17 +126,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     seeAlso: ['storage_view', 'storage_withdraw', 'get_cargo'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
-    positionals: [
-      'item_id',
-      'quantity',
-      'target',
-      'source',
-      'bucket',
-      'dest_bucket',
-      'message',
-      'items',
-      'credits',
-    ],
+    positionals: ['item_id', 'quantity', 'target', 'source', 'bucket', 'dest_bucket', 'message', 'items', 'credits'],
     aliases: { item: 'item_id', recipient: 'target', ship_id: 'item_id' },
     schemaExtensions: {
       source: { type: 'string', description: STORAGE_TRANSFER_SOURCE_DESCRIPTION },
@@ -188,10 +178,11 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   storage_jettison: {
-    usage: '[item_id] [quantity] [items=JSON]  (item_id/quantity required unless items=JSON; same style as cargo jettison)',
+    usage:
+      '[item_id] [quantity] [items=JSON]  (item_id/quantity required unless items=JSON; same style as cargo jettison)',
     description:
       'Jettison items via spacemolt_storage/jettison. Prefer top-level jettison (spacemolt/jettison) for ordinary cargo dumps unless you specifically need this path.',
-    example: "spacemolt storage_jettison items='[{\"item_id\":\"ore_iron\",\"quantity\":50}]'",
+    example: 'spacemolt storage_jettison items=\'[{"item_id":"ore_iron","quantity":50}]\'',
     category: 'Cargo',
     apiRoute: 'POST /api/v2/spacemolt_storage/jettison',
     positionals: ['item_id', 'quantity', 'items'],

@@ -1384,13 +1384,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage deposit parses item quantity target source and gift aliases', () => {
-    const direct = parseInternalOk([
-      'storage_deposit',
-      'ore_iron',
-      '50',
-      'target=faction',
-      'source=storage',
-    ]);
+    const direct = parseInternalOk(['storage_deposit', 'ore_iron', '50', 'target=faction', 'source=storage']);
     expect(normalizeInternalPayload('storage_deposit', direct.payload)).toMatchObject({
       item_id: 'ore_iron',
       quantity: '50',
@@ -1398,12 +1392,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       source: 'storage',
     });
 
-    const gift = parseInternalOk([
-      'storage_deposit',
-      'target=PlayerName',
-      'ship_id=ship_456',
-      'message=Enjoy',
-    ]);
+    const gift = parseInternalOk(['storage_deposit', 'target=PlayerName', 'ship_id=ship_456', 'message=Enjoy']);
     expect(normalizeInternalPayload('storage_deposit', gift.payload)).toMatchObject({
       target: 'PlayerName',
       item_id: 'ship_456',
@@ -1434,13 +1423,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('storage withdraw parses item and quantity positionals', () => {
-    const { payload } = parseInternalOk([
-      'storage_withdraw',
-      'ore_iron',
-      '50',
-      'source=faction',
-      'target=self',
-    ]);
+    const { payload } = parseInternalOk(['storage_withdraw', 'ore_iron', '50', 'source=faction', 'target=self']);
 
     expect(normalizeInternalPayload('storage_withdraw', payload)).toMatchObject({
       item_id: 'ore_iron',

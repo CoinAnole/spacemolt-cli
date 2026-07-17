@@ -543,9 +543,7 @@ describe('cached ID payload resolver', () => {
     );
 
     for (const target of ['self', 'faction', 'faction:smc']) {
-      expect(
-        prepareInternalPayload('storage_deposit', { target, credits: '200' }, options(), sessionPath),
-      ).toEqual({
+      expect(prepareInternalPayload('storage_deposit', { target, credits: '200' }, options(), sessionPath)).toEqual({
         type: 'payload',
         payload: { target, credits: 200 },
       });

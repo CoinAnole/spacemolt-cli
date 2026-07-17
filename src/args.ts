@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
-import type { CommandArg, CommandConfig } from './commands.ts';
+import type { CommandConfig } from './commands.ts';
 
 type CommandRegistrySource = Pick<CommandRegistrySnapshot, 'commands'>;
 

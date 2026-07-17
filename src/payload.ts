@@ -7,7 +7,6 @@ import {
   type CachedIdResolveResult,
   cachedIdAmbiguityMessage,
   formatCachedIdAmbiguity,
-  type IdKind,
   idKindForCommandField,
   loadIdCacheSync,
   resolveCachedId,
@@ -186,12 +185,7 @@ function resolveCachedIdsForPayload(
   return { type: 'payload', payload: resolvedPayload };
 }
 
-function reservedIdValue(
-  command: string,
-  field: string,
-  value: string,
-  kind: string | undefined,
-): string | undefined {
+function reservedIdValue(command: string, field: string, value: string, kind: string | undefined): string | undefined {
   if (isReservedStorageTarget(command, field, value, kind)) {
     return value.trim();
   }
@@ -205,12 +199,7 @@ function reservedIdValue(
   return undefined;
 }
 
-function isReservedStorageTarget(
-  command: string,
-  field: string,
-  value: string,
-  kind: string | undefined,
-): boolean {
+function isReservedStorageTarget(command: string, field: string, value: string, kind: string | undefined): boolean {
   if (command !== 'storage_deposit' || field !== 'target' || kind !== 'player') return false;
   const normalized = value.trim().toLowerCase();
   if (normalized === 'self' || normalized === 'faction' || normalized.startsWith('faction:')) return true;
