@@ -115,6 +115,8 @@ export const shippingQuoteFixture = {
     target_ticks: 20,
     deadline_ticks: 40,
     base_reward: 12500,
+    estimated_reward: 11000,
+    estimate_samples: 8,
     max_speed_bonus: 2500,
     service_fee: 800,
     premium: 450,

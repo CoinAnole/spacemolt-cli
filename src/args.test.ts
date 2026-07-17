@@ -1708,6 +1708,17 @@ describe('validateRequiredArgs', () => {
     ).toBeNull();
   });
 
+  test('shipping_post requires the caller-supplied base reward from v0.529', () => {
+    const partial = { package_id: 'package-1', destination_base_id: 'nova-station' };
+    expect(validateRequiredArgs('shipping_post', partial)).toBe('base_reward');
+    expect(validateRequiredArgs('shipping_post', { ...partial, base_reward: '5000' })).toBeNull();
+    expect(parseOk(['shipping_post', 'package-1', 'nova-station', '5000']).payload).toEqual({
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+      base_reward: '5000',
+    });
+  });
+
   test('agentlogs requires category and message; severity defaults to info', () => {
     expect(validateRequiredArgs('agentlogs', {})).toBe('category');
     expect(validateRequiredArgs('agentlogs', { category: 'nav' })).toBe('message');

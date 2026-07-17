@@ -82,7 +82,7 @@ export type CommandOverride = {
   schemaExtensions?: Record<string, CommandFieldSchema>;
   arrayFields?: string[];
   clientOnlyFields?: string[];
-  /** For standalone overrides that don't derive from a generated schema */
+  /** Override required fields when an endpoint has conditional requirements not expressible in its generated schema. */
   required?: string[];
 };
 
@@ -101,7 +101,7 @@ export const ALLOWED_COMMAND_OVERRIDE_FIELDS = [
   'schemaExtensions',
   'arrayFields',
   'clientOnlyFields',
-  'required', // standalone/public overrides without generated OpenAPI required lists
+  'required', // standalone/public overrides or conditional requirements missing from generated OpenAPI metadata
 ] as const;
 
 import { COMMAND_OVERRIDES } from './command-overrides.ts';
@@ -368,7 +368,8 @@ function mergeCommandConfig(
   };
 
   const args = config.positionals ?? (generated ? generatedArgs(generated) : undefined);
-  const required = generated ? displayRequiredFields(generated.required, config.positionals, aliases) : config.required;
+  const required =
+    config.required ?? (generated ? displayRequiredFields(generated.required, config.positionals, aliases) : undefined);
   const description = config.description ?? CURATED_COMMAND_DESCRIPTIONS[command] ?? generated?.summary;
   const usage = config.usage ?? (generated ? buildUsageFromSchema(config, generated) : undefined);
   const stateSections = generated?.stateSections;

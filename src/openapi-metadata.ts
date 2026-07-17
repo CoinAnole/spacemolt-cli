@@ -163,6 +163,7 @@ export function generateApiRoutes(spec: OpenApiSpec): Record<string, GeneratedAp
   const routes: Record<string, GeneratedApiRoute> = {};
 
   for (const [apiPath, methods] of Object.entries(spec.paths).sort(([a], [b]) => a.localeCompare(b))) {
+    if (!apiPath.startsWith('/api/v2/')) continue;
     for (const method of ['get', 'post'] as const) {
       const operation = methods[method];
       if (!operation) continue;

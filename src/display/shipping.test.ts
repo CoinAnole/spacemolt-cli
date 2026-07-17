@@ -86,6 +86,8 @@ test('renders freight quotes with route, actors, costs, liability, and appraisal
       target_ticks: 20,
       deadline_ticks: 40,
       base_reward: 12500,
+      estimated_reward: 11000,
+      estimate_samples: 8,
       max_speed_bonus: 2500,
       service_fee: 800,
       premium: 450,
@@ -117,6 +119,8 @@ test('renders freight quotes with route, actors, costs, liability, and appraisal
   expect(stdout).toContain('earth_station -> nova_central');
   expect(stdout).toContain('player:shipper-1');
   expect(stdout).toContain('Total cost: 16,250 cr');
+  expect(stdout).toContain('Estimated market reward: 11,000 cr');
+  expect(stdout).toContain('Estimate samples: 8');
   expect(stdout).toContain('Failure debt: 33,000 cr');
   expect(stdout).toContain('Target: 20 ticks');
   expect(stdout).toContain('Insurance selected: yes');
@@ -271,9 +275,12 @@ test('renders an explicit empty listing message with pagination', () => {
     per_page: 20,
     total: 0,
     shipments: [],
+    empty_reason_code: 'no_matching_shipments',
+    empty_reason: 'No contracts at this station match the selected filters.',
   });
   expect(stdout).toContain('page 1, 0 of 0');
-  expect(stdout).toContain('No visible freight contracts.');
+  expect(stdout).toContain('No contracts at this station match the selected filters.');
+  expect(stdout).toContain('Reason: no_matching_shipments');
 });
 
 test('renders tracking events in server order with returned location components only', () => {

@@ -1074,7 +1074,6 @@ describe('command metadata', () => {
       'shipping_get',
       'shipping_list',
       'shipping_pay_debt',
-      'shipping_post',
       'shipping_profile',
       'shipping_quote',
       'shipping_return',
@@ -1084,6 +1083,13 @@ describe('command metadata', () => {
       required: ['package_id', 'destination_base_id'],
       category: 'Generated API',
       route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+    });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_post).toMatchObject({
+      args: ['package_id', 'destination_base_id', 'base_reward'],
+      required: ['package_id', 'destination_base_id', 'base_reward'],
+      usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',
+      category: 'Missions',
+      route: { tool: 'spacemolt_shipping', action: 'post', method: 'POST' },
     });
   });
 

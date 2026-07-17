@@ -469,6 +469,8 @@ describe('id cache', () => {
     expect(idKindForCommandField('switch_ship', 'id')).toBe('ship');
     expect(idKindForCommandField('craft', 'package_id')).toBe('package');
     expect(idKindForCommandField('facility_job_add', 'package_id')).toBe('package');
+    expect(idKindForCommandField('facility_ranch_set_cull', 'facility_id')).toBe('facility');
+    expect(idKindForCommandField('facility_ranch_set_cull', 'cull_target')).toBeUndefined();
     expect(idKindForCommandField('unknown_command', 'target_system_id')).toBe('system');
     expect(idKindForCommandField('unknown_command', 'ship_id')).toBe('ship');
     expect(idKindForCommandField('unknown_command', 'package_id')).toBe('package');

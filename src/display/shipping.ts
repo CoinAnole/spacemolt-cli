@@ -72,6 +72,8 @@ function renderQuote(result: Record<string, unknown>): boolean {
   emitField('Target', quote.target_ticks, formatTicks);
   emitField('Deadline', quote.deadline_ticks, formatTicks);
   emitField('Base reward', quote.base_reward, formatCredits);
+  emitField('Estimated market reward', quote.estimated_reward, formatCredits);
+  emitField('Estimate samples', quote.estimate_samples);
   emitField('Maximum speed bonus', quote.max_speed_bonus, formatCredits);
   emitField('Service fee', quote.service_fee, formatCredits);
   emitField('Premium', quote.premium, formatCredits);
@@ -180,7 +182,8 @@ function renderShippingList(result: Record<string, unknown>): boolean {
   const total = text(result.total) ?? shipments.length.toLocaleString();
   emitLine(`${c.dim}page ${page}, ${shipments.length.toLocaleString()} of ${total}${c.reset}`);
   if (shipments.length === 0) {
-    emitLine('No visible freight contracts.');
+    emitLine(text(result.empty_reason) ?? 'No visible freight contracts.');
+    emitField('Reason', result.empty_reason_code);
     return true;
   }
 

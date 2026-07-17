@@ -11,6 +11,8 @@ Route hops: 3
 Target: 20 ticks
 Deadline: 40 ticks
 Base reward: 12,500 cr
+Estimated market reward: 11,000 cr
+Estimate samples: 8
 Maximum speed bonus: 2,500 cr
 Service fee: 800 cr
 Premium: 450 cr

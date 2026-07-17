@@ -121,4 +121,59 @@ describe('dynamic OpenAPI commands', () => {
       },
     });
   });
+
+  test('orders required generated arguments before optional fields while honoring positional indexes', () => {
+    const commands = buildDynamicCommands(
+      {
+        'POST /api/v2/spacemolt_shipping/post': {
+          operationId: 'spacemolt_shipping_post',
+          summary: 'Post freight',
+          route: { tool: 'spacemolt_shipping', action: 'post', method: 'POST' },
+          required: ['package_id', 'destination_base_id'],
+          schema: {
+            base_reward: { type: 'integer' },
+            destination_base_id: { type: 'string' },
+            package_id: { type: 'string' },
+          },
+        },
+        'POST /api/v2/spacemolt_facility/ranch_set_cull': {
+          operationId: 'spacemolt_facility_ranch_set_cull',
+          summary: 'Set ranch cull target',
+          route: { tool: 'spacemolt_facility', action: 'ranch_set_cull', method: 'POST' },
+          required: ['cull_target'],
+          schema: {
+            cull_target: { type: 'integer' },
+            facility_id: { type: 'string', positionalIndex: 1 },
+          },
+        },
+      },
+      new Set(),
+    );
+
+    expect(commands.shipping_post?.args).toEqual(['package_id', 'destination_base_id', 'base_reward']);
+    expect(commands.shipping_post?.usage).toBe('<package_id> <destination_base_id> [base_reward=...]');
+    expect(commands.facility_ranch_set_cull?.args).toEqual(['cull_target', 'facility_id']);
+    expect(commands.facility_ranch_set_cull?.usage).toBe('<cull_target> [facility_id=...]');
+  });
+
+  test('does not allocate proportionally to untrusted positional indexes', () => {
+    const commands = buildDynamicCommands(
+      {
+        'POST /api/v2/spacemolt_probe/ping': {
+          operationId: 'spacemolt_probe_ping',
+          summary: 'Ping probe',
+          route: { tool: 'spacemolt_probe', action: 'ping', method: 'POST' },
+          required: ['id'],
+          schema: {
+            id: { type: 'string' },
+            unsafe: { type: 'string', positionalIndex: 1_000_000_000 },
+            fractional: { type: 'string', positionalIndex: 1.5 },
+          },
+        },
+      },
+      new Set(),
+    );
+
+    expect(commands.probe_ping?.args).toEqual(['id', 'unsafe', 'fractional']);
+  });
 });

@@ -177,6 +177,38 @@ describe('generate-api-metadata', () => {
     });
   });
 
+  test('generateApiRoutes ignores paths outside the v2 API', () => {
+    const spec = {
+      info: { 'x-gameserver-version': 'v0.529.0' },
+      paths: {
+        '/api/catalog.json': {
+          get: {
+            operationId: 'getCatalog',
+            summary: 'Get the complete catalog.',
+          },
+        },
+        '/api/v2/spacemolt_probe/ping': {
+          post: {
+            operationId: 'probePing',
+            summary: 'Ping probe',
+          },
+        },
+      },
+    } as OpenApiSpec;
+
+    expect(generate(spec)).toEqual({
+      'POST /api/v2/spacemolt_probe/ping': {
+        operationId: 'probePing',
+        summary: 'Ping probe',
+        route: {
+          tool: 'spacemolt_probe',
+          action: 'ping',
+          method: 'POST',
+        },
+      },
+    });
+  });
+
   test('generateApiMetadataFile writes deterministic TypeScript from a spec file', () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-metadata-'));
     try {

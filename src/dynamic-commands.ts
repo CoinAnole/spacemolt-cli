@@ -23,12 +23,30 @@ export function generatedCommandName(route: GeneratedApiRoute): string {
 
 function generatedArgs(generated: GeneratedApiRoute): string[] | undefined {
   if (!generated.schema) return undefined;
-  const positional = Object.entries(generated.schema)
-    .filter(([, schema]) => schema.positionalIndex !== undefined)
-    .sort((a, b) => (a[1].positionalIndex ?? 0) - (b[1].positionalIndex ?? 0))
-    .map(([field]) => field);
-  const remaining = Object.keys(generated.schema).filter((field) => !positional.includes(field));
-  const args = [...positional, ...remaining];
+  const fields = Object.keys(generated.schema);
+  const positionalByIndex = new Map<number, string>();
+  const duplicatePositionals: string[] = [];
+
+  for (const [field, schema] of Object.entries(generated.schema)) {
+    const index = schema.positionalIndex;
+    if (index === undefined || !Number.isSafeInteger(index) || index < 0) continue;
+    if (positionalByIndex.has(index)) duplicatePositionals.push(field);
+    else positionalByIndex.set(index, field);
+  }
+
+  for (const field of generated.required || []) {
+    if (!generated.schema[field] || [...positionalByIndex.values(), ...duplicatePositionals].includes(field)) continue;
+    let firstOpenIndex = 0;
+    while (positionalByIndex.has(firstOpenIndex)) firstOpenIndex += 1;
+    positionalByIndex.set(firstOpenIndex, field);
+  }
+
+  const orderedPositionals = [
+    ...[...positionalByIndex.entries()].sort(([a], [b]) => a - b).map(([, field]) => field),
+    ...duplicatePositionals,
+  ];
+  const remaining = fields.filter((field) => !orderedPositionals.includes(field));
+  const args = [...orderedPositionals, ...remaining];
   return args.length > 0 ? args : undefined;
 }
 

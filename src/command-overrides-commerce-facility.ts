@@ -75,6 +75,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       template_id: 'id',
     },
   },
+  shipping_post: {
+    usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',
+    description: 'Post a sealed-package freight contract with a carrier reward you set.',
+    example: 'spacemolt shipping_post package-1 nova-station 5000 speed_bonus=500',
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/post',
+    positionals: ['package_id', 'destination_base_id', 'base_reward'],
+    required: ['package_id', 'destination_base_id', 'base_reward'],
+  },
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
     description: 'Jettison one cargo item, or several cargo item types with items=JSON, into one container.',

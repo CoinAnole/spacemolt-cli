@@ -418,32 +418,29 @@ describe('local command handlers', () => {
   });
 
   test('nested API command missing required argument output uses grouped display name', () => {
-    const handler = resolveHandler(['faction', 'create_buy_order'], options);
-    expect(handler?.name).toBe('faction create_buy_order');
+    const handler = resolveHandler(['facility', 'list_for_sale'], options);
+    expect(handler?.name).toBe('facility list_for_sale');
     if (!handler) return;
     const { context, stderr } = captureContext();
 
-    const parsed = handler.parse(['faction', 'create_buy_order'], { ...options, profile: 'pilot' }, context);
+    const parsed = handler.parse(['facility', 'list_for_sale'], { ...options, profile: 'pilot' }, context);
 
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.error.code).toBe('exit');
     const output = stderr.join('\n');
-    expect(output).toContain('spacemolt faction create_buy_order');
-    expect(output).not.toContain('faction_create_buy_order');
+    expect(output).toContain('spacemolt facility list_for_sale');
+    expect(output).not.toContain('facility_list_for_sale');
   });
 
   test('nested API command named args still report missing required fields with grouped display name', () => {
-    const handler = resolveHandler(
-      ['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
-      options,
-    );
-    expect(handler?.name).toBe('faction create_buy_order');
+    const handler = resolveHandler(['facility', 'list_for_sale', '--facility-id', 'facility-1'], options);
+    expect(handler?.name).toBe('facility list_for_sale');
     if (!handler) return;
     const { context, stderr } = captureContext();
 
     const parsed = handler.parse(
-      ['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
+      ['facility', 'list_for_sale', '--facility-id', 'facility-1'],
       { ...options, profile: 'pilot' },
       context,
     );
@@ -452,8 +449,8 @@ describe('local command handlers', () => {
     if (parsed.ok) return;
     expect(parsed.error.code).toBe('exit');
     const output = stderr.join('\n');
-    expect(output).toContain('spacemolt faction create_buy_order');
-    expect(output).not.toContain('faction_create_buy_order');
+    expect(output).toContain('spacemolt facility list_for_sale');
+    expect(output).not.toContain('facility_list_for_sale');
   });
 
   test('nested API command one-of forms keep valid schema-based payloads', () => {
@@ -477,7 +474,7 @@ describe('local command handlers', () => {
     const stderr: string[] = [];
 
     const exitCode = await runInvocation(
-      ['faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
+      ['facility', 'list_for_sale', '--facility-id', 'facility-1'],
       undefined,
       fakeContext(stdout, stderr),
     );
@@ -485,8 +482,8 @@ describe('local command handlers', () => {
     expect(exitCode).toBe(1);
     expect(stdout).toEqual([]);
     const output = stderr.join('\n');
-    expect(output).toContain('spacemolt faction create_buy_order');
-    expect(output).not.toContain('faction_create_buy_order');
+    expect(output).toContain('spacemolt facility list_for_sale');
+    expect(output).not.toContain('facility_list_for_sale');
     expect(output.match(/Missing required argument:/g)).toHaveLength(1);
   });
 
@@ -495,7 +492,7 @@ describe('local command handlers', () => {
     const stderr: string[] = [];
 
     const exitCode = await runInvocation(
-      ['--json', 'faction', 'create_buy_order', '--item-id', 'ore_iron', '--quantity', '100'],
+      ['--json', 'facility', 'list_for_sale', '--facility-id', 'facility-1'],
       undefined,
       fakeContext(stdout, stderr),
     );
@@ -505,7 +502,7 @@ describe('local command handlers', () => {
     expect(JSON.parse(stderr.join('\n'))).toEqual({
       error: {
         code: 'missing_required_argument',
-        message: 'Missing required argument: price_each',
+        message: 'Missing required argument: price',
       },
     });
   });

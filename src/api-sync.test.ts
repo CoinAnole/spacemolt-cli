@@ -297,6 +297,7 @@ describe('api sync', () => {
       if (Object.keys(spec.paths).length === 0) return;
       const v2Routes = new Set(
         Object.entries(spec.paths).flatMap(([route, methods]) => {
+          if (!route.startsWith('/api/v2/')) return [];
           const routes: string[] = [];
           if (methods.get) routes.push(`GET ${route}`);
           if (methods.post) routes.push(`POST ${route}`);

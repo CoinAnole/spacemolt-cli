@@ -130,6 +130,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   facility_set_description: { facility: ['facility_id'] },
   facility_set_name: { facility: ['facility_id'] },
   facility_transfer: { facility: ['facility_id'], player: ['player_id'] },
+  facility_ranch_status: { facility: ['facility_id'] },
+  facility_ranch_set_cull: { facility: ['facility_id'] },
   facility_list_for_sale: { facility: ['facility_id'] },
   facility_buy_listing: { listing: ['listing_id'] },
   facility_cancel_listing: { listing: ['listing_id'] },
