@@ -266,7 +266,7 @@ After fixture correction, run the schema divergence report and update `fixture-s
   - v0.522 metadata version matches.
   - generated metadata is deterministic.
   - no curated route is stale.
-  - all eleven non-help shipping actions are discoverable without curated overrides, while the help route stays hidden.
+  - all eleven non-help shipping actions are discoverable without curated overrides, while both GET and POST help records stay hidden.
 - Parser and command metadata tests
   - removed disassemble commands are absent.
   - dismantle commands remain valid.
