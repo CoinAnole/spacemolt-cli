@@ -238,7 +238,7 @@ Related top-level helpers (unchanged): `jettison`, `loot_wreck`, `faction_deposi
 
 #### Migration from multi-action `storage`
 
-| Old (broken) | New |
+| Old | New / result |
 | --- | --- |
 | `storage view` (nested) | Still works |
 | `storage action=view` | Fails — use `storage view` |
@@ -247,11 +247,12 @@ Related top-level helpers (unchanged): `jettison`, `loot_wreck`, `faction_deposi
 | `storage target=faction --payload-json '…'` | Fails — use `storage deposit target=faction --payload-json '…'` |
 | Any key=value-only deposit/withdraw without an action token | Insert `deposit` or `withdraw` as the first subcommand token |
 | Request body field `"action"` | Omitted; the path is `/api/v2/spacemolt_storage/{action}` |
-| Human dry-run `Dry run: storage` + body action | Human dry-run is spaced: `Dry run: storage deposit` |
+| Human dry-run text | Spaced group form only, e.g. `Dry run: storage deposit` |
+| Dry-run / machine `"command": "storage"` | Flat name per action (`"storage_deposit"`, `"storage_view"`, …); prefer URL path `/api/v2/spacemolt_storage/{action}` for the action |
 
-There is **no compatibility shim**. Unknown tokens such as `action=view` or `target=faction` as `argv[1]` produce the same generic unknown-group-action errors as other groups (`Run "spacemolt help storage"`).
+There is **no compatibility shim**. Unknown tokens such as `action=view` or `target=faction` as `argv[1]` produce the same generic unknown-group-action errors as other groups (`Run "spacemolt help storage"`). If you scraped dry-run `payload.action`, use the path segment or command name instead.
 
-Mixed named `key=value` plus bare positionals follow **ordinary** sequential positionals (facility-like): named args do not skip later positional slots. Prefer either all named fields or pure positionals after the action word; do not rely on the old multi-action “skip already-filled fields” behavior.
+Storage actions use **ordinary sequential positionals** (facility-like). Named `key=value` fields do **not** skip later bare slots the way the old multi-action parser did (“skip already-filled fields”). Safe mixes keep bare tokens for leading positionals and use `key=value` for optional later fields (e.g. `storage deposit ore_iron 50 target=PlayerName`), or use all named. Do not rely on the old skip behavior — e.g. `storage deposit item_id=ore_iron 2` no longer maps `2` to quantity; under ordinary positionals it collides with `item_id`.
 
 **Docs submodule lag:** guides under `spacemolt-docs/` (for example `miner.md`, `crafting.md`) may still show `storage action=deposit` until a separate docs submodule update. Trust CLI `help storage` / this README for the current grammar.
 

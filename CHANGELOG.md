@@ -31,8 +31,9 @@ Nested forms with an explicit action word **still work**. Flat `storage_*` names
 | Key=value-only deposit/withdraw without an action token | Insert `deposit` or `withdraw` as the first subcommand token |
 | Request body includes `"action"` | **Omitted**; path is `/api/v2/spacemolt_storage/{action}` |
 | Human dry-run text | Spaced group form only, e.g. `Dry run: storage deposit` |
+| Dry-run / machine `"command": "storage"` | Flat name per action (`"storage_deposit"`, `"storage_view"`, …); prefer URL path `/api/v2/spacemolt_storage/{action}` for the action |
 
-There is **no compatibility shim**. Broken forms use the same generic unknown-group-action errors as other groups; run `spacemolt help storage`.
+There is **no compatibility shim**. Broken forms use the same generic unknown-group-action errors as other groups; run `spacemolt help storage`. If you scraped dry-run `payload.action`, use the path segment or command name instead.
 
 #### Related commands (unchanged)
 
@@ -44,7 +45,7 @@ There is **no compatibility shim**. Broken forms use the same generic unknown-gr
 
 #### Mixed named + positional args
 
-Storage actions use **ordinary sequential positionals** (facility-like). Named `key=value` fields do **not** skip later positional slots the way the old multi-action storage parser did (“skip already-filled fields”). Prefer either pure positionals after the action word or all named fields; do not mix in ways that assumed the old skip behavior.
+Storage actions use **ordinary sequential positionals** (facility-like). Named `key=value` fields do **not** skip later bare slots the way the old multi-action storage parser did (“skip already-filled fields”). Safe mixes keep bare tokens for leading positionals and use `key=value` for optional later fields (e.g. `storage deposit ore_iron 50 target=PlayerName`), or use all named. Do not rely on the old skip behavior — e.g. `storage deposit item_id=ore_iron 2` no longer maps `2` to quantity; under ordinary positionals it collides with `item_id`.
 
 #### Docs submodule lag
 
