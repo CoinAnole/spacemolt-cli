@@ -9,6 +9,7 @@ player:
   faction_id: smc
   clan_tag: SMC
   home_base: earth_station
+  trading_restricted_until: 2026-07-18T12:34:56Z
   standings:
     crimson:
       baseline: 10

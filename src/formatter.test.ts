@@ -1462,6 +1462,55 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('renders active trading restrictions and omits the zero timestamp', () => {
+    const active = captureStructuredOutput('get_player', {
+      player: { username: 'Marlowe', trading_restricted_until: '2026-07-18T12:34:56Z' },
+    });
+    const zeroFixture = structuredClone(getStatusFixture);
+    zeroFixture.player.trading_restricted_until = '0001-01-01T00:00:00Z';
+    const zero = captureStructuredOutput('get_status', {
+      ...zeroFixture,
+    });
+    const empty = captureStructuredOutput('get_player', {
+      player: { username: 'Marlowe', trading_restricted_until: '' },
+    });
+    const malformed = captureStructuredOutput('get_player', {
+      player: { username: 'Marlowe', trading_restricted_until: { timestamp: 'invalid' } },
+    });
+
+    expect(active.stdout).toContain('Trading restricted until: 2026-07-18T12:34:56Z');
+    expect(zero.stdout).not.toContain('Trading restricted until');
+    expect(empty.stdout).not.toContain('Trading restricted until');
+    expect(malformed.stdout).not.toContain('Trading restricted until');
+    expect(malformed.stdout).not.toContain('[object Object]');
+  });
+
+  test('renders base type in get_base and embedded get_poi base details', () => {
+    const base = captureStructuredOutput('get_base', {
+      base: { id: 'forward-cache', name: 'Forward Cache', type: 'outpost', empire: '' },
+      services: [],
+    });
+    const poi = captureStructuredOutput('get_poi', {
+      kind: 'normal',
+      poi: { id: 'cache-poi', name: 'Cache POI', type: 'station', system_id: 'sol' },
+      base: { id: 'forward-cache', name: 'Forward Cache', type: 'outpost', empire: '' },
+    });
+    const absent = captureStructuredOutput('get_base', {
+      base: { id: 'forward-cache', name: 'Forward Cache', empire: '' },
+      services: [],
+    });
+    const malformed = captureStructuredOutput('get_base', {
+      base: { id: 'forward-cache', name: 'Forward Cache', type: { id: 'outpost' }, empire: '' },
+      services: [],
+    });
+
+    expect(base.stdout).toContain('Type: outpost');
+    expect(poi.stdout).toContain('  Type: outpost');
+    expect(absent.stdout).not.toContain('Type:');
+    expect(malformed.stdout).not.toContain('Type:');
+    expect(malformed.stdout).not.toContain('[object Object]');
+  });
+
   test('formats public player_profile without raw JSON fallback', () => {
     const { stdout, stderr } = captureStructuredOutput('player_profile', {
       username: 'Arbiter47',
@@ -3974,6 +4023,7 @@ describe('structuredContent formatters', () => {
       Citizenships: solarian, nebula
       Credits: 4242
       Faction: smc (captain)
+      Trading restricted until: 2026-07-18T12:34:56Z
 
       Location:
         System: Sol
@@ -4084,6 +4134,7 @@ describe('structuredContent formatters', () => {
       "
       === Station: Nova Terra Central ===
       ID: nova_terra_central
+      Type: outpost
       POI: nova_terra_central
       Empire: solarian
       Hull: 8000/10000

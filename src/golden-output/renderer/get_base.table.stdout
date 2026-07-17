@@ -1,6 +1,7 @@
 
 === Station: Nova Terra Central ===
 ID: nova_terra_central
+Type: outpost
 POI: nova_terra_central
 Empire: solarian
 Hull: 8000/10000

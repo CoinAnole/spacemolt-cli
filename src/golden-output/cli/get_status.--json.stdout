@@ -9,7 +9,8 @@
       ],
       "credits": 4242,
       "faction_id": "smc",
-      "faction_rank": "captain"
+      "faction_rank": "captain",
+      "trading_restricted_until": "2026-07-18T12:34:56Z"
     },
     "ship": {
       "name": "Surveyor",

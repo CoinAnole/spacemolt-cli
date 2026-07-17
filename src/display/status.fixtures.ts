@@ -30,6 +30,7 @@ export const getStatusFixture = {
     credits: 4242,
     faction_id: 'smc',
     faction_rank: 'captain',
+    trading_restricted_until: '2026-07-18T12:34:56Z',
   },
   ship: {
     name: 'Surveyor',
@@ -68,6 +69,7 @@ export const playerProfileFixture = {
     faction_id: 'smc',
     clan_tag: 'SMC',
     home_base: 'earth_station',
+    trading_restricted_until: '2026-07-18T12:34:56Z',
     standings: {
       crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
       nebula: { baseline: 20, outstanding_bounty: 0, reputation: 20 },

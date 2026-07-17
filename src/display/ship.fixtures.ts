@@ -104,6 +104,7 @@ export const baseFixture = {
     poi_id: 'nova_terra_central',
     public_access: true,
     shield: 2500,
+    type: 'outpost',
     weapon_dps: 120,
     weapon_reach: 2,
     wrecked: false,

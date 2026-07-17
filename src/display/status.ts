@@ -15,6 +15,7 @@ import {
 } from './helpers.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
+const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
 
 function formatNumber(value: unknown): string {
   return typeof value === 'number' ? value.toLocaleString() : String(value);
@@ -42,6 +43,12 @@ function formatDisplayValue(value: unknown): string {
     if (id) return String(id);
   }
   return String(value);
+}
+
+function emitTradingRestriction(player: Record<string, unknown>): void {
+  const value = player.trading_restricted_until;
+  if (typeof value !== 'string' || value === '' || value === ZERO_TRADING_RESTRICTION) return;
+  emitLine(`Trading restricted until: ${value}`);
 }
 
 function formatSummaryLine(label: string, value: unknown): string {
@@ -335,11 +342,7 @@ function summarizeCompletionRewards(r: Record<string, unknown>): {
     if (skills.length) result.skillXpLine = `Skill XP: ${skills.join(', ')}`;
   }
 
-  if (
-    r.community_percent !== undefined ||
-    isRecord(r.community_progress) ||
-    isRecord(r.community_contributed)
-  ) {
+  if (r.community_percent !== undefined || isRecord(r.community_progress) || isRecord(r.community_contributed)) {
     const parts: string[] = [];
     if (r.community_percent !== undefined && r.community_percent !== null && r.community_percent !== '') {
       parts.push(`${formatNumber(r.community_percent)}%`);
@@ -398,6 +401,7 @@ export const statusFormatters = [
         emitLine(`Faction: ${faction}${clan}${rank}`);
       }
       if (player.home_base) emitLine(`Home Station: ${formatDisplayValue(player.home_base)}`);
+      emitTradingRestriction(player);
 
       const stats = isRecord(player.stats) ? player.stats : undefined;
       if (stats) {
@@ -547,6 +551,7 @@ export const statusFormatters = [
       if (citizenships) emitLine(`Citizenships: ${citizenships}`);
       emitLine(`Credits: ${p.credits}`);
       emitLine(`Faction: ${p.faction_id ? `${p.faction_id} (${p.faction_rank})` : 'None'}`);
+      emitTradingRestriction(p);
 
       emitLine(`\n${c.bright}Location:${c.reset}`);
       emitLine(`  System: ${sys?.name || p.current_system}`);
@@ -774,6 +779,7 @@ export const statusFormatters = [
       const base = r.base as Record<string, unknown> | undefined;
       if (base) {
         emitLine(`\n${c.bright}Station: ${base.name}${c.reset}`);
+        if (typeof base.type === 'string' && base.type) emitLine(`  Type: ${base.type}`);
         if (base.description) emitLine(`  ${base.description}`);
         emitLine(`  Empire: ${base.empire || 'None'}`);
         if (base.faction_id) emitLine(`  Faction: ${base.faction_id}`);
