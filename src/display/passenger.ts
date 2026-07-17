@@ -1,16 +1,16 @@
 import { formatBerthSummary } from './berths.ts';
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
-const FORBIDDEN_LEGACY_BERTH_STRINGS = new Set(['NaN', 'undefined', '[object Object]']);
-
 function passengerRows(value: unknown): Array<Record<string, unknown>> | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.filter(isRecord);
 }
 
-function isLegacyBerthValue(value: unknown): value is string | number {
-  if (typeof value === 'number') return Number.isFinite(value);
-  return typeof value === 'string' && value !== '' && !FORBIDDEN_LEGACY_BERTH_STRINGS.has(value);
+function legacyBerthDisplay(value: unknown): string | number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return /^\d+\/\d+$/.test(normalized) ? normalized : undefined;
 }
 
 function berthSummary(result: Record<string, unknown>): string {
@@ -21,8 +21,11 @@ function berthSummary(result: Record<string, unknown>): string {
     ['Business', result.business_berths],
     ['First', result.first_berths],
   ]
-    .filter(([, value]) => isLegacyBerthValue(value))
-    .map(([label, value]) => `${label}: ${value}`)
+    .map(([label, value]) => {
+      const display = legacyBerthDisplay(value);
+      return display === undefined ? undefined : `${label}: ${display}`;
+    })
+    .filter((summary): summary is string => summary !== undefined)
     .join(' | ');
 }
 

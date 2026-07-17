@@ -3158,8 +3158,8 @@ describe('structuredContent formatters', () => {
     expect(rendered.stdout).not.toContain('[object Object]');
   });
 
-  test('list_passengers omits forbidden legacy berth string tokens', () => {
-    const stdout = ['NaN', 'undefined', '[object Object]']
+  test('list_passengers rejects malformed legacy berth strings without leaking forbidden tokens', () => {
+    const stdout = ['NaN', 'undefined', '[object Object]', ' NaN ', 'undefined/2', 'prefix[object Object]suffix']
       .map(
         (economyBerths) =>
           captureStructuredOutput('list_passengers', {
@@ -3175,6 +3175,18 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('NaN');
     expect(stdout).not.toContain('undefined');
     expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('list_passengers normalizes valid whitespace-padded legacy berth ratios', () => {
+    const rendered = captureStructuredOutput('list_passengers', {
+      passengers: [],
+      count: 0,
+      economy_berths: ' 1/2 ',
+      business_berths: 0,
+    });
+
+    expect(rendered.stdout).toContain('Economy: 1/2 | Business: 0');
+    expect(rendered.stdout).not.toContain('Economy:  1/2 ');
   });
 
   test('load_passenger renders skipped unfunded count', () => {
