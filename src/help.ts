@@ -1154,7 +1154,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     storage loot [wreck_id] [item_id] [quantity]
     storage jettison [item_id] [qty] [items=JSON]
     jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison
-    loot_wreck <wreck_id> <item_id> [quantity]  Standalone wreck loot
+    loot_wreck [wreck_id] [item_id] [quantity]  Standalone wreck loot
     faction deposit_credits <amount>  Wallet -> faction treasury
     faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
 
