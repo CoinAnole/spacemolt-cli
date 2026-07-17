@@ -122,6 +122,10 @@ export const subscribeMarketFixture = {
   ],
 };
 
+// Shared view-storage structured payload for goldens. High-value fixture cases
+// (`storage` / `storage_view`) render with command identity `storage_view` (flat
+// group key; UX is `storage view`). Table body should stay visually stable across
+// that identity change; machine formats may include the command name in metadata.
 export const storageFixture = {
   action: 'view_storage',
   base_id: 'earth_station',
@@ -478,6 +482,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
+  // Case id `storage` kept for golden path stability; command is storage_view.
   storage: { command: 'storage_view', fixture: storageFixture, apiRoute: 'POST /api/v2/spacemolt_storage/view' },
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
@@ -485,6 +490,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   commission_quote: { command: 'commission_quote', fixture: commissionQuoteFixture },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
+  // Explicit storage_view case exercises gifts/messages empty arrays (schema parity).
   storage_view: {
     command: 'storage_view',
     fixture: { ...storageFixture, gifts: [], messages: [] },
