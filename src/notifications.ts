@@ -1,5 +1,6 @@
 import type { CliWriter } from './cli-context.ts';
 import { colorsForPlain } from './output-style.ts';
+import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 import type { APIResponse } from './types.ts';
 
 type NotificationData = Record<string, unknown>;
@@ -246,6 +247,12 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
         parts.push(`${d.escrowed_credits.toLocaleString()}cr still escrowed`);
       }
       writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${parts.join('; ') || 'Crafting update'}`);
+    },
+
+    ship_commission_complete: (data, time, writeLine) => {
+      const receipt = formatShipCommissionReceipt(data);
+      if (!receipt) return;
+      writeLine(`${c.dim}[${time}]${c.reset} ${c.green}${c.bright}[SHIP READY]${c.reset} ${receipt}`);
     },
 
     trade_offer_received: (d, t, writeLine) => {

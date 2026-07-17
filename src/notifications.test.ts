@@ -349,6 +349,25 @@ describe('notification formatting', () => {
       snippets: ['[SCAN]', 'Scan of Raider revealed: hull', 'Ship: fighter'],
     },
     {
+      msgType: 'ship_commission_complete',
+      data: {
+        tick: 901400,
+        commission_id: 'commission-1',
+        ship_id: 'ship-42',
+        ship_class: 'prospector',
+        ship_name: 'Prospector',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+      },
+      snippets: [
+        '[SHIP READY]',
+        'Commission commission-1',
+        'Prospector (prospector)',
+        'ship ship-42',
+        'Earth Station (earth_station)',
+      ],
+    },
+    {
       msgType: 'skill_level_up',
       data: { skill_id: 'mining', new_level: 3, xp_gained: 50 },
       snippets: ['[LEVEL UP]', 'mining is now level 3', '+50 XP'],
@@ -395,6 +414,24 @@ describe('notification formatting', () => {
     for (const snippet of snippets) {
       expect(output).toContain(snippet);
     }
+  });
+
+  test('malformed ship commission receipt falls back without diagnostic tokens', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        timestamp: '2026-07-17T20:00:00.000Z',
+        data: {
+          commission_id: 'commission-only',
+          ship_id: { malformed: true },
+          ship_name: Number.NaN,
+        },
+      }).join('\n'),
+    );
+
+    expect(output).toContain('commission_id: "commission-only"');
+    expectNoDiagnosticTokens(output);
   });
 
   test('crafting summary formatter omits malformed numeric and object fields', () => {
