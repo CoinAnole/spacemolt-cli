@@ -1,0 +1,16 @@
+
+details:
+  action: ranch_set_cull
+  facility_id: "ranch-ember-1"
+  cull_target: 0
+  herd: 18
+  message: "Automatic culling disabled."
+player:
+  username: Marlowe
+  credits: 198000
+ship:
+  id: "ship-wayfarer"
+  name: Wayfarer
+  cargo_used: 0
+  cargo_capacity: 500
+cargo: []

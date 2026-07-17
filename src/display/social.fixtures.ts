@@ -1,3 +1,5 @@
+import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+
 export const chatSentFixture = {
   // Client-oriented aliases accepted by the chat_sent formatter (allowed extras vs ChatResponse).
   action: 'chat',
@@ -727,7 +729,50 @@ export const actionLogFixture = {
   ],
 };
 
-export const socialHighValueFixtures = {
+export const ranchStatusFixture = {
+  action: 'ranch_status',
+  facility_id: 'ranch-ember-1',
+  facility_name: 'Ember Grazer Corral',
+  level: 2,
+  base_id: 'cinder_outpost',
+  base_name: 'Cinder Outpost',
+  anchor_poi: 'cinder_iron_belt',
+  anchor_name: 'Cinder Iron Belt',
+  species: 'ember_grazer',
+  species_name: 'Ember Grazer',
+  herd: 18,
+  capacity: 24,
+  range_health: 0.75,
+  fed_fraction: 0.5,
+  supplies_ok: false,
+  cull_target: 0,
+  max_cull_per_cycle: 4,
+  growth_per_cycle: 1.5,
+  wild_population: 12,
+  domestication_reserve: 0,
+  domestication_active: false,
+  feed: [{ resource: 'iron_ore', per_cycle: 2, stocked: 10, cycles_left: 5 }],
+  produces: [
+    { item: 'grazer_milk', per_cycle: 2.5 },
+    { item: 'ember_grazer_meat', per_cycle: 0 },
+  ],
+  message: 'The herd is healthy, but worker supplies need attention.',
+};
+
+export const ranchSetCullFixture = {
+  details: {
+    action: 'ranch_set_cull',
+    facility_id: 'ranch-ember-1',
+    cull_target: 0,
+    herd: 18,
+    message: 'Automatic culling disabled.',
+  },
+  player: { username: 'Marlowe', credits: 198000 },
+  ship: { id: 'ship-wayfarer', name: 'Wayfarer', cargo_used: 0, cargo_capacity: 500 },
+  cargo: [],
+};
+
+export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   chat: { command: 'chat', fixture: chatSentFixture },
   facility_owned: { command: 'facility_owned', fixture: facilityOwnedFixture },
   facility_list: {
@@ -739,6 +784,17 @@ export const socialHighValueFixtures = {
     command: 'facility_list',
     fixture: facilityListFixture,
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
+  },
+  facility_ranch_status: {
+    command: 'facility_ranch_status',
+    fixture: ranchStatusFixture,
+    apiRoute: 'POST /api/v2/spacemolt_facility/ranch_status',
+  },
+  facility_ranch_set_cull: {
+    command: 'facility_ranch_set_cull',
+    fixture: ranchSetCullFixture,
+    apiRoute: 'POST /api/v2/spacemolt_facility/ranch_set_cull',
+    schemaTarget: 'details',
   },
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },

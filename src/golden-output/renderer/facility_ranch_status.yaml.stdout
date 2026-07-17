@@ -1,0 +1,33 @@
+
+action: ranch_status
+facility_id: "ranch-ember-1"
+facility_name: "Ember Grazer Corral"
+level: 2
+base_id: cinder_outpost
+base_name: "Cinder Outpost"
+anchor_poi: cinder_iron_belt
+anchor_name: "Cinder Iron Belt"
+species: ember_grazer
+species_name: "Ember Grazer"
+herd: 18
+capacity: 24
+range_health: 0.75
+fed_fraction: 0.5
+supplies_ok: false
+cull_target: 0
+max_cull_per_cycle: 4
+growth_per_cycle: 1.5
+wild_population: 12
+domestication_reserve: 0
+domestication_active: false
+feed:
+  - resource: iron_ore
+    per_cycle: 2
+    stocked: 10
+    cycles_left: 5
+produces:
+  - item: grazer_milk
+    per_cycle: 2.5
+  - item: ember_grazer_meat
+    per_cycle: 0
+message: "The herd is healthy, but worker supplies need attention."

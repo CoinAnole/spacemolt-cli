@@ -1,0 +1,26 @@
+
+=== Wildlife Ranch ===
+Facility: Ember Grazer Corral (ranch-ember-1)
+Location: Cinder Outpost (cinder_outpost)
+Habitat: Cinder Iron Belt (cinder_iron_belt)
+Species: Ember Grazer (ember_grazer)
+Level: 2
+Herd: 18 / 24
+Range health: 75% | Fed: 50% | Supplies: no
+Growth: 1.5/cycle | Cull target: disabled (0) | Cull cap: 4/cycle
+Wild population: 12
+Domestication: inactive | Reserve: 0
+The herd is healthy, but worker supplies need attention.
+
+=== Feed ===
+
+  Resource | Per Cycle | Stocked | Cycles Left
+  ---------+-----------+---------+------------
+  iron_ore | 2         | 10      | 5          
+
+=== Production ===
+
+  Item              | Per Cycle
+  ------------------+----------
+  grazer_milk       | 2.5      
+  ember_grazer_meat | 0        

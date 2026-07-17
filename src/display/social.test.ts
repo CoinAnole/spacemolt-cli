@@ -1,7 +1,13 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { facilityListFixture, factionFacilityOwnedFixture, forumThreadFixture } from './social.fixtures.ts';
+import {
+  facilityListFixture,
+  factionFacilityOwnedFixture,
+  forumThreadFixture,
+  ranchSetCullFixture,
+  ranchStatusFixture,
+} from './social.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -28,6 +34,72 @@ const context = {
     compact: false,
   },
 };
+
+test('renders ranch status as a dashboard with feed and production tables', () => {
+  const rendered = renderStructuredResult(
+    'facility_ranch_status',
+    structuredClone(ranchStatusFixture),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Wildlife Ranch ===');
+  expect(stdout).toContain('Facility: Ember Grazer Corral (ranch-ember-1)');
+  expect(stdout).toContain('Location: Cinder Outpost (cinder_outpost)');
+  expect(stdout).toContain('Habitat: Cinder Iron Belt (cinder_iron_belt)');
+  expect(stdout).toContain('Species: Ember Grazer (ember_grazer)');
+  expect(stdout).toContain('Herd: 18 / 24');
+  expect(stdout).toContain('Range health: 75% | Fed: 50% | Supplies: no');
+  expect(stdout).toContain('Growth: 1.5/cycle | Cull target: disabled (0) | Cull cap: 4/cycle');
+  expect(stdout).toContain('Domestication: inactive | Reserve: 0');
+  expect(stdout).toContain('=== Feed ===');
+  expect(stdout).toContain('iron_ore');
+  expect(stdout).toContain('Cycles Left');
+  expect(stdout).toContain('=== Production ===');
+  expect(stdout).toContain('ember_grazer_meat');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+});
+
+test('renders explicit empty ranch feed and production states', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.feed = [];
+  fixture.produces = [];
+
+  const rendered = renderStructuredResult('facility_ranch_status', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('No feed requirements.');
+  expect(stdout).toContain('No expected ranch products.');
+});
+
+test('renders cull target zero as disabled while preserving zero herd', () => {
+  const fixture = structuredClone(ranchSetCullFixture);
+  fixture.details.herd = 0;
+
+  const rendered = renderStructuredResult('facility_ranch_set_cull', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('=== Ranch Cull Policy Updated ===');
+  expect(stdout).toContain('Facility: ranch-ember-1');
+  expect(stdout).toContain('Current herd: 0');
+  expect(stdout).toContain('Cull target: disabled (0)');
+  expect(stdout).toContain('Automatic culling disabled.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('declines malformed required ranch fields to the raw response fallback', () => {
+  const fixture = structuredClone(ranchStatusFixture) as Record<string, unknown>;
+  fixture.range_health = 2;
+
+  const rendered = renderStructuredResult('facility_ranch_status', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Wildlife Ranch ===');
+});
 
 test('renders faction-owned facility rent summary and delinquency fields', () => {
   const rendered = renderStructuredResult(

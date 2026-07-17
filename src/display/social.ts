@@ -347,6 +347,162 @@ function captainLogRows(result: Record<string, unknown>): Array<Record<string, u
   return undefined;
 }
 
+function ranchString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function ranchNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function ranchInteger(value: unknown): value is number {
+  return ranchNumber(value) && Number.isInteger(value);
+}
+
+function ranchFraction(value: unknown): value is number {
+  return ranchNumber(value) && value >= 0 && value <= 1;
+}
+
+function ranchNamedId(name: string, id: string): string {
+  return name === id ? name : `${name} (${id})`;
+}
+
+function ranchPercent(value: number): string {
+  return `${Number((value * 100).toFixed(1)).toLocaleString()}%`;
+}
+
+function ranchRate(value: number): string {
+  return Number(value.toFixed(2)).toLocaleString();
+}
+
+function ranchCullTarget(value: number): string {
+  return value === 0 ? 'disabled (0)' : value.toLocaleString();
+}
+
+function isRanchFeed(value: unknown): value is Array<Record<string, unknown>> {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        isRecord(entry) &&
+        ranchString(entry.resource) &&
+        ranchInteger(entry.per_cycle) &&
+        ranchInteger(entry.stocked) &&
+        ranchInteger(entry.cycles_left),
+    )
+  );
+}
+
+function isRanchProduction(value: unknown): value is Array<Record<string, unknown>> {
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => isRecord(entry) && ranchString(entry.item) && ranchNumber(entry.per_cycle))
+  );
+}
+
+function isRanchStatusResponse(result: Record<string, unknown>): boolean {
+  return (
+    result.action === 'ranch_status' &&
+    ranchString(result.facility_id) &&
+    ranchString(result.facility_name) &&
+    ranchInteger(result.level) &&
+    ranchString(result.base_id) &&
+    ranchString(result.base_name) &&
+    ranchString(result.anchor_poi) &&
+    ranchString(result.anchor_name) &&
+    ranchString(result.species) &&
+    ranchString(result.species_name) &&
+    ranchInteger(result.herd) &&
+    ranchInteger(result.capacity) &&
+    ranchFraction(result.range_health) &&
+    ranchFraction(result.fed_fraction) &&
+    typeof result.supplies_ok === 'boolean' &&
+    ranchInteger(result.cull_target) &&
+    ranchInteger(result.max_cull_per_cycle) &&
+    ranchNumber(result.growth_per_cycle) &&
+    ranchInteger(result.wild_population) &&
+    ranchInteger(result.domestication_reserve) &&
+    typeof result.domestication_active === 'boolean' &&
+    isRanchFeed(result.feed) &&
+    ranchString(result.message) &&
+    (result.produces === undefined || isRanchProduction(result.produces))
+  );
+}
+
+function renderRanchStatus(result: Record<string, unknown>): boolean {
+  if (!isRanchStatusResponse(result)) return false;
+
+  const feed = result.feed as Array<Record<string, unknown>>;
+  const produces = result.produces as Array<Record<string, unknown>> | undefined;
+  const facilityName = result.facility_name as string;
+  const facilityId = result.facility_id as string;
+  const baseName = result.base_name as string;
+  const baseId = result.base_id as string;
+  const anchorName = result.anchor_name as string;
+  const anchorPoi = result.anchor_poi as string;
+  const speciesName = result.species_name as string;
+  const species = result.species as string;
+
+  emitLine(`\n${c.bright}=== Wildlife Ranch ===${c.reset}`);
+  emitLine(`Facility: ${ranchNamedId(facilityName, facilityId)}`);
+  emitLine(`Location: ${ranchNamedId(baseName, baseId)}`);
+  emitLine(`Habitat: ${ranchNamedId(anchorName, anchorPoi)}`);
+  emitLine(`Species: ${ranchNamedId(speciesName, species)}`);
+  emitLine(`Level: ${(result.level as number).toLocaleString()}`);
+  emitLine(`Herd: ${(result.herd as number).toLocaleString()} / ${(result.capacity as number).toLocaleString()}`);
+  emitLine(
+    `Range health: ${ranchPercent(result.range_health as number)} | Fed: ${ranchPercent(result.fed_fraction as number)} | Supplies: ${result.supplies_ok ? 'yes' : 'no'}`,
+  );
+  emitLine(
+    `Growth: ${ranchRate(result.growth_per_cycle as number)}/cycle | Cull target: ${ranchCullTarget(result.cull_target as number)} | Cull cap: ${(result.max_cull_per_cycle as number).toLocaleString()}/cycle`,
+  );
+  emitLine(`Wild population: ${(result.wild_population as number).toLocaleString()}`);
+  emitLine(
+    `Domestication: ${result.domestication_active ? 'active' : 'inactive'} | Reserve: ${(result.domestication_reserve as number).toLocaleString()}`,
+  );
+  if ((result.message as string).trim()) emitLine(result.message as string);
+
+  if (feed.length === 0) emitLine('\nNo feed requirements.');
+  else {
+    printCompactTable('Feed', feed, [
+      ['Resource', ['resource']],
+      ['Per Cycle', ['per_cycle']],
+      ['Stocked', ['stocked']],
+      ['Cycles Left', ['cycles_left']],
+    ]);
+  }
+
+  if (produces !== undefined) {
+    if (produces.length === 0) emitLine('\nNo expected ranch products.');
+    else {
+      printCompactTable('Production', produces, [
+        ['Item', ['item']],
+        ['Per Cycle', ['per_cycle']],
+      ]);
+    }
+  }
+  return true;
+}
+
+function renderRanchSetCull(result: Record<string, unknown>): boolean {
+  if (
+    result.action !== 'ranch_set_cull' ||
+    !ranchString(result.facility_id) ||
+    !ranchInteger(result.cull_target) ||
+    !ranchInteger(result.herd) ||
+    !ranchString(result.message)
+  ) {
+    return false;
+  }
+
+  emitLine(`\n${c.bright}=== Ranch Cull Policy Updated ===${c.reset}`);
+  emitLine(`Facility: ${result.facility_id}`);
+  emitLine(`Current herd: ${result.herd.toLocaleString()}`);
+  emitLine(`Cull target: ${ranchCullTarget(result.cull_target)}`);
+  if (result.message.trim()) emitLine(result.message);
+  return true;
+}
+
 export const socialFormatters = [
   // Chat confirmation
   namedFormatter(
@@ -787,6 +943,13 @@ export const socialFormatters = [
   ),
 
   // Facilities
+  formatter((result) => renderRanchStatus(result), {
+    commands: ['facility_ranch_status'],
+  }),
+  formatter((result) => renderRanchSetCull(result), {
+    commands: ['facility_ranch_set_cull'],
+  }),
+
   namedFormatter(
     'facilities',
     ['facilities'],
