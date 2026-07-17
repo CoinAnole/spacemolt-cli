@@ -106,6 +106,7 @@ The reporter compares each curated command's `apiRoute` against its generated co
 - Regenerate bundled mechanical route/schema metadata with `bun run generate:api` after OpenAPI spec changes. This updates committed metadata only.
 - When the task is only to update the `spacemolt-docs` submodule pointer and regenerate API metadata, use the gameserver version number as the entire commit message, for example `v0.327.2`.
 - Runtime dynamic commands come from the user's cached OpenAPI metadata. Refresh that cache with `spacemolt sync-api`.
+- **Storage is a grouped multi-command**, not multi-action: `GROUPED_COMMANDS` includes `storage`; curated flats are `storage_view`, `storage_deposit`, `storage_withdraw`, `storage_loot`, `storage_jettison` (user typing remains `storage <action> …`). There is no `action=` grammar, no omit-action / implicit deposit, and no request-body `action` field. `SUPPRESSED_GENERATED_ROUTE_SIGNATURES` in `src/dynamic-commands.ts` is intentionally empty for storage (routes are claimed by the five curated configs); keep the empty `Set` as an extension point. Related top-level commands (`jettison`, `loot_wreck`, `faction_deposit_credits`, `faction_withdraw_credits`) stay separate. User migration notes live in `README.md` and `CHANGELOG.md`.
 
 ## Dynamic API Commands
 
@@ -146,6 +147,8 @@ When adding another public command to this path, cover both layers:
 ## Release Notes
 
 Keep `package.json` version and `VERSION` in `src/runtime.ts` in sync.
+
+User-facing release / migration notes for breaking CLI surface changes live in `CHANGELOG.md` (see the Storage command group section for the multi-action → group cutover).
 
 The startup update check queries GitHub releases for `CoinAnole/spacemolt-cli` (if enabled via `SPACEMOLT_UPDATE_CHECK=true`), caches results in `~/.config/spacemolt/update-check.json`, and fails silently unless `DEBUG=true`.
 
