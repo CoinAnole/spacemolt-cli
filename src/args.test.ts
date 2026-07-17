@@ -1252,10 +1252,21 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.faction_id).toBe('faction_1');
   });
 
-  test('agentlogs - category and message required', () => {
+  test('agentlogs - category and message required; severity defaults to info', () => {
     const { payload } = parseOk(['agentlogs', 'navigation', 'jumped to new system']);
     expect(payload.category).toBe('navigation');
     expect(payload.message).toBe('jumped to new system');
+    expect(payload.severity).toBeUndefined();
+    expect(validateRequiredArgs('agentlogs', payload)).toBeNull();
+
+    const dryRun = createDryRunResponse('agentlogs', normalizeParsedPayload('agentlogs', payload));
+    expect(dryRun.structuredContent).toMatchObject({
+      payload: {
+        category: 'navigation',
+        message: 'jumped to new system',
+        severity: 'info',
+      },
+    });
   });
 
   test('get_map with system_id', () => {
@@ -1710,11 +1721,12 @@ describe('validateRequiredArgs', () => {
     ).toBeNull();
   });
 
-  test('agentlogs requires generated required fields in positional order', () => {
+  test('agentlogs requires category and message; severity defaults to info', () => {
     expect(validateRequiredArgs('agentlogs', {})).toBe('category');
     expect(validateRequiredArgs('agentlogs', { category: 'nav' })).toBe('message');
-    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped' })).toBe('severity');
-    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped', severity: 'info' })).toBeNull();
+    // severity is OpenAPI-required but curated defaults fill severity=info at request time
+    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped' })).toBeNull();
+    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped', severity: 'warn' })).toBeNull();
   });
 
   test('faction_post_mission uses generated required fields', () => {

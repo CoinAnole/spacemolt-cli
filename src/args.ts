@@ -427,14 +427,19 @@ export function validateRequiredArgs(
   payload: Record<string, unknown>,
   registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
 ): string | null {
-  const required = commandConfig(command, registry)?.required;
+  const config = commandConfig(command, registry);
+  const required = config?.required;
   if (!required) return null;
+  const defaults = config?.route?.defaults ?? {};
   const normalized = normalizeParsedPayload(command, payload, registry);
   for (const arg of required) {
     if (payload[arg]) continue;
     const canonicalRequired = normalizeParsedPayload(command, { [arg]: '__required__' }, registry);
     const canonicalKeys = Object.keys(canonicalRequired);
     if (canonicalKeys.some((key) => normalized[key])) continue;
+    // Route defaults are applied at request time; treat them as satisfying required wire fields.
+    if (defaults[arg] !== undefined) continue;
+    if (canonicalKeys.some((key) => defaults[key] !== undefined)) continue;
     return arg;
   }
   return null;

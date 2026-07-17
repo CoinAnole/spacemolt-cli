@@ -2698,7 +2698,7 @@ describe('structuredContent formatters', () => {
           action: 'scrap_wreck',
           wreck_id: 'wreck-1',
           message: 'Scrapped wreck.',
-          materials: [{ item_id: 'scrap_metal', quantity: 4 }],
+          materials: [{ item: 'scrap_metal', name: 'Scrap Metal', quantity: 4 }],
           total_value: 1250,
           stored_at: 'sol_yard',
           ship_class: 'skiff',

@@ -426,13 +426,16 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   agentlogs: {
-    usage: '<category> <message> [severity=info/warn/error]  (submit agent log entries to the server)',
+    usage: '<category> <message> [severity=info/warn/error]  (defaults to info)',
     description: 'Disabled endpoint; formerly submitted agent-readable logs to the server.',
     example: 'spacemolt agentlogs navigation "planned route to sol"',
     seeAlso: ['get_action_log'],
     category: 'Agent logging',
     apiRoute: 'POST /api/v2/agentlogs',
     positionals: ['category', 'message', 'severity'],
+    defaults: {
+      severity: 'info',
+    },
   },
   petition: {
     usage: '<empire_id> <message>  (send message to empire leadership, max 1000 chars)',
