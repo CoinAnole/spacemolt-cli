@@ -12,7 +12,7 @@
 
 - Use only committed `spacemolt-docs/openapi.json`; never set `LIVE_API_SYNC=1`.
 - Bundle gameserver metadata exactly as `v0.522.0` via `bun run generate:api`; never hand-edit `src/generated/api-commands.ts`.
-- Expose the eleven non-help shipping actions only through generated dynamic commands after `spacemolt sync-api` loads a v0.522 cache; keep the shipping help route hidden and add no curated shipping overrides, aliases, formatters, or fixtures.
+- Expose the eleven non-help shipping actions only through generated dynamic commands after `spacemolt sync-api` loads a v0.522 cache; keep both GET and POST shipping help records hidden and add no curated shipping overrides, aliases, formatters, or fixtures.
 - Remove `facility_disassemble` and `faction_disassemble`; do not silently redirect them.
 - Preserve raw server data in JSON, YAML, structured, compact, field, fields, and jq output modes.
 - Keep old scalar passenger berth fields only as a renderer fallback; canonical fixtures use nested `berths`.
@@ -94,7 +94,7 @@ import { GENERATED_API_ROUTES } from './generated/api-commands';
 Add this test inside `describe('dynamic OpenAPI commands', ...)`:
 
 ```ts
-  test('exposes v0.522 shipping actions but keeps the shipping help route hidden', () => {
+  test('exposes v0.522 shipping actions but keeps both shipping help routes hidden', () => {
     const shippingRoutes = Object.fromEntries(
       Object.entries(GENERATED_API_ROUTES).filter(([signature]) => signature.includes('/spacemolt_shipping/')),
     );
@@ -169,7 +169,7 @@ Run:
 bun run generate:api
 ```
 
-Expected: `src/generated/api-commands.ts` reports `v0.522.0`, removes the two disassemble routes, and adds the twelve shipping route records including `/help`.
+Expected: `src/generated/api-commands.ts` reports `v0.522.0`, removes the two disassemble routes, and adds 13 shipping route records: eleven non-help actions plus GET and POST `/help` records.
 
 - [ ] **Step 6: Teach API sync to count safe generated fallback coverage**
 

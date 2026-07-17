@@ -6,7 +6,7 @@ Date: 2026-07-17
 
 The cached SpaceMolt documentation has advanced from gameserver v0.512.0 to v0.522.0. The CLI must align its bundled route metadata, curated command surface, human-readable renderers, response fixtures, and OpenAPI validation with that release range.
 
-This is a compatibility release, not a first-class shipping feature release. Regenerating API metadata will make the eleven new non-help `shipping_*` actions available through the existing dynamic-command path and will bundle the hidden shipping help-route metadata, but this work will not add curated shipping commands, shipping-specific renderers, or shipping golden fixtures.
+This is a compatibility release, not a first-class shipping feature release. Regenerating API metadata will make the eleven new non-help `shipping_*` actions available through the existing dynamic-command path and will bundle the hidden GET and POST shipping help-route metadata, but this work will not add curated shipping commands, shipping-specific renderers, or shipping golden fixtures.
 
 The v0.521.0 OpenAPI refactor is large but does not require a runtime rewrite. This CLI generates request and route metadata, not TypeScript response models, and its response rendering is dynamic. The stable named response components and discriminators should instead be used to make fixture/schema validation more deterministic.
 
@@ -104,11 +104,11 @@ The regenerated metadata must:
 
 - report gameserver `v0.522.0`
 - omit the removed `disassemble` and `faction_disassemble` routes
-- include all twelve shipping routes from the cached spec, including the infrastructure help route
+- include all 13 shipping route records from the cached spec: eleven non-help actions plus GET and POST infrastructure help records
 - continue excluding infrastructure-only help routes from curated-coverage requirements where existing API sync rules already do so
 - match a fresh in-memory generation exactly
 
-The eleven non-help shipping routes will be exposed only through generated dynamic commands. Their generated names, request schemas, help visibility, completion, and dispatch follow existing behavior. The shipping help route remains hidden from dynamic command generation under the existing infrastructure-route rule. No curated override will shadow any shipping route in this release.
+The eleven non-help shipping routes will be exposed only through generated dynamic commands. Their generated names, request schemas, help visibility, completion, and dispatch follow existing behavior. Both GET and POST shipping help records remain hidden from dynamic command generation under the existing infrastructure-route rule. No curated override will shadow any shipping route in this release.
 
 ### 2. Removed Facility Commands
 
@@ -242,7 +242,7 @@ After fixture correction, run the schema divergence report and update `fixture-s
 
 1. The CLI loads curated commands merged with regenerated v0.522 metadata.
 2. Curated commands continue to provide friendly behavior for existing routes.
-3. The eleven newly generated non-help shipping commands participate in help, search, completion, and dispatch through the existing dynamic-command path; the shipping help route remains infrastructure metadata rather than a generated command.
+3. The eleven newly generated non-help shipping commands participate in help, search, completion, and dispatch through the existing dynamic-command path; both GET and POST shipping help records remain infrastructure metadata rather than generated commands.
 4. API responses pass through the existing structured-content selection.
 5. Human-readable formatters optionally present current berth, base, restriction, facility type, and maintenance fields.
 6. Machine-output modes serialize the selected server data without formatter-derived changes.
@@ -327,7 +327,7 @@ The exact test-first task breakdown belongs in the implementation plan; this seq
 - Bundled metadata reports and deterministically regenerates as gameserver v0.522.0.
 - `bun test src/api-sync.test.ts` passes against the cached spec.
 - Neither removed disassemble command appears in command lookup, help, completion, routing, or tests.
-- All eleven non-help shipping actions are available through generated dynamic commands without curated shipping code, and the shipping help route remains hidden infrastructure metadata.
+- All eleven non-help shipping actions are available through generated dynamic commands without curated shipping code, and both GET and POST shipping help records remain hidden infrastructure metadata.
 - Passenger and ship berth output uses the nested canonical shape.
 - Craft queue fixtures exercise direct base context.
 - Owned-facility output has separate Name and Type columns.
