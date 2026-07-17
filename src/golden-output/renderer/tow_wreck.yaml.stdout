@@ -1,0 +1,19 @@
+
+details:
+  action: tow_wreck
+  wreck_id: "wreck-1"
+  message: "Tow line attached."
+  insured: false
+  cargo_count: 2
+  module_count: 1
+  salvage_value: 1250
+  ship_class: skiff
+  speed_penalty: "25%"
+ship:
+  fuel: 92
+  max_fuel: 100
+location:
+  system_id: sol
+  system_name: Sol
+  poi_id: sol_belt
+  poi_name: Belt

@@ -1,0 +1,9 @@
+
+=== Scrap Wreck ===
+Action: scrap_wreck
+Wreck Id: wreck-1
+Message: Scrapped wreck.
+Materials: 1 item(s)
+Total Value: 1250
+Stored At: sol_yard
+Ship Class: skiff

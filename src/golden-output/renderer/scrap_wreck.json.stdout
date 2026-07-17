@@ -1,0 +1,30 @@
+{
+  "details": {
+    "action": "scrap_wreck",
+    "wreck_id": "wreck-1",
+    "message": "Scrapped wreck.",
+    "materials": [
+      {
+        "item": "scrap_metal",
+        "name": "Scrap Metal",
+        "quantity": 4
+      }
+    ],
+    "total_value": 1250,
+    "stored_at": "sol_yard",
+    "ship_class": "skiff"
+  },
+  "cargo": [
+    {
+      "item_id": "scrap_metal",
+      "item_name": "Scrap Metal",
+      "quantity": 4
+    }
+  ],
+  "skills": {
+    "salvaging": {
+      "level": 2,
+      "xp": 140
+    }
+  }
+}

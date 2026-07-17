@@ -1,0 +1,18 @@
+
+=== Tow Wreck ===
+Action: tow_wreck
+Wreck Id: wreck-1
+Message: Tow line attached.
+Insured: false
+Cargo Count: 2
+Module Count: 1
+Salvage Value: 1250
+Ship Class: skiff
+Speed Penalty: 25%
+System Id: sol
+System Name: Sol
+Poi Id: sol_belt
+Poi: Belt
+Poi Name: Belt
+Fuel Now: 92
+Fuel Max: 100
