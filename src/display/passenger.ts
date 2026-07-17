@@ -1,9 +1,16 @@
 import { formatBerthSummary } from './berths.ts';
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
+const FORBIDDEN_LEGACY_BERTH_STRINGS = new Set(['NaN', 'undefined', '[object Object]']);
+
 function passengerRows(value: unknown): Array<Record<string, unknown>> | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.filter(isRecord);
+}
+
+function isLegacyBerthValue(value: unknown): value is string | number {
+  if (typeof value === 'number') return Number.isFinite(value);
+  return typeof value === 'string' && value !== '' && !FORBIDDEN_LEGACY_BERTH_STRINGS.has(value);
 }
 
 function berthSummary(result: Record<string, unknown>): string {
@@ -14,10 +21,7 @@ function berthSummary(result: Record<string, unknown>): string {
     ['Business', result.business_berths],
     ['First', result.first_berths],
   ]
-    .filter(
-      ([, value]) =>
-        (typeof value === 'string' && value !== '') || (typeof value === 'number' && Number.isFinite(value)),
-    )
+    .filter(([, value]) => isLegacyBerthValue(value))
     .map(([label, value]) => `${label}: ${value}`)
     .join(' | ');
 }

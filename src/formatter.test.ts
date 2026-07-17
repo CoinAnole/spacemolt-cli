@@ -3105,6 +3105,25 @@ describe('structuredContent formatters', () => {
     expect(rendered.stdout).not.toContain('[object Object]');
   });
 
+  test('list_passengers omits forbidden legacy berth string tokens', () => {
+    const stdout = ['NaN', 'undefined', '[object Object]']
+      .map(
+        (economyBerths) =>
+          captureStructuredOutput('list_passengers', {
+            passengers: [],
+            count: 0,
+            economy_berths: economyBerths,
+            business_berths: 0,
+          }).stdout,
+      )
+      .join('\n');
+
+    expect(stdout).toContain('Business: 0');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
   test('load_passenger renders skipped unfunded count', () => {
     const { stdout, stderr } = captureStructuredOutput('load_passenger', {
       message: 'Loaded passengers.',
