@@ -1057,7 +1057,7 @@ describe('command metadata', () => {
         clear: { type: 'boolean' },
         types: {
           type: 'array',
-          enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'market', 'crafting', 'system'],
+          enum: ['chat', 'combat', 'trade', 'market', 'crafting', 'system'],
         },
       },
     });
@@ -1135,6 +1135,30 @@ describe('command metadata', () => {
       type: 'integer',
     });
     expect(shippingQuote.schema?.base_reward).not.toHaveProperty('minimum');
+  });
+
+  test('notification commands expose exactly the server-emitted type choices', () => {
+    const emittedTypes = ['chat', 'combat', 'trade', 'market', 'crafting', 'system'];
+    for (const command of ['get_notifications', 'notifications']) {
+      const config = COMMANDS[command];
+      expect(config?.schema?.types?.enum).toEqual(emittedTypes);
+      const typesArg = completionArgsForCommand(command, config).find((arg) => arg.name === 'types');
+      expect(typesArg?.values).toEqual(emittedTypes);
+      const help = captureHelp(command);
+      expect(help).toContain('types (chat|combat|trade|market|crafting|system)');
+      expect(help).not.toContain('types (chat|combat|trade|faction|friend|forum');
+    }
+  });
+
+  test('get_action_log advertises explicit event arrays and polling cursors', () => {
+    expect(COMMANDS.get_action_log).toMatchObject({
+      usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
+      example:
+        'spacemolt get_action_log event_type=faction.production_cycle,ship.buy_order_filled since_id=42 page_size=100',
+      arrayFields: ['event_type'],
+    });
+    expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
+    expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {

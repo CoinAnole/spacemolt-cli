@@ -256,26 +256,30 @@ describe('convertPayloadTypes', () => {
     expect(applyPayloadTransforms('get_notifications', typed)).toEqual({ types: ['market'] });
   });
 
-  test('get_notifications types accept skill.md faction/friend/forum filters', () => {
-    const { payload } = parseOk(['get_notifications', 'types=faction,friend,forum']);
-    const typed = convertPayloadTypes(payload, 'get_notifications');
-    expect(applyPayloadTransforms('get_notifications', typed)).toEqual({
-      types: ['faction', 'friend', 'forum'],
-    });
+  test('notification commands reject types the server does not emit', () => {
+    const expectedTypes = 'chat, combat, trade, market, crafting, system';
+    for (const command of ['get_notifications', 'notifications']) {
+      for (const removedType of ['faction', 'friend', 'forum']) {
+        expect(parseArgs([command, `types=${removedType}`])).toEqual({
+          ok: false,
+          errors: [
+            {
+              field: 'types',
+              message: `Invalid value "${removedType}" for "types". Expected one of: ${expectedTypes}`,
+              code: 'invalid_enum',
+            },
+          ],
+        });
+      }
+    }
   });
 
-  test('get_notifications rejects tip as an invalid types enum value', () => {
-    expect(parseArgs(['get_notifications', 'types=tip'])).toEqual({
-      ok: false,
-      errors: [
-        {
-          field: 'types',
-          message:
-            'Invalid value "tip" for "types". Expected one of: chat, combat, trade, faction, friend, forum, market, crafting, system',
-          code: 'invalid_enum',
-        },
-      ],
-    });
+  test('notification commands retain valid multi-type filters', () => {
+    for (const command of ['get_notifications', 'notifications']) {
+      const { payload } = parseOk([command, 'types=chat,market']);
+      const typed = convertPayloadTypes(payload, command);
+      expect(applyPayloadTransforms(command, typed)).toEqual({ types: ['chat', 'market'] });
+    }
   });
 
   test('GET notifications accepts limit/clear/types without unknown_field errors', () => {
@@ -290,20 +294,6 @@ describe('convertPayloadTypes', () => {
       limit: 10,
       clear: false,
       types: ['chat'],
-    });
-  });
-
-  test('GET notifications rejects tip as an invalid types enum value', () => {
-    expect(parseArgs(['notifications', 'types=tip'])).toEqual({
-      ok: false,
-      errors: [
-        {
-          field: 'types',
-          message:
-            'Invalid value "tip" for "types". Expected one of: chat, combat, trade, faction, friend, forum, market, crafting, system',
-          code: 'invalid_enum',
-        },
-      ],
     });
   });
 
@@ -1376,10 +1366,32 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload.page).toBe('2');
   });
 
-  test('get_action_log accepts event_type filter', () => {
-    const { payload } = parseOk(['get_action_log', 'event_type=faction.production_cycle', 'faction_id=faction_1']);
-    expect(payload.event_type).toBe('faction.production_cycle');
-    expect(payload.faction_id).toBe('faction_1');
+  test('get_action_log normalizes key-value event filters and cursor numbers', () => {
+    const { payload } = parseOk([
+      'get_action_log',
+      'event_type=faction.production_cycle, ship.buy_order_filled,,',
+      'faction_id=faction_1',
+      'since_id=42',
+      'page_size=100',
+    ]);
+    const typed = convertPayloadTypes(payload, 'get_action_log');
+    expect(applyPayloadTransforms('get_action_log', typed)).toEqual({
+      event_type: ['faction.production_cycle', 'ship.buy_order_filled'],
+      faction_id: 'faction_1',
+      since_id: 42,
+      page_size: 100,
+    });
+  });
+
+  test('get_action_log turns one event type into one array entry and preserves JSON arrays', () => {
+    const single = parseOk(['get_action_log', 'event_type=crafting.completed']);
+    expect(applyPayloadTransforms('get_action_log', convertPayloadTypes(single.payload, 'get_action_log'))).toEqual({
+      event_type: ['crafting.completed'],
+    });
+
+    expect(
+      applyPayloadTransforms('get_action_log', convertPayloadTypes({ event_type: ['a', 'b'] }, 'get_action_log')),
+    ).toEqual({ event_type: ['a', 'b'] });
   });
 
   test('agentlogs - category and message required; severity defaults to info', () => {

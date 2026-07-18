@@ -440,6 +440,25 @@ describe('help output branches', () => {
     expect(output).toContain('search');
   });
 
+  test('showCommandHelp documents action-log cursor polling', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('get_action_log', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+
+    expect(output).toContain(
+      'spacemolt get_action_log [category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
+    );
+    expect(output).toContain('event_type');
+    expect(output).toContain('page_size');
+    expect(output).toContain('since_id');
+    expect(output).toContain('next_since_id');
+    expect(output).toContain('Page-based queries return newest-first');
+    expect(output).toContain('since_id requests newer entries oldest-first');
+    expect(output).toContain(
+      'spacemolt get_action_log event_type=faction.production_cycle,ship.buy_order_filled since_id=42 page_size=100',
+    );
+  });
+
   test('showCommandHelp documents view_market filters', () => {
     const capture = captureWriter();
 

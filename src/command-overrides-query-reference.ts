@@ -202,25 +202,17 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
-    description: 'Poll queued game events such as chat, combat, trade, and faction updates.',
+    description: 'Poll queued game events across chat, combat, trade, market, crafting, and system categories.',
     example: 'spacemolt get_notifications limit=10 types=chat,market',
     seeAlso: ['get_status', 'get_action_log', 'notifications'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_notifications',
     positionals: ['clear', 'limit', 'types'],
     arrayFields: ['types'],
-    schemaExtensions: {
-      types: {
-        type: 'array',
-        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'market', 'crafting', 'system'],
-        description: 'Filter by notification types. Omit for all types.',
-      },
-    },
   },
   notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
-    description:
-      'Poll pending notifications via GET (query params). Prefer get_notifications for the primary poll UX; this route accepts the same limit/clear/types filters.',
+    description: 'Poll pending game events via GET query parameters. Prefer get_notifications for the primary poll UX.',
     example: 'spacemolt notifications limit=10 clear=false types=chat',
     seeAlso: ['get_notifications', 'get_status', 'get_action_log'],
     category: 'Query commands',
@@ -238,7 +230,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       },
       types: {
         type: 'array',
-        enum: ['chat', 'combat', 'trade', 'faction', 'friend', 'forum', 'market', 'crafting', 'system'],
+        enum: ['chat', 'combat', 'trade', 'market', 'crafting', 'system'],
         description: 'Filter by notification types. Omit for all types.',
       },
     },
@@ -289,11 +281,15 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_queue',
   },
   get_action_log: {
-    usage:
-      '[category=.. event_type=.. faction_id=.. page=..]  (full history: mining, navigation, combat, reputation, etc)',
+    usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
+    description:
+      "Retrieve your or your faction's persistent action history. Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll.",
+    example:
+      'spacemolt get_action_log event_type=faction.production_cycle,ship.buy_order_filled since_id=42 page_size=100',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt_social/get_action_log',
     positionals: ['category', 'faction_id', 'page'],
+    arrayFields: ['event_type'],
   },
   session: {
     description: 'Create a fresh API session and print instructions for using it.',

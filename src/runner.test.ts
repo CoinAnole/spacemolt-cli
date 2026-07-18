@@ -1608,6 +1608,40 @@ describe('runInvocation option isolation', () => {
     expect(stderr.join('\n')).toContain('"unknown_command"');
   });
 
+  test('get_action_log dry-run sends an ordered event array and numeric cursor fields', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-action-log-dry-run-'));
+    try {
+      const result = await captureInvocation(
+        [
+          '--json',
+          '--dry-run',
+          'get_action_log',
+          'event_type=faction.production_cycle,ship.buy_order_filled',
+          'since_id=42',
+          'page_size=100',
+        ],
+        { ...process.env, XDG_CONFIG_HOME: path.join(tempDir, 'config') },
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
+      const body = JSON.parse(result.stdout);
+      expect(body.structuredContent).toMatchObject({
+        command: 'get_action_log',
+        method: 'POST',
+        payload: {
+          event_type: ['faction.production_cycle', 'ship.buy_order_filled'],
+          since_id: 42,
+          page_size: 100,
+        },
+        server_request_sent: false,
+      });
+      expect(body.structuredContent.url).toEndWith('/spacemolt_social/get_action_log');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('connection errors use explicit output state after parsing', async () => {
     const result = await captureInvocation(
       ['--plain', '--debug', 'get_status'],
