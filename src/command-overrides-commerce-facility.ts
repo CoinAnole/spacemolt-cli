@@ -75,6 +75,18 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       template_id: 'id',
     },
   },
+  shipping_list: {
+    usage:
+      '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
+    description:
+      'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
+    example:
+      'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
+    discoverWith: ['get_status'],
+    seeAlso: ['shipping_quote', 'shipping_accept', 'shipping_profile'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/list',
+  },
   shipping_post: {
     usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',
     description: 'Post a sealed-package freight contract with a carrier reward you set.',

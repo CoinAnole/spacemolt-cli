@@ -1041,7 +1041,7 @@ describe('command metadata', () => {
     }
   });
 
-  test('notifications stays curated while safe shipping commands are bundled generated fallbacks', () => {
+  test('notifications and shipping_list stay curated while other safe shipping commands are bundled generated fallbacks', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.notifications;
 
     expect(config).toBeDefined();
@@ -1072,13 +1072,53 @@ describe('command metadata', () => {
       'shipping_cancel',
       'shipping_deliver',
       'shipping_get',
-      'shipping_list',
       'shipping_pay_debt',
       'shipping_profile',
       'shipping_quote',
       'shipping_return',
       'shipping_track',
     ]);
+    const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
+    expect(shippingList).toMatchObject({
+      args: [
+        'eligible_as',
+        'filter_destination',
+        'filter_service_level',
+        'filter_shipper',
+        'page',
+        'per_page',
+        'sort',
+      ],
+      description:
+        'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
+      usage:
+        '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
+      example:
+        'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
+      category: 'Missions',
+      discoverWith: ['get_status'],
+      seeAlso: ['shipping_quote', 'shipping_accept', 'shipping_profile'],
+      route: { tool: 'spacemolt_shipping', action: 'list', method: 'POST' },
+      schema: {
+        eligible_as: { enum: ['player', 'faction'] },
+        filter_destination: { type: 'string' },
+        filter_service_level: { enum: ['standard', 'priority'] },
+        filter_shipper: { type: 'string' },
+        page: { type: 'integer' },
+        per_page: { type: 'integer' },
+        sort: { enum: ['reward', 'distance', 'age'] },
+      },
+    });
+    expect(Object.keys(shippingList.aliases ?? {})).toHaveLength(0);
+    expect(shippingList.route.defaults).toBeUndefined();
+    expect(
+      Object.values(BUNDLED_COMMAND_REGISTRY.commands).filter(
+        (commandConfig) =>
+          commandConfig.route.method === 'POST' &&
+          commandConfig.route.tool === 'spacemolt_shipping' &&
+          commandConfig.route.action === 'list',
+      ),
+    ).toHaveLength(1);
     expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote).toMatchObject({
       required: ['package_id', 'destination_base_id'],
       category: 'Generated API',

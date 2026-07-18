@@ -291,6 +291,20 @@ describe('shell completion generation', () => {
     );
   });
 
+  test('curated shipping_list remains available in runtime and static completion', () => {
+    const values = completeWords({ shell: 'fish', words: ['spacemolt', 'shipping_l'], current: 'shipping_l' }).map(
+      (candidate) => candidate.value,
+    );
+    const bash = generateCompletion('bash');
+    const fish = generateCompletion('fish');
+
+    expect(values).toContain('shipping_list');
+    expect(bash).toContain('shipping_list');
+    expect(fish).toContain(
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_use_subcommand" -a shipping_list',
+    );
+  });
+
   test('runtime completion suggests raw notification override', () => {
     const labels = completeWords({ shell: 'fish', words: ['spacemolt', '--raw-n'], current: '--raw-n' }).map(
       (entry) => entry.value,
@@ -892,5 +906,21 @@ describe('shell completion generation', () => {
     const bash = generateCompletion('bash');
 
     expect(bashCommandCaseBody(bash, 'buy')).toContain('cargo storage');
+  });
+
+  test('shipping_list completion keeps generated filter fields and sort values', () => {
+    const fish = generateCompletion('fish');
+    const bash = generateCompletion('bash');
+    const bashBody = bashCommandCaseBody(bash, 'shipping_list');
+    const fishLines = fishCommandLines(fish, 'shipping_list').join('\n');
+
+    expect(bashBody).toContain('filter_destination=');
+    expect(bashBody).toContain('filter_shipper=');
+    expect(bashBody).toContain('reward distance age');
+    expect(fishLines).toContain('filter_destination=');
+    expect(fishLines).toContain('filter_shipper=');
+    expect(fishLines).toContain('-a reward');
+    expect(fishLines).toContain('-a distance');
+    expect(fishLines).toContain('-a age');
   });
 });

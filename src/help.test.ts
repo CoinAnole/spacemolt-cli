@@ -831,6 +831,36 @@ describe('help output branches', () => {
     expect(search.stdout.join('\n')).toContain('shipping_quote');
   });
 
+  test('shipping_list help explains the docked current-station board and canonical filters', () => {
+    const capture = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_list', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_list', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
+    );
+    expect(output).toContain(
+      'spacemolt shipping_list [eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
+    );
+    expect(output).toContain(
+      'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
+    );
+    expect(output).toContain('eligible_as (player|faction)');
+    expect(output).toContain('filter_service_level (standard|priority)');
+    expect(output).toContain('sort (reward|distance|age)');
+    expect(output).toContain('Server help:');
+    expect(output).toContain('spacemolt server-help shipping_list');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toContain('See also: shipping_quote, shipping_accept, shipping_profile');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/list');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 
