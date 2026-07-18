@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.522.0",
+  "generatedAtGameserver": "v0.530.1",
   "blockingDivergenceSignatures": [
     "create_faction|create_faction|required-missing|message",
     "facility_upgrades|facility_upgrades|required-missing|action",
@@ -21,6 +21,10 @@
     "faction_info|faction_info|required-missing|secondary_color",
     "faction_info|faction_info|required-missing|total_fuel_capacity",
     "faction_info|faction_info|required-missing|total_fuel_reserve",
+    "get_action_log_cursor|get_action_log|required-missing|category",
+    "get_action_log_cursor|get_action_log|required-missing|page",
+    "get_action_log_cursor|get_action_log|required-missing|total",
+    "get_action_log_cursor|get_action_log|required-missing|total_pages",
     "get_battle_log|get_battle_log|required-missing|entries[0].attacks[0].damage_type",
     "get_battle_log|get_battle_log|required-missing|entries[0].attacks[0].hit_chance",
     "get_battle_log|get_battle_log|required-missing|entries[0].attacks[0].hit_roll",

@@ -22,6 +22,8 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('faction_create_buy_order_bulk');
     expect(report.requiredCoverageKeys).toContain('faction_create_sell_order_bulk');
     expect(report.highValueFixtureLabels).toContain('faction_create_sell_order_bulk');
+    expect(report.requiredCoverageKeys).toContain('get_action_log_cursor');
+    expect(report.highValueFixtureLabels).toContain('get_action_log_cursor');
     expect(report.requiredCoverageKeys).toContain('scan_creature');
     expect(report.highValueFixtureLabels).toContain('scan_creature');
   });

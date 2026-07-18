@@ -729,6 +729,32 @@ export const actionLogFixture = {
   ],
 };
 
+export const actionLogCursorFixture = {
+  event_types: ['faction.production_cycle', 'ship.buy_order_filled'],
+  since_id: 100,
+  next_since_id: 105,
+  has_more: true,
+  page_size: 50,
+  entries: [
+    {
+      id: 101,
+      created_at: '2026-07-18T12:00:01.000Z',
+      summary: 'Faction production cycle completed.',
+      category: 'faction',
+      event_type: 'faction.production_cycle',
+      data: { runs: 4, venue: 'alloy-foundry' },
+    },
+    {
+      id: 105,
+      created_at: '2026-07-18T12:01:10.000Z',
+      summary: 'Prospector buy order filled at Nova Terra Central.',
+      category: 'ship',
+      event_type: 'ship.buy_order_filled',
+      data: { ship_id: 'ship-prospector-42', base_id: 'nova-terra-central' },
+    },
+  ],
+};
+
 export const ranchStatusFixture = {
   action: 'ranch_status',
   facility_id: 'ranch-ember-1',
@@ -807,6 +833,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   captains_log_list: { command: 'captains_log_list', fixture: captainsLogListFixture },
   get_chat_history: { command: 'get_chat_history', fixture: chatHistoryFixture },
   get_action_log: { command: 'get_action_log', fixture: actionLogFixture },
+  get_action_log_cursor: { command: 'get_action_log', fixture: actionLogCursorFixture },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
   faction_info: { command: 'faction_info', fixture: factionInfoFixture },

@@ -1,0 +1,34 @@
+{
+  "event_types": [
+    "faction.production_cycle",
+    "ship.buy_order_filled"
+  ],
+  "since_id": 100,
+  "next_since_id": 105,
+  "has_more": true,
+  "page_size": 50,
+  "entries": [
+    {
+      "id": 101,
+      "created_at": "2026-07-18T12:00:01.000Z",
+      "summary": "Faction production cycle completed.",
+      "category": "faction",
+      "event_type": "faction.production_cycle",
+      "data": {
+        "runs": 4,
+        "venue": "alloy-foundry"
+      }
+    },
+    {
+      "id": 105,
+      "created_at": "2026-07-18T12:01:10.000Z",
+      "summary": "Prospector buy order filled at Nova Terra Central.",
+      "category": "ship",
+      "event_type": "ship.buy_order_filled",
+      "data": {
+        "ship_id": "ship-prospector-42",
+        "base_id": "nova-terra-central"
+      }
+    }
+  ]
+}

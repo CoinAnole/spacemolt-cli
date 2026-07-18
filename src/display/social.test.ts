@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import {
+  actionLogCursorFixture,
   facilityListFixture,
   factionFacilityOwnedFixture,
   forumThreadFixture,
@@ -34,6 +35,44 @@ const context = {
     compact: false,
   },
 };
+
+test('renders cursor action-log entries in server order with the next polling cursor', () => {
+  const rendered = renderStructuredResult('get_action_log', structuredClone(actionLogCursorFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout.indexOf('Faction production cycle completed.')).toBeLessThan(
+    stdout.indexOf('Prospector buy order filled at Nova Terra Central.'),
+  );
+  expect(stdout).toContain('Timestamp');
+  expect(stdout).toContain('Summary');
+  expect(stdout).toContain('Category');
+  expect(stdout).toContain('Event');
+  expect(stdout).toContain('More entries available.');
+  expect(stdout).toContain('Next since_id: 105');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+});
+
+test('renders a valid next cursor even when the current cursor page has no more entries', () => {
+  const fixture = structuredClone(actionLogCursorFixture);
+  fixture.has_more = false;
+  fixture.next_since_id = 0;
+  const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('More entries available.');
+  expect(stdout).toContain('Next since_id: 0');
+});
+
+test('omits malformed action-log cursors from human output', () => {
+  for (const cursor of [-1, 1.5, Number.POSITIVE_INFINITY, Number.NaN, '105', undefined]) {
+    const fixture = structuredClone(actionLogCursorFixture) as Record<string, unknown>;
+    fixture.next_since_id = cursor;
+    const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+    expect(stdout).not.toContain('Next since_id:');
+    expect(stdout).toContain('Faction production cycle completed.');
+  }
+});
 
 test('renders ranch status as a dashboard with feed and production tables', () => {
   const rendered = renderStructuredResult(

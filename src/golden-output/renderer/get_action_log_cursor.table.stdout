@@ -1,0 +1,10 @@
+category all
+
+=== Entries ===
+
+  Timestamp           | Summary                                            | Category | Event                    | Ship              
+  --------------------+----------------------------------------------------+----------+--------------------------+-------------------
+  2026-07-18 12:00:01 | Faction production cycle completed.                | faction  | faction.production_cycle |                   
+  2026-07-18 12:01:10 | Prospector buy order filled at Nova Terra Central. | ship     | ship.buy_order_filled    | ship-prospector-42
+More entries available.
+Next since_id: 105

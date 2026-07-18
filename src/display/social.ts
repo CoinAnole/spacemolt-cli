@@ -720,6 +720,10 @@ export const socialFormatters = [
       emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);
+      const nextSinceId = r.next_since_id;
+      if (typeof nextSinceId === 'number' && Number.isSafeInteger(nextSinceId) && nextSinceId >= 0) {
+        emitLine(`${c.dim}Next since_id: ${nextSinceId}${c.reset}`);
+      }
       return true;
     },
     { commands: ['get_action_log'] },
