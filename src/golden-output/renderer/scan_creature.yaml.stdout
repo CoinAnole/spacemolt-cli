@@ -1,0 +1,9 @@
+
+success: true
+target_id: "creature-ember-grazer-1"
+hull: 80
+revealed_info:
+  - "Species: Ember Grazer"
+  - "Role: grazer"
+  - "Danger: low"
+  - "Ranchable: yes"

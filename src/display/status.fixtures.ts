@@ -291,6 +291,13 @@ export const scanFixture = {
   revealed_info: ['Cargo: 20/200', 'Weapons: 1'],
 };
 
+export const scanCreatureFixture = {
+  success: true,
+  target_id: 'creature-ember-grazer-1',
+  hull: 80,
+  revealed_info: ['Species: Ember Grazer', 'Role: grazer', 'Danger: low', 'Ranchable: yes'],
+};
+
 export const completedMissionDetailFixture = {
   template_id: 'mission-ore-run',
   title: 'Ore Run',
@@ -465,6 +472,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_queue: { command: 'get_queue', fixture: getQueueFixture },
   get_queue_empty: { command: 'get_queue', fixture: getQueueEmptyFixture },
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
+  scan_creature: { command: 'scan', fixture: scanCreatureFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
   completed_missions: { command: 'completed_missions', fixture: completedMissionsFixture },
