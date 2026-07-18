@@ -1,4 +1,5 @@
 import type { CommandArg, CommandConfig, LocalCommandConfig } from './commands.ts';
+import { schemaAllowsType } from './openapi-metadata.ts';
 
 export interface CompletionOption {
   long?: string;
@@ -117,7 +118,7 @@ export function completionArgsForCommand(
       };
     }
 
-    if (schema?.type === 'boolean') {
+    if (schemaAllowsType(schema?.type, 'boolean')) {
       return {
         name,
         description,

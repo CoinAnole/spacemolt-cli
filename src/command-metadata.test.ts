@@ -30,6 +30,7 @@ import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandHelp, showFullHelp } from './help';
+import { schemaRequiredScalarType } from './openapi-metadata';
 import { createCommandConfigDryRunResponse } from './preview';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
@@ -147,8 +148,9 @@ function sampleValueForField(command: string, field: string): string {
   const canonical = config.aliases?.[field] || field;
   const schema = config.schema?.[canonical];
   if (schema?.enum?.[0]) return String(schema.enum[0]);
-  if (schema?.type === 'integer' || schema?.type === 'number') return '1';
-  if (schema?.type === 'boolean') return 'true';
+  const requiredScalarType = schemaRequiredScalarType(schema?.type);
+  if (requiredScalarType === 'integer' || requiredScalarType === 'number') return '1';
+  if (requiredScalarType === 'boolean') return 'true';
   if (field.includes('quantity') || field.includes('amount') || field.includes('credits')) return '1';
   if (field.includes('system')) return 'system_sample';
   if (field.includes('poi') || field === 'id') return 'poi_sample';
@@ -1220,7 +1222,8 @@ describe('command metadata', () => {
       for (const [field, schema] of Object.entries(config.schema ?? {})) {
         if (schema.minimum === undefined) continue;
         if (!Number.isFinite(schema.minimum)) failures.push(`${command}.${field}: minimum must be finite`);
-        if (schema.type !== 'integer' && schema.type !== 'number') {
+        const requiredScalarType = schemaRequiredScalarType(schema.type);
+        if (requiredScalarType !== 'integer' && requiredScalarType !== 'number') {
           failures.push(`${command}.${field}: minimum requires integer or number type`);
         }
       }
@@ -1413,6 +1416,24 @@ describe('command metadata', () => {
       kind: 'enum',
       values: ['cargo', 'storage'],
     });
+  });
+
+  test('nullable booleans retain boolean completion metadata', () => {
+    const config: CommandConfig = {
+      args: ['enabled'],
+      route: { tool: 'probe', action: 'union', method: 'POST' },
+      schema: { enabled: { type: ['boolean', 'null'], description: 'Enable the probe.' } },
+    };
+
+    expect(completionArgsForCommand('union_probe', config)).toEqual([
+      {
+        name: 'enabled',
+        description: 'Enable the probe.',
+        values: ['true', 'false'],
+        insert: 'enabled=',
+        kind: 'boolean',
+      },
+    ]);
   });
 
   test('shell completions include local top-level commands', () => {

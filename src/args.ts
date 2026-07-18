@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
-import type { CommandConfig } from './commands.ts';
+import type { CommandConfig, CommandFieldSchema } from './commands.ts';
+import { type OpenApiFieldType, schemaAllowsType, schemaRequiredScalarType } from './openapi-metadata.ts';
 
 type CommandRegistrySource = Pick<CommandRegistrySnapshot, 'commands'>;
 
@@ -144,7 +145,8 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
 
       const nextArg = args[i + 1];
       const fieldType = getCommandFieldType(command, flag.key, registry);
-      if (fieldType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
+      const requiredScalarType = schemaRequiredScalarType(fieldType);
+      if (requiredScalarType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
         setPayloadField(flag.key, nextArg);
         const tokenAfterValue = args[i + 2];
         if (
@@ -476,28 +478,31 @@ export function validatePayloadAgainstSchema(
       }
     }
 
-    if (fieldSchema.type === 'integer' || fieldSchema.type === 'number') {
+    const requiredScalarType = schemaRequiredScalarType(fieldSchema.type);
+
+    if (requiredScalarType === 'integer' || requiredScalarType === 'number') {
       const values = Array.isArray(value) ? value : [value];
       for (const val of values) {
+        if (val === null && schemaAllowsType(fieldSchema.type, 'null')) continue;
         let numericValue: number | undefined;
 
         if (typeof val === 'number') {
-          if (!Number.isFinite(val) || (fieldSchema.type === 'integer' && !Number.isInteger(val))) {
+          if (!Number.isFinite(val) || (requiredScalarType === 'integer' && !Number.isInteger(val))) {
             errors.push({
               field: key,
-              message: schemaTypeErrorMessage(key, fieldSchema.type, val),
-              code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
+              message: schemaTypeErrorMessage(key, requiredScalarType, val),
+              code: requiredScalarType === 'integer' ? 'invalid_integer' : 'invalid_number',
             });
             continue;
           }
           numericValue = val;
         } else {
-          numericValue = parseTypedNumber(String(val), fieldSchema.type);
+          numericValue = parseTypedNumber(String(val), requiredScalarType);
           if (numericValue === undefined) {
             errors.push({
               field: key,
-              message: schemaTypeErrorMessage(key, fieldSchema.type, val),
-              code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
+              message: schemaTypeErrorMessage(key, requiredScalarType, val),
+              code: requiredScalarType === 'integer' ? 'invalid_integer' : 'invalid_number',
             });
             continue;
           }
@@ -513,9 +518,10 @@ export function validatePayloadAgainstSchema(
       }
     }
 
-    if (fieldSchema.type === 'boolean') {
+    if (requiredScalarType === 'boolean') {
       const values = Array.isArray(value) ? value : [value];
       for (const val of values) {
+        if (val === null && schemaAllowsType(fieldSchema.type, 'null')) continue;
         if (typeof val === 'boolean') continue;
         if (val !== 'true' && val !== 'false') {
           const suggestion = suggestBooleanCorrection(String(val));
@@ -592,7 +598,7 @@ export function getArgNames(config: Pick<CommandConfig, 'args' | 'required'>): s
   return names;
 }
 
-type PayloadConversionSchema = Record<string, { type?: string; enum?: string[] }>;
+type PayloadConversionSchema = Record<string, Pick<CommandFieldSchema, 'type' | 'enum'>>;
 
 export function getPayloadConversionSchema(
   command: string | undefined,
@@ -605,7 +611,7 @@ function getCommandFieldType(
   command: string | undefined,
   key: string,
   registry: CommandRegistrySource = BUNDLED_COMMAND_REGISTRY,
-): string | undefined {
+): OpenApiFieldType | undefined {
   if (!command) return undefined;
   return getPayloadConversionSchema(command, registry)[key]?.type;
 }
@@ -618,9 +624,9 @@ function parseTypedNumber(value: string, fieldType: string): number | undefined 
   return num;
 }
 
-function parseJsonStructuredValue(value: string, fieldType: string | undefined): unknown {
+function parseJsonStructuredValue(value: string, fieldType: OpenApiFieldType | undefined): unknown {
   const trimmed = value.trim();
-  if (fieldType === 'array' && trimmed.startsWith('[')) {
+  if (schemaAllowsType(fieldType, 'array') && trimmed.startsWith('[')) {
     try {
       const parsed = JSON.parse(trimmed);
       return Array.isArray(parsed) ? parsed : undefined;
@@ -629,7 +635,7 @@ function parseJsonStructuredValue(value: string, fieldType: string | undefined):
     }
   }
 
-  if (fieldType === 'object' && trimmed.startsWith('{')) {
+  if (schemaAllowsType(fieldType, 'object') && trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(trimmed);
       return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
@@ -654,16 +660,17 @@ export function convertPayloadTypes(
       if (typeof val !== 'string') return val;
       const structured = parseJsonStructuredValue(val, fieldType);
       if (structured !== undefined) return structured;
-      if (fieldType === 'integer' || fieldType === 'number') {
-        const num = parseTypedNumber(val, fieldType);
-        if (num !== undefined) return num;
+      const requiredScalarType = schemaRequiredScalarType(fieldType);
+      if (requiredScalarType === 'integer' || requiredScalarType === 'number') {
+        const parsed = parseTypedNumber(val, requiredScalarType);
+        if (parsed !== undefined) return parsed;
       }
-      if (fieldType === 'boolean') {
+      if (requiredScalarType === 'boolean') {
         if (val === 'true') return true;
         if (val === 'false') return false;
       }
-      if (val === 'true') return true;
-      if (val === 'false') return false;
+      if (fieldType === undefined && val === 'true') return true;
+      if (fieldType === undefined && val === 'false') return false;
       return val;
     };
 

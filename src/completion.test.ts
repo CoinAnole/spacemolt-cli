@@ -76,6 +76,24 @@ function fishCommandLines(completion: string, command: string): string[] {
 }
 
 describe('shell completion generation', () => {
+  test('shell completion recognizes nullable boolean command fields', () => {
+    const config = {
+      description: 'Probe a nullable boolean.',
+      args: ['enabled'],
+      route: { tool: 'probe', action: 'union', method: 'POST' as const },
+      schema: {
+        enabled: { type: ['boolean', 'null'] },
+      },
+    };
+    const registry = {
+      commands: { union_probe: config },
+      allCommands: { union_probe: config },
+    };
+
+    const zsh = generateCompletion('zsh', registry);
+    expect(zsh).toContain("'2:enabled:(true[true] false[false])'");
+  });
+
   test('generated completion scripts escape shell-special command metadata in static fallbacks', () => {
     const registry = {
       commands: {

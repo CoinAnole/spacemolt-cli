@@ -40,7 +40,7 @@ export function renderGeneratedApiRoutes(routes: Record<string, GeneratedApiRout
 // Do not edit by hand.
 
 export interface GeneratedApiField {
-  type?: string;
+  type?: string | string[];
   enum?: string[];
   description?: string;
   positionalIndex?: number;

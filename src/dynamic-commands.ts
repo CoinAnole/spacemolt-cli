@@ -1,5 +1,5 @@
 import type { CommandConfig } from './commands.ts';
-import type { GeneratedApiRoute } from './openapi-metadata.ts';
+import { type GeneratedApiRoute, schemaAllowsType } from './openapi-metadata.ts';
 
 function stripToolPrefix(tool: string): string {
   return tool.replace(/^spacemolt_/, '');
@@ -56,7 +56,8 @@ function generatedUsage(generated: GeneratedApiRoute, args: string[] | undefined
   return args
     .map((field) => {
       const fieldSchema = generated.schema?.[field];
-      const hint = fieldSchema?.enum?.join('|') ?? (fieldSchema?.type === 'boolean' ? 'true/false' : '...');
+      const hint =
+        fieldSchema?.enum?.join('|') ?? (schemaAllowsType(fieldSchema?.type, 'boolean') ? 'true/false' : '...');
       return required.has(field) ? `<${field}>` : `[${field}=${hint}]`;
     })
     .join(' ');

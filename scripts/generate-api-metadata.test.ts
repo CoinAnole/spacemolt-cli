@@ -9,8 +9,72 @@ import {
   type OpenApiSpec,
   renderGeneratedApiRoutes,
 } from './generate-api-metadata';
+import {
+  schemaAllowsType,
+  schemaRequiredScalarType,
+} from '../src/openapi-metadata';
 
 describe('generate-api-metadata', () => {
+  test('schema type helpers distinguish allowed shapes from required scalar coercion', () => {
+    expect(schemaAllowsType('array', 'array')).toBe(true);
+    expect(schemaAllowsType(['string', 'array'], 'array')).toBe(true);
+    expect(schemaAllowsType(['string', 'array'], 'object')).toBe(false);
+    expect(schemaAllowsType('future-shape', 'future-shape')).toBe(true);
+    expect(schemaAllowsType(undefined, 'array')).toBe(false);
+
+    expect(schemaRequiredScalarType('integer')).toBe('integer');
+    expect(schemaRequiredScalarType(['integer', 'null'])).toBe('integer');
+    expect(schemaRequiredScalarType(['integer', 'number', 'null'])).toBe('number');
+    expect(schemaRequiredScalarType(['boolean', 'null'])).toBe('boolean');
+    expect(schemaRequiredScalarType(['string', 'integer'])).toBeUndefined();
+    expect(schemaRequiredScalarType(['array', 'null'])).toBeUndefined();
+    expect(schemaRequiredScalarType('future-shape')).toBeUndefined();
+    expect(schemaRequiredScalarType(undefined)).toBeUndefined();
+  });
+
+  test('generateApiRoutes preserves valid union types and omits malformed type values', () => {
+    const spec = {
+      info: { 'x-gameserver-version': 'v0.530.1' },
+      paths: {
+        '/api/v2/spacemolt_probe/union': {
+          post: {
+            operationId: 'probeUnion',
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      scalar: { type: 'string', description: 'Scalar field.' },
+                      union: { type: ['string', 'array'], description: 'Union field.' },
+                      empty: { type: [], description: 'Empty type array.' },
+                      mixed: { type: ['string', 7], description: 'Mixed type array.' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    } as unknown as OpenApiSpec;
+
+    const route = generate(spec)['POST /api/v2/spacemolt_probe/union'];
+    expect(route?.schema).toEqual({
+      empty: { description: 'Empty type array.' },
+      mixed: { description: 'Mixed type array.' },
+      scalar: { type: 'string', description: 'Scalar field.' },
+      union: { type: ['string', 'array'], description: 'Union field.' },
+    });
+
+    const rendered = renderGeneratedApiRoutes(
+      { 'POST /api/v2/spacemolt_probe/union': route as GeneratedApiRoute },
+      'v0.530.1',
+    );
+    expect(rendered).toContain('type?: string | string[];');
+    expect(rendered).toContain("type: ['string', 'array']");
+  });
+
   test('renderGeneratedApiRoutes includes CLI metadata only when present', () => {
     const route: GeneratedApiRoute = {
       operationId: 'toolAction',
@@ -251,7 +315,7 @@ describe('generate-api-metadata', () => {
 // Do not edit by hand.
 
 export interface GeneratedApiField {
-  type?: string;
+  type?: string | string[];
   enum?: string[];
   description?: string;
   positionalIndex?: number;

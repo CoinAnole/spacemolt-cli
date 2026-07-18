@@ -10,6 +10,7 @@ import {
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
+import { schemaAllowsType } from './openapi-metadata.ts';
 import { colorsForPlain } from './output-style.ts';
 import { getStructuredResult, isRecord } from './response.ts';
 import { VERSION } from './runtime.ts';
@@ -195,12 +196,14 @@ function structuredPayloadFields(_command: string, config: CommandConfig | Local
   // come from OpenAPI/curated schema — no command-name special cases.
   if (!('schema' in config) || !config.schema) return [];
   return Object.entries(config.schema)
-    .filter(([, schema]) => schema.type === 'array' || schema.type === 'object')
+    .filter(([, schema]) => schemaAllowsType(schema.type, 'array') || schemaAllowsType(schema.type, 'object'))
     .map(([field]) => field);
 }
 
-function structuredPayloadExample(command: string, field: string): string {
-  const value = field === 'items' ? '[{"item_id":"ore_iron","quantity":1}]' : field.endsWith('s') ? '[]' : '{}';
+function structuredPayloadExample(command: string, field: string, config: CommandConfig | LocalCommandConfig): string {
+  const schema = 'schema' in config ? config.schema?.[field] : undefined;
+  const value =
+    field === 'items' ? '[{"item_id":"ore_iron","quantity":1}]' : schemaAllowsType(schema?.type, 'array') ? '[]' : '{}';
   return `spacemolt ${command} --payload-json '{"${field}":${value}}'`;
 }
 
@@ -550,7 +553,7 @@ export function showCommandHelp(
     if (structuredFields.length > 0) {
       write(`\n${c.bright}Structured payloads:${c.reset}`);
       write(`  Use --payload-json for array/object fields: ${structuredFields.join(', ')}.`);
-      write(`  ${structuredPayloadExample(command, structuredFields[0] as string)}`);
+      write(`  ${structuredPayloadExample(command, structuredFields[0] as string, config)}`);
     }
   }
 

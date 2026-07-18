@@ -1,6 +1,6 @@
 import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import { GENERATED_API_ROUTES } from './generated/api-commands.ts';
-import type { GeneratedApiRoute } from './openapi-metadata.ts';
+import { type GeneratedApiRoute, type OpenApiFieldType, schemaAllowsType } from './openapi-metadata.ts';
 import { trimTrailingSlash } from './response.ts';
 
 export type CommandArg = string | { rest: string };
@@ -33,7 +33,7 @@ export interface V2Route {
 }
 
 export interface CommandFieldSchema {
-  type?: string;
+  type?: OpenApiFieldType;
   enum?: string[];
   description?: string;
   positionalIndex?: number;
@@ -303,7 +303,8 @@ function buildUsageFromSchema(config: CommandOverride, generated: GeneratedApiRo
   for (const f of allFields) {
     const fieldSchema = generated.schema[f];
     const isRequired = req.includes(f);
-    const hint = fieldSchema?.enum?.join('|') ?? (fieldSchema?.type === 'boolean' ? 'true/false' : '...');
+    const hint =
+      fieldSchema?.enum?.join('|') ?? (schemaAllowsType(fieldSchema?.type, 'boolean') ? 'true/false' : '...');
     parts.push(isRequired ? `<${f}>` : `[${f}=${hint}]`);
   }
   return parts.join(' ');

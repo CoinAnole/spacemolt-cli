@@ -11,6 +11,7 @@ import {
   LOCAL_COMPLETION_COMMANDS,
   SPECIAL_COMPLETIONS,
 } from './completion-metadata.ts';
+import { schemaAllowsType } from './openapi-metadata.ts';
 
 type CompletionRegistry = Pick<CommandRegistrySnapshot, 'allCommands'> &
   Partial<Pick<CommandRegistrySnapshot, 'commands' | 'commandGroups'>>;
@@ -99,7 +100,7 @@ function getEnumValues(
 ): string[] | undefined {
   const schema = getFieldSchema(command, arg, registry, config);
   if (schema?.enum?.length) return schema.enum;
-  if (schema?.type === 'boolean') return ['true', 'false'];
+  if (schemaAllowsType(schema?.type, 'boolean')) return ['true', 'false'];
   return undefined;
 }
 

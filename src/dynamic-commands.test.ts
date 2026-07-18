@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { buildDynamicCommands, generatedCommandName } from './dynamic-commands';
+import { buildDynamicCommands, buildGeneratedCommandConfig, generatedCommandName } from './dynamic-commands';
 import { GENERATED_API_ROUTES } from './generated/api-commands';
 import type { GeneratedApiRoute } from './openapi-metadata';
 
@@ -16,6 +16,19 @@ const route = (tool: string, action: string, method: 'GET' | 'POST' = 'POST'): G
 });
 
 describe('dynamic OpenAPI commands', () => {
+  test('generated usage recognizes nullable boolean fields', () => {
+    const config = buildGeneratedCommandConfig({
+      operationId: 'probeUnion',
+      route: { tool: 'spacemolt_probe', action: 'union', method: 'POST' },
+      schema: {
+        enabled: { type: ['boolean', 'null'] },
+      },
+    });
+
+    expect(config.usage).toBe('[enabled=true/false]');
+    expect(config.schema?.enabled?.type).toEqual(['boolean', 'null']);
+  });
+
   test('exposes v0.522 shipping actions but keeps both shipping help routes hidden', () => {
     const shippingRoutes = Object.fromEntries(
       Object.entries(GENERATED_API_ROUTES).filter(([signature]) => signature.includes('/spacemolt_shipping/')),

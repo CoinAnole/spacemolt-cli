@@ -28,11 +28,13 @@ interface OpenApiParameter {
   schema?: JsonSchema;
 }
 
+export type OpenApiFieldType = string | string[];
+
 interface JsonSchema {
   properties?: Record<string, JsonSchema>;
   required?: string[];
   items?: JsonSchema;
-  type?: string;
+  type?: unknown;
   enum?: string[];
   description?: string;
   'x-positional-index'?: number;
@@ -42,7 +44,7 @@ interface JsonSchema {
 }
 
 export interface GeneratedApiField {
-  type?: string;
+  type?: OpenApiFieldType;
   enum?: string[];
   description?: string;
   positionalIndex?: number;
@@ -84,9 +86,32 @@ function routeParts(apiPath: string): { tool: string; action: string } {
   };
 }
 
+function normalizeOpenApiFieldType(value: unknown): OpenApiFieldType | undefined {
+  if (typeof value === 'string') return value.trim() === '' ? undefined : value;
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  if (!value.every((entry) => typeof entry === 'string' && entry.trim() !== '')) return undefined;
+  return [...value];
+}
+
+export function schemaAllowsType(type: OpenApiFieldType | undefined, expected: string): boolean {
+  return Array.isArray(type) ? type.includes(expected) : type === expected;
+}
+
+export function schemaRequiredScalarType(
+  type: OpenApiFieldType | undefined,
+): 'integer' | 'number' | 'boolean' | undefined {
+  const types = (Array.isArray(type) ? type : type ? [type] : []).filter((entry) => entry !== 'null');
+  if (types.length === 0) return undefined;
+  if (types.every((entry) => entry === 'integer')) return 'integer';
+  if (types.every((entry) => entry === 'integer' || entry === 'number')) return 'number';
+  if (types.every((entry) => entry === 'boolean')) return 'boolean';
+  return undefined;
+}
+
 function fieldSchema(schema: JsonSchema): GeneratedApiField {
   const field: GeneratedApiField = {};
-  if (schema.type) field.type = schema.type;
+  const type = normalizeOpenApiFieldType(schema.type);
+  if (type !== undefined) field.type = type;
   if (schema.enum) field.enum = schema.enum;
   else if (schema.items?.enum) field.enum = schema.items.enum;
   if (schema.description) field.description = schema.description;

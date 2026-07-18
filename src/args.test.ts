@@ -8,6 +8,7 @@ import {
   normalizeParsedPayload,
   parseArgs,
   parseGlobalOptions,
+  validatePayloadAgainstSchema,
   validateRequiredArgs,
 } from './client';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
@@ -15,6 +16,24 @@ import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
 
 const internalCommandRegistry = { commands: COMMANDS } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
+const unionSchemaRegistry = {
+  commands: {
+    union_probe: {
+      args: ['structured', 'count', 'ratio', 'ambiguous', 'ambiguous_boolean', 'enabled', 'strict_count', 'mode'],
+      route: { tool: 'probe', action: 'union', method: 'POST' as const },
+      schema: {
+        structured: { type: ['string', 'array'] },
+        count: { type: ['integer', 'null'] },
+        ratio: { type: ['number', 'null'] },
+        ambiguous: { type: ['string', 'integer'] },
+        ambiguous_boolean: { type: ['string', 'boolean'] },
+        enabled: { type: ['boolean', 'null'] },
+        strict_count: { type: 'integer' },
+        mode: { type: ['string', 'null'], enum: ['fast'] },
+      },
+    },
+  },
+} satisfies Pick<CommandRegistrySnapshot, 'commands'>;
 const internalParseOptions = { registry: internalCommandRegistry } satisfies NonNullable<
   Parameters<typeof parseArgs>[1]
 >;
@@ -50,6 +69,102 @@ function validateInternalRequiredArgs(command: string, payload: Record<string, u
 }
 
 describe('convertPayloadTypes', () => {
+  test('converts only unambiguous scalar unions and parses permitted structured values', () => {
+    expect(
+      convertPayloadTypes(
+        {
+          structured: '["a","b"]',
+          count: '42',
+          ambiguous: '42',
+          enabled: 'true',
+        },
+        'union_probe',
+        unionSchemaRegistry,
+      ),
+    ).toEqual({
+      structured: ['a', 'b'],
+      count: 42,
+      ambiguous: '42',
+      enabled: true,
+    });
+  });
+
+  test('validates required scalar unions without rejecting ambiguous scalar unions', () => {
+    expect(validatePayloadAgainstSchema('union_probe', { count: 'abc' }, unionSchemaRegistry)).toEqual([
+      {
+        field: 'count',
+        message: 'Parameter "count" must be an integer, but received "abc".',
+        code: 'invalid_integer',
+      },
+    ]);
+    expect(validatePayloadAgainstSchema('union_probe', { ambiguous: 'abc' }, unionSchemaRegistry)).toEqual([]);
+  });
+
+  test('preserves ambiguous boolean unions while converting nullable booleans', () => {
+    expect(
+      convertPayloadTypes(
+        {
+          ambiguous_boolean: 'true',
+          enabled: 'true',
+        },
+        'union_probe',
+        unionSchemaRegistry,
+      ),
+    ).toEqual({
+      ambiguous_boolean: 'true',
+      enabled: true,
+    });
+  });
+
+  test('accepts actual null only for nullable scalar unions without bypassing enum validation', () => {
+    expect(
+      validatePayloadAgainstSchema('union_probe', { count: null, ratio: null, enabled: null }, unionSchemaRegistry),
+    ).toEqual([]);
+    expect(validatePayloadAgainstSchema('union_probe', { strict_count: null }, unionSchemaRegistry)).toEqual([
+      {
+        field: 'strict_count',
+        message: 'Parameter "strict_count" must be an integer, but received null.',
+        code: 'invalid_integer',
+      },
+    ]);
+    expect(validatePayloadAgainstSchema('union_probe', { mode: null }, unionSchemaRegistry)).toEqual([
+      {
+        field: 'mode',
+        message: 'Invalid value "null" for "mode". Expected one of: fast',
+        code: 'invalid_enum',
+      },
+    ]);
+  });
+
+  test('coerces valid and rejects invalid non-null values for nullable scalar unions', () => {
+    expect(
+      convertPayloadTypes({ count: '42', ratio: '2.5', enabled: 'false' }, 'union_probe', unionSchemaRegistry),
+    ).toEqual({ count: 42, ratio: 2.5, enabled: false });
+    expect(
+      validatePayloadAgainstSchema(
+        'union_probe',
+        { count: 'nope', ratio: 'nope', enabled: 'maybe' },
+        unionSchemaRegistry,
+      ),
+    ).toEqual([
+      {
+        field: 'count',
+        message: 'Parameter "count" must be an integer, but received "nope".',
+        code: 'invalid_integer',
+      },
+      {
+        field: 'ratio',
+        message: 'Parameter "ratio" must be a number, but received "nope".',
+        code: 'invalid_number',
+      },
+      {
+        field: 'enabled',
+        message: 'Parameter "enabled" must be a boolean, but received "maybe".',
+        code: 'invalid_boolean',
+      },
+    ]);
+  });
+
   test('converts numeric fields using the command schema', () => {
     expect(convertPayloadTypes({ quantity: '10' }, 'sell').quantity).toBe(10);
     expect(convertPayloadTypes({ page_size: '20' }, 'catalog').page_size).toBe(20);
@@ -441,6 +556,14 @@ describe('parseArgs - basic', () => {
     expect(payload.auto_list).toBe('true');
     expect(payload.item_id).toBe('ore_iron');
     expect(payload.quantity).toBe('50');
+  });
+
+  test('nullable boolean CLI flags default to true without consuming the next positional arg', () => {
+    const { payload } = parseOk(['union_probe', '--enabled', 'probe-target'], {
+      registry: unionSchemaRegistry,
+    });
+    expect(payload.enabled).toBe('true');
+    expect(payload.structured).toBe('probe-target');
   });
 
   test('unknown CLI flags are structured parser errors with suggestions', () => {

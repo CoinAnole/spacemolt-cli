@@ -74,6 +74,14 @@ async function withConfigHome<T>(configHome: string, fn: () => Promise<T>): Prom
 }
 
 describe('help output branches', () => {
+  test('action-log union field is advertised as a structured array field', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('get_action_log', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Use --payload-json for array/object fields: event_type.');
+    expect(output).toContain(`spacemolt get_action_log --payload-json '{"event_type":[]}'`);
+  });
+
   test('showHelp emphasizes local help command discovery before server help', () => {
     const capture = captureWriter();
     showHelp(capture.writer);
