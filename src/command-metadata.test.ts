@@ -1079,16 +1079,9 @@ describe('command metadata', () => {
       'shipping_track',
     ]);
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
+    if (!shippingList) throw new Error('shipping_list command missing');
     expect(shippingList).toMatchObject({
-      args: [
-        'eligible_as',
-        'filter_destination',
-        'filter_service_level',
-        'filter_shipper',
-        'page',
-        'per_page',
-        'sort',
-      ],
+      args: ['eligible_as', 'filter_destination', 'filter_service_level', 'filter_shipper', 'page', 'per_page', 'sort'],
       description:
         'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
       usage:
@@ -1119,7 +1112,9 @@ describe('command metadata', () => {
           commandConfig.route.action === 'list',
       ),
     ).toHaveLength(1);
-    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote).toMatchObject({
+    const shippingQuote = BUNDLED_COMMAND_REGISTRY.commands.shipping_quote;
+    if (!shippingQuote) throw new Error('shipping_quote command missing');
+    expect(shippingQuote).toMatchObject({
       required: ['package_id', 'destination_base_id'],
       category: 'Generated API',
       route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
@@ -1134,10 +1129,10 @@ describe('command metadata', () => {
         base_reward: { type: 'integer', minimum: 1 },
       },
     });
-    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote.schema?.base_reward).toMatchObject({
+    expect(shippingQuote.schema?.base_reward).toMatchObject({
       type: 'integer',
     });
-    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote.schema?.base_reward).not.toHaveProperty('minimum');
+    expect(shippingQuote.schema?.base_reward).not.toHaveProperty('minimum');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {

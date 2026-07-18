@@ -855,9 +855,9 @@ describe('help output branches', () => {
     const explanation = captureWriter();
 
     expect(showCommandHelp('shipping_list', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
-    expect(
-      showCommandExplanation('shipping_list', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
-    ).toBe(true);
+    expect(showCommandExplanation('shipping_list', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
 
     const output = capture.stdout.join('\n');
     expect(output).toContain(
