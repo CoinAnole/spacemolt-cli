@@ -391,7 +391,10 @@ function searchLocalCommands(query: string, limit = 30, commands?: CommandHelpSo
     const descriptionText = (config?.description || '').toLowerCase();
     const usageText = (config?.usage || '').toLowerCase();
     const exampleText = (config?.example || '').toLowerCase();
-    const relatedText = [...(config?.discoverWith || []), ...(config?.seeAlso || [])].join(' ').toLowerCase();
+    const relatedText = [...(config?.discoverWith || []), ...(config?.seeAlso || [])]
+      .filter((related) => allCommands[related])
+      .join(' ')
+      .toLowerCase();
     const routeText =
       config && 'route' in config
         ? [config.route.tool, config.route.action, config.route.method].filter(Boolean).join(' ').toLowerCase()

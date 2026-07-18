@@ -531,6 +531,25 @@ describe('help output branches', () => {
     expect(output).toContain('Did you mean: travel');
   });
 
+  test('showCommandSearch ignores related commands absent from the active registry', () => {
+    const capture = captureWriter();
+    showCommandSearch('removed_dynamic', capture.writer, {
+      active_command: {
+        description: 'Active command',
+        usage: '',
+        category: 'General',
+        args: [],
+        required: [],
+        seeAlso: ['removed_dynamic'],
+        route: { tool: 'active', action: 'command', method: 'POST' },
+      },
+    });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('(No local command matches)');
+    expect(output).not.toContain('active_command');
+  });
+
   test('showCommandSearch finds nested faction build and hides removed dual name', () => {
     const capture = captureWriter();
 
