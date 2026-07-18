@@ -1709,6 +1709,7 @@ describe('validateRequiredArgs', () => {
   });
 
   test('shipping_post requires the caller-supplied base reward from v0.529', () => {
+    const shippingQuote = 'shipping_quote';
     const partial = { package_id: 'package-1', destination_base_id: 'nova-station' };
     expect(validateRequiredArgs('shipping_post', partial)).toBe('base_reward');
     expect(validateRequiredArgs('shipping_post', { ...partial, base_reward: '5000' })).toBeNull();
@@ -1717,6 +1718,28 @@ describe('validateRequiredArgs', () => {
       destination_base_id: 'nova-station',
       base_reward: '5000',
     });
+    expect(parseArgs(['shipping_post', 'package-1', 'nova-station', '0'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'base_reward',
+          message: 'Parameter "base_reward" must be at least 1, but received "0".',
+          code: 'below_minimum',
+        },
+      ],
+    });
+    expect(parseArgs(['shipping_post', 'package-1', 'nova-station', '-1'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'base_reward',
+          message: 'Parameter "base_reward" must be at least 1, but received "-1".',
+          code: 'below_minimum',
+        },
+      ],
+    });
+    expect(parseArgs(['shipping_post', 'package-1', 'nova-station', '1']).ok).toBe(true);
+    expect(parseArgs([shippingQuote, 'package-1', 'nova-station', 'base_reward=0']).ok).toBe(true);
   });
 
   test('agentlogs requires category and message; severity defaults to info', () => {

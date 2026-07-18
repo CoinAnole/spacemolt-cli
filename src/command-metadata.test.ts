@@ -1090,7 +1090,14 @@ describe('command metadata', () => {
       usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',
       category: 'Missions',
       route: { tool: 'spacemolt_shipping', action: 'post', method: 'POST' },
+      schema: {
+        base_reward: { type: 'integer', minimum: 1 },
+      },
     });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote.schema?.base_reward).toMatchObject({
+      type: 'integer',
+    });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_quote.schema?.base_reward).not.toHaveProperty('minimum');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {
@@ -1165,6 +1172,22 @@ describe('command metadata', () => {
 
       for (const field of Object.keys(override)) {
         if (!allowed.has(field)) failures.push(`${command}: override field "${field}" is not allowed`);
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('all command schema minima are finite and belong to numeric fields', () => {
+    const failures: string[] = [];
+
+    for (const [command, config] of Object.entries(BUNDLED_COMMAND_REGISTRY.commands)) {
+      for (const [field, schema] of Object.entries(config.schema ?? {})) {
+        if (schema.minimum === undefined) continue;
+        if (!Number.isFinite(schema.minimum)) failures.push(`${command}.${field}: minimum must be finite`);
+        if (schema.type !== 'integer' && schema.type !== 'number') {
+          failures.push(`${command}.${field}: minimum requires integer or number type`);
+        }
       }
     }
 
@@ -1532,6 +1555,81 @@ describe('command metadata', () => {
       missing,
       `Commands missing description (add a description override or ensure the OpenAPI spec has a summary):\n  ${missing.join('\n  ')}`,
     ).toEqual([]);
+  });
+
+  const numericMinimumRegistry = {
+    commands: {
+      numeric_minimum_probe: {
+        args: ['integer_value', 'number_value', 'integer_values'],
+        route: { tool: 'probe', action: 'numeric_minimum', method: 'POST' as const },
+        schema: {
+          integer_value: { type: 'integer', minimum: 1 },
+          number_value: { type: 'number', minimum: 0.5 },
+          integer_values: { type: 'integer', minimum: 1 },
+        },
+      },
+    },
+  } satisfies { commands: Record<string, CommandConfig> };
+
+  test('schema validation enforces numeric minima after successful type parsing', () => {
+    const accepted = [
+      { integer_value: 1 },
+      { integer_value: '2' },
+      { number_value: 0.5 },
+      { number_value: '0.75' },
+      { integer_values: [1, '2'] },
+    ];
+    for (const payload of accepted) {
+      expect(validatePayloadAgainstSchema('numeric_minimum_probe', payload, numericMinimumRegistry)).toEqual([]);
+    }
+
+    expect(
+      validatePayloadAgainstSchema(
+        'numeric_minimum_probe',
+        { integer_value: 0, number_value: '0.25', integer_values: [1, '0', -1] },
+        numericMinimumRegistry,
+      ),
+    ).toEqual([
+      {
+        field: 'integer_value',
+        message: 'Parameter "integer_value" must be at least 1, but received 0.',
+        code: 'below_minimum',
+      },
+      {
+        field: 'number_value',
+        message: 'Parameter "number_value" must be at least 0.5, but received "0.25".',
+        code: 'below_minimum',
+      },
+      {
+        field: 'integer_values',
+        message: 'Parameter "integer_values" must be at least 1, but received "0".',
+        code: 'below_minimum',
+      },
+      {
+        field: 'integer_values',
+        message: 'Parameter "integer_values" must be at least 1, but received -1.',
+        code: 'below_minimum',
+      },
+    ]);
+  });
+
+  test('schema minimum validation does not duplicate type errors or mutate payloads', () => {
+    const payload = { integer_value: '1.5', number_value: 'not-a-number' };
+    const before = structuredClone(payload);
+
+    expect(validatePayloadAgainstSchema('numeric_minimum_probe', payload, numericMinimumRegistry)).toEqual([
+      {
+        field: 'integer_value',
+        message: 'Parameter "integer_value" must be an integer, but received "1.5".',
+        code: 'invalid_integer',
+      },
+      {
+        field: 'number_value',
+        message: 'Parameter "number_value" must be a number, but received "not-a-number".',
+        code: 'invalid_number',
+      },
+    ]);
+    expect(payload).toEqual(before);
   });
 
   test('schema validation catches invalid enum values', () => {

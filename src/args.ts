@@ -410,6 +410,7 @@ export interface ValidationError {
     | 'invalid_enum'
     | 'invalid_integer'
     | 'invalid_number'
+    | 'below_minimum'
     | 'invalid_boolean'
     | 'invalid_field_type'
     | 'file_read_error'
@@ -478,22 +479,35 @@ export function validatePayloadAgainstSchema(
     if (fieldSchema.type === 'integer' || fieldSchema.type === 'number') {
       const values = Array.isArray(value) ? value : [value];
       for (const val of values) {
+        let numericValue: number | undefined;
+
         if (typeof val === 'number') {
-          if (fieldSchema.type === 'integer' && !Number.isInteger(val)) {
+          if (!Number.isFinite(val) || (fieldSchema.type === 'integer' && !Number.isInteger(val))) {
             errors.push({
               field: key,
-              message: schemaTypeErrorMessage(key, 'integer', val),
-              code: 'invalid_integer',
+              message: schemaTypeErrorMessage(key, fieldSchema.type, val),
+              code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
             });
+            continue;
           }
-          continue;
+          numericValue = val;
+        } else {
+          numericValue = parseTypedNumber(String(val), fieldSchema.type);
+          if (numericValue === undefined) {
+            errors.push({
+              field: key,
+              message: schemaTypeErrorMessage(key, fieldSchema.type, val),
+              code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
+            });
+            continue;
+          }
         }
-        const num = parseTypedNumber(String(val), fieldSchema.type);
-        if (num === undefined) {
+
+        if (fieldSchema.minimum !== undefined && numericValue < fieldSchema.minimum) {
           errors.push({
             field: key,
-            message: schemaTypeErrorMessage(key, fieldSchema.type, val),
-            code: fieldSchema.type === 'integer' ? 'invalid_integer' : 'invalid_number',
+            message: schemaMinimumErrorMessage(key, fieldSchema.minimum, val),
+            code: 'below_minimum',
           });
         }
       }
@@ -522,6 +536,10 @@ export function validatePayloadAgainstSchema(
 function schemaTypeErrorMessage(field: string, expectedType: string, received: unknown): string {
   const article = expectedType === 'integer' ? 'an' : 'a';
   return `Parameter "${field}" must be ${article} ${expectedType}, but received ${formatReceivedValue(received)}.`;
+}
+
+function schemaMinimumErrorMessage(field: string, minimum: number, received: unknown): string {
+  return `Parameter "${field}" must be at least ${minimum}, but received ${formatReceivedValue(received)}.`;
 }
 
 function formatReceivedValue(value: unknown): string {

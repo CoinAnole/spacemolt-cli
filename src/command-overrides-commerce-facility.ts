@@ -83,6 +83,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_shipping/post',
     positionals: ['package_id', 'destination_base_id', 'base_reward'],
     required: ['package_id', 'destination_base_id', 'base_reward'],
+    schemaExtensions: {
+      base_reward: { minimum: 1 },
+    },
   },
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',

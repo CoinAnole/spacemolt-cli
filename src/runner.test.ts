@@ -204,6 +204,46 @@ describe('runInvocation option isolation', () => {
     }
   });
 
+  test('rejects a non-positive shipping post reward before dry-run output or transport', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-shipping-minimum-'));
+    const calls: string[] = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string) {
+        calls.push(command);
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    try {
+      const exitCode = await runInvocation(
+        ['--json', '--dry-run', 'shipping_post', 'package-1', 'nova-station', '0'],
+        client,
+        fakeContext(stdout, stderr, {
+          HOME: tempDir,
+          XDG_CONFIG_HOME: path.join(tempDir, 'config'),
+          SPACEMOLT_PROFILE: 'pilot',
+          SPACEMOLT_NO_UPDATE_CHECK: 'true',
+        }),
+      );
+
+      expect(exitCode).toBe(1);
+      expect(calls).toEqual([]);
+      expect(stdout).toEqual([]);
+      expect(JSON.parse(stderr.join('\n'))).toEqual({
+        error: {
+          code: 'validation_error',
+          message: 'Parameter "base_reward" must be at least 1, but received "0".',
+        },
+      });
+      expect(stderr.join('\n')).not.toContain('server_request_sent');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('clean-profile local help and search discover bundled generated commands', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-bundled-help-'));
     const env = {

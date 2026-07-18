@@ -37,6 +37,7 @@ export interface CommandFieldSchema {
   enum?: string[];
   description?: string;
   positionalIndex?: number;
+  minimum?: number;
 }
 
 export interface CommandConfig {
