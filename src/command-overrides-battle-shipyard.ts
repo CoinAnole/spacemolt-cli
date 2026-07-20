@@ -79,7 +79,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   tow_wreck: {
     usage: '<wreck_id>  (use get_wrecks to see wrecks)',
     description:
-      'Attach a tow line to a wreck (tow rig required). You can tow only one thing at a time — a wreck or one of your own smaller-scale ships, never both. To tow an owned ship instead, use storage deposit <ship_id> target=self while docked at the same station.',
+      'Attach a tow line to a wreck (tow rig required). You can tow only one thing at a time — a wreck or one of your own ships of equal or smaller class scale, never both. To tow an owned ship instead, use storage deposit <ship_id> target=self while docked at the same station.',
     example: 'spacemolt tow_wreck wreck-1',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['release_tow', 'storage_deposit', 'storage_withdraw', 'get_wrecks', 'get_status'],

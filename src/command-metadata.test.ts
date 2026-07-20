@@ -803,16 +803,25 @@ describe('command metadata', () => {
     const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
     expect(deposit?.description).toContain('tow');
     expect(deposit?.description).toContain('tow rig');
+    expect(deposit?.description).toContain('equal or smaller class scale');
+    expect(deposit?.description).toContain('same scale is allowed');
+    expect(deposit?.description).not.toContain('must be smaller');
     expect(withdraw?.description).toContain('towed own ship');
     expect(deposit?.aliases?.ship_id).toBe('item_id');
     expect(withdraw?.aliases?.ship_id).toBe('item_id');
+    expect(deposit?.schema?.item_id?.description).toContain(
+      'equal to or smaller than your active ship',
+    );
 
     const depositHelp = captureHelp('storage deposit');
     expect(depositHelp).toContain('tow');
     expect(depositHelp).toContain('ship');
+    expect(depositHelp).toContain('same scale is allowed');
 
     const tow = COMMANDS.tow_wreck;
     expect(tow?.description).toContain('storage deposit');
+    expect(tow?.description).toContain('equal or smaller class scale');
+    expect(tow?.description).not.toContain('smaller-scale');
     expect(tow?.seeAlso).toContain('storage_deposit');
     const release = COMMANDS.release_tow;
     expect(release?.description).toContain('storage withdraw');

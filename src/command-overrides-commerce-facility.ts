@@ -144,7 +144,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[item_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON; ship tow: <ship_id> target=self)',
     description:
-      'Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own smaller-scale ships. Plain deposit moves cargo→personal storage when source/target are omitted. With a tow rig fitted, pass a ship instance UUID and target=self while docked at the same station as that ship (class must be smaller than your active ship) to tow it; you can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.',
+      'Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own ships of equal or smaller class scale. Plain deposit moves cargo→personal storage when source/target are omitted. With a tow rig fitted, pass a ship instance UUID and target=self while docked at the same station as that ship (class scale must not be larger than your active ship; same scale is allowed) to tow it; you can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.',
     example:
       'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self',
     discoverWith: ['get_status', 'get_cargo', 'list_ships'],
@@ -160,7 +160,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       item_id: {
         type: 'string',
         description:
-          'Item ID for normal transfers, credits for treasury/gift credit ops, or a ship instance UUID: target=self attaches a tow (tow rig required; docked; smaller class scale than your active ship), while target=<player_name> gifts the ship. Use list_ships for ship instance IDs; ship_id is an alias.',
+          'Item ID for normal transfers, credits for treasury/gift credit ops, or a ship instance UUID: target=self attaches a tow (tow rig required; docked; class scale equal to or smaller than your active ship), while target=<player_name> gifts the ship. Use list_ships for ship instance IDs; ship_id is an alias.',
       },
       credits: {
         type: 'integer',
