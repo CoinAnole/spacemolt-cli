@@ -1,0 +1,17 @@
+
+action: faction_dismantle
+facility_id: "fac-2"
+facility_type: ore_refinery
+facility_name: "Faction Foundry"
+base_id: nova_station
+package_count: 3
+materials_to_package:
+  - item_id: steel_plate
+    quantity: 80
+  - item_id: circuit_board
+    quantity: 20
+  - item_id: reinforced_hull
+    quantity: 5
+ticks_to_complete: 18
+complete_tick: 901300
+hint: "Need 3 cargo_container in faction storage before packaging finishes."

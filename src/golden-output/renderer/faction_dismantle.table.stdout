@@ -1,0 +1,19 @@
+
+=== Faction Dismantle ===
+Facility: Faction Foundry
+Type: ore_refinery
+Facility ID: fac-2
+Base: nova_station
+Packages to produce: 3
+Ticks to complete: 18
+Complete tick: 901300
+
+=== Materials to package ===
+
+  Item            | Qty
+  ----------------+----
+  steel_plate     | 80 
+  circuit_board   | 20 
+  reinforced_hull | 5  
+
+Need 3 cargo_container in faction storage before packaging finishes.

@@ -56,3 +56,113 @@ test('scan formatter declines a malformed shape without a target identity', () =
 
   expect(rendered.stdout.join('\n')).toContain('=== Response ===');
 });
+
+test('get_status shows towing ship and release hint when towing_ship_id is set', () => {
+  const rendered = renderStructuredResult(
+    'get_status',
+    {
+      player: {
+        username: 'Marlowe',
+        empire: 'Terran',
+        credits: 100,
+        faction_id: null,
+        towing_ship_id: 'ship-tow-1',
+      },
+      ship: {
+        name: 'Hauler',
+        class_id: 'hauler',
+        hull: 50,
+        max_hull: 50,
+        shield: 10,
+        max_shield: 10,
+        shield_recharge: 1,
+        armor: 0,
+        fuel: 20,
+        max_fuel: 40,
+        cargo_used: 0,
+        cargo_capacity: 100,
+        cpu_used: 1,
+        cpu_capacity: 10,
+        power_used: 1,
+        power_capacity: 10,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Towing ship: ship-tow-1');
+  expect(stdout).toContain('storage withdraw ship-tow-1');
+  expect(stdout).not.toContain('Towing wreck:');
+});
+
+test('get_status shows towing wreck when towing_wreck_id is set', () => {
+  const rendered = renderStructuredResult(
+    'get_status',
+    {
+      player: {
+        username: 'Marlowe',
+        empire: 'Terran',
+        credits: 100,
+        towing_wreck_id: 'wreck-9',
+      },
+      ship: {
+        name: 'Hauler',
+        class_id: 'hauler',
+        hull: 50,
+        max_hull: 50,
+        shield: 10,
+        max_shield: 10,
+        shield_recharge: 1,
+        armor: 0,
+        fuel: 20,
+        max_fuel: 40,
+        cargo_used: 0,
+        cargo_capacity: 100,
+        cpu_used: 1,
+        cpu_capacity: 10,
+        power_used: 1,
+        power_capacity: 10,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Towing wreck: wreck-9');
+  expect(stdout).toContain('release_tow');
+  expect(stdout).not.toContain('Towing ship:');
+});
+
+test('get_status omits towing lines when not towing', () => {
+  const rendered = renderStructuredResult(
+    'get_status',
+    {
+      player: { username: 'Marlowe', empire: 'Terran', credits: 100 },
+      ship: {
+        name: 'Hauler',
+        class_id: 'hauler',
+        hull: 50,
+        max_hull: 50,
+        shield: 10,
+        max_shield: 10,
+        shield_recharge: 1,
+        armor: 0,
+        fuel: 20,
+        max_fuel: 40,
+        cargo_used: 0,
+        cargo_capacity: 100,
+        cpu_used: 1,
+        cpu_capacity: 10,
+        power_used: 1,
+        power_capacity: 10,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('Towing ship:');
+  expect(stdout).not.toContain('Towing wreck:');
+});

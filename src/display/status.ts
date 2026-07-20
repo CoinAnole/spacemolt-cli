@@ -560,6 +560,14 @@ export const statusFormatters = [
       if (p.is_cloaked) emitLine(`  ${c.cyan}[CLOAKED]${c.reset}`);
       emitUnknownSignatureHint(r, r.location, poi);
 
+      if (p.towing_wreck_id) {
+        emitLine(`\n${c.bright}Towing wreck:${c.reset} ${p.towing_wreck_id}`);
+        emitLine(`  (release with release_tow)`);
+      } else if (p.towing_ship_id) {
+        emitLine(`\n${c.bright}Towing ship:${c.reset} ${p.towing_ship_id}`);
+        emitLine(`  (release when docked: storage withdraw ${p.towing_ship_id})`);
+      }
+
       if (isRecord(r.riding)) {
         const ride = r.riding as Record<string, unknown>;
         emitLine(

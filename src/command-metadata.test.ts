@@ -745,11 +745,15 @@ describe('command metadata', () => {
     const config = action?.config;
     expect(config?.args).toEqual(['facility_type', 'bucket']);
     expect(config?.usage).toContain('[bucket=name-or-id]');
+    expect(config?.usage).toContain('package_ids');
+    expect(config?.arrayFields).toEqual(['package_ids']);
     expect(config?.schema?.bucket?.description).toContain('Storage Extension bucket');
+    expect(config?.schema?.package_ids?.type).toBe('array');
 
     const help = captureHelp(action?.displayName || 'faction build');
     expect(help).toContain('[bucket=name-or-id]');
     expect(help).toContain('Storage Extension bucket');
+    expect(help).toContain('package_ids');
   });
 
   test('facility_build help documents that build accepts faction facility types', () => {
@@ -761,10 +765,57 @@ describe('command metadata', () => {
       method: 'POST',
     });
     expect(config?.description).toContain('faction facility types are accepted');
+    expect(config?.arrayFields).toEqual(['package_ids']);
+    expect(config?.usage).toContain('package_ids');
+    expect(config?.schema?.package_ids?.type).toBe('array');
 
     const help = captureHelp(action?.displayName || 'facility build');
     expect(help).toContain('faction facility types are accepted');
+    expect(help).toContain('package_ids');
     expect(help).not.toContain('Build a player facility at the current base.');
+  });
+
+  test('facility upgrade and faction facility_upgrade expose package_ids arrays', () => {
+    const personal = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.upgrade?.config;
+    const faction = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.facility_upgrade?.config;
+    expect(personal?.arrayFields).toEqual(['package_ids']);
+    expect(faction?.arrayFields).toEqual(['package_ids']);
+    expect(personal?.usage).toContain('package_ids');
+    expect(faction?.usage).toContain('package_ids');
+  });
+
+  test('facility dismantle help documents per-tier packages and cargo_container cost', () => {
+    for (const [group, action] of [
+      ['facility', 'dismantle'],
+      ['faction', 'dismantle'],
+    ] as const) {
+      const config = BUNDLED_COMMAND_REGISTRY.commandGroups[group]?.actions[action]?.config;
+      expect(config?.description).toContain('one package per upgrade tier');
+      expect(config?.description).toContain('cargo_container');
+      const help = captureHelp(`${group} ${action}`);
+      expect(help).toContain('cargo_container');
+      expect(help).toContain('package');
+    }
+  });
+
+  test('storage deposit/withdraw and salvage tow help document ship towing', () => {
+    const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
+    const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
+    expect(deposit?.description).toContain('tow');
+    expect(deposit?.description).toContain('tow rig');
+    expect(withdraw?.description).toContain('towed own ship');
+    expect(deposit?.aliases?.ship_id).toBe('item_id');
+    expect(withdraw?.aliases?.ship_id).toBe('item_id');
+
+    const depositHelp = captureHelp('storage deposit');
+    expect(depositHelp).toContain('tow');
+    expect(depositHelp).toContain('ship');
+
+    const tow = COMMANDS.tow_wreck;
+    expect(tow?.description).toContain('storage deposit');
+    expect(tow?.seeAlso).toContain('storage_deposit');
+    const release = COMMANDS.release_tow;
+    expect(release?.description).toContain('storage withdraw');
   });
 
   test('facility_set_description is curated on the facility group', () => {

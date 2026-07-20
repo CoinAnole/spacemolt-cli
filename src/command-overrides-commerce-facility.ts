@@ -142,12 +142,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   storage_deposit: {
     usage:
-      '[item_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON)',
+      '[item_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON; ship tow: <ship_id> target=self)',
     description:
-      'Deposit cargo into station/faction storage, gift items/credits/ships to players, or move between faction compartments. Plain deposit moves cargo→personal storage when source/target are omitted.',
-    example: 'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"',
-    discoverWith: ['get_status', 'get_cargo'],
-    seeAlso: ['storage_view', 'storage_withdraw', 'get_cargo'],
+      'Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own smaller-scale ships. Plain deposit moves cargo→personal storage when source/target are omitted. With a tow rig fitted, pass a ship instance UUID and target=self while docked at the same station as that ship (class must be smaller than your active ship) to tow it; you can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.',
+    example:
+      'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self',
+    discoverWith: ['get_status', 'get_cargo', 'list_ships'],
+    seeAlso: ['storage_view', 'storage_withdraw', 'get_cargo', 'list_ships', 'tow_wreck', 'get_status'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
     positionals: ['item_id', 'quantity', 'target', 'source', 'bucket', 'dest_bucket', 'message', 'items', 'credits'],
@@ -156,6 +157,11 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       source: { type: 'string', description: STORAGE_TRANSFER_SOURCE_DESCRIPTION },
       bucket: { type: 'string', description: STORAGE_BUCKET_DESCRIPTION },
       dest_bucket: { type: 'string', description: STORAGE_DEST_BUCKET_DESCRIPTION },
+      item_id: {
+        type: 'string',
+        description:
+          'Item ID for normal transfers, credits for treasury/gift credit ops, or a ship instance UUID: target=self attaches a tow (tow rig required; docked; smaller class scale than your active ship), while target=<player_name> gifts the ship. Use list_ships for ship instance IDs; ship_id is an alias.',
+      },
       credits: {
         type: 'integer',
         description: 'Credits to gift to another player.',
@@ -164,20 +170,25 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   storage_withdraw: {
     usage:
-      '[item_id] [quantity] [target=self|faction] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [items=JSON]  (item_id/quantity required unless items=JSON)',
+      '[item_id] [quantity] [target=self|faction] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [items=JSON]  (item_id/quantity required unless items=JSON; release tow: <ship_id>)',
     description:
-      'Withdraw from personal or faction storage into cargo (default personal→cargo when source/target omitted), or move faction compartments.',
-    example: 'spacemolt storage_withdraw ore_iron 10',
-    discoverWith: ['get_status', 'storage_view'],
-    seeAlso: ['storage_view', 'storage_deposit', 'get_cargo'],
+      'Withdraw from personal or faction storage into cargo (default personal→cargo when source/target omitted), move faction compartments, or release a towed own ship. Pass the towed ship instance UUID as item_id while docked to drop the tow (distinct from release_tow, which only drops a towed wreck).',
+    example: 'spacemolt storage_withdraw ore_iron 10; release tow: storage withdraw <ship_id>',
+    discoverWith: ['get_status', 'storage_view', 'list_ships'],
+    seeAlso: ['storage_view', 'storage_deposit', 'get_cargo', 'list_ships', 'release_tow', 'get_status'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
     positionals: ['item_id', 'quantity', 'target', 'source', 'bucket', 'dest_bucket', 'items'],
-    aliases: { item: 'item_id', recipient: 'target' },
+    aliases: { item: 'item_id', recipient: 'target', ship_id: 'item_id' },
     schemaExtensions: {
       source: { type: 'string', description: STORAGE_TRANSFER_SOURCE_DESCRIPTION },
       bucket: { type: 'string', description: STORAGE_BUCKET_DESCRIPTION },
       dest_bucket: { type: 'string', description: STORAGE_DEST_BUCKET_DESCRIPTION },
+      item_id: {
+        type: 'string',
+        description:
+          'Item ID for normal transfers, credits for treasury ops, or a ship instance UUID to release a ship you are towing once docked. ship_id is an alias. Use release_tow for a towed wreck.',
+      },
     },
   },
   storage_loot: {
@@ -475,19 +486,21 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/upgrades',
   },
   facility_build: {
-    usage: '<facility_type>',
-    description: 'Build a facility at the current station; faction facility types are accepted by the server.',
-    example: 'spacemolt facility_build ore_refinery',
+    usage: '<facility_type> [package_ids=id[,id...]]',
+    description:
+      'Build a facility at the current station; faction facility types are accepted by the server. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall).',
+    example: 'spacemolt facility_build ore_refinery package_ids=pkg-tier1,pkg-tier2',
     discoverWith: ['facility_types', 'facility_list'],
-    seeAlso: ['facility_types', 'facility_list'],
+    seeAlso: ['facility_types', 'facility_list', 'facility_dismantle'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/build',
     positionals: ['facility_type'],
+    arrayFields: ['package_ids'],
   },
   facility_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a facility you own, returning 100% of build and upgrade materials in ordinary labeled packages.',
+      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild.',
     example: 'spacemolt facility_dismantle facility-1',
     discoverWith: ['facility_owned'],
     seeAlso: ['facility_owned', 'facility_build', 'facility_repair'],
@@ -507,10 +520,14 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_id'],
   },
   facility_upgrade: {
-    usage: '<facility_type> [facility_id]',
+    usage: '<facility_type> [facility_id] [package_ids=id[,id...]]',
+    description:
+      'Upgrade a facility you own. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall).',
+    example: 'spacemolt facility_upgrade ore_refinery facility-1 package_ids=pkg-tier2',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/upgrade',
     positionals: ['facility_type', 'facility_id'],
+    arrayFields: ['package_ids'],
   },
   facility_job_add: {
     usage:
@@ -700,15 +717,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: [],
   },
   faction_build: {
-    usage: '<facility_type> [bucket=name-or-id]',
+    usage: '<facility_type> [bucket=name-or-id] [package_ids=id[,id...]]',
     description:
-      'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store.',
-    example: 'spacemolt faction_build ore_refinery bucket=BuildMat',
+      'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall).',
+    example: 'spacemolt faction_build ore_refinery bucket=BuildMat package_ids=pkg-tier1',
     discoverWith: ['facility_types', 'faction_facility_list'],
-    seeAlso: ['facility_types', 'faction_facility_list'],
+    seeAlso: ['facility_types', 'faction_facility_list', 'faction_dismantle'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_build',
     positionals: ['facility_type', 'bucket'],
+    arrayFields: ['package_ids'],
     schemaExtensions: {
       bucket: {
         type: 'string',
@@ -719,7 +737,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage in ordinary labeled packages.',
+      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild.',
     example: 'spacemolt faction_dismantle facility-1',
     discoverWith: ['faction_facility_owned'],
     seeAlso: ['faction_facility_owned', 'faction_build', 'facility_repair'],
@@ -728,10 +746,14 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['facility_id'],
   },
   faction_facility_upgrade: {
-    usage: '<facility_type> <facility_id> [bucket=name-or-id]',
+    usage: '<facility_type> <facility_id> [bucket=name-or-id] [package_ids=id[,id...]]',
+    description:
+      'Upgrade a faction facility. Pass bucket to source materials from a Storage Extension bucket. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall).',
+    example: 'spacemolt faction_facility_upgrade ore_refinery facility-1 package_ids=pkg-tier2',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_upgrade',
     positionals: ['facility_type', 'facility_id', 'bucket'],
+    arrayFields: ['package_ids'],
     schemaExtensions: {
       bucket: {
         type: 'string',

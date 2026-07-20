@@ -1,0 +1,18 @@
+
+=== Dismantle ===
+Facility: Frontier Smelter
+Type: ore_refinery
+Facility ID: fac-1
+Base: earth_station
+Packages to produce: 2
+Ticks to complete: 12
+Complete tick: 901200
+
+=== Materials to package ===
+
+  Item          | Qty
+  --------------+----
+  steel_plate   | 40 
+  circuit_board | 10 
+
+Need 2 cargo_container in storage before packaging finishes.

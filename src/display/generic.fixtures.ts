@@ -471,6 +471,39 @@ export const mobileBaseFixture = {
   system: 'frontier_outpost',
 };
 
+export const facilityDismantleFixture = {
+  action: 'dismantle',
+  facility_id: 'fac-1',
+  facility_type: 'ore_refinery',
+  facility_name: 'Frontier Smelter',
+  base_id: 'earth_station',
+  package_count: 2,
+  materials_to_package: [
+    { item_id: 'steel_plate', quantity: 40 },
+    { item_id: 'circuit_board', quantity: 10 },
+  ],
+  ticks_to_complete: 12,
+  complete_tick: 901200,
+  hint: 'Need 2 cargo_container in storage before packaging finishes.',
+};
+
+export const factionDismantleFixture = {
+  action: 'faction_dismantle',
+  facility_id: 'fac-2',
+  facility_type: 'ore_refinery',
+  facility_name: 'Faction Foundry',
+  base_id: 'nova_station',
+  package_count: 3,
+  materials_to_package: [
+    { item_id: 'steel_plate', quantity: 80 },
+    { item_id: 'circuit_board', quantity: 20 },
+    { item_id: 'reinforced_hull', quantity: 5 },
+  ],
+  ticks_to_complete: 18,
+  complete_tick: 901300,
+  hint: 'Need 3 cargo_container in faction storage before packaging finishes.',
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
@@ -492,4 +525,6 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   set_colors: { command: 'set_colors', fixture: setColorsFixture, schemaTarget: 'details' },
   set_status: { command: 'set_status', fixture: setStatusFixture, schemaTarget: 'details' },
   undock: { command: 'undock', fixture: undockFixture, schemaTarget: 'details' },
+  facility_dismantle: { command: 'facility_dismantle', fixture: facilityDismantleFixture },
+  faction_dismantle: { command: 'faction_dismantle', fixture: factionDismantleFixture },
 };

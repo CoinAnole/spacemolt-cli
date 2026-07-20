@@ -1719,6 +1719,38 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('facility and faction build/upgrade split package_ids CSV and keep JSON arrays', () => {
+    for (const command of [
+      'facility_build',
+      'facility_upgrade',
+      'faction_build',
+      'faction_facility_upgrade',
+    ] as const) {
+      const csv = parseInternalOk([command, 'ore_refinery', 'package_ids=pkg-1,pkg-2']);
+      const csvTyped = convertInternalPayloadTypes(csv.payload, command);
+      expect(applyPayloadTransforms(command, csvTyped, internalCommandRegistry)).toMatchObject({
+        package_ids: ['pkg-1', 'pkg-2'],
+      });
+
+      const json = parseInternalOk([command, 'ore_refinery', 'package_ids=["pkg-a","pkg-b"]']);
+      const jsonTyped = convertInternalPayloadTypes(json.payload, command);
+      expect(applyPayloadTransforms(command, jsonTyped, internalCommandRegistry)).toMatchObject({
+        package_ids: ['pkg-a', 'pkg-b'],
+      });
+    }
+  });
+
+  test('storage deposit and withdraw accept ship instance IDs for tow attach/release', () => {
+    expect(parseInternalOk(['storage_deposit', 'ship-uuid-1', 'target=self']).payload).toEqual({
+      item_id: 'ship-uuid-1',
+      target: 'self',
+    });
+    expect(
+      normalizeInternalPayload('storage_deposit', parseInternalOk(['storage_deposit', 'ship_id=ship-uuid-1']).payload),
+    ).toEqual({ item_id: 'ship-uuid-1' });
+    expect(parseInternalOk(['storage_withdraw', 'ship-uuid-1']).payload).toEqual({ item_id: 'ship-uuid-1' });
+  });
+
   test('new coverage commands parse positional payloads', () => {
     expect(parseOk(['get_empire_info', 'solarian']).payload.empire_id).toBe('solarian');
     expect(parseOk(['get_tax_estimate']).payload).toEqual({});

@@ -49,6 +49,40 @@ test('renders faction espionage narrative results', () => {
   expect(stdout).toContain('Your spy slips through a service hatch');
 });
 
+test('renders facility dismantle with materials table and cargo_container hint', () => {
+  const rendered = renderStructuredResult(
+    'facility_dismantle',
+    {
+      action: 'dismantle',
+      facility_id: 'fac-1',
+      facility_type: 'ore_refinery',
+      facility_name: 'Frontier Smelter',
+      base_id: 'earth_station',
+      package_count: 2,
+      materials_to_package: [
+        { item_id: 'steel_plate', quantity: 40 },
+        { item_id: 'circuit_board', quantity: 10 },
+      ],
+      ticks_to_complete: 12,
+      complete_tick: 901200,
+      hint: 'Need 2 cargo_container in storage before packaging finishes.',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Dismantle ===');
+  expect(stdout).toContain('Facility: Frontier Smelter');
+  expect(stdout).toContain('Packages to produce: 2');
+  expect(stdout).toContain('Materials to package');
+  expect(stdout).toContain('steel_plate');
+  expect(stdout).toContain('circuit_board');
+  expect(stdout).toContain('Need 2 cargo_container');
+  expect(stdout).not.toContain('2 item(s)');
+});
+
 test('renders catalog ships with prestige lock notes when present', () => {
   const rendered = renderStructuredResult(
     'catalog',

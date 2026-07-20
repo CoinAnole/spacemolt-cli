@@ -1,6 +1,15 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
 import { summarizeAmmoEffects } from './combat-effects.ts';
-import { c, emitLine, finiteNumber, firstArray, formatter, isRecord, printCompactTable } from './helpers.ts';
+import {
+  c,
+  commandNameEquals,
+  emitLine,
+  finiteNumber,
+  firstArray,
+  formatter,
+  isRecord,
+  printCompactTable,
+} from './helpers.ts';
 
 function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
   return Object.entries(value)
@@ -842,6 +851,61 @@ export const genericFormatters = [
       return true;
     },
     { shapeFallback: true },
+  ),
+
+  // Facility dismantle / faction_dismantle response
+  formatter(
+    (r, command) => {
+      const action = typeof r.action === 'string' ? r.action : undefined;
+      const isDismantleCommand =
+        commandNameEquals(command, 'facility_dismantle') ||
+        commandNameEquals(command, 'faction_dismantle') ||
+        action === 'dismantle' ||
+        action === 'faction_dismantle';
+      if (!isDismantleCommand) return false;
+      if (typeof r.facility_id !== 'string' || !r.facility_id) return false;
+      if (r.package_count === undefined && !Array.isArray(r.materials_to_package)) return false;
+
+      const title =
+        action === 'faction_dismantle' || commandNameEquals(command, 'faction_dismantle')
+          ? 'Faction Dismantle'
+          : 'Dismantle';
+      emitLine(`\n${c.bright}=== ${title} ===${c.reset}`);
+      if (r.facility_name !== undefined) emitLine(`Facility: ${r.facility_name}`);
+      if (r.facility_type !== undefined) emitLine(`Type: ${r.facility_type}`);
+      emitLine(`Facility ID: ${r.facility_id}`);
+      if (r.base_id !== undefined) emitLine(`Base: ${r.base_id}`);
+      if (r.package_count !== undefined) emitLine(`Packages to produce: ${r.package_count}`);
+      if (r.ticks_to_complete !== undefined) emitLine(`Ticks to complete: ${r.ticks_to_complete}`);
+      if (r.complete_tick !== undefined) emitLine(`Complete tick: ${r.complete_tick}`);
+
+      const materials = Array.isArray(r.materials_to_package) ? r.materials_to_package.filter(isRecord) : [];
+      if (materials.length) {
+        printCompactTable(
+          'Materials to package',
+          materials.map((row) => ({
+            item_id: row.item_id,
+            quantity: row.quantity,
+          })),
+          [
+            ['Item', ['item_id']],
+            ['Qty', ['quantity']],
+          ],
+        );
+      }
+
+      if (typeof r.hint === 'string' && r.hint) {
+        emitLine(`\n${c.yellow}${r.hint}${c.reset}`);
+      }
+      if (typeof r.message === 'string' && r.message) {
+        emitLine(`${c.dim}${r.message}${c.reset}`);
+      }
+      return true;
+    },
+    {
+      commands: ['facility_dismantle', 'faction_dismantle'],
+      shapeFallback: true,
+    },
   ),
 
   // Simple message
