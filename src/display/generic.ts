@@ -361,6 +361,23 @@ function formatTimePerRun(value: unknown): string | undefined {
   return `${number.toLocaleString()} tick${number === 1 ? '' : 's'}`;
 }
 
+function formatYesNo(value: unknown): string | undefined {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return undefined;
+}
+
+function formatEtaTicks(value: unknown): string | undefined {
+  const n = finiteNumber(value);
+  if (n === undefined) return undefined;
+  // Match formatTimePerRun style (toLocaleString + singular/plural tick).
+  return `${n.toLocaleString()} tick${n === 1 ? '' : 's'}`;
+}
+
+function isPackageCraftAction(result: Record<string, unknown>): boolean {
+  return result.kind === 'package' || result.action === 'pack' || result.action === 'unpack';
+}
+
 function formatCraftVenue(result: Record<string, unknown>): string | undefined {
   if (result.venue === undefined && result.venue_type === undefined) return undefined;
   if (result.venue !== undefined && result.venue_type !== undefined) return `${result.venue} (${result.venue_type})`;
@@ -617,6 +634,11 @@ export const genericFormatters = [
 
       emitLine(`\n${c.bright}=== ${craftTitleWithStation(command, r)} ===${c.reset}`);
       emitOptionalValue('Job', r.job_id);
+      if (isPackageCraftAction(r)) {
+        emitOptionalValue('Action', r.action);
+      }
+      emitOptionalValue('Package', r.package_id);
+      emitOptionalValue('Label', r.label);
       emitOptionalValue('Recipe', r.recipe);
       emitOptionalValue('Mode', r.mode);
       emitOptionalValue('Runs', formatRunCount(r.runs ?? r.quantity));
@@ -626,8 +648,12 @@ export const genericFormatters = [
       emitOptionalValue('Output', summarizeNamedItemQuantities(r.produces));
       emitOptionalValue('Time/run', formatTimePerRun(r.effective_time_per_run));
       emitOptionalValue('Completion tick', r.est_completion_tick);
+      emitOptionalValue('ETA', formatEtaTicks(r.eta_ticks));
       if (r.have_inputs !== undefined) emitOptionalValue('Inputs available', r.have_inputs);
       if (r.have_credits !== undefined) emitOptionalValue('Credits available', r.have_credits);
+      if (r.have_capacity !== undefined) {
+        emitOptionalValue('Capacity available', formatYesNo(r.have_capacity));
+      }
       emitCraftCost(r.dry_run === true ? 'Inputs' : 'Escrowed inputs', isRecord(r.cost) ? r.cost : r.escrowed);
       if (r.message) emitLine(String(r.message));
       return true;

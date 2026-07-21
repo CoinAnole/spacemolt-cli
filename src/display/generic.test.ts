@@ -282,6 +282,7 @@ test('renders queued craft details with job id and output', () => {
     {
       details: {
         action: 'craft',
+        kind: 'job',
         effective_time_per_run: 3.5,
         escrowed: {
           inputs: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 }],
@@ -308,7 +309,125 @@ test('renders queued craft details with job id and output', () => {
   expect(stdout).toContain('Recipe: Build Power Cell');
   expect(stdout).toContain('Runs: 1');
   expect(stdout).toContain('Output: 1x Power Cell');
+  expect(stdout).not.toContain('Action:');
+  expect(stdout).not.toContain('Package:');
+  expect(stdout).not.toContain('Label:');
+  expect(stdout).not.toContain('ETA:');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders package pack job with action package label and eta', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'pack',
+        kind: 'package',
+        job_id: 'pkg-job-1',
+        package_id: 'pkg-abc',
+        label: 'Spare Parts Kit',
+        eta_ticks: 5,
+        facility_id: 'workshop:player:station',
+        mode: 'craft',
+        runs: 1,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queued ===');
+  expect(stdout).toContain('Job: pkg-job-1');
+  expect(stdout).toContain('Action: pack');
+  expect(stdout).toContain('Package: pkg-abc');
+  expect(stdout).toContain('Label: Spare Parts Kit');
+  expect(stdout).toContain('ETA: 5 ticks');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders package unpack job fields', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'unpack',
+        kind: 'package',
+        job_id: 'pkg-job-2',
+        package_id: 'pkg-xyz',
+        label: 'Salvage Bundle',
+        eta_ticks: 1,
+        facility_id: 'workshop:player:station',
+        mode: 'craft',
+        runs: 1,
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queued ===');
+  expect(stdout).toContain('Action: unpack');
+  expect(stdout).toContain('Package: pkg-xyz');
+  expect(stdout).toContain('Label: Salvage Bundle');
+  expect(stdout).toContain('ETA: 1 tick');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders craft quote capacity available as yes/no', () => {
+  const renderQuote = (have_capacity: unknown) => {
+    const details: Record<string, unknown> = {
+      action: 'craft',
+      cost: {
+        inputs: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 }],
+      },
+      dry_run: true,
+      effective_time_per_run: 3.5,
+      est_completion_tick: 1131729,
+      facility_id: 'workshop:player:station',
+      have_credits: true,
+      have_inputs: true,
+      mode: 'craft',
+      produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+      recipe: 'Build Power Cell',
+      runs: 1,
+      venue: 'Station Workshop',
+      venue_type: 'workshop',
+    };
+    if (have_capacity !== undefined) details.have_capacity = have_capacity;
+    return renderStructuredResult('craft', { details }, options, context);
+  };
+
+  const yes = renderQuote(true);
+  const yesOut = yes.stdout.join('\n');
+  expect(yes.success).toBe(true);
+  expect(yesOut).toContain('Inputs available: true');
+  expect(yesOut).toContain('Credits available: true');
+  expect(yesOut).toContain('Capacity available: yes');
+
+  const no = renderQuote(false);
+  const noOut = no.stdout.join('\n');
+  expect(no.success).toBe(true);
+  expect(noOut).toContain('Inputs available: true');
+  expect(noOut).toContain('Credits available: true');
+  expect(noOut).toContain('Capacity available: no');
+
+  const absent = renderQuote(undefined);
+  const absentOut = absent.stdout.join('\n');
+  expect(absent.success).toBe(true);
+  expect(absentOut).toContain('Inputs available: true');
+  expect(absentOut).toContain('Credits available: true');
+  expect(absentOut).not.toContain('Capacity available');
+
+  const garbage = renderQuote('maybe');
+  const garbageOut = garbage.stdout.join('\n');
+  expect(garbage.success).toBe(true);
+  expect(garbageOut).not.toContain('Capacity available');
 });
 
 test('renders craft queue total_jobs and truncation message', () => {
