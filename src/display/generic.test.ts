@@ -120,6 +120,55 @@ test('renders catalog ships with prestige lock notes when present', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders catalog facilities with maintenance_fuel and maintenance_inputs upkeep', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      type: 'facilities',
+      items: [
+        {
+          id: 'bunker_fed_reactor',
+          name: 'Bunker-Fed Reactor',
+          category: 'infrastructure',
+          level: 1,
+          maintenance_fuel: 55,
+          power_supply: 12,
+          build_cost: 4000,
+        },
+        {
+          id: 'storage_locker',
+          name: 'Storage Locker',
+          category: 'infrastructure',
+          level: 1,
+          maintenance_inputs: [
+            { item_id: 'steel_plate', name: 'Steel Plate', quantity: 3 },
+            { item_id: 'durasteel_plate', quantity: 2 },
+          ],
+          build_cost: 500,
+        },
+      ],
+      message: 'Facilities: showing 2 of 2',
+      page: 1,
+      page_size: 20,
+      total: 2,
+      total_pages: 1,
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Facilities ===');
+  expect(stdout).toContain('Upkeep');
+  expect(stdout).toContain('Bunker-Fed Reactor');
+  expect(stdout).toContain('55 fuel/cycle');
+  expect(stdout).toContain('Storage Locker');
+  expect(stdout).toContain('3 Steel Plate');
+  expect(stdout).toContain('2 durasteel_plate');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders catalog recipe items with recipe availability', () => {
   const rendered = renderStructuredResult(
     'catalog',

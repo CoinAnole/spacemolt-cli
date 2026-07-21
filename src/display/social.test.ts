@@ -179,6 +179,109 @@ test('renders facility list per-cycle item and labor upkeep', () => {
   expect(rendered.stdout.join('\n')).toContain('320cr');
 });
 
+test('renders facility maintenance_fuel as fuel/cycle in Upkeep', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
+  stationFacilities.push({
+    facility_id: 'station-reactor',
+    type: 'bunker_fed_reactor',
+    name: 'Bunker-Fed Reactor',
+    description: 'Station power from bunker fuel.',
+    category: 'infrastructure',
+    level: 2,
+    maintenance_satisfied: true,
+    maintenance_fuel: 55,
+  });
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Bunker-Fed Reactor');
+  expect(stdout).toContain('Upkeep');
+  expect(stdout).toContain('55 fuel/cycle');
+});
+
+test('renders facility upkeep with fuel plus item maintenance together', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
+  stationFacilities.push({
+    facility_id: 'hybrid-plant',
+    type: 'hybrid_plant',
+    name: 'Hybrid Plant',
+    category: 'infrastructure',
+    level: 1,
+    maintenance_fuel: 10,
+    maintenance_per_cycle: [{ item_id: 'iron_ore', name: 'Iron', quantity: 2 }],
+  });
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Hybrid Plant');
+  expect(stdout).toContain('10 fuel/cycle, 2 Iron');
+});
+
+test('renders facility maintenance_inputs when maintenance_per_cycle is absent', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  facilityList.station_facilities = [
+    {
+      facility_id: 'catalog-shaped',
+      type: 'ore_refinery',
+      name: 'Catalog-Shaped Plant',
+      category: 'production',
+      level: 1,
+      maintenance_inputs: [
+        { item_id: 'steel_plate', name: 'Steel Plate', quantity: 3 },
+        { item_id: 'durasteel_plate', quantity: 2 },
+      ],
+    },
+  ];
+  facilityList.player_facilities = [];
+  facilityList.faction_facilities = [];
+  facilityList.public_facilities = [];
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Catalog-Shaped Plant');
+  expect(stdout).toContain('Upkeep');
+  expect(stdout).toContain('3 Steel Plate');
+  expect(stdout).toContain('2 durasteel_plate');
+});
+
+test('omits facility table Upkeep column when no upkeep fields are present', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  facilityList.station_facilities = [
+    {
+      facility_id: 'bare-facility',
+      type: 'fuel_bunker',
+      name: 'Bare Bunker',
+      category: 'service',
+      level: 1,
+    },
+  ];
+  facilityList.player_facilities = [];
+  facilityList.faction_facilities = [];
+  facilityList.public_facilities = [];
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+  const stationSection = stdout.split('=== Public Facilities ===')[0] ?? stdout;
+  const stationTableHeader = stationSection
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
+
+  expect(rendered.success).toBe(true);
+  expect(stationTableHeader).toBeDefined();
+  expect(stationTableHeader).toContain('Name');
+  expect(stationTableHeader).not.toContain('Upkeep');
+  // Life support may still print "Upkeep every N ticks" outside facility tables.
+  expect(stdout).toContain('Life Support');
+});
+
 test('renders facility dining and leisure scores when present', () => {
   const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
   const stdout = rendered.stdout.join('\n');

@@ -1363,6 +1363,18 @@ describe('structuredContent output mode precedence', () => {
       globalOptions({ quiet: true }),
       { clock: captureContext([], []).clock },
     );
+    const autoDocked = renderResult(
+      'get_status',
+      { structuredContent: { ...outputModeFixture, auto_docked: true } },
+      globalOptions({ plain: true }),
+      { clock: captureContext([], []).clock },
+    );
+    const autoUndocked = renderResult(
+      'get_status',
+      { structuredContent: { ...outputModeFixture, auto_undocked: true } },
+      globalOptions({ plain: true }),
+      { clock: captureContext([], []).clock },
+    );
     const timed = renderResult('get_status', { result: 'OK' }, globalOptions({ plain: true }), {
       clock: captureContext([], []).clock,
     });
@@ -1370,6 +1382,14 @@ describe('structuredContent output mode precedence', () => {
 
     expect(projected.stdout).toEqual(['{"ship.fuel":42}']);
     expect(quiet.stdout.join('\n')).not.toContain('[AUTO-DOCKED]');
+    expect(autoDocked.stdout.join('\n')).toContain(
+      '[AUTO-DOCKED] Automatically docked at station (instant / same tick; no extra tick)',
+    );
+    expect(autoDocked.stdout.join('\n')).not.toContain('cost 1 extra tick');
+    expect(autoUndocked.stdout.join('\n')).toContain(
+      '[AUTO-UNDOCKED] Automatically undocked from station (instant / same tick; no extra tick)',
+    );
+    expect(autoUndocked.stdout.join('\n')).not.toContain('cost 1 extra tick');
     expect(timed.stdout).toEqual(['[2026-05-19T12:34:56.000Z]', 'OK']);
     expect(drift.stderr.join('\n')).not.toContain('[DRIFT WARNING]');
   });

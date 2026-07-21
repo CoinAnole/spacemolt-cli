@@ -277,6 +277,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_system', 'travel'],
   },
+  in_fleet: {
+    code: 'in_fleet',
+    message: 'Ship is in a fleet.',
+    suggestion:
+      'Only the fleet leader controls dock state (including auto-dock/undock). Use "spacemolt fleet leave" to act alone.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['fleet_leave', 'fleet_status'],
+  },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_REGISTRY);

@@ -433,9 +433,13 @@ function displayStructuredResultInternal(
 
   if (!isQuiet(options, context)) {
     if (viewModel.auto_docked)
-      emitLine(`${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (cost 1 extra tick)`);
+      emitLine(
+        `${c.cyan}[AUTO-DOCKED]${c.reset} Automatically docked at station (instant / same tick; no extra tick)`,
+      );
     if (viewModel.auto_undocked)
-      emitLine(`${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (cost 1 extra tick)`);
+      emitLine(
+        `${c.cyan}[AUTO-UNDOCKED]${c.reset} Automatically undocked from station (instant / same tick; no extra tick)`,
+      );
   }
 
   const scopedFormatters = commandScopedFormatters(resultFormatters, command);

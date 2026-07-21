@@ -337,16 +337,17 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; package recipes pack_package/unpack_package; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
+      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [package_ids=id[,id...]] [output_package_label=...] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; package recipes pack_package/unpack_package; package_ids/output_package_label for packaged ordinary craft; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
     description:
-      "Queue crafting work or cancel queued jobs. Default routing prefers your own facility, then your faction's, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target). Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.",
+      "Queue crafting work or cancel queued jobs. Default routing prefers your own facility, then your faction's, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Pass package_ids=id[,id…] to source inputs from sealed packages in the source location: pooled contents must match the recipe inputs × quantity exactly (no storage/cargo backfill); empty cargo_containers are reclaimed only when accessible Logistics is present. Pass output_package_label=… to seal all job outputs into one labeled package on completion (needs accessible Logistics and one cargo_container; total output size ≤ 100; cancel refunds inputs with no package). dry_run=true previews packaged craft gates without consuming anything (not with bulk jobs). Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target) — e.g. spacemolt craft pack_package items='[{\"item_id\":\"iron_ore\",\"quantity\":20}]' source=cargo target=cargo label='Survey Kit'. Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.",
     example:
-      'spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'',
+      "spacemolt craft iron_plates 10 package_ids=pkg-1,pkg-2 output_package_label='Plate Pack'",
     discoverWith: ['catalog', 'storage', 'get_status', 'inspect'],
     seeAlso: ['recycle', 'catalog', 'storage', 'inspect', 'get_guide'],
     category: 'Crafting',
     apiRoute: 'POST /api/v2/spacemolt/craft',
     positionals: ['recipe_id', 'quantity'],
+    arrayFields: ['package_ids'],
     schemaExtensions: {
       action: {
         type: 'string',
@@ -365,7 +366,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       dry_run: {
         type: 'boolean',
-        description: 'Return a cost, routing, and ETA quote without queuing work or spending escrow.',
+        description:
+          'Return a cost, routing, and ETA quote without queuing work or spending escrow. For packaged craft (package_ids / output_package_label), also previews exact-match, Logistics, cargo_container, single-package size, and destination-room gates. Not supported with bulk jobs.',
       },
       facility_id: {
         type: 'string',
@@ -384,9 +386,19 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
         type: 'string',
         description: 'For pack_package: player-visible package label.',
       },
+      output_package_label: {
+        type: 'string',
+        description:
+          'Seal ordinary craft outputs into one package with this label on completion (instead of loose deposit). Requires accessible Logistics and one cargo_container; total output size across all runs must be ≤ 100. Cancelling refunds inputs and produces no package.',
+      },
       package_id: {
         type: 'string',
         description: 'For unpack_package: package instance ID to open.',
+      },
+      package_ids: {
+        type: 'array',
+        description:
+          "Source ordinary craft inputs from these sealed packages (raw id or package:<id>) in the source location. Pooled contents must equal recipe inputs × quantity exactly — any shortage or overage is rejected before consumption (no storage/cargo backfill). Empty cargo_containers are reclaimed only when an accessible Logistics facility is present.",
       },
       target: {
         type: 'string',

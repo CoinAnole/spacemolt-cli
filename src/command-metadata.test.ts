@@ -548,13 +548,23 @@ describe('command metadata', () => {
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
     expect(config?.usage).toContain('source=storage|faction|faction:<bucket>|cargo');
     expect(config?.usage).toContain('deliver_to=storage|faction|faction:<bucket>');
+    expect(config?.usage).toContain('package_ids=id[,id...]');
+    expect(config?.usage).toContain('output_package_label');
     expect(config?.usage).toContain('items=JSON');
     expect(config?.usage).toContain('package_id');
     expect(config?.usage).toContain('label');
     expect(config?.usage).toContain('target=');
+    expect(config?.arrayFields).toEqual(['package_ids']);
     expect(config?.description).toContain('faction:<bucket>');
+    expect(config?.description).toContain('package_ids');
+    expect(config?.description).toContain('no storage/cargo backfill');
+    expect(config?.description).toContain('empty cargo_containers are reclaimed only when accessible Logistics');
+    expect(config?.description).toContain('output_package_label');
     expect(config?.description).toContain('pack_package');
     expect(config?.description).toContain('unpack_package');
+    expect(config?.description).toContain("spacemolt craft pack_package items=");
+    expect(config?.example).toContain('package_ids');
+    expect(config?.example).toContain('output_package_label');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
     expect(config?.schema?.deliver_to?.description).toContain('alias for target');
@@ -563,6 +573,17 @@ describe('command metadata', () => {
     expect(config?.schema?.items?.type).toBe('array');
     expect(config?.schema?.label?.type).toBe('string');
     expect(config?.schema?.package_id?.type).toBe('string');
+    expect(config?.schema?.package_ids?.type).toBe('array');
+    expect(config?.schema?.package_ids?.description).toContain('exactly');
+    expect(config?.schema?.package_ids?.description).toContain('no storage/cargo backfill');
+    expect(config?.schema?.package_ids?.description).toContain(
+      'Empty cargo_containers are reclaimed only when an accessible Logistics facility is present',
+    );
+    expect(config?.schema?.output_package_label?.type).toBe('string');
+    expect(config?.schema?.output_package_label?.description).toContain('Logistics');
+    expect(config?.schema?.output_package_label?.description).toContain('cargo_container');
+    expect(config?.schema?.dry_run?.description).toContain('packaged craft');
+    expect(config?.schema?.dry_run?.description).toContain('bulk jobs');
     expect(config?.schema?.target?.type).toBe('string');
     expect(config?.schema?.action?.enum).toEqual(['queue']);
     expect(config?.schema?.job_id?.type).toBe('string');
@@ -603,6 +624,8 @@ describe('command metadata', () => {
     expect(help).not.toContain('globally fastest or cheapest');
     expect(help).toContain('pack_package');
     expect(help).toContain('package_id');
+    expect(help).toContain('package_ids');
+    expect(help).toContain('output_package_label');
     expect(help).toContain('items');
     expect(help).toContain('label');
     expect(help).toContain('target');

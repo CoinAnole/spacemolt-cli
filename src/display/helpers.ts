@@ -80,6 +80,38 @@ export function finiteNumber(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
+function formatMaintenanceItemList(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts = value
+    .filter(isRecord)
+    .map((item) => {
+      const quantity = finiteNumber(item.quantity);
+      const quantityText = quantity === undefined ? '?' : quantity.toLocaleString();
+      const name = item.name ?? item.item_id ?? 'item';
+      return `${quantityText} ${name}`;
+    })
+    .filter(Boolean);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+/**
+ * Human upkeep for facility rows/definitions.
+ * Supports bunker-style `maintenance_fuel` (integer fuel/cycle) plus item lists
+ * on `maintenance_per_cycle` (live FacilityEntry) or `maintenance_inputs` (catalog FacilityDefinition).
+ * FacilityEntry OpenAPI does not declare `maintenance_fuel`; formatting it here is defensive for
+ * live extras and for catalog/definition payloads that do include the field.
+ */
+export function formatFacilityMaintenanceUpkeep(row: Record<string, unknown>): string | undefined {
+  const parts: string[] = [];
+  const fuel = finiteNumber(row.maintenance_fuel);
+  if (fuel !== undefined) {
+    parts.push(`${fuel.toLocaleString()} fuel/cycle`);
+  }
+  const items = formatMaintenanceItemList(row.maintenance_per_cycle) ?? formatMaintenanceItemList(row.maintenance_inputs);
+  if (items) parts.push(items);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
 /**
  * Format API `depletion_percent` for human output.
  * Server semantics: 0 = full, 100 = empty (percent depleted).

@@ -6,6 +6,7 @@ import {
   emitLine,
   finiteNumber,
   firstArray,
+  formatFacilityMaintenanceUpkeep,
   formatter,
   isRecord,
   printCompactTable,
@@ -790,6 +791,52 @@ export const genericFormatters = [
 
       const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
       if (passiveRecipeDetails) printRecipeRows('Passive Recipes', passiveRecipeDetails, { passive: true });
+      printMetadata(r);
+      printCatalogTruncationWarning('catalog', r);
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['catalog'] },
+  ),
+
+  // Catalog type=facilities returns FacilityDefinition rows (maintenance_fuel / maintenance_inputs).
+  formatter(
+    (r) => {
+      if (r.type !== 'facilities' || !Array.isArray(r.items) || !r.items.every(isRecord)) return false;
+      const rows: Array<Record<string, unknown>> = (r.items as Array<Record<string, unknown>>).map((facility) => {
+        const powerSupply = finiteNumber(facility.power_supply);
+        return {
+          ...facility,
+          maintenance_display: formatFacilityMaintenanceUpkeep(facility),
+          power_supply_display: powerSupply === undefined ? undefined : `${powerSupply.toLocaleString()} supply`,
+        };
+      });
+      const columns: Array<[string, string[]]> = [
+        ['Name', ['name']],
+        ['ID', ['id', 'type_id']],
+        ['Category', ['category']],
+        ['Level', ['level']],
+      ];
+      insertOptionalColumn(columns, rows, 'Upkeep', ['maintenance_display'], 'Level');
+      insertOptionalColumn(
+        columns,
+        rows,
+        'Power',
+        ['power_supply_display', 'power_supply'],
+        rows.some((row) => row.maintenance_display !== undefined) ? 'Upkeep' : 'Level',
+      );
+      insertOptionalColumn(
+        columns,
+        rows,
+        'Build cost',
+        ['build_cost'],
+        rows.some((row) => row.power_supply_display !== undefined || row.power_supply !== undefined)
+          ? 'Power'
+          : rows.some((row) => row.maintenance_display !== undefined)
+            ? 'Upkeep'
+            : 'Level',
+      );
+      printCompactTable('Facilities', rows, columns, { maxCellWidth: 72 });
       printMetadata(r);
       printCatalogTruncationWarning('catalog', r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);

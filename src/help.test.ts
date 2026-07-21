@@ -1142,6 +1142,29 @@ describe('help output branches', () => {
     expect(fleetMoved.stderr.join('\n')).toContain('spacemolt get_status');
   });
 
+  test('displayError gives in_fleet auto-dock errors a fleet-leader suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'mine',
+      { code: 'in_fleet', message: 'Only the fleet leader can change dock state while in a fleet.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [in_fleet]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('fleet leader');
+    expect(output).toContain('spacemolt fleet leave');
+  });
+
   test('displayError tells users to verify state before retrying persistence errors', () => {
     const baseContext: CliRuntimeContext = {
       env: {},

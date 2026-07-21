@@ -1740,6 +1740,20 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     }
   });
 
+  test('craft splits package_ids CSV and keeps JSON arrays', () => {
+    const csv = parseInternalOk(['craft', 'iron_plates', '10', 'package_ids=pkg-1,pkg-2']);
+    const csvTyped = convertInternalPayloadTypes(csv.payload, 'craft');
+    expect(applyPayloadTransforms('craft', csvTyped, internalCommandRegistry)).toMatchObject({
+      package_ids: ['pkg-1', 'pkg-2'],
+    });
+
+    const json = parseInternalOk(['craft', 'iron_plates', '10', 'package_ids=["pkg-a","pkg-b"]']);
+    const jsonTyped = convertInternalPayloadTypes(json.payload, 'craft');
+    expect(applyPayloadTransforms('craft', jsonTyped, internalCommandRegistry)).toMatchObject({
+      package_ids: ['pkg-a', 'pkg-b'],
+    });
+  });
+
   test('storage deposit and withdraw accept ship instance IDs for tow attach/release', () => {
     expect(parseInternalOk(['storage_deposit', 'ship-uuid-1', 'target=self']).payload).toEqual({
       item_id: 'ship-uuid-1',

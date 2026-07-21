@@ -6,6 +6,7 @@ import {
   emitStationLifeSupport,
   emitStationPower,
   firstArray,
+  formatFacilityMaintenanceUpkeep,
   formatter,
   isRecord,
   namedFormatter,
@@ -96,19 +97,6 @@ function formatZoneCount(value: unknown): string | undefined {
   return `${number.toLocaleString()} ${number === 1 ? 'zone' : 'zones'}`;
 }
 
-function formatMaintenance(value: unknown): string | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const parts = value
-    .filter(isRecord)
-    .map((item) => {
-      const quantity = formatNumber(item.quantity) ?? '?';
-      const name = item.name ?? item.item_id ?? 'item';
-      return `${quantity} ${name}`;
-    })
-    .filter(Boolean);
-  return parts.length ? parts.join(', ') : undefined;
-}
-
 function facilityBaseName(row: Record<string, unknown>): string | undefined {
   for (const field of ['name', 'type_name', 'facility_type', 'type']) {
     const value = row[field];
@@ -161,7 +149,8 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
       maintenance_level_display: formatMaintenanceLevel(row.maintenance_level),
       maintenance_satisfied_display:
         typeof row.maintenance_satisfied === 'boolean' ? row.maintenance_satisfied : undefined,
-      maintenance_display: formatMaintenance(row.maintenance_per_cycle),
+      // Defensive: FacilityEntry schema omits maintenance_fuel; catalog FacilityDefinition has it.
+      maintenance_display: formatFacilityMaintenanceUpkeep(row),
       labor_cycle_display: formatCredits(row.labor_per_cycle),
       output_price_per_unit: outputPricePerUnit,
       output_price_per_unit_display: formatCredits(outputPricePerUnit),
@@ -197,8 +186,8 @@ function facilityColumns(
   if (hasAnyField(rows, ['power_throttled'])) {
     columns.push(['Power Throttled', ['power_throttled']]);
   }
-  if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle'])) {
-    columns.push(['Upkeep', ['maintenance_display', 'maintenance_per_cycle']]);
+  if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs'])) {
+    columns.push(['Upkeep', ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs']]);
   }
   if (hasAnyField(rows, ['labor_cycle_display', 'labor_per_cycle'])) {
     columns.push(['Labor/cycle', ['labor_cycle_display', 'labor_per_cycle']]);
