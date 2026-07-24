@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
 import { getNotificationsFixture } from './display/notifications.fixtures';
 import {
+  formatActionResultDetails,
   formatNotificationPreview,
+  hasPreviewHandler,
   tableMessageFromPreview,
 } from './notification-format-shared';
 import { displayNotifications, formatNotification, NOTIFICATION_TYPES } from './notifications';
@@ -524,26 +526,25 @@ describe('notification formatting', () => {
   });
 
   test('action_result omits bulky ship and location payloads', () => {
-    const output = stripAnsi(
-      formatNotification({
-        type: 'action_result',
-        msg_type: 'action_result',
-        timestamp: '2026-07-24T19:05:05.000Z',
-        data: {
-          command: 'undock',
-          tick: 1433948,
-          result: {
-            ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
-            location: {
-              system_name: 'Nova Terra',
-              nearby_players: [{ username: 'ILC Knurl' }, { username: 'Cody' }],
-              nearby_player_count: 88,
-            },
-            details: { action: 'undock' },
+    const notification = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:05.000Z',
+      data: {
+        command: 'undock',
+        tick: 1433948,
+        result: {
+          ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+          location: {
+            system_name: 'Nova Terra',
+            nearby_players: [{ username: 'ILC Knurl' }, { username: 'Cody' }],
+            nearby_player_count: 88,
           },
+          details: { action: 'undock' },
         },
-      }).join('\n'),
-    );
+      },
+    };
+    const output = stripAnsi(formatNotification(notification).join('\n'));
 
     expect(output).toContain('[ACTION RESULT]');
     expect(output).toContain('undock completed');
@@ -551,23 +552,110 @@ describe('notification formatting', () => {
     expect(output).not.toContain('nearby_players');
     expect(output).not.toContain('ILC Knurl');
     expect(output).not.toContain('"hull":130');
+    expect(output).not.toContain('Dust Devil');
+    expectNoNestedJsonDump(output);
+
+    // Pure preview path (PREVIEW_HANDLERS) matches inline compact form.
+    expect(hasPreviewHandler('action_result')).toBe(true);
+    const preview = formatNotificationPreview(notification);
+    expect(preview.tag).toBe('ACTION RESULT');
+    expect(preview.headline).toContain('undock completed');
+    expect(preview.headline).toContain('1433948');
+    expect(preview.details.join(' ')).toContain('undock');
+    expectNoNestedJsonDump(preview.headline);
+    expectNoNestedJsonDump(preview.details.join('\n'));
+    expect(preview.omittedHint).toBeDefined();
   });
 
   test('system jump progress formats a compact one-liner', () => {
-    const output = stripAnsi(
-      formatNotification({
-        type: 'system',
-        msg_type: 'system',
-        timestamp: '2026-07-24T19:05:15.000Z',
-        data: { action: 'jump', arrival_tick: 1433950, destination: 'lacaille_9352', is_wormhole: false },
-      }).join('\n'),
-    );
+    const notification = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:15.000Z',
+      data: { action: 'jump', arrival_tick: 1433950, destination: 'lacaille_9352', is_wormhole: false },
+    };
+    const output = stripAnsi(formatNotification(notification).join('\n'));
 
     expect(output).toContain('[SYSTEM]');
     expect(output).toContain('jump');
     expect(output).toContain('→ lacaille_9352');
     expect(output).toContain('arrival tick 1433950');
     expect(output).not.toContain('"action"');
+
+    expect(hasPreviewHandler('system')).toBe(true);
+    const preview = formatNotificationPreview(notification);
+    expect(preview.tag).toBe('SYSTEM');
+    expect(preview.headline).toContain('jump');
+    expect(preview.headline).toContain('→ lacaille_9352');
+    expect(preview.headline).toContain('arrival tick 1433950');
+  });
+
+  test('system tip/generic without message never dumps nested JSON', () => {
+    const tipWithoutMessage = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:15.000Z',
+      data: {
+        type: 'gameplay_tip',
+        ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+        nearby_players: [{ username: 'Spy' }],
+      },
+    };
+    const tipOutput = stripAnsi(formatNotification(tipWithoutMessage).join('\n'));
+    expect(tipOutput).toContain('[TIP]');
+    expect(tipOutput).toContain('gameplay tip');
+    expect(tipOutput).not.toContain('Dust Devil');
+    expect(tipOutput).not.toContain('Spy');
+    expectNoNestedJsonDump(tipOutput);
+
+    const tipPreview = formatNotificationPreview(tipWithoutMessage);
+    expect(tipPreview.tag).toBe('TIP');
+    expect(tipPreview.headline).toBe('gameplay tip');
+    expectNoNestedJsonDump(tipPreview.headline);
+
+    const systemWithoutMessage = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:15.000Z',
+      data: {
+        code: 'info',
+        tick: 42,
+        ship: { id: 'ship-1', hull: 100 },
+        location: { nearby_players: [{ username: 'Spy' }] },
+      },
+    };
+    const systemOutput = stripAnsi(formatNotification(systemWithoutMessage).join('\n'));
+    expect(systemOutput).toContain('[SYSTEM]');
+    expect(systemOutput).toContain('code=info');
+    expect(systemOutput).toContain('tick=42');
+    expect(systemOutput).not.toContain('Spy');
+    expect(systemOutput).not.toMatch(/"hull"\s*:/);
+    expectNoNestedJsonDump(systemOutput);
+
+    const systemPreview = formatNotificationPreview(systemWithoutMessage);
+    expect(systemPreview.tag).toBe('SYSTEM');
+    expect(systemPreview.headline).toContain('code=info');
+    expect(systemPreview.headline).not.toContain('{');
+    expectNoNestedJsonDump(systemPreview.headline);
+  });
+
+  test('formatActionResultDetails prefers message then compact scalars', () => {
+    expect(formatActionResultDetails({ message: 'jumped to Alfirk' })).toBe('jumped to Alfirk');
+    expect(
+      formatActionResultDetails({
+        action: 'mine',
+        item_name: 'Iron Ore',
+        quantity: 5,
+        system: 'Alfirk',
+      }),
+    ).toBe('mine → Alfirk 5× Iron Ore');
+    // Nested bulky keys are ignored — only listed scalars.
+    expect(
+      formatActionResultDetails({
+        action: 'undock',
+        ship: { hull: 130 },
+      } as Record<string, unknown>),
+    ).toBe('undock');
   });
 
   test.each([
