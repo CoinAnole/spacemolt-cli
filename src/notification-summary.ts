@@ -22,6 +22,8 @@ export interface NotificationPresentationOptions {
   rawNotifications?: boolean;
 }
 
+type SummaryKind = 'crafting' | 'action_result' | 'system_progress';
+
 const HIGH_SIGNAL_TERMS = ['complete', 'completed', 'failed', 'failure', 'error', 'cancel', 'cancelled', 'refund'];
 const HIGH_SIGNAL_TEXT = /(?:^|[^a-z])(complete|completed|failed|failure|error|cancel|cancelled|refund)(?:[^a-z]|$)/i;
 const HIGH_SIGNAL_KEYS = new Set(HIGH_SIGNAL_TERMS);
@@ -35,6 +37,14 @@ function asNotificationArray(value: unknown): Notification[] | undefined {
 
 function isCraftingSummary(notification: Notification): boolean {
   return notification.msg_type === 'crafting_summary';
+}
+
+function isActionResultSummary(notification: Notification): boolean {
+  return notification.msg_type === 'action_result_summary';
+}
+
+function isSystemProgressSummary(notification: Notification): boolean {
+  return notification.msg_type === 'system_progress_summary';
 }
 
 function metadataString(value: unknown): string | undefined {
@@ -88,6 +98,40 @@ function isHighSignalCrafting(notification: Notification): boolean {
 function isRoutineCraftingProgress(notification: Notification): boolean {
   if (isCraftingSummary(notification)) return false;
   return isCraftingLike(notification) && !isHighSignalCrafting(notification);
+}
+
+function notificationMsgType(notification: Notification): string {
+  return typeof notification.msg_type === 'string' && notification.msg_type.trim()
+    ? notification.msg_type
+    : notification.type;
+}
+
+function isRoutineActionResult(notification: Notification): boolean {
+  if (isActionResultSummary(notification)) return false;
+  const msgType = notificationMsgType(notification);
+  return msgType === 'action_result' || notification.type === 'action_result';
+}
+
+function isRoutineSystemProgress(notification: Notification): boolean {
+  if (isSystemProgressSummary(notification)) return false;
+  // Specific system-adjacent msg_types (commission, tips, etc.) keep their own handlers.
+  if (notification.msg_type && notification.msg_type !== 'system') return false;
+  if (notification.type !== 'system' && notificationMsgType(notification) !== 'system') return false;
+
+  const data = isRecord(notification.data) ? notification.data : undefined;
+  if (!data) return false;
+  if (data.type === 'gameplay_tip') return false;
+  if (typeof data.action !== 'string' || !data.action.trim()) return false;
+  // Failures / errors in system travel should stay individual.
+  if (hasHighSignalValue([data.action, data.message, data.status, data.error, data.code])) return false;
+  return true;
+}
+
+function classifyRoutine(notification: Notification): SummaryKind | null {
+  if (isRoutineCraftingProgress(notification)) return 'crafting';
+  if (isRoutineActionResult(notification)) return 'action_result';
+  if (isRoutineSystemProgress(notification)) return 'system_progress';
+  return null;
 }
 
 function timestampMillis(notification: Notification): number {
@@ -178,7 +222,20 @@ function escrowedCreditsFrom(notification: Notification): number | undefined {
   return undefined;
 }
 
-function craftingSummary(progress: Notification[]): Notification {
+function countByKey(values: string[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const value of values) {
+    counts[value] = (counts[value] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function sortedTimeSpan(progress: Notification[]): {
+  first?: Notification;
+  latest?: Notification;
+  firstTick?: number;
+  latestTick?: number;
+} {
   const sortedByTime = [...progress].sort((left, right) => timestampMillis(left) - timestampMillis(right));
   const first = sortedByTime[0] ?? progress[0];
   const latest = sortedByTime[sortedByTime.length - 1] ?? progress[progress.length - 1] ?? first;
@@ -186,6 +243,35 @@ function craftingSummary(progress: Notification[]): Notification {
     .map((notification) => numericDataField(notification, 'tick'))
     .filter((value): value is number => value !== undefined)
     .sort((left, right) => left - right);
+  return {
+    first,
+    latest,
+    firstTick: ticks[0],
+    latestTick: ticks[ticks.length - 1],
+  };
+}
+
+function actionResultMessage(notification: Notification): string | undefined {
+  const data = isRecord(notification.data) ? notification.data : undefined;
+  const result = isRecord(data?.result) ? data.result : undefined;
+  if (typeof result?.message === 'string' && result.message.trim()) return result.message;
+  const details = isRecord(result?.details) ? result.details : undefined;
+  if (typeof details?.message === 'string' && details.message.trim()) return details.message;
+  if (typeof details?.action === 'string' && details.action.trim()) {
+    const system =
+      (typeof details.system === 'string' && details.system) ||
+      (typeof details.system_id === 'string' && details.system_id) ||
+      undefined;
+    const poi = typeof details.poi === 'string' && details.poi ? details.poi : undefined;
+    if (system && poi) return `${details.action} → ${system} (${poi})`;
+    if (system) return `${details.action} → ${system}`;
+    return details.action;
+  }
+  return undefined;
+}
+
+function craftingSummary(progress: Notification[]): Notification {
+  const { first, latest, firstTick, latestTick } = sortedTimeSpan(progress);
   const jobIds = new Set(progress.flatMap(jobIdsFrom));
   const rentalJobIds = new Set(progress.flatMap(rentalJobIdsFrom));
   const latestMessage = latest ? stringDataField(latest, 'message') : undefined;
@@ -196,8 +282,8 @@ function craftingSummary(progress: Notification[]): Notification {
 
   if (first?.timestamp) data.first_timestamp = first.timestamp;
   if (latest?.timestamp) data.latest_timestamp = latest.timestamp;
-  if (ticks[0] !== undefined) data.first_tick = ticks[0];
-  if (ticks[ticks.length - 1] !== undefined) data.latest_tick = ticks[ticks.length - 1];
+  if (firstTick !== undefined) data.first_tick = firstTick;
+  if (latestTick !== undefined) data.latest_tick = latestTick;
   if (jobIds.size > 0) data.jobs = jobIds.size;
   if (rentalJobIds.size > 0) data.rental_jobs = rentalJobIds.size;
   if (latestEscrowedCredits !== undefined) data.escrowed_credits = latestEscrowedCredits;
@@ -211,19 +297,80 @@ function craftingSummary(progress: Notification[]): Notification {
   };
 }
 
+function actionResultSummary(progress: Notification[]): Notification {
+  const { first, latest, firstTick, latestTick } = sortedTimeSpan(progress);
+  const commands = countByKey(progress.map((notification) => stringDataField(notification, 'command') || 'unknown'));
+  const latestCommand = latest ? stringDataField(latest, 'command') : undefined;
+  const latestMessage = latest ? actionResultMessage(latest) : undefined;
+  const data: Record<string, unknown> = {
+    count: progress.length,
+    commands,
+  };
+
+  if (first?.timestamp) data.first_timestamp = first.timestamp;
+  if (latest?.timestamp) data.latest_timestamp = latest.timestamp;
+  if (firstTick !== undefined) data.first_tick = firstTick;
+  if (latestTick !== undefined) data.latest_tick = latestTick;
+  if (latestCommand) data.latest_command = latestCommand;
+  if (latestMessage) data.latest_message = latestMessage;
+
+  return {
+    type: 'action_result',
+    msg_type: 'action_result_summary',
+    timestamp: latest?.timestamp ?? first?.timestamp ?? new Date(0).toISOString(),
+    data,
+  };
+}
+
+function systemProgressSummary(progress: Notification[]): Notification {
+  const { first, latest } = sortedTimeSpan(progress);
+  const actions = countByKey(progress.map((notification) => stringDataField(notification, 'action') || 'unknown'));
+  const latestAction = latest ? stringDataField(latest, 'action') : undefined;
+  const latestDestination = latest ? stringDataField(latest, 'destination') : undefined;
+  const latestArrivalTick = latest ? numericDataField(latest, 'arrival_tick') : undefined;
+  const data: Record<string, unknown> = {
+    count: progress.length,
+    actions,
+  };
+
+  if (first?.timestamp) data.first_timestamp = first.timestamp;
+  if (latest?.timestamp) data.latest_timestamp = latest.timestamp;
+  if (latestAction) data.latest_action = latestAction;
+  if (latestDestination) data.latest_destination = latestDestination;
+  if (latestArrivalTick !== undefined) data.latest_arrival_tick = latestArrivalTick;
+
+  return {
+    type: 'system',
+    msg_type: 'system_progress_summary',
+    timestamp: latest?.timestamp ?? first?.timestamp ?? new Date(0).toISOString(),
+    data,
+  };
+}
+
+function buildSummary(kind: SummaryKind, progress: Notification[]): Notification {
+  switch (kind) {
+    case 'crafting':
+      return craftingSummary(progress);
+    case 'action_result':
+      return actionResultSummary(progress);
+    case 'system_progress':
+      return systemProgressSummary(progress);
+  }
+}
+
 export function presentNotifications(notifications?: APIResponse['notifications']): PresentedNotifications {
   const raw = notifications ?? [];
-  const routineIndexes = new Set<number>();
-  const routine: Notification[] = [];
+  const groups = new Map<SummaryKind, number[]>();
 
   raw.forEach((notification, index) => {
-    if (isRoutineCraftingProgress(notification)) {
-      routineIndexes.add(index);
-      routine.push(notification);
-    }
+    const kind = classifyRoutine(notification);
+    if (!kind) return;
+    const indexes = groups.get(kind) ?? [];
+    indexes.push(index);
+    groups.set(kind, indexes);
   });
 
-  if (!routine.length) {
+  if (!groups.size) {
     return {
       notifications: [...raw],
       rawCount: raw.length,
@@ -233,10 +380,28 @@ export function presentNotifications(notifications?: APIResponse['notifications'
     };
   }
 
-  const firstRoutineIndex = [...routineIndexes].sort((left, right) => left - right)[0] ?? 0;
-  const summary = craftingSummary(routine);
+  const summaryAtIndex = new Map<number, Notification>();
+  const routineIndexes = new Set<number>();
+  const summaries: Array<{ type: string; count: number }> = [];
+
+  // Preserve stable group order by first occurrence in the raw stream.
+  // Crafting always collapses (even a single progress tick). Action results and system
+  // travel progress only collapse when there are 2+ of that kind so a lone event still
+  // renders as itself (with the compact human formatter).
+  const orderedKinds = [...groups.entries()].sort((left, right) => (left[1][0] ?? 0) - (right[1][0] ?? 0));
+  for (const [kind, indexes] of orderedKinds) {
+    const progress = indexes.map((index) => raw[index]).filter((entry): entry is Notification => Boolean(entry));
+    if (!progress.length) continue;
+    if (kind !== 'crafting' && progress.length < 2) continue;
+    const firstIndex = indexes[0] ?? 0;
+    summaryAtIndex.set(firstIndex, buildSummary(kind, progress));
+    for (const index of indexes) routineIndexes.add(index);
+    summaries.push({ type: kind, count: progress.length });
+  }
+
   const presented = raw.flatMap((notification, index) => {
-    if (index === firstRoutineIndex) return [summary];
+    const summary = summaryAtIndex.get(index);
+    if (summary) return [summary];
     if (routineIndexes.has(index)) return [];
     return [notification];
   });
@@ -245,8 +410,8 @@ export function presentNotifications(notifications?: APIResponse['notifications'
     notifications: presented,
     rawCount: raw.length,
     shownCount: presented.length,
-    summarizedCount: routine.length,
-    summaries: [{ type: 'crafting', count: routine.length }],
+    summarizedCount: routineIndexes.size,
+    summaries,
   };
 }
 

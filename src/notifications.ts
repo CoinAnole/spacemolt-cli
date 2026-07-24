@@ -110,6 +110,50 @@ function safeScalar(value: unknown): string | number | boolean | undefined {
   return finiteNumber(value);
 }
 
+/** Format `{ jump: 12, undock: 1 }` as `jump×12, undock×1` (top entries only). */
+function formatCountMap(value: unknown, limit = 6): string | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const entries = Object.entries(record)
+    .map(([key, count]) => {
+      const n = finiteNumber(count);
+      if (!key.trim() || n === undefined || n <= 0) return undefined;
+      return [key, n] as const;
+    })
+    .filter((entry): entry is readonly [string, number] => Boolean(entry))
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+  if (!entries.length) return undefined;
+  const preview = entries
+    .slice(0, limit)
+    .map(([key, count]) => `${key}×${count}`)
+    .join(', ');
+  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
+  return `${preview}${suffix}`;
+}
+
+function formatActionResultDetails(details: Record<string, unknown>): string | undefined {
+  const message = safeScalar(details.message);
+  if (message !== undefined) return String(message);
+
+  const bits: string[] = [];
+  const action = safeScalar(details.action);
+  if (action !== undefined) bits.push(String(action));
+  const system = safeScalar(details.system) ?? safeScalar(details.system_id);
+  if (system !== undefined) bits.push(`→ ${system}`);
+  const poi = safeScalar(details.poi) ?? safeScalar(details.poi_name);
+  if (poi !== undefined) bits.push(`@ ${poi}`);
+  const item = safeScalar(details.item_name) ?? safeScalar(details.item_id);
+  if (item !== undefined) {
+    const quantity = finiteNumber(details.quantity);
+    bits.push(quantity !== undefined ? `${quantity}× ${item}` : String(item));
+  }
+  for (const key of ['module_id', 'wear_status', 'storage_total', 'cargo_remaining'] as const) {
+    const value = safeScalar(details[key]);
+    if (value !== undefined) bits.push(`${key}=${value}`);
+  }
+  return bits.length ? bits.join(' ') : undefined;
+}
+
 function formatGenericNotification(
   notification: ReturnType<typeof normalizedNotification>,
   time: string,
@@ -216,6 +260,39 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       }
       writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[CRAFTING]${c.reset} ${parts.join('; ')}`);
       if (latestMessage !== undefined) writeLine(`  Latest: ${latestMessage}`);
+    },
+
+    action_result_summary: (d, t, writeLine) => {
+      const count = finiteNumber(d.count) ?? 0;
+      const parts = [`${count} action ${plural(count, 'result')} summarized`];
+      const commandPreview = formatCountMap(d.commands);
+      if (commandPreview) parts.push(commandPreview);
+      const latestTick = safeScalar(d.latest_tick);
+      if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
+      const latestCommand = safeScalar(d.latest_command);
+      if (latestCommand !== undefined) parts.push(`latest ${latestCommand}`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULTS]${c.reset} ${parts.join('; ')}`);
+      const latestMessage = safeScalar(d.latest_message);
+      if (latestMessage !== undefined) writeLine(`  Latest: ${latestMessage}`);
+    },
+
+    system_progress_summary: (d, t, writeLine) => {
+      const count = finiteNumber(d.count) ?? 0;
+      const parts = [`${count} travel progress ${plural(count, 'update')} summarized`];
+      const actionPreview = formatCountMap(d.actions);
+      if (actionPreview) parts.push(actionPreview);
+      const latestAction = safeScalar(d.latest_action);
+      const latestDestination = safeScalar(d.latest_destination);
+      if (latestAction !== undefined && latestDestination !== undefined) {
+        parts.push(`latest ${latestAction} → ${latestDestination}`);
+      } else if (latestAction !== undefined) {
+        parts.push(`latest ${latestAction}`);
+      } else if (latestDestination !== undefined) {
+        parts.push(`latest → ${latestDestination}`);
+      }
+      const latestArrival = safeScalar(d.latest_arrival_tick);
+      if (latestArrival !== undefined) parts.push(`arrival tick ${latestArrival}`);
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${parts.join('; ')}`);
     },
 
     crafting_update: (d, t, writeLine) => {
@@ -495,26 +572,42 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       // Handle different system notification types
       if (d.type === 'gameplay_tip') {
         writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
-      } else {
-        // Generic system message
-        writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
+        return;
       }
+
+      const action = safeScalar(d.action);
+      if (action !== undefined) {
+        const destination = safeScalar(d.destination);
+        const arrival = safeScalar(d.arrival_tick);
+        const bits = [String(action)];
+        if (destination !== undefined) bits.push(`→ ${destination}`);
+        if (arrival !== undefined) bits.push(`(arrival tick ${arrival})`);
+        if (d.is_wormhole === true) bits.push('wormhole');
+        writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${bits.join(' ')}`);
+        return;
+      }
+
+      // Generic system message — prefer scalar message over full JSON dumps.
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
     },
 
     action_result: (d, t, writeLine) => {
       writeLine(
         `${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`,
       );
-      if (d.result && typeof d.result === 'object') {
-        const result = d.result as Record<string, unknown>;
-        if (result.message) {
-          writeLine(`  ${result.message}`);
-        } else {
-          for (const [key, value] of Object.entries(result)) {
-            writeLine(`  ${key}: ${JSON.stringify(value)}`);
-          }
-        }
+      const result = asRecord(d.result);
+      if (!result) return;
+      if (safeScalar(result.message) !== undefined) {
+        writeLine(`  ${safeScalar(result.message)}`);
+        return;
       }
+      const details = asRecord(result.details);
+      if (details) {
+        const summary = formatActionResultDetails(details);
+        if (summary) writeLine(`  ${summary}`);
+        return;
+      }
+      // Avoid dumping bulky ship/location/nearby_players payloads.
     },
 
     action_error: (d, t, writeLine) => {
