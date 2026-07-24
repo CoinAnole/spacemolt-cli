@@ -135,6 +135,56 @@ function formatCraftingSummary(data: Record<string, unknown>): string {
   return parts.join('; ');
 }
 
+function formatCountMapPreview(value: unknown, limit = 4): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value)
+    .map(([key, count]) => {
+      const n = finiteNumber(count);
+      if (!key.trim() || n === undefined || n <= 0) return undefined;
+      return [key, n] as const;
+    })
+    .filter((entry): entry is readonly [string, number] => Boolean(entry))
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+  if (!entries.length) return undefined;
+  const preview = entries
+    .slice(0, limit)
+    .map(([key, count]) => `${key}×${count}`)
+    .join(', ');
+  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
+  return `${preview}${suffix}`;
+}
+
+function formatActionResultSummary(data: Record<string, unknown>): string {
+  const count = finiteNumber(data.count) ?? 0;
+  const parts = [`${count} action result${count === 1 ? '' : 's'} summarized`];
+  const commands = formatCountMapPreview(data.commands);
+  if (commands) parts.push(commands);
+  const latestTick = safeScalar(data.latest_tick);
+  if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
+  const latestCommand = safeScalar(data.latest_command);
+  if (latestCommand !== undefined) parts.push(`latest ${latestCommand}`);
+  const latestMessage = safeScalar(data.latest_message);
+  if (latestMessage !== undefined) parts.push(`latest: ${latestMessage}`);
+  return parts.join('; ');
+}
+
+function formatSystemProgressSummary(data: Record<string, unknown>): string {
+  const count = finiteNumber(data.count) ?? 0;
+  const parts = [`${count} travel progress update${count === 1 ? '' : 's'} summarized`];
+  const actions = formatCountMapPreview(data.actions);
+  if (actions) parts.push(actions);
+  const latestAction = safeScalar(data.latest_action);
+  const latestDestination = safeScalar(data.latest_destination);
+  if (latestAction !== undefined && latestDestination !== undefined) {
+    parts.push(`latest ${latestAction} → ${latestDestination}`);
+  } else if (latestAction !== undefined) {
+    parts.push(`latest ${latestAction}`);
+  } else if (latestDestination !== undefined) {
+    parts.push(`latest → ${latestDestination}`);
+  }
+  return parts.join('; ');
+}
+
 function formatNotificationType(notification: Record<string, unknown>): string {
   const data = isRecord(notification.data) ? notification.data : undefined;
   const type = notification.msg_type ?? notification.type ?? data?.type;
@@ -150,6 +200,8 @@ function formatNotificationMessage(notification: Record<string, unknown>): strin
   if (type === 'market_update') return formatMarketUpdate(data);
   if (type === 'crafting_summary') return formatCraftingSummary(data);
   if (type === 'crafting_update') return formatCraftingUpdate(data);
+  if (type === 'action_result_summary') return formatActionResultSummary(data);
+  if (type === 'system_progress_summary') return formatSystemProgressSummary(data);
   if (type === 'ship_commission_complete') {
     const receipt = formatShipCommissionReceipt(data);
     if (receipt) return receipt;

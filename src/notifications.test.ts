@@ -146,6 +146,43 @@ describe('notification formatting', () => {
       snippets: ['[ACTION RESULT]', 'mine completed', 'Mined ore.'],
     },
     {
+      msgType: 'action_result_summary',
+      data: {
+        count: 18,
+        commands: { jump: 12, undock: 1, storage: 1 },
+        latest_tick: 1434000,
+        latest_command: 'jump',
+        latest_message: 'jumped → Alfirk',
+      },
+      snippets: [
+        '[ACTION RESULTS]',
+        '18 action results summarized',
+        'jump×12',
+        'undock×1',
+        'storage×1',
+        'latest tick 1434000',
+        'latest jump',
+        'Latest: jumped → Alfirk',
+      ],
+    },
+    {
+      msgType: 'system_progress_summary',
+      data: {
+        count: 10,
+        actions: { jump: 10 },
+        latest_action: 'jump',
+        latest_destination: 'alfirk',
+        latest_arrival_tick: 1433966,
+      },
+      snippets: [
+        '[SYSTEM]',
+        '10 travel progress updates summarized',
+        'jump×10',
+        'latest jump → alfirk',
+        'arrival tick 1433966',
+      ],
+    },
+    {
       msgType: 'base_destroyed',
       data: { base_name: 'Outpost', wreck_id: 'wreck_1' },
       snippets: ['[BASE DESTROYED]', 'Outpost', 'wreck_1'],
@@ -469,6 +506,53 @@ describe('notification formatting', () => {
 
     expect(output).toContain('[CRAFTING]');
     expectNoDiagnosticTokens(output);
+  });
+
+  test('action_result omits bulky ship and location payloads', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'action_result',
+        msg_type: 'action_result',
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data: {
+          command: 'undock',
+          tick: 1433948,
+          result: {
+            ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+            location: {
+              system_name: 'Nova Terra',
+              nearby_players: [{ username: 'ILC Knurl' }, { username: 'Cody' }],
+              nearby_player_count: 88,
+            },
+            details: { action: 'undock' },
+          },
+        },
+      }).join('\n'),
+    );
+
+    expect(output).toContain('[ACTION RESULT]');
+    expect(output).toContain('undock completed');
+    expect(output).toContain('undock');
+    expect(output).not.toContain('nearby_players');
+    expect(output).not.toContain('ILC Knurl');
+    expect(output).not.toContain('"hull":130');
+  });
+
+  test('system jump progress formats a compact one-liner', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-07-24T19:05:15.000Z',
+        data: { action: 'jump', arrival_tick: 1433950, destination: 'lacaille_9352', is_wormhole: false },
+      }).join('\n'),
+    );
+
+    expect(output).toContain('[SYSTEM]');
+    expect(output).toContain('jump');
+    expect(output).toContain('→ lacaille_9352');
+    expect(output).toContain('arrival tick 1433950');
+    expect(output).not.toContain('"action"');
   });
 
   test.each([

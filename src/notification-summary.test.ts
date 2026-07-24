@@ -23,6 +23,63 @@ const trade = {
   data: { from_name: 'Dockmaster', trade_id: 'trade-1' },
 };
 
+const actionResultA = {
+  type: 'action_result',
+  msg_type: 'action_result',
+  timestamp: '2026-07-24T19:05:05.000Z',
+  data: {
+    command: 'undock',
+    tick: 1433948,
+    result: {
+      details: { action: 'undock' },
+      location: { nearby_players: [{ username: 'Crowd' }] },
+    },
+  },
+};
+
+const actionResultB = {
+  type: 'action_result',
+  msg_type: 'action_result',
+  timestamp: '2026-07-24T19:05:24.000Z',
+  data: {
+    command: 'jump',
+    tick: 1433950,
+    result: {
+      details: {
+        action: 'jumped',
+        system: 'Lacaille 9352',
+        system_id: 'lacaille_9352',
+        poi: 'theta_proxima_belt',
+      },
+    },
+  },
+};
+
+const systemJumpA = {
+  type: 'system',
+  msg_type: 'system',
+  timestamp: '2026-07-24T19:05:15.000Z',
+  data: { action: 'jump', arrival_tick: 1433950, destination: 'lacaille_9352', is_wormhole: false },
+};
+
+const systemJumpB = {
+  type: 'system',
+  msg_type: 'system',
+  timestamp: '2026-07-24T19:05:35.000Z',
+  data: { action: 'jump', arrival_tick: 1433952, destination: 'grumium', is_wormhole: false },
+};
+
+const actionFailed = {
+  type: 'action_error',
+  msg_type: 'action_error',
+  timestamp: '2026-07-24T19:13:45.000Z',
+  data: {
+    command: 'buy_listed_ship',
+    tick: 1434000,
+    message: 'skill_required: Flying a Tier 5 ship requires Piloting level 50 (you have 38).',
+  },
+};
+
 describe('notification presentation', () => {
   test('summarizes routine crafting progress into one synthetic row and preserves non-crafting order', () => {
     const presented = presentNotifications([progressA, trade, progressB]);
@@ -288,5 +345,107 @@ describe('notification presentation', () => {
 
     expect(presented.response).toBe(response);
     expect(presented.topLevel).toBeUndefined();
+  });
+
+  test('summarizes successful action_result and system travel progress while keeping failures', () => {
+    const presented = presentNotifications([
+      actionResultA,
+      systemJumpA,
+      actionResultB,
+      systemJumpB,
+      actionFailed,
+      trade,
+    ]);
+
+    expect(presented.rawCount).toBe(6);
+    expect(presented.shownCount).toBe(4);
+    expect(presented.summarizedCount).toBe(4);
+    expect(presented.summaries).toEqual([
+      { type: 'action_result', count: 2 },
+      { type: 'system_progress', count: 2 },
+    ]);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
+      'action_result_summary',
+      'system_progress_summary',
+      'action_error',
+      'trade_offer_received',
+    ]);
+
+    expect(presented.notifications[0]).toMatchObject({
+      type: 'action_result',
+      msg_type: 'action_result_summary',
+      timestamp: '2026-07-24T19:05:24.000Z',
+      data: {
+        count: 2,
+        commands: { undock: 1, jump: 1 },
+        first_tick: 1433948,
+        latest_tick: 1433950,
+        latest_command: 'jump',
+        latest_message: 'jumped → Lacaille 9352 (theta_proxima_belt)',
+      },
+    });
+
+    expect(presented.notifications[1]).toMatchObject({
+      type: 'system',
+      msg_type: 'system_progress_summary',
+      timestamp: '2026-07-24T19:05:35.000Z',
+      data: {
+        count: 2,
+        actions: { jump: 2 },
+        latest_action: 'jump',
+        latest_destination: 'grumium',
+        latest_arrival_tick: 1433952,
+      },
+    });
+  });
+
+  test('does not summarize system tips or non-travel system messages', () => {
+    const tip = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:00:00.000Z',
+      data: { type: 'gameplay_tip', message: 'Refuel often.' },
+    };
+    const maintenance = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:00:01.000Z',
+      data: { message: 'Server maintenance scheduled.' },
+    };
+
+    const presented = presentNotifications([tip, maintenance, systemJumpA, systemJumpB]);
+
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
+      'system',
+      'system',
+      'system_progress_summary',
+    ]);
+    expect(presented.summarizedCount).toBe(2);
+  });
+
+  test('summarizes mixed crafting, action results, and system progress independently', () => {
+    const presented = presentNotifications([progressA, actionResultA, systemJumpA, progressB, actionResultB]);
+
+    // Lone system jump stays individual; action results and crafting collapse.
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
+      'crafting_summary',
+      'action_result_summary',
+      'system',
+    ]);
+    expect(presented.summaries).toEqual([
+      { type: 'crafting', count: 2 },
+      { type: 'action_result', count: 2 },
+    ]);
+  });
+
+  test('leaves a single action_result and single system travel update unsummarized', () => {
+    const presented = presentNotifications([actionResultA, systemJumpA, trade]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
+      'action_result',
+      'system',
+      'trade_offer_received',
+    ]);
   });
 });
