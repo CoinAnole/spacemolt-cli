@@ -504,6 +504,19 @@ export const factionDismantleFixture = {
   hint: 'Need 3 cargo_container in faction storage before packaging finishes.',
 };
 
+/** Live-shaped nested SC: details = DismantleOutpostResponse (no top-level auto_undocked banner). */
+export const dismantleOutpostFixture = {
+  details: {
+    base_id: 'outpost_forward_cache',
+    name: 'Forward Cache',
+    kit_item: 'outpost_kit',
+    kit_refunded: true,
+    fee_refunded: 0,
+    hint: 'You are adrift at the former outpost point of interest.',
+    auto_undocked: true,
+  },
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
@@ -527,4 +540,5 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   undock: { command: 'undock', fixture: undockFixture, schemaTarget: 'details' },
   facility_dismantle: { command: 'facility_dismantle', fixture: facilityDismantleFixture },
   faction_dismantle: { command: 'faction_dismantle', fixture: factionDismantleFixture },
+  dismantle_outpost: { command: 'dismantle_outpost', fixture: dismantleOutpostFixture },
 };

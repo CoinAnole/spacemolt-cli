@@ -1,0 +1,11 @@
+{
+  "details": {
+    "base_id": "outpost_forward_cache",
+    "name": "Forward Cache",
+    "kit_item": "outpost_kit",
+    "kit_refunded": true,
+    "fee_refunded": 0,
+    "hint": "You are adrift at the former outpost point of interest.",
+    "auto_undocked": true
+  }
+}

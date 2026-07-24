@@ -83,6 +83,41 @@ test('renders facility dismantle with materials table and cargo_container hint',
   expect(stdout).not.toContain('2 item(s)');
 });
 
+test('renders dismantle_outpost kit refund and details-only auto-undocked field line', () => {
+  // Nest under details so envelope-level auto_undocked banner is not emitted;
+  // the formatter still surfaces details.auto_undocked as a field line.
+  const rendered = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'outpost_forward_cache',
+        name: 'Forward Cache',
+        kit_item: 'outpost_kit',
+        kit_refunded: true,
+        fee_refunded: 0,
+        hint: 'You are adrift at the former outpost point of interest.',
+        auto_undocked: true,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Outpost: Forward Cache');
+  expect(stdout).toContain('Base ID: outpost_forward_cache');
+  expect(stdout).toContain('Kit returned: outpost_kit');
+  expect(stdout).toContain('Kit refunded: yes');
+  expect(stdout).toContain('Fee refunded: 0cr');
+  expect(stdout).toContain('Auto-undocked: yes');
+  expect(stdout).toContain('You are adrift at the former outpost point of interest.');
+  expect(stdout).not.toContain('=== Response ===');
+  // Formatter must not re-emit the cyan envelope banner from details-only flag
+  expect(stdout).not.toContain('[AUTO-UNDOCKED]');
+});
+
 test('renders catalog ships with prestige lock notes when present', () => {
   const rendered = renderStructuredResult(
     'catalog',

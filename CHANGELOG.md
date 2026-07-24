@@ -4,6 +4,27 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Curated `dismantle_outpost` (breaking rename)
+
+Dismantling a faction outpost is now a first-class top-level command, matching `build_outpost` and the skill/API verb `dismantle_outpost()`.
+
+| Surface | Before | After |
+| --- | --- | --- |
+| Command | Generated flat `facility_dismantle_outpost` and grouped `facility dismantle_outpost` | Curated top-level `dismantle_outpost` only |
+| Body args | None | None (empty request body) |
+| Human output | Generic fallback | Kit refund / fee / auto-undock details (`=== Outpost Dismantled ===`) |
+
+#### Migration
+
+| Old | New |
+| --- | --- |
+| `spacemolt facility_dismantle_outpost` | `spacemolt dismantle_outpost` |
+| `spacemolt facility dismantle_outpost` | `spacemolt dismantle_outpost` |
+
+There is **no command-name alias**. Requires ManageBases; empty faction storage (items, fuel) and remove garaged ships first; leave free cargo room for the returned Outpost Kit. Founding fee is not refunded; you are undocked afterward.
+
+Outpost built-in fuel bunkers cannot be dismantled alone via `facility dismantle` / `faction dismantle` — remove them by dismantling the whole outpost with `dismantle_outpost`. Help for those commands notes this path.
+
 ### Storage command group (breaking)
 
 Station storage is no longer a single multi-action command. It is a **grouped multi-command** (same pattern as `facility` / `faction`):
