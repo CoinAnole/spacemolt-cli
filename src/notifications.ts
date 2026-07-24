@@ -140,6 +140,25 @@ function formatActionResultDetails(details: Record<string, unknown>): string | u
 }
 
 /**
+ * Map known pure-preview tags to the colors previously used by writeLine handlers.
+ * Interim until K14 severity→color is wired; unknown tags stay magenta.
+ */
+function previewTagColor(tag: string, c: NotificationColors): string {
+  switch (tag) {
+    case 'MARKET':
+    case 'CRAFTING':
+    case 'ACTION RESULTS':
+      return c.green;
+    case 'SHIP READY':
+      return `${c.green}${c.bright}`;
+    case 'SYSTEM':
+      return c.magenta;
+    default:
+      return c.magenta;
+  }
+}
+
+/**
  * Render a pure NotificationPreview as colored multi-line output.
  * Used for Policy 5 generic fallback (and later for typed preview handlers).
  * Does not show omittedHint by default (verbose-only, PR 8).
@@ -150,8 +169,9 @@ function renderPreviewInline(
   c: NotificationColors,
   writeLine: (message?: string) => void,
 ): void {
+  const tagColor = previewTagColor(preview.tag, c);
   writeLine(
-    `${c.dim}[${time}]${c.reset} ${c.magenta}[${preview.tag}]${c.reset} ${preview.headline}`,
+    `${c.dim}[${time}]${c.reset} ${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`,
   );
   for (const detail of preview.details) {
     writeLine(`  ${detail}`);
