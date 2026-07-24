@@ -1,5 +1,6 @@
 import type { CliWriter } from './cli-context.ts';
 import {
+  formatActionResultDetails,
   formatCountMap,
   formatNotificationPreview,
   tryTypedNotificationPreview,
@@ -16,14 +17,6 @@ type NotificationHandler = (data: NotificationData, time: string, writeLine: (me
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
-}
-
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value) ?? 'null';
-  } catch {
-    return '"unserializable"';
-  }
 }
 
 function hasDiagnosticToken(lines: string[]): boolean {
@@ -116,27 +109,14 @@ function safeScalar(value: unknown): string | number | boolean | undefined {
   return finiteNumber(value);
 }
 
-function formatActionResultDetails(details: Record<string, unknown>): string | undefined {
-  const message = safeScalar(details.message);
-  if (message !== undefined) return String(message);
-
-  const bits: string[] = [];
-  const action = safeScalar(details.action);
-  if (action !== undefined) bits.push(String(action));
-  const system = safeScalar(details.system) ?? safeScalar(details.system_id);
-  if (system !== undefined) bits.push(`→ ${system}`);
-  const poi = safeScalar(details.poi) ?? safeScalar(details.poi_name);
-  if (poi !== undefined) bits.push(`@ ${poi}`);
-  const item = safeScalar(details.item_name) ?? safeScalar(details.item_id);
-  if (item !== undefined) {
-    const quantity = finiteNumber(details.quantity);
-    bits.push(quantity !== undefined ? `${quantity}× ${item}` : String(item));
-  }
-  for (const key of ['module_id', 'wear_status', 'storage_total', 'cargo_remaining'] as const) {
-    const value = safeScalar(details[key]);
-    if (value !== undefined) bits.push(`${key}=${value}`);
-  }
-  return bits.length ? bits.join(' ') : undefined;
+/** Interim tag colors for pure-preview inline path (K14 — severity later). */
+function tagColor(tag: string, c: NotificationColors): string {
+  const upper = tag.toUpperCase();
+  if (upper === 'ACTION RESULT' || upper === 'ACTION RESULTS' || upper === 'CRAFTING') return c.green;
+  if (upper === 'TIP') return c.yellow;
+  if (upper === 'ACTION FAILED' || upper === 'COMBAT' || upper === 'DEATH') return c.red;
+  if (upper.startsWith('CHAT')) return c.cyan;
+  return c.magenta;
 }
 
 /**
@@ -147,6 +127,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
   switch (tag) {
     case 'MARKET':
     case 'CRAFTING':
+    case 'ACTION RESULT':
     case 'ACTION RESULTS':
       return c.green;
     case 'SHIP READY':
@@ -160,7 +141,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
 
 /**
  * Render a pure NotificationPreview as colored multi-line output.
- * Used for Policy 5 generic fallback (and later for typed preview handlers).
+ * Used for Policy 5 generic fallback and dual-used PREVIEW_HANDLERS (action_result, system).
  * Does not show omittedHint by default (verbose-only, PR 8).
  */
 function renderPreviewInline(
@@ -591,10 +572,13 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       );
     },
 
+    // Dual-registry: pure PREVIEW_HANDLERS cover these types first in formatNotification.
+    // Keep writeLine entries so NOTIFICATION_TYPES stays complete; fallbacks never safeJson.
     system: (d, t, writeLine) => {
-      // Handle different system notification types
       if (d.type === 'gameplay_tip') {
-        writeLine(`${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
+        writeLine(
+          `${c.dim}[${t}]${c.reset} ${c.yellow}[TIP]${c.reset} ${safeScalar(d.message) ?? 'gameplay tip'}`,
+        );
         return;
       }
 
@@ -610,13 +594,18 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
         return;
       }
 
-      // Generic system message — prefer scalar message over full JSON dumps.
-      writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${safeScalar(d.message) ?? safeJson(d)}`);
+      // Prefer scalar message; never dump nested JSON of entire data.
+      const message = safeScalar(d.message);
+      if (message !== undefined) {
+        writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} ${message}`);
+        return;
+      }
+      writeLine(`${c.dim}[${t}]${c.reset} ${c.magenta}[SYSTEM]${c.reset} system notification`);
     },
 
     action_result: (d, t, writeLine) => {
       writeLine(
-        `${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command}${c.reset} completed (tick ${d.tick || '?'})`,
+        `${c.dim}[${t}]${c.reset} ${c.green}[ACTION RESULT]${c.reset} ${c.bright}${d.command ?? 'action'}${c.reset} completed (tick ${d.tick || '?'})`,
       );
       const result = asRecord(d.result);
       if (!result) return;
@@ -628,9 +617,8 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       if (details) {
         const summary = formatActionResultDetails(details);
         if (summary) writeLine(`  ${summary}`);
-        return;
       }
-      // Avoid dumping bulky ship/location/nearby_players payloads.
+      // Never dump bulky ship/location/nearby_players payloads.
     },
 
     action_error: (d, t, writeLine) => {
@@ -658,7 +646,7 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
 export const NOTIFICATION_TYPES = Object.keys(createNotificationHandlers(colorsForPlain(false))).sort();
 
 /**
- * Interim dual-registry dispatch (PR2):
+ * Interim dual-registry dispatch (design step 4a / PR2+PR3 merge):
  *   1. PREVIEW_HANDLERS via tryTypedNotificationPreview → renderPreviewInline
  *   2. legacy writeLine handler by msgType (try/catch + hasDiagnosticToken guard)
  *   3. Policy 5 generic via formatNotificationPreview
@@ -674,7 +662,7 @@ export function formatNotification(notification: Notification, options?: { plain
   const type = normalized.msgType;
   const c = colorsForPlain(Boolean(options?.plain));
 
-  // 1. Pure typed preview (table-parity handlers from PR2+)
+  // 1. Pure typed preview (PR2 table-parity + PR3 action_result/system)
   const typedPreview = tryTypedNotificationPreview({
     type: normalized.type,
     msg_type: normalized.msgType,
