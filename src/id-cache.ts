@@ -29,10 +29,34 @@ export interface IdHint {
   context?: Record<string, string | number | boolean>;
 }
 
+export type IdMatchKind = 'exact' | 'prefix' | 'substring';
+
 export type CachedIdResolveResult =
-  | { type: 'resolved'; value: string; hint: IdHint; match: 'exact' | 'prefix' | 'substring' }
+  | { type: 'resolved'; value: string; hint: IdHint; match: IdMatchKind }
   | { type: 'ambiguous'; kind: IdKind; query: string; matches: IdHint[] }
   | { type: 'unresolved'; value: string };
+
+/** Controls which non-exact stages may rewrite payload IDs. Exact id/name always runs. */
+export interface IdResolutionPolicy {
+  /** When false, only exact (id or name) and reserved/package normalization may rewrite. */
+  allowPrefix: boolean;
+  /** When false, substring matches are never applied to the payload. */
+  allowSubstring: boolean;
+}
+
+/** Default / strict policy for all kinds. Exact id/name still runs. */
+export const STRICT_ID_RESOLUTION_POLICY: IdResolutionPolicy = {
+  allowPrefix: false,
+  allowSubstring: false,
+};
+
+/** Soft-match policy when options.fuzzyIds === true. system/poi never use substring. */
+export function softIdResolutionPolicy(kind: IdKind): IdResolutionPolicy {
+  if (kind === 'system' || kind === 'poi') {
+    return { allowPrefix: true, allowSubstring: false };
+  }
+  return { allowPrefix: true, allowSubstring: true };
+}
 
 interface IdCacheFile {
   version: 1;
@@ -375,7 +399,12 @@ export function searchItemHints(query: string, hints = loadIdCacheSync()): IdHin
   return searchIdHints('item', query, hints);
 }
 
-export function resolveCachedId(kind: IdKind, query: string, hints = loadIdCacheSync()): CachedIdResolveResult {
+export function resolveCachedId(
+  kind: IdKind,
+  query: string,
+  hints = loadIdCacheSync(),
+  policy: IdResolutionPolicy = STRICT_ID_RESOLUTION_POLICY,
+): CachedIdResolveResult {
   const trimmed = query.trim();
   if (!trimmed) return { type: 'unresolved', value: query };
 
@@ -383,14 +412,19 @@ export function resolveCachedId(kind: IdKind, query: string, hints = loadIdCache
   const lookup = kind === 'package' ? normalizePackageId(trimmed) || trimmed : trimmed;
 
   const candidates = dedupeHintsById(hintsForKind(kind, hints));
+  // Exact always runs against hint.id OR hint.name (K13).
   const exact = findMatches(candidates, lookup, 'exact');
   if (exact.length > 0) return resolveMatches(kind, lookup, exact, 'exact');
 
-  const prefix = findMatches(candidates, lookup, 'prefix');
-  if (prefix.length > 0) return resolveMatches(kind, lookup, prefix, 'prefix');
+  if (policy.allowPrefix) {
+    const prefix = findMatches(candidates, lookup, 'prefix');
+    if (prefix.length > 0) return resolveMatches(kind, lookup, prefix, 'prefix');
+  }
 
-  const substring = findMatches(candidates, lookup, 'substring');
-  if (substring.length > 0) return resolveMatches(kind, lookup, substring, 'substring');
+  if (policy.allowSubstring) {
+    const substring = findMatches(candidates, lookup, 'substring');
+    if (substring.length > 0) return resolveMatches(kind, lookup, substring, 'substring');
+  }
 
   // Even without a cache hit, return the bare package instance id for API fields.
   return { type: 'unresolved', value: kind === 'package' ? lookup : query };
@@ -430,6 +464,18 @@ export function formatCachedIdAmbiguity(
   if (result.matches.length > 8) lines.push(`  ${colors.dim}...and ${result.matches.length - 8} more${colors.reset}`);
   lines.push(`Use the exact ID, or run a discovery command to refresh cached IDs.`);
   return lines;
+}
+
+/** One-line stderr notice for non-exact (prefix/substring) payload rewrites. */
+export function formatCachedIdResolution(
+  command: string,
+  field: string,
+  query: string,
+  resolved: Extract<CachedIdResolveResult, { type: 'resolved' }>,
+  options: { plain?: boolean } = {},
+): string {
+  const colors = colorsForPlain(Boolean(options.plain));
+  return `${colors.cyan}resolved${colors.reset} ${command}.${field} "${query}" → "${resolved.value}" (${resolved.match})`;
 }
 
 export function cachedIdAmbiguityMessage(result: Extract<CachedIdResolveResult, { type: 'ambiguous' }>): string {
@@ -545,7 +591,7 @@ function sortNewest(hints: IdHint[]): IdHint[] {
   return [...hints].sort((a, b) => b.seenAt.localeCompare(a.seenAt) || a.id.localeCompare(b.id));
 }
 
-function findMatches(hints: IdHint[], query: string, match: 'exact' | 'prefix' | 'substring'): IdHint[] {
+function findMatches(hints: IdHint[], query: string, match: IdMatchKind): IdHint[] {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return [];
   return hints.filter((hint) => {
@@ -556,12 +602,7 @@ function findMatches(hints: IdHint[], query: string, match: 'exact' | 'prefix' |
   });
 }
 
-function resolveMatches(
-  kind: IdKind,
-  query: string,
-  matches: IdHint[],
-  match: 'exact' | 'prefix' | 'substring',
-): CachedIdResolveResult {
+function resolveMatches(kind: IdKind, query: string, matches: IdHint[], match: IdMatchKind): CachedIdResolveResult {
   const hint = matches[0];
   if (matches.length === 1 && hint) return { type: 'resolved', value: hint.id, hint, match };
   return { type: 'ambiguous', kind, query, matches };

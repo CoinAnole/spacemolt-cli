@@ -8,6 +8,7 @@ import {
   commandResolverFields,
   extractIdHints,
   formatCachedIdAmbiguity,
+  formatCachedIdResolution,
   getIdCachePath,
   hintsForKind,
   idKindForCommandField,
@@ -18,6 +19,8 @@ import {
   resolveCachedId,
   saveIdCache,
   searchItemHints,
+  softIdResolutionPolicy,
+  STRICT_ID_RESOLUTION_POLICY,
 } from './id-cache';
 
 describe('id cache', () => {
@@ -280,7 +283,7 @@ describe('id cache', () => {
     expect(fs.readdirSync(tempDir).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
   });
 
-  test('resolves exact, prefix, and substring matches conservatively', () => {
+  test('strict default resolves exact id/name only; soft opt-in enables prefix/substring', () => {
     const hints = [
       {
         kind: 'item' as const,
@@ -297,20 +300,77 @@ describe('id cache', () => {
         seenAt: '2026-05-18T00:01:00.000Z',
       },
     ];
+    const soft = softIdResolutionPolicy('item');
 
+    // Exact id (case) and exact name always work under strict.
     expect(resolveCachedId('item', 'ORE_IRON', hints)).toEqual(
       expect.objectContaining({ type: 'resolved', value: 'ore_iron', match: 'exact' }),
     );
-    expect(resolveCachedId('item', 'fuel', hints)).toEqual(
+    expect(resolveCachedId('item', 'Iron Ore', hints)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'ore_iron', match: 'exact' }),
+    );
+    // Prefix/substring pass through under default strict policy.
+    expect(resolveCachedId('item', 'fuel', hints)).toEqual({ type: 'unresolved', value: 'fuel' });
+    expect(resolveCachedId('item', 'cell', hints)).toEqual({ type: 'unresolved', value: 'cell' });
+    expect(resolveCachedId('item', 'gold', hints)).toEqual({ type: 'unresolved', value: 'gold' });
+    // Soft policy restores prefix + substring for non-map kinds.
+    expect(resolveCachedId('item', 'fuel', hints, soft)).toEqual(
       expect.objectContaining({ type: 'resolved', value: 'fuel_cell', match: 'prefix' }),
     );
-    expect(resolveCachedId('item', 'cell', hints)).toEqual(
+    expect(resolveCachedId('item', 'cell', hints, soft)).toEqual(
       expect.objectContaining({ type: 'resolved', value: 'fuel_cell', match: 'substring' }),
     );
-    expect(resolveCachedId('item', 'gold', hints)).toEqual({ type: 'unresolved', value: 'gold' });
+    expect(resolveCachedId('item', 'fuel', hints, STRICT_ID_RESOLUTION_POLICY)).toEqual({
+      type: 'unresolved',
+      value: 'fuel',
+    });
   });
 
-  test('reports ambiguity for partial matches across multiple cached IDs', () => {
+  test('soft system/poi policy allows unique prefix but never substring (haven/crosshaven)', () => {
+    const systemHints = [
+      {
+        kind: 'system' as const,
+        id: 'crosshaven',
+        name: 'Crosshaven',
+        sourceCommand: 'get_map',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+    ];
+    const softSystem = softIdResolutionPolicy('system');
+    const softPoi = softIdResolutionPolicy('poi');
+
+    // Incident class: substring must never rewrite haven → crosshaven.
+    expect(resolveCachedId('system', 'haven', systemHints)).toEqual({ type: 'unresolved', value: 'haven' });
+    expect(resolveCachedId('system', 'haven', systemHints, softSystem)).toEqual({
+      type: 'unresolved',
+      value: 'haven',
+    });
+    // Unique prefix still works when soft is on.
+    expect(resolveCachedId('system', 'cro', systemHints, softSystem)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'crosshaven', match: 'prefix' }),
+    );
+    expect(resolveCachedId('system', 'cro', systemHints)).toEqual({ type: 'unresolved', value: 'cro' });
+
+    const poiHints = [
+      {
+        kind: 'poi' as const,
+        id: 'node_beta_industrial_station',
+        name: 'Node Beta Industrial Station',
+        sourceCommand: 'get_system',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+    ];
+    expect(resolveCachedId('poi', 'node_beta', poiHints, softPoi)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'node_beta_industrial_station', match: 'prefix' }),
+    );
+    // Substring of a longer id/name must not rewrite under soft poi policy.
+    expect(resolveCachedId('poi', 'industrial', poiHints, softPoi)).toEqual({
+      type: 'unresolved',
+      value: 'industrial',
+    });
+  });
+
+  test('reports ambiguity for partial matches across multiple cached IDs when soft is enabled', () => {
     const hints = [
       {
         kind: 'item' as const,
@@ -327,8 +387,12 @@ describe('id cache', () => {
         seenAt: '2026-05-18T00:01:00.000Z',
       },
     ];
+    const soft = softIdResolutionPolicy('item');
 
-    const result = resolveCachedId('item', 'iron', hints);
+    // Under strict, unique soft would not run — iron is unresolved (not ambiguous).
+    expect(resolveCachedId('item', 'iron', hints)).toEqual({ type: 'unresolved', value: 'iron' });
+
+    const result = resolveCachedId('item', 'iron', hints, soft);
 
     expect(result.type).toBe('ambiguous');
     if (result.type !== 'ambiguous') throw new Error('expected ambiguity');
@@ -544,7 +608,54 @@ describe('id cache', () => {
     ];
 
     expect(resolveCachedId('poi', 'earth', hints)).toEqual(
-      expect.objectContaining({ type: 'resolved', value: 'sol_earth' }),
+      expect.objectContaining({ type: 'resolved', value: 'sol_earth', match: 'exact' }),
     );
+  });
+
+  test('formatCachedIdResolution prints prefix and substring notices; plain mode strips color', () => {
+    const prefixResolved = {
+      type: 'resolved' as const,
+      value: 'ore_iron',
+      match: 'prefix' as const,
+      hint: {
+        kind: 'item' as const,
+        id: 'ore_iron',
+        name: 'Iron Ore',
+        sourceCommand: 'get_cargo',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+    };
+    const substringResolved = {
+      type: 'resolved' as const,
+      value: 'fuel_cell',
+      match: 'substring' as const,
+      hint: {
+        kind: 'item' as const,
+        id: 'fuel_cell',
+        name: 'Fuel Cell',
+        sourceCommand: 'view_market',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+    };
+
+    const prefixLine = formatCachedIdResolution('sell', 'item_id', 'iron', prefixResolved, { plain: true });
+    const substringLine = formatCachedIdResolution('buy', 'item_id', 'cell', substringResolved, { plain: true });
+    const colored = formatCachedIdResolution('find_route', 'id', 'cro', {
+      type: 'resolved',
+      value: 'crosshaven',
+      match: 'prefix',
+      hint: {
+        kind: 'system',
+        id: 'crosshaven',
+        sourceCommand: 'get_map',
+        seenAt: '2026-05-18T00:00:00.000Z',
+      },
+    });
+
+    expect(prefixLine).toBe('resolved sell.item_id "iron" → "ore_iron" (prefix)');
+    expect(substringLine).toBe('resolved buy.item_id "cell" → "fuel_cell" (substring)');
+    expect(colored).toContain('resolved');
+    expect(colored).toContain('find_route.id "cro" → "crosshaven" (prefix)');
+    expect(colored).not.toContain('Error:');
   });
 });

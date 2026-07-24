@@ -30,7 +30,19 @@ export interface GlobalOptions {
   rawNotifications?: boolean;
   /** Inline omittedHint + extra preferred scalars only; never nested bulky dumps (K16 / PR 8). */
   verboseNotifications?: boolean;
+  /** jq path soft-resolve only — unrelated to ID-cache payload resolution. */
   fuzzy?: boolean;
+  /**
+   * Effective soft ID payload resolution (prefix/substring).
+   * After runner merge: always concrete true|false.
+   * Before merge (unit tests / direct preparePayload): treat undefined as false (strict).
+   */
+  fuzzyIds?: boolean;
+  /**
+   * True iff --fuzzy-ids or --no-fuzzy-ids appeared on the CLI.
+   * Used only by resolveFuzzyIdsEnabled; not read by preparePayload.
+   */
+  fuzzyIdsCliExplicit?: boolean;
   profile?: string;
   field?: string;
   fields?: string[];

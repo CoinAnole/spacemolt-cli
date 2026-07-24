@@ -26,7 +26,8 @@ import {
 import { outputStateFromGlobalOptionError, wantsMachineReadableErrorOutput } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
 import { API_BASE } from './runtime.ts';
-import { getDefaultProfile, setActiveProfile, validateProfileName } from './session.ts';
+import { resolveFuzzyIdsEnabled } from './runtime-config.ts';
+import { getDefaultProfile, loadCliConfig, setActiveProfile, validateProfileName } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -225,7 +226,12 @@ async function runInvocationWithContext(
     parsedOptions.profile || context.env.SPACEMOLT_PROFILE
       ? undefined
       : deps.getDefaultProfile(undefined, undefined, context.env);
-  const effectiveOptions = savedDefaultProfile ? { ...parsedOptions, profile: savedDefaultProfile } : parsedOptions;
+  const cliConfig = loadCliConfig(undefined, undefined, context.env);
+  const fuzzyIds = resolveFuzzyIdsEnabled(parsedOptions, context.env, cliConfig);
+  const effectiveOptions: GlobalOptions = {
+    ...(savedDefaultProfile ? { ...parsedOptions, profile: savedDefaultProfile } : parsedOptions),
+    fuzzyIds,
+  };
   setActiveProfile(effectiveOptions.profile);
 
   const config = getRuntimeConfig(effectiveOptions, context.env);
@@ -237,6 +243,7 @@ async function runInvocationWithContext(
       json: config.jsonOutput,
       format: config.format,
       profile: config.profile,
+      fuzzyIds,
     },
   };
   const resolvedContext = withResolvedConfig(context, config);

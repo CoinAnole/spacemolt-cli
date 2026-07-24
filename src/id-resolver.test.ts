@@ -85,7 +85,7 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: '90' } });
   });
 
-  test('resolves storage view station_id from cached station POI prefix', () => {
+  test('strict default does not expand storage view station_id prefix; soft opt-in does', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -103,12 +103,36 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = prepareInternalPayload('storage_view', { station_id: 'node_beta' }, options(), sessionPath);
+    expect(prepareInternalPayload('storage_view', { station_id: 'node_beta' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { station_id: 'node_beta', target: 'self' },
+    });
+
+    const stderr: string[] = [];
+    const prepared = prepareInternalPayload(
+      'storage_view',
+      { station_id: 'node_beta' },
+      options({ fuzzyIds: true }),
+      sessionPath,
+    );
+    // prepareInternalPayload has no writer — re-run with writer for notice
+    const preparedWithNotice = preparePayload(
+      'storage_view',
+      { station_id: 'node_beta' },
+      options({ fuzzyIds: true, plain: true }),
+      sessionPath,
+      writer([], stderr),
+      internalCommandRegistry,
+    );
 
     expect(prepared).toEqual({
       type: 'payload',
       payload: { station_id: 'node_beta_industrial_station', target: 'self' },
     });
+    expect(preparedWithNotice).toEqual(prepared);
+    expect(stderr.join('\n')).toContain(
+      'resolved storage_view.station_id "node_beta" → "node_beta_industrial_station" (prefix)',
+    );
   });
 
   test('bare storage_view empty payload still materializes target=self', () => {
@@ -118,13 +142,44 @@ describe('cached ID payload resolver', () => {
     });
   });
 
-  test('resolves sell item from cached item name before type conversion', async () => {
+  test('strict default passes short sell item fragments; soft opt-in rewrites with notice', async () => {
     const sessionPath = useTempSession();
     await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath);
 
-    const prepared = preparePayload('sell', { item_id: 'iron', quantity: '50' }, options(), sessionPath);
+    expect(preparePayload('sell', { item_id: 'iron', quantity: '50' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'iron', quantity: 50 },
+    });
+
+    const stderr: string[] = [];
+    const prepared = preparePayload(
+      'sell',
+      { item_id: 'iron', quantity: '50' },
+      options({ fuzzyIds: true, plain: true }),
+      sessionPath,
+      writer([], stderr),
+    );
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'ore_iron', quantity: 50 } });
+    // Alias normalization maps item_id → id before cache resolution.
+    expect(stderr.join('\n')).toContain('resolved sell.id "iron" → "ore_iron" (prefix)');
+  });
+
+  test('quiet suppresses soft-resolution notices but still rewrites', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse('get_cargo', { structuredContent: cargoFixture }, sessionPath);
+    const stderr: string[] = [];
+
+    const prepared = preparePayload(
+      'sell',
+      { item_id: 'iron', quantity: '50' },
+      options({ fuzzyIds: true, quiet: true }),
+      sessionPath,
+      writer([], stderr),
+    );
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'ore_iron', quantity: 50 } });
+    expect(stderr).toEqual([]);
   });
 
   test('keeps sell fuel reserved for ship tank fuel even when fuel cells are cached', () => {
@@ -205,7 +260,7 @@ describe('cached ID payload resolver', () => {
     });
   });
 
-  test('resolves storage action item aliases from cached item names', () => {
+  test('soft match resolves storage action item aliases from cached item names', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -225,15 +280,27 @@ describe('cached ID payload resolver', () => {
 
     for (const action of ['deposit', 'withdraw', 'loot', 'jettison']) {
       expect(
-        prepareInternalPayload(`storage_${action}`, { item_id: 'iron', quantity: '2' }, options(), sessionPath),
+        prepareInternalPayload(
+          `storage_${action}`,
+          { item_id: 'iron', quantity: '2' },
+          options({ fuzzyIds: true }),
+          sessionPath,
+        ),
       ).toEqual({
         type: 'payload',
         payload: { item_id: 'ore_iron', quantity: 2 },
       });
+      // Strict: fragment passes through.
+      expect(
+        prepareInternalPayload(`storage_${action}`, { item_id: 'iron', quantity: '2' }, options(), sessionPath),
+      ).toEqual({
+        type: 'payload',
+        payload: { item_id: 'iron', quantity: 2 },
+      });
     }
   });
 
-  test('resolves storage loot wreck aliases from cached wreck names', () => {
+  test('soft match resolves storage loot wreck aliases from cached wreck names', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -251,7 +318,9 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    expect(prepareInternalPayload('storage_loot', { wreck_id: 'iron' }, options(), sessionPath)).toEqual({
+    expect(
+      prepareInternalPayload('storage_loot', { wreck_id: 'iron' }, options({ fuzzyIds: true }), sessionPath),
+    ).toEqual({
       type: 'payload',
       payload: { wreck_id: 'wreck_iron' },
     });
@@ -303,7 +372,7 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'player-raider' } });
   });
 
-  test('resolves load_drone item names after drone_item_id alias normalizes to id', () => {
+  test('soft match resolves load_drone item prefix after drone_item_id alias normalizes to id', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -321,7 +390,17 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
-    const prepared = preparePayload('load_drone', { drone_item_id: 'combat' }, options(), sessionPath);
+    expect(preparePayload('load_drone', { drone_item_id: 'combat' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'combat' },
+    });
+
+    const prepared = preparePayload(
+      'load_drone',
+      { drone_item_id: 'combat' },
+      options({ fuzzyIds: true }),
+      sessionPath,
+    );
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'combat_drone' } });
   });
@@ -578,7 +657,7 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'faction-smc' } });
   });
 
-  test('resolves drone and wreck command IDs from cache', () => {
+  test('resolves drone soft-prefix and wreck exact-name IDs from cache', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -603,10 +682,16 @@ describe('cached ID payload resolver', () => {
       })}\n`,
     );
 
+    // "survey" is prefix of name "Survey Drone" — soft only.
     expect(preparePayload('deploy_drone', { drone_id: 'survey' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'survey' },
+    });
+    expect(preparePayload('deploy_drone', { drone_id: 'survey' }, options({ fuzzyIds: true }), sessionPath)).toEqual({
       type: 'payload',
       payload: { id: 'drone-1' },
     });
+    // "skiff" is exact name — always on under strict.
     expect(preparePayload('tow_wreck', { wreck_id: 'skiff' }, options(), sessionPath)).toEqual({
       type: 'payload',
       payload: { id: 'wreck-1' },
@@ -681,7 +766,7 @@ describe('cached ID payload resolver', () => {
     });
   });
 
-  test('stops before execution on ambiguous cached item matches', () => {
+  test('stops before execution on ambiguous cached item matches under soft match', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -711,10 +796,15 @@ describe('cached ID payload resolver', () => {
     );
     const stderr: string[] = [];
 
+    // Strict: soft stages disabled → pass-through, no ambiguity.
+    expect(
+      preparePayload('sell', { item_id: 'iron', quantity: '50' }, options(), sessionPath, writer([], [])),
+    ).toEqual({ type: 'payload', payload: { id: 'iron', quantity: 50 } });
+
     const prepared = preparePayload(
       'sell',
       { item_id: 'iron', quantity: '50' },
-      options(),
+      options({ fuzzyIds: true }),
       sessionPath,
       writer([], stderr),
     );
@@ -725,7 +815,7 @@ describe('cached ID payload resolver', () => {
     expect(stderr.join('\n')).toContain('ore_iron');
   });
 
-  test('prints JSON error for ambiguous cached ID matches in JSON mode', () => {
+  test('prints JSON error for ambiguous cached ID matches in JSON mode under soft match', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
       getIdCachePath(sessionPath),
@@ -755,7 +845,7 @@ describe('cached ID payload resolver', () => {
     const prepared = preparePayload(
       'sell',
       { item_id: 'iron', quantity: '50' },
-      options({ json: true }),
+      options({ json: true, fuzzyIds: true }),
       sessionPath,
       writer(stdout, stderr),
     );
@@ -766,5 +856,196 @@ describe('cached ID payload resolver', () => {
     expect(parsed.error.code).toBe('ambiguous_cached_id');
     expect(parsed.error.message).toContain('ore_iron');
     expect(parsed.error.message).toContain('iron_plate');
+  });
+
+  test('incident regression: find_route/jump haven never rewrites to crosshaven', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'system',
+            id: 'crosshaven',
+            name: 'Crosshaven',
+            sourceCommand: 'get_map',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    for (const command of ['find_route', 'jump'] as const) {
+      // Default strict
+      expect(preparePayload(command, { target_system: 'haven' }, options(), sessionPath)).toEqual({
+        type: 'payload',
+        payload: { id: 'haven' },
+      });
+      // Soft opt-in still bans system substring
+      expect(
+        preparePayload(command, { target_system: 'haven' }, options({ fuzzyIds: true }), sessionPath),
+      ).toEqual({
+        type: 'payload',
+        payload: { id: 'haven' },
+      });
+    }
+
+    // Soft system prefix still works with notice.
+    const stderr: string[] = [];
+    expect(
+      preparePayload(
+        'find_route',
+        { target_system: 'cro' },
+        options({ fuzzyIds: true, plain: true }),
+        sessionPath,
+        writer([], stderr),
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'crosshaven' },
+    });
+    expect(stderr.join('\n')).toContain('resolved find_route.id "cro" → "crosshaven" (prefix)');
+  });
+
+  test('exact name rewrites stay silent under strict (no soft notice)', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse('get_system', { structuredContent: systemInfoFixture }, sessionPath);
+    const stderr: string[] = [];
+
+    const prepared = preparePayload(
+      'travel',
+      { target_poi: 'earth' },
+      options(),
+      sessionPath,
+      writer([], stderr),
+    );
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'sol_earth' } });
+    expect(stderr).toEqual([]);
+  });
+
+  test('array string elements apply reserved values and soft policy per element', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'item',
+            id: 'fuel_cell',
+            name: 'Fuel Cell',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    // Synthetic command not in COMMAND_ID_RESOLVER_RULES → field-name heuristic (item_* → item).
+    const syntheticRegistry = {
+      commands: {
+        batch_probe: {
+          args: ['item_ids'],
+          route: { tool: 'probe', action: 'batch', method: 'POST' as const },
+          schema: { item_ids: { type: 'array' } },
+        },
+      },
+    };
+    const stderr: string[] = [];
+    const prepared = preparePayload(
+      'batch_probe',
+      { item_ids: ['iron', 'fuel', 'tank_fuel', 'cell'] },
+      options({ fuzzyIds: true, plain: true }),
+      sessionPath,
+      writer([], stderr),
+      syntheticRegistry,
+    );
+
+    expect(prepared).toEqual({
+      type: 'payload',
+      payload: { item_ids: ['ore_iron', 'fuel', 'fuel', 'fuel_cell'] },
+    });
+    // Reserved fuel tokens never soft-rewrite or notice; soft rewrites notice once each.
+    expect(stderr.filter((line) => line.includes('resolved'))).toHaveLength(2);
+    expect(stderr.join('\n')).toContain('resolved batch_probe.item_ids "iron" → "ore_iron" (prefix)');
+    expect(stderr.join('\n')).toContain('resolved batch_probe.item_ids "cell" → "fuel_cell" (substring)');
+    expect(stderr.join('\n')).not.toContain('"fuel"');
+  });
+
+  test('heuristic id fields on unmapped commands use the same strict/soft policies', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'system',
+            id: 'crosshaven',
+            name: 'Crosshaven',
+            sourceCommand: 'get_map',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'ship',
+            id: 'ship-1',
+            name: 'Dust Devil',
+            sourceCommand: 'list_ships',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const syntheticRegistry = {
+      commands: {
+        unknown_probe: {
+          args: ['target_system_id', 'ship_id'],
+          route: { tool: 'probe', action: 'unknown', method: 'POST' as const },
+          schema: {
+            target_system_id: { type: 'string' },
+            ship_id: { type: 'string' },
+          },
+        },
+      },
+    };
+
+    // Strict: no soft rewrite.
+    expect(
+      preparePayload(
+        'unknown_probe',
+        { target_system_id: 'haven', ship_id: 'dust' },
+        options(),
+        sessionPath,
+        undefined,
+        syntheticRegistry,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target_system_id: 'haven', ship_id: 'dust' },
+    });
+
+    // Soft: system substring still blocked; ship prefix allowed.
+    expect(
+      preparePayload(
+        'unknown_probe',
+        { target_system_id: 'haven', ship_id: 'dust' },
+        options({ fuzzyIds: true }),
+        sessionPath,
+        undefined,
+        syntheticRegistry,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target_system_id: 'haven', ship_id: 'ship-1' },
+    });
   });
 });

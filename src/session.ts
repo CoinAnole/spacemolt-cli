@@ -34,6 +34,8 @@ export function getSpacemoltHome(
 export interface CliConfig {
   defaultProfile?: string;
   userAgent?: string;
+  /** Soft ID payload resolution (prefix/substring). JSON boolean only. */
+  fuzzyIds?: boolean;
   [key: string]: unknown;
 }
 
@@ -295,6 +297,11 @@ export function loadCliConfig(homeDir?: string, platform?: string, env?: EnvLike
       const userAgent = userAgentFromConfigValue(config.userAgent);
       if (userAgent) loaded.userAgent = userAgent;
       else delete loaded.userAgent;
+    }
+    // Only JSON boolean accepted; strings/numbers/null ignored (fall through to default).
+    if (config.fuzzyIds !== undefined) {
+      if (typeof config.fuzzyIds === 'boolean') loaded.fuzzyIds = config.fuzzyIds;
+      else delete loaded.fuzzyIds;
     }
     return loaded;
   } catch {
