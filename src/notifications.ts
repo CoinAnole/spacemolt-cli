@@ -2,6 +2,7 @@ import type { CliWriter } from './cli-context.ts';
 import {
   formatActionResultDetails,
   formatCountMap,
+  formatInventoryPreview,
   formatNotificationPreview,
   tryTypedNotificationPreview,
   type NotificationPreview,
@@ -481,7 +482,8 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
 
     pirate_destroyed: (d, t, writeLine) => {
       writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[PIRATES]${c.reset} Pirate destroyed!`);
-      if (d.loot) writeLine(`  Loot: ${JSON.stringify(d.loot)}`);
+      const lootPreview = formatInventoryPreview(d.loot);
+      if (lootPreview) writeLine(`  Loot: ${lootPreview}`);
     },
 
     battle_started: (d, t, writeLine) => {

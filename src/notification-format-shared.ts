@@ -35,6 +35,150 @@ export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT):
   return `${preview}${suffix}`;
 }
 
+const DEFAULT_INVENTORY_LIMIT = 6;
+
+/**
+ * Format `{ jump: 12, undock: 1 }` as `jump×12, undock×1` (top entries only).
+ * Default limit 6 (unified multi-line + table).
+ */
+export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT): string | undefined {
+  const record = isRecord(value) ? value : undefined;
+  if (!record) return undefined;
+  const entries = Object.entries(record)
+    .map(([key, count]) => {
+      const n = finiteNumber(count);
+      if (!key.trim() || n === undefined || n <= 0) return undefined;
+      return [key, n] as const;
+    })
+    .filter((entry): entry is readonly [string, number] => Boolean(entry))
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+  if (!entries.length) return undefined;
+  const preview = entries
+    .slice(0, limit)
+    .map(([key, count]) => `${key}×${count}`)
+    .join(', ');
+  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
+  return `${preview}${suffix}`;
+}
+
+/** Keys that may nest an item list inside an inventory-like bag. */
+const INVENTORY_NEST_KEYS = ['items', 'cargo', 'loot', 'inventory', 'contents', 'looted'] as const;
+
+/** Prefer these fields (in order) for an item row label. */
+const INVENTORY_ITEM_ID_KEYS = [
+  'item_id',
+  'item_name',
+  'name',
+  'resource_id',
+  'module_type_id',
+  'module_id',
+  'id',
+] as const;
+
+/** Prefer these fields (in order) for an item row quantity. */
+const INVENTORY_QTY_KEYS = ['quantity', 'count', 'amount', 'qty'] as const;
+
+function inventoryItemLabel(item: Record<string, unknown>): string | undefined {
+  for (const key of INVENTORY_ITEM_ID_KEYS) {
+    const value = item[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function inventoryItemQuantity(item: Record<string, unknown>): number | undefined {
+  for (const key of INVENTORY_QTY_KEYS) {
+    const n = finiteNumber(item[key]);
+    if (n !== undefined) return n;
+  }
+  // Module / presence rows without quantity still count as one unit.
+  return inventoryItemLabel(item) !== undefined ? 1 : undefined;
+}
+
+function pushInventoryEntry(
+  acc: Map<string, number>,
+  key: string | undefined,
+  quantity: number | undefined,
+): void {
+  if (!key?.trim() || quantity === undefined || quantity <= 0) return;
+  const id = key.trim();
+  acc.set(id, (acc.get(id) ?? 0) + quantity);
+}
+
+/**
+ * Collect inventory-like entries from common API shapes:
+ * - count map: `{ ore_iron: 5, credits: 100 }`
+ * - item array: `[{ item_id, quantity }, …]`
+ * - nested bag: `{ items: […] }`, `{ cargo: […] }`, etc.
+ * Nested non-list objects are skipped (never walked into ship/location graphs).
+ */
+function collectInventoryEntries(value: unknown, acc: Map<string, number>, depth = 0): void {
+  if (depth > 2 || value === null || value === undefined) return;
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (!isRecord(entry)) continue;
+      pushInventoryEntry(acc, inventoryItemLabel(entry), inventoryItemQuantity(entry));
+    }
+    return;
+  }
+
+  if (!isRecord(value)) return;
+
+  // Prefer nested list bags when present (merge all recognized nests).
+  let sawNest = false;
+  for (const nestKey of INVENTORY_NEST_KEYS) {
+    if (!(nestKey in value)) continue;
+    sawNest = true;
+    collectInventoryEntries(value[nestKey], acc, depth + 1);
+  }
+  if (sawNest) {
+    // Also pick up scalar co-entries on the same bag (e.g. credits alongside items[]).
+    for (const [key, count] of Object.entries(value)) {
+      if ((INVENTORY_NEST_KEYS as readonly string[]).includes(key)) continue;
+      pushInventoryEntry(acc, key, finiteNumber(count));
+    }
+    return;
+  }
+
+  // Flat count map: only finite positive numeric values.
+  for (const [key, count] of Object.entries(value)) {
+    pushInventoryEntry(acc, key, finiteNumber(count));
+  }
+}
+
+/**
+ * Compact inventory-style preview (K15) — never full nested JSON.
+ *
+ * Examples:
+ * - `{ ore_iron: 5, credits: 100 }` → `2 items: ore_iron×5, credits×100`
+ * - `[{ item_id: 'ore_iron', quantity: 5 }]` → `1 item: ore_iron×5`
+ * - large bags truncate with `+N more` after `limit` (default 6)
+ *
+ * Returns undefined when no inventory-like entries can be extracted.
+ */
+export function formatInventoryPreview(
+  value: unknown,
+  limit = DEFAULT_INVENTORY_LIMIT,
+): string | undefined {
+  const acc = new Map<string, number>();
+  collectInventoryEntries(value, acc);
+  if (!acc.size) return undefined;
+
+  const entries = [...acc.entries()].sort(
+    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+  );
+  const preview = entries
+    .slice(0, limit)
+    .map(([key, count]) => `${key}×${count}`)
+    .join(', ');
+  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
+  const total = entries.length;
+  const label = total === 1 ? '1 item' : `${total} items`;
+  return `${label}: ${preview}${suffix}`;
+}
+
+
 // ── Shared notification preview (Policy 5 ladder + typed handlers) ──────────
 //
 // K8 module-size intent: keep pure preview + formatCountMap in this file for PR1.
