@@ -1093,3 +1093,129 @@ test('renders Package and Label columns on bulk craft results when present', () 
   expect(stdout).toContain('Bulk Plates');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('packaged craft quote renders Ready: yes when ready is true', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        mode: 'craft',
+        quantity: 1,
+        runs: 1,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+        facility_id: 'workshop:player:station',
+        cost: {
+          inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 2 }],
+        },
+        credits_total: 0,
+        effective_time_per_run: 2,
+        est_completion_tick: 1131800,
+        ready: true,
+        gates: {
+          package_match: { ok: true },
+          inputs: { ok: true },
+          credits: { ok: true },
+          logistics: { ok: true },
+          cargo_container: { ok: true },
+          output_size: { ok: true },
+          destination_room: { ok: true },
+        },
+        produces: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 1 }],
+        message: 'Quote only — ready to queue.',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Quote ===');
+  expect(stdout).toContain('Ready: yes');
+  expect(stdout).not.toContain('Ready: no');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('places Label column after Job when only label is present on craft queue', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        kind: 'queue',
+        jobs: [
+          {
+            job_id: 'label-only-1',
+            label: 'Named Job',
+            recipe: 'Build Power Cell',
+            mode: 'craft',
+            runs_done: 0,
+            runs_remaining: 1,
+            runs_total: 1,
+            venue: 'Station Workshop',
+            facility_id: 'workshop:player:station',
+            eta_ticks: 2,
+            status: 'queued',
+            position: 0,
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Label');
+  expect(stdout).toContain('Named Job');
+  expect(stdout).not.toContain('Package');
+  // Header adjacency: Label should sit next to Job, not trailing after Pos.
+  const header = stdout.split('\n').find((line) => line.includes('Job') && line.includes('Label'));
+  expect(header).toBeDefined();
+  expect(header!.indexOf('Job')).toBeLessThan(header!.indexOf('Label'));
+  expect(header!.indexOf('Label')).toBeLessThan(header!.indexOf('Recipe'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('places Label column after Job when only label is present on bulk craft results', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'bulk',
+        mode: 'craft',
+        results: [
+          {
+            index: 0,
+            success: true,
+            job_id: 'bulk-label-1',
+            label: 'Sealed Label Only',
+            recipe: 'Iron Plates',
+            runs: 2,
+            venue: 'Own Smelter',
+            message: 'Queued.',
+          },
+        ],
+        summary: { total: 1, succeeded: 1, failed: 0 },
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Label');
+  expect(stdout).toContain('Sealed Label Only');
+  expect(stdout).not.toContain('Package');
+  const header = stdout.split('\n').find((line) => line.includes('Job') && line.includes('Label'));
+  expect(header).toBeDefined();
+  expect(header!.indexOf('Job')).toBeLessThan(header!.indexOf('Label'));
+  expect(header!.indexOf('Label')).toBeLessThan(header!.indexOf('Recipe'));
+  expect(stdout).not.toContain('=== Response ===');
+});

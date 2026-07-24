@@ -1960,6 +1960,75 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats crafting update job preview with output package label only', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            tick: 901520,
+            jobs: [
+              {
+                job_id: 'rental-label-only',
+                recipe: 'Assemble Power Cell',
+                mode: 'facility',
+                venue: 'Public Assembler',
+                runs_done: 0,
+                runs_remaining: 1,
+                escrowed_credits: 120,
+                external: true,
+                completed: true,
+                output_package_label: 'Label Only Pack',
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_update');
+    expect(stdout).toContain('Assemble Power Cell');
+    expect(stdout).toContain('rental');
+    expect(stdout).toContain('120cr escrowed');
+    expect(stdout).toContain('out Label Only Pack');
+    expect(stdout).not.toContain('out Label Only Pack (');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats crafting update single-job output package id only', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            message: 'Job completed',
+            completed: true,
+            tick: 901530,
+            output_package_id: 'pkg-id-only',
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_update');
+    expect(stdout).toContain('Job completed');
+    expect(stdout).toContain('out pkg-id-only');
+    expect(stdout).not.toContain('out  (');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats crafting summary rental and escrow fields', () => {
     const fixture = {
       count: 1,

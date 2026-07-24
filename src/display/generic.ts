@@ -651,7 +651,14 @@ export const genericFormatters = [
           ['Pos', ['position']],
         ];
         insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
-        insertOptionalColumn(columns, rows, 'Label', ['label'], 'Package');
+        // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
+        insertOptionalColumn(
+          columns,
+          rows,
+          'Label',
+          ['label'],
+          columns.some(([columnLabel]) => columnLabel === 'Package') ? 'Package' : 'Job',
+        );
         insertOptionalColumn(columns, rows, 'Station', ['station_display'], 'Venue');
         const afterVenueContext = rows.some((row) => row.station_display !== undefined) ? 'Station' : 'Venue';
         insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], afterVenueContext);
@@ -684,7 +691,14 @@ export const genericFormatters = [
           ['Message', ['message', 'error', 'error_code']],
         ];
         insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
-        insertOptionalColumn(columns, rows, 'Label', ['label'], 'Package');
+        // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
+        insertOptionalColumn(
+          columns,
+          rows,
+          'Label',
+          ['label'],
+          columns.some(([columnLabel]) => columnLabel === 'Package') ? 'Package' : 'Job',
+        );
         insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], 'Venue');
         insertOptionalColumn(
           columns,
