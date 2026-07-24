@@ -1658,6 +1658,39 @@ export function tryTypedNotificationPreview(
  * Table Message always consumes this via tableMessageFromPreview (PR4 / K13 Message only).
  * Inline formatNotification is layout-only over this builder (PR7c).
  */
+function applyVerboseExtras(
+  preview: NotificationPreview,
+  data: Record<string, unknown>,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  if (!options.verbose) return preview;
+
+  const omittedHint = preview.omittedHint ?? omittedBulkyHint(data);
+  const existingText = [preview.headline, ...preview.details].join(' ');
+  const preferredBits = collectScalarBits(data, {
+    preferredKeys: GENERIC_SCALAR_KEYS,
+    maxKeys: options.maxDetails + preview.details.length + 4,
+  });
+
+  const details = [...preview.details];
+  for (const bit of preferredBits) {
+    if (details.length >= options.maxDetails) break;
+    if (preview.headline.includes(bit)) continue;
+    if (details.includes(bit)) continue;
+    // Skip if the key already appears in headline/details (e.g. message-path "code" mention).
+    const eq = bit.indexOf('=');
+    const key = eq > 0 ? bit.slice(0, eq) : bit;
+    if (key && (existingText.includes(`${key}=`) || existingText.includes(`${key}:`))) continue;
+    details.push(truncate(bit, options));
+  }
+
+  return {
+    ...preview,
+    details,
+    ...(omittedHint ? { omittedHint } : {}),
+  };
+}
+
 export function formatNotificationPreview(
   notification: unknown,
   options?: NotificationPreviewOptions,

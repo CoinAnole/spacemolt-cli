@@ -807,7 +807,8 @@ ${c.bright}Arguments:${c.reset}
 ${c.bright}Global Flags:${c.reset}
   --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
-  --raw-notifications  Skip notification summarization (crafting, action results, travel progress); human lines stay compact
+  --raw-notifications  Render raw notification streams without crafting summaries
+  --verbose-notifications  Show omitted-field hints and extra scalars on inline notification lines
   --plain, -p       No ANSI colors
   --field           Extract one response field, or comma-separated fields
   --fields, -f      Extract response fields
@@ -902,7 +903,8 @@ ${c.bright}Arguments:${c.reset}
 ${c.bright}Global Flags:${c.reset}
   --json, -j        Full API response as JSON; same as --format=json for successful output
   --quiet, -q       Suppress extra messages
-  --raw-notifications  Skip notification summarization (crafting, action results, travel progress); human lines stay compact
+  --raw-notifications  Render raw notification streams without crafting summaries
+  --verbose-notifications  Show omitted-field hints and extra scalars on inline notification lines
   --plain, -p       No ANSI colors
   --field           Extract one response field, or comma-separated fields
   --fields, -f      Extract response fields
@@ -989,7 +991,8 @@ ${c.bright}Usage:${c.reset}
     Output modes:
       --json, -j          Full API response as JSON; same as --format=json for successful output
       --quiet, -q         Suppress notifications and info messages
-      --raw-notifications  Skip notification summarization (crafting, action results, travel progress); human lines stay compact
+      --raw-notifications  Render raw notification streams without crafting summaries
+      --verbose-notifications  Show omitted-field hints and extra scalars on inline notification lines
       --plain, -p         No ANSI colors
       --raw               Allow unknown command fields to pass through
       --field             Extract one response field, or comma-separated fields

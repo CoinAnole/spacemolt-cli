@@ -103,7 +103,10 @@ export async function renderResponse(
     const header = `${colors.dim}--- Notifications (${notificationLabel}) ---${colors.reset}`;
     if (writer) writer.out(header);
     else console.log(header);
-    displayNotifications(response.notifications, writer, renderOptions.quiet, { plain: renderOptions.plain });
+    displayNotifications(response.notifications, writer, renderOptions.quiet, {
+      plain: renderOptions.plain,
+      verbose: renderOptions.verboseNotifications,
+    });
     if (writer) writer.out('');
     else console.log('');
   }
