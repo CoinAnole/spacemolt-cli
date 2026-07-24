@@ -818,7 +818,9 @@ ${c.bright}Global Flags:${c.reset}
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key | length, ...)
-  --fuzzy           Auto-resolve simple --jq paths to similar keys
+  --fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)
+  --fuzzy-ids       Soft ID-cache payload match (prefix/substring); default is exact id/name only
+  --no-fuzzy-ids    Force exact-only ID resolution (override env/config)
   --keys [path]     List available keys at a JSON dotpath
   --search          Filter structured output to matching branches (renders table/json)
   --search-keys     List matching jq paths and keys (projection mode)
@@ -853,6 +855,8 @@ ${c.bright}Dynamic API Commands:${c.reset}
 
 ${c.bright}ID Cache:${c.reset}
   Discovery commands like get_system, get_cargo, view_market, get_nearby, and list_ships save useful IDs.
+  Payload fields match exact id/name by default. Soft match needs --fuzzy-ids, SPACEMOLT_FUZZY_IDS, or config fuzzyIds.
+  Under soft match, system/poi use unique prefix only (never substring). Completion and ids search stay fuzzy always.
   spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs
   spacemolt where-can-i <item>          Search cached item sightings`;
 }
@@ -914,7 +918,9 @@ ${c.bright}Global Flags:${c.reset}
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
   --jq              Extract with path syntax (.key, .key[], .key | length, ...)
-  --fuzzy           Auto-resolve simple --jq paths to similar keys
+  --fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)
+  --fuzzy-ids       Soft ID-cache payload match (prefix/substring); default is exact id/name only
+  --no-fuzzy-ids    Force exact-only ID resolution (override env/config)
   --keys [path]     List available keys at a JSON dotpath
   --search          Filter structured output to matching branches (renders table/json)
   --search-keys     List matching jq paths and keys (projection mode)
@@ -1003,7 +1009,9 @@ ${c.bright}Usage:${c.reset}
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
       --jq <expr>         Extract with path syntax (.key, .key[], .key | length, ...)
-      --fuzzy             Auto-resolve simple --jq paths to similar keys
+      --fuzzy             Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)
+      --fuzzy-ids         Soft ID-cache payload match (prefix/substring); default is exact id/name only
+      --no-fuzzy-ids      Force exact-only ID resolution (override env/config)
       --keys [path]       List available keys at a JSON dotpath
       --search <text>      Filter structured output to matching branches
       --search-keys <text> List matching jq paths and keys
@@ -1063,6 +1071,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     jump <system|bearing>     Jump lane or Pathfinder bearing
     dock                      Enter station
     undock                    Leave station
+    System/POI IDs: exact id/name by default; --fuzzy-ids allows unique prefix only (never substring)
 
   ${c.cyan}Mining & Trading:${c.reset}
     mine                      Mine at asteroid belt
@@ -1258,6 +1267,7 @@ ${c.bright}Environment Variables:${c.reset}
    SPACEMOLT_URL       API URL (default: https://game.spacemolt.com/api/v2)
    SPACEMOLT_PROFILE   Named session profile (overridden by --profile)
    SPACEMOLT_OUTPUT    Set to json for full API response JSON
+   SPACEMOLT_FUZZY_IDS Soft ID-cache payload match when true/1 (default exact; flags override)
    DEBUG=true          Show verbose request/response logging
 
 ${c.bright}API Routing:${c.reset}
