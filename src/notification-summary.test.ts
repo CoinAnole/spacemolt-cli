@@ -381,7 +381,7 @@ describe('notification presentation', () => {
         first_tick: 1433948,
         latest_tick: 1433950,
         latest_command: 'jump',
-        latest_message: 'jumped → Lacaille 9352 (theta_proxima_belt)',
+        latest_message: 'jumped → Lacaille 9352 @ theta_proxima_belt',
       },
     });
 
@@ -395,6 +395,288 @@ describe('notification presentation', () => {
         latest_action: 'jump',
         latest_destination: 'grumium',
         latest_arrival_tick: 1433952,
+      },
+    });
+  });
+
+  test('keeps non-allowlisted action_result individual while summarizing travel commands', () => {
+    const buyListedShip = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:00.000Z',
+      data: {
+        command: 'buy_listed_ship',
+        tick: 1433940,
+        result: { details: { action: 'buy_listed_ship', message: 'Purchased Dust Devil.' } },
+      },
+    };
+
+    const presented = presentNotifications([buyListedShip, actionResultA, actionResultB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
+      'action_result',
+      'action_result_summary',
+    ]);
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'action_result',
+      data: { command: 'buy_listed_ship' },
+    });
+    expect(presented.notifications[1]).toMatchObject({
+      msg_type: 'action_result_summary',
+      data: {
+        count: 2,
+        commands: { undock: 1, jump: 1 },
+      },
+    });
+  });
+
+  test('keeps interleaved non-routine action_result individual while travel pair still summarizes', () => {
+    const buyListedShip = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:10.000Z',
+      data: {
+        command: 'buy_listed_ship',
+        tick: 1433945,
+        result: { details: { action: 'buy_listed_ship' } },
+      },
+    };
+
+    const presented = presentNotifications([actionResultA, buyListedShip, actionResultB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
+      'action_result_summary',
+      'action_result',
+    ]);
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'action_result_summary',
+      data: { count: 2, commands: { undock: 1, jump: 1 } },
+    });
+    expect(presented.notifications[1]).toMatchObject({
+      msg_type: 'action_result',
+      data: { command: 'buy_listed_ship' },
+    });
+  });
+
+  test('does not summarize two non-routine action_result successes', () => {
+    const mine = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:06:00.000Z',
+      data: { command: 'mine', tick: 1434100, result: { details: { action: 'mine' } } },
+    };
+    const sell = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:06:05.000Z',
+      data: { command: 'sell', tick: 1434101, result: { details: { action: 'sell' } } },
+    };
+
+    const presented = presentNotifications([mine, sell]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result']);
+    expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual(['mine', 'sell']);
+  });
+
+  test('summarizes travel and dock action_results on the allowlist', () => {
+    const travel = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:07:00.000Z',
+      data: { command: 'travel', tick: 1434200, result: { details: { action: 'travel' } } },
+    };
+    const dock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:07:05.000Z',
+      data: { command: 'dock', tick: 1434201, result: { details: { action: 'dock' } } },
+    };
+
+    const presented = presentNotifications([travel, dock]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary']);
+    expect(presented.notifications[0]).toMatchObject({
+      data: { count: 2, commands: { travel: 1, dock: 1 }, latest_command: 'dock' },
+    });
+  });
+
+  test('summarizes fleet_jump and fleet_travel action_results', () => {
+    const fleetJump = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:08:00.000Z',
+      data: { command: 'fleet_jump', tick: 1434300, result: { details: { action: 'fleet_jump' } } },
+    };
+    const fleetTravel = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:08:05.000Z',
+      data: { command: 'fleet_travel', tick: 1434301, result: { details: { action: 'fleet_travel' } } },
+    };
+
+    const presented = presentNotifications([fleetJump, fleetTravel]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary']);
+    expect(presented.notifications[0]).toMatchObject({
+      data: { count: 2, commands: { fleet_jump: 1, fleet_travel: 1 }, latest_command: 'fleet_travel' },
+    });
+  });
+
+  test('does not summarize action_results missing data.command (fail open)', () => {
+    const missingA = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:09:00.000Z',
+      data: { tick: 1434400, result: { details: { action: 'jump' } } },
+    };
+    const missingB = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:09:05.000Z',
+      data: { tick: 1434401, result: { details: { action: 'undock' } } },
+    };
+
+    const presented = presentNotifications([missingA, missingB]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications).toEqual([missingA, missingB]);
+  });
+
+  test('still summarizes jump action_results whose nested delta contains high-signal tokens', () => {
+    const jumpWithErrorToken = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:10:00.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434500,
+        result: {
+          details: { action: 'jumped', system: 'error_boundary_system' },
+          ship: { modules: [{ name: 'error_corrector', completed: true }] },
+        },
+      },
+    };
+    const jumpWithCompleteToken = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:10:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434501,
+        result: {
+          details: { action: 'jumped', system: 'complete_system' },
+          location: { note: 'complete' },
+        },
+      },
+    };
+
+    const presented = presentNotifications([jumpWithErrorToken, jumpWithCompleteToken]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary']);
+    expect(presented.notifications[0]).toMatchObject({
+      data: { count: 2, commands: { jump: 2 }, latest_command: 'jump' },
+    });
+  });
+
+  test('does not summarize non-travel system actions even with destination or message', () => {
+    const maintenanceWindow = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:11:00.000Z',
+      data: { action: 'maintenance_window', message: 'Scheduled window.' },
+    };
+    const maintenanceWindowB = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:11:05.000Z',
+      data: { action: 'maintenance_window', message: 'Still scheduled.' },
+    };
+    const rebootA = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:11:10.000Z',
+      data: { action: 'reboot', destination: 'x' },
+    };
+    const rebootB = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:11:15.000Z',
+      data: { action: 'reboot', destination: 'y' },
+    };
+
+    const maintenancePresented = presentNotifications([maintenanceWindow, maintenanceWindowB]);
+    expect(maintenancePresented.summarizedCount).toBe(0);
+    expect(maintenancePresented.notifications).toEqual([maintenanceWindow, maintenanceWindowB]);
+
+    const rebootPresented = presentNotifications([rebootA, rebootB]);
+    expect(rebootPresented.summarizedCount).toBe(0);
+    expect(rebootPresented.notifications).toEqual([rebootA, rebootB]);
+  });
+
+  test('summarizes system travel when only action is jump (no destination)', () => {
+    const jumpOnlyA = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:12:00.000Z',
+      data: { action: 'jump' },
+    };
+    const jumpOnlyB = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:12:05.000Z',
+      data: { action: 'jump' },
+    };
+
+    const presented = presentNotifications([jumpOnlyA, jumpOnlyB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['system_progress_summary']);
+    expect(presented.notifications[0]).toMatchObject({
+      data: { count: 2, actions: { jump: 2 }, latest_action: 'jump' },
+    });
+  });
+
+  test('actionResultMessage uses @ poi and accepts poi_name', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jumpWithPoiName = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            action: 'jumped',
+            system: 'Sol',
+            poi_name: 'Earth Station',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jumpWithPoiName]);
+
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'action_result_summary',
+      data: {
+        latest_command: 'jump',
+        latest_message: 'jumped → Sol @ Earth Station',
       },
     });
   });

@@ -1,4 +1,5 @@
 import type { CliWriter } from './cli-context.ts';
+import { formatCountMap } from './notification-format-shared.ts';
 import { colorsForPlain } from './output-style.ts';
 import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 import type { APIResponse } from './types.ts';
@@ -108,27 +109,6 @@ function safeScalar(value: unknown): string | number | boolean | undefined {
   if (typeof value === 'string') return value.trim() ? value : undefined;
   if (typeof value === 'boolean') return value;
   return finiteNumber(value);
-}
-
-/** Format `{ jump: 12, undock: 1 }` as `jump×12, undock×1` (top entries only). */
-function formatCountMap(value: unknown, limit = 6): string | undefined {
-  const record = asRecord(value);
-  if (!record) return undefined;
-  const entries = Object.entries(record)
-    .map(([key, count]) => {
-      const n = finiteNumber(count);
-      if (!key.trim() || n === undefined || n <= 0) return undefined;
-      return [key, n] as const;
-    })
-    .filter((entry): entry is readonly [string, number] => Boolean(entry))
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
-  if (!entries.length) return undefined;
-  const preview = entries
-    .slice(0, limit)
-    .map(([key, count]) => `${key}×${count}`)
-    .join(', ');
-  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
-  return `${preview}${suffix}`;
 }
 
 function formatActionResultDetails(details: Record<string, unknown>): string | undefined {

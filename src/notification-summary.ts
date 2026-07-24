@@ -106,10 +106,38 @@ function notificationMsgType(notification: Notification): string {
     : notification.type;
 }
 
+/** Commands whose successful action_result frames are high-volume travel noise. */
+const ROUTINE_ACTION_RESULT_COMMANDS = new Set([
+  'jump',
+  'travel',
+  'dock',
+  'undock',
+  'fleet_jump',
+  'fleet_travel',
+]);
+
+/** system.data.action values treated as travel progress (frame vocabulary, not HTTP routes). */
+const TRAVEL_SYSTEM_ACTIONS = new Set(['jump', 'travel', 'warp', 'dock', 'undock']);
+
+function actionResultCommand(notification: Notification): string | undefined {
+  const data = isRecord(notification.data) ? notification.data : undefined;
+  const command = data?.command;
+  return typeof command === 'string' && command.trim() ? command.trim().toLowerCase() : undefined;
+}
+
 function isRoutineActionResult(notification: Notification): boolean {
   if (isActionResultSummary(notification)) return false;
   const msgType = notificationMsgType(notification);
-  return msgType === 'action_result' || notification.type === 'action_result';
+  if (msgType !== 'action_result' && notification.type !== 'action_result') return false;
+  const command = actionResultCommand(notification);
+  // Missing or non-allowlisted command → fail open (keep individual).
+  if (!command || !ROUTINE_ACTION_RESULT_COMMANDS.has(command)) return false;
+  return true;
+}
+
+function isTravelSystemAction(data: Record<string, unknown>): boolean {
+  if (typeof data.action !== 'string' || !data.action.trim()) return false;
+  return TRAVEL_SYSTEM_ACTIONS.has(data.action.trim().toLowerCase());
 }
 
 function isRoutineSystemProgress(notification: Notification): boolean {
@@ -121,9 +149,9 @@ function isRoutineSystemProgress(notification: Notification): boolean {
   const data = isRecord(notification.data) ? notification.data : undefined;
   if (!data) return false;
   if (data.type === 'gameplay_tip') return false;
-  if (typeof data.action !== 'string' || !data.action.trim()) return false;
-  // Failures / errors in system travel should stay individual.
+  // Scoped high-signal (scalars only) — never walk unrelated nested blobs.
   if (hasHighSignalValue([data.action, data.message, data.status, data.error, data.code])) return false;
+  if (!isTravelSystemAction(data)) return false;
   return true;
 }
 
@@ -262,9 +290,13 @@ function actionResultMessage(notification: Notification): string | undefined {
       (typeof details.system === 'string' && details.system) ||
       (typeof details.system_id === 'string' && details.system_id) ||
       undefined;
-    const poi = typeof details.poi === 'string' && details.poi ? details.poi : undefined;
-    if (system && poi) return `${details.action} → ${system} (${poi})`;
+    const poi =
+      (typeof details.poi === 'string' && details.poi) ||
+      (typeof details.poi_name === 'string' && details.poi_name) ||
+      undefined;
+    if (system && poi) return `${details.action} → ${system} @ ${poi}`;
     if (system) return `${details.action} → ${system}`;
+    if (poi) return `${details.action} @ ${poi}`;
     return details.action;
   }
   return undefined;
