@@ -1910,6 +1910,8 @@ describe('structuredContent formatters', () => {
                 escrowed_credits: 300,
                 external: true,
                 completed: true,
+                output_package_id: 'pkg-out-9',
+                output_package_label: 'Cell Pack',
               },
             ],
           },
@@ -1925,6 +1927,105 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('rental');
     expect(stdout).toContain('300cr escrowed');
     expect(stdout).toContain('2 runs left');
+    expect(stdout).toContain('out Cell Pack (pkg-out-9)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats crafting update single-job output package fields', () => {
+    // Keep completed:true so notification-summary does not collapse this into a crafting_summary.
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            message: 'Job completed',
+            completed: true,
+            tick: 901510,
+            output_package_id: 'pkg-solo-1',
+            output_package_label: 'Solo Pack',
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_update');
+    expect(stdout).toContain('Job completed');
+    expect(stdout).toContain('out Solo Pack (pkg-solo-1)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats crafting update job preview with output package label only', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            tick: 901520,
+            jobs: [
+              {
+                job_id: 'rental-label-only',
+                recipe: 'Assemble Power Cell',
+                mode: 'facility',
+                venue: 'Public Assembler',
+                runs_done: 0,
+                runs_remaining: 1,
+                escrowed_credits: 120,
+                external: true,
+                completed: true,
+                output_package_label: 'Label Only Pack',
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_update');
+    expect(stdout).toContain('Assemble Power Cell');
+    expect(stdout).toContain('rental');
+    expect(stdout).toContain('120cr escrowed');
+    expect(stdout).toContain('out Label Only Pack');
+    expect(stdout).not.toContain('out Label Only Pack (');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats crafting update single-job output package id only', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          timestamp: '2026-06-29T00:00:00.000Z',
+          data: {
+            message: 'Job completed',
+            completed: true,
+            tick: 901530,
+            output_package_id: 'pkg-id-only',
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('crafting_update');
+    expect(stdout).toContain('Job completed');
+    expect(stdout).toContain('out pkg-id-only');
+    expect(stdout).not.toContain('out  (');
     expect(stdout).not.toContain('=== Response ===');
   });
 

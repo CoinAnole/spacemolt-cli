@@ -1,0 +1,30 @@
+
+=== Craft Quote ===
+Recipe: Iron Plates
+Mode: craft
+Runs: 10
+Venue: Station Workshop (workshop)
+Facility: workshop:player-1:nova_terra_central
+Output: 10x Iron Plate
+Time/run: 2 ticks
+Completion tick: 1131800
+Ready: no
+Gates:
+  package_match: ok
+  inputs: FAIL — contents do not match recipe × quantity
+  credits: ok
+  logistics: ok
+  cargo_container: ok
+  output_size: ok
+  destination_room: ok
+Inputs: 20x Iron Ore
+Labor: 0cr
+Fee: 0cr
+Output package: Plate Pack
+  Size: 12/50
+  Container consumed: 1
+  Reclaimed containers: 2
+  Contents: 10x Iron Plate
+Package IDs: pkg-ore-1,pkg-ore-2
+Output package label: Plate Pack
+Quote only — nothing queued. Packaged craft is not ready.

@@ -1,0 +1,14 @@
+
+=== Craft Queued ===
+Job: craft-pkg-job-1
+Recipe: Iron Plates
+Mode: craft
+Runs: 10
+Venue: Station Workshop (workshop)
+Facility: workshop:player-1:nova_terra_central
+Output: 10x Iron Plate
+Time/run: 2 ticks
+Completion tick: 1131805
+Escrowed inputs: 20x Iron Ore
+Output package: Plate Pack (pkg-out-1)
+Crafting queued: sealed output will be package Plate Pack.

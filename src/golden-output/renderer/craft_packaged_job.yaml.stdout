@@ -1,0 +1,25 @@
+
+details:
+  action: craft
+  kind: job
+  effective_time_per_run: 2
+  escrowed:
+    inputs:
+      - item_id: iron_ore
+        name: "Iron Ore"
+        quantity: 20
+  est_completion_tick: 1131805
+  facility_id: "workshop:player-1:nova_terra_central"
+  job_id: "craft-pkg-job-1"
+  message: "Crafting queued: sealed output will be package Plate Pack."
+  mode: craft
+  produces:
+    - item_id: iron_plate
+      name: "Iron Plate"
+      quantity: 10
+  recipe: "Iron Plates"
+  runs: 10
+  venue: "Station Workshop"
+  venue_type: workshop
+  output_package_id: "pkg-out-1"
+  output_package_label: "Plate Pack"

@@ -378,6 +378,74 @@ function isPackageCraftAction(result: Record<string, unknown>): boolean {
   return result.kind === 'package' || result.action === 'pack' || result.action === 'unpack';
 }
 
+function isPackagedCraftQuote(r: Record<string, unknown>): boolean {
+  return r.kind === 'packaged_quote' || (r.dry_run === true && isRecord(r.gates));
+}
+
+/** Triage order for packaged craft dry-run gates; unknown keys follow alphabetically. */
+const PACKAGED_CRAFT_GATE_ORDER = [
+  'package_match',
+  'inputs',
+  'credits',
+  'logistics',
+  'cargo_container',
+  'output_size',
+  'destination_room',
+] as const;
+
+function formatPackagedCraftGateLine(key: string, gate: unknown): string {
+  if (!isRecord(gate)) return `  ${key}: ?`;
+  if (gate.ok === true) return `  ${key}: ok`;
+  const reason = typeof gate.reason === 'string' && gate.reason.trim() ? ` — ${gate.reason}` : '';
+  return `  ${key}: FAIL${reason}`;
+}
+
+function emitPackagedCraftGates(gates: Record<string, unknown>): void {
+  const known = new Set<string>(PACKAGED_CRAFT_GATE_ORDER);
+  const lines: string[] = [];
+  for (const key of PACKAGED_CRAFT_GATE_ORDER) {
+    if (gates[key] === undefined) continue;
+    lines.push(formatPackagedCraftGateLine(key, gates[key]));
+  }
+  const unknownKeys = Object.keys(gates)
+    .filter((key) => !known.has(key))
+    .sort();
+  for (const key of unknownKeys) {
+    lines.push(formatPackagedCraftGateLine(key, gates[key]));
+  }
+  if (!lines.length) return;
+  emitLine('Gates:');
+  for (const line of lines) emitLine(line);
+}
+
+function emitPackagedOutputPreview(outputPackage: Record<string, unknown>): void {
+  const label = scalarText(outputPackage.label);
+  emitLine(`Output package: ${label ?? 'package'}`);
+  const sizeUsed = formatCount(outputPackage.size_used);
+  const sizeMax = formatCount(outputPackage.size_max);
+  if (sizeUsed !== undefined || sizeMax !== undefined) {
+    emitLine(`  Size: ${sizeUsed ?? '?'}/${sizeMax ?? '?'}`);
+  }
+  if (outputPackage.container_consumed !== undefined) {
+    emitLine(`  Container consumed: ${formatCount(outputPackage.container_consumed) ?? outputPackage.container_consumed}`);
+  }
+  if (outputPackage.reclaimed_containers !== undefined) {
+    emitLine(
+      `  Reclaimed containers: ${formatCount(outputPackage.reclaimed_containers) ?? outputPackage.reclaimed_containers}`,
+    );
+  }
+  const contents = summarizeNamedItemQuantities(outputPackage.items);
+  if (contents) emitLine(`  Contents: ${contents}`);
+}
+
+function formatPackageIdsCsv(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ids = value
+    .map((entry) => (typeof entry === 'string' || typeof entry === 'number' ? String(entry) : ''))
+    .filter((entry) => entry !== '');
+  return ids.length ? ids.join(',') : undefined;
+}
+
 function formatCraftVenue(result: Record<string, unknown>): string | undefined {
   if (result.venue === undefined && result.venue_type === undefined) return undefined;
   if (result.venue !== undefined && result.venue_type !== undefined) return `${result.venue} (${result.venue_type})`;
@@ -582,6 +650,15 @@ export const genericFormatters = [
           ['Status', ['status']],
           ['Pos', ['position']],
         ];
+        insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
+        // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
+        insertOptionalColumn(
+          columns,
+          rows,
+          'Label',
+          ['label'],
+          columns.some(([columnLabel]) => columnLabel === 'Package') ? 'Package' : 'Job',
+        );
         insertOptionalColumn(columns, rows, 'Station', ['station_display'], 'Venue');
         const afterVenueContext = rows.some((row) => row.station_display !== undefined) ? 'Station' : 'Venue';
         insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], afterVenueContext);
@@ -613,6 +690,15 @@ export const genericFormatters = [
           ['Venue', ['venue']],
           ['Message', ['message', 'error', 'error_code']],
         ];
+        insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
+        // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
+        insertOptionalColumn(
+          columns,
+          rows,
+          'Label',
+          ['label'],
+          columns.some(([columnLabel]) => columnLabel === 'Package') ? 'Package' : 'Job',
+        );
         insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], 'Venue');
         insertOptionalColumn(
           columns,
@@ -632,6 +718,8 @@ export const genericFormatters = [
         return true;
       }
 
+      const packagedQuote = isPackagedCraftQuote(r);
+
       emitLine(`\n${c.bright}=== ${craftTitleWithStation(command, r)} ===${c.reset}`);
       emitOptionalValue('Job', r.job_id);
       if (isPackageCraftAction(r)) {
@@ -649,12 +737,30 @@ export const genericFormatters = [
       emitOptionalValue('Time/run', formatTimePerRun(r.effective_time_per_run));
       emitOptionalValue('Completion tick', r.est_completion_tick);
       emitOptionalValue('ETA', formatEtaTicks(r.eta_ticks));
-      if (r.have_inputs !== undefined) emitOptionalValue('Inputs available', r.have_inputs);
-      if (r.have_credits !== undefined) emitOptionalValue('Credits available', r.have_credits);
-      if (r.have_capacity !== undefined) {
-        emitOptionalValue('Capacity available', formatYesNo(r.have_capacity));
+      if (packagedQuote) {
+        emitOptionalValue('Ready', formatYesNo(r.ready));
+        if (isRecord(r.gates)) emitPackagedCraftGates(r.gates);
+      } else {
+        if (r.have_inputs !== undefined) emitOptionalValue('Inputs available', r.have_inputs);
+        if (r.have_credits !== undefined) emitOptionalValue('Credits available', r.have_credits);
+        if (r.have_capacity !== undefined) {
+          emitOptionalValue('Capacity available', formatYesNo(r.have_capacity));
+        }
       }
       emitCraftCost(r.dry_run === true ? 'Inputs' : 'Escrowed inputs', isRecord(r.cost) ? r.cost : r.escrowed);
+      if (packagedQuote) {
+        if (isRecord(r.output_package)) emitPackagedOutputPreview(r.output_package);
+        emitOptionalValue('Package IDs', formatPackageIdsCsv(r.package_ids));
+        emitOptionalValue('Output package label', r.output_package_label);
+      } else {
+        // Distinct wire fields from pack/unpack package_id/label (ordinary packaged craft job).
+        emitOptionalValue(
+          'Output package',
+          formatNameAndId(scalarText(r.output_package_label), scalarText(r.output_package_id)) ??
+            r.output_package_id ??
+            r.output_package_label,
+        );
+      }
       if (r.message) emitLine(String(r.message));
       return true;
     },
