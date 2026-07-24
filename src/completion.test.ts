@@ -316,6 +316,8 @@ describe('shell completion generation', () => {
       expect(script).toContain('jq only');
       expect(script).toContain('exact id/name only');
       expect(script).toContain('not ID soft match');
+      expect(script).toContain('system/poi prefix-only');
+      expect(script).toContain('override env/config');
     }
 
     const runtimeFuzzy = completeWords({
@@ -325,7 +327,15 @@ describe('shell completion generation', () => {
     });
     expect(runtimeFuzzy.map((c) => c.value)).toEqual(expect.arrayContaining(['--fuzzy', '--fuzzy-ids']));
     expect(runtimeFuzzy.find((c) => c.value === '--fuzzy')?.description).toContain('jq only');
+    expect(runtimeFuzzy.find((c) => c.value === '--fuzzy-ids')?.description).toContain('system/poi prefix-only');
     expect(runtimeFuzzy.find((c) => c.value === '--fuzzy-ids')?.description).toContain('exact id/name only');
+
+    const runtimeNoFuzzy = completeWords({
+      shell: 'fish',
+      words: ['spacemolt', '--no-fuzzy-ids'],
+      current: '--no-fuzzy-ids',
+    });
+    expect(runtimeNoFuzzy.find((c) => c.value === '--no-fuzzy-ids')?.description).toContain('override env/config');
   });
 
   test('bundled generated commands appear in runtime and static completion', () => {
