@@ -1,4 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import {
+  formatNotificationPreview,
+  tableMessageFromPreview,
+} from './notification-format-shared';
 import { displayNotifications, formatNotification, NOTIFICATION_TYPES } from './notifications';
 
 function stripAnsi(value: string): string {
@@ -10,6 +14,14 @@ function expectNoDiagnosticTokens(value: string): void {
   expect(value).not.toContain('Infinity');
   expect(value).not.toContain('[object Object]');
   expect(value).not.toContain('undefined');
+}
+
+/** Nested JSON dump signatures that Policy 5 generic must never emit. */
+function expectNoNestedJsonDump(value: string): void {
+  expect(value).not.toMatch(/"hull"\s*:/);
+  expect(value).not.toContain('nearby_players');
+  expect(value).not.toMatch(/\{[^{}]*"id"\s*:/);
+  expectNoDiagnosticTokens(value);
 }
 
 describe('notification formatting', () => {
@@ -125,7 +137,8 @@ describe('notification formatting', () => {
         timestamp: '2026-05-18T12:00:00.000Z',
         data: { code: 'strange', count: 2 },
       },
-      snippets: ['[ODDITY]', 'code: "strange"', 'count: 2'],
+      // Policy 5 scalar bag: preferred keys as key=value, no nested JSON dump.
+      snippets: ['[ODDITY]', 'code=strange', 'count=2'],
     },
   ])('$name', ({ notification, snippets }) => {
     const output = stripAnsi(formatNotification(notification).join('\n'));
@@ -467,8 +480,12 @@ describe('notification formatting', () => {
       }).join('\n'),
     );
 
-    expect(output).toContain('commission_id: "commission-only"');
+    // Handler emits diagnostic tokens (NaN) → Policy 5 generic scalar bag fallback.
+    // Never dump nested ship_id object as JSON.
+    expect(output).toContain('commission_id=commission-only');
+    expect(output).not.toContain('malformed');
     expectNoDiagnosticTokens(output);
+    expectNoNestedJsonDump(output);
   });
 
   test('crafting summary formatter omits malformed numeric and object fields', () => {
@@ -675,5 +692,173 @@ describe('notification formatting', () => {
     );
 
     expect(stripAnsi(lines.join('\n'))).toContain('Marlowe: Docking.');
+  });
+
+  describe('Policy 5 pure preview ladder (formatNotificationPreview)', () => {
+    test('chat-like sender+content without dedicated PREVIEW_HANDLER keeps sender prefix', () => {
+      // No PREVIEW_HANDLERS entry for this msg_type — must use Policy 5 sender+body rung.
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'future_chat_variant',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          channel: 'local',
+          sender: 'Ibis',
+          content: 'Clear skies over Sol today.',
+        },
+      });
+
+      expect(preview.headline).toBe('Ibis: Clear skies over Sol today.');
+      expect(preview.headline).not.toBe('Clear skies over Sol today.');
+      expect(preview.tag).toBe('FUTURE_CHAT_VARIANT');
+      expect(tableMessageFromPreview(preview)).toBe('Ibis: Clear skies over Sol today.');
+    });
+
+    test('unknown type with scalar system+tick includes both; never nested JSON', () => {
+      const preview = formatNotificationPreview({
+        type: 'oddity',
+        msg_type: 'oddity',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: { system: 'Alfirk', tick: 1 },
+      });
+
+      expect(preview.headline).toContain('system=Alfirk');
+      expect(preview.headline).toContain('tick=1');
+      expectNoNestedJsonDump(preview.headline);
+    });
+
+    test('unknown type with bulky ship + scalar code omits nested ship JSON', () => {
+      const preview = formatNotificationPreview({
+        type: 'mystery',
+        msg_type: 'mystery',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          code: 'strange',
+          ship: {
+            id: 'ship-1',
+            name: 'Dust Devil',
+            hull: 130,
+            modules: [{ id: 'laser' }],
+          },
+          nearby_players: [{ username: 'Spy', id: 'p-9' }],
+        },
+      });
+
+      expect(preview.headline).toContain('code=strange');
+      expect(preview.headline).not.toContain('Dust Devil');
+      expect(preview.headline).not.toContain('Spy');
+      expectNoNestedJsonDump(preview.headline);
+      expect(preview.omittedHint).toBeDefined();
+      expect(preview.omittedHint).toMatch(/ship|nearby_players/);
+    });
+
+    test('sender+body beats bare MESSAGE_KEYS', () => {
+      const preview = formatNotificationPreview({
+        type: 'social',
+        msg_type: 'untyped_social',
+        data: {
+          sender: 'Ibis',
+          content: 'Clear skies over Sol today.',
+          message: 'should-not-win-alone',
+        },
+      });
+      expect(preview.headline).toBe('Ibis: Clear skies over Sol today.');
+    });
+
+    test('command+error beats bare MESSAGE_KEYS', () => {
+      const preview = formatNotificationPreview({
+        type: 'action',
+        msg_type: 'untyped_error',
+        data: { command: 'jump', message: 'drive offline', code: 'E_DRIVE' },
+      });
+      expect(preview.headline).toBe('jump: drive offline');
+    });
+
+    test('MESSAGE_KEYS beat scalar bag', () => {
+      const preview = formatNotificationPreview({
+        type: 'mystery',
+        msg_type: 'mystery',
+        data: { message: 'Something happened.', code: 'strange', tick: 9 },
+      });
+      expect(preview.headline).toBe('Something happened.');
+      expect(preview.headline).not.toContain('code=');
+    });
+
+    test('last resort is short notification label, never JSON.stringify of data', () => {
+      const preview = formatNotificationPreview({
+        type: 'emptyish',
+        msg_type: 'emptyish',
+        data: {
+          ship: { id: 'ship-1', hull: 100 },
+          location: { nearby_players: [{ username: 'Spy' }] },
+        },
+      });
+      expect(preview.headline).toBe('notification');
+      expectNoNestedJsonDump(preview.headline);
+      expect(JSON.stringify(preview)).not.toMatch(/"hull"\s*:/);
+    });
+
+    test('length caps truncate pathological strings', () => {
+      const long = 'x'.repeat(500);
+      const preview = formatNotificationPreview(
+        {
+          type: 'mystery',
+          msg_type: 'mystery',
+          data: { message: long },
+        },
+        { maxLineLength: 40 },
+      );
+      expect(preview.headline.length).toBeLessThanOrEqual(40);
+      expect(preview.headline.endsWith('…')).toBe(true);
+    });
+
+    test('inline generic path never dumps nested ship/nearby JSON', () => {
+      const output = stripAnsi(
+        formatNotification({
+          type: 'mystery',
+          msg_type: 'mystery_bulk',
+          timestamp: '2026-05-18T12:00:00.000Z',
+          data: {
+            code: 'strange',
+            ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+            location: { nearby_players: [{ username: 'Spy' }] },
+          },
+        }).join('\n'),
+      );
+
+      expect(output).toContain('[MYSTERY_BULK]');
+      expect(output).toContain('code=strange');
+      expect(output).not.toContain('Dust Devil');
+      expect(output).not.toContain('Spy');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('tableMessageFromPreview folds short first detail only', () => {
+      expect(
+        tableMessageFromPreview({
+          tag: 'SUMMARY',
+          headline: '18 results summarized',
+          details: ['Latest: jumped → Alfirk'],
+        }),
+      ).toBe('18 results summarized; Latest: jumped → Alfirk');
+
+      expect(
+        tableMessageFromPreview({
+          tag: 'SUMMARY',
+          headline: '18 results summarized',
+          details: [],
+        }),
+      ).toBe('18 results summarized');
+
+      // Long first detail is not folded.
+      const longDetail = 'y'.repeat(81);
+      expect(
+        tableMessageFromPreview({
+          tag: 'SUMMARY',
+          headline: 'headline',
+          details: [longDetail],
+        }),
+      ).toBe('headline');
+    });
   });
 });
