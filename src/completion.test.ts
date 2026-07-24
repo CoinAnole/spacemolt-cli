@@ -288,11 +288,44 @@ describe('shell completion generation', () => {
         (candidate) => candidate.value,
       ),
     ).toContain('--plain');
+    const fuzzyPrefix = completeWords({ shell: 'fish', words: ['spacemolt', '--fu'], current: '--fu' }).map(
+      (candidate) => candidate.value,
+    );
+    expect(fuzzyPrefix).toContain('--fuzzy');
+    expect(fuzzyPrefix).toContain('--fuzzy-ids');
     expect(
-      completeWords({ shell: 'fish', words: ['spacemolt', '--fu'], current: '--fu' }).map(
+      completeWords({ shell: 'fish', words: ['spacemolt', '--no-fu'], current: '--no-fu' }).map(
         (candidate) => candidate.value,
       ),
-    ).toContain('--fuzzy');
+    ).toContain('--no-fuzzy-ids');
+  });
+
+  test('static completion scripts include --fuzzy-ids and keep --fuzzy as jq-only', () => {
+    const bash = generateCompletion('bash');
+    const fish = generateCompletion('fish');
+    const zsh = generateCompletion('zsh');
+
+    for (const script of [bash, fish, zsh]) {
+      expect(script).toContain('--fuzzy');
+      expect(script).toContain('--fuzzy-ids');
+      expect(script).toContain('--no-fuzzy-ids');
+    }
+
+    // Bash static fallback lists flag names only; fish/zsh embed descriptions.
+    for (const script of [fish, zsh]) {
+      expect(script).toContain('jq only');
+      expect(script).toContain('exact id/name only');
+      expect(script).toContain('not ID soft match');
+    }
+
+    const runtimeFuzzy = completeWords({
+      shell: 'fish',
+      words: ['spacemolt', '--fuzzy'],
+      current: '--fuzzy',
+    });
+    expect(runtimeFuzzy.map((c) => c.value)).toEqual(expect.arrayContaining(['--fuzzy', '--fuzzy-ids']));
+    expect(runtimeFuzzy.find((c) => c.value === '--fuzzy')?.description).toContain('jq only');
+    expect(runtimeFuzzy.find((c) => c.value === '--fuzzy-ids')?.description).toContain('exact id/name only');
   });
 
   test('bundled generated commands appear in runtime and static completion', () => {
