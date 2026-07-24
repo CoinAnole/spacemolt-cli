@@ -4,6 +4,10 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Help: `--raw-notifications` vs compact human formatting
+
+`--raw-notifications` skips notification **summarization** only (crafting, action results, system travel progress, and similar collapses). Human output still uses compact one-line formatting; it does not dump full nested notification JSON. Use `--json` / `--structured` / related machine modes when you need full objects.
+
 ### Curated `dismantle_outpost` (breaking rename)
 
 Dismantling a faction outpost is now a first-class top-level command, matching `build_outpost` and the skill/API verb `dismantle_outpost()`.
