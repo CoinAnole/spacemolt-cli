@@ -5,6 +5,10 @@ Leader: DriftMiner-7
 Members: 20
 Owned Stations: 2
 Treasury: 12345
+Ally access:
+  Fuel: yes
+  Facilities: no
+  Intel opt-out: no
 
 === Faction Facilities ===
 

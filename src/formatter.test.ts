@@ -3990,6 +3990,9 @@ describe('structuredContent formatters', () => {
       owned_bases: 2,
       treasury: 12345,
       is_member: true,
+      ally_fuel_access: true,
+      ally_facility_access: false,
+      ally_intel_opt_out: false,
       facilities: [
         {
           facility_id: 'facility-1',
@@ -4005,6 +4008,10 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Faction: Drift Matrix [DMX7] ===');
     expect(stdout).toContain('Leader: DriftMiner-7');
+    expect(stdout).toContain('Ally access:');
+    expect(stdout).toContain('  Fuel: yes');
+    expect(stdout).toContain('  Facilities: no');
+    expect(stdout).toContain('  Intel opt-out: no');
     expect(stdout).toContain('=== Faction Facilities ===');
     expect(stdout).toContain('Faction Fuel Bunker');
     expect(stdout).not.toContain('=== Response ===');

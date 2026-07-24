@@ -517,6 +517,9 @@ export const factionInfoFixture = {
   owned_bases: 2,
   treasury: 12345,
   is_member: true,
+  ally_fuel_access: true,
+  ally_facility_access: false,
+  ally_intel_opt_out: false,
   facilities: [
     {
       facility_id: 'facility-1',
