@@ -1861,16 +1861,60 @@ describe('structuredContent formatters', () => {
     const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
 
     expect(stderr).toBe('');
+    // Type column stays raw msg_type (K13).
+    expect(stdout).toContain('ship_commission_complete');
+    // Message uses Policy 5 scalar bag / last resort — never nested JSON dumps (PR4).
+    expect(stdout).toContain('commission_id=commission-object');
+    expect(stdout).toContain('commission_id=commission-nan');
+    expect(stdout).toContain('code=E_SAFE');
+    expect(stdout).toContain('ship_id=ship-infinite');
     expect(stdout).not.toContain('undefined');
     expect(stdout).not.toContain('NaN');
     expect(stdout).not.toContain('Infinity');
     expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('=== Response ===');
-    expect(stdout).toContain(
-      '{"commission_id":"commission-object","sender":{"malformed":true},"content":{"malformed":true}}',
-    );
-    expect(stdout).toContain('{"commission_id":"commission-nan","command":null,"code":"E_SAFE"}');
-    expect(stdout).toContain('{"commission_id":{"malformed":true},"ship_id":"ship-infinite","message":null}');
+    expect(stdout).not.toContain('{"commission_id"');
+    expect(stdout).not.toContain('"malformed"');
+  });
+
+  test('formats residual action_result notifications without nested ship JSON', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'action_result',
+          msg_type: 'action_result',
+          timestamp: '2026-07-24T19:05:05.000Z',
+          data: {
+            command: 'undock',
+            tick: 1433948,
+            result: {
+              message: 'Left berth 3.',
+              ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+              location: {
+                nearby_players: [{ username: 'ILC Knurl' }],
+                nearby_player_count: 88,
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    // Type stays raw msg_type (K13) — not the display tag ACTION RESULT.
+    expect(stdout).toContain('action_result');
+    expect(stdout).not.toMatch(/\|\s*ACTION RESULT\s*\|/);
+    expect(stdout).toContain('undock completed');
+    expect(stdout).toContain('1433948');
+    expect(stdout).toContain('Left berth 3.');
+    expect(stdout).not.toContain('Dust Devil');
+    expect(stdout).not.toContain('ILC Knurl');
+    expect(stdout).not.toContain('"hull"');
+    expect(stdout).not.toContain('nearby_players');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('formats crafting progress notifications as a summary row', () => {

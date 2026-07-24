@@ -948,19 +948,22 @@ describe('notification formatting', () => {
     });
   });
 
-  describe('PR2 table Message baseline parity (PREVIEW_HANDLERS)', () => {
-    /**
-     * Until PR4, pure preview Message must match today's table Message oracle.
-     * Use a high maxLineLength so truncation does not mask formatter drift — table cell
-     * width (120) is applied by printCompactTable, not formatNotificationMessage itself.
-     */
-    function expectBaselineMessageParity(notification: Record<string, unknown>) {
-      const options = { maxLineLength: 10_000 as const };
-      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, options));
-      expect(fromPreview).toBe(formatNotificationMessage(notification));
+  describe('PR4 table Message via shared preview', () => {
+    /** Table Message is always the pure preview pipeline (thin wrapper contract). */
+    function expectTableMessageFromPreview(notification: Record<string, unknown>) {
+      const fromPreview = tableMessageFromPreview(
+        formatNotificationPreview(notification, { maxLineLength: 120 }),
+      );
+      expect(formatNotificationMessage(notification)).toBe(fromPreview);
+      expectNoNestedJsonDump(fromPreview);
+      expectNoDiagnosticTokens(fromPreview);
     }
 
-    const baselineFixtures: Array<{ name: string; notification: Record<string, unknown> }> = [
+    const messageSnippetFixtures: Array<{
+      name: string;
+      notification: Record<string, unknown>;
+      snippets: string[];
+    }> = [
       {
         name: 'market_update zero items',
         notification: {
@@ -968,6 +971,7 @@ describe('notification formatting', () => {
           msg_type: 'market_update',
           data: { base_name: 'Empty Dock', tick: 1, items: [] },
         },
+        snippets: ['Empty Dock tick 1: 0 item updates'],
       },
       {
         name: 'market_update single item depth',
@@ -988,6 +992,12 @@ describe('notification formatting', () => {
             ],
           },
         },
+        snippets: [
+          'Haven Exchange tick 901337: 1 item update',
+          'Iron Ore',
+          'sell 40 @ 12',
+          'buy 25 @ 9',
+        ],
       },
       {
         name: 'market_update multi item + more',
@@ -1011,6 +1021,7 @@ describe('notification formatting', () => {
             ],
           },
         },
+        snippets: ['2 item updates', 'Iron Ore', 'sell 40 @ 12, 10 @ 11, +1 more', '+1 more'],
       },
       {
         name: 'market_update book emptied',
@@ -1022,6 +1033,7 @@ describe('notification formatting', () => {
             items: [{ item_name: 'Iron Ore', sell_orders: [], buy_orders: [] }],
           },
         },
+        snippets: ['Haven Exchange: 1 item update', 'Iron Ore book emptied'],
       },
       {
         name: 'crafting_update jobs path',
@@ -1044,6 +1056,14 @@ describe('notification formatting', () => {
             ],
           },
         },
+        snippets: [
+          '1 job tick 901500',
+          'Power Cell',
+          'rental',
+          '300cr escrowed',
+          '2 runs left',
+          'out Pack (pkg-9)',
+        ],
       },
       {
         name: 'crafting_update multi jobs +more',
@@ -1060,6 +1080,7 @@ describe('notification formatting', () => {
             ],
           },
         },
+        snippets: ['4 jobs tick 9', 'A, 1 run left', 'B, 2 runs left', 'C, 3 runs left', '+1 more'],
       },
       {
         name: 'crafting_update no-jobs package path',
@@ -1074,6 +1095,7 @@ describe('notification formatting', () => {
             output_package_label: 'Solo Pack',
           },
         },
+        snippets: ['Job completed', 'out Solo Pack (pkg-solo-1)', 'tick 901510'],
       },
       {
         name: 'crafting_update no-jobs rental escrow',
@@ -1086,6 +1108,7 @@ describe('notification formatting', () => {
             tick: 9,
           },
         },
+        snippets: ['rental facility', '120cr still escrowed', 'tick 9'],
       },
       {
         name: 'crafting_update empty fallback',
@@ -1094,6 +1117,7 @@ describe('notification formatting', () => {
           msg_type: 'crafting_update',
           data: {},
         },
+        snippets: ['Crafting update'],
       },
       {
         name: 'crafting_summary full fields',
@@ -1109,6 +1133,14 @@ describe('notification formatting', () => {
             latest_message: 'Still running.',
           },
         },
+        snippets: [
+          '3 crafting progress updates summarized',
+          'latest tick 901501',
+          '2 active jobs',
+          '1 on rented facility',
+          '300cr still escrowed',
+          // Full string exceeds maxLineLength 120; table Message truncates with ….
+        ],
       },
       {
         name: 'crafting_summary count only',
@@ -1117,6 +1149,7 @@ describe('notification formatting', () => {
           msg_type: 'crafting_summary',
           data: { count: 1 },
         },
+        snippets: ['1 crafting progress update summarized'],
       },
       {
         name: 'crafting_summary malformed numerics',
@@ -1130,6 +1163,7 @@ describe('notification formatting', () => {
             latest_message: { text: 'bad' },
           },
         },
+        snippets: ['0 crafting progress updates summarized'],
       },
       {
         name: 'action_result_summary with latest message',
@@ -1144,6 +1178,13 @@ describe('notification formatting', () => {
             latest_message: 'jumped → Alfirk',
           },
         },
+        snippets: [
+          '18 action results summarized',
+          'jump×12',
+          'latest tick 1434000',
+          'latest jump',
+          'latest: jumped → Alfirk',
+        ],
       },
       {
         name: 'action_result_summary without latest message',
@@ -1157,6 +1198,7 @@ describe('notification formatting', () => {
             latest_command: 'dock',
           },
         },
+        snippets: ['2 action results summarized', 'dock×2', 'latest tick 10', 'latest dock'],
       },
       {
         name: 'system_progress_summary action+destination',
@@ -1171,6 +1213,12 @@ describe('notification formatting', () => {
             latest_arrival_tick: 1433952,
           },
         },
+        snippets: [
+          '2 travel progress updates summarized',
+          'jump×2',
+          'latest jump → grumium',
+          'arrival tick 1433952',
+        ],
       },
       {
         name: 'system_progress_summary action only',
@@ -1182,6 +1230,7 @@ describe('notification formatting', () => {
             latest_action: 'travel',
           },
         },
+        snippets: ['1 travel progress update summarized', 'latest travel'],
       },
       {
         name: 'system_progress_summary destination only',
@@ -1193,6 +1242,7 @@ describe('notification formatting', () => {
             latest_destination: 'alfirk',
           },
         },
+        snippets: ['4 travel progress updates summarized', 'latest → alfirk'],
       },
       {
         name: 'ship_commission_complete receipt',
@@ -1209,70 +1259,113 @@ describe('notification formatting', () => {
             base_name: 'Earth Station',
           },
         },
+        snippets: [
+          'Commission commission-1',
+          'ship ship-42',
+          'Prospector (prospector)',
+          'Earth Station (earth_station)',
+        ],
       },
     ];
 
-    test.each(baselineFixtures)('parity: $name', ({ notification }) => {
-      expectBaselineMessageParity(notification);
+    test.each(messageSnippetFixtures)('Message: $name', ({ notification, snippets }) => {
+      expectTableMessageFromPreview(notification);
+      const message = formatNotificationMessage(notification);
+      for (const snippet of snippets) {
+        expect(message).toContain(snippet);
+      }
     });
 
-    test('get_notifications fixture non-regressable Message snippets', () => {
+    test('get_notifications fixture non-regressable market/commission/chat Message snippets', () => {
       const rows = getNotificationsFixture.notifications as Array<Record<string, unknown>>;
       for (const notification of rows) {
-        const msgType =
-          typeof notification.msg_type === 'string' ? notification.msg_type : String(notification.type ?? '');
-        // Only assert exact parity for PR2 typed special-cases; others use Policy 5 ladder
-        // (chat already covered by PR1) or still-independent table path.
-        if (
-          msgType === 'market_update' ||
-          msgType === 'ship_commission_complete' ||
-          msgType === 'crafting_update' ||
-          msgType === 'crafting_summary' ||
-          msgType === 'action_result_summary' ||
-          msgType === 'system_progress_summary'
-        ) {
-          expectBaselineMessageParity(notification);
-        }
+        expectTableMessageFromPreview(notification);
       }
 
       const market = rows.find((n) => n.msg_type === 'market_update')!;
       const commission = rows.find((n) => n.msg_type === 'ship_commission_complete')!;
       const chat = rows.find((n) => n.msg_type === 'chat_message')!;
+      const system = rows.find((n) => n.msg_type === 'system')!;
 
-      const marketMsg = tableMessageFromPreview(
-        formatNotificationPreview(market, { maxLineLength: 120 }),
-      );
+      const marketMsg = formatNotificationMessage(market);
       expect(marketMsg).toContain('Haven Exchange');
       expect(marketMsg).toContain('1 item update');
       expect(marketMsg).toContain('Iron Ore');
       expect(marketMsg).toContain('sell 40 @ 12');
       expect(marketMsg).toContain('buy 25 @ 9');
 
-      const commissionMsg = tableMessageFromPreview(
-        formatNotificationPreview(commission, { maxLineLength: 120 }),
-      );
+      const commissionMsg = formatNotificationMessage(commission);
       expect(commissionMsg).toContain('Commission commission-1');
       expect(commissionMsg).toContain('ship ship-42');
       expect(commissionMsg).toContain('Prospector (prospector)');
       expect(commissionMsg).toContain('Earth Station (earth_station)');
 
-      // Chat is Policy 5 ladder (PR1) — still non-regressable sender:content form.
-      const chatMsg = tableMessageFromPreview(formatNotificationPreview(chat, { maxLineLength: 120 }));
-      expect(chatMsg).toBe('Ibis: Clear skies over Sol today.');
-      expect(chatMsg).toBe(formatNotificationMessage(chat));
+      // Chat is Policy 5 ladder — non-regressable sender:content form (K11 / K12).
+      expect(formatNotificationMessage(chat)).toBe('Ibis: Clear skies over Sol today.');
+      expect(formatNotificationMessage(system)).toBe('Server maintenance scheduled.');
     });
 
-    test('ship_commission without receipt falls through (no forced empty headline)', () => {
+    test('residual action_result table Message is compact, never nested JSON', () => {
+      const notification = {
+        type: 'action_result',
+        msg_type: 'action_result',
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data: {
+          command: 'undock',
+          tick: 1433948,
+          result: {
+            message: 'Left berth 3.',
+            ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+            location: {
+              system_name: 'Nova Terra',
+              nearby_players: [{ username: 'ILC Knurl' }, { username: 'Cody' }],
+              nearby_player_count: 88,
+            },
+            details: { action: 'undock' },
+          },
+        },
+      };
+
+      const message = formatNotificationMessage(notification);
+      expect(message).toContain('undock completed');
+      expect(message).toContain('1433948');
+      // Short result.message folds into the table cell via tableMessageFromPreview.
+      expect(message).toContain('Left berth 3.');
+      expect(message).not.toContain('Dust Devil');
+      expect(message).not.toContain('ILC Knurl');
+      expect(message).not.toContain('"hull"');
+      expect(message).not.toContain('nearby_players');
+      expectNoNestedJsonDump(message);
+
+      // Without result.message, compact details scalar still lands in Message.
+      const detailsOnly = {
+        ...notification,
+        data: {
+          command: 'jump',
+          tick: 99,
+          result: {
+            ship: { id: 'ship-1', hull: 50 },
+            details: { action: 'jump', system: 'alfirk' },
+          },
+        },
+      };
+      const detailsMsg = formatNotificationMessage(detailsOnly);
+      expect(detailsMsg).toContain('jump completed');
+      expect(detailsMsg).toContain('jump → alfirk');
+      expectNoNestedJsonDump(detailsMsg);
+    });
+
+    test('ship_commission without receipt falls through to scalar bag (not JSON)', () => {
       const notification = {
         type: 'system',
         msg_type: 'ship_commission_complete',
         data: { commission_id: 'commission-only' },
       };
-      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
-      // Typed handler returns null → Policy 5 scalar bag (improvement over table JSON dump).
-      expect(preview.headline).toContain('commission_id=commission-only');
-      expect(preview.tag).toBe('SHIP_COMMISSION_COMPLETE');
-      expectNoNestedJsonDump(preview.headline);
+      const message = formatNotificationMessage(notification);
+      // Typed handler returns null → Policy 5 scalar bag.
+      expect(message).toContain('commission_id=commission-only');
+      expectNoNestedJsonDump(message);
+      expect(formatNotificationPreview(notification).tag).toBe('SHIP_COMMISSION_COMPLETE');
     });
 
     test('inline dual-use uses preview headline for market_update', () => {
@@ -1296,6 +1389,8 @@ describe('notification formatting', () => {
       const output = stripAnsi(formatNotification(notification).join('\n'));
       expect(output).toContain(`[MARKET] ${preview.headline}`);
       expect(output).toContain('Haven Exchange tick 901337: 1 item update');
+      // Table Message matches the same pure headline (no detail fold for market).
+      expect(formatNotificationMessage(notification)).toBe(preview.headline);
     });
   });
 });
