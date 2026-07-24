@@ -126,16 +126,24 @@ function tagColor(tag: string, c: NotificationColors): string {
  * Combat-domain tags (PR7a) approximate legacy colors (tag-level, not per-msg_type).
  */
 function previewTagColor(tag: string, c: NotificationColors): string {
+  const upper = tag.toUpperCase();
+  if (upper.startsWith('CHAT')) return c.cyan;
   switch (tag) {
     case 'MARKET':
     case 'CRAFTING':
     case 'ACTION RESULT':
     case 'ACTION RESULTS':
+    case 'PEACE':
+    case 'FRIEND':
       return c.green;
     case 'SHIP READY':
     case 'KILL':
       return `${c.green}${c.bright}`;
+    case 'BASE DESTROYED':
+    case 'WAR':
+      return `${c.red}${c.bright}`;
     case 'SYSTEM':
+    case 'FACTION':
       return c.magenta;
     case 'COMBAT':
     case 'POLICE':
@@ -144,6 +152,13 @@ function previewTagColor(tag: string, c: NotificationColors): string {
       return c.red;
     case 'DEATH':
       return `${c.red}${c.bright}`;
+    case 'TRADE':
+    case 'SCANNED':
+      return c.yellow;
+    case 'SCAN':
+      return c.cyan;
+    case 'RAID':
+      return c.red;
     default:
       return c.magenta;
   }

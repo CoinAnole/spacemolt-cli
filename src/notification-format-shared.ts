@@ -928,6 +928,269 @@ function previewBattleEnded(
  * PR7a: combat / police / pirate / battle domain.
  * Inline dual-use prefers this registry before writeLine (see formatNotification).
  */
+function scalarOr(value: unknown, fallback: string): string {
+  const scalar = safeScalar(value);
+  return scalar !== undefined ? String(scalar) : fallback;
+}
+
+function positiveNumber(value: unknown): number | undefined {
+  const n = finiteNumber(value);
+  return n !== undefined && n > 0 ? n : undefined;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+function detailPreview(
+  tag: string,
+  headline: string,
+  details: string[],
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return {
+    tag,
+    headline: truncate(headline, options),
+    details: details
+      .map((line) => truncate(line, options))
+      .filter((line) => line.length > 0)
+      .slice(0, options.maxDetails),
+  };
+}
+
+// ── Social / trade / friends / faction / base / scan (PR7b) ──────────────────
+
+function previewChatMessage(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const channel = scalarOr(data.channel, 'local');
+  const sender = scalarOr(data.sender, 'Unknown');
+  const content = data.content === undefined || data.content === null ? '' : String(data.content);
+  return headlinePreview(`CHAT:${channel}`, `${sender}: ${content}`, options);
+}
+
+function previewTradeOfferReceived(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const from = scalarOr(data.from_name, 'Someone');
+  const tradeId = scalarOr(data.trade_id, '');
+  const details: string[] = [];
+  const offer = positiveNumber(data.offer_credits);
+  if (offer !== undefined) details.push(`Offering: ${offer} credits`);
+  const request = positiveNumber(data.request_credits);
+  if (request !== undefined) details.push(`Requesting: ${request} credits`);
+  details.push(`Use: trade accept trade_id=${tradeId} or trade decline trade_id=${tradeId}`);
+  return detailPreview('TRADE', `Offer from ${from} (ID: ${tradeId})`, details, options);
+}
+
+function previewTradeComplete(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const partner = scalarOr(data.partner_name, scalarOr(data.with, 'someone'));
+  return headlinePreview('TRADE', `Trade completed with ${partner}!`, options);
+}
+
+function previewTradeDeclined(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview('TRADE', `Trade declined by ${scalarOr(data.from_name, 'someone')}`, options);
+}
+
+function previewTradeCancelled(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview('TRADE', `Trade cancelled (ID: ${scalarOr(data.trade_id, 'unknown')})`, options);
+}
+
+function previewFriendRequest(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'FRIEND',
+    `${scalarOr(data.from_name, 'Someone')} sent you a friend request`,
+    options,
+  );
+}
+
+function previewFriendRequestAccepted(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const who = scalarOr(data.from_name, scalarOr(data.username, 'Someone'));
+  return headlinePreview('FRIEND', `${who} accepted your friend request!`, options);
+}
+
+function previewFriendRemoved(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const who = scalarOr(data.from_name, scalarOr(data.username, 'Someone'));
+  return headlinePreview('FRIEND', `${who} removed you as a friend`, options);
+}
+
+function previewFriendOnline(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview('FRIEND', `${scalarOr(data.username, 'A friend')} is now online`, options);
+}
+
+function previewFriendOffline(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview('FRIEND', `${scalarOr(data.username, 'A friend')} went offline`, options);
+}
+
+function previewFactionInvite(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const factionId = scalarOr(data.faction_id, '');
+  return detailPreview(
+    'FACTION',
+    `You've been invited to join ${scalarOr(data.faction_name, 'a faction')}`,
+    [
+      `Use: join_faction faction_id=${factionId} or faction decline_invite faction_id=${factionId}`,
+    ],
+    options,
+  );
+}
+
+function previewFactionWarDeclared(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return detailPreview(
+    'WAR',
+    `${scalarOr(data.attacker_name, 'a faction')} has declared war on your faction!`,
+    [`Reason: ${scalarOr(data.reason, 'no reason given')}`],
+    options,
+  );
+}
+
+function previewFactionPeaceProposed(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const factionId = scalarOr(data.faction_id, '');
+  return detailPreview(
+    'PEACE',
+    `${scalarOr(data.proposer_name, 'a faction')} has proposed peace!`,
+    [
+      `Terms: ${scalarOr(data.terms, 'unconditional')}`,
+      `Use: faction accept_peace target_faction_id=${factionId}`,
+    ],
+    options,
+  );
+}
+
+function previewBaseRaidUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const current = finiteNumber(data.current_health) ?? 0;
+  const max = finiteNumber(data.max_health) ?? 0;
+  const dpt = finiteNumber(data.damage_per_tick) ?? 0;
+  return headlinePreview(
+    'RAID',
+    `${scalarOr(data.base_name, 'base')}: ${current}/${max} HP (-${dpt}/tick)`,
+    options,
+  );
+}
+
+function previewBaseDestroyed(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const details: string[] = [];
+  const wreckId = safeScalar(data.wreck_id);
+  if (wreckId !== undefined) details.push(`Wreck ID for looting: ${wreckId}`);
+  return detailPreview(
+    'BASE DESTROYED',
+    `${scalarOr(data.base_name, 'base')} has been destroyed!`,
+    details,
+    options,
+  );
+}
+
+function previewScanResult(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const target = scalarOr(data.username, scalarOr(data.target_id, 'unknown'));
+  if (data.success) {
+    const revealed = stringList(data.revealed_info);
+    const details: string[] = [];
+    const shipClass = safeScalar(data.ship_class);
+    if (shipClass !== undefined) details.push(`Ship: ${shipClass}`);
+    const hull = safeScalar(data.hull);
+    if (hull !== undefined) details.push(`Hull: ${hull}`);
+    const shield = safeScalar(data.shield);
+    if (shield !== undefined) details.push(`Shield: ${shield}`);
+    const cloaked = safeScalar(data.cloaked);
+    if (cloaked !== undefined) details.push(`Cloaked: ${cloaked}`);
+    return detailPreview(
+      'SCAN',
+      `Scan of ${target} revealed: ${revealed.join(', ')}`,
+      details,
+      options,
+    );
+  }
+  return headlinePreview(
+    'SCAN',
+    `Scan of ${target} failed - insufficient scan power`,
+    options,
+  );
+}
+
+function previewScanDetected(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const revealed = stringList(data.revealed_info);
+  return detailPreview(
+    'SCANNED',
+    `You were scanned by ${scalarOr(data.scanner_username, 'Unknown')} (${scalarOr(data.scanner_ship_class, 'unknown')})`,
+    [`They learned: ${revealed.join(', ')}`],
+    options,
+  );
+}
+
+/**
+ * Typed pure preview handlers. Grown over later PRs.
+ * null → fall through to Policy 5 generic path.
+ *
+ * PR2: table Message special-case types (market, crafting, summaries, commission).
+ * PR3: action_result + system (residual dump fixes).
+ * PR7b: social / trade / friends / faction / base / scan.
+ * Inline dual-use prefers this registry before writeLine (see formatNotification).
+ */
+
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   market_update: (data, _notification, options) =>
     headlinePreview('MARKET', formatMarketUpdateMessage(data), options),
@@ -971,6 +1234,24 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   battle_joined: previewBattleJoined,
   battle_left: previewBattleLeft,
   battle_ended: previewBattleEnded,
+  // Social domain (PR7b)
+  chat_message: previewChatMessage,
+  trade_offer_received: previewTradeOfferReceived,
+  trade_complete: previewTradeComplete,
+  trade_declined: previewTradeDeclined,
+  trade_cancelled: previewTradeCancelled,
+  friend_request: previewFriendRequest,
+  friend_request_accepted: previewFriendRequestAccepted,
+  friend_removed: previewFriendRemoved,
+  friend_online: previewFriendOnline,
+  friend_offline: previewFriendOffline,
+  faction_invite: previewFactionInvite,
+  faction_war_declared: previewFactionWarDeclared,
+  faction_peace_proposed: previewFactionPeaceProposed,
+  base_raid_update: previewBaseRaidUpdate,
+  base_destroyed: previewBaseDestroyed,
+  scan_result: previewScanResult,
+  scan_detected: previewScanDetected,
 };
 
 /** True when a native pure preview handler is registered for msgType (dual-registry dispatch). */
