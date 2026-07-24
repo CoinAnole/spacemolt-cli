@@ -3,6 +3,7 @@ import { formatNotificationMessage } from './display/notifications';
 import { getNotificationsFixture } from './display/notifications.fixtures';
 import {
   formatActionResultDetails,
+  formatInventoryPreview,
   formatNotificationPreview,
   hasPreviewHandler,
   tableMessageFromPreview,
@@ -778,6 +779,342 @@ describe('notification formatting', () => {
     );
 
     expect(stripAnsi(lines.join('\n'))).toContain('Marlowe: Docking.');
+  });
+
+  describe('formatInventoryPreview (K15 compact inventory)', () => {
+    test('formats count-map loot as N items: id×qty', () => {
+      expect(formatInventoryPreview({ ore_iron: 5, credits: 100 })).toBe(
+        '2 items: credits×100, ore_iron×5',
+      );
+      expect(formatInventoryPreview({ credits: 10 })).toBe('1 item: credits×10');
+    });
+
+    test('formats item arrays and nested bags', () => {
+      expect(
+        formatInventoryPreview([
+          { item_id: 'ore_iron', quantity: 5 },
+          { item_id: 'fuel_cell', quantity: 2 },
+        ]),
+      ).toBe('2 items: ore_iron×5, fuel_cell×2');
+
+      expect(
+        formatInventoryPreview({
+          items: [{ item_id: 'ore_iron', quantity: 5 }],
+          credits: 100,
+        }),
+      ).toBe('2 items: credits×100, ore_iron×5');
+    });
+
+    test('truncates with +N more and never emits nested JSON', () => {
+      const loot = {
+        a: 1,
+        b: 2,
+        c: 3,
+        d: 4,
+        e: 5,
+        f: 6,
+        g: 7,
+      };
+      const preview = formatInventoryPreview(loot, 3);
+      expect(preview).toMatch(/^7 items: /);
+      expect(preview).toContain('+4 more');
+      expect(preview).not.toContain('{');
+      expect(preview).not.toContain('[');
+    });
+
+    test('returns undefined for empty or non-inventory values', () => {
+      expect(formatInventoryPreview({})).toBeUndefined();
+      expect(formatInventoryPreview([])).toBeUndefined();
+      expect(formatInventoryPreview(null)).toBeUndefined();
+      expect(formatInventoryPreview('credits')).toBeUndefined();
+      expect(formatInventoryPreview({ nested: { ore_iron: 5 } })).toBeUndefined();
+    });
+
+    test('pirate_destroyed nested loot never JSON.stringifies', () => {
+      const output = stripAnsi(
+        formatNotification({
+          type: 'combat',
+          msg_type: 'pirate_destroyed',
+          timestamp: '2026-05-18T12:00:00.000Z',
+          data: {
+            loot: {
+              ore_iron: 5,
+              credits: 100,
+              fuel_cell: 2,
+              scrap: 1,
+            },
+          },
+        }).join('\n'),
+      );
+
+      expect(output).toContain('[PIRATES]');
+      expect(output).toContain('Pirate destroyed!');
+      expect(output).toContain('Loot: 4 items:');
+      expect(output).toContain('credits×100');
+      expect(output).toContain('ore_iron×5');
+      expect(output).not.toContain('"ore_iron"');
+      expect(output).not.toContain(JSON.stringify({ ore_iron: 5, credits: 100, fuel_cell: 2, scrap: 1 }));
+      expectNoDiagnosticTokens(output);
+
+      // Pure PREVIEW_HANDLERS path (PR7a) uses formatInventoryPreview too.
+      expect(hasPreviewHandler('pirate_destroyed')).toBe(true);
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'pirate_destroyed',
+        data: { loot: { ore_iron: 5, credits: 100, fuel_cell: 2, scrap: 1 } },
+      });
+      expect(preview.tag).toBe('PIRATES');
+      expect(preview.headline).toBe('Pirate destroyed!');
+      expect(preview.details.join(' ')).toContain('Loot: 4 items:');
+      expect(preview.details.join(' ')).toContain('credits×100');
+      expectNoNestedJsonDump(preview.details.join('\n'));
+    });
+  });
+
+  describe('PR7a combat domain pure previews', () => {
+    const combatTypes = [
+      'combat_update',
+      'player_died',
+      'player_kill',
+      'police_warning',
+      'police_spawn',
+      'police_combat',
+      'pirate_warning',
+      'pirate_spawn',
+      'pirate_combat',
+      'pirate_destroyed',
+      'battle_started',
+      'battle_update',
+      'battle_damage',
+      'battle_joined',
+      'battle_left',
+      'battle_ended',
+    ] as const;
+
+    test('registers pure PREVIEW_HANDLERS for every combat-domain type', () => {
+      for (const msgType of combatTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+      }
+    });
+
+    test('combat_update pure preview matches compact hit line', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'combat_update',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          attacker: 'raider',
+          target: 'Marlowe',
+          damage: 12,
+          damage_type: 'laser',
+          shield_hit: 8,
+          hull_hit: 4,
+          destroyed: true,
+        },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('COMBAT');
+      expect(preview.headline).toContain('raider hit Marlowe for 12 laser damage');
+      expect(preview.headline).toContain('shield: 8');
+      expect(preview.headline).toContain('hull: 4');
+      expect(preview.headline).toContain('DESTROYED');
+      expect(preview.details).toEqual([]);
+
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).toContain('[COMBAT]');
+      expect(output).toContain('raider hit Marlowe for 12 laser damage');
+    });
+
+    test('player_died headline is death summary; combat_log is details (no nested dump)', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_died',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          killer_name: 'Raider',
+          respawn_base: 'home',
+          ship_lost: 'Dust Devil',
+          clone_cost: 500,
+          combat_log: {
+            message: 'Last stand at the gate',
+            attacker_ship: 'raider_frigate',
+            weapons_used: { laser: 3, missile: 1 },
+            total_damage: 120,
+            shield_damage: 40,
+            hull_damage: 80,
+            combat_rounds: 4,
+            death_location: 'Gate Alpha',
+            death_system: 'Alfirk',
+            // Bulky junk must never appear in human output
+            full_ship: { hull: 0, modules: [{ id: 'laser' }] },
+          },
+        },
+      };
+
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('DEATH');
+      expect(preview.headline).toBe('Destroyed by Raider!');
+      expect(preview.details.some((line) => line.includes('Last stand at the gate'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Attacker ship: raider_frigate'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Weapons:'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Damage taken: 120 total'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Location: Gate Alpha in Alfirk'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Ship lost: Dust Devil'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Clone cost: 500 credits'))).toBe(true);
+      expect(preview.details.some((line) => line.includes('Respawned at: home'))).toBe(true);
+      // Never dump nested full_ship / modules
+      expectNoNestedJsonDump(preview.headline);
+      expectNoNestedJsonDump(preview.details.join('\n'));
+      expect(preview.details.join('\n')).not.toContain('full_ship');
+      expect(preview.details.join('\n')).not.toContain('"hull"');
+
+      // Table Message is headline-first (may fold a short first detail)
+      const tableMessage = tableMessageFromPreview(preview);
+      expect(tableMessage).toContain('Destroyed by Raider!');
+      expectNoNestedJsonDump(tableMessage);
+
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).toContain('[DEATH]');
+      expect(output).toContain('Destroyed by Raider!');
+      expect(output).toContain('Respawned at: home');
+      expect(output).not.toContain('full_ship');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('player_died malformed combat_log never dumps JSON', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: {
+          killer_name: 'Raider',
+          combat_log: 'not-a-record',
+          respawn_base: 'home',
+        },
+      });
+      expect(preview.tag).toBe('DEATH');
+      expect(preview.headline).toBe('Destroyed by Raider!');
+      expect(preview.details.join('\n')).toContain('Respawned at: home');
+      expect(preview.details.join('\n')).not.toContain('not-a-record');
+      expectNoNestedJsonDump(preview.details.join('\n'));
+
+      const police = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: { cause: 'police' },
+      });
+      expect(police.headline).toBe('Destroyed by system police!');
+
+      const selfDestruct = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: { cause: 'self_destruct' },
+      });
+      expect(selfDestruct.headline).toBe('Self-destructed!');
+    });
+
+    test('player_kill pure preview keeps bounty/wreck as details', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim_name: 'Raider', bounty: 50, wreck_id: 'wreck_1' },
+      });
+      expect(preview.tag).toBe('KILL');
+      expect(preview.headline).toContain('You destroyed Raider!');
+      expect(preview.details).toEqual(expect.arrayContaining(['Bounty: 50 credits', 'Wreck: wreck_1']));
+    });
+
+    test('police / pirate / battle pure previews stay compact', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'police_warning',
+          data: { message: 'Contraband', police_level: 2, response_ticks: 5 },
+        }).headline,
+      ).toBe('Contraband');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'police_spawn',
+          data: { num_drones: 3 },
+        }).headline,
+      ).toContain('3 police drone(s) arrived');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'police_combat',
+          data: { damage: 12, destroyed: true },
+        }).headline,
+      ).toContain('YOU WERE DESTROYED');
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'pirate_spawn',
+          data: { num_pirates: 2 },
+        }).headline,
+      ).toContain('2 pirate(s) appeared');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'pirate_combat',
+          data: { damage: 8, destroyed: true },
+        }).headline,
+      ).toContain('Pirate dealt 8 damage');
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_started',
+          data: { battle_id: 'battle_1' },
+        }).headline,
+      ).toContain('Battle started! ID: battle_1');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_update',
+          data: { tick: 9, message: 'shields holding' },
+        }).headline,
+      ).toContain('Battle tick 9 - shields holding');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_damage',
+          data: { attacker: 'Alpha', target: 'Beta', damage: 3 },
+        }).headline,
+      ).toBe('Alpha hit Beta for 3 damage');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_joined',
+          data: { username: 'Marlowe' },
+        }).headline,
+      ).toContain('Marlowe joined the battle');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe' },
+        }).headline,
+      ).toContain('Marlowe left the battle');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_ended',
+          data: { message: 'Victory' },
+        }).headline,
+      ).toBe('Battle ended! Victory');
+    });
+
+    test('K13: table Type stays raw msg_type; Message uses pure preview headline', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'combat_update',
+        data: {
+          attacker: 'raider',
+          target: 'ship',
+          damage: 4,
+          damage_type: 'laser',
+          shield_hit: 2,
+          hull_hit: 2,
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toContain('raider hit ship for 4 laser damage');
+      // Type column is independent of preview.tag (COMBAT); Message is not the tag.
+      expect(message).not.toBe('COMBAT');
+      expect(formatNotificationMessage(notification)).toBe(
+        tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })),
+      );
+    });
   });
 
   describe('Policy 5 pure preview ladder (formatNotificationPreview)', () => {

@@ -123,6 +123,7 @@ function tagColor(tag: string, c: NotificationColors): string {
 /**
  * Map known pure-preview tags to the colors previously used by writeLine handlers.
  * Interim until K14 severity→color is wired; unknown tags stay magenta.
+ * Combat-domain tags (PR7a) approximate legacy colors (tag-level, not per-msg_type).
  */
 function previewTagColor(tag: string, c: NotificationColors): string {
   switch (tag) {
@@ -132,9 +133,17 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'ACTION RESULTS':
       return c.green;
     case 'SHIP READY':
+    case 'KILL':
       return `${c.green}${c.bright}`;
     case 'SYSTEM':
       return c.magenta;
+    case 'COMBAT':
+    case 'POLICE':
+    case 'PIRATES':
+    case 'BATTLE':
+      return c.red;
+    case 'DEATH':
+      return `${c.red}${c.bright}`;
     default:
       return c.magenta;
   }
@@ -187,6 +196,8 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
       );
     },
 
+    // Dual-registry (PR7a): pure PREVIEW_HANDLERS cover combat domain first.
+    // Keep writeLine entries so NOTIFICATION_TYPES stays complete until PR7c.
     combat_update: (d, t, writeLine) => {
       const destroyed = d.destroyed ? ' - DESTROYED!' : '';
       writeLine(
@@ -482,6 +493,7 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
 
     pirate_destroyed: (d, t, writeLine) => {
       writeLine(`${c.dim}[${t}]${c.reset} ${c.green}[PIRATES]${c.reset} Pirate destroyed!`);
+      if (d.loot === undefined || d.loot === null) return;
       const lootPreview = formatInventoryPreview(d.loot);
       if (lootPreview) writeLine(`  Loot: ${lootPreview}`);
     },
