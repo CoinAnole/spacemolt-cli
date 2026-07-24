@@ -2110,6 +2110,36 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('latest:');
   });
 
+  test('formats system_progress_summary with arrival tick in table message preview', () => {
+    const fixture = {
+      count: 1,
+      notifications: [
+        {
+          type: 'system',
+          msg_type: 'system_progress_summary',
+          timestamp: '2026-07-24T19:05:35.000Z',
+          data: {
+            count: 2,
+            actions: { jump: 2 },
+            latest_action: 'jump',
+            latest_destination: 'grumium',
+            latest_arrival_tick: 1433952,
+          },
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('system_progress_summary');
+    expect(stdout).toContain('2 travel progress updates summarized');
+    expect(stdout).toContain('jump×2');
+    expect(stdout).toContain('latest jump → grumium');
+    expect(stdout).toContain('arrival tick 1433952');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats ship listings before generic market listings', () => {
     const { stdout, stderr } = captureStructuredOutput('browse_ships', browseShipsFixture);
 

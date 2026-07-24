@@ -1,3 +1,4 @@
+import { formatCountMap } from '../notification-format-shared.ts';
 import { type Notification, presentNotifications } from '../notification-summary.ts';
 import { formatShipCommissionReceipt } from '../ship-commission-receipt.ts';
 import type { GlobalOptions } from '../types.ts';
@@ -135,29 +136,10 @@ function formatCraftingSummary(data: Record<string, unknown>): string {
   return parts.join('; ');
 }
 
-function formatCountMapPreview(value: unknown, limit = 4): string | undefined {
-  if (!isRecord(value)) return undefined;
-  const entries = Object.entries(value)
-    .map(([key, count]) => {
-      const n = finiteNumber(count);
-      if (!key.trim() || n === undefined || n <= 0) return undefined;
-      return [key, n] as const;
-    })
-    .filter((entry): entry is readonly [string, number] => Boolean(entry))
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
-  if (!entries.length) return undefined;
-  const preview = entries
-    .slice(0, limit)
-    .map(([key, count]) => `${key}×${count}`)
-    .join(', ');
-  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
-  return `${preview}${suffix}`;
-}
-
 function formatActionResultSummary(data: Record<string, unknown>): string {
   const count = finiteNumber(data.count) ?? 0;
   const parts = [`${count} action result${count === 1 ? '' : 's'} summarized`];
-  const commands = formatCountMapPreview(data.commands);
+  const commands = formatCountMap(data.commands);
   if (commands) parts.push(commands);
   const latestTick = safeScalar(data.latest_tick);
   if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
@@ -171,7 +153,7 @@ function formatActionResultSummary(data: Record<string, unknown>): string {
 function formatSystemProgressSummary(data: Record<string, unknown>): string {
   const count = finiteNumber(data.count) ?? 0;
   const parts = [`${count} travel progress update${count === 1 ? '' : 's'} summarized`];
-  const actions = formatCountMapPreview(data.actions);
+  const actions = formatCountMap(data.actions);
   if (actions) parts.push(actions);
   const latestAction = safeScalar(data.latest_action);
   const latestDestination = safeScalar(data.latest_destination);
@@ -182,6 +164,8 @@ function formatSystemProgressSummary(data: Record<string, unknown>): string {
   } else if (latestDestination !== undefined) {
     parts.push(`latest → ${latestDestination}`);
   }
+  const latestArrival = safeScalar(data.latest_arrival_tick);
+  if (latestArrival !== undefined) parts.push(`arrival tick ${latestArrival}`);
   return parts.join('; ');
 }
 
