@@ -478,8 +478,8 @@ describe('notification formatting', () => {
       }).join('\n'),
     );
 
-    // Handler emits diagnostic tokens (NaN) → Policy 5 generic scalar bag fallback.
-    // Never dump nested ship_id object as JSON.
+    // Typed PREVIEW_HANDLER returns null (no receipt); writeLine also emits nothing;
+    // dual-registry falls through to Policy 5 scalar bag. Never dump nested ship_id as JSON.
     expect(output).toContain('commission_id=commission-only');
     expect(output).not.toContain('malformed');
     expectNoDiagnosticTokens(output);
