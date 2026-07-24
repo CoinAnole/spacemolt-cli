@@ -31,15 +31,17 @@ Exact name→id rewrites still work without any flag (examples: `travel earth`,
 
 Preferred (merge-safe — do **not** overwrite whole config.json):
 
-1. Edit `~/.config/spacemolt-cli/config.json` (or macOS/Windows config path) and **add**
+1. Merge-safe setter: `spacemolt config fuzzy-ids on` (or `off`). Prefer this over hand-editing.
+2. Or edit `~/.config/spacemolt-cli/config.json` (or macOS/Windows config path) and **add**
    `"fuzzyIds": true` alongside existing keys such as `defaultProfile`.
-2. Or export for a shell session / tools wrapper:
+3. Or export for a shell session / tools wrapper:
    `export SPACEMOLT_FUZZY_IDS=1`
-3. Or per-invocation: `spacemolt --fuzzy-ids sell iron 50`
+4. Or per-invocation: `spacemolt --fuzzy-ids sell iron 50`
 
 **Do not** run `echo '{"fuzzyIds":true}' > config.json` — that wipes `defaultProfile` / `userAgent`.
 
 Precedence: **CLI flag > env > config.json boolean > default (`false`)**. Use `--no-fuzzy-ids` to force off.
+`spacemolt doctor` reports the effective soft-match preference and source.
 
 #### Exact-id path (no soft match)
 

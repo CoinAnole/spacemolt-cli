@@ -13,7 +13,8 @@ import {
 import { colorsForPlain } from './output-style.ts';
 import { trimTrailingSlash } from './response.ts';
 import { API_BASE, type SpaceMoltConfig, VERSION } from './runtime.ts';
-import { ACTIVE_PROFILE, getDefaultProfile, SessionManager, tryGetSessionPath } from './session.ts';
+import { resolveFuzzyIdsEnabled } from './runtime-config.ts';
+import { ACTIVE_PROFILE, getDefaultProfile, loadCliConfig, SessionManager, tryGetSessionPath } from './session.ts';
 import { requestJson } from './transport.ts';
 
 export interface DoctorCheck {
@@ -108,6 +109,30 @@ export async function runDoctor(config?: SpaceMoltConfig, env: NodeJS.ProcessEnv
   }
 
   checks.push(pass('version', `v${VERSION}`));
+
+  try {
+    const cliConfig = loadCliConfig(undefined, undefined, env);
+    const effectiveFuzzyIds = resolveFuzzyIdsEnabled({}, env, cliConfig);
+    const rawEnv = env.SPACEMOLT_FUZZY_IDS?.trim().toLowerCase();
+    const envSet = rawEnv === '1' || rawEnv === 'true' || rawEnv === '0' || rawEnv === 'false';
+    const configSet = typeof cliConfig.fuzzyIds === 'boolean';
+    const source = envSet ? 'env' : configSet ? 'config' : 'default';
+    const message = effectiveFuzzyIds
+      ? `soft match on (${source})`
+      : source === 'default'
+        ? 'exact only (default)'
+        : `exact only (${source})`;
+    checks.push(
+      pass(
+        'fuzzy-ids',
+        message,
+        'CLI --fuzzy-ids/--no-fuzzy-ids > SPACEMOLT_FUZZY_IDS > config.json fuzzyIds > off',
+      ),
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    checks.push(fail('fuzzy-ids', 'error reading preference', msg));
+  }
 
   try {
     const cacheDir = defaultOpenApiCacheDir(env);

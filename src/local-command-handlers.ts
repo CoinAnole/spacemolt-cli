@@ -105,17 +105,23 @@ function describeOpenApiCacheState(cachedVersion: string, bundledVersion: string
 }
 
 type ProfilePayload = { action: 'list' } | { action: 'default'; name?: string };
-type ConfigPayload = { action: 'user-agent'; mode: 'show' | 'set' | 'reset'; value?: string };
+type ConfigPayload =
+  | { action: 'user-agent'; mode: 'show' | 'set' | 'reset'; value?: string }
+  | { action: 'fuzzy-ids'; mode: 'show' | 'set'; value?: boolean };
+
+type ConfigResult =
+  | { action: 'user-agent'; userAgent: string; custom: boolean }
+  | { action: 'fuzzy-ids'; fuzzyIds: boolean; configured: boolean };
 
 const PROFILE_USAGE = 'spacemolt profile [list|default [name]]';
-const CONFIG_USAGE = 'spacemolt config user-agent [value|--reset]';
+const CONFIG_USAGE = 'spacemolt config user-agent [value|--reset] | spacemolt config fuzzy-ids [on|off]';
 
-const configHandler: CommandHandler<ConfigPayload, { userAgent: string; custom: boolean }> = {
+const configHandler: CommandHandler<ConfigPayload, ConfigResult> = {
   name: 'config',
   requiresNetwork: false,
   parse(argv) {
     const action = argv[1];
-    if (action !== 'user-agent') {
+    if (action !== 'user-agent' && action !== 'fuzzy-ids') {
       return {
         ok: false,
         error: {
@@ -128,6 +134,27 @@ const configHandler: CommandHandler<ConfigPayload, { userAgent: string; custom: 
     }
 
     const value = argv.slice(2).join(' ').trim();
+
+    if (action === 'fuzzy-ids') {
+      if (!value) return { ok: true, payload: { action, mode: 'show' } };
+      const normalized = value.toLowerCase();
+      if (normalized === 'on' || normalized === 'true' || normalized === '1') {
+        return { ok: true, payload: { action, mode: 'set', value: true } };
+      }
+      if (normalized === 'off' || normalized === 'false' || normalized === '0') {
+        return { ok: true, payload: { action, mode: 'set', value: false } };
+      }
+      return {
+        ok: false,
+        error: {
+          code: 'validation_error',
+          message: `Invalid fuzzy-ids value: ${value}`,
+          customStderr: `Error: Invalid fuzzy-ids value "${value}" (use on or off)\nUsage: spacemolt config fuzzy-ids [on|off]`,
+          exitCode: 1,
+        },
+      };
+    }
+
     if (!value) return { ok: true, payload: { action, mode: 'show' } };
     if (value === '--reset') return { ok: true, payload: { action, mode: 'reset' } };
 
@@ -147,6 +174,23 @@ const configHandler: CommandHandler<ConfigPayload, { userAgent: string; custom: 
   },
   run(payload, _options, _client, context) {
     let config = loadCliConfig(context?.env.HOME, undefined, context?.env);
+
+    if (payload.action === 'fuzzy-ids') {
+      if (payload.mode === 'set') {
+        config = updateCliConfig(
+          (current) => ({ ...current, fuzzyIds: payload.value }),
+          context?.env.HOME,
+          undefined,
+          context?.env,
+        );
+      }
+      return {
+        action: 'fuzzy-ids',
+        fuzzyIds: Boolean(config.fuzzyIds),
+        configured: typeof config.fuzzyIds === 'boolean',
+      };
+    }
+
     if (payload.mode === 'set') {
       config = updateCliConfig(
         (current) => ({ ...current, userAgent: payload.value }),
@@ -169,11 +213,26 @@ const configHandler: CommandHandler<ConfigPayload, { userAgent: string; custom: 
     }
 
     return {
+      action: 'user-agent',
       userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
       custom: Boolean(config.userAgent),
     };
   },
   render(result, options, _client, context) {
+    if (result.action === 'fuzzy-ids') {
+      if (options.json) {
+        writeJson(context, {
+          structuredContent: { fuzzyIds: result.fuzzyIds, configured: result.configured },
+        });
+      } else {
+        const out = context?.writer.out.bind(context.writer) ?? console.log;
+        const state = result.fuzzyIds ? 'on' : 'off';
+        const note = result.configured ? '' : ' (default)';
+        out(`Fuzzy IDs: ${state}${note}`);
+      }
+      return 0;
+    }
+
     if (options.json) {
       writeJson(context, { structuredContent: { userAgent: result.userAgent, custom: result.custom } });
     } else {
