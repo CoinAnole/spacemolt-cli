@@ -636,6 +636,16 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
 
 export const NOTIFICATION_TYPES = Object.keys(createNotificationHandlers(colorsForPlain(false))).sort();
 
+/**
+ * Interim dual-registry dispatch (PR1):
+ *   1. legacy writeLine handler by msgType (with try/catch + hasDiagnosticToken guard)
+ *   2. Policy 5 generic via formatNotificationPreview (consults empty PREVIEW_HANDLERS)
+ *
+ * With PREVIEW_HANDLERS empty this matches design step 4a. When PR2+ registers pure
+ * handlers for types that still have writeLine handlers and dual-uses them inline,
+ * flip order to: PREVIEW_HANDLERS → writeLine → Policy 5 generic (keep diagnostic guard).
+ * Do not scrape writeLine/ANSI for table Message.
+ */
 export function formatNotification(notification: Notification, options?: { plain?: boolean }): string[] {
   const lines: string[] = [];
   const writeLine = (message = '') => lines.push(message);

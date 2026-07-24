@@ -34,6 +34,12 @@ export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT):
 }
 
 // ── Shared notification preview (Policy 5 ladder + typed handlers) ──────────
+//
+// K8 module-size intent: keep pure preview + formatCountMap in this file for PR1.
+// Design allows a split to `notification-preview.ts` only if growth is ≫~200 lines
+// *and* the split pays for itself. Typed PREVIEW_HANDLERS (PR2+) may push past that
+// threshold — prefer one module until dual registries / table wire-up settle, then
+// split if navigation suffers. Do not re-flag K8 solely for line count mid-migration.
 
 /** Normalized envelope matching `normalizedNotification()` in `src/notifications.ts`. */
 export interface NormalizedNotification {
@@ -85,11 +91,18 @@ export interface NotificationPreviewOptions {
   maxLineLength?: number;
   /** Max detail lines / scalar bag keys produced by generic expansion. Default: 6. */
   maxDetails?: number;
-  /** Max object depth for generic scalar walk. Default: 2. */
+  /**
+   * Max object depth for a future nested scalar walk. Default: 2.
+   * **Reserved:** accepted and resolved today but unused by Policy 5 (top-level scalar bag only).
+   * Will apply if/when a depth-limited nested walk is added; not a live control yet.
+   */
   maxDepth?: number;
   /**
-   * When true (`--verbose-notifications`), include `omittedHint` as a detail line
-   * and allow extra preferred scalars in details — still never nested ship/location/nearby dumps.
+   * When true (`--verbose-notifications`), allow extra preferred scalars / verbose detail policy.
+   * **Reserved until PR 8:** accepted and resolved today but does **not** change preview output.
+   * `omittedHint` is already computed on scalar-bag/last-resort paths; showing it as a dim
+   * detail line is an **inline adapter** concern under `--verbose-notifications` (PR 8), not
+   * the pure builder. Still never expands nested ship/location/nearby dumps.
    */
   verbose?: boolean;
 }
@@ -98,6 +111,7 @@ type ResolvedPreviewOptions = Required<
   Pick<NotificationPreviewOptions, 'maxLineLength' | 'maxDetails' | 'maxDepth' | 'verbose'>
 >;
 
+/** Defaults include reserved `maxDepth` / `verbose` so later PRs can read them without API churn. */
 const DEFAULT_PREVIEW_OPTIONS: ResolvedPreviewOptions = {
   maxLineLength: 200,
   maxDetails: 6,
@@ -186,9 +200,13 @@ type PreviewHandler = (
 /**
  * Typed pure preview handlers. Grown over later PRs.
  * null → fall through to Policy 5 generic path.
+ *
+ * PR1: empty — Policy 5 generic covers unknown types.
+ * PR2+: register table-parity / domain handlers here. Inline dual-use must prefer this
+ * registry before writeLine (see formatNotification dispatch note in notifications.ts).
  */
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
-  // PR1: empty — typed handlers land in later PRs. Policy 5 generic covers unknown types.
+  // Empty until typed handlers land.
 };
 
 function resolveOptions(options?: NotificationPreviewOptions): ResolvedPreviewOptions {
