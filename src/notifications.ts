@@ -140,8 +140,10 @@ function formatGenericNotification(
   time: string,
   c: NotificationColors,
   writeLine: (message?: string) => void,
+  verbose = false,
 ): void {
   const preview = formatNotificationPreview({
+    verbose,
     type: notification.type,
     msg_type: notification.msgType,
     timestamp: notification.timestamp,
@@ -164,7 +166,10 @@ export const NOTIFICATION_TYPES = [...PREVIEW_HANDLER_TYPES];
  *
  * Table Message is independent (tableMessageFromPreview); Type stays raw msg_type (K13).
  */
-export function formatNotification(notification: Notification, options?: { plain?: boolean }): string[] {
+export function formatNotification(
+  notification: Notification,
+  options?: { plain?: boolean; verbose?: boolean },
+): string[] {
   const lines: string[] = [];
   const writeLine = (message = '') => lines.push(message);
   const normalized = normalizedNotification(notification);
@@ -173,6 +178,7 @@ export function formatNotification(notification: Notification, options?: { plain
 
   try {
     const preview = formatNotificationPreview({
+      verbose: Boolean(options?.verbose),
       type: normalized.type,
       msg_type: normalized.msgType,
       timestamp: normalized.timestamp,
@@ -185,7 +191,7 @@ export function formatNotification(notification: Notification, options?: { plain
   }
 
   lines.length = 0;
-  formatGenericNotification(normalized, time, c, writeLine);
+  formatGenericNotification(normalized, time, c, writeLine, Boolean(options?.verbose));
   return lines;
 }
 
@@ -193,14 +199,14 @@ export function displayNotifications(
   notifications?: APIResponse['notifications'],
   writer?: CliWriter,
   quiet = false,
-  options?: { plain?: boolean },
+  options?: { plain?: boolean; verbose?: boolean },
 ): void {
   if (!Array.isArray(notifications) || !notifications.length) return;
   if (quiet) return;
 
   const out = writer?.out.bind(writer) ?? console.log;
   for (const notification of notifications) {
-    for (const line of formatNotification(notification, options)) {
+    for (const line of formatNotification(notification, { plain: options?.plain, verbose: options?.verbose })) {
       out(line);
     }
   }

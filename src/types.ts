@@ -28,6 +28,8 @@ export interface GlobalOptions {
   allowUnknown: boolean;
   dryRun: boolean;
   rawNotifications?: boolean;
+  /** Inline omittedHint + extra preferred scalars only; never nested bulky dumps (K16 / PR 8). */
+  verboseNotifications?: boolean;
   fuzzy?: boolean;
   profile?: string;
   field?: string;

@@ -2010,6 +2010,15 @@ describe('CLI output modes', () => {
     expect(result.options.args).toEqual(['get_notifications']);
   });
 
+  test('global option parser handles verbose-notifications flag', () => {
+    const result = parseGlobalOptions(['--verbose-notifications', 'get_status']);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.options.verboseNotifications).toBe(true);
+    expect(result.options.args).toEqual(['get_status']);
+  });
+
   test('global option parser handles watch, format, jq, profile, fuzzy, and dry-run values', () => {
     const result = parseGlobalOptions([
       '--watch',
