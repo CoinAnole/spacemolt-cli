@@ -829,3 +829,267 @@ test('renders bulk craft results with rental and fee columns', () => {
   expect(stdout).toContain('Summary: 2 succeeded, 0 failed, 2 total');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('renders packaged craft quote with gates, ready, and output package preview', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        mode: 'craft',
+        quantity: 10,
+        runs: 10,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+        facility_id: 'workshop:player:station',
+        cost: {
+          inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20 }],
+        },
+        credits_total: 0,
+        effective_time_per_run: 2,
+        est_completion_tick: 1131800,
+        ready: false,
+        package_ids: ['pkg-ore-1', 'pkg-ore-2'],
+        output_package_label: 'Plate Pack',
+        produces: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 10 }],
+        gates: {
+          package_match: { ok: true },
+          inputs: { ok: false, reason: 'contents do not match recipe × quantity' },
+          credits: { ok: true },
+          logistics: { ok: true },
+          cargo_container: { ok: true },
+          output_size: { ok: true },
+          destination_room: { ok: true },
+          future_gate: { ok: false, reason: 'not yet supported' },
+        },
+        output_package: {
+          label: 'Plate Pack',
+          size_used: 12,
+          size_max: 50,
+          container_consumed: 1,
+          reclaimed_containers: 2,
+          items: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 10 }],
+        },
+        message: 'Quote only — nothing queued.',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Quote ===');
+  expect(stdout).toContain('Recipe: Iron Plates');
+  expect(stdout).toContain('Ready: no');
+  expect(stdout).toContain('Gates:');
+  // Known gates in triage order, then unknown keys alphabetically.
+  const gateBlock = stdout.slice(stdout.indexOf('Gates:'));
+  const order = [
+    'package_match: ok',
+    'inputs: FAIL — contents do not match recipe × quantity',
+    'credits: ok',
+    'logistics: ok',
+    'cargo_container: ok',
+    'output_size: ok',
+    'destination_room: ok',
+    'future_gate: FAIL — not yet supported',
+  ];
+  let cursor = 0;
+  for (const line of order) {
+    const at = gateBlock.indexOf(line, cursor);
+    expect(at).toBeGreaterThanOrEqual(0);
+    cursor = at + line.length;
+  }
+  expect(stdout).toContain('Output package: Plate Pack');
+  expect(stdout).toContain('Size: 12/50');
+  expect(stdout).toContain('Container consumed: 1');
+  expect(stdout).toContain('Reclaimed containers: 2');
+  expect(stdout).toContain('Contents: 10x Iron Plate');
+  expect(stdout).toContain('Package IDs: pkg-ore-1,pkg-ore-2');
+  expect(stdout).toContain('Output package label: Plate Pack');
+  expect(stdout).toContain('Inputs: 20x Iron Ore');
+  expect(stdout).not.toContain('Inputs available');
+  expect(stdout).not.toContain('Credits available');
+  expect(stdout).not.toContain('Capacity available');
+  expect(stdout).not.toContain('Credits total');
+  expect(stdout).not.toContain('credits_total');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('ordinary craft quote still surfaces have_* fields', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'quote',
+        cost: {
+          inputs: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 }],
+        },
+        dry_run: true,
+        effective_time_per_run: 3.5,
+        est_completion_tick: 1131729,
+        facility_id: 'workshop:player:station',
+        have_credits: true,
+        have_inputs: true,
+        have_capacity: false,
+        mode: 'craft',
+        produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+        recipe: 'Build Power Cell',
+        runs: 1,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Quote ===');
+  expect(stdout).toContain('Inputs available: true');
+  expect(stdout).toContain('Credits available: true');
+  expect(stdout).toContain('Capacity available: no');
+  expect(stdout).not.toContain('Ready:');
+  expect(stdout).not.toContain('Gates:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders output package on ordinary packaged craft job', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'job',
+        job_id: 'craft-pkg-job-1',
+        recipe: 'Iron Plates',
+        mode: 'craft',
+        runs: 10,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+        facility_id: 'workshop:player:station',
+        effective_time_per_run: 2,
+        est_completion_tick: 1131805,
+        produces: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 10 }],
+        escrowed: {
+          inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20 }],
+        },
+        output_package_id: 'pkg-out-1',
+        output_package_label: 'Plate Pack',
+        message: 'Queued with sealed output package.',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queued ===');
+  expect(stdout).toContain('Job: craft-pkg-job-1');
+  expect(stdout).toContain('Output package: Plate Pack (pkg-out-1)');
+  expect(stdout).not.toContain('Package: pkg-out-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders Package and Label columns on craft queue when present', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        kind: 'queue',
+        jobs: [
+          {
+            job_id: 'pkg-queue-1',
+            package_id: 'pkg-abc',
+            label: 'Spare Parts',
+            recipe: 'pack_package',
+            mode: 'craft',
+            runs_done: 0,
+            runs_remaining: 1,
+            runs_total: 1,
+            venue: 'Station Workshop',
+            facility_id: 'workshop:player:station',
+            eta_ticks: 3,
+            status: 'queued',
+            position: 0,
+          },
+          {
+            job_id: 'craft-queue-2',
+            recipe: 'Build Power Cell',
+            mode: 'craft',
+            runs_done: 0,
+            runs_remaining: 2,
+            runs_total: 2,
+            venue: 'Station Workshop',
+            facility_id: 'workshop:player:station',
+            eta_ticks: 5,
+            status: 'queued',
+            position: 1,
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Package');
+  expect(stdout).toContain('Label');
+  expect(stdout).toContain('pkg-abc');
+  expect(stdout).toContain('Spare Parts');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders Package and Label columns on bulk craft results when present', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'bulk',
+        mode: 'craft',
+        results: [
+          {
+            index: 0,
+            success: true,
+            job_id: 'bulk-pkg-1',
+            package_id: 'pkg-bulk-1',
+            label: 'Bulk Plates',
+            recipe: 'Iron Plates',
+            runs: 5,
+            venue: 'Own Smelter',
+            message: 'Queued sealed.',
+          },
+          {
+            index: 1,
+            success: true,
+            job_id: 'bulk-plain-1',
+            recipe: 'Build Power Cell',
+            runs: 1,
+            venue: 'Station Workshop',
+            message: 'Queued.',
+          },
+        ],
+        summary: { total: 2, succeeded: 2, failed: 0 },
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Package');
+  expect(stdout).toContain('Label');
+  expect(stdout).toContain('pkg-bulk-1');
+  expect(stdout).toContain('Bulk Plates');
+  expect(stdout).not.toContain('=== Response ===');
+});

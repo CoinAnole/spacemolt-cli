@@ -267,6 +267,76 @@ export const craftQueuedFixture = {
   },
 };
 
+/** Packaged craft dry-run (kind=packaged_quote): gates/ready + output package preview. */
+export const craftPackagedQuoteFixture = {
+  details: {
+    action: 'craft',
+    kind: 'packaged_quote',
+    dry_run: true,
+    recipe: 'Iron Plates',
+    mode: 'craft',
+    quantity: 10,
+    runs: 10,
+    venue: 'Station Workshop',
+    venue_type: 'workshop',
+    facility_id: 'workshop:player-1:nova_terra_central',
+    cost: {
+      inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20 }],
+      fee: 0,
+      labor: 0,
+    },
+    credits_total: 0,
+    effective_time_per_run: 2,
+    est_completion_tick: 1131800,
+    ready: false,
+    package_ids: ['pkg-ore-1', 'pkg-ore-2'],
+    output_package_label: 'Plate Pack',
+    produces: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 10 }],
+    gates: {
+      package_match: { ok: true },
+      inputs: { ok: false, reason: 'contents do not match recipe × quantity' },
+      credits: { ok: true },
+      logistics: { ok: true },
+      cargo_container: { ok: true },
+      output_size: { ok: true },
+      destination_room: { ok: true },
+    },
+    output_package: {
+      label: 'Plate Pack',
+      size_used: 12,
+      size_max: 50,
+      container_consumed: 1,
+      reclaimed_containers: 2,
+      items: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 10 }],
+    },
+    message: 'Quote only — nothing queued. Packaged craft is not ready.',
+  },
+};
+
+/** Queued ordinary craft that seals output into a package. */
+export const craftPackagedJobFixture = {
+  details: {
+    action: 'craft',
+    kind: 'job',
+    effective_time_per_run: 2,
+    escrowed: {
+      inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20 }],
+    },
+    est_completion_tick: 1131805,
+    facility_id: 'workshop:player-1:nova_terra_central',
+    job_id: 'craft-pkg-job-1',
+    message: 'Crafting queued: sealed output will be package Plate Pack.',
+    mode: 'craft',
+    produces: [{ item_id: 'iron_plate', name: 'Iron Plate', quantity: 10 }],
+    recipe: 'Iron Plates',
+    runs: 10,
+    venue: 'Station Workshop',
+    venue_type: 'workshop',
+    output_package_id: 'pkg-out-1',
+    output_package_label: 'Plate Pack',
+  },
+};
+
 export const recycleQuoteFixture = {
   details: {
     action: 'recycle',
@@ -525,6 +595,8 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
   craft: { command: 'craft', fixture: craftQueuedFixture },
+  craft_packaged_quote: { command: 'craft', fixture: craftPackagedQuoteFixture },
+  craft_packaged_job: { command: 'craft', fixture: craftPackagedJobFixture },
   recycle: { command: 'recycle', fixture: recycleQuoteFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },

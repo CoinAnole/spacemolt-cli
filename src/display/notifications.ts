@@ -73,6 +73,14 @@ function formatCreditsAmount(value: unknown): string | undefined {
   return `${number.toLocaleString()}cr`;
 }
 
+function formatOutputPackagePreview(job: Record<string, unknown>): string | undefined {
+  const outLabel = safeScalar(job.output_package_label);
+  const outId = safeScalar(job.output_package_id);
+  if (outLabel !== undefined && outId !== undefined) return `out ${outLabel} (${outId})`;
+  if (outLabel !== undefined || outId !== undefined) return `out ${outLabel ?? outId}`;
+  return undefined;
+}
+
 function formatCraftingJobPreview(job: Record<string, unknown>): string {
   const recipe = safeScalar(job.recipe) ?? safeScalar(job.job_id) ?? safeScalar(job.id) ?? 'job';
   const parts = [String(recipe)];
@@ -82,6 +90,8 @@ function formatCraftingJobPreview(job: Record<string, unknown>): string {
   const remaining = finiteNumber(job.runs_remaining);
   if (remaining !== undefined) parts.push(`${remaining.toLocaleString()} run${remaining === 1 ? '' : 's'} left`);
   if (job.completed === true) parts.push('completed');
+  const outPackage = formatOutputPackagePreview(job);
+  if (outPackage !== undefined) parts.push(outPackage);
   return parts.join(', ');
 }
 
@@ -100,6 +110,8 @@ function formatCraftingUpdate(data: Record<string, unknown>): string {
   if (data.external === true) parts.push('rental facility');
   const escrow = formatCreditsAmount(data.escrowed_credits);
   if (escrow !== undefined) parts.push(`${escrow} still escrowed`);
+  const outPackage = formatOutputPackagePreview(data);
+  if (outPackage !== undefined) parts.push(outPackage);
   if (data.tick !== undefined && data.tick !== null) parts.push(`tick ${data.tick}`);
   return parts.join('; ') || 'Crafting update';
 }
