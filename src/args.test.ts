@@ -1183,6 +1183,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['build_outpost', 'Aurora Cache']).payload).toEqual({
       name: 'Aurora Cache',
     });
+    expect(parseOk(['dismantle_outpost']).payload).toEqual({});
     expect(parseOk(['buy_ship_license', 'solarian_frigate']).payload).toEqual({
       ship_class: 'solarian_frigate',
     });

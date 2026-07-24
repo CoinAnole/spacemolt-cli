@@ -448,10 +448,23 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description: 'Deploy a lightweight faction outpost at the current eligible lawless point of interest.',
     example: 'spacemolt build_outpost "Aurora Cache"',
     discoverWith: ['get_base_cost', 'get_poi'],
-    seeAlso: ['get_base_cost', 'station_info'],
+    seeAlso: ['get_base_cost', 'station_info', 'dismantle_outpost'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/deploy_outpost',
     positionals: ['name'],
+  },
+  dismantle_outpost: {
+    // Omit `usage` entirely — do NOT set usage: ''.
+    // help.ts returns config.usage whenever defined; '' suppresses generated usage
+    // and prints a blank usage line. Empty schema + positionals: [] matches facility_owned.
+    description:
+      "Dismantle the faction outpost you are docked at, packing it into an Outpost Kit in your ship's cargo. Requires ManageBases. Empty faction storage (items, fuel) and remove garaged ships first; leave free cargo room for the kit. Founding fee is not refunded. You are undocked afterward. Built-in outpost fuel bunkers cannot be dismantled alone — use this command for the whole outpost.",
+    example: 'spacemolt dismantle_outpost',
+    discoverWith: ['build_outpost', 'storage_view', 'storage_withdraw'],
+    seeAlso: ['build_outpost', 'facility_dismantle', 'faction_dismantle', 'storage_view'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/dismantle_outpost',
+    positionals: [],
   },
   buy_ship_license: {
     usage: '<ship_class>',
@@ -500,10 +513,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild.',
+      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with `dismantle_outpost`.',
     example: 'spacemolt facility_dismantle facility-1',
     discoverWith: ['facility_owned'],
-    seeAlso: ['facility_owned', 'facility_build', 'facility_repair'],
+    seeAlso: ['facility_owned', 'facility_build', 'facility_repair', 'dismantle_outpost'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/dismantle',
     positionals: ['facility_id'],
@@ -737,10 +750,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild.',
+      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with `dismantle_outpost`.',
     example: 'spacemolt faction_dismantle facility-1',
     discoverWith: ['faction_facility_owned'],
-    seeAlso: ['faction_facility_owned', 'faction_build', 'facility_repair'],
+    seeAlso: ['faction_facility_owned', 'faction_build', 'facility_repair', 'dismantle_outpost'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_dismantle',
     positionals: ['facility_id'],

@@ -981,6 +981,35 @@ export const genericFormatters = [
     },
   ),
 
+  // Outpost dismantle — kit refund (distinct schema from facility/faction dismantle)
+  formatter(
+    (r, command) => {
+      if (!commandNameEquals(command, 'dismantle_outpost')) return false;
+      if (typeof r.base_id !== 'string' || typeof r.name !== 'string') return false;
+      if (r.kit_item === undefined && r.kit_refunded === undefined) return false;
+
+      emitLine(`\n${c.bright}=== Outpost Dismantled ===${c.reset}`);
+      emitLine(`Outpost: ${r.name}`);
+      emitLine(`Base ID: ${r.base_id}`);
+      if (r.kit_item !== undefined) emitLine(`Kit returned: ${r.kit_item}`);
+      if (r.kit_refunded !== undefined) {
+        emitLine(`Kit refunded: ${formatYesNo(r.kit_refunded) ?? r.kit_refunded}`);
+      }
+      if (r.fee_refunded !== undefined) {
+        emitLine(`Fee refunded: ${formatCount(r.fee_refunded) ?? r.fee_refunded}cr`);
+      }
+      // Details-level flag only — never the cyan envelope banner
+      if (r.auto_undocked !== undefined) {
+        emitOptionalValue('Auto-undocked', formatYesNo(r.auto_undocked));
+      }
+      if (typeof r.hint === 'string' && r.hint) {
+        emitLine(`\n${c.yellow}${r.hint}${c.reset}`);
+      }
+      return true;
+    },
+    { commands: ['dismantle_outpost'] },
+  ),
+
   // Simple message
   formatter(
     (r) => {

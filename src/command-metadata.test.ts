@@ -815,10 +815,47 @@ describe('command metadata', () => {
       const config = BUNDLED_COMMAND_REGISTRY.commandGroups[group]?.actions[action]?.config;
       expect(config?.description).toContain('one package per upgrade tier');
       expect(config?.description).toContain('cargo_container');
+      expect(config?.description).toContain('dismantle_outpost');
+      expect(config?.description).toContain('fuel bunkers cannot be dismantled alone');
+      expect(config?.seeAlso).toContain('dismantle_outpost');
       const help = captureHelp(`${group} ${action}`);
       expect(help).toContain('cargo_container');
       expect(help).toContain('package');
+      expect(help).toContain('dismantle_outpost');
     }
+  });
+
+  test('dismantle_outpost is curated top-level with empty payload and bunker preconditions', () => {
+    const config = COMMANDS.dismantle_outpost;
+    expect(config).toBeDefined();
+    expect(config?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'dismantle_outpost',
+      method: 'POST',
+    });
+    expect(config?.args).toEqual([]);
+    expect(config?.description).toContain('ManageBases');
+    expect(config?.description).toContain('Outpost Kit');
+    expect(config?.description).toContain('fuel bunkers cannot be dismantled alone');
+    expect(config?.example).toBe('spacemolt dismantle_outpost');
+    expect(config?.seeAlso).toEqual(
+      expect.arrayContaining(['build_outpost', 'facility_dismantle', 'faction_dismantle', 'storage_view']),
+    );
+    expect(config?.discoverWith).toEqual(
+      expect.arrayContaining(['build_outpost', 'storage_view', 'storage_withdraw']),
+    );
+    // Must not blank the usage line via usage: ''
+    expect(config?.usage === undefined || config.usage.length > 0).toBe(true);
+    // Generated facility_dismantle_outpost is route-claimed away
+    expect(COMMANDS.facility_dismantle_outpost).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.dismantle_outpost).toBeUndefined();
+
+    const help = captureHelp('dismantle_outpost');
+    expect(help).toContain('ManageBases');
+    expect(help).toContain('Outpost Kit');
+    expect(help).toContain('fuel bunkers');
+
+    expect(COMMANDS.build_outpost?.seeAlso).toContain('dismantle_outpost');
   });
 
   test('storage deposit/withdraw and salvage tow help document ship towing', () => {
@@ -1153,6 +1190,9 @@ describe('command metadata', () => {
         .map(([command]) => command)
         .sort(),
     ).toEqual([
+      // MCP-only auth helpers remain generated fallbacks (not curated CLI commands).
+      'auth_login_link',
+      'auth_login_link_poll',
       'shipping_accept',
       'shipping_cancel',
       'shipping_deliver',
