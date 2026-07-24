@@ -114,7 +114,7 @@ describe('notification formatting', () => {
           ],
         },
       },
-      // Dual-use PREVIEW_HANDLERS: table Message quality (first item + +N more).
+      // Pure PREVIEW_HANDLERS: table Message quality (first item + +N more).
       snippets: [
         '[MARKET]',
         'Haven Exchange tick 901337: 2 item updates',
@@ -325,7 +325,7 @@ describe('notification formatting', () => {
           },
         ],
       },
-      // Dual-use table Message: "1 job tick 901338: recipe, rental, …"
+      // Pure PREVIEW_HANDLER table Message: "1 job tick 901338: recipe, rental, …"
       snippets: [
         '[CRAFTING]',
         '1 job tick 901338',
@@ -481,8 +481,8 @@ describe('notification formatting', () => {
       }).join('\n'),
     );
 
-    // Typed PREVIEW_HANDLER returns null (no receipt); writeLine also emits nothing;
-    // dual-registry falls through to Policy 5 scalar bag. Never dump nested ship_id as JSON.
+    // Typed PREVIEW_HANDLER returns null (no receipt); pure registry falls through
+    // to Policy 5 scalar bag. Never dump nested ship_id as JSON.
     expect(output).toContain('commission_id=commission-only');
     expect(output).not.toContain('malformed');
     expectNoDiagnosticTokens(output);
@@ -1285,6 +1285,268 @@ describe('notification formatting', () => {
     });
   });
 
+  describe('PR7b pure social domain previews', () => {
+    const socialTypes = [
+      'chat_message',
+      'trade_offer_received',
+      'trade_complete',
+      'trade_declined',
+      'trade_cancelled',
+      'friend_request',
+      'friend_request_accepted',
+      'friend_removed',
+      'friend_online',
+      'friend_offline',
+      'faction_invite',
+      'faction_war_declared',
+      'faction_peace_proposed',
+      'base_raid_update',
+      'base_destroyed',
+      'scan_result',
+      'scan_detected',
+    ] as const;
+
+    test('social domain types are registered as pure PREVIEW_HANDLERS', () => {
+      for (const msgType of socialTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+      }
+    });
+
+    test('chat_message pure preview keeps channel tag and sender:content', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: { channel: 'local', sender: 'Ibis', content: 'Clear skies over Sol today.' },
+      });
+      expect(preview.tag).toBe('CHAT:local');
+      expect(preview.headline).toBe('Ibis: Clear skies over Sol today.');
+      expect(preview.details).toEqual([]);
+      // Table Message is headline only (K11) — Type stays raw chat_message elsewhere.
+      expect(tableMessageFromPreview(preview)).toBe('Ibis: Clear skies over Sol today.');
+    });
+
+    test('trade_offer_received pure preview includes prompts and credits details', () => {
+      const preview = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_offer_received',
+        data: {
+          from_name: 'Dockmaster',
+          trade_id: 'trade_1',
+          offer_credits: 5,
+          request_credits: 2,
+        },
+      });
+      expect(preview.tag).toBe('TRADE');
+      expect(preview.headline).toContain('Offer from Dockmaster');
+      expect(preview.headline).toContain('trade_1');
+      expect(preview.details.some((d) => d.includes('Offering: 5 credits'))).toBe(true);
+      expect(preview.details.some((d) => d.includes('Requesting: 2 credits'))).toBe(true);
+      expect(preview.details.some((d) => d.includes('trade accept trade_id=trade_1'))).toBe(true);
+    });
+
+    test('faction_invite pure preview includes decline prompt', () => {
+      const preview = formatNotificationPreview({
+        type: 'faction',
+        msg_type: 'faction_invite',
+        data: { faction_name: 'Wardens', faction_id: 'fac_1' },
+      });
+      expect(preview.tag).toBe('FACTION');
+      expect(preview.headline).toContain('Wardens');
+      expect(preview.details.join('\n')).toContain('join_faction faction_id=fac_1');
+      expect(preview.details.join('\n')).toContain('faction decline_invite faction_id=fac_1');
+    });
+
+    test('scan_result pure preview never dumps malformed revealed_info object', () => {
+      const preview = formatNotificationPreview({
+        type: 'scan',
+        msg_type: 'scan_result',
+        data: { success: true, username: 'Raider', revealed_info: { bad: true }, ship_class: 'fighter' },
+      });
+      expect(preview.tag).toBe('SCAN');
+      expect(preview.headline).toContain('Scan of Raider revealed:');
+      expect(preview.headline).not.toContain('[object Object]');
+      expect(preview.details).toContain('Ship: fighter');
+      expectNoNestedJsonDump(JSON.stringify(preview));
+    });
+
+    test('inline pure registry: social types go through pure preview path', () => {
+      const output = stripAnsi(
+        formatNotification({
+          type: 'chat',
+          msg_type: 'chat_message',
+          timestamp: '2026-05-18T12:00:00.000Z',
+          data: { channel: 'faction', sender: 'Marlowe', content: 'Rally at Sol.' },
+        }).join('\n'),
+      );
+      expect(output).toContain('[CHAT:faction]');
+      expect(output).toContain('Marlowe: Rally at Sol.');
+    });
+
+    test('base_raid_update pure preview is compact HP line', () => {
+      const preview = formatNotificationPreview({
+        type: 'base',
+        msg_type: 'base_raid_update',
+        data: { base_name: 'Outpost', current_health: 80, max_health: 100, damage_per_tick: 5 },
+      });
+      expect(preview.tag).toBe('RAID');
+      expect(preview.headline).toBe('Outpost: 80/100 HP (-5/tick)');
+    });
+  });
+
+  describe('PR7c remainder pure previews + pure registry', () => {
+    const remainderTypes = [
+      'mining_yield',
+      'drone_update',
+      'drone_destroyed',
+      'skill_level_up',
+      'skill_xp_gain',
+      'pilotless_ship',
+      'reconnected',
+      'version_info',
+      'queue_cleared',
+      'action_error',
+      'poi_arrival',
+      'poi_departure',
+    ] as const;
+
+    test('registers pure PREVIEW_HANDLERS for every remainder type', () => {
+      for (const msgType of remainderTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+      }
+    });
+
+    test('NOTIFICATION_TYPES equals sorted PREVIEW_HANDLERS keys (pure registry)', () => {
+      // knownCases coverage already asserts equality; double-check pure source of truth.
+      expect(NOTIFICATION_TYPES).toEqual([...NOTIFICATION_TYPES].sort());
+      for (const msgType of NOTIFICATION_TYPES) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+      }
+      // Remainder types are included in the sole registry.
+      for (const msgType of remainderTypes) {
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+      }
+    });
+
+    test('mining_yield pure preview is compact yield line', () => {
+      const preview = formatNotificationPreview({
+        type: 'mining',
+        msg_type: 'mining_yield',
+        data: { quantity: 5, resource_id: 'ore_iron', remaining: 42 },
+      });
+      expect(preview.tag).toBe('MINED');
+      expect(preview.headline).toBe('+5x ore_iron (42 remaining at POI)');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('skill_level_up and skill_xp_gain pure previews', () => {
+      const levelUp = formatNotificationPreview({
+        msg_type: 'skill_level_up',
+        data: { skill_id: 'mining', new_level: 3, xp_gained: 50 },
+      });
+      expect(levelUp.tag).toBe('LEVEL UP');
+      expect(levelUp.headline).toContain('mining is now level 3');
+      expect(levelUp.headline).toContain('+50 XP');
+
+      const xp = formatNotificationPreview({
+        msg_type: 'skill_xp_gain',
+        data: { skill_id: 'mining', xp_gained: 5, current_xp: 10, next_level_xp: 20 },
+      });
+      expect(xp.tag).toBe('XP');
+      expect(xp.headline).toBe('+5 XP in mining (10/20)');
+    });
+
+    test('drone_update / drone_destroyed pure previews', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'drone_update',
+          data: { drone_type: 'combat', damage: 6, target_id: 'pirate' },
+        }).headline,
+      ).toContain('combat drone dealt 6 damage to pirate');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'drone_destroyed',
+          data: { drone_type: 'combat', drone_id: 'drone_1' },
+        }).headline,
+      ).toContain('combat drone was destroyed! (ID: drone_1)');
+    });
+
+    test('pilotless_ship and reconnected use details for secondary lines', () => {
+      const pilotless = formatNotificationPreview({
+        msg_type: 'pilotless_ship',
+        data: { player_username: 'Marlowe', ship_class: 'hauler', ticks_remaining: 3 },
+      });
+      expect(pilotless.tag).toBe('PILOTLESS');
+      expect(pilotless.headline).toContain("Marlowe's hauler is now pilotless");
+      expect(pilotless.details.some((d) => d.includes('Vulnerable for 3 ticks'))).toBe(true);
+
+      const reconnected = formatNotificationPreview({
+        msg_type: 'reconnected',
+        data: { message: 'Back online', was_pilotless: true, ticks_remaining: 2 },
+      });
+      expect(reconnected.tag).toBe('RECONNECTED');
+      expect(reconnected.headline).toBe('Back online');
+      expect(reconnected.details.some((d) => d.includes('recovered with 2 ticks'))).toBe(true);
+    });
+
+    test('poi_arrival / poi_departure / queue / version / action_error pure previews', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'poi_arrival',
+          data: { clan_tag: 'SOL', username: 'Marlowe', poi_name: 'Earth' },
+        }).headline,
+      ).toBe('[SOL] Marlowe has arrived at Earth');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'poi_departure',
+          data: { clan_tag: 'SOL', username: 'Marlowe', poi_name: 'Earth' },
+        }).headline,
+      ).toBe('[SOL] Marlowe has departed from Earth');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'queue_cleared',
+          data: { reason: 'manual' },
+        }).headline,
+      ).toBe('Action queue cleared: manual');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'version_info',
+          data: { version: '2.0.0' },
+        }).headline,
+      ).toBe('Server version: 2.0.0');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'action_error',
+          data: { command: 'travel', tick: 77, message: 'drive offline' },
+        }).headline,
+      ).toBe('travel failed (tick 77): drive offline');
+    });
+
+    test('inline layout-only: remainder types render via pure preview (no writeLine registry)', () => {
+      const output = stripAnsi(
+        formatNotification({
+          type: 'mining',
+          msg_type: 'mining_yield',
+          timestamp: '2026-05-18T12:00:00.000Z',
+          data: { quantity: 5, resource_id: 'ore_iron', remaining: 42 },
+        }).join('\n'),
+      );
+      expect(output).toContain('[MINED]');
+      expect(output).toContain('+5x ore_iron');
+      expect(output).toContain('42 remaining at POI');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('reconnected missing message has safe fallback (no undefined token)', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'reconnected',
+        data: {},
+      });
+      expect(preview.tag).toBe('RECONNECTED');
+      expect(preview.headline).toBe('Reconnected');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+  });
+
   describe('PR4 table Message via shared preview', () => {
     /** Table Message is always the pure preview pipeline (thin wrapper contract). */
     function expectTableMessageFromPreview(notification: Record<string, unknown>) {
@@ -1637,7 +1899,7 @@ describe('notification formatting', () => {
       expect(commissionMsg).toContain('Prospector (prospector)');
       expect(commissionMsg).toContain('Earth Station (earth_station)');
 
-      // Chat is Policy 5 ladder — non-regressable sender:content form (K11 / K12).
+      // Chat pure PREVIEW_HANDLER — non-regressable sender:content form (K11 / K12).
       expect(formatNotificationMessage(chat)).toBe('Ibis: Clear skies over Sol today.');
       expect(formatNotificationMessage(system)).toBe('Server maintenance scheduled.');
     });
@@ -1705,7 +1967,7 @@ describe('notification formatting', () => {
       expect(formatNotificationPreview(notification).tag).toBe('SHIP_COMMISSION_COMPLETE');
     });
 
-    test('inline dual-use uses preview headline for market_update', () => {
+    test('inline pure registry uses preview headline for market_update', () => {
       const notification = {
         type: 'market',
         msg_type: 'market_update',

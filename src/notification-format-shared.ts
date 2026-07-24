@@ -603,8 +603,7 @@ function previewSystem(
 
 // ── Combat domain pure previews (PR7a) ──────────────────────────────────────
 // combat_update, player_died, player_kill, police_*, pirate_*, battle_*
-// Dual-registry: writeLine handlers remain in notifications.ts for NOTIFICATION_TYPES
-// until PR7c deletes them. Table Type stays raw msg_type (K13).
+// Table Type stays raw msg_type (K13).
 
 function damageLabel(value: unknown, fallback: string | number = 0): string | number {
   const n = finiteNumber(value);
@@ -1181,14 +1180,179 @@ function previewScanDetected(
   );
 }
 
+// ── Remainder domain pure previews (PR7c) ───────────────────────────────────
+// mining, drones, skills, queue, version, poi_*, reconnected, pilotless, action_error
+// Completes pure registry; writeLine handlers deleted in notifications.ts.
+
+function previewMiningYield(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const quantity = damageLabel(data.quantity, 0);
+  const resource = scalarOr(data.resource_id, 'ore');
+  const remaining = data.remaining !== undefined && data.remaining !== null ? safeScalar(data.remaining) : undefined;
+  const remainingMsg = remaining !== undefined ? ` (${remaining} remaining at POI)` : '';
+  return headlinePreview('MINED', `+${quantity}x ${resource}${remainingMsg}`, options);
+}
+
+function previewDroneUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'DRONE',
+    `Your ${scalarOr(data.drone_type, 'drone')} drone dealt ${damageLabel(data.damage, 0)} damage to ${scalarOr(data.target_id, 'target')}`,
+    options,
+  );
+}
+
+function previewDroneDestroyed(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'DRONE',
+    `Your ${scalarOr(data.drone_type, 'drone')} drone was destroyed! (ID: ${scalarOr(data.drone_id, '')})`,
+    options,
+  );
+}
+
+function previewSkillLevelUp(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'LEVEL UP',
+    `${scalarOr(data.skill_id, 'unknown')} is now level ${damageLabel(data.new_level, 0)}! (+${damageLabel(data.xp_gained, 0)} XP)`,
+    options,
+  );
+}
+
+function previewSkillXpGain(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const xp = data.xp_gained !== undefined && data.xp_gained !== null ? data.xp_gained : data.xp;
+  const current = safeScalar(data.current_xp);
+  const next = safeScalar(data.next_level_xp);
+  const currentLabel = current !== undefined ? String(current) : '?';
+  const nextLabel = next !== undefined ? String(next) : '?';
+  return headlinePreview(
+    'XP',
+    `+${damageLabel(xp, 0)} XP in ${scalarOr(data.skill_id, 'unknown')} (${currentLabel}/${nextLabel})`,
+    options,
+  );
+}
+
+function previewPilotlessShip(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return detailPreview(
+    'PILOTLESS',
+    `${scalarOr(data.player_username, 'unknown')}'s ${scalarOr(data.ship_class, 'ship')} is now pilotless!`,
+    [`Vulnerable for ${damageLabel(data.ticks_remaining, 0)} ticks - can be attacked without resistance`],
+    options,
+  );
+}
+
+function previewReconnected(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const details: string[] = [];
+  if (data.was_pilotless) {
+    details.push(
+      `Ship was pilotless - recovered with ${damageLabel(data.ticks_remaining, 0)} ticks to spare`,
+    );
+  }
+  return detailPreview(
+    'RECONNECTED',
+    message !== undefined ? firstLine(String(message)) : 'Reconnected',
+    details,
+    options,
+  );
+}
+
+function previewVersionInfo(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview('VERSION', `Server version: ${scalarOr(data.version, 'unknown')}`, options);
+}
+
+function previewQueueCleared(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const reason = safeScalar(data.reason);
+  const suffix = reason !== undefined ? `: ${firstLine(String(reason))}` : '';
+  return headlinePreview('QUEUE', `Action queue cleared${suffix}`, options);
+}
+
+function previewActionError(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const command = scalarOr(data.command, 'action');
+  const tick = safeScalar(data.tick);
+  const tickLabel = tick !== undefined ? String(tick) : '?';
+  const error = safeScalar(data.message) ?? safeScalar(data.code) ?? 'unknown error';
+  return headlinePreview(
+    'ACTION FAILED',
+    `${command} failed (tick ${tickLabel}): ${firstLine(String(error))}`,
+    options,
+  );
+}
+
+function previewPoiArrival(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const clan = safeScalar(data.clan_tag);
+  const tag = clan !== undefined ? `[${clan}] ` : '';
+  return headlinePreview(
+    'ARRIVAL',
+    `${tag}${scalarOr(data.username, 'Someone')} has arrived at ${scalarOr(data.poi_name, 'this POI')}`,
+    options,
+  );
+}
+
+function previewPoiDeparture(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const clan = safeScalar(data.clan_tag);
+  const tag = clan !== undefined ? `[${clan}] ` : '';
+  return headlinePreview(
+    'DEPARTURE',
+    `${tag}${scalarOr(data.username, 'Someone')} has departed from ${scalarOr(data.poi_name, 'this POI')}`,
+    options,
+  );
+}
+
 /**
- * Typed pure preview handlers. Grown over later PRs.
+ * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
  *
  * PR2: table Message special-case types (market, crafting, summaries, commission).
  * PR3: action_result + system (residual dump fixes).
+ * PR7a: combat / police / pirate / battle.
  * PR7b: social / trade / friends / faction / base / scan.
- * Inline dual-use prefers this registry before writeLine (see formatNotification).
+ * PR7c: remainder (mining, drones, skills, queue, version, poi, reconnected, pilotless, action_error).
  */
 
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
@@ -1215,6 +1379,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   },
 
   action_result: previewActionResult,
+  action_error: previewActionError,
   system: previewSystem,
 
   // PR7a combat domain
@@ -1252,12 +1417,30 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   base_destroyed: previewBaseDestroyed,
   scan_result: previewScanResult,
   scan_detected: previewScanDetected,
+  // Remainder (PR7c)
+  mining_yield: previewMiningYield,
+  drone_update: previewDroneUpdate,
+  drone_destroyed: previewDroneDestroyed,
+  skill_level_up: previewSkillLevelUp,
+  skill_xp_gain: previewSkillXpGain,
+  pilotless_ship: previewPilotlessShip,
+  reconnected: previewReconnected,
+  version_info: previewVersionInfo,
+  queue_cleared: previewQueueCleared,
+  poi_arrival: previewPoiArrival,
+  poi_departure: previewPoiDeparture,
 };
 
-/** True when a native pure preview handler is registered for msgType (dual-registry dispatch). */
+/** True when a native pure preview handler is registered for msgType. */
 export function hasPreviewHandler(msgType: string): boolean {
   return typeof PREVIEW_HANDLERS[msgType] === 'function';
 }
+
+/**
+ * Sorted msg_type keys with pure PREVIEW_HANDLERS.
+ * After PR7c this is the sole known-type registry (NOTIFICATION_TYPES derives from it).
+ */
+export const PREVIEW_HANDLER_TYPES: readonly string[] = Object.keys(PREVIEW_HANDLERS).sort();
 
 function resolveOptions(options?: NotificationPreviewOptions): ResolvedPreviewOptions {
   return {
@@ -1447,7 +1630,6 @@ export function normalizeNotification(notification: unknown): NormalizedNotifica
 /**
  * Try a typed PREVIEW_HANDLERS entry only.
  * Returns null when no handler is registered, the handler returns null, or the handler throws.
- * Used by interim inline dual-registry dispatch (PREVIEW_HANDLERS → writeLine → generic).
  */
 export function tryTypedNotificationPreview(
   notification: unknown,
@@ -1472,8 +1654,9 @@ export function tryTypedNotificationPreview(
  * Build a human preview for any notification (raw or synthetic).
  * Never throws; never emits diagnostic tokens; never stringifies nested objects for human recovery.
  *
- * Completeness: Policy 5 ladder + PREVIEW_HANDLERS (PR2 table-parity + PR3 action_result/system + PR7a combat domain).
+ * Completeness: Policy 5 ladder + full PREVIEW_HANDLERS registry (PR2–PR7c pure known types).
  * Table Message always consumes this via tableMessageFromPreview (PR4 / K13 Message only).
+ * Inline formatNotification is layout-only over this builder (PR7c).
  */
 export function formatNotificationPreview(
   notification: unknown,
