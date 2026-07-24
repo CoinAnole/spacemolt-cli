@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { formatNotificationMessage } from './display/notifications';
+import { getNotificationsFixture } from './display/notifications.fixtures';
 import {
   formatNotificationPreview,
   tableMessageFromPreview,
@@ -109,16 +111,12 @@ describe('notification formatting', () => {
           ],
         },
       },
+      // Dual-use PREVIEW_HANDLERS: table Message quality (first item + +N more).
       snippets: [
         '[MARKET]',
-        'Haven Exchange',
-        'tick 901337',
-        '2 item updates',
-        'Iron Ore',
-        'sell 40 @ 12',
-        'buy 25 @ 9',
-        'ore_copper',
-        'book emptied',
+        'Haven Exchange tick 901337: 2 item updates',
+        'Iron Ore sell 40 @ 12, buy 25 @ 9',
+        '+1 more',
       ],
     },
     {
@@ -175,7 +173,7 @@ describe('notification formatting', () => {
         'storage×1',
         'latest tick 1434000',
         'latest jump',
-        'Latest: jumped → Alfirk',
+        'latest: jumped → Alfirk',
       ],
     },
     {
@@ -306,7 +304,7 @@ describe('notification formatting', () => {
         '2 active jobs',
         '1 on rented facility',
         '300cr still escrowed',
-        'Latest: Crafting fuel cells.',
+        'latest: Crafting fuel cells.',
       ],
     },
     {
@@ -324,10 +322,10 @@ describe('notification formatting', () => {
           },
         ],
       },
+      // Dual-use table Message: "1 job tick 901338: recipe, rental, …"
       snippets: [
         '[CRAFTING]',
-        '1 job update',
-        'tick 901338',
+        '1 job tick 901338',
         'Assemble Power Cell',
         'rental',
         '300cr escrowed',
@@ -508,7 +506,7 @@ describe('notification formatting', () => {
     expect(output).not.toContain('Infinity');
     expect(output).not.toContain('[object Object]');
     expect(output).not.toContain('latest tick');
-    expect(output).not.toContain('Latest:');
+    expect(output).not.toContain('latest:');
   });
 
   test('crafting summary formatter handles non-object data defensively', () => {
@@ -859,6 +857,357 @@ describe('notification formatting', () => {
           details: [longDetail],
         }),
       ).toBe('headline');
+    });
+  });
+
+  describe('PR2 table Message baseline parity (PREVIEW_HANDLERS)', () => {
+    /**
+     * Until PR4, pure preview Message must match today's table Message oracle.
+     * Use a high maxLineLength so truncation does not mask formatter drift — table cell
+     * width (120) is applied by printCompactTable, not formatNotificationMessage itself.
+     */
+    function expectBaselineMessageParity(notification: Record<string, unknown>) {
+      const options = { maxLineLength: 10_000 as const };
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, options));
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+    }
+
+    const baselineFixtures: Array<{ name: string; notification: Record<string, unknown> }> = [
+      {
+        name: 'market_update zero items',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: { base_name: 'Empty Dock', tick: 1, items: [] },
+        },
+      },
+      {
+        name: 'market_update single item depth',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_id: 'haven_exchange',
+            base_name: 'Haven Exchange',
+            tick: 901337,
+            items: [
+              {
+                item_id: 'ore_iron',
+                item_name: 'Iron Ore',
+                sell_orders: [{ price_each: 12, quantity: 40, source: 'station' }],
+                buy_orders: [{ price_each: 9, quantity: 25 }],
+              },
+            ],
+          },
+        },
+      },
+      {
+        name: 'market_update multi item + more',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            tick: 901337,
+            items: [
+              {
+                item_name: 'Iron Ore',
+                sell_orders: [
+                  { price_each: 12, quantity: 40 },
+                  { price_each: 11, quantity: 10 },
+                  { price_each: 10, quantity: 5 },
+                ],
+                buy_orders: [{ price_each: 9, quantity: 25 }],
+              },
+              { item_id: 'ore_copper', sell_orders: [], buy_orders: [] },
+            ],
+          },
+        },
+      },
+      {
+        name: 'market_update book emptied',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            items: [{ item_name: 'Iron Ore', sell_orders: [], buy_orders: [] }],
+          },
+        },
+      },
+      {
+        name: 'crafting_update jobs path',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          data: {
+            tick: 901500,
+            jobs: [
+              {
+                job_id: 'rental-job',
+                recipe: 'Power Cell',
+                external: true,
+                escrowed_credits: 300,
+                runs_remaining: 2,
+                completed: true,
+                output_package_id: 'pkg-9',
+                output_package_label: 'Pack',
+              },
+            ],
+          },
+        },
+      },
+      {
+        name: 'crafting_update multi jobs +more',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          data: {
+            tick: 9,
+            jobs: [
+              { recipe: 'A', runs_remaining: 1 },
+              { recipe: 'B', runs_remaining: 2 },
+              { recipe: 'C', runs_remaining: 3 },
+              { recipe: 'D', runs_remaining: 4 },
+            ],
+          },
+        },
+      },
+      {
+        name: 'crafting_update no-jobs package path',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          data: {
+            message: 'Job completed',
+            completed: true,
+            tick: 901510,
+            output_package_id: 'pkg-solo-1',
+            output_package_label: 'Solo Pack',
+          },
+        },
+      },
+      {
+        name: 'crafting_update no-jobs rental escrow',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          data: {
+            external: true,
+            escrowed_credits: 120,
+            tick: 9,
+          },
+        },
+      },
+      {
+        name: 'crafting_update empty fallback',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_update',
+          data: {},
+        },
+      },
+      {
+        name: 'crafting_summary full fields',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_summary',
+          data: {
+            count: 3,
+            jobs: 2,
+            rental_jobs: 1,
+            escrowed_credits: 300,
+            latest_tick: 901501,
+            latest_message: 'Still running.',
+          },
+        },
+      },
+      {
+        name: 'crafting_summary count only',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_summary',
+          data: { count: 1 },
+        },
+      },
+      {
+        name: 'crafting_summary malformed numerics',
+        notification: {
+          type: 'crafting',
+          msg_type: 'crafting_summary',
+          data: {
+            count: Number.NaN,
+            jobs: Number.POSITIVE_INFINITY,
+            latest_tick: { bad: true },
+            latest_message: { text: 'bad' },
+          },
+        },
+      },
+      {
+        name: 'action_result_summary with latest message',
+        notification: {
+          type: 'action',
+          msg_type: 'action_result_summary',
+          data: {
+            count: 18,
+            commands: { jump: 12, undock: 1, storage: 1 },
+            latest_tick: 1434000,
+            latest_command: 'jump',
+            latest_message: 'jumped → Alfirk',
+          },
+        },
+      },
+      {
+        name: 'action_result_summary without latest message',
+        notification: {
+          type: 'action',
+          msg_type: 'action_result_summary',
+          data: {
+            count: 2,
+            commands: { dock: 2 },
+            latest_tick: 10,
+            latest_command: 'dock',
+          },
+        },
+      },
+      {
+        name: 'system_progress_summary action+destination',
+        notification: {
+          type: 'system',
+          msg_type: 'system_progress_summary',
+          data: {
+            count: 2,
+            actions: { jump: 2 },
+            latest_action: 'jump',
+            latest_destination: 'grumium',
+            latest_arrival_tick: 1433952,
+          },
+        },
+      },
+      {
+        name: 'system_progress_summary action only',
+        notification: {
+          type: 'system',
+          msg_type: 'system_progress_summary',
+          data: {
+            count: 1,
+            latest_action: 'travel',
+          },
+        },
+      },
+      {
+        name: 'system_progress_summary destination only',
+        notification: {
+          type: 'system',
+          msg_type: 'system_progress_summary',
+          data: {
+            count: 4,
+            latest_destination: 'alfirk',
+          },
+        },
+      },
+      {
+        name: 'ship_commission_complete receipt',
+        notification: {
+          type: 'system',
+          msg_type: 'ship_commission_complete',
+          data: {
+            tick: 901400,
+            commission_id: 'commission-1',
+            ship_id: 'ship-42',
+            ship_class: 'prospector',
+            ship_name: 'Prospector',
+            base_id: 'earth_station',
+            base_name: 'Earth Station',
+          },
+        },
+      },
+    ];
+
+    test.each(baselineFixtures)('parity: $name', ({ notification }) => {
+      expectBaselineMessageParity(notification);
+    });
+
+    test('get_notifications fixture non-regressable Message snippets', () => {
+      const rows = getNotificationsFixture.notifications as Array<Record<string, unknown>>;
+      for (const notification of rows) {
+        const msgType =
+          typeof notification.msg_type === 'string' ? notification.msg_type : String(notification.type ?? '');
+        // Only assert exact parity for PR2 typed special-cases; others use Policy 5 ladder
+        // (chat already covered by PR1) or still-independent table path.
+        if (
+          msgType === 'market_update' ||
+          msgType === 'ship_commission_complete' ||
+          msgType === 'crafting_update' ||
+          msgType === 'crafting_summary' ||
+          msgType === 'action_result_summary' ||
+          msgType === 'system_progress_summary'
+        ) {
+          expectBaselineMessageParity(notification);
+        }
+      }
+
+      const market = rows.find((n) => n.msg_type === 'market_update')!;
+      const commission = rows.find((n) => n.msg_type === 'ship_commission_complete')!;
+      const chat = rows.find((n) => n.msg_type === 'chat_message')!;
+
+      const marketMsg = tableMessageFromPreview(
+        formatNotificationPreview(market, { maxLineLength: 120 }),
+      );
+      expect(marketMsg).toContain('Haven Exchange');
+      expect(marketMsg).toContain('1 item update');
+      expect(marketMsg).toContain('Iron Ore');
+      expect(marketMsg).toContain('sell 40 @ 12');
+      expect(marketMsg).toContain('buy 25 @ 9');
+
+      const commissionMsg = tableMessageFromPreview(
+        formatNotificationPreview(commission, { maxLineLength: 120 }),
+      );
+      expect(commissionMsg).toContain('Commission commission-1');
+      expect(commissionMsg).toContain('ship ship-42');
+      expect(commissionMsg).toContain('Prospector (prospector)');
+      expect(commissionMsg).toContain('Earth Station (earth_station)');
+
+      // Chat is Policy 5 ladder (PR1) — still non-regressable sender:content form.
+      const chatMsg = tableMessageFromPreview(formatNotificationPreview(chat, { maxLineLength: 120 }));
+      expect(chatMsg).toBe('Ibis: Clear skies over Sol today.');
+      expect(chatMsg).toBe(formatNotificationMessage(chat));
+    });
+
+    test('ship_commission without receipt falls through (no forced empty headline)', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: { commission_id: 'commission-only' },
+      };
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      // Typed handler returns null → Policy 5 scalar bag (improvement over table JSON dump).
+      expect(preview.headline).toContain('commission_id=commission-only');
+      expect(preview.tag).toBe('SHIP_COMMISSION_COMPLETE');
+      expectNoNestedJsonDump(preview.headline);
+    });
+
+    test('inline dual-use uses preview headline for market_update', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          base_name: 'Haven Exchange',
+          tick: 901337,
+          items: [
+            {
+              item_name: 'Iron Ore',
+              sell_orders: [{ price_each: 12, quantity: 40 }],
+              buy_orders: [{ price_each: 9, quantity: 25 }],
+            },
+          ],
+        },
+      };
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).toContain(`[MARKET] ${preview.headline}`);
+      expect(output).toContain('Haven Exchange tick 901337: 1 item update');
     });
   });
 });
