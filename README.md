@@ -288,7 +288,7 @@ Request fields resolved from the ID cache use **exact id or name match only** by
 | `spacemolt --fuzzy-ids …` | On for that invocation |
 | `spacemolt --no-fuzzy-ids …` | Force off (overrides env/config) |
 | `SPACEMOLT_FUZZY_IDS=1` | On for the process |
-| `config.json` `"fuzzyIds": true` | On for the profile config (merge-safe; do not overwrite the whole file) |
+| `config.json` `"fuzzyIds": true` | On in shared CLI config (`config.json`; merge-safe; do not overwrite the whole file) |
 
 Precedence: **CLI flag > env > config.json boolean > default (`false`)**.
 
