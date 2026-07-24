@@ -139,7 +139,7 @@ describe('doctor', () => {
     }
   });
 
-  test('fuzzy-ids check reports config and env sources', async () => {
+  test('fuzzy-ids check reports config, env, and cli sources', async () => {
     const configHome = tempDir();
     try {
       const configDir = path.join(configHome, 'spacemolt-cli');
@@ -159,6 +159,42 @@ describe('doctor', () => {
         SPACEMOLT_FUZZY_IDS: '0',
       });
       expect(fromEnv.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('exact only (env)');
+
+      const fromCli = await runDoctor(
+        defaultConfigWithoutEnvProfile(),
+        {
+          ...process.env,
+          XDG_CONFIG_HOME: configHome,
+          SPACEMOLT_FUZZY_IDS: '0',
+        },
+        { fuzzyIds: true, fuzzyIdsCliExplicit: true },
+      );
+      expect(fromCli.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('soft match on (cli)');
+
+      const cliOff = await runDoctor(
+        defaultConfigWithoutEnvProfile(),
+        {
+          ...process.env,
+          XDG_CONFIG_HOME: configHome,
+          SPACEMOLT_FUZZY_IDS: '1',
+        },
+        { fuzzyIds: false, fuzzyIdsCliExplicit: true },
+      );
+      expect(cliOff.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('exact only (cli)');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('CLI --fuzzy-ids doctor reports soft match from cli source', async () => {
+    const configHome = tempDir();
+    try {
+      const result = await runDirect(['--fuzzy-ids', 'doctor'], {
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_FUZZY_IDS: '0',
+      });
+      expect(result.stdout).toContain('fuzzy-ids');
+      expect(result.stdout).toContain('soft match on (cli)');
     } finally {
       fs.rmSync(configHome, { recursive: true, force: true });
     }

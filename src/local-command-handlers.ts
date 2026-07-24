@@ -107,14 +107,16 @@ function describeOpenApiCacheState(cachedVersion: string, bundledVersion: string
 type ProfilePayload = { action: 'list' } | { action: 'default'; name?: string };
 type ConfigPayload =
   | { action: 'user-agent'; mode: 'show' | 'set' | 'reset'; value?: string }
-  | { action: 'fuzzy-ids'; mode: 'show' | 'set'; value?: boolean };
+  | { action: 'fuzzy-ids'; mode: 'show' | 'set' | 'reset'; value?: boolean };
 
 type ConfigResult =
   | { action: 'user-agent'; userAgent: string; custom: boolean }
   | { action: 'fuzzy-ids'; fuzzyIds: boolean; configured: boolean };
 
 const PROFILE_USAGE = 'spacemolt profile [list|default [name]]';
-const CONFIG_USAGE = 'spacemolt config user-agent [value|--reset] | spacemolt config fuzzy-ids [on|off]';
+const CONFIG_USAGE =
+  'spacemolt config user-agent [value|--reset] | spacemolt config fuzzy-ids [on|off|--reset]';
+const FUZZY_IDS_USAGE = 'spacemolt config fuzzy-ids [on|off|--reset]';
 
 const configHandler: CommandHandler<ConfigPayload, ConfigResult> = {
   name: 'config',
@@ -137,11 +139,12 @@ const configHandler: CommandHandler<ConfigPayload, ConfigResult> = {
 
     if (action === 'fuzzy-ids') {
       if (!value) return { ok: true, payload: { action, mode: 'show' } };
+      if (value === '--reset') return { ok: true, payload: { action, mode: 'reset' } };
       const normalized = value.toLowerCase();
-      if (normalized === 'on' || normalized === 'true' || normalized === '1') {
+      if (normalized === 'on') {
         return { ok: true, payload: { action, mode: 'set', value: true } };
       }
-      if (normalized === 'off' || normalized === 'false' || normalized === '0') {
+      if (normalized === 'off') {
         return { ok: true, payload: { action, mode: 'set', value: false } };
       }
       return {
@@ -149,7 +152,7 @@ const configHandler: CommandHandler<ConfigPayload, ConfigResult> = {
         error: {
           code: 'validation_error',
           message: `Invalid fuzzy-ids value: ${value}`,
-          customStderr: `Error: Invalid fuzzy-ids value "${value}" (use on or off)\nUsage: spacemolt config fuzzy-ids [on|off]`,
+          customStderr: `Error: Invalid fuzzy-ids value "${value}" (use on, off, or --reset)\nUsage: ${FUZZY_IDS_USAGE}`,
           exitCode: 1,
         },
       };
@@ -179,6 +182,18 @@ const configHandler: CommandHandler<ConfigPayload, ConfigResult> = {
       if (payload.mode === 'set') {
         config = updateCliConfig(
           (current) => ({ ...current, fuzzyIds: payload.value }),
+          context?.env.HOME,
+          undefined,
+          context?.env,
+        );
+      }
+      if (payload.mode === 'reset') {
+        config = updateCliConfig(
+          (current) => {
+            const next = { ...current };
+            delete next.fuzzyIds;
+            return next;
+          },
           context?.env.HOME,
           undefined,
           context?.env,
@@ -519,8 +534,8 @@ const doctorHandler: CommandHandler<Record<string, never>, { doctorResult: Docto
   parse() {
     return { ok: true, payload: {} };
   },
-  async run(_payload, _options, client, context) {
-    const doctorResult = await runDoctor(client?.config, context?.env as NodeJS.ProcessEnv | undefined);
+  async run(_payload, options, client, context) {
+    const doctorResult = await runDoctor(client?.config, context?.env as NodeJS.ProcessEnv | undefined, options);
     return { doctorResult };
   },
   render(result, options, _client, context) {

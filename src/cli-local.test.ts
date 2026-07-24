@@ -557,6 +557,14 @@ describe('CLI local usability behavior', () => {
       expect(doctor.exitCode).toBeLessThanOrEqual(1);
       expect(doctor.stdout).toContain('fuzzy-ids');
       expect(doctor.stdout).toContain('exact only (config)');
+
+      const reset = await runDirect(['config', 'fuzzy-ids', '--reset'], testEnv);
+      expect(reset.exitCode).toBe(0);
+      expect(reset.stdout).toContain('Fuzzy IDs: off (default)');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+        userAgent: 'FleetBot/1.0',
+      });
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }

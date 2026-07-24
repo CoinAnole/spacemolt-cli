@@ -1034,14 +1034,29 @@ describe('local command handlers', () => {
       userAgent: 'FleetBot/1.0',
       fuzzyIds: false,
     });
+
+    const resetHandler = localHandler(['config', 'fuzzy-ids', '--reset']);
+    const resetParsed = resetHandler.parse(['config', 'fuzzy-ids', '--reset'], options);
+    expect(resetParsed.ok).toBe(true);
+    if (!resetParsed.ok) return;
+    const resetCapture = captureContext(env);
+    const resetResult = await resetHandler.run(resetParsed.payload, options, undefined, resetCapture.context);
+    expect(await resetHandler.render(resetResult, options, undefined, resetCapture.context)).toBe(0);
+    expect(resetCapture.stdout.join('\n')).toBe('Fuzzy IDs: off (default)');
+    expect(JSON.parse(fs.readFileSync(path.join(configHome, 'spacemolt-cli', 'config.json'), 'utf-8'))).toEqual({
+      defaultProfile: 'pilot',
+      userAgent: 'FleetBot/1.0',
+    });
   });
 
-  test('config fuzzy-ids rejects invalid values', async () => {
-    const handler = localHandler(['config', 'fuzzy-ids', 'maybe']);
-    const parsed = handler.parse(['config', 'fuzzy-ids', 'maybe'], options);
-    expect(parsed.ok).toBe(false);
-    if (parsed.ok) return;
-    expect(parsed.error.message).toContain('Invalid fuzzy-ids value');
+  test('config fuzzy-ids rejects invalid values and env-style aliases', async () => {
+    for (const value of ['maybe', 'true', 'false', '1', '0']) {
+      const handler = localHandler(['config', 'fuzzy-ids', value]);
+      const parsed = handler.parse(['config', 'fuzzy-ids', value], options);
+      expect(parsed.ok).toBe(false);
+      if (parsed.ok) return;
+      expect(parsed.error.message).toContain('Invalid fuzzy-ids value');
+    }
   });
 
   test('ids command renders JSON with cached hints', async () => {
