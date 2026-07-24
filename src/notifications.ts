@@ -1,5 +1,9 @@
 import type { CliWriter } from './cli-context.ts';
-import { formatCountMap } from './notification-format-shared.ts';
+import {
+  formatCountMap,
+  formatNotificationPreview,
+  type NotificationPreview,
+} from './notification-format-shared.ts';
 import { colorsForPlain } from './output-style.ts';
 import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 import type { APIResponse } from './types.ts';
@@ -134,24 +138,42 @@ function formatActionResultDetails(details: Record<string, unknown>): string | u
   return bits.length ? bits.join(' ') : undefined;
 }
 
+/**
+ * Render a pure NotificationPreview as colored multi-line output.
+ * Used for Policy 5 generic fallback (and later for typed preview handlers).
+ * Does not show omittedHint by default (verbose-only, PR 8).
+ */
+function renderPreviewInline(
+  preview: NotificationPreview,
+  time: string,
+  c: NotificationColors,
+  writeLine: (message?: string) => void,
+): void {
+  writeLine(
+    `${c.dim}[${time}]${c.reset} ${c.magenta}[${preview.tag}]${c.reset} ${preview.headline}`,
+  );
+  for (const detail of preview.details) {
+    writeLine(`  ${detail}`);
+  }
+}
+
+/**
+ * Generic fallback: Policy 5 ladder via shared pure preview.
+ * Never dumps nested JSON of ship/location/nearby payloads.
+ */
 function formatGenericNotification(
   notification: ReturnType<typeof normalizedNotification>,
   time: string,
   c: NotificationColors,
   writeLine: (message?: string) => void,
 ): void {
-  const message = notification.data.message;
-  if (safeScalar(message) !== undefined) {
-    writeLine(
-      `${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset} ${safeScalar(message)}`,
-    );
-    return;
-  }
-
-  writeLine(`${c.dim}[${time}]${c.reset} ${c.magenta}[${notification.type.toUpperCase()}]${c.reset}`);
-  for (const [key, value] of Object.entries(notification.data)) {
-    writeLine(`  ${key}: ${safeJson(value)}`);
-  }
+  const preview = formatNotificationPreview({
+    type: notification.type,
+    msg_type: notification.msgType,
+    timestamp: notification.timestamp,
+    data: notification.data,
+  });
+  renderPreviewInline(preview, time, c, writeLine);
 }
 
 function createNotificationHandlers(c: NotificationColors): Record<string, NotificationHandler> {
@@ -614,6 +636,16 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
 
 export const NOTIFICATION_TYPES = Object.keys(createNotificationHandlers(colorsForPlain(false))).sort();
 
+/**
+ * Interim dual-registry dispatch (PR1):
+ *   1. legacy writeLine handler by msgType (with try/catch + hasDiagnosticToken guard)
+ *   2. Policy 5 generic via formatNotificationPreview (consults empty PREVIEW_HANDLERS)
+ *
+ * With PREVIEW_HANDLERS empty this matches design step 4a. When PR2+ registers pure
+ * handlers for types that still have writeLine handlers and dual-uses them inline,
+ * flip order to: PREVIEW_HANDLERS → writeLine → Policy 5 generic (keep diagnostic guard).
+ * Do not scrape writeLine/ANSI for table Message.
+ */
 export function formatNotification(notification: Notification, options?: { plain?: boolean }): string[] {
   const lines: string[] = [];
   const writeLine = (message = '') => lines.push(message);
