@@ -4,6 +4,58 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### ID cache payload resolution (breaking)
+
+Payload fields resolved from the profile ID cache use **exact id/name match only** by default.
+Unique **prefix** and **substring** rewrites no longer apply unless soft match is enabled.
+
+Exact name→id rewrites still work without any flag (examples: `travel earth`,
+`battle_target raider`, facility display names).
+
+| Old (implicit) | New |
+| --- | --- |
+| `find_route haven` with only `crosshaven` in cache → `crosshaven` | Sends `haven` unchanged |
+| `sell iron` / `buy cell` short fragments → soft rewrite | Sends fragment unless soft match enabled |
+| `storage view station_id=node_beta` prefix expand | Requires soft match |
+| Silent prefix/substring rewrite | Opt-in + one stderr line (unless `--quiet`) |
+
+#### Who is affected
+
+| Audience | Action |
+| --- | --- |
+| **Automation** (exact IDs, map tokens) | Usually **do nothing**. New default is safe. Prefer ids from `get_map` / `get_system` / `get_cargo`. |
+| **Interactive traders** using short item fragments (`sell iron`, `buy cell`, storage item nicknames) | Enable soft match **or** switch to exact item ids |
+| **Interactive navigators** using full/exact POI or system names | Name-exact still works; system **substring** never did the right thing for short real systems |
+
+#### Interactive soft match (restore old short-token UX)
+
+Preferred (merge-safe — do **not** overwrite whole config.json):
+
+1. Edit `~/.config/spacemolt-cli/config.json` (or macOS/Windows config path) and **add**
+   `"fuzzyIds": true` alongside existing keys such as `defaultProfile`.
+2. Or export for a shell session / tools wrapper:
+   `export SPACEMOLT_FUZZY_IDS=1`
+3. Or per-invocation: `spacemolt --fuzzy-ids sell iron 50`
+
+**Do not** run `echo '{"fuzzyIds":true}' > config.json` — that wipes `defaultProfile` / `userAgent`.
+
+Precedence: **CLI flag > env > config.json boolean > default (`false`)**. Use `--no-fuzzy-ids` to force off.
+
+#### Exact-id path (no soft match)
+
+```bash
+spacemolt ids item iron          # discovery (still fuzzy search)
+spacemolt get_cargo              # seed exact item ids
+spacemolt sell ore_iron 50       # exact id — works under strict default
+```
+
+#### Notes
+
+- `--fuzzy` remains **jq-only** and does **not** enable ID soft match.
+- `--fuzzy-ids` does **not** reintroduce `haven` → `crosshaven` (system/poi: unique **prefix** only, never substring).
+- Unique system **prefix** expansion under soft match is intentional (`cro` → `crosshaven`) and prints a stderr notice.
+- Completion, `ids`, and `where-can-i` stay fuzzy and are **not** gated by `--fuzzy-ids`.
+
 ### Help: `--raw-notifications` vs compact human formatting
 
 `--raw-notifications` skips notification **summarization** only (crafting, action results, system travel progress, and similar collapses). Human output still uses compact one-line formatting; it does not dump full nested notification JSON. Use `--json` / `--structured` / related machine modes when you need full objects.

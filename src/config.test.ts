@@ -6,6 +6,7 @@ import { SpaceMoltClient } from './api.ts';
 import * as clientEntrypoint from './client.ts';
 import { getRuntimeConfig } from './main.ts';
 import { createDefaultConfig, createRuntimeState, type SpaceMoltConfig } from './runtime.ts';
+import { resolveFuzzyIdsEnabled } from './runtime-config.ts';
 import {
   getCliConfigPath,
   loadCliConfig,
@@ -133,6 +134,50 @@ describe('Explicit Runtime Configuration', () => {
     });
 
     fs.rmSync(configHome, { recursive: true, force: true });
+  });
+
+  test('loadCliConfig accepts boolean fuzzyIds and ignores non-boolean values', () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-fuzzy-ids-config-'));
+    const env = { XDG_CONFIG_HOME: configHome };
+    fs.mkdirSync(path.join(configHome, 'spacemolt-cli'), { recursive: true });
+    const configPath = getCliConfigPath(undefined, undefined, env);
+
+    fs.writeFileSync(configPath, `${JSON.stringify({ defaultProfile: 'pilot', fuzzyIds: true })}\n`);
+    expect(loadCliConfig(undefined, undefined, env)).toEqual({ defaultProfile: 'pilot', fuzzyIds: true });
+
+    fs.writeFileSync(configPath, `${JSON.stringify({ defaultProfile: 'pilot', fuzzyIds: 'true' })}\n`);
+    expect(loadCliConfig(undefined, undefined, env)).toEqual({ defaultProfile: 'pilot' });
+
+    fs.writeFileSync(configPath, `${JSON.stringify({ defaultProfile: 'pilot', fuzzyIds: 1 })}\n`);
+    expect(loadCliConfig(undefined, undefined, env)).toEqual({ defaultProfile: 'pilot' });
+
+    fs.rmSync(configHome, { recursive: true, force: true });
+  });
+
+  test('resolveFuzzyIdsEnabled precedence is CLI > env > config boolean > false', () => {
+    expect(resolveFuzzyIdsEnabled({}, {}, {})).toBe(false);
+    expect(resolveFuzzyIdsEnabled({}, {}, { fuzzyIds: true })).toBe(true);
+    expect(resolveFuzzyIdsEnabled({}, { SPACEMOLT_FUZZY_IDS: '1' }, { fuzzyIds: false })).toBe(true);
+    expect(resolveFuzzyIdsEnabled({}, { SPACEMOLT_FUZZY_IDS: 'false' }, { fuzzyIds: true })).toBe(false);
+    expect(resolveFuzzyIdsEnabled({}, { SPACEMOLT_FUZZY_IDS: '0' }, { fuzzyIds: true })).toBe(false);
+    expect(resolveFuzzyIdsEnabled({}, { SPACEMOLT_FUZZY_IDS: 'true' }, {})).toBe(true);
+    // CLI explicit wins over env and config.
+    expect(
+      resolveFuzzyIdsEnabled(
+        { fuzzyIds: false, fuzzyIdsCliExplicit: true },
+        { SPACEMOLT_FUZZY_IDS: '1' },
+        { fuzzyIds: true },
+      ),
+    ).toBe(false);
+    expect(
+      resolveFuzzyIdsEnabled(
+        { fuzzyIds: true, fuzzyIdsCliExplicit: true },
+        { SPACEMOLT_FUZZY_IDS: '0' },
+        { fuzzyIds: false },
+      ),
+    ).toBe(true);
+    // Non-boolean config is ignored (caller typically strips via loadCliConfig).
+    expect(resolveFuzzyIdsEnabled({}, {}, { fuzzyIds: 'yes' as unknown as boolean })).toBe(false);
   });
 
   test('createRuntimeState maps config into output flags without reading globals', () => {

@@ -141,6 +141,12 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       result.dryRun = value !== 'false' && value !== '0';
     } else if (arg === '--fuzzy') {
       result.fuzzy = true;
+    } else if (arg === '--fuzzy-ids') {
+      result.fuzzyIds = true;
+      result.fuzzyIdsCliExplicit = true;
+    } else if (arg === '--no-fuzzy-ids') {
+      result.fuzzyIds = false;
+      result.fuzzyIdsCliExplicit = true;
     } else if (arg === '--no-timestamp') {
       result.noTimestamp = true;
     } else if (arg === '--compact') {

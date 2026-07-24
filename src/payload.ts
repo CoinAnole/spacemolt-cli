@@ -5,11 +5,16 @@ import type { CommandError, PreparedPayload } from './command-types.ts';
 import { displayMissingArgument, displayUnknownCommand, printJsonError, showCommandHelp } from './help.ts';
 import {
   type CachedIdResolveResult,
+  type IdKind,
+  type IdResolutionPolicy,
   cachedIdAmbiguityMessage,
   formatCachedIdAmbiguity,
+  formatCachedIdResolution,
   idKindForCommandField,
   loadIdCacheSync,
   resolveCachedId,
+  softIdResolutionPolicy,
+  STRICT_ID_RESOLUTION_POLICY,
 } from './id-cache.ts';
 import { wantsMachineReadableErrorOutput } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
@@ -94,7 +99,7 @@ export function preparePayload(
     options,
     registry,
   );
-  const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath);
+  const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath, options, writer, displayCommand);
   if (resolvedPayload.type === 'ambiguous') {
     if (wantsMachineReadableErrorOutput(options)) {
       printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result), writer);
@@ -145,22 +150,49 @@ function restoreCommandLocalSearch(
 function resolveCachedIdsForPayload(
   command: string,
   payload: Record<string, unknown>,
-  sessionPath?: string,
+  sessionPath: string | undefined,
+  options: GlobalOptions,
+  writer?: CliWriter,
+  displayCommand: string = command,
 ): PayloadResolveResult {
   const resolvedPayload: Record<string, unknown> = { ...payload };
   const hints = loadIdCacheSync(sessionPath);
+  // undefined fuzzyIds → strict (K1); runner merges env/config into a concrete boolean.
+  const fuzzyIds = Boolean(options.fuzzyIds);
+  const policyFor = (kind: IdKind): IdResolutionPolicy =>
+    fuzzyIds ? softIdResolutionPolicy(kind) : STRICT_ID_RESOLUTION_POLICY;
+  const reportResolution = (
+    field: string,
+    query: string,
+    resolved: Extract<CachedIdResolveResult, { type: 'resolved' }>,
+  ) => {
+    if (options.quiet || resolved.match === 'exact') return;
+    const writeErr = writer?.err.bind(writer) ?? console.error;
+    writeErr(
+      formatCachedIdResolution(displayCommand, field, query, resolved, { plain: options.plain }),
+    );
+  };
 
   for (const [field, value] of Object.entries(payload)) {
     const kind = idKindForCommandField(command, field);
     if (!kind) continue;
+    const policy = policyFor(kind);
 
     if (Array.isArray(value)) {
       const resolvedArray: unknown[] = [];
       for (const item of value) {
         if (typeof item === 'string') {
-          const resolved = resolveCachedId(kind, item, hints);
+          const reservedValue = reservedIdValue(command, field, item, kind);
+          if (reservedValue !== undefined) {
+            resolvedArray.push(reservedValue);
+            continue;
+          }
+          const resolved = resolveCachedId(kind, item, hints, policy);
           if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
-          if (resolved.type === 'resolved') resolvedArray.push(resolved.value);
+          if (resolved.type === 'resolved') {
+            reportResolution(field, item, resolved);
+            resolvedArray.push(resolved.value);
+          }
           // Use resolver-normalized unresolved values (e.g. package:id → bare package_id).
           else resolvedArray.push(resolved.value !== item ? resolved.value : item);
         } else {
@@ -170,13 +202,16 @@ function resolveCachedIdsForPayload(
       resolvedPayload[field] = resolvedArray;
     } else if (typeof value === 'string') {
       const reservedValue = reservedIdValue(command, field, value, kind);
-      if (reservedValue) {
+      if (reservedValue !== undefined) {
         resolvedPayload[field] = reservedValue;
         continue;
       }
-      const resolved = resolveCachedId(kind, value, hints);
+      const resolved = resolveCachedId(kind, value, hints, policy);
       if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
-      if (resolved.type === 'resolved') resolvedPayload[field] = resolved.value;
+      if (resolved.type === 'resolved') {
+        reportResolution(field, value, resolved);
+        resolvedPayload[field] = resolved.value;
+      }
       // Apply package: prefix stripping even when the id is not in cache.
       else if (resolved.value !== value) resolvedPayload[field] = resolved.value;
     }

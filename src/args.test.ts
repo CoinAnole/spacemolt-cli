@@ -2047,6 +2047,31 @@ describe('CLI output modes', () => {
     expect(result.options.args).toEqual(['get_status']);
   });
 
+  test('global option parser handles --fuzzy-ids / --no-fuzzy-ids without touching jq --fuzzy', () => {
+    const enabled = parseGlobalOptions(['--fuzzy-ids', 'sell', 'iron', '50']);
+    expect(enabled.ok).toBe(true);
+    if (!enabled.ok) throw new Error(enabled.error.message);
+    expect(enabled.options.fuzzyIds).toBe(true);
+    expect(enabled.options.fuzzyIdsCliExplicit).toBe(true);
+    expect(enabled.options.fuzzy).toBe(false);
+    expect(enabled.options.args).toEqual(['sell', 'iron', '50']);
+
+    const disabled = parseGlobalOptions(['--no-fuzzy-ids', 'find_route', 'haven']);
+    expect(disabled.ok).toBe(true);
+    if (!disabled.ok) throw new Error(disabled.error.message);
+    expect(disabled.options.fuzzyIds).toBe(false);
+    expect(disabled.options.fuzzyIdsCliExplicit).toBe(true);
+    expect(disabled.options.fuzzy).toBe(false);
+
+    // Last flag wins when both appear; --fuzzy (jq) remains independent.
+    const lastWins = parseGlobalOptions(['--fuzzy-ids', '--fuzzy', '--no-fuzzy-ids', 'get_status']);
+    expect(lastWins.ok).toBe(true);
+    if (!lastWins.ok) throw new Error(lastWins.error.message);
+    expect(lastWins.options.fuzzyIds).toBe(false);
+    expect(lastWins.options.fuzzyIdsCliExplicit).toBe(true);
+    expect(lastWins.options.fuzzy).toBe(true);
+  });
+
   test('global option parser handles output search flags', () => {
     const result = parseGlobalOptions([
       '--search',
