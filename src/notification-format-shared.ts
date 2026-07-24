@@ -10,31 +10,6 @@ function finiteNumber(value: unknown): number | undefined {
 }
 
 const DEFAULT_COUNT_MAP_LIMIT = 6;
-
-/**
- * Format `{ jump: 12, undock: 1 }` as `jump×12, undock×1` (top entries only).
- * Default limit 6 (unified multi-line + table).
- */
-export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT): string | undefined {
-  const record = isRecord(value) ? value : undefined;
-  if (!record) return undefined;
-  const entries = Object.entries(record)
-    .map(([key, count]) => {
-      const n = finiteNumber(count);
-      if (!key.trim() || n === undefined || n <= 0) return undefined;
-      return [key, n] as const;
-    })
-    .filter((entry): entry is readonly [string, number] => Boolean(entry))
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
-  if (!entries.length) return undefined;
-  const preview = entries
-    .slice(0, limit)
-    .map(([key, count]) => `${key}×${count}`)
-    .join(', ');
-  const suffix = entries.length > limit ? `, +${entries.length - limit} more` : '';
-  return `${preview}${suffix}`;
-}
-
 const DEFAULT_INVENTORY_LIMIT = 6;
 
 /**
@@ -177,7 +152,6 @@ export function formatInventoryPreview(
   const label = total === 1 ? '1 item' : `${total} items`;
   return `${label}: ${preview}${suffix}`;
 }
-
 
 // ── Shared notification preview (Policy 5 ladder + typed handlers) ──────────
 //
@@ -343,9 +317,9 @@ type PreviewHandler = (
   options: ResolvedPreviewOptions,
 ) => NotificationPreview | null;
 
-// ── Table Message baseline formatters (PR2) ─────────────────────────────────
-// Ported from src/display/notifications.ts so pure previews match today's table
-// Message quality (K11). Table path still calls its local copies until PR4.
+// ── Table Message baseline formatters (PR2; sole Message source after PR4) ───
+// Ported from the former table-only helpers in display/notifications.ts.
+// Table Message is now always tableMessageFromPreview(formatNotificationPreview(...)).
 
 function records(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isRecord) : [];
@@ -627,12 +601,331 @@ function previewSystem(
   };
 }
 
+// ── Combat domain pure previews (PR7a) ──────────────────────────────────────
+// combat_update, player_died, player_kill, police_*, pirate_*, battle_*
+// Dual-registry: writeLine handlers remain in notifications.ts for NOTIFICATION_TYPES
+// until PR7c deletes them. Table Type stays raw msg_type (K13).
+
+function damageLabel(value: unknown, fallback: string | number = 0): string | number {
+  const n = finiteNumber(value);
+  if (n !== undefined) return n;
+  if (typeof value === 'string' && value.trim()) return value;
+  return fallback;
+}
+
+function previewCombatUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const attacker = safeScalar(data.attacker) ?? 'unknown';
+  const target = safeScalar(data.target) ?? 'unknown';
+  const damage = damageLabel(data.damage);
+  const damageType = safeScalar(data.damage_type) ?? 'unknown';
+  const shield = damageLabel(data.shield_hit);
+  const hull = damageLabel(data.hull_hit);
+  const destroyed = data.destroyed ? ' - DESTROYED!' : '';
+  return headlinePreview(
+    'COMBAT',
+    `${attacker} hit ${target} for ${damage} ${damageType} damage (shield: ${shield}, hull: ${hull})${destroyed}`,
+    options,
+  );
+}
+
+/**
+ * player_died: headline = one-line death summary; combat_log / costs / respawn are details
+ * for inline multi-line only (table Message prefers headline via tableMessageFromPreview).
+ * Malformed combat_log is skipped — never dumps nested objects as JSON.
+ */
+function previewPlayerDied(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const cause = safeScalar(data.cause);
+  let headline: string;
+  if (cause === 'self_destruct') {
+    headline = 'Self-destructed!';
+  } else if (cause === 'police') {
+    headline = 'Destroyed by system police!';
+  } else {
+    headline = `Destroyed by ${safeScalar(data.killer_name) ?? 'unknown'}!`;
+  }
+
+  const details: string[] = [];
+  if (isRecord(data.combat_log)) {
+    const log = data.combat_log;
+    const logMessage = safeScalar(log.message);
+    if (logMessage !== undefined) details.push(truncate(firstLine(String(logMessage)), options));
+
+    const attackerShip = safeScalar(log.attacker_ship);
+    if (attackerShip !== undefined) details.push(truncate(`Attacker ship: ${attackerShip}`, options));
+
+    if (isRecord(log.weapons_used)) {
+      const weapons = Object.entries(log.weapons_used)
+        .map(([weapon, count]) => {
+          const n = finiteNumber(count);
+          if (n === undefined) return undefined;
+          return `${weapon} (x${n})`;
+        })
+        .filter((entry): entry is string => Boolean(entry));
+      if (weapons.length) details.push(truncate(`Weapons: ${weapons.join(', ')}`, options));
+    }
+
+    const totalDamage = finiteNumber(log.total_damage);
+    if (totalDamage !== undefined && totalDamage > 0) {
+      const shield = finiteNumber(log.shield_damage) ?? 0;
+      const hull = finiteNumber(log.hull_damage) ?? 0;
+      const rounds = finiteNumber(log.combat_rounds) ?? 0;
+      details.push(
+        truncate(
+          `Damage taken: ${totalDamage} total (${shield} shield, ${hull} hull) over ${rounds} round${rounds !== 1 ? 's' : ''}`,
+          options,
+        ),
+      );
+    }
+
+    const deathLocation = safeScalar(log.death_location);
+    if (deathLocation !== undefined) {
+      details.push(
+        truncate(
+          `Location: ${deathLocation} in ${safeScalar(log.death_system) ?? 'unknown'}`,
+          options,
+        ),
+      );
+    }
+  }
+
+  const shipLost = safeScalar(data.ship_lost);
+  if (shipLost !== undefined) details.push(truncate(`Ship lost: ${shipLost}`, options));
+
+  const cloneCost = finiteNumber(data.clone_cost);
+  if (cloneCost !== undefined && cloneCost > 0) {
+    details.push(truncate(`Clone cost: ${cloneCost} credits`, options));
+  }
+
+  const insurance = finiteNumber(data.insurance_payout);
+  if (insurance !== undefined && insurance > 0) {
+    details.push(truncate(`Insurance payout: ${insurance} credits`, options));
+  }
+
+  details.push(
+    truncate(`Respawned at: ${safeScalar(data.respawn_base) ?? 'home'} with ship fully repaired`, options),
+  );
+
+  return {
+    tag: 'DEATH',
+    headline: truncate(headline, options),
+    details,
+  };
+}
+
+function previewPlayerKill(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const victim = safeScalar(data.victim_name) ?? safeScalar(data.target_name) ?? 'unknown';
+  const details: string[] = [];
+  // Match legacy writeLine: truthy bounty only (0 / empty omitted).
+  const bountyN = finiteNumber(data.bounty);
+  if (bountyN !== undefined && bountyN > 0) {
+    details.push(truncate(`Bounty: ${bountyN} credits`, options));
+  } else {
+    const bountyScalar = safeScalar(data.bounty);
+    if (bountyScalar !== undefined && bountyScalar !== 0 && bountyScalar !== false) {
+      details.push(truncate(`Bounty: ${bountyScalar} credits`, options));
+    }
+  }
+  const wreckId = safeScalar(data.wreck_id);
+  if (wreckId !== undefined) details.push(truncate(`Wreck: ${wreckId}`, options));
+  return {
+    tag: 'KILL',
+    headline: truncate(`You destroyed ${victim}!`, options),
+    details,
+  };
+}
+
+function previewPoliceWarning(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const details = [
+    truncate(
+      `Security level: ${damageLabel(data.police_level, 0)}, Response in: ${damageLabel(data.response_ticks, 0)} tick(s)`,
+      options,
+    ),
+  ];
+  return {
+    tag: 'POLICE',
+    headline: truncate(message !== undefined ? firstLine(String(message)) : 'Police warning', options),
+    details,
+  };
+}
+
+function previewPoliceSpawn(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'POLICE',
+    `${damageLabel(data.num_drones, 0)} police drone(s) arrived!`,
+    options,
+  );
+}
+
+function previewPoliceCombat(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const destroyed = data.destroyed ? ' - YOU WERE DESTROYED!' : '';
+  return headlinePreview(
+    'POLICE',
+    `Police drone dealt ${damageLabel(data.damage, 0)} damage${destroyed}`,
+    options,
+  );
+}
+
+function previewPirateWarning(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  return headlinePreview(
+    'PIRATES',
+    message !== undefined ? firstLine(String(message)) : 'Pirates detected nearby!',
+    options,
+  );
+}
+
+function previewPirateSpawn(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'PIRATES',
+    `${damageLabel(data.num_pirates, 1)} pirate(s) appeared!`,
+    options,
+  );
+}
+
+function previewPirateCombat(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const destroyed = data.destroyed ? ' - YOU WERE DESTROYED!' : '';
+  return headlinePreview(
+    'PIRATES',
+    `Pirate dealt ${damageLabel(data.damage, 0)} damage${destroyed}`,
+    options,
+  );
+}
+
+/** pirate_destroyed uses formatInventoryPreview for loot (PR6 / K15) — never JSON.stringify. */
+function previewPirateDestroyed(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const details: string[] = [];
+  if (data.loot !== undefined && data.loot !== null) {
+    const lootPreview = formatInventoryPreview(data.loot);
+    if (lootPreview) details.push(truncate(`Loot: ${lootPreview}`, options));
+  }
+  return {
+    tag: 'PIRATES',
+    headline: 'Pirate destroyed!',
+    details,
+  };
+}
+
+function previewBattleStarted(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'BATTLE',
+    `Battle started! ID: ${safeScalar(data.battle_id) ?? 'unknown'}`,
+    options,
+  );
+}
+
+function previewBattleUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const tickScalar = safeScalar(data.tick);
+  const tick = tickScalar !== undefined ? String(tickScalar) : '?';
+  const message = safeScalar(data.message);
+  return headlinePreview(
+    'BATTLE',
+    `Battle tick ${tick} - ${message !== undefined ? firstLine(String(message)) : 'combat continues'}`,
+    options,
+  );
+}
+
+function previewBattleDamage(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'BATTLE',
+    `${safeScalar(data.attacker) ?? 'unknown'} hit ${safeScalar(data.target) ?? 'unknown'} for ${damageLabel(data.damage, 0)} damage`,
+    options,
+  );
+}
+
+function previewBattleJoined(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'BATTLE',
+    `${safeScalar(data.username) ?? 'Someone'} joined the battle`,
+    options,
+  );
+}
+
+function previewBattleLeft(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return headlinePreview(
+    'BATTLE',
+    `${safeScalar(data.username) ?? 'Someone'} left the battle`,
+    options,
+  );
+}
+
+function previewBattleEnded(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const suffix = message !== undefined ? ` ${firstLine(String(message))}` : '';
+  return headlinePreview('BATTLE', `Battle ended!${suffix}`, options);
+}
+
 /**
  * Typed pure preview handlers. Grown over later PRs.
  * null → fall through to Policy 5 generic path.
  *
  * PR2: table Message special-case types (market, crafting, summaries, commission).
  * PR3: action_result + system (residual dump fixes).
+ * PR7a: combat / police / pirate / battle domain.
  * Inline dual-use prefers this registry before writeLine (see formatNotification).
  */
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
@@ -652,7 +945,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
     headlinePreview('SYSTEM', formatSystemProgressSummaryMessage(data), options),
 
   ship_commission_complete: (data, _notification, options) => {
-    // Receipt when present; null falls through to Policy 5 / writeLine (matches table ladder).
+    // Receipt when present; null falls through to Policy 5 generic (scalar bag / last resort).
     const receipt = formatShipCommissionReceipt(data);
     if (!receipt) return null;
     return headlinePreview('SHIP READY', receipt, options);
@@ -660,6 +953,24 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
 
   action_result: previewActionResult,
   system: previewSystem,
+
+  // PR7a combat domain
+  combat_update: previewCombatUpdate,
+  player_died: previewPlayerDied,
+  player_kill: previewPlayerKill,
+  police_warning: previewPoliceWarning,
+  police_spawn: previewPoliceSpawn,
+  police_combat: previewPoliceCombat,
+  pirate_warning: previewPirateWarning,
+  pirate_spawn: previewPirateSpawn,
+  pirate_combat: previewPirateCombat,
+  pirate_destroyed: previewPirateDestroyed,
+  battle_started: previewBattleStarted,
+  battle_update: previewBattleUpdate,
+  battle_damage: previewBattleDamage,
+  battle_joined: previewBattleJoined,
+  battle_left: previewBattleLeft,
+  battle_ended: previewBattleEnded,
 };
 
 /** True when a native pure preview handler is registered for msgType (dual-registry dispatch). */
@@ -880,8 +1191,8 @@ export function tryTypedNotificationPreview(
  * Build a human preview for any notification (raw or synthetic).
  * Never throws; never emits diagnostic tokens; never stringifies nested objects for human recovery.
  *
- * Completeness: Policy 5 ladder + PREVIEW_HANDLERS (PR2 table-parity + PR3 action_result/system).
- * Table Message still independent until table-unification (PR4).
+ * Completeness: Policy 5 ladder + PREVIEW_HANDLERS (PR2 table-parity + PR3 action_result/system + PR7a combat domain).
+ * Table Message always consumes this via tableMessageFromPreview (PR4 / K13 Message only).
  */
 export function formatNotificationPreview(
   notification: unknown,
