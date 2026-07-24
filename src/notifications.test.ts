@@ -347,7 +347,7 @@ describe('notification formatting', () => {
     {
       msgType: 'pirate_destroyed',
       data: { loot: { credits: 10 } },
-      snippets: ['[PIRATES]', 'Pirate destroyed!', 'Loot: {"credits":10}'],
+      snippets: ['[PIRATES]', 'Pirate destroyed!', 'Loot: 1 item: credits×10'],
     },
     { msgType: 'pirate_spawn', data: { num_pirates: 2 }, snippets: ['[PIRATES]', '2 pirate(s) appeared'] },
     { msgType: 'pirate_warning', data: { message: 'Incoming' }, snippets: ['[PIRATES]', 'Incoming'] },
