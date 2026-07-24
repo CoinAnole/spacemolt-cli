@@ -922,6 +922,23 @@ describe('command metadata', () => {
     expect(help).toContain('docked');
   });
 
+  test('faction_edit help documents ally access toggles', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.edit?.config;
+    expect(config?.usage).toContain('ally_fuel_access');
+    expect(config?.usage).toContain('ally_facility_access');
+    expect(config?.usage).toContain('ally_intel_opt_out');
+    expect(config?.description).toContain('ally-sharing toggles');
+    expect(config?.description).toContain('fuel access');
+    expect(config?.description).toContain('facility access');
+    expect(config?.description).toContain('intel opt-out');
+    expect(config?.example).toContain('ally_fuel_access=true');
+
+    const help = captureHelp('faction edit');
+    expect(help).toContain('ally_fuel_access');
+    expect(help).toContain('ally_facility_access');
+    expect(help).toContain('ally_intel_opt_out');
+  });
+
   test('facility production commands have curated routes and help', () => {
     const expected: Record<
       string,

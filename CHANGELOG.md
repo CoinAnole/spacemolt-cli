@@ -25,6 +25,16 @@ There is **no command-name alias**. Requires ManageBases; empty faction storage 
 
 Outpost built-in fuel bunkers cannot be dismantled alone via `facility dismantle` / `faction dismantle` — remove them by dismantling the whole outpost with `dismantle_outpost`. Help for those commands notes this path.
 
+### Faction ally access toggles
+
+`faction info` now prints OpenAPI ally-sharing fields when present:
+
+- `ally_fuel_access` → Fuel
+- `ally_facility_access` → Facilities
+- `ally_intel_opt_out` → Intel opt-out
+
+`faction edit` help/usage documents the same optional boolean kwargs. There is **no** storage-sharing toggle in the OpenAPI field set (fuel / facility / intel only).
+
 ### Storage command group (breaking)
 
 Station storage is no longer a single multi-action command. It is a **grouped multi-command** (same pattern as `facility` / `faction`):

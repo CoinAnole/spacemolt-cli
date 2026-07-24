@@ -37,7 +37,7 @@ import {
   viewShipBuyOrdersFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
-import { facilityListFixture } from './display/social.fixtures';
+import { facilityListFixture, factionInfoFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
 import type { GlobalOptions } from './types';
 
@@ -3981,32 +3981,45 @@ describe('structuredContent formatters', () => {
   });
 
   test('faction_info lists faction facilities', () => {
-    const { stdout, stderr } = captureStructuredOutput('faction_info', {
-      id: 'faction-1',
-      name: 'Drift Matrix',
-      tag: 'DMX7',
-      leader_username: 'DriftMiner-7',
-      member_count: 20,
-      owned_bases: 2,
-      treasury: 12345,
-      is_member: true,
-      facilities: [
-        {
-          facility_id: 'facility-1',
-          base_id: 'earth_station',
-          name: 'Faction Fuel Bunker',
-          type: 'fuel_bunker',
-          active: true,
-          faction_service: 'fuel',
-        },
-      ],
-    });
+    const { stdout, stderr } = captureStructuredOutput('faction_info', factionInfoFixture);
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Faction: Drift Matrix [DMX7] ===');
     expect(stdout).toContain('Leader: DriftMiner-7');
+    expect(stdout).toContain('Ally access:');
+    expect(stdout).toContain('  Fuel: yes');
+    expect(stdout).toContain('  Facilities: no');
+    expect(stdout).toContain('  Intel opt-out: no');
     expect(stdout).toContain('=== Faction Facilities ===');
     expect(stdout).toContain('Faction Fuel Bunker');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_info omits ally access when toggles are absent', () => {
+    const { ally_fuel_access: _fuel, ally_facility_access: _facility, ally_intel_opt_out: _intel, ...withoutAlly } =
+      factionInfoFixture;
+    const { stdout, stderr } = captureStructuredOutput('faction_info', withoutAlly);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction: Drift Matrix [DMX7] ===');
+    expect(stdout).toContain('=== Faction Facilities ===');
+    expect(stdout).not.toContain('Ally access:');
+    expect(stdout).not.toContain('  Fuel:');
+    expect(stdout).not.toContain('  Facilities:');
+    expect(stdout).not.toContain('  Intel opt-out:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_info emits only present ally access rows', () => {
+    const { ally_facility_access: _facility, ally_intel_opt_out: _intel, ...partialAlly } = factionInfoFixture;
+    const { stdout, stderr } = captureStructuredOutput('faction_info', partialAlly);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Ally access:');
+    expect(stdout).toContain('  Fuel: yes');
+    expect(stdout).not.toContain('  Facilities:');
+    expect(stdout).not.toContain('  Intel opt-out:');
+    expect(stdout).toContain('=== Faction Facilities ===');
     expect(stdout).not.toContain('=== Response ===');
   });
 

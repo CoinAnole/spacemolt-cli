@@ -731,6 +731,16 @@ export const socialFormatters = [
       if (typeof r.description === 'string' && r.description) emitLine(`Description: ${r.description}`);
       if (typeof r.charter === 'string' && r.charter) emitLine(`Charter: ${r.charter}`);
 
+      const allyFuel = formatYesNo(r.ally_fuel_access);
+      const allyFacility = formatYesNo(r.ally_facility_access);
+      const allyIntelOptOut = formatYesNo(r.ally_intel_opt_out);
+      if (allyFuel !== undefined || allyFacility !== undefined || allyIntelOptOut !== undefined) {
+        emitLine('Ally access:');
+        if (allyFuel !== undefined) emitLine(`  Fuel: ${allyFuel}`);
+        if (allyFacility !== undefined) emitLine(`  Facilities: ${allyFacility}`);
+        if (allyIntelOptOut !== undefined) emitLine(`  Intel opt-out: ${allyIntelOptOut}`);
+      }
+
       const facilities = firstArray(r, ['facilities']);
       if (facilities) {
         printCompactTable('Faction Facilities', facilities, [

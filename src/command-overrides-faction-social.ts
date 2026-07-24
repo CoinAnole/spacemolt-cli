@@ -194,6 +194,11 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction_admin/edit',
     positionals: ['description', 'charter', 'primary_color', 'secondary_color'],
+    usage:
+      '[description] [charter] [primary_color] [secondary_color] [ally_fuel_access=true/false] [ally_facility_access=true/false] [ally_intel_opt_out=true/false]',
+    description:
+      'Update faction description, charter, colors, and ally-sharing toggles (fuel access, facility access, intel opt-out).',
+    example: 'spacemolt faction edit ally_fuel_access=true ally_facility_access=true',
   },
   faction_create_role: {
     category: 'Factions',
