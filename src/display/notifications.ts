@@ -175,7 +175,8 @@ function formatNotificationType(notification: Record<string, unknown>): string {
   return type === undefined || type === null || type === '' ? 'notification' : String(type);
 }
 
-function formatNotificationMessage(notification: Record<string, unknown>): string {
+/** Exported for PR2 baseline parity tests against pure `formatNotificationPreview`. */
+export function formatNotificationMessage(notification: Record<string, unknown>): string {
   const data = notification.data;
   if (typeof data === 'string') return firstLinePreview(data);
   if (!isRecord(data)) return data === undefined || data === null ? '' : JSON.stringify(data);
