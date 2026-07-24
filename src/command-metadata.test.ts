@@ -846,8 +846,10 @@ describe('command metadata', () => {
     );
     // Must not blank the usage line via usage: ''
     expect(config?.usage === undefined || config.usage.length > 0).toBe(true);
-    // Generated facility_dismantle_outpost is route-claimed away
-    expect(COMMANDS.facility_dismantle_outpost).toBeUndefined();
+    // Generated facility_dismantle_outpost is route-claimed away (check bundled registry, not
+    // curated COMMANDS — generated fallbacks never appear on COMMANDS alone).
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_dismantle_outpost).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.facility_dismantle_outpost).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.dismantle_outpost).toBeUndefined();
 
     const help = captureHelp('dismantle_outpost');

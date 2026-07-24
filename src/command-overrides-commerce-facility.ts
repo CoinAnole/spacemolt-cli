@@ -513,7 +513,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with `dismantle_outpost`.',
+      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with dismantle_outpost.',
     example: 'spacemolt facility_dismantle facility-1',
     discoverWith: ['facility_owned'],
     seeAlso: ['facility_owned', 'facility_build', 'facility_repair', 'dismantle_outpost'],
@@ -750,7 +750,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with `dismantle_outpost`.',
+      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with dismantle_outpost.',
     example: 'spacemolt faction_dismantle facility-1',
     discoverWith: ['faction_facility_owned'],
     seeAlso: ['faction_facility_owned', 'faction_build', 'facility_repair', 'dismantle_outpost'],
