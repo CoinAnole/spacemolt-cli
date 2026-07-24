@@ -1,3 +1,5 @@
+import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
+
 /** Local isRecord — same style as ship-commission-receipt.ts; no import from response.ts. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -197,16 +199,183 @@ type PreviewHandler = (
   options: ResolvedPreviewOptions,
 ) => NotificationPreview | null;
 
+// ── Table Message baseline formatters (PR2) ─────────────────────────────────
+// Ported from src/display/notifications.ts so pure previews match today's table
+// Message quality (K11). Table path still calls its local copies until PR4.
+
+function records(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function formatDepth(label: string, value: unknown): string | undefined {
+  const levels = records(value);
+  if (!levels.length) return undefined;
+  const preview = levels
+    .slice(0, 2)
+    .map((level) => `${level.quantity ?? '?'} @ ${level.price_each ?? '?'}`)
+    .join(', ');
+  const suffix = levels.length > 2 ? `, +${levels.length - 2} more` : '';
+  return `${label} ${preview}${suffix}`;
+}
+
+function formatMarketUpdateMessage(data: Record<string, unknown>): string {
+  const station = data.base_name ?? data.base_id ?? 'current station';
+  const items = records(data.items);
+  const plural = items.length === 1 ? '' : 's';
+  const tick = data.tick === undefined || data.tick === null ? '' : ` tick ${data.tick}`;
+  const firstItem = items[0];
+  if (!firstItem) return `${station}${tick}: 0 item updates`;
+
+  const itemName = firstItem.item_name ?? firstItem.item_id ?? 'unknown item';
+  const sell = formatDepth('sell', firstItem.sell_orders);
+  const buy = formatDepth('buy', firstItem.buy_orders);
+  const depth = [sell, buy].filter(Boolean).join(', ') || 'book emptied';
+  const remaining = items.length > 1 ? `; +${items.length - 1} more` : '';
+  return `${station}${tick}: ${items.length} item update${plural}; ${itemName} ${depth}${remaining}`;
+}
+
+function formatCreditsAmount(value: unknown): string | undefined {
+  const number = finiteNumber(value);
+  if (number === undefined) return undefined;
+  return `${number.toLocaleString()}cr`;
+}
+
+function formatOutputPackagePreview(job: Record<string, unknown>): string | undefined {
+  const outLabel = safeScalar(job.output_package_label);
+  const outId = safeScalar(job.output_package_id);
+  if (outLabel !== undefined && outId !== undefined) return `out ${outLabel} (${outId})`;
+  if (outLabel !== undefined || outId !== undefined) return `out ${outLabel ?? outId}`;
+  return undefined;
+}
+
+function formatCraftingJobPreview(job: Record<string, unknown>): string {
+  const recipe = safeScalar(job.recipe) ?? safeScalar(job.job_id) ?? safeScalar(job.id) ?? 'job';
+  const parts = [String(recipe)];
+  if (job.external === true) parts.push('rental');
+  const escrow = formatCreditsAmount(job.escrowed_credits);
+  if (escrow !== undefined) parts.push(`${escrow} escrowed`);
+  const remaining = finiteNumber(job.runs_remaining);
+  if (remaining !== undefined) parts.push(`${remaining.toLocaleString()} run${remaining === 1 ? '' : 's'} left`);
+  if (job.completed === true) parts.push('completed');
+  const outPackage = formatOutputPackagePreview(job);
+  if (outPackage !== undefined) parts.push(outPackage);
+  return parts.join(', ');
+}
+
+function formatCraftingUpdateMessage(data: Record<string, unknown>): string {
+  const jobs = records(data.jobs);
+  if (jobs.length) {
+    const previews = jobs.slice(0, 3).map(formatCraftingJobPreview);
+    const more = jobs.length > 3 ? `; +${jobs.length - 3} more` : '';
+    const tick = data.tick === undefined || data.tick === null ? '' : ` tick ${data.tick}`;
+    return `${jobs.length} job${jobs.length === 1 ? '' : 's'}${tick}: ${previews.join('; ')}${more}`;
+  }
+
+  const parts: string[] = [];
+  const message = safeScalar(data.message);
+  if (message !== undefined) parts.push(String(message));
+  if (data.external === true) parts.push('rental facility');
+  const escrow = formatCreditsAmount(data.escrowed_credits);
+  if (escrow !== undefined) parts.push(`${escrow} still escrowed`);
+  const outPackage = formatOutputPackagePreview(data);
+  if (outPackage !== undefined) parts.push(outPackage);
+  if (data.tick !== undefined && data.tick !== null) parts.push(`tick ${data.tick}`);
+  return parts.join('; ') || 'Crafting update';
+}
+
+function formatCraftingSummaryMessage(data: Record<string, unknown>): string {
+  const count = finiteNumber(data.count) ?? 0;
+  const updateWord = count === 1 ? 'update' : 'updates';
+  const parts = [`${count} crafting progress ${updateWord} summarized`];
+  const latestTick = safeScalar(data.latest_tick);
+  const jobs = finiteNumber(data.jobs);
+  const rentalJobs = finiteNumber(data.rental_jobs);
+  const escrow = formatCreditsAmount(data.escrowed_credits);
+  const latestMessage = safeScalar(data.latest_message);
+  if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
+  if (jobs !== undefined) parts.push(`${jobs} active ${jobs === 1 ? 'job' : 'jobs'}`);
+  if (rentalJobs !== undefined) {
+    parts.push(`${rentalJobs} on rented ${rentalJobs === 1 ? 'facility' : 'facilities'}`);
+  }
+  if (escrow !== undefined) parts.push(`${escrow} still escrowed`);
+  if (latestMessage !== undefined) parts.push(`latest: ${latestMessage}`);
+  return parts.join('; ');
+}
+
+function formatActionResultSummaryMessage(data: Record<string, unknown>): string {
+  const count = finiteNumber(data.count) ?? 0;
+  const parts = [`${count} action result${count === 1 ? '' : 's'} summarized`];
+  const commands = formatCountMap(data.commands);
+  if (commands) parts.push(commands);
+  const latestTick = safeScalar(data.latest_tick);
+  if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
+  const latestCommand = safeScalar(data.latest_command);
+  if (latestCommand !== undefined) parts.push(`latest ${latestCommand}`);
+  const latestMessage = safeScalar(data.latest_message);
+  if (latestMessage !== undefined) parts.push(`latest: ${latestMessage}`);
+  return parts.join('; ');
+}
+
+function formatSystemProgressSummaryMessage(data: Record<string, unknown>): string {
+  const count = finiteNumber(data.count) ?? 0;
+  const parts = [`${count} travel progress update${count === 1 ? '' : 's'} summarized`];
+  const actions = formatCountMap(data.actions);
+  if (actions) parts.push(actions);
+  const latestAction = safeScalar(data.latest_action);
+  const latestDestination = safeScalar(data.latest_destination);
+  if (latestAction !== undefined && latestDestination !== undefined) {
+    parts.push(`latest ${latestAction} → ${latestDestination}`);
+  } else if (latestAction !== undefined) {
+    parts.push(`latest ${latestAction}`);
+  } else if (latestDestination !== undefined) {
+    parts.push(`latest → ${latestDestination}`);
+  }
+  const latestArrival = safeScalar(data.latest_arrival_tick);
+  if (latestArrival !== undefined) parts.push(`arrival tick ${latestArrival}`);
+  return parts.join('; ');
+}
+
+function headlinePreview(
+  tag: string,
+  headline: string,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  return {
+    tag,
+    headline: truncate(headline, options),
+    details: [],
+  };
+}
+
 /**
  * Typed pure preview handlers. Grown over later PRs.
  * null → fall through to Policy 5 generic path.
  *
- * PR1: empty — Policy 5 generic covers unknown types.
- * PR2+: register table-parity / domain handlers here. Inline dual-use must prefer this
- * registry before writeLine (see formatNotification dispatch note in notifications.ts).
+ * PR2: table Message special-case types (market, crafting, summaries, commission).
+ * Inline dual-use prefers this registry before writeLine (see formatNotification).
  */
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
-  // Empty until typed handlers land.
+  market_update: (data, _notification, options) =>
+    headlinePreview('MARKET', formatMarketUpdateMessage(data), options),
+
+  crafting_update: (data, _notification, options) =>
+    headlinePreview('CRAFTING', formatCraftingUpdateMessage(data), options),
+
+  crafting_summary: (data, _notification, options) =>
+    headlinePreview('CRAFTING', formatCraftingSummaryMessage(data), options),
+
+  action_result_summary: (data, _notification, options) =>
+    headlinePreview('ACTION RESULTS', formatActionResultSummaryMessage(data), options),
+
+  system_progress_summary: (data, _notification, options) =>
+    headlinePreview('SYSTEM', formatSystemProgressSummaryMessage(data), options),
+
+  ship_commission_complete: (data, _notification, options) => {
+    // Receipt when present; null falls through to Policy 5 / writeLine (matches table ladder).
+    const receipt = formatShipCommissionReceipt(data);
+    if (!receipt) return null;
+    return headlinePreview('SHIP READY', receipt, options);
+  },
 };
 
 function resolveOptions(options?: NotificationPreviewOptions): ResolvedPreviewOptions {
@@ -395,11 +564,35 @@ export function normalizeNotification(notification: unknown): NormalizedNotifica
 }
 
 /**
+ * Try a typed PREVIEW_HANDLERS entry only.
+ * Returns null when no handler is registered, the handler returns null, or the handler throws.
+ * Used by interim inline dual-registry dispatch (PREVIEW_HANDLERS → writeLine → generic).
+ */
+export function tryTypedNotificationPreview(
+  notification: unknown,
+  options?: NotificationPreviewOptions,
+): NotificationPreview | null {
+  try {
+    const resolved = resolveOptions(options);
+    const normalized = normalizeNotification(notification);
+    const handler = PREVIEW_HANDLERS[normalized.msgType];
+    if (!handler) return null;
+    try {
+      return handler(normalized.data, normalized, resolved);
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Build a human preview for any notification (raw or synthetic).
  * Never throws; never emits diagnostic tokens; never stringifies nested objects for human recovery.
  *
- * PR1 completeness: generic Policy 5 ladder + empty PREVIEW_HANDLERS.
- * Later PRs register typed handlers; table Message still independent until table-unification.
+ * PR2 completeness: Policy 5 ladder + table-parity PREVIEW_HANDLERS (market, crafting, summaries,
+ * ship_commission_complete). Table Message still independent until table-unification (PR4).
  */
 export function formatNotificationPreview(
   notification: unknown,
@@ -408,15 +601,8 @@ export function formatNotificationPreview(
   try {
     const resolved = resolveOptions(options);
     const normalized = normalizeNotification(notification);
-    const handler = PREVIEW_HANDLERS[normalized.msgType];
-    if (handler) {
-      try {
-        const typed = handler(normalized.data, normalized, resolved);
-        if (typed) return typed;
-      } catch {
-        // Typed handler failure falls through to generic.
-      }
-    }
+    const typed = tryTypedNotificationPreview(notification, options);
+    if (typed) return typed;
     return previewGeneric(normalized, resolved);
   } catch {
     return { tag: 'NOTIFICATION', headline: 'notification', details: [] };

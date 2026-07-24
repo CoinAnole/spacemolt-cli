@@ -2,6 +2,7 @@ import type { CliWriter } from './cli-context.ts';
 import {
   formatCountMap,
   formatNotificationPreview,
+  tryTypedNotificationPreview,
   type NotificationPreview,
 } from './notification-format-shared.ts';
 import { colorsForPlain } from './output-style.ts';
@@ -139,6 +140,25 @@ function formatActionResultDetails(details: Record<string, unknown>): string | u
 }
 
 /**
+ * Map known pure-preview tags to the colors previously used by writeLine handlers.
+ * Interim until K14 severity→color is wired; unknown tags stay magenta.
+ */
+function previewTagColor(tag: string, c: NotificationColors): string {
+  switch (tag) {
+    case 'MARKET':
+    case 'CRAFTING':
+    case 'ACTION RESULTS':
+      return c.green;
+    case 'SHIP READY':
+      return `${c.green}${c.bright}`;
+    case 'SYSTEM':
+      return c.magenta;
+    default:
+      return c.magenta;
+  }
+}
+
+/**
  * Render a pure NotificationPreview as colored multi-line output.
  * Used for Policy 5 generic fallback (and later for typed preview handlers).
  * Does not show omittedHint by default (verbose-only, PR 8).
@@ -149,8 +169,9 @@ function renderPreviewInline(
   c: NotificationColors,
   writeLine: (message?: string) => void,
 ): void {
+  const tagColor = previewTagColor(preview.tag, c);
   writeLine(
-    `${c.dim}[${time}]${c.reset} ${c.magenta}[${preview.tag}]${c.reset} ${preview.headline}`,
+    `${c.dim}[${time}]${c.reset} ${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`,
   );
   for (const detail of preview.details) {
     writeLine(`  ${detail}`);
@@ -637,13 +658,11 @@ function createNotificationHandlers(c: NotificationColors): Record<string, Notif
 export const NOTIFICATION_TYPES = Object.keys(createNotificationHandlers(colorsForPlain(false))).sort();
 
 /**
- * Interim dual-registry dispatch (PR1):
- *   1. legacy writeLine handler by msgType (with try/catch + hasDiagnosticToken guard)
- *   2. Policy 5 generic via formatNotificationPreview (consults empty PREVIEW_HANDLERS)
+ * Interim dual-registry dispatch (PR2):
+ *   1. PREVIEW_HANDLERS via tryTypedNotificationPreview → renderPreviewInline
+ *   2. legacy writeLine handler by msgType (try/catch + hasDiagnosticToken guard)
+ *   3. Policy 5 generic via formatNotificationPreview
  *
- * With PREVIEW_HANDLERS empty this matches design step 4a. When PR2+ registers pure
- * handlers for types that still have writeLine handlers and dual-uses them inline,
- * flip order to: PREVIEW_HANDLERS → writeLine → Policy 5 generic (keep diagnostic guard).
  * Do not scrape writeLine/ANSI for table Message.
  */
 export function formatNotification(notification: Notification, options?: { plain?: boolean }): string[] {
@@ -654,9 +673,28 @@ export function formatNotification(notification: Notification, options?: { plain
   const time = formatTime(normalized.timestamp);
   const type = normalized.msgType;
   const c = colorsForPlain(Boolean(options?.plain));
+
+  // 1. Pure typed preview (table-parity handlers from PR2+)
+  const typedPreview = tryTypedNotificationPreview({
+    type: normalized.type,
+    msg_type: normalized.msgType,
+    timestamp: normalized.timestamp,
+    data: normalized.data,
+  });
+  if (typedPreview) {
+    const previewLines: string[] = [];
+    const previewWriteLine = (message = '') => previewLines.push(message);
+    try {
+      renderPreviewInline(typedPreview, time, c, previewWriteLine);
+      if (previewLines.length > 0 && !hasDiagnosticToken(previewLines)) return previewLines;
+    } catch {
+      // Malformed pure preview should not make rendering fail.
+    }
+  }
+
+  // 2. Legacy writeLine handlers
   const notificationHandlers = createNotificationHandlers(c);
   const handler = notificationHandlers[type];
-
   if (handler) {
     const handledLines: string[] = [];
     const handledWriteLine = (message = '') => handledLines.push(message);
@@ -668,6 +706,7 @@ export function formatNotification(notification: Notification, options?: { plain
     }
   }
 
+  // 3. Policy 5 generic
   formatGenericNotification(normalized, time, c, writeLine);
   return lines;
 }
