@@ -348,10 +348,147 @@ function headlinePreview(
 }
 
 /**
+ * Compact action_result details (Policy 3 field priority for details tree).
+ * Prefers details.message, then selected scalars — never nested ship/location dumps.
+ */
+export function formatActionResultDetails(details: Record<string, unknown>): string | undefined {
+  const message = safeScalar(details.message);
+  if (message !== undefined) return String(message);
+
+  const bits: string[] = [];
+  const action = safeScalar(details.action);
+  if (action !== undefined) bits.push(String(action));
+  const system = safeScalar(details.system) ?? safeScalar(details.system_id);
+  if (system !== undefined) bits.push(`→ ${system}`);
+  const poi = safeScalar(details.poi) ?? safeScalar(details.poi_name);
+  if (poi !== undefined) bits.push(`@ ${poi}`);
+  const item = safeScalar(details.item_name) ?? safeScalar(details.item_id);
+  if (item !== undefined) {
+    const quantity = finiteNumber(details.quantity);
+    bits.push(quantity !== undefined ? `${quantity}× ${item}` : String(item));
+  }
+  for (const key of ['module_id', 'wear_status', 'storage_total', 'cargo_remaining'] as const) {
+    const value = safeScalar(details[key]);
+    if (value !== undefined) bits.push(`${key}=${value}`);
+  }
+  return bits.length ? bits.join(' ') : undefined;
+}
+
+function previewActionResult(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const command = safeScalar(data.command);
+  const tick = safeScalar(data.tick);
+  const commandLabel = command !== undefined ? String(command) : 'action';
+  const tickLabel = tick !== undefined ? String(tick) : '?';
+  const headline = truncate(`${commandLabel} completed (tick ${tickLabel})`, options);
+
+  const details: string[] = [];
+  const result = isRecord(data.result) ? data.result : undefined;
+  if (result) {
+    const resultMessage = safeScalar(result.message);
+    if (resultMessage !== undefined) {
+      details.push(truncate(firstLine(String(resultMessage)), options));
+    } else {
+      const nested = isRecord(result.details) ? result.details : undefined;
+      if (nested) {
+        const summary = formatActionResultDetails(nested);
+        if (summary) details.push(truncate(summary, options));
+      }
+    }
+  }
+
+  // Label bulky nested result fields for optional verbose (PR 8); never expand them.
+  const bulkySource = result ?? data;
+  const omittedHint = omittedBulkyHint(bulkySource);
+
+  return {
+    tag: 'ACTION RESULT',
+    headline,
+    details,
+    ...(omittedHint ? { omittedHint } : {}),
+  };
+}
+
+/**
+ * Compact system / tip preview. Never stringifies nested data (clears residual safeJson paths).
+ */
+function previewSystem(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  // gameplay_tip → [TIP]
+  if (data.type === 'gameplay_tip') {
+    const message = safeScalar(data.message);
+    return {
+      tag: 'TIP',
+      headline: truncate(
+        message !== undefined ? firstLine(String(message)) : 'gameplay tip',
+        options,
+      ),
+      details: [],
+    };
+  }
+
+  // Travel progress: action → destination (arrival tick N) [wormhole]
+  const action = safeScalar(data.action);
+  if (action !== undefined) {
+    const bits = [String(action)];
+    const destination = safeScalar(data.destination);
+    if (destination !== undefined) bits.push(`→ ${destination}`);
+    const arrival = safeScalar(data.arrival_tick);
+    if (arrival !== undefined) bits.push(`(arrival tick ${arrival})`);
+    if (data.is_wormhole === true) bits.push('wormhole');
+    return {
+      tag: 'SYSTEM',
+      headline: truncate(bits.join(' '), options),
+      details: [],
+    };
+  }
+
+  // Scalar message only
+  const message = safeScalar(data.message);
+  if (message !== undefined) {
+    return {
+      tag: 'SYSTEM',
+      headline: truncate(firstLine(String(message)), options),
+      details: [],
+    };
+  }
+
+  // No message: compact scalar bag — never nested JSON dumps of the whole data object.
+  const bits = collectScalarBits(data, {
+    preferredKeys: GENERIC_SCALAR_KEYS,
+    maxKeys: options.maxDetails,
+  });
+  if (bits.length) {
+    const omittedHint = omittedBulkyHint(data);
+    return {
+      tag: 'SYSTEM',
+      headline: truncate(bits.join(', '), options),
+      details: [],
+      ...(omittedHint ? { omittedHint } : {}),
+    };
+  }
+
+  const omittedHint = omittedBulkyHint(data);
+  return {
+    tag: 'SYSTEM',
+    headline: 'system notification',
+    details: [],
+    ...(omittedHint ? { omittedHint } : {}),
+  };
+}
+
+/**
  * Typed pure preview handlers. Grown over later PRs.
  * null → fall through to Policy 5 generic path.
  *
  * PR2: table Message special-case types (market, crafting, summaries, commission).
+ * PR3: action_result + system (residual dump fixes).
  * Inline dual-use prefers this registry before writeLine (see formatNotification).
  */
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
@@ -376,7 +513,15 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
     if (!receipt) return null;
     return headlinePreview('SHIP READY', receipt, options);
   },
+
+  action_result: previewActionResult,
+  system: previewSystem,
 };
+
+/** True when a native pure preview handler is registered for msgType (dual-registry dispatch). */
+export function hasPreviewHandler(msgType: string): boolean {
+  return typeof PREVIEW_HANDLERS[msgType] === 'function';
+}
 
 function resolveOptions(options?: NotificationPreviewOptions): ResolvedPreviewOptions {
   return {
@@ -591,8 +736,8 @@ export function tryTypedNotificationPreview(
  * Build a human preview for any notification (raw or synthetic).
  * Never throws; never emits diagnostic tokens; never stringifies nested objects for human recovery.
  *
- * PR2 completeness: Policy 5 ladder + table-parity PREVIEW_HANDLERS (market, crafting, summaries,
- * ship_commission_complete). Table Message still independent until table-unification (PR4).
+ * Completeness: Policy 5 ladder + PREVIEW_HANDLERS (PR2 table-parity + PR3 action_result/system).
+ * Table Message still independent until table-unification (PR4).
  */
 export function formatNotificationPreview(
   notification: unknown,
