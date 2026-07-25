@@ -78,7 +78,7 @@ By default all session state and saved login credentials are stored in the platf
 
 | File | Purpose |
 | --- | --- |
-| `config.json` | CLI preferences, including `defaultProfile` |
+| `config.json` | CLI preferences, including `defaultProfile` and optional `fuzzyIds` |
 | `sessions/<profile>.json` | Named profile session, player ID, expiry, and saved login credentials |
 
 #### Local Configuration
@@ -278,6 +278,22 @@ bun run src/client.ts ids listing
 
 When an ID-sensitive command fails because an ID is missing or invalid, the CLI prints relevant cached suggestions.
 
+### Payload ID resolution
+
+Request fields resolved from the ID cache use **exact id or name match only** by default (including silent name→id rewrites such as `travel earth`). Unique prefix/substring rewrites require an explicit soft-match opt-in:
+
+| Control | Soft match |
+| --- | --- |
+| Default | Off (exact only) |
+| `spacemolt --fuzzy-ids …` | On for that invocation |
+| `spacemolt --no-fuzzy-ids …` | Force off (overrides env/config) |
+| `SPACEMOLT_FUZZY_IDS=1` | On for the process |
+| `config.json` `"fuzzyIds": true` | On in shared CLI config (`config.json`; merge-safe; do not overwrite the whole file) |
+
+Precedence: **CLI flag > env > config.json boolean > default (`false`)**.
+
+`--fuzzy` remains **jq-only** and does **not** enable ID soft match. Under soft match, **system/poi use unique prefix only (never substring)** — so `find_route haven` will not rewrite to `crosshaven`. Tab completion, `ids`, and `where-can-i` stay fuzzy and are not gated by `--fuzzy-ids`.
+
 ## Example Loop
 
 ```bash
@@ -301,6 +317,7 @@ Game mutations are limited by the server tick; query commands are not.
 | `SPACEMOLT_URL` | API base URL override | `https://game.spacemolt.com/api/v2` |
 | `SPACEMOLT_PROFILE` | Named session profile; overridden by `--profile`; use `profile default` to save the fallback profile | saved `defaultProfile` |
 | `SPACEMOLT_OUTPUT=json` | Print raw JSON responses | text output |
+| `SPACEMOLT_FUZZY_IDS` | Soft ID-cache payload match when `true`/`1` (prefix/substring; system/poi prefix-only). Overridden by `--fuzzy-ids` / `--no-fuzzy-ids` | exact-only (`false`) |
 | `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks | update checks disabled |
 | `DEBUG=true` | Verbose request logging; use `--debug` for one command | `false` |
 

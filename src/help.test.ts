@@ -119,6 +119,9 @@ describe('help output branches', () => {
       'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs',
     );
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
+    expect(output).toContain('Payload fields match exact id/name by default.');
+    expect(output).toContain('system/poi use unique prefix only (never substring)');
+    expect(output).toContain('Completion, ids, and where-can-i stay fuzzy always.');
   });
 
   test('showHelp documents automation output semantics', () => {
@@ -132,7 +135,13 @@ describe('help output branches', () => {
     expect(output).toContain('--verbose-notifications');
     expect(output).toContain('omitted-field hints');
     expect(output).toContain('--jq              Extract with path syntax');
-    expect(output).toContain('--fuzzy           Auto-resolve simple --jq paths to similar keys');
+    expect(output).toContain(
+      '--fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)',
+    );
+    expect(output).toContain(
+      '--fuzzy-ids       Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only',
+    );
+    expect(output).toContain('--no-fuzzy-ids    Force exact-only ID resolution (override env/config)');
     expect(output).toContain('--keys [path]     List available keys at a JSON dotpath');
     expect(output).toContain('--search');
     expect(output).toContain('--search-keys');
@@ -220,6 +229,18 @@ describe('help output branches', () => {
       'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs',
     );
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
+    expect(output).toContain('Payload fields match exact id/name by default.');
+    expect(output).toContain('--fuzzy-ids');
+    expect(output).toContain('system/poi use unique prefix only (never substring)');
+    expect(output).toContain('Completion, ids, and where-can-i stay fuzzy always.');
+    // Global Flags block is duplicated with showHelp (not a shared helper); lock the flag lines here too.
+    expect(output).toContain(
+      '--fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)',
+    );
+    expect(output).toContain(
+      '--fuzzy-ids       Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only',
+    );
+    expect(output).toContain('--no-fuzzy-ids    Force exact-only ID resolution (override env/config)');
   });
 
   test('renderProgressiveHelp writes docked, asteroid, escape pod, and space states', () => {
@@ -988,6 +1009,9 @@ describe('help output branches', () => {
       'spacemolt ids <kind> [--search text]  Show or filter cached poi/system/item/player/ship/faction/drone/wreck/facility/listing/package IDs',
     );
     expect(output).toContain('spacemolt where-can-i <item>          Search cached item sightings');
+    expect(output).toContain('Payload fields match exact id/name by default.');
+    expect(output).toContain('system/poi use unique prefix only (never substring)');
+    expect(output).toContain('Completion, ids, and where-can-i stay fuzzy always.');
   });
 
   test('showFullHelp documents automation output semantics', () => {
@@ -1002,7 +1026,13 @@ describe('help output branches', () => {
     expect(output).toContain('--verbose-notifications');
     expect(output).toContain('omitted-field hints');
     expect(output).toContain('--jq <expr>         Extract with path syntax');
-    expect(output).toContain('--fuzzy             Auto-resolve simple --jq paths to similar keys');
+    expect(output).toContain(
+      '--fuzzy             Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)',
+    );
+    expect(output).toContain(
+      '--fuzzy-ids         Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only',
+    );
+    expect(output).toContain('--no-fuzzy-ids      Force exact-only ID resolution (override env/config)');
     expect(output).toContain('--keys [path]       List available keys at a JSON dotpath');
     expect(output).toContain('--search');
     expect(output).toContain('--search-keys');
@@ -1012,6 +1042,10 @@ describe('help output branches', () => {
     expect(output).toContain('Search projections print jq paths and values.');
     expect(output).toContain('--field/--fields output only the selected projection, even with --json/--format=json.');
     expect(output).toContain('SPACEMOLT_OUTPUT    Set to json for full API response JSON');
+    expect(output).toContain('SPACEMOLT_FUZZY_IDS Soft ID-cache payload match when true/1');
+    expect(output).toContain(
+      'System/POI IDs: exact id/name by default; --fuzzy-ids allows unique prefix only (never substring)',
+    );
   });
 
   test('showFullHelp documents named profile environment without session path override', () => {
