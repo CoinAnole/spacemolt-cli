@@ -78,7 +78,7 @@ export const LOCAL_COMPLETION_COMMANDS: Record<string, { description: string }> 
 };
 
 export const SPECIAL_COMPLETIONS: Record<string, { values: string[]; description: string }> = {
-  config: { values: ['user-agent'], description: 'Configuration action' },
+  config: { values: ['user-agent', 'fuzzy-ids'], description: 'Configuration action' },
   completion: { values: ['bash', 'zsh', 'fish'], description: 'Generate shell completion' },
   ids: { values: ['poi', 'system', 'item', 'player'], description: 'Cached ID kind' },
   profile: { values: ['list', 'default'], description: 'Profile action' },

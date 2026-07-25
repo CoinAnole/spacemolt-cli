@@ -524,6 +524,52 @@ describe('CLI local usability behavior', () => {
     }
   });
 
+  test('config fuzzy-ids on/off preserves unrelated config keys', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-fuzzy-ids-config-test-'));
+    try {
+      const configDir = path.join(home, '.config', 'spacemolt-cli');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(configDir, 'config.json'),
+        `${JSON.stringify({ defaultProfile: 'pilot', userAgent: 'FleetBot/1.0' })}\n`,
+      );
+
+      const testEnv = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+      const on = await runDirect(['config', 'fuzzy-ids', 'on'], testEnv);
+      expect(on.exitCode).toBe(0);
+      expect(on.stdout).toContain('Fuzzy IDs: on');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+        userAgent: 'FleetBot/1.0',
+        fuzzyIds: true,
+      });
+
+      const off = await runDirect(['config', 'fuzzy-ids', 'off'], testEnv);
+      expect(off.exitCode).toBe(0);
+      expect(off.stdout).toContain('Fuzzy IDs: off');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+        userAgent: 'FleetBot/1.0',
+        fuzzyIds: false,
+      });
+
+      const doctor = await runDirect(['doctor'], testEnv);
+      expect(doctor.exitCode).toBeLessThanOrEqual(1);
+      expect(doctor.stdout).toContain('fuzzy-ids');
+      expect(doctor.stdout).toContain('exact only (config)');
+
+      const reset = await runDirect(['config', 'fuzzy-ids', '--reset'], testEnv);
+      expect(reset.exitCode).toBe(0);
+      expect(reset.stdout).toContain('Fuzzy IDs: off (default)');
+      expect(JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf-8'))).toEqual({
+        defaultProfile: 'pilot',
+        userAgent: 'FleetBot/1.0',
+      });
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   test('--profile validates path-safe profile names before network work', async () => {
     const result = await runDirect(['--profile', '../bad', 'get_status']);
     expect(result.exitCode).toBe(1);

@@ -1653,7 +1653,7 @@ describe('command metadata', () => {
 
   test('shell completions include local subcommand values', () => {
     const expectedValues = {
-      config: ['user-agent'],
+      config: ['user-agent', 'fuzzy-ids'],
       completion: ['bash', 'zsh', 'fish'],
       ids: ['poi', 'system', 'item', 'player'],
       profile: ['list', 'default'],

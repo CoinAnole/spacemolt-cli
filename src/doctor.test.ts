@@ -101,7 +101,16 @@ describe('doctor', () => {
   test('returns all expected check names', async () => {
     const result = await runDoctor();
     const names = result.checks.map((c) => c.name);
-    expect(names).toEqual(['api', 'session', 'profile', 'auth', 'version', 'openapi-cache', 'drift']);
+    expect(names).toEqual([
+      'api',
+      'session',
+      'profile',
+      'auth',
+      'version',
+      'fuzzy-ids',
+      'openapi-cache',
+      'drift',
+    ]);
   });
 
   test('version check reports current version', async () => {
@@ -110,6 +119,85 @@ describe('doctor', () => {
     expect(versionCheck).toBeDefined();
     expect(versionCheck?.ok).toBe(true);
     expect(versionCheck?.message).toContain('v');
+  });
+
+  test('fuzzy-ids check reports default exact-only preference', async () => {
+    const configHome = tempDir();
+    try {
+      const result = await runDoctor(defaultConfigWithoutEnvProfile(), {
+        ...process.env,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_FUZZY_IDS: undefined,
+      });
+      const check = result.checks.find((c) => c.name === 'fuzzy-ids');
+      expect(check).toBeDefined();
+      expect(check?.ok).toBe(true);
+      expect(check?.message).toBe('exact only (default)');
+      expect(check?.detail).toContain('CLI --fuzzy-ids');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('fuzzy-ids check reports config, env, and cli sources', async () => {
+    const configHome = tempDir();
+    try {
+      const configDir = path.join(configHome, 'spacemolt-cli');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.writeFileSync(path.join(configDir, 'config.json'), `${JSON.stringify({ fuzzyIds: true })}\n`);
+
+      const fromConfig = await runDoctor(defaultConfigWithoutEnvProfile(), {
+        ...process.env,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_FUZZY_IDS: undefined,
+      });
+      expect(fromConfig.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('soft match on (config)');
+
+      const fromEnv = await runDoctor(defaultConfigWithoutEnvProfile(), {
+        ...process.env,
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_FUZZY_IDS: '0',
+      });
+      expect(fromEnv.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('exact only (env)');
+
+      const fromCli = await runDoctor(
+        defaultConfigWithoutEnvProfile(),
+        {
+          ...process.env,
+          XDG_CONFIG_HOME: configHome,
+          SPACEMOLT_FUZZY_IDS: '0',
+        },
+        { fuzzyIds: true, fuzzyIdsCliExplicit: true },
+      );
+      expect(fromCli.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('soft match on (cli)');
+
+      const cliOff = await runDoctor(
+        defaultConfigWithoutEnvProfile(),
+        {
+          ...process.env,
+          XDG_CONFIG_HOME: configHome,
+          SPACEMOLT_FUZZY_IDS: '1',
+        },
+        { fuzzyIds: false, fuzzyIdsCliExplicit: true },
+      );
+      expect(cliOff.checks.find((c) => c.name === 'fuzzy-ids')?.message).toBe('exact only (cli)');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
+  });
+
+  test('CLI --fuzzy-ids doctor reports soft match from cli source', async () => {
+    const configHome = tempDir();
+    try {
+      const result = await runDirect(['--fuzzy-ids', 'doctor'], {
+        XDG_CONFIG_HOME: configHome,
+        SPACEMOLT_FUZZY_IDS: '0',
+      });
+      expect(result.stdout).toContain('fuzzy-ids');
+      expect(result.stdout).toContain('soft match on (cli)');
+    } finally {
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
   });
 
   test('session path check tolerates no default profile', async () => {
@@ -215,7 +303,7 @@ describe('doctor', () => {
     const parsed = JSON.parse(result.stdout);
     expect(parsed.structuredContent).toBeDefined();
     expect(parsed.structuredContent.checks).toBeArray();
-    expect(parsed.structuredContent.checks.length).toBe(7);
+    expect(parsed.structuredContent.checks.length).toBe(8);
     expect(parsed.structuredContent.cachedOpenApiRoutes).toBeNumber();
     expect(parsed.structuredContent.dynamicCommands).toBeNumber();
   });
