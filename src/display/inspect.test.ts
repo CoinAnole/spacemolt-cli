@@ -28,6 +28,23 @@ const context = {
   },
 };
 
+const packageShell = {
+  package_id: 'pkg_abc',
+  label: 'Main Belt Survey Supplies',
+  size: 100,
+  created_at: '2026-07-16T12:00:00Z',
+  owner: { type: 'player', id: 'p1', name: 'PilotOne' },
+  creator: {
+    player_id: 'p1',
+    username: 'PilotOne',
+    faction: { type: 'player_faction', id: 'f1', name: 'Survey Corps', tag: 'SRV' },
+  },
+  contents: [
+    { item_id: 'iron_ore', name: 'Iron Ore', quantity: 20, size: 20 },
+    { item_id: 'copper_ore', name: 'Copper Ore', quantity: 10, size: 10 },
+  ],
+};
+
 test('renders package inspect results with contents table', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -35,22 +52,7 @@ test('renders package inspect results with contents table', () => {
       id: 'package:pkg_abc',
       kind: 'package',
       source: 'cargo',
-      package: {
-        package_id: 'pkg_abc',
-        label: 'Main Belt Survey Supplies',
-        size: 100,
-        created_at: '2026-07-16T12:00:00Z',
-        owner: { type: 'player', id: 'p1', name: 'PilotOne' },
-        creator: {
-          player_id: 'p1',
-          username: 'PilotOne',
-          faction: { type: 'player_faction', id: 'f1', name: 'Survey Corps', tag: 'SRV' },
-        },
-        contents: [
-          { item_id: 'iron_ore', name: 'Iron Ore', quantity: 20, size: 20 },
-          { item_id: 'copper_ore', name: 'Copper Ore', quantity: 10, size: 10 },
-        ],
-      },
+      package: packageShell,
     },
     options,
     context,
@@ -69,7 +71,218 @@ test('renders package inspect results with contents table', () => {
   expect(stdout).toContain('Iron Ore');
   expect(stdout).toContain('Copper Ore');
   expect(stdout).toContain('iron_ore');
+  expect(stdout).not.toContain('Shipment');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders package inspect with full shipment fields', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        ...packageShell,
+        shipment: {
+          shipment_id: 'shipment-transit-1',
+          status: 'in_transit',
+          role: 'carrier',
+          destination_base_id: 'nova_central',
+          destination_name: 'Nova Central',
+          destination_system: 'centauri',
+          base_reward: 12500,
+          payout_if_delivered_now: 12500,
+          failure_debt: 33000,
+          ticks_to_deadline: 40,
+          ticks_to_recovery_deadline: 2920,
+          late: false,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Shipment');
+  expect(stdout).toContain('Contract: shipment-transit-1');
+  expect(stdout).toContain('Status: in_transit');
+  expect(stdout).toContain('Role: carrier');
+  expect(stdout).toContain('Destination: Nova Central / centauri (nova_central)');
+  expect(stdout).toContain('Base reward: 12,500 cr');
+  expect(stdout).toContain('Payout if delivered now: 12,500 cr');
+  expect(stdout).toContain('Failure debt: 33,000 cr');
+  expect(stdout).toContain('Ticks to deadline: 40 ticks');
+  expect(stdout).toContain('Ticks to recovery deadline: 2,920 ticks');
+  expect(stdout).toContain('Late: no');
+  expect(stdout).not.toContain('Late fee if delivered now');
+  // Shipment section appears before contents.
+  expect(stdout.indexOf('Shipment')).toBeLessThan(stdout.indexOf('=== Contents ==='));
+  expect(stdout).toContain('Iron Ore');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders late shipment economics including negative deadline ticks', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        ...packageShell,
+        shipment: {
+          shipment_id: 'shipment-late-1',
+          status: 'in_transit',
+          role: 'carrier',
+          destination_base_id: 'nova_central',
+          destination_name: 'Nova Central',
+          destination_system: 'centauri',
+          base_reward: 12500,
+          payout_if_delivered_now: 0,
+          failure_debt: 33000,
+          ticks_to_deadline: -120,
+          ticks_to_recovery_deadline: 2760,
+          late: true,
+          late_fee_if_delivered_now: 250,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contract: shipment-late-1');
+  expect(stdout).toContain('Late: yes');
+  expect(stdout).toContain('Payout if delivered now: 0 cr');
+  expect(stdout).toContain('Late fee if delivered now: 250 cr');
+  expect(stdout).toContain('Ticks to deadline: -120 ticks');
+  expect(stdout).toContain('Ticks to recovery deadline: 2,760 ticks');
+});
+
+test('formats destination fallbacks for package shipment', () => {
+  const baseOnly = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      package: {
+        ...packageShell,
+        shipment: {
+          shipment_id: 's1',
+          status: 'in_transit',
+          role: 'carrier',
+          destination_base_id: 'nova_central',
+          base_reward: 1,
+          payout_if_delivered_now: 1,
+          failure_debt: 1,
+          ticks_to_deadline: 1,
+          ticks_to_recovery_deadline: 1,
+          late: false,
+        },
+      },
+    },
+    options,
+    context,
+  );
+  expect(baseOnly.stdout.join('\n')).toContain('Destination: nova_central');
+
+  const nameAndBase = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      package: {
+        ...packageShell,
+        shipment: {
+          shipment_id: 's1',
+          status: 'in_transit',
+          role: 'carrier',
+          destination_base_id: 'nova_central',
+          destination_name: 'Nova Central',
+          base_reward: 1,
+          payout_if_delivered_now: 1,
+          failure_debt: 1,
+          ticks_to_deadline: 1,
+          ticks_to_recovery_deadline: 1,
+          late: false,
+        },
+      },
+    },
+    options,
+    context,
+  );
+  expect(nameAndBase.stdout.join('\n')).toContain('Destination: Nova Central (nova_central)');
+
+  const systemAndBase = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      package: {
+        ...packageShell,
+        shipment: {
+          shipment_id: 's1',
+          status: 'in_transit',
+          role: 'carrier',
+          destination_base_id: 'nova_central',
+          destination_system: 'centauri',
+          base_reward: 1,
+          payout_if_delivered_now: 1,
+          failure_debt: 1,
+          ticks_to_deadline: 1,
+          ticks_to_recovery_deadline: 1,
+          late: false,
+        },
+      },
+    },
+    options,
+    context,
+  );
+  expect(systemAndBase.stdout.join('\n')).toContain('Destination: centauri (nova_central)');
+});
+
+test('ignores non-record package shipment and empty shipment objects', () => {
+  const nonRecord = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        ...packageShell,
+        shipment: 'not-a-record',
+      },
+    },
+    options,
+    context,
+  );
+  const nonRecordOut = nonRecord.stdout.join('\n');
+  expect(nonRecordOut).not.toContain('Shipment');
+  expect(nonRecordOut).toContain('Package: Main Belt Survey Supplies');
+
+  const empty = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        ...packageShell,
+        shipment: {},
+      },
+    },
+    options,
+    context,
+  );
+  const emptyOut = empty.stdout.join('\n');
+  expect(emptyOut).not.toContain('Shipment');
+  expect(emptyOut).toContain('Package: Main Belt Survey Supplies');
+  expect(emptyOut).toContain('Iron Ore');
 });
 
 test('renders system inspect results with faction intel', () => {

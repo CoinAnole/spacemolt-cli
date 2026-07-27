@@ -111,6 +111,65 @@ function emitOptionalLine(label: string, value: unknown): void {
   emitLine(`${label}: ${String(value)}`);
 }
 
+// byte-identical to shipping.ts formatCredits / formatTicks / formatBoolean
+function formatCredits(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return `${value.toLocaleString()} cr`;
+}
+
+function formatTicks(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return `${value.toLocaleString()} ticks`;
+}
+
+function formatBoolean(value: unknown): string | undefined {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return undefined;
+}
+
+function formatDestination(shipment: Record<string, unknown>): string | undefined {
+  const name = text(shipment.destination_name);
+  const system = text(shipment.destination_system);
+  const baseId = text(shipment.destination_base_id);
+
+  const parts: string[] = [];
+  if (name) parts.push(name);
+  if (system) parts.push(system);
+
+  if (parts.length && baseId) {
+    return `${parts.join(' / ')} (${baseId})`;
+  }
+  if (baseId) return baseId;
+  if (parts.length) return parts.join(' / ');
+  return undefined;
+}
+
+function emitPackageShipment(shipment: Record<string, unknown>): void {
+  const lines: string[] = [];
+  const push = (label: string, rendered: string | undefined): void => {
+    if (rendered === undefined) return;
+    lines.push(`${label}: ${rendered}`);
+  };
+
+  push('Contract', text(shipment.shipment_id));
+  push('Status', text(shipment.status));
+  push('Role', text(shipment.role));
+  push('Destination', formatDestination(shipment));
+  push('Base reward', formatCredits(shipment.base_reward));
+  push('Payout if delivered now', formatCredits(shipment.payout_if_delivered_now));
+  push('Failure debt', formatCredits(shipment.failure_debt));
+  push('Ticks to deadline', formatTicks(shipment.ticks_to_deadline));
+  push('Ticks to recovery deadline', formatTicks(shipment.ticks_to_recovery_deadline));
+  push('Late', formatBoolean(shipment.late));
+  push('Late fee if delivered now', formatCredits(shipment.late_fee_if_delivered_now));
+
+  if (!lines.length) return;
+
+  emitLine(`\n${c.bright}Shipment${c.reset}`);
+  for (const line of lines) emitLine(line);
+}
+
 function emitInspectHeader(result: Record<string, unknown>): void {
   const id = text(result.id) ?? 'unknown';
   emitLine(`\n${c.bright}=== Inspect: ${id} ===${c.reset}`);
@@ -132,6 +191,10 @@ function emitPackage(pkg: Record<string, unknown>): void {
   if (owner) emitLine(`Owner: ${owner}`);
   const creator = formatCreator(pkg.creator);
   if (creator) emitLine(`Creator: ${creator}`);
+
+  if (isRecord(pkg.shipment)) {
+    emitPackageShipment(pkg.shipment);
+  }
 
   const contents = Array.isArray(pkg.contents) ? pkg.contents.filter(isRecord) : [];
   if (contents.length) {

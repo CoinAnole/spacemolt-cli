@@ -1,0 +1,30 @@
+
+=== Inspect: package:pkg_abc ===
+Kind: package
+Source: cargo
+
+Package: Main Belt Survey Supplies
+ID: pkg_abc
+Size: 100
+Created: 2026-07-16T12:00:00Z
+Owner: PilotOne (player)
+Creator: PilotOne / Survey Corps [SRV]
+
+Shipment
+Contract: shipment-transit-1
+Status: in_transit
+Role: carrier
+Destination: Nova Central / centauri (nova_central)
+Base reward: 12,500 cr
+Payout if delivered now: 12,500 cr
+Failure debt: 33,000 cr
+Ticks to deadline: 40 ticks
+Ticks to recovery deadline: 2,920 ticks
+Late: no
+
+=== Contents ===
+
+  Name       | Item       | Qty | Size
+  -----------+------------+-----+-----
+  Iron Ore   | iron_ore   | 20  | 20  
+  Copper Ore | copper_ore | 10  | 10  
