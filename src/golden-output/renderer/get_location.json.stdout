@@ -24,7 +24,9 @@
     "nearby_pirate_count": 2,
     "nearby_pirates": [
       {
-        "name": "Raider"
+        "name": "Raider",
+        "faction": "pirate_kael",
+        "faction_name": "Admiral Kael"
       }
     ],
     "nearby_empire_npc_count": 1,

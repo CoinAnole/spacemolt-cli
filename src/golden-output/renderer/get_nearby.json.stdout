@@ -28,7 +28,9 @@
       "hull": 40,
       "max_hull": 50,
       "shield": 10,
-      "max_shield": 20
+      "max_shield": 20,
+      "faction": "pirate_kael",
+      "faction_name": "Admiral Kael"
     }
   ],
   "pirate_count": 1,

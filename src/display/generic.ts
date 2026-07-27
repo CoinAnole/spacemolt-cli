@@ -76,8 +76,14 @@ function summarizeRewards(rewards: unknown): string {
   }
   if (rewards.reputation !== undefined && rewards.reputation !== null && rewards.reputation !== 0)
     parts.push(`rep +${rewards.reputation}`);
-  if (rewards.pirate_rep !== undefined && rewards.pirate_rep !== null && rewards.pirate_rep !== 0)
-    parts.push(`pirate rep +${rewards.pirate_rep}`);
+  if (rewards.pirate_rep !== undefined && rewards.pirate_rep !== null && rewards.pirate_rep !== 0) {
+    const faction =
+      typeof rewards.pirate_faction === 'string' && rewards.pirate_faction.trim() !== ''
+        ? rewards.pirate_faction.trim()
+        : '';
+    const suffix = faction ? ` (${faction})` : '';
+    parts.push(`pirate rep +${rewards.pirate_rep}${suffix}`);
+  }
   return parts.join('; ');
 }
 

@@ -25,6 +25,7 @@
     },
     "reputation": 3,
     "pirate_rep": 1,
+    "pirate_faction": "pirate_kael",
     "skill_xp": {
       "piloting": 25
     }
