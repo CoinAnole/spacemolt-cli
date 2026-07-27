@@ -117,6 +117,48 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       base_reward: { minimum: 1 },
     },
   },
+  // Explicit usage required: buildUsageFromSchema returns undefined when required=[]
+  // even though package_id / shipment_id are optional schema fields (see commands.ts).
+  shipping_get: {
+    usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
+    description:
+      'Show one freight contract by shipment_id or by the sealed package_id in your hold.',
+    example: 'spacemolt shipping_get package_id=package-relief-1',
+    category: 'Missions',
+    discoverWith: ['shipping_active', 'get_cargo'],
+    seeAlso: ['shipping_active', 'shipping_track', 'shipping_deliver'],
+    apiRoute: 'POST /api/v2/spacemolt_shipping/get',
+  },
+  shipping_track: {
+    usage: '[package_id=...] [shipment_id=...] [limit=...]  (provide package_id or shipment_id)',
+    description:
+      'Track beacon events for a freight contract by shipment_id or by the sealed package_id in your hold.',
+    example: 'spacemolt shipping_track package_id=package-relief-1',
+    category: 'Missions',
+    discoverWith: ['shipping_active', 'get_cargo'],
+    seeAlso: ['shipping_active', 'shipping_get', 'shipping_deliver'],
+    apiRoute: 'POST /api/v2/spacemolt_shipping/track',
+  },
+  shipping_deliver: {
+    usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
+    description:
+      'Deliver freight at the destination by shipment_id or by the sealed package_id in your hold.',
+    example: 'spacemolt shipping_deliver package_id=package-relief-1',
+    category: 'Missions',
+    discoverWith: ['shipping_active', 'get_cargo'],
+    seeAlso: ['shipping_active', 'shipping_get', 'shipping_return'],
+    apiRoute: 'POST /api/v2/spacemolt_shipping/deliver',
+  },
+  shipping_return: {
+    usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
+    description:
+      'Return freight to origin by shipment_id or by the sealed package_id in your hold.',
+    example: 'spacemolt shipping_return package_id=package-relief-1',
+    category: 'Missions',
+    discoverWith: ['shipping_active', 'get_cargo'],
+    seeAlso: ['shipping_active', 'shipping_get', 'shipping_deliver'],
+    apiRoute: 'POST /api/v2/spacemolt_shipping/return',
+  },
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
     description: 'Jettison one cargo item, or several cargo item types with items=JSON, into one container.',
