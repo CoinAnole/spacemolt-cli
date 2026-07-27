@@ -223,6 +223,73 @@ function renderShippingList(result: Record<string, unknown>): boolean {
   return true;
 }
 
+function formatDestination(row: Record<string, unknown>, contract: Record<string, unknown>): string | undefined {
+  const name = text(row.destination_name);
+  const system = text(row.destination_system);
+  if (name && system) return `${name} (${system})`;
+  if (name) return name;
+  return text(contract.destination_base_id);
+}
+
+function formatActiveDeadline(row: Record<string, unknown>): string | undefined {
+  const ticks = formatTicks(row.ticks_to_deadline);
+  if (ticks === undefined) return undefined;
+  return row.late === true ? `late · ${ticks}` : ticks;
+}
+
+function renderShippingActive(result: Record<string, unknown>): boolean {
+  const shipments = requiredRecordArray(result.shipments);
+  if (!shipments) return false;
+  if (!shipments.every((row) => isRecord(row.contract))) return false;
+
+  emitHeading('Active Freight');
+  const tickLabel = text(result.tick) ?? '?';
+  emitLine(`${c.dim}tick ${tickLabel} · ${shipments.length.toLocaleString()} contracts${c.reset}`);
+
+  const message = text(result.message);
+  if (shipments.length === 0) {
+    emitLine(message ?? 'No active freight contracts.');
+    return true;
+  }
+  if (message) emitLine(message);
+
+  // contract objects already validated above via isRecord on every row.
+  const rows = shipments.map((row) => {
+    const contract = row.contract as Record<string, unknown>;
+    return {
+      role: text(row.role),
+      destination: formatDestination(row, contract),
+      deadline: formatActiveDeadline(row),
+      recovery: formatTicks(row.ticks_to_recovery_deadline),
+      payout: formatCredits(row.payout_if_delivered_now),
+      late_fee: formatCredits(row.late_fee_if_delivered_now),
+      in_cargo: formatBoolean(row.package_in_your_cargo),
+      next_step: text(row.next_step),
+      shipment: text(contract.id),
+      package: text(contract.package_id),
+    };
+  });
+
+  printCompactTable(
+    'Contracts',
+    rows,
+    [
+      ['Role', ['role']],
+      ['Destination', ['destination']],
+      ['Deadline', ['deadline']],
+      ['Recovery', ['recovery']],
+      ['Payout', ['payout']],
+      ['Late fee', ['late_fee']],
+      ['In cargo', ['in_cargo']],
+      ['Next step', ['next_step']],
+      ['Shipment', ['shipment']],
+      ['Package', ['package']],
+    ],
+    { maxCellWidth: 48 },
+  );
+  return true;
+}
+
 function formatLocation(event: Record<string, unknown>): string | undefined {
   const parts = [text(event.system_id), text(event.poi_id), text(event.base_id)].filter(
     (value): value is string => value !== undefined,
@@ -437,6 +504,10 @@ export const shippingFormatters = [
   ),
   formatter((result) => renderShippingList(result), {
     commands: ['shipping_list'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+  formatter((result) => renderShippingActive(result), {
+    commands: ['shipping_active'],
     suppressShapeFallbackOnDecline: true,
   }),
   formatter((result) => renderShippingTrack(result), {

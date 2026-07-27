@@ -1249,7 +1249,7 @@ describe('command metadata', () => {
         'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
       category: 'Missions',
       discoverWith: ['get_status'],
-      seeAlso: ['shipping_quote', 'shipping_accept', 'shipping_profile'],
+      seeAlso: ['shipping_active', 'shipping_quote', 'shipping_accept', 'shipping_profile'],
       route: { tool: 'spacemolt_shipping', action: 'list', method: 'POST' },
       schema: {
         eligible_as: { enum: ['player', 'faction'] },
@@ -1271,6 +1271,25 @@ describe('command metadata', () => {
           commandConfig.route.action === 'list',
       ),
     ).toHaveLength(1);
+    const shippingActive = BUNDLED_COMMAND_REGISTRY.commands.shipping_active;
+    if (!shippingActive) throw new Error('shipping_active command missing');
+    // Avoid expect.arrayContaining / stringContaining inside toMatchObject on registry
+    // objects — bun:test can replace matched properties with matcher instances.
+    expect(shippingActive.description).toContain('live freight');
+    expect(shippingActive.example).toBe('spacemolt shipping_active');
+    expect(shippingActive.category).toBe('Missions');
+    expect(shippingActive.discoverWith).toEqual(['get_status', 'get_cargo', 'shipping_list']);
+    expect(shippingActive.seeAlso).toEqual([
+      'shipping_list',
+      'shipping_get',
+      'shipping_track',
+      'shipping_deliver',
+      'shipping_return',
+      'shipping_profile',
+    ]);
+    expect(shippingActive.route).toEqual({ tool: 'spacemolt_shipping', action: 'active', method: 'POST' });
+    expect(shippingActive.required ?? []).toEqual([]);
+    expect(shippingActive.usage).toBeUndefined();
     const shippingQuote = BUNDLED_COMMAND_REGISTRY.commands.shipping_quote;
     if (!shippingQuote) throw new Error('shipping_quote command missing');
     expect(shippingQuote).toMatchObject({

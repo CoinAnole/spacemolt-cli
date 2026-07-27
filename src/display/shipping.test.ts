@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { shippingActiveEmptyFixture } from './shipping.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
 
 const options: GlobalOptions = {
@@ -281,6 +282,209 @@ test('renders an explicit empty listing message with pagination', () => {
   expect(stdout).toContain('page 1, 0 of 0');
   expect(stdout).toContain('No contracts at this station match the selected filters.');
   expect(stdout).toContain('Reason: no_matching_shipments');
+});
+
+test('renders active freight with role, destination, deadline/late, recovery, payout, late fee, cargo, and next step', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 12450,
+    message: '3 live freight contracts.',
+    shipments: [
+      {
+        contract: { ...contract, id: 'shipment-active-carrier-1', package_id: 'package-relief-1' },
+        role: 'carrier',
+        ticks_to_target: 8,
+        ticks_to_deadline: 28,
+        ticks_to_recovery_deadline: 2908,
+        late: false,
+        payout_if_delivered_now: 12000,
+        failure_debt: 500,
+        package_in_your_cargo: true,
+        next_step: 'Deliver at nova_central while docked.',
+        destination_name: 'Nova Central',
+        destination_system: 'Nova',
+        last_known_location: 'sol / earth_orbit',
+      },
+      {
+        contract: {
+          ...contract,
+          id: 'shipment-active-late-1',
+          package_id: 'package-reactor-1',
+          service_level: 'priority',
+        },
+        role: 'carrier',
+        ticks_to_target: -40,
+        ticks_to_deadline: -15,
+        ticks_to_recovery_deadline: 2865,
+        late: true,
+        payout_if_delivered_now: 0,
+        late_fee_if_delivered_now: 400,
+        failure_debt: 72000,
+        package_in_your_cargo: true,
+        next_step: 'Deliver late (forfeit reward, pay late fee) or return at origin.',
+        destination_name: 'Sirius Observatory',
+        destination_system: 'Sirius',
+      },
+      {
+        contract: {
+          ...contract,
+          id: 'shipment-active-invited-1',
+          package_id: 'package-invite-1',
+          status: 'posted',
+          visibility: 'invited',
+        },
+        role: 'invited_carrier',
+        ticks_to_target: 40,
+        ticks_to_deadline: 80,
+        ticks_to_recovery_deadline: 2960,
+        late: false,
+        payout_if_delivered_now: 9000,
+        failure_debt: 500,
+        package_in_your_cargo: false,
+        next_step: 'Accept the invitation or ignore the listing.',
+        destination_name: 'Nova Central',
+        destination_system: 'Nova',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Active Freight ===');
+  expect(stdout).toContain('tick 12,450 · 3 contracts');
+  expect(stdout).toContain('3 live freight contracts.');
+  expect(stdout).toContain('carrier');
+  expect(stdout).toContain('invited_carrier');
+  expect(stdout).toContain('Nova Central (Nova)');
+  expect(stdout).toContain('Sirius Observatory (Sirius)');
+  expect(stdout).toContain('28 ticks');
+  expect(stdout).toContain('late · -15 ticks');
+  expect(stdout).toContain('2,908 ticks');
+  expect(stdout).toContain('12,000 cr');
+  expect(stdout).toContain('0 cr');
+  expect(stdout).toContain('400 cr');
+  expect(stdout).toContain('Deliver at nova_central while docked.');
+  expect(stdout).toContain('shipment-active-carrier-1');
+  expect(stdout).toContain('package-reactor-1');
+  expect(stdout).toContain('package-invite-1');
+  expect(stdout).toMatch(/In cargo/);
+  expect(stdout).toMatch(/Late fee/);
+  expect(stdout).toMatch(/Next step/);
+  // Non-v1 table columns must not appear as headers
+  expect(stdout).not.toMatch(/\bStatus\b/);
+  expect(stdout).not.toMatch(/\bTarget\b/);
+  expect(stdout).not.toMatch(/\bLiability\b/);
+  expect(stdout).not.toContain('last_known_location');
+  expect(stdout).not.toContain('sol / earth_orbit');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders an explicit empty active freight message', () => {
+  const withMessage = output('shipping_active', structuredClone(shippingActiveEmptyFixture));
+  expect(withMessage).toContain('=== Active Freight ===');
+  expect(withMessage).toContain('tick 12,450 · 0 contracts');
+  expect(withMessage).toContain('No active freight contracts.');
+  expect(withMessage).not.toContain('=== Response ===');
+
+  const defaultEmpty = output('shipping_active', {
+    action: 'active',
+    tick: 100,
+    shipments: [],
+  });
+  expect(defaultEmpty).toContain('tick 100 · 0 contracts');
+  expect(defaultEmpty).toContain('No active freight contracts.');
+  expect(defaultEmpty).not.toContain('=== Response ===');
+});
+
+test('declines malformed active freight payloads and preserves the raw fallback', () => {
+  expect(rawFallbackJson(output('shipping_active', { action: 'active', tick: 1, shipments: 'invalid' }))).toEqual({
+    action: 'active',
+    tick: 1,
+    shipments: 'invalid',
+  });
+  expect(
+    rawFallbackJson(
+      output('shipping_active', {
+        action: 'active',
+        tick: 1,
+        shipments: [{ contract: 'invalid', role: 'carrier' }],
+      }),
+    ),
+  ).toEqual({
+    action: 'active',
+    tick: 1,
+    shipments: [{ contract: 'invalid', role: 'carrier' }],
+  });
+});
+
+test('omits malformed optional active freight fields without diagnostic tokens', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 500,
+    shipments: [
+      {
+        contract: { id: 'shipment-sparse-1', package_id: 'package-sparse-1' },
+        role: 'shipper',
+        ticks_to_deadline: Number.NaN,
+        ticks_to_recovery_deadline: 'not-a-number',
+        late: 'maybe',
+        payout_if_delivered_now: undefined,
+        late_fee_if_delivered_now: Number.NaN,
+        package_in_your_cargo: 'yes',
+        next_step: '',
+        destination_name: '',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Active Freight ===');
+  expect(stdout).toContain('shipper');
+  expect(stdout).toContain('shipment-sparse-1');
+  expect(stdout).toContain('package-sparse-1');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+
+test('formats active destination as name-only or contract base id when system is missing', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 900,
+    shipments: [
+      {
+        contract: { id: 'shipment-name-only-1', package_id: 'package-name-only-1' },
+        role: 'carrier',
+        ticks_to_deadline: 10,
+        ticks_to_recovery_deadline: 100,
+        late: false,
+        payout_if_delivered_now: 1000,
+        package_in_your_cargo: true,
+        next_step: 'Deliver while docked.',
+        destination_name: 'Name Only Station',
+        // destination_system omitted → name-only branch
+      },
+      {
+        contract: {
+          id: 'shipment-base-id-1',
+          package_id: 'package-base-id-1',
+          destination_base_id: 'nova_central',
+        },
+        role: 'recipient',
+        ticks_to_deadline: 12,
+        ticks_to_recovery_deadline: 120,
+        late: false,
+        payout_if_delivered_now: 0,
+        package_in_your_cargo: false,
+        next_step: 'Wait for delivery.',
+        // destination_name / destination_system omitted → base id fallback
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Name Only Station');
+  expect(stdout).toContain('nova_central');
+  expect(stdout).not.toContain('Name Only Station (');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('renders tracking events in server order with returned location components only', () => {

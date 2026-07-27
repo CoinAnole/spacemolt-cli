@@ -83,9 +83,27 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     example:
       'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
     discoverWith: ['get_status'],
-    seeAlso: ['shipping_quote', 'shipping_accept', 'shipping_profile'],
+    seeAlso: ['shipping_active', 'shipping_quote', 'shipping_accept', 'shipping_profile'],
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt_shipping/list',
+  },
+  // Empty body / no args: omit usage entirely (do not set usage: '' — help treats empty string as a blank usage line).
+  shipping_active: {
+    description:
+      'List every live freight contract you are party to (carrier, shipper, recipient, or invited carrier): destination, role, deadline/recovery countdown, late fee, payout if delivered now, whether the package is in your cargo, and the next step. Start here if you accepted a run and lost track of it.',
+    example: 'spacemolt shipping_active',
+    discoverWith: ['get_status', 'get_cargo', 'shipping_list'],
+    seeAlso: [
+      'shipping_list',
+      'shipping_get',
+      'shipping_track',
+      'shipping_deliver',
+      'shipping_return',
+      'shipping_profile',
+    ],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/active',
+    positionals: [],
   },
   shipping_post: {
     usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',

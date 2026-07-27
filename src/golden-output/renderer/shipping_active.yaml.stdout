@@ -1,0 +1,45 @@
+
+action: active
+tick: 12450
+message: "3 live freight contracts."
+shipments:
+  - contract: {id: "shipment-active-carrier-1", package_id: "package-relief-1", shipper: {kind: player, id: marlowe}, recipient: {kind: station, id: nova_central}, origin_base_id: earth_station, destination_base_id: nova_central, shipping_house_id: earth_mission_board, visibility: public, service_level: standard, status: in_transit, posted_at: 2026-07-17T10:00:00Z, listing_expires_at: 2026-07-18T10:00:00Z, base_reward: 12000, max_speed_bonus: 0, service_fee: 800, reward_escrow: 12000, speed_bonus_escrow: 0, failure_debt: 500, reserved_exposure: 500, policy_status: none, insurable: false, risk_band: unpriced, contractor: {kind: player, id: "carrier-vale"}, accepted_at: 2026-07-17T10:05:00Z, accepted_tick: 1200, target_tick: 1220, deadline_tick: 1240, recovery_deadline_tick: 4120}
+    role: carrier
+    ticks_to_target: 8
+    ticks_to_deadline: 28
+    ticks_to_recovery_deadline: 2908
+    late: false
+    payout_if_delivered_now: 12000
+    failure_debt: 500
+    package_in_your_cargo: true
+    next_step: "Deliver at nova_central while docked."
+    origin_name: "Earth Station"
+    origin_system: Sol
+    destination_name: "Nova Central"
+    destination_system: Nova
+    last_known_location: "sol / earth_orbit"
+  - contract: {id: "shipment-active-late-1", package_id: "package-reactor-1", shipper: {kind: player, id: marlowe}, recipient: {kind: station, id: nova_central}, origin_base_id: earth_station, destination_base_id: nova_central, shipping_house_id: earth_mission_board, visibility: public, service_level: priority, status: in_transit, posted_at: 2026-07-17T10:00:00Z, listing_expires_at: 2026-07-18T10:00:00Z, base_reward: 22000, max_speed_bonus: 0, service_fee: 800, reward_escrow: 12000, speed_bonus_escrow: 0, failure_debt: 500, reserved_exposure: 500, policy_status: none, insurable: false, risk_band: unpriced, deadline_tick: 1200, recovery_deadline_tick: 4080}
+    role: carrier
+    ticks_to_target: -40
+    ticks_to_deadline: -15
+    ticks_to_recovery_deadline: 2865
+    late: true
+    payout_if_delivered_now: 0
+    late_fee_if_delivered_now: 400
+    failure_debt: 72000
+    package_in_your_cargo: true
+    next_step: "Deliver late (forfeit reward, pay late fee) or return at origin."
+    destination_name: "Sirius Observatory"
+    destination_system: Sirius
+  - contract: {id: "shipment-active-invited-1", package_id: "package-invite-1", shipper: {kind: player, id: marlowe}, recipient: {kind: station, id: nova_central}, origin_base_id: earth_station, destination_base_id: nova_central, shipping_house_id: earth_mission_board, visibility: invited, service_level: standard, status: posted, posted_at: 2026-07-17T10:00:00Z, listing_expires_at: 2026-07-18T10:00:00Z, base_reward: 12000, max_speed_bonus: 0, service_fee: 800, reward_escrow: 12000, speed_bonus_escrow: 0, failure_debt: 500, reserved_exposure: 500, policy_status: none, insurable: false, risk_band: unpriced, invited_carrier: {kind: player, id: "carrier-vale"}}
+    role: invited_carrier
+    ticks_to_target: 40
+    ticks_to_deadline: 80
+    ticks_to_recovery_deadline: 2960
+    late: false
+    payout_if_delivered_now: 9000
+    failure_debt: 500
+    package_in_your_cargo: false
+    next_step: "Accept the invitation or ignore the listing."
+    destination_name: "Nova Central"
+    destination_system: Nova
