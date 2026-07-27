@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { shippingActiveEmptyFixture } from './shipping.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
 
 const options: GlobalOptions = {
@@ -377,12 +378,7 @@ test('renders active freight with role, destination, deadline/late, recovery, pa
 });
 
 test('renders an explicit empty active freight message', () => {
-  const withMessage = output('shipping_active', {
-    action: 'active',
-    tick: 12450,
-    shipments: [],
-    message: 'No active freight contracts.',
-  });
+  const withMessage = output('shipping_active', structuredClone(shippingActiveEmptyFixture));
   expect(withMessage).toContain('=== Active Freight ===');
   expect(withMessage).toContain('tick 12,450 · 0 contracts');
   expect(withMessage).toContain('No active freight contracts.');
@@ -446,6 +442,48 @@ test('omits malformed optional active freight fields without diagnostic tokens',
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('[object Object]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+
+test('formats active destination as name-only or contract base id when system is missing', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 900,
+    shipments: [
+      {
+        contract: { id: 'shipment-name-only-1', package_id: 'package-name-only-1' },
+        role: 'carrier',
+        ticks_to_deadline: 10,
+        ticks_to_recovery_deadline: 100,
+        late: false,
+        payout_if_delivered_now: 1000,
+        package_in_your_cargo: true,
+        next_step: 'Deliver while docked.',
+        destination_name: 'Name Only Station',
+        // destination_system omitted → name-only branch
+      },
+      {
+        contract: {
+          id: 'shipment-base-id-1',
+          package_id: 'package-base-id-1',
+          destination_base_id: 'nova_central',
+        },
+        role: 'recipient',
+        ticks_to_deadline: 12,
+        ticks_to_recovery_deadline: 120,
+        late: false,
+        payout_if_delivered_now: 0,
+        package_in_your_cargo: false,
+        next_step: 'Wait for delivery.',
+        // destination_name / destination_system omitted → base id fallback
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Name Only Station');
+  expect(stdout).toContain('nova_central');
+  expect(stdout).not.toContain('Name Only Station (');
   expect(stdout).not.toContain('=== Response ===');
 });
 

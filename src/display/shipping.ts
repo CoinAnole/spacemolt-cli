@@ -253,11 +253,10 @@ function renderShippingActive(result: Record<string, unknown>): boolean {
   }
   if (message) emitLine(message);
 
-  const rows: Array<Record<string, unknown>> = [];
-  for (const row of shipments) {
-    if (!isRecord(row.contract)) continue;
-    const contract = row.contract;
-    rows.push({
+  // contract objects already validated above via isRecord on every row.
+  const rows = shipments.map((row) => {
+    const contract = row.contract as Record<string, unknown>;
+    return {
       role: text(row.role),
       destination: formatDestination(row, contract),
       deadline: formatActiveDeadline(row),
@@ -268,8 +267,8 @@ function renderShippingActive(result: Record<string, unknown>): boolean {
       next_step: text(row.next_step),
       shipment: text(contract.id),
       package: text(contract.package_id),
-    });
-  }
+    };
+  });
 
   printCompactTable(
     'Contracts',
