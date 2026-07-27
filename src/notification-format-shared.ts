@@ -1263,6 +1263,52 @@ function previewPoiDeparture(
 }
 
 /**
+ * Pure preview for `shipment_overdue` (freight late-delivery window).
+ *
+ * Field names are **assumed** (aligned with ShippingActiveContract / inspect shipment OpenAPI
+ * names where possible). There is **no** formal Notification_shipment_overdue schema —
+ * schema-verified for notifications: none. Defensive secondary aliases tolerate partial bags.
+ *
+ * Empty-bag policy (D12): structured parts → data.message → fixed 'Freight shipment overdue'
+ * (never return null for this msg_type).
+ */
+function previewShipmentOverdue(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const shipment = firstSafeScalar(data, ['shipment_id', 'shipment', 'contract_id']);
+  const destination = firstSafeScalar(data, ['destination_name', 'destination', 'destination_base_id']);
+  // first finite wins — prefer recovery window (time left after deadline), then deadline delta, then loose aliases
+  const ticksLeft =
+    finiteNumber(data.ticks_to_recovery_deadline) ??
+    finiteNumber(data.ticks_to_deadline) ??
+    finiteNumber(data.ticks_left) ??
+    finiteNumber(data.ticks_remaining);
+  const lateFee = finiteNumber(data.late_fee_if_delivered_now) ?? finiteNumber(data.late_fee);
+
+  const parts: string[] = [];
+  if (shipment !== undefined) parts.push(`shipment ${shipment}`);
+  if (destination !== undefined) parts.push(`→ ${destination}`);
+  if (ticksLeft !== undefined) parts.push(`${ticksLeft.toLocaleString()} ticks left`);
+  if (lateFee !== undefined) parts.push(`late fee ${lateFee.toLocaleString()} cr`);
+
+  const message = safeScalar(data.message);
+  const headline =
+    parts.length > 0
+      ? `Overdue: ${parts.join(', ')}`
+      : message !== undefined
+        ? String(message)
+        : 'Freight shipment overdue';
+
+  // headlinePreview does not accept severity; merge onto the preview object (K14).
+  return {
+    ...headlinePreview('FREIGHT OVERDUE', headline, options),
+    severity: 'warning',
+  };
+}
+
+/**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
  *
@@ -1271,6 +1317,7 @@ function previewPoiDeparture(
  * PR7a: combat / police / pirate / battle.
  * PR7b: social / trade / friends / faction / base / scan.
  * PR7c: remainder (mining, drones, skills, queue, version, poi, reconnected, pilotless, action_error).
+ * Freight: shipment_overdue (D12 pure preview).
  */
 
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
@@ -1346,6 +1393,9 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   queue_cleared: previewQueueCleared,
   poi_arrival: previewPoiArrival,
   poi_departure: previewPoiDeparture,
+
+  // Freight overdue (0.549.0) — assumed field names; no Notification_* schema yet
+  shipment_overdue: previewShipmentOverdue,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

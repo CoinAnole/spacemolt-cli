@@ -412,6 +412,25 @@ describe('notification formatting', () => {
       ],
     },
     {
+      // Assumed keys (aligned with ShippingActiveContract — NOT schema-verified for notifications)
+      msgType: 'shipment_overdue',
+      data: {
+        shipment_id: 'shipment-late-1',
+        destination_name: 'Nova Central',
+        ticks_to_recovery_deadline: 2400,
+        late_fee_if_delivered_now: 400,
+      },
+      snippets: [
+        '[FREIGHT OVERDUE]',
+        'Overdue:',
+        'shipment shipment-late-1',
+        '→ Nova Central',
+        'ticks left',
+        'late fee',
+        'cr',
+      ],
+    },
+    {
       msgType: 'skill_level_up',
       data: { skill_id: 'mining', new_level: 3, xp_gained: 50 },
       snippets: ['[LEVEL UP]', 'mining is now level 3', '+50 XP'],
@@ -1615,6 +1634,127 @@ describe('notification formatting', () => {
       expect(preview.tag).toBe('RECONNECTED');
       expect(preview.headline).toBe('Reconnected');
       expectNoDiagnosticTokens(preview.headline);
+    });
+  });
+
+  /**
+   * shipment_overdue pure preview (D12).
+   *
+   * Assumed data keys (aligned with ShippingActiveContract / inspect shipment names):
+   *   shipment_id | shipment | contract_id
+   *   destination_name | destination | destination_base_id
+   *   ticks_to_recovery_deadline | ticks_to_deadline | ticks_left | ticks_remaining
+   *   late_fee_if_delivered_now | late_fee
+   * Schema-verified for notifications: none (no Notification_shipment_overdue in OpenAPI).
+   * Empty-bag policy: structured parts → data.message → 'Freight shipment overdue' (never null).
+   */
+  describe('shipment_overdue pure preview (D12)', () => {
+    test('registers pure PREVIEW_HANDLERS for shipment_overdue', () => {
+      expect(hasPreviewHandler('shipment_overdue')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('shipment_overdue');
+    });
+
+    test('full assumed bag assembles Overdue headline with severity warning', () => {
+      const preview = formatNotificationPreview({
+        type: 'shipment_overdue',
+        msg_type: 'shipment_overdue',
+        data: {
+          shipment_id: 'shipment-late-1',
+          destination_name: 'Nova Central',
+          ticks_to_recovery_deadline: 2400,
+          late_fee_if_delivered_now: 400,
+          message: 'ignored when structured parts present',
+        },
+      });
+      expect(preview.tag).toBe('FREIGHT OVERDUE');
+      expect(preview.severity).toBe('warning');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).toContain('Overdue:');
+      expect(preview.headline).toContain('shipment shipment-late-1');
+      expect(preview.headline).toContain('→ Nova Central');
+      expect(preview.headline).toContain('ticks left');
+      expect(preview.headline).toContain('late fee');
+      expect(preview.headline).toContain('cr');
+      // Structured parts win over message
+      expect(preview.headline).not.toContain('ignored when structured');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('ticks-only partial bag (changelog-minimum content)', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'shipment_overdue',
+        data: { ticks_to_recovery_deadline: 42 },
+      });
+      expect(preview.tag).toBe('FREIGHT OVERDUE');
+      expect(preview.severity).toBe('warning');
+      // Small integer avoids locale grouping in toLocaleString
+      expect(preview.headline).toBe('Overdue: 42 ticks left');
+    });
+
+    test('prefers ticks_to_recovery_deadline over ticks_to_deadline aliases', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'shipment_overdue',
+        data: {
+          ticks_to_recovery_deadline: 99,
+          ticks_to_deadline: 1,
+          ticks_left: 2,
+          ticks_remaining: 3,
+        },
+      });
+      expect(preview.headline).toBe('Overdue: 99 ticks left');
+    });
+
+    test('secondary field aliases resolve when primaries absent', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'shipment_overdue',
+        data: {
+          contract_id: 'c-9',
+          destination_base_id: 'base_alpha',
+          ticks_remaining: 50,
+          late_fee: 100,
+        },
+      });
+      expect(preview.headline).toContain('shipment c-9');
+      expect(preview.headline).toContain('→ base_alpha');
+      expect(preview.headline).toContain('50');
+      expect(preview.headline).toContain('late fee');
+    });
+
+    test('message-only bag uses data.message as headline', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'shipment_overdue',
+        data: { message: 'Delivery deadline passed; late fee applies until recovery window ends.' },
+      });
+      expect(preview.tag).toBe('FREIGHT OVERDUE');
+      expect(preview.severity).toBe('warning');
+      expect(preview.headline).toBe('Delivery deadline passed; late fee applies until recovery window ends.');
+    });
+
+    test('empty bag → last-resort headline (never null / Policy 5)', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'shipment_overdue',
+        data: {},
+      });
+      expect(preview.tag).toBe('FREIGHT OVERDUE');
+      expect(preview.severity).toBe('warning');
+      expect(preview.headline).toBe('Freight shipment overdue');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('table Type stays raw msg_type; Message uses pure preview headline', () => {
+      const notification = {
+        type: 'shipment_overdue',
+        msg_type: 'shipment_overdue',
+        data: { ticks_to_deadline: 10 },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe(
+        tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })),
+      );
+      expect(message).toContain('Overdue:');
+      expect(message).toContain('ticks left');
+      // Message must not substitute human tag for Type (K13 — Type is table column, not Message)
+      expect(message).not.toMatch(/^shipment_overdue$/);
     });
   });
 
