@@ -4406,9 +4406,11 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('3');
     expect(stdout).toContain('Sides');
     expect(stdout).toContain('SMC');
+    // Kind column cells are pipe-delimited enums; avoid bare "player"/"pirate"
+    // which also appear inside participant IDs (player-1 / pirate-1).
     expect(stdout).toContain('Kind');
-    expect(stdout).toContain('player');
-    expect(stdout).toContain('pirate');
+    expect(stdout).toMatch(/\|\s*player\s*\|/);
+    expect(stdout).toMatch(/\|\s*pirate\s*\|/);
     expect(stdout).not.toContain('=== Response ===');
   });
 

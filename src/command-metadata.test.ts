@@ -520,6 +520,9 @@ describe('command metadata', () => {
     expect(help).toContain('target_id_or_name');
     expect(help).toMatch(/name/i);
     expect(help).toMatch(/pirate|station|combatant/i);
+
+    // KD-9: Battle cheatsheet in full help stays aligned with command help
+    expect(captureFullHelp()).toContain('Focus by ID or name (any combatant)');
   });
 
   test('unload_passenger help documents all-passenger bulk unload', () => {
