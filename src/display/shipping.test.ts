@@ -720,6 +720,52 @@ test('renders action-specific settlements and keeps zero amounts visible', () =>
   }
 });
 
+test('surfaces late delivery flag on deliver and return settlements when present', () => {
+  const lateDeliver = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered' },
+      carrier_payout: 0,
+      late: true,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(lateDeliver).toContain('=== Freight Delivered ===');
+  expect(lateDeliver).toContain('Late delivery: yes');
+  expect(lateDeliver).not.toContain('=== Response ===');
+
+  const onTimeReturn = output('shipping_return', {
+    details: {
+      action: 'return',
+      contract: { ...contract, status: 'returned' },
+      shipper_refund: 12500,
+      late: false,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(onTimeReturn).toContain('=== Freight Returned ===');
+  expect(onTimeReturn).toContain('Late delivery: no');
+  expect(onTimeReturn).not.toContain('=== Response ===');
+
+  const omittedLate = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered' },
+      carrier_payout: 15000,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(omittedLate).toContain('=== Freight Delivered ===');
+  expect(omittedLate).not.toContain('Late delivery');
+  expect(omittedLate).not.toContain('=== Response ===');
+});
+
 test('omits malformed optional carrier and settlement fields without diagnostic tokens', () => {
   const stdout = output('shipping_deliver', {
     details: {
@@ -727,8 +773,10 @@ test('omits malformed optional carrier and settlement fields without diagnostic 
       contract: { ...contract, contractor: {}, terminal_reason: [], carrier_payout: Number.NaN },
       carrier_payout: Number.NaN,
       claim_paid: {},
+      late: 'maybe',
     },
   });
+  expect(stdout).not.toContain('Late delivery');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('[object Object]');
@@ -756,27 +804,27 @@ function settlementEnvelope(
 
 test('surfaces late flag on deliver settlement when true', () => {
   const stdout = output('shipping_deliver', settlementEnvelope('deliver', { late: true }));
-  expect(stdout).toContain('Late: yes');
+  expect(stdout).toContain('Late delivery: yes');
   expect(stdout).not.toContain('=== Response ===');
 });
 
 test('surfaces late flag on deliver settlement when false (on-time)', () => {
   const stdout = output('shipping_deliver', settlementEnvelope('deliver', { late: false }));
-  expect(stdout).toContain('Late: no');
+  expect(stdout).toContain('Late delivery: no');
   expect(stdout).not.toContain('=== Response ===');
 });
 
 test('omits Late line when late is absent from settlement', () => {
   const stdout = output('shipping_deliver', settlementEnvelope('deliver'));
-  expect(stdout).not.toMatch(/^Late:/m);
-  expect(stdout).not.toContain('Late:');
+  expect(stdout).not.toMatch(/^Late delivery:/m);
+  expect(stdout).not.toContain('Late delivery:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
 test('omits Late line when late is malformed', () => {
   for (const late of [{}, Number.NaN, 'yes', 1] as const) {
     const stdout = output('shipping_deliver', settlementEnvelope('deliver', { late }));
-    expect(stdout).not.toContain('Late:');
+    expect(stdout).not.toContain('Late delivery:');
     expect(stdout).not.toContain('undefined');
     expect(stdout).not.toContain('NaN');
     expect(stdout).not.toContain('[object Object]');
@@ -787,6 +835,6 @@ test('omits Late line when late is malformed', () => {
 test('surfaces late flag on overdue return settlement', () => {
   const stdout = output('shipping_return', settlementEnvelope('return', { late: true, shipper_refund: 12500 }));
   expect(stdout).toContain('=== Freight Returned ===');
-  expect(stdout).toContain('Late: yes');
+  expect(stdout).toContain('Late delivery: yes');
   expect(stdout).not.toContain('=== Response ===');
 });
