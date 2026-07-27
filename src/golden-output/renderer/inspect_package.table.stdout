@@ -16,15 +16,3 @@ Creator: PilotOne / Survey Corps [SRV]
   -----------+------------+-----+-----
   Iron Ore   | iron_ore   | 20  | 20  
   Copper Ore | copper_ore | 10  | 10  
-
-Shipment
-Contract: shipment-pkg-1
-Status: in_transit
-Role: carrier
-Destination: Nova Central (Nova)
-Late: no
-Ticks to deadline: 28 ticks
-Ticks to recovery deadline: 2,908 ticks
-Payout if delivered now: 12,000 cr
-Base reward: 12,000 cr
-Failure debt: 500 cr

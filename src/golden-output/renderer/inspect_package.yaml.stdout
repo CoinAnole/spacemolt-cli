@@ -28,16 +28,3 @@ package:
       name: "Copper Ore"
       quantity: 10
       size: 10
-  shipment:
-    shipment_id: "shipment-pkg-1"
-    status: in_transit
-    role: carrier
-    destination_base_id: nova_central
-    destination_name: "Nova Central"
-    destination_system: Nova
-    base_reward: 12000
-    payout_if_delivered_now: 12000
-    failure_debt: 500
-    ticks_to_deadline: 28
-    ticks_to_recovery_deadline: 2908
-    late: false
