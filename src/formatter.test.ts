@@ -164,7 +164,8 @@ const playerProfileFixture = {
     standings: {
       crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
       nebula: { baseline: 20, outstanding_bounty: 0, reputation: 20 },
-      pirate_kael: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+      pirate_voss: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+      pirate_kael: { baseline: 0, outstanding_bounty: 0, reputation: 5 },
     },
     stats: {
       piloting: { level: 5, xp: 1200 },
@@ -1505,7 +1506,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Crafting: Level 2 (175 XP)');
     expect(stdout).toContain('crimson: 94');
     expect(stdout).toContain('nebula: 20');
-    expect(stdout).toContain('pirate_kael: -30');
+    expect(stdout).toContain('pirate_voss: -30');
+    expect(stdout).toContain('pirate_kael: 5');
     expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -4565,6 +4567,9 @@ describe('structuredContent formatters', () => {
       Credits: 4242
       Faction: smc (captain)
       Trading restricted until: 2026-07-18T12:34:56Z
+
+      Standings:
+        solarian: 12, crimson: 94, pirate_voss: -10, pirate_kael: 5
 
       Location:
         System: Sol

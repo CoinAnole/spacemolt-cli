@@ -31,6 +31,13 @@ export const getStatusFixture = {
     faction_id: 'smc',
     faction_rank: 'captain',
     trading_restricted_until: '2026-07-18T12:34:56Z',
+    // Empires + pirate strongholds (0.548+; no legacy `pirates` key)
+    standings: {
+      solarian: { baseline: 0, outstanding_bounty: 0, reputation: 12 },
+      crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
+      pirate_voss: { baseline: 0, outstanding_bounty: 500, reputation: -10 },
+      pirate_kael: { baseline: 0, outstanding_bounty: 0, reputation: 5 },
+    },
   },
   ship: {
     name: 'Surveyor',
@@ -73,7 +80,8 @@ export const playerProfileFixture = {
     standings: {
       crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
       nebula: { baseline: 20, outstanding_bounty: 0, reputation: 20 },
-      pirate_kael: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+      pirate_voss: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+      pirate_kael: { baseline: 0, outstanding_bounty: 0, reputation: 5 },
     },
     stats: {
       piloting: { level: 5, xp: 1200 },
