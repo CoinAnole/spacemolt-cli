@@ -720,6 +720,52 @@ test('renders action-specific settlements and keeps zero amounts visible', () =>
   }
 });
 
+test('surfaces late delivery flag on deliver and return settlements when present', () => {
+  const lateDeliver = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered' },
+      carrier_payout: 0,
+      late: true,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(lateDeliver).toContain('=== Freight Delivered ===');
+  expect(lateDeliver).toContain('Late delivery: yes');
+  expect(lateDeliver).not.toContain('=== Response ===');
+
+  const onTimeReturn = output('shipping_return', {
+    details: {
+      action: 'return',
+      contract: { ...contract, status: 'returned' },
+      shipper_refund: 12500,
+      late: false,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(onTimeReturn).toContain('=== Freight Returned ===');
+  expect(onTimeReturn).toContain('Late delivery: no');
+  expect(onTimeReturn).not.toContain('=== Response ===');
+
+  const omittedLate = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered' },
+      carrier_payout: 15000,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(omittedLate).toContain('=== Freight Delivered ===');
+  expect(omittedLate).not.toContain('Late delivery');
+  expect(omittedLate).not.toContain('=== Response ===');
+});
+
 test('omits malformed optional carrier and settlement fields without diagnostic tokens', () => {
   const stdout = output('shipping_deliver', {
     details: {
@@ -727,8 +773,10 @@ test('omits malformed optional carrier and settlement fields without diagnostic 
       contract: { ...contract, contractor: {}, terminal_reason: [], carrier_payout: Number.NaN },
       carrier_payout: Number.NaN,
       claim_paid: {},
+      late: 'maybe',
     },
   });
+  expect(stdout).not.toContain('Late delivery');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('[object Object]');
