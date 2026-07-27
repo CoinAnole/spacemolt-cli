@@ -9,7 +9,29 @@
     "credits": 4242,
     "faction_id": "smc",
     "faction_rank": "captain",
-    "trading_restricted_until": "2026-07-18T12:34:56Z"
+    "trading_restricted_until": "2026-07-18T12:34:56Z",
+    "standings": {
+      "solarian": {
+        "baseline": 0,
+        "outstanding_bounty": 0,
+        "reputation": 12
+      },
+      "crimson": {
+        "baseline": 10,
+        "outstanding_bounty": 0,
+        "reputation": 94
+      },
+      "pirate_voss": {
+        "baseline": 0,
+        "outstanding_bounty": 500,
+        "reputation": -10
+      },
+      "pirate_kael": {
+        "baseline": 0,
+        "outstanding_bounty": 0,
+        "reputation": 5
+      }
+    }
   },
   "ship": {
     "name": "Surveyor",

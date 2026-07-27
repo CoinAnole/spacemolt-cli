@@ -235,6 +235,21 @@ function formatStandingValue(value: unknown): string | undefined {
   return String(value);
 }
 
+/** Emit standings block when present; no-op if empty/malformed. Reputation only (no bounty/baseline). */
+function emitStandings(player: Record<string, unknown>): void {
+  if (!isRecord(player.standings)) return;
+  const standings = Object.entries(player.standings)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => {
+      const standing = formatStandingValue(value);
+      return standing === undefined ? undefined : `${key}: ${standing}`;
+    })
+    .filter((standing): standing is string => Boolean(standing));
+  if (!standings.length) return;
+  emitLine(`\n${c.bright}Standings:${c.reset}`);
+  emitLine(`  ${standings.join(', ')}`);
+}
+
 function formatCitizenshipId(value: unknown, key?: string): string | undefined {
   if (isRecord(value)) {
     const id = value.empire_id ?? value.id ?? value.name ?? key;
@@ -430,19 +445,7 @@ export const statusFormatters = [
         }
       }
 
-      if (isRecord(player.standings)) {
-        const standings = Object.entries(player.standings)
-          .filter(([, value]) => value !== undefined && value !== null && value !== '')
-          .map(([key, value]) => {
-            const standing = formatStandingValue(value);
-            return standing === undefined ? undefined : `${key}: ${standing}`;
-          })
-          .filter((standing): standing is string => Boolean(standing));
-        if (standings.length) {
-          emitLine(`\n${c.bright}Standings:${c.reset}`);
-          emitLine(`  ${standings.join(', ')}`);
-        }
-      }
+      emitStandings(player);
       return true;
     },
     { commands: ['get_player'] },
@@ -567,6 +570,7 @@ export const statusFormatters = [
       emitLine(`Credits: ${p.credits}`);
       emitLine(`Faction: ${p.faction_id ? `${p.faction_id} (${p.faction_rank})` : 'None'}`);
       emitTradingRestriction(p);
+      emitStandings(p);
 
       emitLine(`\n${c.bright}Location:${c.reset}`);
       emitLine(`  System: ${sys?.name || p.current_system}`);
@@ -627,7 +631,7 @@ export const statusFormatters = [
       }
       return true;
     },
-    { commands: ['get_status'], shapeFallback: true },
+    { commands: ['get_status', 'get_state'], shapeFallback: true },
   ),
 
   // Registration
