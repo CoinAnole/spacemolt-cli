@@ -244,6 +244,34 @@ test('formats destination fallbacks for package shipment', () => {
     context,
   );
   expect(systemAndBase.stdout.join('\n')).toContain('Destination: centauri (nova_central)');
+
+  // Defensive path: name + system without base_id (formatDestination parts-only join).
+  const nameAndSystem = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_abc',
+      kind: 'package',
+      package: {
+        ...packageShell,
+        shipment: {
+          shipment_id: 's1',
+          status: 'in_transit',
+          role: 'carrier',
+          destination_name: 'Nova Central',
+          destination_system: 'centauri',
+          base_reward: 1,
+          payout_if_delivered_now: 1,
+          failure_debt: 1,
+          ticks_to_deadline: 1,
+          ticks_to_recovery_deadline: 1,
+          late: false,
+        },
+      },
+    },
+    options,
+    context,
+  );
+  expect(nameAndSystem.stdout.join('\n')).toContain('Destination: Nova Central / centauri');
 });
 
 test('ignores non-record package shipment and empty shipment objects', () => {
