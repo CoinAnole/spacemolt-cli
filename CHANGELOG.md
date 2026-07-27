@@ -4,6 +4,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Battle targeting help and status fixtures
+
+- `battle_target` help (including the Battle cheatsheet) now states that any battle combatant can be focused by **ID or name** (players, pirates, police, drones, creatures, stations), matching gameserver 0.547.2.
+- Golden `get_battle_status` sample includes multi-kind participants (`kind`, station hull/shield) so human output shows the Kind column.
+
 ### ID cache payload resolution (breaking)
 
 Payload fields resolved from the profile ID cache use **exact id/name match only** by default.

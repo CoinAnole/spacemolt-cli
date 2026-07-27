@@ -24,11 +24,12 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   battle_target: {
-    usage: '<target_id>',
-    description: 'Focus a target in the current battle.',
-    example: 'spacemolt battle_target <target_id>',
+    usage: '<target_id_or_name>',
+    description:
+      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, or stations.',
+    example: 'spacemolt battle_target "Pirate Skiff"',
     discoverWith: ['get_battle_status'],
-    seeAlso: ['battle_stance', 'reload'],
+    seeAlso: ['get_battle_status', 'battle_stance', 'reload'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/target',
     positionals: ['target_id'],
