@@ -17,10 +17,10 @@ import {
   printIds,
   printWhereCanI,
   resolveCachedId,
+  STRICT_ID_RESOLUTION_POLICY,
   saveIdCache,
   searchItemHints,
   softIdResolutionPolicy,
-  STRICT_ID_RESOLUTION_POLICY,
 } from './id-cache';
 
 describe('id cache', () => {

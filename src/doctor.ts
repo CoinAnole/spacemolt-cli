@@ -122,24 +122,14 @@ export async function runDoctor(
     const rawEnv = env.SPACEMOLT_FUZZY_IDS?.trim().toLowerCase();
     const envSet = rawEnv === '1' || rawEnv === 'true' || rawEnv === '0' || rawEnv === 'false';
     const configSet = typeof cliConfig.fuzzyIds === 'boolean';
-    const source = fuzzyOptions.fuzzyIdsCliExplicit
-      ? 'cli'
-      : envSet
-        ? 'env'
-        : configSet
-          ? 'config'
-          : 'default';
+    const source = fuzzyOptions.fuzzyIdsCliExplicit ? 'cli' : envSet ? 'env' : configSet ? 'config' : 'default';
     const message = effectiveFuzzyIds
       ? `soft match on (${source})`
       : source === 'default'
         ? 'exact only (default)'
         : `exact only (${source})`;
     checks.push(
-      pass(
-        'fuzzy-ids',
-        message,
-        'CLI --fuzzy-ids/--no-fuzzy-ids > SPACEMOLT_FUZZY_IDS > config.json fuzzyIds > off',
-      ),
+      pass('fuzzy-ids', message, 'CLI --fuzzy-ids/--no-fuzzy-ids > SPACEMOLT_FUZZY_IDS > config.json fuzzyIds > off'),
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

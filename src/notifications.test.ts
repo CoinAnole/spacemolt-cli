@@ -326,14 +326,7 @@ describe('notification formatting', () => {
         ],
       },
       // Pure PREVIEW_HANDLER table Message: "1 job tick 901338: recipe, rental, …"
-      snippets: [
-        '[CRAFTING]',
-        '1 job tick 901338',
-        'Assemble Power Cell',
-        'rental',
-        '300cr escrowed',
-        '2 runs left',
-      ],
+      snippets: ['[CRAFTING]', '1 job tick 901338', 'Assemble Power Cell', 'rental', '300cr escrowed', '2 runs left'],
     },
     {
       msgType: 'pilotless_ship',
@@ -783,9 +776,7 @@ describe('notification formatting', () => {
 
   describe('formatInventoryPreview (K15 compact inventory)', () => {
     test('formats count-map loot as N items: id×qty', () => {
-      expect(formatInventoryPreview({ ore_iron: 5, credits: 100 })).toBe(
-        '2 items: credits×100, ore_iron×5',
-      );
+      expect(formatInventoryPreview({ ore_iron: 5, credits: 100 })).toBe('2 items: credits×100, ore_iron×5');
       expect(formatInventoryPreview({ credits: 10 })).toBe('1 item: credits×10');
     });
 
@@ -1550,9 +1541,7 @@ describe('notification formatting', () => {
   describe('PR4 table Message via shared preview', () => {
     /** Table Message is always the pure preview pipeline (thin wrapper contract). */
     function expectTableMessageFromPreview(notification: Record<string, unknown>) {
-      const fromPreview = tableMessageFromPreview(
-        formatNotificationPreview(notification, { maxLineLength: 120 }),
-      );
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
       expect(formatNotificationMessage(notification)).toBe(fromPreview);
       expectNoNestedJsonDump(fromPreview);
       expectNoDiagnosticTokens(fromPreview);
@@ -1591,12 +1580,7 @@ describe('notification formatting', () => {
             ],
           },
         },
-        snippets: [
-          'Haven Exchange tick 901337: 1 item update',
-          'Iron Ore',
-          'sell 40 @ 12',
-          'buy 25 @ 9',
-        ],
+        snippets: ['Haven Exchange tick 901337: 1 item update', 'Iron Ore', 'sell 40 @ 12', 'buy 25 @ 9'],
       },
       {
         name: 'market_update multi item + more',
@@ -1655,14 +1639,7 @@ describe('notification formatting', () => {
             ],
           },
         },
-        snippets: [
-          '1 job tick 901500',
-          'Power Cell',
-          'rental',
-          '300cr escrowed',
-          '2 runs left',
-          'out Pack (pkg-9)',
-        ],
+        snippets: ['1 job tick 901500', 'Power Cell', 'rental', '300cr escrowed', '2 runs left', 'out Pack (pkg-9)'],
       },
       {
         name: 'crafting_update multi jobs +more',
@@ -1812,12 +1789,7 @@ describe('notification formatting', () => {
             latest_arrival_tick: 1433952,
           },
         },
-        snippets: [
-          '2 travel progress updates summarized',
-          'jump×2',
-          'latest jump → grumium',
-          'arrival tick 1433952',
-        ],
+        snippets: ['2 travel progress updates summarized', 'jump×2', 'latest jump → grumium', 'arrival tick 1433952'],
       },
       {
         name: 'system_progress_summary action only',
@@ -1881,10 +1853,17 @@ describe('notification formatting', () => {
         expectTableMessageFromPreview(notification);
       }
 
-      const market = rows.find((n) => n.msg_type === 'market_update')!;
-      const commission = rows.find((n) => n.msg_type === 'ship_commission_complete')!;
-      const chat = rows.find((n) => n.msg_type === 'chat_message')!;
-      const system = rows.find((n) => n.msg_type === 'system')!;
+      const market = rows.find((n) => n.msg_type === 'market_update');
+      const commission = rows.find((n) => n.msg_type === 'ship_commission_complete');
+      const chat = rows.find((n) => n.msg_type === 'chat_message');
+      const system = rows.find((n) => n.msg_type === 'system');
+      expect(market).toBeDefined();
+      expect(commission).toBeDefined();
+      expect(chat).toBeDefined();
+      expect(system).toBeDefined();
+      if (market === undefined || commission === undefined || chat === undefined || system === undefined) {
+        throw new Error('expected market/commission/chat/system rows in get_notifications fixture');
+      }
 
       const marketMsg = formatNotificationMessage(market);
       expect(marketMsg).toContain('Haven Exchange');

@@ -1177,8 +1177,9 @@ test('places Label column after Job when only label is present on craft queue', 
   // Header adjacency: Label should sit next to Job, not trailing after Pos.
   const header = stdout.split('\n').find((line) => line.includes('Job') && line.includes('Label'));
   expect(header).toBeDefined();
-  expect(header!.indexOf('Job')).toBeLessThan(header!.indexOf('Label'));
-  expect(header!.indexOf('Label')).toBeLessThan(header!.indexOf('Recipe'));
+  if (header === undefined) throw new Error('expected craft queue header with Job and Label');
+  expect(header.indexOf('Job')).toBeLessThan(header.indexOf('Label'));
+  expect(header.indexOf('Label')).toBeLessThan(header.indexOf('Recipe'));
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -1215,7 +1216,8 @@ test('places Label column after Job when only label is present on bulk craft res
   expect(stdout).not.toContain('Package');
   const header = stdout.split('\n').find((line) => line.includes('Job') && line.includes('Label'));
   expect(header).toBeDefined();
-  expect(header!.indexOf('Job')).toBeLessThan(header!.indexOf('Label'));
-  expect(header!.indexOf('Label')).toBeLessThan(header!.indexOf('Recipe'));
+  if (header === undefined) throw new Error('expected bulk craft header with Job and Label');
+  expect(header.indexOf('Job')).toBeLessThan(header.indexOf('Label'));
+  expect(header.indexOf('Label')).toBeLessThan(header.indexOf('Recipe'));
   expect(stdout).not.toContain('=== Response ===');
 });

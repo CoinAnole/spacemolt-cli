@@ -414,10 +414,7 @@ describe('notification presentation', () => {
     const presented = presentNotifications([buyListedShip, actionResultA, actionResultB]);
 
     expect(presented.summarizedCount).toBe(2);
-    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
-      'action_result',
-      'action_result_summary',
-    ]);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result_summary']);
     expect(presented.notifications[0]).toMatchObject({
       msg_type: 'action_result',
       data: { command: 'buy_listed_ship' },
@@ -446,10 +443,7 @@ describe('notification presentation', () => {
     const presented = presentNotifications([actionResultA, buyListedShip, actionResultB]);
 
     expect(presented.summarizedCount).toBe(2);
-    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
-      'action_result_summary',
-      'action_result',
-    ]);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary', 'action_result']);
     expect(presented.notifications[0]).toMatchObject({
       msg_type: 'action_result_summary',
       data: { count: 2, commands: { undock: 1, jump: 1 } },
@@ -697,11 +691,7 @@ describe('notification presentation', () => {
 
     const presented = presentNotifications([tip, maintenance, systemJumpA, systemJumpB]);
 
-    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
-      'system',
-      'system',
-      'system_progress_summary',
-    ]);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['system', 'system', 'system_progress_summary']);
     expect(presented.summarizedCount).toBe(2);
   });
 
@@ -724,10 +714,6 @@ describe('notification presentation', () => {
     const presented = presentNotifications([actionResultA, systemJumpA, trade]);
 
     expect(presented.summarizedCount).toBe(0);
-    expect(presented.notifications.map((n) => n.msg_type)).toEqual([
-      'action_result',
-      'system',
-      'trade_offer_received',
-    ]);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'system', 'trade_offer_received']);
   });
 });

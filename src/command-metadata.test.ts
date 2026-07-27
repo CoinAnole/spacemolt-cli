@@ -562,7 +562,7 @@ describe('command metadata', () => {
     expect(config?.description).toContain('output_package_label');
     expect(config?.description).toContain('pack_package');
     expect(config?.description).toContain('unpack_package');
-    expect(config?.description).toContain("spacemolt craft pack_package items=");
+    expect(config?.description).toContain('spacemolt craft pack_package items=');
     expect(config?.example).toContain('package_ids');
     expect(config?.example).toContain('output_package_label');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
@@ -841,9 +841,7 @@ describe('command metadata', () => {
     expect(config?.seeAlso).toEqual(
       expect.arrayContaining(['build_outpost', 'facility_dismantle', 'faction_dismantle', 'storage_view']),
     );
-    expect(config?.discoverWith).toEqual(
-      expect.arrayContaining(['build_outpost', 'storage_view', 'storage_withdraw']),
-    );
+    expect(config?.discoverWith).toEqual(expect.arrayContaining(['build_outpost', 'storage_view', 'storage_withdraw']));
     // Must not blank the usage line via usage: ''
     expect(config?.usage === undefined || config.usage.length > 0).toBe(true);
     // Generated facility_dismantle_outpost is route-claimed away (check bundled registry, not
@@ -871,9 +869,7 @@ describe('command metadata', () => {
     expect(withdraw?.description).toContain('towed own ship');
     expect(deposit?.aliases?.ship_id).toBe('item_id');
     expect(withdraw?.aliases?.ship_id).toBe('item_id');
-    expect(deposit?.schema?.item_id?.description).toContain(
-      'equal to or smaller than your active ship',
-    );
+    expect(deposit?.schema?.item_id?.description).toContain('equal to or smaller than your active ship');
 
     const depositHelp = captureHelp('storage deposit');
     expect(depositHelp).toContain('tow');

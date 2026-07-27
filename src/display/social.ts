@@ -187,7 +187,10 @@ function facilityColumns(
     columns.push(['Power Throttled', ['power_throttled']]);
   }
   if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs'])) {
-    columns.push(['Upkeep', ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs']]);
+    columns.push([
+      'Upkeep',
+      ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs'],
+    ]);
   }
   if (hasAnyField(rows, ['labor_cycle_display', 'labor_per_cycle'])) {
     columns.push(['Labor/cycle', ['labor_cycle_display', 'labor_per_cycle']]);

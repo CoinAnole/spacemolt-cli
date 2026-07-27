@@ -107,14 +107,7 @@ function notificationMsgType(notification: Notification): string {
 }
 
 /** Commands whose successful action_result frames are high-volume travel noise. */
-const ROUTINE_ACTION_RESULT_COMMANDS = new Set([
-  'jump',
-  'travel',
-  'dock',
-  'undock',
-  'fleet_jump',
-  'fleet_travel',
-]);
+const ROUTINE_ACTION_RESULT_COMMANDS = new Set(['jump', 'travel', 'dock', 'undock', 'fleet_jump', 'fleet_travel']);
 
 /** system.data.action values treated as travel progress (frame vocabulary, not HTTP routes). */
 const TRAVEL_SYSTEM_ACTIONS = new Set(['jump', 'travel', 'warp', 'dock', 'undock']);

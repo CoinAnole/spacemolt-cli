@@ -147,8 +147,7 @@ export const LOCAL_COMMANDS: Record<string, LocalCommandConfig> = {
   },
   config: {
     usage: 'user-agent [value|--reset] | fuzzy-ids [on|off|--reset]',
-    description:
-      'Show or change local CLI preferences such as the API User-Agent header and fuzzy ID soft match.',
+    description: 'Show or change local CLI preferences such as the API User-Agent header and fuzzy ID soft match.',
     example: 'spacemolt config fuzzy-ids on',
     category: 'Configuration',
     args: ['action'],

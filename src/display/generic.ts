@@ -427,7 +427,9 @@ function emitPackagedOutputPreview(outputPackage: Record<string, unknown>): void
     emitLine(`  Size: ${sizeUsed ?? '?'}/${sizeMax ?? '?'}`);
   }
   if (outputPackage.container_consumed !== undefined) {
-    emitLine(`  Container consumed: ${formatCount(outputPackage.container_consumed) ?? outputPackage.container_consumed}`);
+    emitLine(
+      `  Container consumed: ${formatCount(outputPackage.container_consumed) ?? outputPackage.container_consumed}`,
+    );
   }
   if (outputPackage.reclaimed_containers !== undefined) {
     emitLine(

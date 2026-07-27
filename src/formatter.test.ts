@@ -4171,8 +4171,12 @@ describe('structuredContent formatters', () => {
   });
 
   test('faction_info omits ally access when toggles are absent', () => {
-    const { ally_fuel_access: _fuel, ally_facility_access: _facility, ally_intel_opt_out: _intel, ...withoutAlly } =
-      factionInfoFixture;
+    const {
+      ally_fuel_access: _fuel,
+      ally_facility_access: _facility,
+      ally_intel_opt_out: _intel,
+      ...withoutAlly
+    } = factionInfoFixture;
     const { stdout, stderr } = captureStructuredOutput('faction_info', withoutAlly);
 
     expect(stderr).toBe('');

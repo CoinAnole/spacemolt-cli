@@ -797,9 +797,9 @@ describe('cached ID payload resolver', () => {
     const stderr: string[] = [];
 
     // Strict: soft stages disabled → pass-through, no ambiguity.
-    expect(
-      preparePayload('sell', { item_id: 'iron', quantity: '50' }, options(), sessionPath, writer([], [])),
-    ).toEqual({ type: 'payload', payload: { id: 'iron', quantity: 50 } });
+    expect(preparePayload('sell', { item_id: 'iron', quantity: '50' }, options(), sessionPath, writer([], []))).toEqual(
+      { type: 'payload', payload: { id: 'iron', quantity: 50 } },
+    );
 
     const prepared = preparePayload(
       'sell',
@@ -883,9 +883,7 @@ describe('cached ID payload resolver', () => {
         payload: { id: 'haven' },
       });
       // Soft opt-in still bans system substring
-      expect(
-        preparePayload(command, { target_system: 'haven' }, options({ fuzzyIds: true }), sessionPath),
-      ).toEqual({
+      expect(preparePayload(command, { target_system: 'haven' }, options({ fuzzyIds: true }), sessionPath)).toEqual({
         type: 'payload',
         payload: { id: 'haven' },
       });
@@ -913,13 +911,7 @@ describe('cached ID payload resolver', () => {
     await cacheIdsFromResponse('get_system', { structuredContent: systemInfoFixture }, sessionPath);
     const stderr: string[] = [];
 
-    const prepared = preparePayload(
-      'travel',
-      { target_poi: 'earth' },
-      options(),
-      sessionPath,
-      writer([], stderr),
-    );
+    const prepared = preparePayload('travel', { target_poi: 'earth' }, options(), sessionPath, writer([], stderr));
 
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'sol_earth' } });
     expect(stderr).toEqual([]);

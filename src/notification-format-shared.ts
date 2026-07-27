@@ -70,11 +70,7 @@ function inventoryItemQuantity(item: Record<string, unknown>): number | undefine
   return inventoryItemLabel(item) !== undefined ? 1 : undefined;
 }
 
-function pushInventoryEntry(
-  acc: Map<string, number>,
-  key: string | undefined,
-  quantity: number | undefined,
-): void {
+function pushInventoryEntry(acc: Map<string, number>, key: string | undefined, quantity: number | undefined): void {
   if (!key?.trim() || quantity === undefined || quantity <= 0) return;
   const id = key.trim();
   acc.set(id, (acc.get(id) ?? 0) + quantity);
@@ -132,17 +128,12 @@ function collectInventoryEntries(value: unknown, acc: Map<string, number>, depth
  *
  * Returns undefined when no inventory-like entries can be extracted.
  */
-export function formatInventoryPreview(
-  value: unknown,
-  limit = DEFAULT_INVENTORY_LIMIT,
-): string | undefined {
+export function formatInventoryPreview(value: unknown, limit = DEFAULT_INVENTORY_LIMIT): string | undefined {
   const acc = new Map<string, number>();
   collectInventoryEntries(value, acc);
   if (!acc.size) return undefined;
 
-  const entries = [...acc.entries()].sort(
-    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
-  );
+  const entries = [...acc.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
   const preview = entries
     .slice(0, limit)
     .map(([key, count]) => `${key}×${count}`)
@@ -453,11 +444,7 @@ function formatSystemProgressSummaryMessage(data: Record<string, unknown>): stri
   return parts.join('; ');
 }
 
-function headlinePreview(
-  tag: string,
-  headline: string,
-  options: ResolvedPreviewOptions,
-): NotificationPreview {
+function headlinePreview(tag: string, headline: string, options: ResolvedPreviewOptions): NotificationPreview {
   return {
     tag,
     headline: truncate(headline, options),
@@ -543,10 +530,7 @@ function previewSystem(
     const message = safeScalar(data.message);
     return {
       tag: 'TIP',
-      headline: truncate(
-        message !== undefined ? firstLine(String(message)) : 'gameplay tip',
-        options,
-      ),
+      headline: truncate(message !== undefined ? firstLine(String(message)) : 'gameplay tip', options),
       details: [],
     };
   }
@@ -686,12 +670,7 @@ function previewPlayerDied(
 
     const deathLocation = safeScalar(log.death_location);
     if (deathLocation !== undefined) {
-      details.push(
-        truncate(
-          `Location: ${deathLocation} in ${safeScalar(log.death_system) ?? 'unknown'}`,
-          options,
-        ),
-      );
+      details.push(truncate(`Location: ${deathLocation} in ${safeScalar(log.death_system) ?? 'unknown'}`, options));
     }
   }
 
@@ -708,9 +687,7 @@ function previewPlayerDied(
     details.push(truncate(`Insurance payout: ${insurance} credits`, options));
   }
 
-  details.push(
-    truncate(`Respawned at: ${safeScalar(data.respawn_base) ?? 'home'} with ship fully repaired`, options),
-  );
+  details.push(truncate(`Respawned at: ${safeScalar(data.respawn_base) ?? 'home'} with ship fully repaired`, options));
 
   return {
     tag: 'DEATH',
@@ -769,11 +746,7 @@ function previewPoliceSpawn(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview(
-    'POLICE',
-    `${damageLabel(data.num_drones, 0)} police drone(s) arrived!`,
-    options,
-  );
+  return headlinePreview('POLICE', `${damageLabel(data.num_drones, 0)} police drone(s) arrived!`, options);
 }
 
 function previewPoliceCombat(
@@ -782,11 +755,7 @@ function previewPoliceCombat(
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
   const destroyed = data.destroyed ? ' - YOU WERE DESTROYED!' : '';
-  return headlinePreview(
-    'POLICE',
-    `Police drone dealt ${damageLabel(data.damage, 0)} damage${destroyed}`,
-    options,
-  );
+  return headlinePreview('POLICE', `Police drone dealt ${damageLabel(data.damage, 0)} damage${destroyed}`, options);
 }
 
 function previewPirateWarning(
@@ -807,11 +776,7 @@ function previewPirateSpawn(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview(
-    'PIRATES',
-    `${damageLabel(data.num_pirates, 1)} pirate(s) appeared!`,
-    options,
-  );
+  return headlinePreview('PIRATES', `${damageLabel(data.num_pirates, 1)} pirate(s) appeared!`, options);
 }
 
 function previewPirateCombat(
@@ -820,11 +785,7 @@ function previewPirateCombat(
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
   const destroyed = data.destroyed ? ' - YOU WERE DESTROYED!' : '';
-  return headlinePreview(
-    'PIRATES',
-    `Pirate dealt ${damageLabel(data.damage, 0)} damage${destroyed}`,
-    options,
-  );
+  return headlinePreview('PIRATES', `Pirate dealt ${damageLabel(data.damage, 0)} damage${destroyed}`, options);
 }
 
 /** pirate_destroyed uses formatInventoryPreview for loot (PR6 / K15) — never JSON.stringify. */
@@ -850,11 +811,7 @@ function previewBattleStarted(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview(
-    'BATTLE',
-    `Battle started! ID: ${safeScalar(data.battle_id) ?? 'unknown'}`,
-    options,
-  );
+  return headlinePreview('BATTLE', `Battle started! ID: ${safeScalar(data.battle_id) ?? 'unknown'}`, options);
 }
 
 function previewBattleUpdate(
@@ -889,11 +846,7 @@ function previewBattleJoined(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview(
-    'BATTLE',
-    `${safeScalar(data.username) ?? 'Someone'} joined the battle`,
-    options,
-  );
+  return headlinePreview('BATTLE', `${safeScalar(data.username) ?? 'Someone'} joined the battle`, options);
 }
 
 function previewBattleLeft(
@@ -901,11 +854,7 @@ function previewBattleLeft(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview(
-    'BATTLE',
-    `${safeScalar(data.username) ?? 'Someone'} left the battle`,
-    options,
-  );
+  return headlinePreview('BATTLE', `${safeScalar(data.username) ?? 'Someone'} left the battle`, options);
 }
 
 function previewBattleEnded(
@@ -1017,11 +966,7 @@ function previewFriendRequest(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview(
-    'FRIEND',
-    `${scalarOr(data.from_name, 'Someone')} sent you a friend request`,
-    options,
-  );
+  return headlinePreview('FRIEND', `${scalarOr(data.from_name, 'Someone')} sent you a friend request`, options);
 }
 
 function previewFriendRequestAccepted(
@@ -1067,9 +1012,7 @@ function previewFactionInvite(
   return detailPreview(
     'FACTION',
     `You've been invited to join ${scalarOr(data.faction_name, 'a faction')}`,
-    [
-      `Use: join_faction faction_id=${factionId} or faction decline_invite faction_id=${factionId}`,
-    ],
+    [`Use: join_faction faction_id=${factionId} or faction decline_invite faction_id=${factionId}`],
     options,
   );
 }
@@ -1096,10 +1039,7 @@ function previewFactionPeaceProposed(
   return detailPreview(
     'PEACE',
     `${scalarOr(data.proposer_name, 'a faction')} has proposed peace!`,
-    [
-      `Terms: ${scalarOr(data.terms, 'unconditional')}`,
-      `Use: faction accept_peace target_faction_id=${factionId}`,
-    ],
+    [`Terms: ${scalarOr(data.terms, 'unconditional')}`, `Use: faction accept_peace target_faction_id=${factionId}`],
     options,
   );
 }
@@ -1112,11 +1052,7 @@ function previewBaseRaidUpdate(
   const current = finiteNumber(data.current_health) ?? 0;
   const max = finiteNumber(data.max_health) ?? 0;
   const dpt = finiteNumber(data.damage_per_tick) ?? 0;
-  return headlinePreview(
-    'RAID',
-    `${scalarOr(data.base_name, 'base')}: ${current}/${max} HP (-${dpt}/tick)`,
-    options,
-  );
+  return headlinePreview('RAID', `${scalarOr(data.base_name, 'base')}: ${current}/${max} HP (-${dpt}/tick)`, options);
 }
 
 function previewBaseDestroyed(
@@ -1127,12 +1063,7 @@ function previewBaseDestroyed(
   const details: string[] = [];
   const wreckId = safeScalar(data.wreck_id);
   if (wreckId !== undefined) details.push(`Wreck ID for looting: ${wreckId}`);
-  return detailPreview(
-    'BASE DESTROYED',
-    `${scalarOr(data.base_name, 'base')} has been destroyed!`,
-    details,
-    options,
-  );
+  return detailPreview('BASE DESTROYED', `${scalarOr(data.base_name, 'base')} has been destroyed!`, details, options);
 }
 
 function previewScanResult(
@@ -1152,18 +1083,9 @@ function previewScanResult(
     if (shield !== undefined) details.push(`Shield: ${shield}`);
     const cloaked = safeScalar(data.cloaked);
     if (cloaked !== undefined) details.push(`Cloaked: ${cloaked}`);
-    return detailPreview(
-      'SCAN',
-      `Scan of ${target} revealed: ${revealed.join(', ')}`,
-      details,
-      options,
-    );
+    return detailPreview('SCAN', `Scan of ${target} revealed: ${revealed.join(', ')}`, details, options);
   }
-  return headlinePreview(
-    'SCAN',
-    `Scan of ${target} failed - insufficient scan power`,
-    options,
-  );
+  return headlinePreview('SCAN', `Scan of ${target} failed - insufficient scan power`, options);
 }
 
 function previewScanDetected(
@@ -1270,9 +1192,7 @@ function previewReconnected(
   const message = safeScalar(data.message);
   const details: string[] = [];
   if (data.was_pilotless) {
-    details.push(
-      `Ship was pilotless - recovered with ${damageLabel(data.ticks_remaining, 0)} ticks to spare`,
-    );
+    details.push(`Ship was pilotless - recovered with ${damageLabel(data.ticks_remaining, 0)} ticks to spare`);
   }
   return detailPreview(
     'RECONNECTED',
@@ -1356,8 +1276,7 @@ function previewPoiDeparture(
  */
 
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
-  market_update: (data, _notification, options) =>
-    headlinePreview('MARKET', formatMarketUpdateMessage(data), options),
+  market_update: (data, _notification, options) => headlinePreview('MARKET', formatMarketUpdateMessage(data), options),
 
   crafting_update: (data, _notification, options) =>
     headlinePreview('CRAFTING', formatCraftingUpdateMessage(data), options),
@@ -1457,7 +1376,10 @@ function safeScalar(value: unknown): string | number | boolean | undefined {
   return finiteNumber(value);
 }
 
-function firstSafeScalar(data: Record<string, unknown>, keys: readonly string[]): string | number | boolean | undefined {
+function firstSafeScalar(
+  data: Record<string, unknown>,
+  keys: readonly string[],
+): string | number | boolean | undefined {
   for (const key of keys) {
     const value = safeScalar(data[key]);
     if (value !== undefined) return value;

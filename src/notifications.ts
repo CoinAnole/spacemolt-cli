@@ -1,8 +1,8 @@
 import type { CliWriter } from './cli-context.ts';
 import {
   formatNotificationPreview,
-  PREVIEW_HANDLER_TYPES,
   type NotificationPreview,
+  PREVIEW_HANDLER_TYPES,
 } from './notification-format-shared.ts';
 import { colorsForPlain } from './output-style.ts';
 import type { APIResponse } from './types.ts';
@@ -123,9 +123,7 @@ function renderPreviewInline(
   writeLine: (message?: string) => void,
 ): void {
   const tagColor = previewTagColor(preview.tag, c);
-  writeLine(
-    `${c.dim}[${time}]${c.reset} ${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`,
-  );
+  writeLine(`${c.dim}[${time}]${c.reset} ${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`);
   for (const detail of preview.details) {
     writeLine(`  ${detail}`);
   }

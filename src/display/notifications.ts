@@ -1,7 +1,4 @@
-import {
-  formatNotificationPreview,
-  tableMessageFromPreview,
-} from '../notification-format-shared.ts';
+import { formatNotificationPreview, tableMessageFromPreview } from '../notification-format-shared.ts';
 import { type Notification, presentNotifications } from '../notification-summary.ts';
 import type { GlobalOptions } from '../types.ts';
 import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
@@ -35,9 +32,7 @@ function formatNotificationType(notification: Record<string, unknown>): string {
  * maxLineLength 120 matches printCompactTable maxCellWidth.
  */
 export function formatNotificationMessage(notification: Record<string, unknown>): string {
-  return tableMessageFromPreview(
-    formatNotificationPreview(notification, { maxLineLength: 120 }),
-  );
+  return tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
 }
 
 function isNotificationArray(value: unknown[]): value is Notification[] {

@@ -114,8 +114,7 @@ type ConfigResult =
   | { action: 'fuzzy-ids'; fuzzyIds: boolean; configured: boolean };
 
 const PROFILE_USAGE = 'spacemolt profile [list|default [name]]';
-const CONFIG_USAGE =
-  'spacemolt config user-agent [value|--reset] | spacemolt config fuzzy-ids [on|off|--reset]';
+const CONFIG_USAGE = 'spacemolt config user-agent [value|--reset] | spacemolt config fuzzy-ids [on|off|--reset]';
 const FUZZY_IDS_USAGE = 'spacemolt config fuzzy-ids [on|off|--reset]';
 
 const configHandler: CommandHandler<ConfigPayload, ConfigResult> = {

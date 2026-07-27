@@ -101,16 +101,7 @@ describe('doctor', () => {
   test('returns all expected check names', async () => {
     const result = await runDoctor();
     const names = result.checks.map((c) => c.name);
-    expect(names).toEqual([
-      'api',
-      'session',
-      'profile',
-      'auth',
-      'version',
-      'fuzzy-ids',
-      'openapi-cache',
-      'drift',
-    ]);
+    expect(names).toEqual(['api', 'session', 'profile', 'auth', 'version', 'fuzzy-ids', 'openapi-cache', 'drift']);
   });
 
   test('version check reports current version', async () => {

@@ -56,7 +56,8 @@ export const GLOBAL_COMPLETION_OPTIONS: CompletionOption[] = [
   { long: '--fuzzy', description: 'Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)' },
   {
     long: '--fuzzy-ids',
-    description: 'Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only',
+    description:
+      'Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only',
   },
   { long: '--no-fuzzy-ids', description: 'Force exact-only ID-cache payload resolution; override env/config' },
   { long: '--keys', description: 'List keys at a JSON dotpath', takesValue: true },

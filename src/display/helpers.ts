@@ -107,7 +107,8 @@ export function formatFacilityMaintenanceUpkeep(row: Record<string, unknown>): s
   if (fuel !== undefined) {
     parts.push(`${fuel.toLocaleString()} fuel/cycle`);
   }
-  const items = formatMaintenanceItemList(row.maintenance_per_cycle) ?? formatMaintenanceItemList(row.maintenance_inputs);
+  const items =
+    formatMaintenanceItemList(row.maintenance_per_cycle) ?? formatMaintenanceItemList(row.maintenance_inputs);
   if (items) parts.push(items);
   return parts.length ? parts.join(', ') : undefined;
 }

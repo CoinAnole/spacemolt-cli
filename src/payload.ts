@@ -5,16 +5,16 @@ import type { CommandError, PreparedPayload } from './command-types.ts';
 import { displayMissingArgument, displayUnknownCommand, printJsonError, showCommandHelp } from './help.ts';
 import {
   type CachedIdResolveResult,
-  type IdKind,
-  type IdResolutionPolicy,
   cachedIdAmbiguityMessage,
   formatCachedIdAmbiguity,
   formatCachedIdResolution,
+  type IdKind,
+  type IdResolutionPolicy,
   idKindForCommandField,
   loadIdCacheSync,
   resolveCachedId,
-  softIdResolutionPolicy,
   STRICT_ID_RESOLUTION_POLICY,
+  softIdResolutionPolicy,
 } from './id-cache.ts';
 import { wantsMachineReadableErrorOutput } from './output-state.ts';
 import { colorsForPlain } from './output-style.ts';
@@ -99,7 +99,14 @@ export function preparePayload(
     options,
     registry,
   );
-  const resolvedPayload = resolveCachedIdsForPayload(command, requestPayload, sessionPath, options, writer, displayCommand);
+  const resolvedPayload = resolveCachedIdsForPayload(
+    command,
+    requestPayload,
+    sessionPath,
+    options,
+    writer,
+    displayCommand,
+  );
   if (resolvedPayload.type === 'ambiguous') {
     if (wantsMachineReadableErrorOutput(options)) {
       printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result), writer);
@@ -168,9 +175,7 @@ function resolveCachedIdsForPayload(
   ) => {
     if (options.quiet || resolved.match === 'exact') return;
     const writeErr = writer?.err.bind(writer) ?? console.error;
-    writeErr(
-      formatCachedIdResolution(displayCommand, field, query, resolved, { plain: options.plain }),
-    );
+    writeErr(formatCachedIdResolution(displayCommand, field, query, resolved, { plain: options.plain }));
   };
 
   for (const [field, value] of Object.entries(payload)) {
