@@ -4362,6 +4362,8 @@ describe('structuredContent formatters', () => {
           player_id: 'player-1',
           username: 'Marlowe',
           side_id: 1,
+          kind: 'player',
+          is_npc: false,
           auto_pilot: false,
           ship_name: 'Prospector',
           ship_class: 'prospector',
@@ -4376,6 +4378,8 @@ describe('structuredContent formatters', () => {
           player_id: 'pirate-1',
           username: 'Pirate Skiff',
           side_id: 2,
+          kind: 'pirate',
+          is_npc: true,
           auto_pilot: true,
           ship_class: 'skiff',
           zone: 'inner',
@@ -4402,6 +4406,9 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('3');
     expect(stdout).toContain('Sides');
     expect(stdout).toContain('SMC');
+    expect(stdout).toContain('Kind');
+    expect(stdout).toContain('player');
+    expect(stdout).toContain('pirate');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -4584,13 +4591,16 @@ describe('structuredContent formatters', () => {
         Side | Faction | Players
         -----+---------+--------
         1    | SMC     | 1
+        2    |         | 0
 
       === Participants ===
 
-        Name        | ID         | Side | Stance | Target
-        ------------+------------+------+--------+---------
-        Marlowe     | player-1   | 1    | fire   | pirate-1
-        Pilot Whale | creature-1 | 2    | fire   |"
+        Name          | ID            | Side | Kind     | Ship                    | Zone    | Distance | Stance | Target   | Hull | Shield
+        --------------+---------------+------+----------+-------------------------+---------+----------+--------+----------+------+-------
+        Marlowe       | player-1      | 1    | player   | Prospector (prospector) | outer   | 0        | fire   | pirate-1 | 82%  | 40%
+        Pirate Skiff  | pirate-1      | 2    | pirate   | skiff                   | inner   | 3        |        |          |      |
+        Pilot Whale   | creature-1    | 2    | creature |                         |         |          |        |          |      |
+        Earth Station | station-earth | 1    | station  |                         | engaged |          |        |          | 97%  | 80%"
       ,
         "cargo": 
       "

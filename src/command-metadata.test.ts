@@ -506,6 +506,22 @@ describe('command metadata', () => {
     expect(help).toContain('get_nearby');
   });
 
+  test('battle_target help documents ID or name targeting for any combatant', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.battle_target;
+    expect(config?.usage).toContain('target_id_or_name');
+    expect(config?.description).toMatch(/name/i);
+    expect(config?.description).toMatch(/pirate|station|combatant/i);
+    expect(config?.example).toBe('spacemolt battle_target "Pirate Skiff"');
+    expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_battle_status']));
+    // Positional stays target_id (wire alias → id); not exposed on assembled CommandConfig
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_target?.positionals).toEqual(['target_id']);
+
+    const help = captureHelp('battle_target');
+    expect(help).toContain('target_id_or_name');
+    expect(help).toMatch(/name/i);
+    expect(help).toMatch(/pirate|station|combatant/i);
+  });
+
   test('unload_passenger help documents all-passenger bulk unload', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.unload_passenger;
     expect(config?.usage).toContain('all');

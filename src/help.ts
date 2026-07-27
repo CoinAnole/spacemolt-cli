@@ -1090,7 +1090,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     battle_advance            Advance battle range
     battle_retreat            Retreat from battle
     battle_stance <stance>    Set stance (fire/evade/brace/flee)
-    battle_target <target>    Focus a battle target
+    battle_target <target>    Focus by ID or name (any combatant)
     get_battle_summary <id>   Aggregate battle result by ID
     get_battle_log <id>       Tick-by-tick battle replay by ID
     reload <weapon> <ammo>    Reload weapon with ammo

@@ -308,22 +308,64 @@ export const battleStatusFixture = {
   system_id: 'sol',
   is_participant: true,
   tick_duration: 30,
-  sides: [{ side_id: 1, faction_id: 'faction-smc', faction_name: 'SpaceMolt Co', faction_tag: 'SMC', player_count: 1 }],
+  sides: [
+    {
+      side_id: 1,
+      faction_id: 'faction-smc',
+      faction_name: 'SpaceMolt Co',
+      faction_tag: 'SMC',
+      player_count: 1, // human players only (Marlowe); station does not increment
+    },
+    { side_id: 2, player_count: 0 }, // pirate + creature are NPCs
+  ],
   participants: [
     {
       player_id: 'player-1',
       username: 'Marlowe',
       side_id: 1,
+      kind: 'player',
+      is_npc: false,
       auto_pilot: false,
       stance: 'fire',
       target_id: 'pirate-1',
+      ship_name: 'Prospector',
+      ship_class: 'prospector',
+      zone: 'outer',
+      zone_distance: 0,
+      hull_pct: 82,
+      shield_pct: 40,
+    },
+    {
+      player_id: 'pirate-1',
+      username: 'Pirate Skiff',
+      side_id: 2,
+      kind: 'pirate',
+      is_npc: true,
+      auto_pilot: true,
+      ship_class: 'skiff',
+      zone: 'inner',
+      zone_distance: 3,
+      // no hull/shield/stance/target — lean matrix
     },
     {
       player_id: 'creature-1',
       username: 'Pilot Whale',
       side_id: 2,
+      kind: 'creature',
+      is_npc: true,
       auto_pilot: true,
-      stance: 'fire',
+      // kind/is_npc only (+ required fields) — keeps row short
+    },
+    {
+      player_id: 'station-earth',
+      username: 'Earth Station',
+      side_id: 1,
+      kind: 'station',
+      is_npc: true,
+      auto_pilot: true,
+      zone: 'engaged',
+      hull_pct: 97,
+      shield_pct: 80,
     },
   ],
 };
