@@ -925,9 +925,34 @@ describe('help output branches', () => {
     expect(output).toContain('Server help:');
     expect(output).toContain('spacemolt server-help shipping_list');
     expect(output).toContain('spacemolt get_status');
-    expect(output).toContain('See also: shipping_quote, shipping_accept, shipping_profile');
+    expect(output).toContain('See also: shipping_active, shipping_quote, shipping_accept, shipping_profile');
+    expect(output).toContain('shipping_active');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/list');
+  });
+
+  test('shipping_active help explains the recovery board for live freight contracts', () => {
+    const capture = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_active', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_active', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('live freight contract');
+    expect(output).toContain('spacemolt shipping_active');
+    expect(output).toContain('Server help:');
+    expect(output).toContain('spacemolt server-help shipping_active');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toContain('spacemolt get_cargo');
+    expect(output).toContain('See also:');
+    expect(output).toContain('shipping_list');
+    expect(output).toContain('shipping_deliver');
+    expect(output).toContain('shipping_return');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/active');
   });
 
   test('Generated API Commands excludes bundled nested command actions', () => {

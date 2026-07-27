@@ -29,7 +29,7 @@ describe('dynamic OpenAPI commands', () => {
     expect(config.schema?.enabled?.type).toEqual(['boolean', 'null']);
   });
 
-  test('exposes v0.522 shipping actions but keeps both shipping help routes hidden', () => {
+  test('exposes shipping actions from bundled OpenAPI but keeps help routes hidden', () => {
     const shippingRoutes = Object.fromEntries(
       Object.entries(GENERATED_API_ROUTES).filter(([signature]) => signature.includes('/spacemolt_shipping/')),
     );
@@ -38,6 +38,7 @@ describe('dynamic OpenAPI commands', () => {
     expect(Object.keys(shippingRoutes).sort()).toEqual([
       'GET /api/v2/spacemolt_shipping/help',
       'POST /api/v2/spacemolt_shipping/accept',
+      'POST /api/v2/spacemolt_shipping/active',
       'POST /api/v2/spacemolt_shipping/cancel',
       'POST /api/v2/spacemolt_shipping/deliver',
       'POST /api/v2/spacemolt_shipping/get',
@@ -52,6 +53,7 @@ describe('dynamic OpenAPI commands', () => {
     ]);
     expect(Object.keys(commands).sort()).toEqual([
       'shipping_accept',
+      'shipping_active',
       'shipping_cancel',
       'shipping_deliver',
       'shipping_get',

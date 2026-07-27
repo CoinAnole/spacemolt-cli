@@ -9,6 +9,19 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `battle_target` help (including the Battle cheatsheet) now states that any battle combatant can be focused by **ID or name** (players, pirates, police, drones, creatures, stations), matching gameserver 0.547.2.
 - Golden `get_battle_status` sample includes multi-kind participants (`kind`, station hull/shield) so human output shows the Kind column.
 
+### Curated `shipping_active` recovery board
+
+`shipping_active` is a first-class Missions command (no longer Generated API). Human mode prints
+an **Active Freight** table of every live contract you are party to: role, destination,
+deadline (with late marker), recovery window, payout if delivered now, late fee, whether the
+package is in your cargo, next step, shipment id, and package id. Start here when you accepted
+a run and lost track of the box.
+
+```bash
+spacemolt shipping_active
+spacemolt help shipping_active
+```
+
 ### ID cache payload resolution (breaking)
 
 Payload fields resolved from the profile ID cache use **exact id/name match only** by default.

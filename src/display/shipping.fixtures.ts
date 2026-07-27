@@ -251,6 +251,91 @@ export const shippingListFixture = {
   total: 2,
 };
 
+export const shippingActiveFixture = {
+  action: 'active',
+  tick: 12450,
+  message: '3 live freight contracts.',
+  shipments: [
+    {
+      contract: shipmentContract({
+        id: 'shipment-active-carrier-1',
+        status: 'in_transit',
+        contractor: actor('player', 'carrier-vale'),
+        accepted_at: '2026-07-17T10:05:00Z',
+        accepted_tick: 1200,
+        target_tick: 1220,
+        deadline_tick: 1240,
+        recovery_deadline_tick: 4120,
+      }),
+      role: 'carrier',
+      ticks_to_target: 8,
+      ticks_to_deadline: 28,
+      ticks_to_recovery_deadline: 2908,
+      late: false,
+      payout_if_delivered_now: 12000,
+      // late_fee_if_delivered_now intentionally omitted → empty Late fee cell
+      failure_debt: 500,
+      package_in_your_cargo: true,
+      next_step: 'Deliver at nova_central while docked.',
+      origin_name: 'Earth Station',
+      origin_system: 'Sol',
+      destination_name: 'Nova Central',
+      destination_system: 'Nova',
+      last_known_location: 'sol / earth_orbit',
+    },
+    {
+      contract: shipmentContract({
+        id: 'shipment-active-late-1',
+        package_id: 'package-reactor-1',
+        status: 'in_transit',
+        service_level: 'priority',
+        base_reward: 22000,
+        deadline_tick: 1200,
+        recovery_deadline_tick: 4080,
+      }),
+      role: 'carrier',
+      ticks_to_target: -40,
+      ticks_to_deadline: -15,
+      ticks_to_recovery_deadline: 2865,
+      late: true,
+      payout_if_delivered_now: 0,
+      late_fee_if_delivered_now: 400,
+      failure_debt: 72000,
+      package_in_your_cargo: true,
+      next_step: 'Deliver late (forfeit reward, pay late fee) or return at origin.',
+      destination_name: 'Sirius Observatory',
+      destination_system: 'Sirius',
+    },
+    {
+      contract: shipmentContract({
+        id: 'shipment-active-invited-1',
+        package_id: 'package-invite-1',
+        status: 'posted',
+        visibility: 'invited',
+        invited_carrier: actor('player', 'carrier-vale'),
+      }),
+      role: 'invited_carrier',
+      ticks_to_target: 40,
+      ticks_to_deadline: 80,
+      ticks_to_recovery_deadline: 2960,
+      late: false,
+      payout_if_delivered_now: 9000,
+      failure_debt: 500,
+      package_in_your_cargo: false,
+      next_step: 'Accept the invitation or ignore the listing.',
+      destination_name: 'Nova Central',
+      destination_system: 'Nova',
+    },
+  ],
+};
+
+export const shippingActiveEmptyFixture = {
+  action: 'active',
+  tick: 12450,
+  shipments: [],
+  message: 'No active freight contracts.',
+};
+
 export const shippingTrackFixture = {
   action: 'track',
   contract: shipmentContract({
@@ -396,6 +481,7 @@ export const shippingHighValueFixtures: Record<string, HighValueFixtureEntry> = 
   shipping_get: shippingEntry('get', shippingGetFixture),
   shipping_accept: shippingEntry('accept', shippingAcceptFixture, 'details'),
   shipping_list: shippingEntry('list', shippingListFixture),
+  shipping_active: shippingEntry('active', shippingActiveFixture),
   shipping_track: shippingEntry('track', shippingTrackFixture),
   shipping_profile: shippingEntry('profile', shippingProfileFixture),
   shipping_pay_debt: shippingEntry('pay_debt', shippingPayDebtFixture, 'details'),

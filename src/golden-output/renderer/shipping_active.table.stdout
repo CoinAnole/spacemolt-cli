@@ -1,0 +1,12 @@
+
+=== Active Freight ===
+tick 12,450 · 3 contracts
+3 live freight contracts.
+
+=== Contracts ===
+
+  Role            | Destination                 | Deadline         | Recovery    | Payout    | Late fee | In cargo | Next step                                        | Shipment                  | Package          
+  ----------------+-----------------------------+------------------+-------------+-----------+----------+----------+--------------------------------------------------+---------------------------+------------------
+  carrier         | Nova Central (Nova)         | 28 ticks         | 2,908 ticks | 12,000 cr |          | yes      | Deliver at nova_central while docked.            | shipment-active-carrier-1 | package-relief-1 
+  carrier         | Sirius Observatory (Sirius) | late · -15 ticks | 2,865 ticks | 0 cr      | 400 cr   | yes      | Deliver late (forfeit reward, pay late fee) o... | shipment-active-late-1    | package-reactor-1
+  invited_carrier | Nova Central (Nova)         | 80 ticks         | 2,960 ticks | 9,000 cr  |          | no       | Accept the invitation or ignore the listing.     | shipment-active-invited-1 | package-invite-1 
