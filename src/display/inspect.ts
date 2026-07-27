@@ -128,7 +128,12 @@ function formatBoolean(value: unknown): string | undefined {
   return undefined;
 }
 
-function formatDestination(shipment: Record<string, unknown>): string | undefined {
+/**
+ * Destination: `name / system (base_id)` so required destination_base_id stays
+ * visible for docking/commands when labels are present (design formatDestination).
+ * Strings are rendered as-is from the API (no title-casing).
+ */
+function formatShipmentDestination(shipment: Record<string, unknown>): string | undefined {
   const name = text(shipment.destination_name);
   const system = text(shipment.destination_system);
   const baseId = text(shipment.destination_base_id);
@@ -137,35 +142,39 @@ function formatDestination(shipment: Record<string, unknown>): string | undefine
   if (name) parts.push(name);
   if (system) parts.push(system);
 
-  if (parts.length && baseId) {
-    return `${parts.join(' / ')} (${baseId})`;
-  }
+  if (parts.length && baseId) return `${parts.join(' / ')} (${baseId})`;
   if (baseId) return baseId;
   if (parts.length) return parts.join(' / ');
   return undefined;
 }
 
+/**
+ * OpenAPI InspectPackageShipment — freight contract summary when a sealed package
+ * is under an active shipment. Optional nested `package.shipment`.
+ * Suppress bare Shipment heading when zero fields format (empty/unrenderable record).
+ */
 function emitPackageShipment(shipment: Record<string, unknown>): void {
   const lines: string[] = [];
-  const push = (label: string, rendered: string | undefined): void => {
-    if (rendered === undefined) return;
-    lines.push(`${label}: ${rendered}`);
+  const push = (label: string, value: string | undefined): void => {
+    if (value === undefined || value === '') return;
+    lines.push(`${label}: ${value}`);
   };
 
+  // Field order: ids → destination → credits → ticks → late (design example fragment)
   push('Contract', text(shipment.shipment_id));
   push('Status', text(shipment.status));
   push('Role', text(shipment.role));
-  push('Destination', formatDestination(shipment));
+  push('Destination', formatShipmentDestination(shipment));
   push('Base reward', formatCredits(shipment.base_reward));
   push('Payout if delivered now', formatCredits(shipment.payout_if_delivered_now));
   push('Failure debt', formatCredits(shipment.failure_debt));
+  push('Late fee if delivered now', formatCredits(shipment.late_fee_if_delivered_now));
   push('Ticks to deadline', formatTicks(shipment.ticks_to_deadline));
   push('Ticks to recovery deadline', formatTicks(shipment.ticks_to_recovery_deadline));
-  push('Late', formatBoolean(shipment.late));
-  push('Late fee if delivered now', formatCredits(shipment.late_fee_if_delivered_now));
+  const late = formatBoolean(shipment.late);
+  if (late !== undefined) lines.push(`Late: ${late}`);
 
   if (!lines.length) return;
-
   emitLine(`\n${c.bright}Shipment${c.reset}`);
   for (const line of lines) emitLine(line);
 }
@@ -192,6 +201,7 @@ function emitPackage(pkg: Record<string, unknown>): void {
   const creator = formatCreator(pkg.creator);
   if (creator) emitLine(`Creator: ${creator}`);
 
+  // Package-level logistics metadata before inventory rows
   if (isRecord(pkg.shipment)) {
     emitPackageShipment(pkg.shipment);
   }

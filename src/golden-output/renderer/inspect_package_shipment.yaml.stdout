@@ -1,12 +1,12 @@
 
-id: "package:pkg_abc"
+id: "package:pkg_freight"
 kind: package
 source: cargo
 package:
-  package_id: pkg_abc
-  label: "Main Belt Survey Supplies"
-  size: 100
-  created_at: 2026-07-16T12:00:00Z
+  package_id: pkg_freight
+  label: "Sealed Reactor Parts"
+  size: 50
+  created_at: 2026-07-26T12:00:00Z
   owner:
     type: player
     id: p1
@@ -19,6 +19,11 @@ package:
       id: f1
       name: "Survey Corps"
       tag: SRV
+  contents:
+    - item_id: reactor_parts
+      name: "Reactor Parts"
+      quantity: 1
+      size: 50
   shipment:
     shipment_id: "shipment-transit-1"
     status: in_transit
@@ -32,12 +37,3 @@ package:
     ticks_to_deadline: 40
     ticks_to_recovery_deadline: 2920
     late: false
-  contents:
-    - item_id: iron_ore
-      name: "Iron Ore"
-      quantity: 20
-      size: 20
-    - item_id: copper_ore
-      name: "Copper Ore"
-      quantity: 10
-      size: 10

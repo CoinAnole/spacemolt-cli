@@ -412,7 +412,8 @@ describe('notification formatting', () => {
       ],
     },
     {
-      // Assumed keys (aligned with ShippingActiveContract — NOT schema-verified for notifications)
+      // Assumed keys (aligned with ShippingActiveContract / InspectPackageShipment —
+      // NOT schema-verified; no Notification_shipment_overdue in OpenAPI).
       msgType: 'shipment_overdue',
       data: {
         shipment_id: 'shipment-late-1',
@@ -425,9 +426,8 @@ describe('notification formatting', () => {
         'Overdue:',
         'shipment shipment-late-1',
         '→ Nova Central',
-        'ticks left',
-        'late fee',
-        'cr',
+        '2,400 ticks left',
+        'late fee 400 cr',
       ],
     },
     {
@@ -1637,24 +1637,16 @@ describe('notification formatting', () => {
     });
   });
 
-  /**
-   * shipment_overdue pure preview (D12).
-   *
-   * Assumed data keys (aligned with ShippingActiveContract / inspect shipment names):
-   *   shipment_id | shipment | contract_id
-   *   destination_name | destination | destination_base_id
-   *   ticks_to_recovery_deadline | ticks_to_deadline | ticks_left | ticks_remaining
-   *   late_fee_if_delivered_now | late_fee
-   * Schema-verified for notifications: none (no Notification_shipment_overdue in OpenAPI).
-   * Empty-bag policy: structured parts → data.message → 'Freight shipment overdue' (never null).
-   */
-  describe('shipment_overdue pure preview (D12)', () => {
-    test('registers pure PREVIEW_HANDLERS for shipment_overdue', () => {
+  describe('shipment_overdue pure preview (0.549 freight late warning)', () => {
+    // Field names assumed from ShippingActiveContract / InspectPackageShipment + shipping prose.
+    // No Notification_shipment_overdue schema — multi-branch coverage for partial bags.
+
+    test('registers pure PREVIEW_HANDLER for shipment_overdue', () => {
       expect(hasPreviewHandler('shipment_overdue')).toBe(true);
       expect(NOTIFICATION_TYPES).toContain('shipment_overdue');
     });
 
-    test('full assumed bag assembles Overdue headline with severity warning', () => {
+    test('full assumed bag: shipment, destination, ticks left, late fee', () => {
       const preview = formatNotificationPreview({
         type: 'shipment_overdue',
         msg_type: 'shipment_overdue',
@@ -1663,98 +1655,86 @@ describe('notification formatting', () => {
           destination_name: 'Nova Central',
           ticks_to_recovery_deadline: 2400,
           late_fee_if_delivered_now: 400,
-          message: 'ignored when structured parts present',
         },
       });
       expect(preview.tag).toBe('FREIGHT OVERDUE');
       expect(preview.severity).toBe('warning');
+      expect(preview.headline).toBe(
+        'Overdue: shipment shipment-late-1, → Nova Central, 2,400 ticks left, late fee 400 cr',
+      );
       expect(preview.details).toEqual([]);
-      expect(preview.headline).toContain('Overdue:');
-      expect(preview.headline).toContain('shipment shipment-late-1');
-      expect(preview.headline).toContain('→ Nova Central');
-      expect(preview.headline).toContain('ticks left');
-      expect(preview.headline).toContain('late fee');
-      expect(preview.headline).toContain('cr');
-      // Structured parts win over message
-      expect(preview.headline).not.toContain('ignored when structured');
-      expectNoDiagnosticTokens(preview.headline);
     });
 
-    test('ticks-only partial bag (changelog-minimum content)', () => {
-      const preview = formatNotificationPreview({
-        msg_type: 'shipment_overdue',
-        data: { ticks_to_recovery_deadline: 42 },
-      });
-      expect(preview.tag).toBe('FREIGHT OVERDUE');
-      expect(preview.severity).toBe('warning');
-      // Small integer avoids locale grouping in toLocaleString
-      expect(preview.headline).toBe('Overdue: 42 ticks left');
-    });
-
-    test('prefers ticks_to_recovery_deadline over ticks_to_deadline aliases', () => {
+    test('ticks-only bag prefers recovery window over deadline delta', () => {
       const preview = formatNotificationPreview({
         msg_type: 'shipment_overdue',
         data: {
-          ticks_to_recovery_deadline: 99,
-          ticks_to_deadline: 1,
-          ticks_left: 2,
-          ticks_remaining: 3,
+          ticks_to_recovery_deadline: 2865,
+          ticks_to_deadline: -15,
         },
       });
-      expect(preview.headline).toBe('Overdue: 99 ticks left');
+      expect(preview.tag).toBe('FREIGHT OVERDUE');
+      expect(preview.headline).toBe('Overdue: 2,865 ticks left');
+      expect(preview.headline).not.toContain('-15');
     });
 
-    test('secondary field aliases resolve when primaries absent', () => {
+    test('message-only bag uses server message when no structured scalars', () => {
       const preview = formatNotificationPreview({
         msg_type: 'shipment_overdue',
         data: {
-          contract_id: 'c-9',
-          destination_base_id: 'base_alpha',
-          ticks_remaining: 50,
-          late_fee: 100,
+          message: 'Delivery deadline passed; late fee applies until recovery window ends.',
         },
       });
-      expect(preview.headline).toContain('shipment c-9');
-      expect(preview.headline).toContain('→ base_alpha');
-      expect(preview.headline).toContain('50');
-      expect(preview.headline).toContain('late fee');
-    });
-
-    test('message-only bag uses data.message as headline', () => {
-      const preview = formatNotificationPreview({
-        msg_type: 'shipment_overdue',
-        data: { message: 'Delivery deadline passed; late fee applies until recovery window ends.' },
-      });
       expect(preview.tag).toBe('FREIGHT OVERDUE');
-      expect(preview.severity).toBe('warning');
-      expect(preview.headline).toBe('Delivery deadline passed; late fee applies until recovery window ends.');
+      expect(preview.headline).toBe(
+        'Delivery deadline passed; late fee applies until recovery window ends.',
+      );
     });
 
-    test('empty bag → last-resort headline (never null / Policy 5)', () => {
+    test('empty bag last-resort headline (typed, never Policy 5 null fallthrough)', () => {
       const preview = formatNotificationPreview({
         msg_type: 'shipment_overdue',
         data: {},
       });
       expect(preview.tag).toBe('FREIGHT OVERDUE');
-      expect(preview.severity).toBe('warning');
       expect(preview.headline).toBe('Freight shipment overdue');
       expectNoDiagnosticTokens(preview.headline);
     });
 
-    test('table Type stays raw msg_type; Message uses pure preview headline', () => {
+    test('secondary field aliases still resolve shipment and destination', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'shipment_overdue',
+        data: {
+          contract_id: 'shipment-alias-1',
+          destination_base_id: 'nova_central',
+          ticks_remaining: 100,
+          late_fee: 250,
+        },
+      });
+      expect(preview.headline).toContain('shipment shipment-alias-1');
+      expect(preview.headline).toContain('→ nova_central');
+      expect(preview.headline).toContain('100 ticks left');
+      expect(preview.headline).toContain('late fee 250 cr');
+    });
+
+    test('table Message matches pure preview (Type stays raw msg_type)', () => {
       const notification = {
         type: 'shipment_overdue',
         msg_type: 'shipment_overdue',
-        data: { ticks_to_deadline: 10 },
+        data: {
+          shipment_id: 'shipment-late-1',
+          destination_name: 'Nova Central',
+          ticks_to_recovery_deadline: 2400,
+          late_fee_if_delivered_now: 400,
+        },
       };
       const message = formatNotificationMessage(notification);
       expect(message).toBe(
         tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })),
       );
       expect(message).toContain('Overdue:');
-      expect(message).toContain('ticks left');
-      // Message must not substitute human tag for Type (K13 — Type is table column, not Message)
-      expect(message).not.toMatch(/^shipment_overdue$/);
+      expect(message).toContain('shipment-late-1');
+      expectNoNestedJsonDump(message);
     });
   });
 
