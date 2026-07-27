@@ -1229,13 +1229,9 @@ describe('command metadata', () => {
       'auth_login_link_poll',
       'shipping_accept',
       'shipping_cancel',
-      'shipping_deliver',
-      'shipping_get',
       'shipping_pay_debt',
       'shipping_profile',
       'shipping_quote',
-      'shipping_return',
-      'shipping_track',
     ]);
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');
@@ -1290,6 +1286,43 @@ describe('command metadata', () => {
     expect(shippingActive.route).toEqual({ tool: 'spacemolt_shipping', action: 'active', method: 'POST' });
     expect(shippingActive.required ?? []).toEqual([]);
     expect(shippingActive.usage).toBeUndefined();
+    // package_id dual-identifier curation: explicit usage is mandatory (empty required
+    // would drop optional-only usage via buildUsageFromSchema).
+    for (const [name, usage, action] of [
+      [
+        'shipping_get',
+        '[package_id=...] [shipment_id=...]  (provide exactly one)',
+        'get',
+      ],
+      [
+        'shipping_track',
+        '[package_id=...] [shipment_id=...] [limit=...]  (provide package_id or shipment_id)',
+        'track',
+      ],
+      [
+        'shipping_deliver',
+        '[package_id=...] [shipment_id=...]  (provide exactly one)',
+        'deliver',
+      ],
+      [
+        'shipping_return',
+        '[package_id=...] [shipment_id=...]  (provide exactly one)',
+        'return',
+      ],
+    ] as const) {
+      const cmd = BUNDLED_COMMAND_REGISTRY.commands[name];
+      if (!cmd) throw new Error(`${name} command missing`);
+      expect(cmd.usage).toBe(usage);
+      expect(cmd.category).toBe('Missions');
+      expect(cmd.example).toContain('package_id=');
+      expect(cmd.description).toContain('package_id');
+      expect(cmd.required ?? []).toEqual([]);
+      expect(cmd.discoverWith).toEqual(['shipping_active', 'get_cargo']);
+      expect(cmd.route).toEqual({ tool: 'spacemolt_shipping', action, method: 'POST' });
+      expect(cmd.schema?.package_id?.type).toBe('string');
+      expect(cmd.schema?.shipment_id?.type).toBe('string');
+    }
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_track?.schema?.limit?.type).toBe('integer');
     const shippingQuote = BUNDLED_COMMAND_REGISTRY.commands.shipping_quote;
     if (!shippingQuote) throw new Error('shipping_quote command missing');
     expect(shippingQuote).toMatchObject({

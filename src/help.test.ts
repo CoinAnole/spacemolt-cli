@@ -955,6 +955,27 @@ describe('help output branches', () => {
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/active');
   });
 
+  test('shipping_deliver help documents package_id dual identifier usage', () => {
+    const capture = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_deliver', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_deliver', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('package_id');
+    expect(output).toContain(
+      'spacemolt shipping_deliver [package_id=...] [shipment_id=...]  (provide exactly one)',
+    );
+    expect(output).toContain('spacemolt shipping_deliver package_id=package-relief-1');
+    expect(output).toContain('Server help:');
+    expect(output).toContain('spacemolt server-help shipping_deliver');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/deliver');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 

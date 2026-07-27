@@ -22,6 +22,19 @@ spacemolt shipping_active
 spacemolt help shipping_active
 ```
 
+### Shipping get / track / deliver / return accept `package_id`
+
+`shipping_get`, `shipping_track`, `shipping_deliver`, and `shipping_return` are curated under
+Missions and document the dual identifier path: pass **either** `shipment_id` **or** the sealed
+`package_id` from cargo (exactly one). Help usage and examples teach the cargo-box path so you
+do not need the contract id when the unlabeled package is already in your hold.
+
+```bash
+spacemolt shipping_get package_id=package-relief-1
+spacemolt shipping_deliver package_id=package-relief-1
+spacemolt help shipping_deliver
+```
+
 ### ID cache payload resolution (breaking)
 
 Payload fields resolved from the profile ID cache use **exact id/name match only** by default.
