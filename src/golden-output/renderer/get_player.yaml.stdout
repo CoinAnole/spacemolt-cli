@@ -19,7 +19,7 @@ player:
       baseline: 20
       outstanding_bounty: 0
       reputation: 20
-    pirates:
+    pirate_kael:
       baseline: 0
       outstanding_bounty: 2500
       reputation: -30

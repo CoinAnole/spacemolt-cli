@@ -8,7 +8,7 @@ missions:
     type: combat
     description: "Clear pirate contacts harassing local shipping lanes."
     expires_in_ticks: 48
-    rewards: {credits: 2500, skill_xp: {combat: 40}}
+    rewards: {pirate_rep: 5, pirate_faction: pirate_kael}
   - difficulty: 5
     mission_id: deep_core_prospecting
     title: "Deep Core Prospecting"

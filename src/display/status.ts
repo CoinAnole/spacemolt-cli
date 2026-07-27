@@ -259,6 +259,14 @@ function formatCitizenships(value: unknown): string | undefined {
   return unique.length ? unique.join(', ') : undefined;
 }
 
+/** Prefer human crew name, fall back to standing key (0.548.0 per-crew pirates). */
+function pirateCrewLabel(p: Record<string, unknown>): string {
+  const name = typeof p.faction_name === 'string' ? p.faction_name.trim() : '';
+  if (name) return name;
+  const id = typeof p.faction === 'string' ? p.faction.trim() : '';
+  return id;
+}
+
 function summarizeObjectiveForDisplay(objective: unknown): string {
   if (!isRecord(objective)) return String(objective);
   const description = objective.description ?? objective.title ?? objective.type;
@@ -296,7 +304,14 @@ function summarizeRewardForDisplay(rewards: unknown): string {
     if (items.length) parts.push(items.join(', '));
   }
   if (rewards.reputation !== undefined) parts.push(`reputation ${formatSignedNumber(rewards.reputation)}`);
-  if (rewards.pirate_rep !== undefined) parts.push(`pirate rep ${formatSignedNumber(rewards.pirate_rep)}`);
+  if (rewards.pirate_rep !== undefined) {
+    const faction =
+      typeof rewards.pirate_faction === 'string' && rewards.pirate_faction.trim() !== ''
+        ? rewards.pirate_faction.trim()
+        : '';
+    const suffix = faction ? ` (${faction})` : '';
+    parts.push(`pirate rep ${formatSignedNumber(rewards.pirate_rep)}${suffix}`);
+  }
   if (isRecord(rewards.skill_xp)) {
     parts.push(
       Object.entries(rewards.skill_xp)
@@ -839,8 +854,10 @@ export const statusFormatters = [
         for (const p of pirates) {
           const name = p.name || p.pirate_id || 'Unknown';
           const ship = p.ship_class || p.tier ? ` (${p.ship_class || p.tier})` : '';
+          const crewLabel = pirateCrewLabel(p);
+          const crew = crewLabel ? ` - ${crewLabel}` : '';
           const status = p.status ? ` - ${p.status}` : '';
-          emitLine(`  ${name}${ship}${status}`);
+          emitLine(`  ${name}${ship}${crew}${status}`);
         }
       }
 

@@ -118,9 +118,10 @@ export const missionsFixture = {
       type: 'combat',
       description: 'Clear pirate contacts harassing local shipping lanes.',
       expires_in_ticks: 48,
+      // Slim rewards so summarizeRewards parenthetical fits maxCellWidth 32 in get_missions table.
       rewards: {
-        credits: 2500,
-        skill_xp: { combat: 40 },
+        pirate_rep: 5,
+        pirate_faction: 'pirate_kael',
       },
     },
     {

@@ -7,6 +7,7 @@ import {
   browseShipsFixture,
   cargoFixture,
   catalogItemsFixture,
+  completedMissionDetailFixture,
   completedMissionsFixture,
   createSellOrderFixture,
   declineMissionFixture,
@@ -25,6 +26,7 @@ import {
   listStationPassengersWithLoungeFixture,
   loadPassengerConnectingFixture,
   missionsFixture,
+  nearbyFixture,
   poiInfoFixture,
   storageFixture,
   subscribeMarketFixture,
@@ -162,7 +164,7 @@ const playerProfileFixture = {
     standings: {
       crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
       nebula: { baseline: 20, outstanding_bounty: 0, reputation: 20 },
-      pirates: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
+      pirate_kael: { baseline: 0, outstanding_bounty: 2500, reputation: -30 },
     },
     stats: {
       piloting: { level: 5, xp: 1200 },
@@ -1503,7 +1505,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Crafting: Level 2 (175 XP)');
     expect(stdout).toContain('crimson: 94');
     expect(stdout).toContain('nebula: 20');
-    expect(stdout).toContain('pirates: -30');
+    expect(stdout).toContain('pirate_kael: -30');
     expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -3362,7 +3364,143 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Missions ===');
     expect(stdout).toContain('Pirate Sweep');
+    // Slim pirate_sweep rewards: full parenthetical must fit maxCellWidth 32 (no truncation).
+    expect(stdout).toContain('pirate rep +5 (pirate_kael)');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_nearby shows pirate crew from faction_name', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_nearby', nearbyFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_nearby pirate crew falls back to faction id and omits when absent', () => {
+    const factionOnly = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      count: 0,
+      pirates: [{ name: 'Corsair', tier: 'skiff', status: 'hostile', faction: 'pirate_kael' }],
+      pirate_count: 1,
+    });
+    const neither = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      count: 0,
+      pirates: [{ name: 'Raider', tier: 'skiff', status: 'hostile' }],
+      pirate_count: 1,
+    });
+    const whitespaceName = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      count: 0,
+      pirates: [
+        {
+          name: 'Raider',
+          tier: 'skiff',
+          status: 'hostile',
+          faction_name: '   ',
+          faction: 'pirate_voss',
+        },
+      ],
+      pirate_count: 1,
+    });
+
+    expect(factionOnly.stderr).toBe('');
+    expect(factionOnly.stdout).toContain('Corsair (skiff) - pirate_kael - hostile');
+    expect(neither.stdout).toContain('Raider (skiff) - hostile');
+    expect(neither.stdout).not.toContain('pirate_');
+    expect(whitespaceName.stdout).toContain('Raider (skiff) - pirate_voss - hostile');
+  });
+
+  test('view_completed_mission includes pirate_faction on pirate rep rewards', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_completed_mission', completedMissionDetailFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(
+      'Rewards: 7,500 cr; 25 ore_iron; reputation +3; pirate rep +1 (pirate_kael); piloting +25 XP',
+    );
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('view_completed_mission omits pirate_faction parenthetical when empty or missing', () => {
+    const missing = captureStructuredOutput('view_completed_mission', {
+      template_id: 'mission-ore-run',
+      title: 'Ore Run',
+      rewards: { pirate_rep: 1 },
+    });
+    const empty = captureStructuredOutput('view_completed_mission', {
+      template_id: 'mission-ore-run',
+      title: 'Ore Run',
+      rewards: { pirate_rep: 2, pirate_faction: '' },
+    });
+    const whitespace = captureStructuredOutput('view_completed_mission', {
+      template_id: 'mission-ore-run',
+      title: 'Ore Run',
+      rewards: { pirate_rep: 3, pirate_faction: '  ' },
+    });
+
+    expect(missing.stdout).toContain('pirate rep +1');
+    expect(missing.stdout).not.toContain('pirate rep +1 (');
+    expect(empty.stdout).toContain('pirate rep +2');
+    expect(empty.stdout).not.toContain('pirate rep +2 (');
+    expect(whitespace.stdout).toContain('pirate rep +3');
+    expect(whitespace.stdout).not.toContain('pirate rep +3 (');
+  });
+
+  // KD-11: prove summarizeRewards pirate_faction via get_active_missions (maxCellWidth 64), not the 32-wide missions list.
+  test('get_active_missions summarizeRewards includes pirate_faction parenthetical', () => {
+    const withFaction = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-pirate-1',
+            title: 'Crew Strike',
+            type: 'combat',
+            difficulty: 2,
+            rewards: { pirate_rep: 5, pirate_faction: 'pirate_kael' },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const missingFaction = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-pirate-2',
+            title: 'Open Season',
+            type: 'combat',
+            difficulty: 1,
+            rewards: { pirate_rep: 4 },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const emptyFaction = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-pirate-3',
+            title: 'All Crews',
+            type: 'combat',
+            difficulty: 1,
+            rewards: { pirate_rep: 3, pirate_faction: '' },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(withFaction.stderr).toBe('');
+    expect(withFaction.stdout).toContain('pirate rep +5 (pirate_kael)');
+    expect(missingFaction.stdout).toContain('pirate rep +4');
+    expect(missingFaction.stdout).not.toContain('pirate rep +4 (');
+    expect(emptyFaction.stdout).toContain('pirate rep +3');
+    expect(emptyFaction.stdout).not.toContain('pirate rep +3 (');
   });
 
   test('formats empire policy snapshots without raw JSON fallback', () => {
@@ -4808,7 +4946,7 @@ describe('structuredContent formatters', () => {
         Ibis [SMC] (hauler) - "refitting" [DOCKED]
 
       Pirates (1):
-        Raider (skiff) - hostile
+        Raider (skiff) - Admiral Kael - hostile
 
       Empire NPCs (1):
         Patrol (interceptor)
