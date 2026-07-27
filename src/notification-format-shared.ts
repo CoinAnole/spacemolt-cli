@@ -1263,23 +1263,20 @@ function previewPoiDeparture(
 }
 
 /**
- * Pure preview for `shipment_overdue` (freight late-delivery window).
- *
- * Field names are **assumed** (aligned with ShippingActiveContract / inspect shipment OpenAPI
- * names where possible). There is **no** formal Notification_shipment_overdue schema —
- * schema-verified for notifications: none. Defensive secondary aliases tolerate partial bags.
- *
- * Empty-bag policy (D12): structured parts → data.message → fixed 'Freight shipment overdue'
- * (never return null for this msg_type).
+ * One-off push when a freight run passes its deadline (games 0.549+).
+ * No formal Notification_shipment_overdue schema — field names assumed from
+ * ShippingActiveContract / InspectPackageShipment + OpenAPI shipping prose
+ * (shipment, destination, ticks left, late fee). Tolerate partial bags.
  */
 function previewShipmentOverdue(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
+  // Assumed keys (aligned with active-contract OpenAPI names — NOT schema-verified for notifications)
   const shipment = firstSafeScalar(data, ['shipment_id', 'shipment', 'contract_id']);
   const destination = firstSafeScalar(data, ['destination_name', 'destination', 'destination_base_id']);
-  // first finite wins — prefer recovery window (time left after deadline), then deadline delta, then loose aliases
+  // Prefer recovery window (time left after deadline), then deadline delta, then loose aliases
   const ticksLeft =
     finiteNumber(data.ticks_to_recovery_deadline) ??
     finiteNumber(data.ticks_to_deadline) ??
@@ -1301,7 +1298,6 @@ function previewShipmentOverdue(
         ? String(message)
         : 'Freight shipment overdue';
 
-  // headlinePreview does not accept severity; merge onto the preview object (K14).
   return {
     ...headlinePreview('FREIGHT OVERDUE', headline, options),
     severity: 'warning',
@@ -1317,7 +1313,6 @@ function previewShipmentOverdue(
  * PR7a: combat / police / pirate / battle.
  * PR7b: social / trade / friends / faction / base / scan.
  * PR7c: remainder (mining, drones, skills, queue, version, poi, reconnected, pilotless, action_error).
- * Freight: shipment_overdue (D12 pure preview).
  */
 
 const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
@@ -1341,6 +1336,9 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
     if (!receipt) return null;
     return headlinePreview('SHIP READY', receipt, options);
   },
+
+  // Freight deadline passed (0.549+); always typed — never null to Policy 5
+  shipment_overdue: previewShipmentOverdue,
 
   action_result: previewActionResult,
   action_error: previewActionError,
@@ -1393,9 +1391,6 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   queue_cleared: previewQueueCleared,
   poi_arrival: previewPoiArrival,
   poi_departure: previewPoiDeparture,
-
-  // Freight overdue (0.549.0) — assumed field names; no Notification_* schema yet
-  shipment_overdue: previewShipmentOverdue,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

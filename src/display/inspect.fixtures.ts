@@ -19,6 +19,22 @@ export const inspectPackageFixture = {
       { item_id: 'iron_ore', name: 'Iron Ore', quantity: 20, size: 20 },
       { item_id: 'copper_ore', name: 'Copper Ore', quantity: 10, size: 10 },
     ],
+    // OpenAPI InspectPackageShipment (optional nested contract summary)
+    shipment: {
+      shipment_id: 'shipment-pkg-1',
+      status: 'in_transit',
+      role: 'carrier',
+      destination_base_id: 'nova_central',
+      destination_name: 'Nova Central',
+      destination_system: 'Nova',
+      base_reward: 12000,
+      payout_if_delivered_now: 12000,
+      failure_debt: 500,
+      ticks_to_deadline: 28,
+      ticks_to_recovery_deadline: 2908,
+      late: false,
+      // late_fee_if_delivered_now intentionally omitted when not late
+    },
   },
 };
 
