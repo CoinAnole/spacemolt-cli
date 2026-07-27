@@ -1198,6 +1198,73 @@ describe('notification formatting', () => {
       expect(preview.headline).not.toContain('code=');
     });
 
+    test('verbose generic previews add bounded scalars and omitted-field metadata', () => {
+      const notification = {
+        type: 'mystery',
+        msg_type: 'mystery',
+        data: {
+          message: 'Something happened.',
+          code: 'strange',
+          tick: 9,
+          ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+        },
+      };
+
+      const standard = formatNotificationPreview(notification);
+      expect(standard.details).toEqual([]);
+      expect(standard.omittedHint).toBeUndefined();
+
+      const verbose = formatNotificationPreview(notification, { verbose: true, maxDetails: 2 });
+      expect(verbose.details).toEqual(['code=strange', 'tick=9']);
+      expect(verbose.omittedHint).toBe('omitted: ship');
+      expect(JSON.stringify(verbose)).not.toContain('Dust Devil');
+      expect(JSON.stringify(verbose)).not.toMatch(/"hull"\s*:/);
+    });
+
+    test('verbose scalar details respect maxDetails and maxLineLength', () => {
+      const preview = formatNotificationPreview(
+        {
+          type: 'mystery',
+          msg_type: 'mystery',
+          data: {
+            message: 'Something happened.',
+            code: 'a-very-long-code',
+            tick: 9,
+          },
+        },
+        { verbose: true, maxDetails: 1, maxLineLength: 12 },
+      );
+
+      expect(preview.details).toHaveLength(1);
+      expect(preview.details[0]?.length).toBeLessThanOrEqual(12);
+      expect(preview.details[0]?.endsWith('…')).toBe(true);
+    });
+
+    test('inline verbose output shows extras and a dim omission hint without expanding nested data', () => {
+      const notification = {
+        type: 'mystery',
+        msg_type: 'mystery',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          message: 'Something happened.',
+          code: 'strange',
+          tick: 9,
+          ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+        },
+      };
+
+      const standard = formatNotification(notification, { plain: true }).join('\n');
+      expect(standard).not.toContain('code=strange');
+      expect(standard).not.toContain('omitted: ship');
+
+      const verbose = formatNotification(notification, { plain: true, verbose: true }).join('\n');
+      expect(verbose).toContain('code=strange');
+      expect(verbose).toContain('tick=9');
+      expect(verbose).toContain('omitted: ship');
+      expect(verbose).not.toContain('Dust Devil');
+      expect(verbose).not.toMatch(/"hull"\s*:/);
+    });
+
     test('last resort is short notification label, never JSON.stringify of data', () => {
       const preview = formatNotificationPreview({
         type: 'emptyish',
@@ -1304,16 +1371,29 @@ describe('notification formatting', () => {
     });
 
     test('chat_message pure preview keeps channel tag and sender:content', () => {
-      const preview = formatNotificationPreview({
+      const notification = {
         type: 'chat',
         msg_type: 'chat_message',
-        data: { channel: 'local', sender: 'Ibis', content: 'Clear skies over Sol today.' },
-      });
+        data: {
+          channel: 'local',
+          sender: 'Ibis',
+          content: 'Clear skies over Sol today.',
+          tick: 9,
+          ship: { id: 'ship-1', name: 'Dust Devil' },
+        },
+      };
+      const preview = formatNotificationPreview(notification);
       expect(preview.tag).toBe('CHAT:local');
       expect(preview.headline).toBe('Ibis: Clear skies over Sol today.');
       expect(preview.details).toEqual([]);
       // Table Message is headline only (K11) — Type stays raw chat_message elsewhere.
       expect(tableMessageFromPreview(preview)).toBe('Ibis: Clear skies over Sol today.');
+      expect(formatNotificationMessage(notification)).toBe('Ibis: Clear skies over Sol today.');
+
+      const verbose = formatNotificationPreview(notification, { verbose: true });
+      expect(verbose.details).toContain('tick=9');
+      expect(verbose.omittedHint).toBe('omitted: ship');
+      expect(JSON.stringify(verbose)).not.toContain('Dust Devil');
     });
 
     test('trade_offer_received pure preview includes prompts and credits details', () => {

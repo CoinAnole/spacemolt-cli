@@ -210,10 +210,8 @@ export interface NotificationPreviewOptions {
   maxDepth?: number;
   /**
    * When true (`--verbose-notifications`), allow extra preferred scalars / verbose detail policy.
-   * **Reserved until PR 8:** accepted and resolved today but does **not** change preview output.
-   * `omittedHint` is already computed on scalar-bag/last-resort paths; showing it as a dim
-   * detail line is an **inline adapter** concern under `--verbose-notifications` (PR 8), not
-   * the pure builder. Still never expands nested ship/location/nearby dumps.
+   * `omittedHint` remains renderer metadata; the inline adapter shows it as a dim detail line
+   * under `--verbose-notifications`. Still never expands nested ship/location/nearby dumps.
    */
   verbose?: boolean;
 }
@@ -222,7 +220,7 @@ type ResolvedPreviewOptions = Required<
   Pick<NotificationPreviewOptions, 'maxLineLength' | 'maxDetails' | 'maxDepth' | 'verbose'>
 >;
 
-/** Defaults include reserved `maxDepth` / `verbose` so later PRs can read them without API churn. */
+/** Defaults include reserved `maxDepth`; verbose notification expansion is opt-in. */
 const DEFAULT_PREVIEW_OPTIONS: ResolvedPreviewOptions = {
   maxLineLength: 200,
   maxDetails: 6,
@@ -1621,8 +1619,8 @@ export function formatNotificationPreview(
     const resolved = resolveOptions(options);
     const normalized = normalizeNotification(notification);
     const typed = tryTypedNotificationPreview(notification, options);
-    if (typed) return typed;
-    return previewGeneric(normalized, resolved);
+    const preview = typed ?? previewGeneric(normalized, resolved);
+    return applyVerboseExtras(preview, normalized.data, resolved);
   } catch {
     return { tag: 'NOTIFICATION', headline: 'notification', details: [] };
   }

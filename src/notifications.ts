@@ -121,11 +121,15 @@ function renderPreviewInline(
   time: string,
   c: NotificationColors,
   writeLine: (message?: string) => void,
+  verbose = false,
 ): void {
   const tagColor = previewTagColor(preview.tag, c);
   writeLine(`${c.dim}[${time}]${c.reset} ${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`);
   for (const detail of preview.details) {
     writeLine(`  ${detail}`);
+  }
+  if (verbose && preview.omittedHint) {
+    writeLine(`  ${c.dim}${preview.omittedHint}${c.reset}`);
   }
 }
 
@@ -140,14 +144,16 @@ function formatGenericNotification(
   writeLine: (message?: string) => void,
   verbose = false,
 ): void {
-  const preview = formatNotificationPreview({
-    verbose,
-    type: notification.type,
-    msg_type: notification.msgType,
-    timestamp: notification.timestamp,
-    data: notification.data,
-  });
-  renderPreviewInline(preview, time, c, writeLine);
+  const preview = formatNotificationPreview(
+    {
+      type: notification.type,
+      msg_type: notification.msgType,
+      timestamp: notification.timestamp,
+      data: notification.data,
+    },
+    { verbose },
+  );
+  renderPreviewInline(preview, time, c, writeLine, verbose);
 }
 
 /**
@@ -175,14 +181,17 @@ export function formatNotification(
   const c = colorsForPlain(Boolean(options?.plain));
 
   try {
-    const preview = formatNotificationPreview({
-      verbose: Boolean(options?.verbose),
-      type: normalized.type,
-      msg_type: normalized.msgType,
-      timestamp: normalized.timestamp,
-      data: normalized.data,
-    });
-    renderPreviewInline(preview, time, c, writeLine);
+    const verbose = Boolean(options?.verbose);
+    const preview = formatNotificationPreview(
+      {
+        type: normalized.type,
+        msg_type: normalized.msgType,
+        timestamp: normalized.timestamp,
+        data: normalized.data,
+      },
+      { verbose },
+    );
+    renderPreviewInline(preview, time, c, writeLine, verbose);
     if (lines.length > 0 && !hasDiagnosticToken(lines)) return lines;
   } catch {
     // Malformed pure preview should not make rendering fail.
