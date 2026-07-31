@@ -146,7 +146,14 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
       const nextArg = args[i + 1];
       const fieldType = getCommandFieldType(command, flag.key, registry);
       const requiredScalarType = schemaRequiredScalarType(fieldType);
-      if (requiredScalarType !== 'boolean' && nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
+      if (requiredScalarType === 'boolean') {
+        if (nextArg === 'true' || nextArg === 'false') {
+          setPayloadField(flag.key, nextArg);
+          i++;
+        } else {
+          setPayloadField(flag.key, 'true');
+        }
+      } else if (nextArg && !nextArg.startsWith('-') && nextArg.indexOf('=') === -1) {
         setPayloadField(flag.key, nextArg);
         const tokenAfterValue = args[i + 2];
         if (

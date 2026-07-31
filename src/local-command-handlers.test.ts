@@ -524,6 +524,34 @@ describe('local command handlers', () => {
     expect(output).not.toContain('Dry run: faction_create_buy_order');
   });
 
+  test('nested API command dry run consumes a separated boolean value before named arguments', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runInvocation(
+      [
+        '--dry-run',
+        'true',
+        '--json',
+        'facility',
+        'job_add',
+        '--recipe-id',
+        'craft_military_fuel_cell',
+        '--facility-id',
+        'facility_1',
+      ],
+      undefined,
+      fakeContext(stdout, stderr),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(JSON.parse(stdout.join('\n')).structuredContent.payload).toEqual({
+      recipe_id: 'craft_military_fuel_cell',
+      facility_id: 'facility_1',
+    });
+  });
+
   test('nested API command dry run preserves yaml structured output', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

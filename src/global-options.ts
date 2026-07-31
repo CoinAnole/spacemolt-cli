@@ -135,7 +135,13 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
     } else if (arg === '--verbose-notifications') {
       result.verboseNotifications = true;
     } else if (arg === '--dry-run' || arg === '--preview') {
-      result.dryRun = true;
+      const nextArg = args[i + 1];
+      if (nextArg === 'true' || nextArg === 'false') {
+        result.dryRun = nextArg === 'true';
+        i++;
+      } else {
+        result.dryRun = true;
+      }
     } else if (arg.startsWith('--dry-run=') || arg.startsWith('--preview=')) {
       const value = arg.substring(arg.indexOf('=') + 1).toLowerCase();
       result.dryRun = value !== 'false' && value !== '0';

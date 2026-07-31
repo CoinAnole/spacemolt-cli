@@ -548,11 +548,31 @@ describe('parseArgs - basic', () => {
     expect(payload.quantity).toBe('50');
   });
 
+  test('boolean CLI flags consume separated true and false values', () => {
+    const enabled = parseOk(['sell', '--auto-list', 'true', 'ore_iron', '50']);
+    expect(enabled.payload.auto_list).toBe('true');
+    expect(enabled.payload.item_id).toBe('ore_iron');
+    expect(enabled.payload.quantity).toBe('50');
+
+    const disabled = parseOk(['sell', '--auto-list', 'false', 'ore_iron', '50']);
+    expect(disabled.payload.auto_list).toBe('false');
+    expect(disabled.payload.item_id).toBe('ore_iron');
+    expect(disabled.payload.quantity).toBe('50');
+  });
+
   test('nullable boolean CLI flags default to true without consuming the next positional arg', () => {
     const { payload } = parseOk(['union_probe', '--enabled', 'probe-target'], {
       registry: unionSchemaRegistry,
     });
     expect(payload.enabled).toBe('true');
+    expect(payload.structured).toBe('probe-target');
+  });
+
+  test('nullable boolean CLI flags consume separated boolean values', () => {
+    const { payload } = parseOk(['union_probe', '--enabled', 'false', 'probe-target'], {
+      registry: unionSchemaRegistry,
+    });
+    expect(payload.enabled).toBe('false');
     expect(payload.structured).toBe('probe-target');
   });
 
@@ -2045,6 +2065,29 @@ describe('CLI output modes', () => {
     expect(result.options.profile).toBe('pilot');
     expect(result.options.dryRun).toBe(false);
     expect(result.options.args).toEqual(['get_status']);
+  });
+
+  test('global dry-run flags consume separated true and false values', () => {
+    for (const [flag, value, expected] of [
+      ['--dry-run', 'true', true],
+      ['--dry-run', 'false', false],
+      ['--preview', 'true', true],
+      ['--preview', 'false', false],
+    ] as const) {
+      const result = parseGlobalOptions([
+        'facility',
+        'job_add',
+        flag,
+        value,
+        '--recipe-id',
+        'craft_military_fuel_cell',
+      ]);
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.error.message);
+      expect(result.options.dryRun).toBe(expected);
+      expect(result.options.args).toEqual(['facility', 'job_add', '--recipe-id', 'craft_military_fuel_cell']);
+    }
   });
 
   test('global option parser handles --fuzzy-ids / --no-fuzzy-ids without touching jq --fuzzy', () => {
