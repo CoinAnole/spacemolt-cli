@@ -586,8 +586,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description:
       'Repair a damaged facility after a station is wrecked (costs ~30% of original materials and build time).',
     example: 'spacemolt facility_repair facility-1',
-    discoverWith: ['facility_list', 'facility_owned'],
-    seeAlso: ['facility_list', 'facility_owned', 'facility_dismantle'],
+    discoverWith: ['facility_list', 'facility_owned', 'faction_facility_list'],
+    seeAlso: ['facility_list', 'facility_owned', 'faction_facility_list', 'facility_dismantle'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/repair',
     positionals: ['facility_id'],
@@ -778,7 +778,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   faction_facility_list: {
     category: 'Facilities',
+    description:
+      'List faction facilities at the current station, including status (active, damaged, under construction).',
+    example: 'spacemolt faction facility_list',
+    discoverWith: ['faction_facility_owned', 'facility_repair', 'facility_list'],
+    seeAlso: ['faction_facility_owned', 'facility_repair', 'faction_build', 'facility_list'],
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_list',
+    positionals: [],
   },
   faction_facility_owned: {
     category: 'Facilities',

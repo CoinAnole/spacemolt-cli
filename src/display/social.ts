@@ -948,6 +948,68 @@ export const socialFormatters = [
     { commands: ['faction_facility_owned'], shapeFallback: true },
   ),
 
+  // FacilityFactionListResponse (faction_list action) — custom columns only; do not call facilityColumns.
+  namedFormatter(
+    'faction_facility_list',
+    ['faction_facilities'],
+    (r, command) => {
+      if (command && !commandNameEquals(command, 'faction_facility_list')) return false;
+      if (r.action !== undefined && r.action !== 'faction_list') return false;
+
+      const facilities = firstArray(r, ['faction_facilities']);
+      if (!facilities) return false;
+      // Reject grouped facility_list payloads
+      if (Array.isArray(r.station_facilities) || Array.isArray(r.player_facilities)) return false;
+
+      emitOptionalLine('Faction', r.faction_id);
+      const tableTitle = r.base_id ? `Faction Facilities at ${r.base_id}` : 'Faction Facilities';
+
+      const rows = facilities.map((facility) => ({
+        ...facility,
+        name_display: facilityDisplayName(facility),
+        type_display: facilityTypeKey(facility),
+        rent_display: formatCredits(facility.rent_per_cycle),
+        damaged_display: formatYesNo(facility.damaged),
+      }));
+
+      const columns: Array<[string, string[]]> = [
+        ['Name', ['name_display']],
+        ['Type', ['type_display', 'type']],
+        ['ID', ['facility_id', 'id']],
+        ['Level', ['level']],
+        ['Status', ['status']],
+      ];
+      if (hasAnyField(rows, ['damaged', 'damaged_display'])) {
+        columns.push(['Damaged', ['damaged_display', 'damaged']]);
+      }
+      columns.push(['Service', ['faction_service']]);
+      columns.push(['Rent', ['rent_display', 'rent_per_cycle']]);
+      if (hasAnyField(rows, ['ticks_until_complete'])) {
+        columns.push(['Building', ['ticks_until_complete']]);
+      }
+      if (hasAnyField(rows, ['capacity'])) {
+        columns.push(['Capacity', ['capacity']]);
+      }
+      if (hasAnyField(rows, ['rental_fee_per_run'])) {
+        columns.push(['Fee/run', ['rental_fee_per_run']]);
+      }
+
+      printCompactTable(tableTitle, rows, columns);
+
+      if (isRecord(r.faction_storage)) {
+        const s = r.faction_storage;
+        const parts: string[] = [];
+        if (s.credits !== undefined) parts.push(`${formatNumber(s.credits) ?? s.credits}cr`);
+        if (s.item_types !== undefined) parts.push(`${s.item_types} types`);
+        if (s.rooms !== undefined) parts.push(`${s.rooms} rooms`);
+        if (parts.length) emitLine(`\nFaction storage: ${parts.join(', ')}`);
+      }
+      if (typeof r.hint === 'string' && r.hint) emitLine(`\n${r.hint}`);
+      return true;
+    },
+    { commands: ['faction_facility_list'], shapeFallback: false },
+  ),
+
   // Facilities
   formatter((result) => renderRanchStatus(result), {
     commands: ['facility_ranch_status'],
