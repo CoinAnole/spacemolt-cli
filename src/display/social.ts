@@ -1195,6 +1195,9 @@ export const socialFormatters = [
       }
       emitOptionalLine('Status', r.status);
       emitOptionalLine('Category', r.category);
+      if (r.has_station !== undefined) {
+        emitLine(`Has Station: ${formatYesNo(r.has_station) ?? r.has_station}`);
+      }
       emitOptionalLine('Outcome', r.outcome);
       emitOptionalLine('Winning Side', r.winning_side);
       emitOptionalLine('Start Tick', r.start_tick);

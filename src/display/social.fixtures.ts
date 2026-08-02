@@ -376,6 +376,7 @@ export const battleSummaryFixture = {
   system_name: 'Sol',
   status: 'completed',
   category: 'pvp',
+  has_station: true,
   start_tick: 900100,
   duration_ticks: 14,
   participant_count: 3,
