@@ -4,6 +4,22 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+## 2.8.0 — 2026-08-02
+
+Large release since **2.7.0** (2026-06-29). Bundled OpenAPI metadata tracks gameserver through **v0.552.0**.
+
+### Highlights
+
+| Area | What changed |
+| --- | --- |
+| **Breaking: storage** | Multi-action `storage` → grouped `storage view|deposit|withdraw|loot|jettison` (no `action=` body field) |
+| **Breaking: ID cache** | Payload id/name rewrites are exact-only by default; short fragments need `--fuzzy-ids` / `config fuzzy-ids` / `SPACEMOLT_FUZZY_IDS` |
+| **Breaking: outpost dismantle** | Use top-level `dismantle_outpost` (not `facility dismantle_outpost`) |
+| **Shipping** | Curated `shipping_active` recovery board; get/track/deliver/return accept `package_id` **or** `shipment_id`; late settlement + overdue previews |
+| **Notifications** | Shared compact human previews; routine summarization; `--verbose-notifications` for omitted extras; clearer `--raw-notifications` docs |
+| **Display** | Standings, pirate crews, facility required stock, faction facility damage status, craft packages, commissions, ranch/bulk orders, battle station participation |
+| **API sync** | Continuous `spacemolt-docs` / generated metadata updates from ~v0.454 through **v0.552.0** |
+
 ### Display: facility maintenance stock labels (0.550.0)
 
 Facility list and catalog facility tables now label maintenance quantities as
@@ -72,9 +88,9 @@ prefer `--json` / `--structured` and those field names — do not scrape human t
 
 | Topic | Where it lives today |
 | --- | --- |
-| Dual id (`package_id` **or** `shipment_id`) | Unreleased: **Shipping get / track / deliver / return accept `package_id`** |
-| Late windows / fees / recovery board | Unreleased: **Curated `shipping_active` recovery board** (deadline, late fee, late marker) |
-| Settlement `late` flag on deliver/return human output | Already in shipping deliver/return human output (display path) — no separate Unreleased section |
+| Dual id (`package_id` **or** `shipment_id`) | **Shipping get / track / deliver / return accept `package_id`** (below) |
+| Late windows / fees / recovery board | **Curated `shipping_active` recovery board** (deadline, late fee, late marker) |
+| Settlement `late` flag on deliver/return human output | Shipping deliver/return human settlement output |
 
 ### Faction facility list table with status and damage
 
@@ -170,9 +186,34 @@ spacemolt sell ore_iron 50       # exact id — works under strict default
 - Unique system **prefix** expansion under soft match is intentional (`cro` → `crosshaven`) and prints a stderr notice.
 - Completion, `ids`, and `where-can-i` stay fuzzy and are **not** gated by `--fuzzy-ids`.
 
-### Help: `--raw-notifications` vs compact human formatting
+### Notifications: compact previews and flags
 
-`--raw-notifications` skips notification **summarization** only (crafting, action results, system travel progress, and similar collapses). Human output still uses compact one-line formatting; it does not dump full nested notification JSON. Use `--json` / `--structured` / related machine modes when you need full objects.
+Human notification and `get_notifications` table **Message** columns share one preview builder:
+
+- Routine types (crafting progress, action results, system travel, social/combat domains, inventory dumps) collapse to short one-line previews instead of nested dumps.
+- Generic fallbacks are ladder-aware (prefer useful scalars over raw JSON blobs).
+- Crafting / action_result / travel progress can be **summarized** further (multiple related lines collapsed).
+- Ship commission and related receipts render cleanly in notification polls and action-log human output.
+- Freight: `shipment_overdue` and package-shipment context get human previews; inspect tables show `package.shipment` when present.
+
+Flags:
+
+| Flag | Effect |
+| --- | --- |
+| (default) | Compact previews + routine summarization |
+| `--verbose-notifications` | Keep omitted hints and extra scalar fields that the compact path drops |
+| `--raw-notifications` | Skip **summarization** only — still uses compact one-line formatting, not full nested JSON |
+
+Use `--json` / `--structured` / related machine modes when you need full notification objects.
+
+### Display: standings, pirates, craft packages, and related
+
+- `get_status` / `get_state` human output show player **standings** (empire + per-crew pirate keys from gameserver 0.548+).
+- Nearby / mission pirate rewards show **crew** labels; structured mode exposes `faction` / `faction_name` (see automation notes above).
+- Craft quotes, job fields, and bulk craft columns render **packages** and capacity gates for packaged recipes.
+- Wildlife **ranch** responses and faction **bulk-order** responses have dedicated human formatters.
+- Action log human output surfaces **polling cursors** (`since_id` style) for incremental scrapers.
+- Ship tow help documents same-scale towing; package_ids / dismantle UX aligned with gameserver 0.531–0.538 craft packaging and dock changes.
 
 ### Curated `dismantle_outpost` (breaking rename)
 
