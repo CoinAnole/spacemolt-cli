@@ -1,0 +1,13 @@
+Faction: faction-1
+
+=== Faction Facilities at earth_station ===
+
+  Name                      | Type                   | ID              | Level | Status             | Damaged | Service    | Rent    | Building
+  --------------------------+------------------------+-----------------+-------+--------------------+---------+------------+---------+---------
+  Alloy One (Alloy Smelter) | alloy_smelter          | faction-smelter | 1     | active             | no      | production | 1,200cr |         
+  Faction Fuel Bunker       | fuel_bunker            | faction-bunker  | 2     | damaged            | yes     | fuel       | 800cr   |         
+  Shipyard Berth            | faction_shipyard_berth | faction-yard    | 1     | under_construction |         | shipyard   | 1,200cr | 12      
+
+Faction storage: 50,000cr, 14 types, 3 rooms
+
+Damaged facilities produce nothing until repaired with facility_repair.

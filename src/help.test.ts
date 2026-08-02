@@ -315,7 +315,9 @@ describe('help output branches', () => {
     expect(output).toContain(
       'faction build <facility_type> [bucket=name-or-id] [package_ids=id[,id...]] - Build a faction facility at the current station.',
     );
-    expect(output).toContain('faction facility_list - List faction facilities at the current station.');
+    expect(output).toContain(
+      'faction facility_list - List faction facilities at the current station, including status (active, damaged, under construction).',
+    );
     expect(output).not.toContain('faction_build');
     expect(output).not.toContain('faction_facility_list');
   });

@@ -5,6 +5,7 @@ import {
   actionLogCursorFixture,
   battleSummaryFixture,
   facilityListFixture,
+  factionFacilityListFixture,
   factionFacilityOwnedFixture,
   forumThreadFixture,
   ranchSetCullFixture,
@@ -796,4 +797,130 @@ test('get_battle_summary omits Has Station when has_station is absent', () => {
   const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
 
   expect(stdout).not.toContain('Has Station:');
+});
+
+test('faction_facility_list renders status, damaged yes/no, and custom names', () => {
+  const rendered = renderStructuredResult(
+    'faction_facility_list',
+    structuredClone(factionFacilityListFixture),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Faction: faction-1');
+  expect(stdout).toContain('Faction Facilities at earth_station');
+  expect(stdout).toMatch(/Status/);
+  expect(stdout).toMatch(/Damaged/);
+  expect(stdout).toContain('active');
+  expect(stdout).toContain('damaged');
+  expect(stdout).toContain('under_construction');
+  expect(stdout).toContain('yes');
+  expect(stdout).toContain('no');
+  expect(stdout).toContain('Alloy One (Alloy Smelter)');
+  expect(stdout).toContain('Faction storage:');
+  expect(stdout).toContain('Damaged facilities produce nothing until repaired with facility_repair.');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+});
+
+test('faction_facility_list empty array still claims response with (None)', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [] as Array<Record<string, unknown>>,
+    hint: 'No faction facilities at this station.',
+  };
+  const rendered = renderStructuredResult('faction_facility_list', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Faction: faction-1');
+  expect(stdout).toContain('(None)');
+  expect(stdout).toContain('No faction facilities at this station.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_facility_list does not claim grouped facility_list payloads', () => {
+  const rendered = renderStructuredResult(
+    'faction_facility_list',
+    structuredClone(facilityListFixture),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  // Matcher rejects station_facilities/player_facilities; must not use the
+  // faction_list-only single-table title (grouped list may still shape-match).
+  expect(stdout).not.toContain('Faction Facilities at earth_station');
+  expect(stdout).not.toContain('Faction: faction-1');
+});
+
+test('faction_facility_list omits Damaged column when no damaged fields', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [
+      {
+        facility_id: 'faction-yard',
+        type: 'faction_shipyard_berth',
+        name: 'Shipyard Berth',
+        level: 1,
+        faction_service: 'shipyard',
+        rent_per_cycle: 1200,
+        status: 'under_construction',
+        ticks_until_complete: 12,
+      },
+      {
+        facility_id: 'faction-smelter',
+        type: 'alloy_smelter',
+        name: 'Alloy Smelter',
+        level: 1,
+        faction_service: 'production',
+        rent_per_cycle: 1200,
+        status: 'active',
+      },
+    ],
+    hint: 'No damaged facilities.',
+  };
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Level\s+\|\s+Status\s+\|\s+Service/);
+  expect(stdout).not.toMatch(/\|\s*Damaged\s*\|/);
+  expect(stdout).toMatch(/\|\s*Building\s*$|\|\s*Building\b/);
+  expect(stdout).toContain('12');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_facility_list omits Building column without ticks_until_complete', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [
+      {
+        facility_id: 'faction-smelter',
+        type: 'alloy_smelter',
+        name: 'Alloy Smelter',
+        level: 1,
+        faction_service: 'production',
+        rent_per_cycle: 1200,
+        status: 'active',
+        damaged: false,
+      },
+    ],
+    hint: 'All active.',
+  };
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toMatch(/\|\s*Damaged\s*\|/);
+  expect(stdout).not.toMatch(/\|\s*Building\b/);
+  expect(stdout).toContain('no');
 });

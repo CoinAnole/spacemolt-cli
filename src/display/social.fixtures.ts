@@ -274,6 +274,52 @@ export const factionFacilityOwnedFixture = {
   hint: "Use action 'faction_list' while docked for full per-facility detail at that station.",
 };
 
+/** FacilityFactionListResponse — covers active, damaged, and under_construction statuses. */
+export const factionFacilityListFixture = {
+  action: 'faction_list',
+  base_id: 'earth_station',
+  faction_id: 'faction-1',
+  faction_facilities: [
+    {
+      facility_id: 'faction-smelter',
+      type: 'alloy_smelter',
+      name: 'Alloy Smelter',
+      custom_name: 'Alloy One',
+      level: 1,
+      faction_service: 'production',
+      rent_per_cycle: 1200,
+      status: 'active',
+      damaged: false,
+    },
+    {
+      facility_id: 'faction-bunker',
+      type: 'fuel_bunker',
+      name: 'Faction Fuel Bunker',
+      level: 2,
+      faction_service: 'fuel',
+      rent_per_cycle: 800,
+      status: 'damaged',
+      damaged: true,
+    },
+    {
+      facility_id: 'faction-yard',
+      type: 'faction_shipyard_berth',
+      name: 'Shipyard Berth',
+      level: 1,
+      faction_service: 'shipyard',
+      rent_per_cycle: 1200,
+      status: 'under_construction',
+      ticks_until_complete: 12,
+    },
+  ],
+  faction_storage: {
+    credits: 50_000,
+    item_types: 14,
+    rooms: 3,
+  },
+  hint: 'Damaged facilities produce nothing until repaired with facility_repair.',
+};
+
 export const fleetFixture = {
   action: 'status',
   in_fleet: true,
@@ -697,6 +743,7 @@ export const socialFixtureCases = {
   facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
+  faction_facility_list: { command: 'faction_facility_list', fixture: factionFacilityListFixture },
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
@@ -869,6 +916,11 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     schemaTarget: 'details',
   },
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
+  faction_facility_list: {
+    command: 'faction_facility_list',
+    fixture: factionFacilityListFixture,
+    apiRoute: 'POST /api/v2/spacemolt_facility/faction_list',
+  },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },

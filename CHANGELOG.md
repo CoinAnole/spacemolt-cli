@@ -4,6 +4,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Faction facility list table with status and damage
+
+- `faction facility_list` renders a human table with **Status** (active / damaged / under construction), **Damaged** (yes/no), Service, and Rent — including optional Building ticks when under construction.
+- Help cross-links `facility_repair` from the list command (and vice versa) so post-raid repair is discoverable.
+
 ### Battle summary shows station participation
 
 - `get_battle_summary` table output includes **Has Station: yes|no** when the API returns `has_station` (whether a station fought in the battle).
