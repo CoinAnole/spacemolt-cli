@@ -4,6 +4,10 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Battle summary shows station participation
+
+- `get_battle_summary` table output includes **Has Station: yes|no** when the API returns `has_station` (whether a station fought in the battle).
+
 ### Battle targeting help and status fixtures
 
 - `battle_target` help (including the Battle cheatsheet) now states that any battle combatant can be focused by **ID or name** (players, pirates, police, drones, creatures, stations), matching gameserver 0.547.2.

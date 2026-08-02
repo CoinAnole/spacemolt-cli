@@ -3,6 +3,7 @@ import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   actionLogCursorFixture,
+  battleSummaryFixture,
   facilityListFixture,
   factionFacilityOwnedFixture,
   forumThreadFixture,
@@ -765,4 +766,34 @@ test('renders get_guide server version', () => {
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Server version: v0.461.0');
+});
+
+test('get_battle_summary shows Has Station yes when has_station is true', () => {
+  const rendered = renderStructuredResult(
+    'get_battle_summary',
+    structuredClone(battleSummaryFixture),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Has Station: yes');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_battle_summary shows Has Station no when has_station is false', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.has_station = false;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Has Station: no');
+});
+
+test('get_battle_summary omits Has Station when has_station is absent', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  delete fixture.has_station;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Has Station:');
 });
