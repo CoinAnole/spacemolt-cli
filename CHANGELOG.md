@@ -48,15 +48,15 @@ prefer `--json` / `--structured` and those field names — do not scrape human t
 | --- | --- | --- |
 | **CLI structured modes** (`--json` / `--structured`) | Objects with `faction` / `faction_name` (and related pirate fields) | Read fields by name |
 | **Gameserver / MCP table UIs** for `get_nearby` / `get_state` | Headered tables that gained a **`crew`** column in 0.548.0 | If you parse those tables, re-bind by **header** (`crew` / `faction`), not fixed column index |
-| **CLI default human stdout** | Freeform lines, e.g. `Name (class) - crewLabel - status` via `pirateCrewLabel` — **not** a headered multi-column table | Do **not** look for a `crew` header in CLI human output; switch to structured modes instead of positional scraping |
+| **CLI default human stdout** | Freeform lines, e.g. `Name (class) - crewLabel - status` — **not** a headered multi-column table | Do **not** look for a `crew` header in CLI human output; switch to structured modes instead of positional scraping |
 
-#### Shipping (already covered elsewhere — Stack B does not rewrite)
+#### Shipping (already covered elsewhere)
 
 | Topic | Where it lives today |
 | --- | --- |
 | Dual id (`package_id` **or** `shipment_id`) | Unreleased: **Shipping get / track / deliver / return accept `package_id`** |
 | Late windows / fees / recovery board | Unreleased: **Curated `shipping_active` recovery board** (deadline, late fee, late marker) |
-| Settlement `late` flag on deliver/return human output | Landed in PR `#45` (display code) — **no dedicated CHANGELOG section**; do not expand Stack B to invent one |
+| Settlement `late` flag on deliver/return human output | Already in shipping deliver/return human output (display path) — no separate Unreleased section |
 
 ### Faction facility list table with status and damage
 
