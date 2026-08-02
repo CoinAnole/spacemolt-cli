@@ -479,8 +479,9 @@ describe('help output branches', () => {
     expect(output).toContain('next_since_id');
     expect(output).toContain('Page-based queries return newest-first');
     expect(output).toContain('since_id requests newer entries oldest-first');
+    expect(output).toContain('session.daily_balance');
     expect(output).toContain(
-      'spacemolt get_action_log event_type=faction.production_cycle,ship.buy_order_filled since_id=42 page_size=100',
+      'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
   });
 

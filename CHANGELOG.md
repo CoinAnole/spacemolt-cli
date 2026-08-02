@@ -4,6 +4,60 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Action log: `session.daily_balance` in help
+
+- `get_action_log` help/example advertise `event_type=session.daily_balance` (UTC-day credit
+  snapshot for book balancing), alongside multi-type filters and `since_id` cursor polling.
+  No protocol change — filter support was already present.
+
+### Automation notes (gameserver 0.548–0.551)
+
+Scripts and agents that parse structured status / facility / nearby payloads should treat the
+following as intentional gameserver contracts. Prefer `--json` / `--structured` over scraping
+human stdout.
+
+#### Standings: per-crew pirate keys (0.548.0)
+
+| Old | New |
+| --- | --- |
+| `standings.pirates` | **Removed** |
+| (single aggregate pirate rep) | Per-crew keys: `pirate_voss`, `pirate_kael`, `pirate_thane`, `pirate_mera`, `pirate_dross`, `pirate_crix`, `pirate_sable`, `pirate_nyx`, `pirate_korr` |
+
+Empire keys are unchanged (`solarian`, `voidborn`, `crimson`, `nebula`, `outerrim`). Prefer
+iterating object keys (or reading known per-crew ids) rather than a single `pirates` property.
+Attacking one crew only moves that crew’s standing.
+
+#### Faction facilities: filter on active / damaged (0.551.1)
+
+| Unsafe assumption | Correct check |
+| --- | --- |
+| Any listed facility is productive | Prefer `status === "active"` (or treat `status === "damaged"` / `damaged === true` as non-productive) |
+| Damaged facilities still look “active” | Damaged faction facilities report `status: "damaged"` and a `damaged` flag |
+| `faction_info` “active facilities” includes damaged | `faction_info` no longer lists a damaged faction facility as active |
+
+Repair path: `facility repair` / `spacemolt help facility_repair` (discoverable from
+`faction facility_list` help after Stack A). Human `faction facility_list` already shows
+Status / Damaged columns.
+
+#### Nearby pirates: structured fields first; gameserver tables vs CLI human text (0.548.0)
+
+Pirate rows expose **`faction`** / **`faction_name`** (crew id / display name). For automation,
+prefer `--json` / `--structured` and those field names — do not scrape human text.
+
+| Consumer | Shape | What to do |
+| --- | --- | --- |
+| **CLI structured modes** (`--json` / `--structured`) | Objects with `faction` / `faction_name` (and related pirate fields) | Read fields by name |
+| **Gameserver / MCP table UIs** for `get_nearby` / `get_state` | Headered tables that gained a **`crew`** column in 0.548.0 | If you parse those tables, re-bind by **header** (`crew` / `faction`), not fixed column index |
+| **CLI default human stdout** | Freeform lines, e.g. `Name (class) - crewLabel - status` via `pirateCrewLabel` — **not** a headered multi-column table | Do **not** look for a `crew` header in CLI human output; switch to structured modes instead of positional scraping |
+
+#### Shipping (already covered elsewhere — Stack B does not rewrite)
+
+| Topic | Where it lives today |
+| --- | --- |
+| Dual id (`package_id` **or** `shipment_id`) | Unreleased: **Shipping get / track / deliver / return accept `package_id`** |
+| Late windows / fees / recovery board | Unreleased: **Curated `shipping_active` recovery board** (deadline, late fee, late marker) |
+| Settlement `late` flag on deliver/return human output | Landed in PR `#45` (display code) — **no dedicated CHANGELOG section**; do not expand Stack B to invent one |
+
 ### Faction facility list table with status and damage
 
 - `faction facility_list` renders a human table with **Status** (active / damaged / under construction), **Damaged** (yes/no), Service, and Rent — including optional Building ticks when under construction.
