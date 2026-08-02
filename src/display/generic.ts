@@ -957,13 +957,13 @@ export const genericFormatters = [
         ['Category', ['category']],
         ['Level', ['level']],
       ];
-      insertOptionalColumn(columns, rows, 'Upkeep', ['maintenance_display'], 'Level');
+      insertOptionalColumn(columns, rows, 'Req. stock', ['maintenance_display'], 'Level');
       insertOptionalColumn(
         columns,
         rows,
         'Power',
         ['power_supply_display', 'power_supply'],
-        rows.some((row) => row.maintenance_display !== undefined) ? 'Upkeep' : 'Level',
+        rows.some((row) => row.maintenance_display !== undefined) ? 'Req. stock' : 'Level',
       );
       insertOptionalColumn(
         columns,
@@ -973,7 +973,7 @@ export const genericFormatters = [
         rows.some((row) => row.power_supply_display !== undefined || row.power_supply !== undefined)
           ? 'Power'
           : rows.some((row) => row.maintenance_display !== undefined)
-            ? 'Upkeep'
+            ? 'Req. stock'
             : 'Level',
       );
       printCompactTable('Facilities', rows, columns, { maxCellWidth: 72 });

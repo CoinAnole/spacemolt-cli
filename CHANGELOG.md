@@ -4,6 +4,24 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Display: facility maintenance stock labels (0.550.0)
+
+Facility list and catalog facility tables now label maintenance quantities as
+**required on-hand stock**, matching gameserver 0.550.0:
+
+- Column header **`Upkeep` → `Req. stock`** (human table only; scrapers of
+  table headers must update).
+- Bunker fuel cell text **`N fuel/cycle` → `N fuel stock`**.
+- Item-only cells are unchanged quantities under the new header.
+
+`Rent/cycle`, labor, and faction rent bills remain true per-cycle credit costs.
+Wire field names (`maintenance_per_cycle`, `maintenance_fuel`, …) and
+JSON/YAML/compact output are unchanged.
+
+Station life-support lines (`Upkeep every N ticks`, `Short of upkeep`) are
+**intentionally unchanged** — they are station cadence fields, not the facility
+maintenance stock list.
+
 ### Action log: `session.daily_balance` in help
 
 - `get_action_log` help/example advertise `event_type=session.daily_balance` (UTC-day credit

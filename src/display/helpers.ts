@@ -95,17 +95,19 @@ function formatMaintenanceItemList(value: unknown): string | undefined {
 }
 
 /**
- * Human upkeep for facility rows/definitions.
- * Supports bunker-style `maintenance_fuel` (integer fuel/cycle) plus item lists
- * on `maintenance_per_cycle` (live FacilityEntry) or `maintenance_inputs` (catalog FacilityDefinition).
- * FacilityEntry OpenAPI does not declare `maintenance_fuel`; formatting it here is defensive for
- * live extras and for catalog/definition payloads that do include the field.
+ * Human required-stock display for facility rows/definitions (gameserver 0.550.0 stock-on-hand).
+ * Wire field names remain historical (`maintenance_per_cycle`, `maintenance_fuel`, …); values are
+ * on-hand stock thresholds, not per-cycle burn. Supports bunker-style `maintenance_fuel` (integer
+ * fuel stock) plus item lists on `maintenance_per_cycle` (live FacilityEntry) or
+ * `maintenance_inputs` (catalog FacilityDefinition). FacilityEntry OpenAPI does not declare
+ * `maintenance_fuel`; formatting it here is defensive for live extras and for catalog/definition
+ * payloads that do include the field.
  */
 export function formatFacilityMaintenanceUpkeep(row: Record<string, unknown>): string | undefined {
   const parts: string[] = [];
   const fuel = finiteNumber(row.maintenance_fuel);
   if (fuel !== undefined) {
-    parts.push(`${fuel.toLocaleString()} fuel/cycle`);
+    parts.push(`${fuel.toLocaleString()} fuel stock`);
   }
   const items =
     formatMaintenanceItemList(row.maintenance_per_cycle) ?? formatMaintenanceItemList(row.maintenance_inputs);
