@@ -970,6 +970,7 @@ export const socialFormatters = [
         type_display: facilityTypeKey(facility),
         rent_display: formatCredits(facility.rent_per_cycle),
         damaged_display: formatYesNo(facility.damaged),
+        fee_display: formatCredits(facility.rental_fee_per_run),
       }));
 
       const columns: Array<[string, string[]]> = [
@@ -990,8 +991,8 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['capacity'])) {
         columns.push(['Capacity', ['capacity']]);
       }
-      if (hasAnyField(rows, ['rental_fee_per_run'])) {
-        columns.push(['Fee/run', ['rental_fee_per_run']]);
+      if (hasAnyField(rows, ['fee_display', 'rental_fee_per_run'])) {
+        columns.push(['Fee/run', ['fee_display', 'rental_fee_per_run']]);
       }
 
       printCompactTable(tableTitle, rows, columns);

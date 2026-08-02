@@ -857,3 +857,70 @@ test('faction_facility_list does not claim grouped facility_list payloads', () =
   expect(stdout).not.toContain('Faction Facilities at earth_station');
   expect(stdout).not.toContain('Faction: faction-1');
 });
+
+test('faction_facility_list omits Damaged column when no damaged fields', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [
+      {
+        facility_id: 'faction-yard',
+        type: 'faction_shipyard_berth',
+        name: 'Shipyard Berth',
+        level: 1,
+        faction_service: 'shipyard',
+        rent_per_cycle: 1200,
+        status: 'under_construction',
+        ticks_until_complete: 12,
+      },
+      {
+        facility_id: 'faction-smelter',
+        type: 'alloy_smelter',
+        name: 'Alloy Smelter',
+        level: 1,
+        faction_service: 'production',
+        rent_per_cycle: 1200,
+        status: 'active',
+      },
+    ],
+    hint: 'No damaged facilities.',
+  };
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Level\s+\|\s+Status\s+\|\s+Service/);
+  expect(stdout).not.toMatch(/\|\s*Damaged\s*\|/);
+  expect(stdout).toMatch(/\|\s*Building\s*$|\|\s*Building\b/);
+  expect(stdout).toContain('12');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_facility_list omits Building column without ticks_until_complete', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [
+      {
+        facility_id: 'faction-smelter',
+        type: 'alloy_smelter',
+        name: 'Alloy Smelter',
+        level: 1,
+        faction_service: 'production',
+        rent_per_cycle: 1200,
+        status: 'active',
+        damaged: false,
+      },
+    ],
+    hint: 'All active.',
+  };
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toMatch(/\|\s*Damaged\s*\|/);
+  expect(stdout).not.toMatch(/\|\s*Building\b/);
+  expect(stdout).toContain('no');
+});

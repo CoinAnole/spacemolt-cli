@@ -743,6 +743,7 @@ export const socialFixtureCases = {
   facility_list: { command: 'facility_list', fixture: facilityListFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
+  faction_facility_list: { command: 'faction_facility_list', fixture: factionFacilityListFixture },
   faction_facility_owned: { command: 'faction_facility_owned', fixture: factionFacilityOwnedFixture },
   fleet: { command: 'fleet_status', fixture: fleetFixture },
   battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },

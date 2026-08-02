@@ -43,7 +43,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_deposit_credits: 'Transfer credits from your wallet to the faction treasury.',
   faction_edit: 'Update faction description, charter, colors, and ally-sharing toggles',
   faction_edit_role: 'Edit a custom faction role',
-  faction_facility_list: 'List faction facilities at the current station.',
+  faction_facility_list:
+    'List faction facilities at the current station, including status (active, damaged, under construction).',
   faction_facility_owned: 'List faction facilities across all stations.',
   faction_get_invites: 'View pending faction invitations',
   faction_info: 'View faction details',
