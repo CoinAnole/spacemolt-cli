@@ -1363,11 +1363,14 @@ describe('command metadata', () => {
     expect(COMMANDS.get_action_log).toMatchObject({
       usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
       example:
-        'spacemolt get_action_log event_type=faction.production_cycle,ship.buy_order_filled since_id=42 page_size=100',
+        'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
       arrayFields: ['event_type'],
     });
+    expect(COMMANDS.get_action_log?.description).toContain('session.daily_balance');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
+    const eventTypeSchema = COMMANDS.get_action_log?.schema?.event_type as { description?: string } | undefined;
+    expect(eventTypeSchema?.description).toContain('session.daily_balance');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {

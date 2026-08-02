@@ -283,13 +283,19 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_action_log: {
     usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
     description:
-      "Retrieve your or your faction's persistent action history. Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll.",
+      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation). Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll.",
     example:
-      'spacemolt get_action_log event_type=faction.production_cycle,ship.buy_order_filled since_id=42 page_size=100',
+      'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt_social/get_action_log',
     positionals: ['category', 'faction_id', 'page'],
     arrayFields: ['event_type'],
+    schemaExtensions: {
+      event_type: {
+        description:
+          'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history). Comma-separated on the CLI or --payload-json.',
+      },
+    },
   },
   session: {
     description: 'Create a fresh API session and print instructions for using it.',
