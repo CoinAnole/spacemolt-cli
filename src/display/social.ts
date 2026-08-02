@@ -188,7 +188,7 @@ function facilityColumns(
   }
   if (hasAnyField(rows, ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs'])) {
     columns.push([
-      'Upkeep',
+      'Req. stock',
       ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs'],
     ]);
   }

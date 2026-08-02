@@ -171,17 +171,23 @@ test('renders faction-owned facility rent summary and delinquency fields', () =>
   expect(rendered.stdout.join('\n')).toContain('2,400cr');
 });
 
-test('renders facility list per-cycle item and labor upkeep', () => {
+test('renders facility list item req. stock and labor per cycle', () => {
   const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+  const stationSection = stdout.split('=== Player Facilities ===')[0] ?? stdout;
+  const stationTableHeader = stationSection
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
 
   expect(rendered.success).toBe(true);
-  expect(rendered.stdout.join('\n')).toContain('Upkeep');
-  expect(rendered.stdout.join('\n')).toContain('Labor/cycle');
-  expect(rendered.stdout.join('\n')).toContain('12 Fuel Cell');
-  expect(rendered.stdout.join('\n')).toContain('320cr');
+  expect(stationTableHeader).toBeDefined();
+  expect(stationTableHeader).toContain('Req. stock');
+  expect(stdout).toContain('Labor/cycle');
+  expect(stdout).toContain('12 Fuel Cell');
+  expect(stdout).toContain('320cr');
 });
 
-test('renders facility maintenance_fuel as fuel/cycle in Upkeep', () => {
+test('renders facility maintenance_fuel as fuel stock in Req. stock', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
   stationFacilities.push({
@@ -197,14 +203,20 @@ test('renders facility maintenance_fuel as fuel/cycle in Upkeep', () => {
 
   const rendered = renderStructuredResult('facility_list', facilityList, options, context);
   const stdout = rendered.stdout.join('\n');
+  const stationSection = stdout.split('=== Player Facilities ===')[0] ?? stdout;
+  const stationTableHeader = stationSection
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
 
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Bunker-Fed Reactor');
-  expect(stdout).toContain('Upkeep');
-  expect(stdout).toContain('55 fuel/cycle');
+  expect(stationTableHeader).toBeDefined();
+  expect(stationTableHeader).toContain('Req. stock');
+  expect(stdout).toContain('55 fuel stock');
+  expect(stdout).not.toContain('fuel/cycle');
 });
 
-test('renders facility upkeep with fuel plus item maintenance together', () => {
+test('renders facility req. stock with fuel plus item maintenance together', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
   stationFacilities.push({
@@ -222,7 +234,7 @@ test('renders facility upkeep with fuel plus item maintenance together', () => {
 
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Hybrid Plant');
-  expect(stdout).toContain('10 fuel/cycle, 2 Iron');
+  expect(stdout).toContain('10 fuel stock, 2 Iron');
 });
 
 test('renders facility maintenance_inputs when maintenance_per_cycle is absent', () => {
@@ -246,15 +258,20 @@ test('renders facility maintenance_inputs when maintenance_per_cycle is absent',
 
   const rendered = renderStructuredResult('facility_list', facilityList, options, context);
   const stdout = rendered.stdout.join('\n');
+  const stationSection = stdout.split('=== Public Facilities ===')[0] ?? stdout;
+  const stationTableHeader = stationSection
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
 
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Catalog-Shaped Plant');
-  expect(stdout).toContain('Upkeep');
+  expect(stationTableHeader).toBeDefined();
+  expect(stationTableHeader).toContain('Req. stock');
   expect(stdout).toContain('3 Steel Plate');
   expect(stdout).toContain('2 durasteel_plate');
 });
 
-test('omits facility table Upkeep column when no upkeep fields are present', () => {
+test('omits facility table Req. stock column when no maintenance fields are present', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   facilityList.station_facilities = [
     {
@@ -279,7 +296,9 @@ test('omits facility table Upkeep column when no upkeep fields are present', () 
   expect(rendered.success).toBe(true);
   expect(stationTableHeader).toBeDefined();
   expect(stationTableHeader).toContain('Name');
-  expect(stationTableHeader).not.toContain('Upkeep');
+  expect(stationTableHeader).not.toContain('Req. stock');
+  // Bare maintenance column header "Upkeep" must also be absent (not Tourism Upkeep).
+  expect(stationTableHeader).not.toMatch(/(^|\|)\s*Upkeep\s*(\||$)/);
   // Life support may still print "Upkeep every N ticks" outside facility tables.
   expect(stdout).toContain('Life Support');
 });

@@ -155,7 +155,7 @@ test('renders catalog ships with prestige lock notes when present', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
-test('renders catalog facilities with maintenance_fuel and maintenance_inputs upkeep', () => {
+test('renders catalog facilities with maintenance_fuel and maintenance_inputs req. stock', () => {
   const rendered = renderStructuredResult(
     'catalog',
     {
@@ -193,11 +193,16 @@ test('renders catalog facilities with maintenance_fuel and maintenance_inputs up
   );
 
   const stdout = rendered.stdout.join('\n');
+  const tableHeader = stdout
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('=== Facilities ===');
-  expect(stdout).toContain('Upkeep');
+  expect(tableHeader).toBeDefined();
+  expect(tableHeader).toContain('Req. stock');
   expect(stdout).toContain('Bunker-Fed Reactor');
-  expect(stdout).toContain('55 fuel/cycle');
+  expect(stdout).toContain('55 fuel stock');
+  expect(stdout).not.toContain('fuel/cycle');
   expect(stdout).toContain('Storage Locker');
   expect(stdout).toContain('3 Steel Plate');
   expect(stdout).toContain('2 durasteel_plate');

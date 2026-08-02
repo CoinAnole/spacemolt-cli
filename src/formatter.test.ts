@@ -4823,7 +4823,7 @@ describe('structuredContent formatters', () => {
 
       === Station Facilities ===
 
-        Name                    | ID            | Level | Category       | Maint | Upkeep                           | Labor/cycle | Dining | Tourism Upkeep | Recycler | Owner
+        Name                    | ID            | Level | Category       | Maint | Req. stock                       | Labor/cycle | Dining | Tourism Upkeep | Recycler | Owner
         ------------------------+---------------+-------+----------------+-------+----------------------------------+-------------+--------+----------------+----------+------
         Fuel Bunker             | station-fuel  | 3     | service        | 100%  |                                  |             |        |                | false    |
         Confederacy Fleet Depot | station-depot | 3     | infrastructure | 60%   | 12 Fuel Cell, 4 Plasma Cell Pack | 320cr       |        |                |          |
