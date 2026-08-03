@@ -1686,9 +1686,7 @@ describe('notification formatting', () => {
         },
       });
       expect(preview.tag).toBe('FREIGHT OVERDUE');
-      expect(preview.headline).toBe(
-        'Delivery deadline passed; late fee applies until recovery window ends.',
-      );
+      expect(preview.headline).toBe('Delivery deadline passed; late fee applies until recovery window ends.');
     });
 
     test('empty bag last-resort headline (typed, never Policy 5 null fallthrough)', () => {
@@ -1729,9 +1727,7 @@ describe('notification formatting', () => {
         },
       };
       const message = formatNotificationMessage(notification);
-      expect(message).toBe(
-        tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })),
-      );
+      expect(message).toBe(tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })));
       expect(message).toContain('Overdue:');
       expect(message).toContain('shipment-late-1');
       expectNoNestedJsonDump(message);

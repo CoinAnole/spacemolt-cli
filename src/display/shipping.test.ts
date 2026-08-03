@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
-import { shippingActiveEmptyFixture } from './shipping.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
+import { shippingActiveEmptyFixture } from './shipping.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -444,7 +444,6 @@ test('omits malformed optional active freight fields without diagnostic tokens',
   expect(stdout).not.toContain('[object Object]');
   expect(stdout).not.toContain('=== Response ===');
 });
-
 
 test('formats active destination as name-only or contract base id when system is missing', () => {
   const stdout = output('shipping_active', {

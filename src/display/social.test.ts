@@ -905,9 +905,7 @@ test('faction_facility_list omits Damaged column when no damaged fields', () => 
     ],
     hint: 'No damaged facilities.',
   };
-  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join(
-    '\n',
-  );
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join('\n');
 
   expect(stdout).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Level\s+\|\s+Status\s+\|\s+Service/);
   expect(stdout).not.toMatch(/\|\s*Damaged\s*\|/);
@@ -935,9 +933,7 @@ test('faction_facility_list omits Building column without ticks_until_complete',
     ],
     hint: 'All active.',
   };
-  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join(
-    '\n',
-  );
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join('\n');
 
   expect(stdout).toMatch(/\|\s*Damaged\s*\|/);
   expect(stdout).not.toMatch(/\|\s*Building\b/);

@@ -199,11 +199,7 @@ test('get_status omits Standings when standings are absent or empty', () => {
     empire: 'Terran',
     credits: 100,
   };
-  for (const player of [
-    { ...basePlayer },
-    { ...basePlayer, standings: {} },
-    { ...basePlayer, standings: null },
-  ]) {
+  for (const player of [{ ...basePlayer }, { ...basePlayer, standings: {} }, { ...basePlayer, standings: null }]) {
     const rendered = renderStructuredResult(
       'get_status',
       {
@@ -235,10 +231,18 @@ test('get_status omits Standings when standings are absent or empty', () => {
 });
 
 test('get_status and get_player share emitStandings output shape', () => {
-  const statusOut = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context)
-    .stdout.join('\n');
-  const playerOut = renderStructuredResult('get_player', structuredClone(playerProfileFixture), options, context)
-    .stdout.join('\n');
+  const statusOut = renderStructuredResult(
+    'get_status',
+    structuredClone(getStatusFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const playerOut = renderStructuredResult(
+    'get_player',
+    structuredClone(playerProfileFixture),
+    options,
+    context,
+  ).stdout.join('\n');
 
   const statusSection = standingsSection(statusOut);
   const playerSection = standingsSection(playerOut);

@@ -1289,26 +1289,14 @@ describe('command metadata', () => {
     // package_id dual-identifier curation: explicit usage is mandatory (empty required
     // would drop optional-only usage via buildUsageFromSchema).
     for (const [name, usage, action] of [
-      [
-        'shipping_get',
-        '[package_id=...] [shipment_id=...]  (provide exactly one)',
-        'get',
-      ],
+      ['shipping_get', '[package_id=...] [shipment_id=...]  (provide exactly one)', 'get'],
       [
         'shipping_track',
         '[package_id=...] [shipment_id=...] [limit=...]  (provide package_id or shipment_id)',
         'track',
       ],
-      [
-        'shipping_deliver',
-        '[package_id=...] [shipment_id=...]  (provide exactly one)',
-        'deliver',
-      ],
-      [
-        'shipping_return',
-        '[package_id=...] [shipment_id=...]  (provide exactly one)',
-        'return',
-      ],
+      ['shipping_deliver', '[package_id=...] [shipment_id=...]  (provide exactly one)', 'deliver'],
+      ['shipping_return', '[package_id=...] [shipment_id=...]  (provide exactly one)', 'return'],
     ] as const) {
       const cmd = BUNDLED_COMMAND_REGISTRY.commands[name];
       if (!cmd) throw new Error(`${name} command missing`);

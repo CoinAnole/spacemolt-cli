@@ -969,9 +969,7 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('package_id');
-    expect(output).toContain(
-      'spacemolt shipping_deliver [package_id=...] [shipment_id=...]  (provide exactly one)',
-    );
+    expect(output).toContain('spacemolt shipping_deliver [package_id=...] [shipment_id=...]  (provide exactly one)');
     expect(output).toContain('spacemolt shipping_deliver package_id=package-relief-1');
     expect(output).toContain('Server help:');
     expect(output).toContain('spacemolt server-help shipping_deliver');
