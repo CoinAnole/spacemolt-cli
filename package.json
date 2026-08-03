@@ -12,6 +12,7 @@
     "build": "bun scripts/build.ts",
     "install:local:unix": "bash scripts/install-local.sh",
     "install:local:windows": "powershell -ExecutionPolicy Bypass -File scripts/install-local.ps1",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/",
     "test": "bun test",

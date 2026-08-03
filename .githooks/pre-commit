@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Run lint and typecheck before each commit.
+# Bypass with: git commit --no-verify
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "pre-commit: bun not found in PATH" >&2
+  exit 1
+fi
+
+echo "pre-commit: lint"
+bun run lint
+
+echo "pre-commit: typecheck"
+bun run typecheck
+
+echo "pre-commit: ok"

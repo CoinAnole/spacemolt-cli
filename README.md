@@ -330,6 +330,8 @@ bun run lint
 bun run build
 ```
 
+`bun install` configures git to use committed hooks under `.githooks/`. The pre-commit hook runs `bun run lint` and `bun run typecheck`. Bypass a single commit with `git commit --no-verify`.
+
 Command routing is v2-only. User-facing command metadata lives in `src/commands.ts`; generated route and schema metadata lives in `src/generated/api-commands.ts`.
 
 Regenerate bundled API metadata after updating `spacemolt-docs/openapi.json`:
