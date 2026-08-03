@@ -1,0 +1,28 @@
+
+=== Player Status ===
+Username: Marlowe
+Empire: Terran
+Citizenships: solarian, nebula
+Credits: 4242
+Faction: smc (captain)
+Trading restricted until: 2026-07-18T12:34:56Z
+
+Standings:
+  solarian: 12, crimson: 94, pirate_voss: -10, pirate_kael: 5
+
+Location:
+  System: Sol
+  POI: Earth
+  Docked: Yes (earth_station)
+
+Ship: Surveyor (prospector)
+  Hull: 90/100
+  Shield: 35/50 (+5/tick)
+  Armor: 10
+  Fuel: 80/100
+  Cargo: 12/60
+  CPU: 8/20
+  Power: 10/25
+
+Nearby Players: 1
+  - Ibis (hauler)
