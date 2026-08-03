@@ -470,6 +470,12 @@ export const getQueueEmptyFixture = {
 
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
+  // Covers get_state on the shared status formatter
+  // (OpenAPI: get_status is an alias of get_state; both → V2GameState).
+  get_state: {
+    command: 'get_state',
+    fixture: getStatusFixture,
+  },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
   player_profile: { command: 'player_profile', fixture: publicPlayerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
