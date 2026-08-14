@@ -239,6 +239,104 @@ export const nearbyFixture = {
   poi_id: 'sol_cloudbank',
 };
 
+/** Full observation baseline; pirate_count is intentionally absent in the v0.554 response schema. */
+export const subscribeObservationFixture = {
+  action: 'subscribe_observation',
+  active_scan: true,
+  cloaked_contacts: [
+    {
+      target_id: 'player-cloaked-1',
+      revealed_info: ['username', 'ship_class', 'hull', 'shield', 'cloaked'],
+      cloaked: true,
+      faction_id: 'smc',
+      hull: 72,
+      shield: 18,
+      ship_class: 'scout',
+      ship_name: 'Quiet Current',
+      username: 'Wisp',
+    },
+  ],
+  creatures: [
+    {
+      creature_id: 'creature-pilot-whale-7',
+      species: 'pilot_whale',
+      name: 'Pilot-Whale Pod',
+      role: 'grazer',
+      hull: 80,
+      max_hull: 120,
+      in_combat: false,
+      brand_faction: 'smc',
+      brand_ranch: 'cloudbank-ranch',
+      branded: true,
+    },
+  ],
+  empire_npcs: [
+    {
+      npc_id: 'npc-patrol-7',
+      name: 'Solarian Patrol',
+      role: 'patrol',
+      empire: 'solarian',
+      in_combat: false,
+      fleet_name: 'Seventh Watch',
+      ship_class: 'interceptor',
+      ship_name: 'Vigilant',
+    },
+  ],
+  message: 'Observation watch established.',
+  nearby: [
+    {
+      clan_tag: 'SMC',
+      docked: false,
+      faction_id: 'smc',
+      faction_tag: 'SMC',
+      in_combat: false,
+      offline: false,
+      player_id: 'player-marlowe',
+      primary_color: '#335577',
+      secondary_color: '#88aacc',
+      ship_class: 'prospector',
+      ship_name: 'Long Survey',
+      status_message: 'mapping Cloudbank',
+      username: 'Marlowe',
+    },
+  ],
+  pirates: [
+    {
+      pirate_id: 'pirate-corsair-7',
+      name: 'Corsair',
+      tier: 'skiff',
+      is_boss: false,
+      status: 'hostile',
+      faction: 'pirate_kael',
+      faction_name: 'Admiral Kael',
+      hull: 40,
+      max_hull: 50,
+      shield: 10,
+      max_shield: 20,
+    },
+  ],
+  poi_id: 'sol_cloudbank',
+  system_agents: [
+    {
+      clan_tag: 'FREE',
+      docked: true,
+      faction_id: 'free-captains',
+      faction_tag: 'FREE',
+      in_combat: false,
+      offline: false,
+      player_id: 'player-ibis',
+      primary_color: '#553355',
+      secondary_color: '#aa88aa',
+      ship_class: 'hauler',
+      ship_name: 'Wide Arc',
+      status_message: 'loading freight',
+      username: 'Ibis',
+    },
+  ],
+  system_id: 'sol',
+  unknown_signature: true,
+};
+
 export const arrivalFixture = {
   details: {
     action: 'travel',
@@ -483,6 +581,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
+  subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },

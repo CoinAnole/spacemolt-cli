@@ -835,17 +835,20 @@ export const statusFormatters = [
     ['nearby'],
     (r) => {
       if (r.location && typeof r.location === 'object') return false;
-      const players = (Array.isArray(r.nearby) ? r.nearby : r.players) as Array<Record<string, unknown>> | undefined;
-      if (!Array.isArray(players)) return false;
-      const pirates = (r.pirates as Array<Record<string, unknown>>) || [];
-      const npcs = (r.empire_npcs as Array<Record<string, unknown>>) || [];
-      const creatures = (r.creatures as Array<Record<string, unknown>>) || [];
+      const playerSource = Array.isArray(r.nearby) ? r.nearby : r.players;
+      if (!Array.isArray(playerSource)) return false;
+      const players = playerSource.filter(isRecord);
+      const pirates = Array.isArray(r.pirates) ? r.pirates.filter(isRecord) : [];
+      const npcs = Array.isArray(r.empire_npcs) ? r.empire_npcs.filter(isRecord) : [];
+      const creatures = Array.isArray(r.creatures) ? r.creatures.filter(isRecord) : [];
       const playerCount =
         typeof r.nearby_player_count === 'number'
           ? r.nearby_player_count
           : typeof r.count === 'number'
             ? r.count
             : players.length;
+      const pirateCount =
+        typeof r.pirate_count === 'number' && Number.isFinite(r.pirate_count) ? r.pirate_count : pirates.length;
       const empireNpcCount = typeof r.empire_npc_count === 'number' ? r.empire_npc_count : npcs.length;
       const creatureCount = typeof r.creature_count === 'number' ? r.creature_count : creatures.length;
 
@@ -859,9 +862,9 @@ export const statusFormatters = [
         if (playerCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${playerCount - NEARBY_TABLE_LIMIT} more`);
       }
 
-      if ((r.pirate_count as number) > 0) {
-        emitLine(`\n${c.red}Pirates (${r.pirate_count}):${c.reset}`);
-        for (const p of pirates) {
+      if (pirateCount > 0) {
+        emitLine(`\n${c.red}Pirates (${pirateCount}):${c.reset}`);
+        for (const p of pirates.slice(0, NEARBY_TABLE_LIMIT)) {
           const name = p.name || p.pirate_id || 'Unknown';
           const ship = p.ship_class || p.tier ? ` (${p.ship_class || p.tier})` : '';
           const crewLabel = pirateCrewLabel(p);
@@ -869,6 +872,7 @@ export const statusFormatters = [
           const status = p.status ? ` - ${p.status}` : '';
           emitLine(`  ${name}${ship}${crew}${status}`);
         }
+        if (pirateCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${pirateCount - NEARBY_TABLE_LIMIT} more`);
       }
 
       if (empireNpcCount > 0) {
@@ -899,7 +903,7 @@ export const statusFormatters = [
       }
       return true;
     },
-    { commands: ['get_nearby'], shapeFallback: true },
+    { commands: ['get_nearby', 'subscribe_observation'], shapeFallback: true },
   ),
 
   // Skills state: skills as object map of skill_id -> skill data

@@ -1304,6 +1304,154 @@ function previewShipmentOverdue(
   };
 }
 
+const OBSERVATION_IDENTITY_LIMIT = 3;
+
+type ObservationIdentityDomain =
+  | 'nearby player'
+  | 'system agent'
+  | 'pirate'
+  | 'empire NPC'
+  | 'creature'
+  | 'cloaked contact';
+
+function observationText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = firstLine(value);
+  if (!text || /NaN|Infinity|\[object Object\]|undefined/.test(text)) return undefined;
+  return text;
+}
+
+function observationIdentity(record: Record<string, unknown>, domain: ObservationIdentityDomain): string {
+  const nameKeys =
+    domain === 'nearby player' || domain === 'system agent' || domain === 'cloaked contact'
+      ? (['username', 'name', 'ship_name'] as const)
+      : domain === 'creature'
+        ? (['name', 'species'] as const)
+        : (['name', 'ship_name'] as const);
+  const idKeys =
+    domain === 'nearby player' || domain === 'system agent'
+      ? (['player_id', 'id'] as const)
+      : domain === 'pirate'
+        ? (['pirate_id', 'id'] as const)
+        : domain === 'empire NPC'
+          ? (['npc_id', 'id'] as const)
+          : domain === 'creature'
+            ? (['creature_id', 'id'] as const)
+            : (['target_id', 'player_id', 'id'] as const);
+  const name = nameKeys.map((key) => observationText(record[key])).find(Boolean);
+  const id = idKeys.map((key) => observationText(record[key])).find(Boolean);
+  let identity = name && id && name !== id ? `${name} [${id}]` : (name ?? id ?? domain);
+
+  if (domain === 'pirate') {
+    const crew = observationText(record.faction_name) ?? observationText(record.faction);
+    if (crew) identity += ` (${crew})`;
+  }
+  return identity;
+}
+
+function observationDepartures(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(observationText).filter((entry): entry is string => entry !== undefined);
+}
+
+function observationDomainDetail(
+  label: string,
+  domain: ObservationIdentityDomain,
+  changed: Array<Record<string, unknown>>,
+  departed: string[],
+  options: ResolvedPreviewOptions,
+): string | undefined {
+  if (!changed.length && !departed.length) return undefined;
+
+  let remainingIdentitySlots = OBSERVATION_IDENTITY_LIMIT;
+  let shownIdentities = 0;
+  const parts: string[] = [];
+
+  if (changed.length) {
+    const identities = changed.slice(0, remainingIdentitySlots).map((record) => observationIdentity(record, domain));
+    shownIdentities += identities.length;
+    remainingIdentitySlots -= identities.length;
+    parts.push(`changed ${changed.length}${identities.length ? `: ${identities.join(', ')}` : ''}`);
+  }
+
+  if (departed.length) {
+    const identities = departed.slice(0, remainingIdentitySlots);
+    shownIdentities += identities.length;
+    parts.push(`departed ${departed.length}${identities.length ? `: ${identities.join(', ')}` : ''}`);
+  }
+
+  const hiddenIdentities = changed.length + departed.length - shownIdentities;
+  const detail = `${label} — ${parts.join('; ')}`;
+  if (hiddenIdentities <= 0) return truncate(detail, options);
+
+  const more = `; +${hiddenIdentities} more`;
+  if (detail.length + more.length <= options.maxLineLength) return `${detail}${more}`;
+  if (options.maxLineLength <= more.length + 1) return truncate(`${detail}${more}`, options);
+  return `${detail.slice(0, options.maxLineLength - more.length - 1)}…${more}`;
+}
+
+function previewObservationUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const nearbyChanged = records(data.nearby_changed);
+  const nearbyDeparted = observationDepartures(data.nearby_departed);
+  const systemChanged = records(data.system_changed);
+  const systemDeparted = observationDepartures(data.system_departed);
+  const piratesChanged = records(data.pirates_changed);
+  const piratesDeparted = observationDepartures(data.pirates_departed);
+  const empireNpcsChanged = records(data.empire_npcs_changed);
+  const empireNpcsDeparted = observationDepartures(data.empire_npcs_departed);
+  const creaturesChanged = records(data.creatures_changed);
+  const creaturesDeparted = observationDepartures(data.creatures_departed);
+  const cloakedResolved = records(data.cloaked_resolved);
+  const cloakedLost = observationDepartures(data.cloaked_lost);
+
+  const changedCount =
+    nearbyChanged.length +
+    systemChanged.length +
+    piratesChanged.length +
+    empireNpcsChanged.length +
+    creaturesChanged.length +
+    cloakedResolved.length;
+  const departedCount =
+    nearbyDeparted.length +
+    systemDeparted.length +
+    piratesDeparted.length +
+    empireNpcsDeparted.length +
+    creaturesDeparted.length +
+    cloakedLost.length;
+
+  const poi = observationText(data.poi_id) ?? 'current POI';
+  const system = observationText(data.system_id) ?? 'current system';
+  const tick = finiteNumber(data.tick);
+  const suffixes: string[] = [];
+  if (data.unknown_signature === true) suffixes.push('unknown signature');
+  if (data.active_scan === true) suffixes.push('active scan');
+  const suffix = suffixes.length ? `; ${suffixes.join('; ')}` : '';
+
+  const details = [
+    observationDomainDetail('Nearby players', 'nearby player', nearbyChanged, nearbyDeparted, options),
+    observationDomainDetail('System agents', 'system agent', systemChanged, systemDeparted, options),
+    observationDomainDetail('Pirates', 'pirate', piratesChanged, piratesDeparted, options),
+    observationDomainDetail('Empire NPCs', 'empire NPC', empireNpcsChanged, empireNpcsDeparted, options),
+    observationDomainDetail('Creatures', 'creature', creaturesChanged, creaturesDeparted, options),
+    observationDomainDetail('Cloaked contacts', 'cloaked contact', cloakedResolved, cloakedLost, options),
+  ]
+    .filter((detail): detail is string => detail !== undefined)
+    .slice(0, options.maxDetails);
+
+  return {
+    tag: 'OBSERVATION',
+    headline: truncate(
+      `Observation at ${poi} in ${system} (tick ${tick === undefined ? '?' : tick}): ${changedCount} changed, ${departedCount} departed${suffix}`,
+      options,
+    ),
+    details,
+  };
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -1339,6 +1487,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
 
   // Freight deadline passed (0.549+); always typed — never null to Policy 5
   shipment_overdue: previewShipmentOverdue,
+  observation_update: previewObservationUpdate,
 
   action_result: previewActionResult,
   action_error: previewActionError,

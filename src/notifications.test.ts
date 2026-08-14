@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
-import { getNotificationsFixture } from './display/notifications.fixtures';
+import { getNotificationsFixture, getNotificationsObservationFixture } from './display/notifications.fixtures';
 import {
   formatActionResultDetails,
   formatInventoryPreview,
@@ -273,6 +273,21 @@ describe('notification formatting', () => {
       snippets: ['[FRIEND]', 'Marlowe accepted your friend request'],
     },
     { msgType: 'mining_yield', data: { quantity: 2, resource_id: 'ore_iron' }, snippets: ['[MINED]', '+2x ore_iron'] },
+    {
+      msgType: 'observation_update',
+      data: {
+        poi_id: 'sol_cloudbank',
+        system_id: 'sol',
+        tick: 901500,
+        unknown_signature: false,
+        pirates_changed: [{ pirate_id: 'pirate-1', name: 'Corsair', faction_name: 'Admiral Kael' }],
+      },
+      snippets: [
+        '[OBSERVATION]',
+        'Observation at sol_cloudbank in sol (tick 901500): 1 changed, 0 departed',
+        'Pirates — changed 1: Corsair [pirate-1] (Admiral Kael)',
+      ],
+    },
     {
       msgType: 'market_update',
       data: {
@@ -1634,6 +1649,134 @@ describe('notification formatting', () => {
       expect(preview.tag).toBe('RECONNECTED');
       expect(preview.headline).toBe('Reconnected');
       expectNoDiagnosticTokens(preview.headline);
+    });
+  });
+
+  describe('observation_update pure preview (v0.554 presence feed)', () => {
+    const observationNotification = getNotificationsObservationFixture.notifications[0];
+    if (!observationNotification) throw new Error('expected observation notification fixture');
+
+    test('registers the typed handler and exported notification type', () => {
+      expect(hasPreviewHandler('observation_update')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('observation_update');
+    });
+
+    test('summarizes all six contact domains in stable order', () => {
+      const preview = formatNotificationPreview(observationNotification);
+
+      expect(preview.tag).toBe('OBSERVATION');
+      expect(preview.headline).toBe(
+        'Observation at sol_cloudbank in sol (tick 901500): 7 changed, 6 departed; unknown signature; active scan',
+      );
+      expect(preview.details).toEqual([
+        'Nearby players — changed 1: Marlowe [player-marlowe]; departed 1: player-ibis',
+        'System agents — changed 1: Oriole [player-oriole]; departed 1: player-wren',
+        'Pirates — changed 2: Corsair [pirate-corsair-7] (Admiral Kael), Raider [pirate-raider-8] (Captain Voss); departed 1: pirate-raider-6',
+        'Empire NPCs — changed 1: Solarian Patrol [npc-patrol-7]; departed 1: npc-freighter-2',
+        'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7]; departed 1: creature-starfish-2',
+        'Cloaked contacts — changed 1: Wisp [player-cloaked-1]; departed 1: player-cloaked-old',
+      ]);
+      expectNoDiagnosticTokens(JSON.stringify(preview));
+      expectNoNestedJsonDump(JSON.stringify(preview));
+    });
+
+    test('limits each domain to three identities total and reports every count', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_belt',
+          system_id: 'sol',
+          tick: 42,
+          unknown_signature: false,
+          pirates_changed: [
+            { pirate_id: 'p1', name: 'Corsair', faction_name: 'Crew X' },
+            { pirate_id: 'p2', name: 'Raider' },
+            { pirate_id: 'p3', name: 'Marauder' },
+            { pirate_id: 'p4', name: 'Reaver' },
+          ],
+          pirates_departed: ['p5'],
+        },
+      });
+
+      expect(preview.headline).toContain('4 changed, 1 departed');
+      expect(preview.details).toEqual([
+        'Pirates — changed 4: Corsair [p1] (Crew X), Raider [p2], Marauder [p3]; departed 1; +2 more',
+      ]);
+      expect(preview.details[0]).not.toContain('Reaver');
+      expect(preview.details[0]).not.toContain('p5');
+    });
+
+    test('metadata-only flags append to the headline without detail lines', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 901501,
+          unknown_signature: true,
+          active_scan: true,
+        },
+      });
+
+      expect(preview.headline).toBe(
+        'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; unknown signature; active scan',
+      );
+      expect(preview.details).toEqual([]);
+    });
+
+    test('ignores malformed array members and never emits diagnostic tokens or nested data', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: { nested: true },
+          system_id: 'undefined',
+          tick: Number.NaN,
+          unknown_signature: false,
+          nearby_changed: [
+            null,
+            'not-a-record',
+            { username: { nested: true }, player_id: Number.NaN },
+            { username: 'undefined', ship: { id: 'hidden' } },
+          ],
+          nearby_departed: [null, { nested: true }, '', 'NaN', 'player-safe'],
+          pirates_changed: { nested: true },
+        },
+      });
+      const output = JSON.stringify(preview);
+
+      expect(preview.headline).toBe('Observation at current POI in current system (tick ?): 2 changed, 1 departed');
+      expect(preview.details).toEqual([
+        'Nearby players — changed 2: nearby player, nearby player; departed 1: player-safe',
+      ]);
+      expect(output).not.toContain('hidden');
+      expectNoDiagnosticTokens(output);
+      expectNoNestedJsonDump(output);
+    });
+
+    test('inline and notification-table layouts consume the same typed preview', () => {
+      const inline = stripAnsi(formatNotification(observationNotification).join('\n'));
+      expect(inline).toContain('[OBSERVATION]');
+      expect(inline).toContain('Observation at sol_cloudbank in sol (tick 901500): 7 changed, 6 departed');
+      expect(inline).toContain('Nearby players — changed 1');
+      expect(inline).toContain('Cloaked contacts — changed 1');
+
+      const compactNotification = {
+        type: 'observation',
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'earth',
+          system_id: 'sol',
+          tick: 7,
+          unknown_signature: false,
+          nearby_changed: [{ username: 'Ada', player_id: 'p1' }],
+        },
+      };
+      const tableMessage = formatNotificationMessage(compactNotification);
+      expect(tableMessage).toBe(
+        'Observation at earth in sol (tick 7): 1 changed, 0 departed; Nearby players — changed 1: Ada [p1]',
+      );
+      expectNoDiagnosticTokens(inline);
+      expectNoNestedJsonDump(tableMessage);
     });
   });
 

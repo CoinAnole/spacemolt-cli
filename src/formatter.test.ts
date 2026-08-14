@@ -30,6 +30,7 @@ import {
   poiInfoFixture,
   storageFixture,
   subscribeMarketFixture,
+  subscribeObservationFixture,
   systemInfoFixture,
   unloadPassengerBulkFixture,
   unloadPassengerLoungeFixture,
@@ -3433,6 +3434,72 @@ describe('structuredContent formatters', () => {
     expect(neither.stdout).toContain('Raider (skiff) - hostile');
     expect(neither.stdout).not.toContain('pirate_');
     expect(whitespaceName.stdout).toContain('Raider (skiff) - pirate_voss - hostile');
+  });
+
+  test('subscribe_observation formats v0.554 NPC arrays without pirate_count', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', subscribeObservationFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Players (1):');
+    expect(stdout).toContain('Marlowe');
+    expect(stdout).toContain('Pirates (1):');
+    expect(stdout).toContain('Corsair (skiff) - Admiral Kael - hostile');
+    expect(stdout).toContain('Empire NPCs (1):');
+    expect(stdout).toContain('Solarian Patrol (interceptor)');
+    expect(stdout).toContain('Creatures (1):');
+    expect(stdout).toContain('Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale)');
+    expect(stdout).toContain('Unknown cloaked signature detected');
+    expect(stdout).not.toContain('Ibis');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_nearby retains an explicit pirate_count', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      pirates: [{ pirate_id: 'pirate-1', name: 'Corsair' }],
+      pirate_count: 4,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Pirates (4):');
+    expect(stdout).toContain('Corsair');
+  });
+
+  test('subscribe_observation safely ignores empty and malformed optional NPC arrays', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', {
+      action: 'subscribe_observation',
+      active_scan: false,
+      nearby: [null, 'not-a-player'],
+      system_agents: [],
+      pirates: { malformed: true },
+      empire_npcs: [null, 'not-an-npc'],
+      creatures: 'not-an-array',
+      poi_id: 'sol_earth',
+      system_id: 'sol',
+      unknown_signature: false,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Players (0):');
+    expect(stdout).toContain('No other players at this location');
+    expect(stdout).not.toContain('Pirates (');
+    expect(stdout).not.toContain('Empire NPCs (');
+    expect(stdout).not.toContain('Creatures (');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('nearby pirate rows use the shared NPC row limit', () => {
+    const pirates = Array.from({ length: 12 }, (_, index) => ({
+      pirate_id: `pirate-${index + 1}`,
+      name: `Corsair ${index + 1}`,
+    }));
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', { nearby: [], pirates });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Pirates (12):');
+    expect(stdout).toContain('Corsair 10');
+    expect(stdout).not.toContain('Corsair 11');
+    expect(stdout).toContain('... and 2 more');
   });
 
   test('view_completed_mission includes pirate_faction on pirate rep rewards', () => {
