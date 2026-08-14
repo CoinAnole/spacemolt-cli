@@ -1161,7 +1161,10 @@ export const genericFormatters = [
   formatter(
     (r, command) => {
       const entries = Object.entries(r).filter(([, value]) => value !== undefined && value !== null && value !== '');
-      if (!entries.length || entries.length > 16) return false;
+      const isStorageTransfer =
+        commandNameEquals(command, 'storage_deposit') || commandNameEquals(command, 'storage_withdraw');
+      const maxEntries = isStorageTransfer ? 24 : 16;
+      if (!entries.length || entries.length > maxEntries) return false;
       if (entries.some(([, value]) => !isScalarDisplayValue(value) && !Array.isArray(value))) return false;
       const hasActionMarker =
         typeof r.action === 'string' ||
@@ -1181,6 +1184,6 @@ export const genericFormatters = [
       if (entries.length === 1 && r.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
       return true;
     },
-    { shapeFallback: true },
+    { commands: ['storage_deposit', 'storage_withdraw'], shapeFallback: true },
   ),
 ];

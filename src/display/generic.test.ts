@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { storageDepositAutoDockedFixture, storageWithdrawAutoDockedFixture } from './generic.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
 
 const options: GlobalOptions = {
@@ -116,6 +117,22 @@ test('renders dismantle_outpost kit refund and details-only auto-undocked field 
   expect(stdout).not.toContain('=== Response ===');
   // Formatter must not re-emit the cyan envelope banner from details-only flag
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
+});
+
+test.each([
+  ['storage_deposit', storageDepositAutoDockedFixture, 'Deposit Items', 'Storage Total: 42'],
+  ['storage_withdraw', storageWithdrawAutoDockedFixture, 'Withdraw Items', 'Storage Remaining: 35'],
+] as const)('renders nested %s auto-dock receipts with the resulting station', (command, fixture, title, totalLine) => {
+  const rendered = renderStructuredResult(command, structuredClone(fixture), options, context);
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain(`=== ${title} ===`);
+  expect(stdout).toContain(totalLine);
+  expect(stdout).toContain('Auto Docked: true');
+  expect(stdout).toContain('Station Name: Earth Station');
+  expect(stdout).toContain('Station Id: earth_station');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('renders catalog ships with prestige lock notes when present', () => {

@@ -935,23 +935,43 @@ describe('command metadata', () => {
     expect(COMMANDS.build_outpost?.seeAlso).toContain('dismantle_outpost');
   });
 
-  test('storage deposit/withdraw and salvage tow help document ship towing', () => {
+  test('storage deposit/withdraw help documents auto-docking, fleets, special targets, and ship towing', () => {
     const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
     const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
+    for (const config of [deposit, withdraw]) {
+      expect(config?.description).toContain('omitted target, target=self, or target=faction');
+      expect(config?.description).toContain("auto-dock at the current POI's base");
+      expect(config?.description).toContain('fleet leader docks the fleet');
+    }
+    expect(deposit?.description).toContain('before deposit validation');
+    expect(deposit?.description).toContain('failed deposit may still leave you docked');
+    expect(deposit?.description).toContain('Player gifts, empire donations, and faction:TAG donations');
     expect(deposit?.description).toContain('tow');
     expect(deposit?.description).toContain('tow rig');
     expect(deposit?.description).toContain('equal or smaller class scale');
     expect(deposit?.description).toContain('same scale is allowed');
     expect(deposit?.description).not.toContain('must be smaller');
     expect(withdraw?.description).toContain('towed own ship');
+    expect(withdraw?.description).toContain('must be at the same station');
+    expect(withdraw?.description).toContain('local path can auto-dock first');
     expect(deposit?.aliases?.ship_id).toBe('item_id');
     expect(withdraw?.aliases?.ship_id).toBe('item_id');
     expect(deposit?.schema?.item_id?.description).toContain('equal to or smaller than your active ship');
+    expect(deposit?.schema?.item_id?.description).toContain('local path can auto-dock first');
+    expect(withdraw?.schema?.item_id?.description).toContain('local withdrawal path can auto-dock first');
+    expect(withdraw?.schema?.item_id?.description).toContain('must be at the same station');
 
     const depositHelp = captureHelp('storage deposit');
     expect(depositHelp).toContain('tow');
     expect(depositHelp).toContain('ship');
     expect(depositHelp).toContain('same scale is allowed');
+    expect(depositHelp).toContain('before deposit validation');
+    expect(depositHelp).toContain('faction:TAG donations');
+
+    const withdrawHelp = captureHelp('storage withdraw');
+    expect(withdrawHelp).toContain("auto-dock at the current POI's base");
+    expect(withdrawHelp).toContain('fleet leader docks the fleet');
+    expect(withdrawHelp).toContain('local withdrawal path can auto-dock first');
 
     const tow = COMMANDS.tow_wreck;
     expect(tow?.description).toContain('storage deposit');
@@ -960,6 +980,26 @@ describe('command metadata', () => {
     expect(tow?.seeAlso).toContain('storage_deposit');
     const release = COMMANDS.release_tow;
     expect(release?.description).toContain('storage withdraw');
+  });
+
+  test('facility repair help documents faction repair permissions, accounting, and completion discovery', () => {
+    const repair = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.repair?.config;
+    expect(repair?.description).toContain('draw materials from faction storage');
+    expect(repair?.description).toContain('facility-management rights');
+    expect(repair?.description).toContain('spend is recorded in the faction action log');
+    expect(repair?.description).toContain('Facility listings expose when an in-progress repair completes');
+    expect(repair?.description).toContain('get_action_log');
+    expect(repair?.seeAlso).toContain('get_action_log');
+    expect(repair?.schema?.facility_id?.description).toContain('facility_list or facility_owned');
+    expect(repair?.schema?.facility_id?.description).toContain('faction_facility_list');
+    expect(repair?.schema?.facility_id?.description).toContain('repair completion timing');
+
+    const help = captureHelp('facility repair');
+    expect(help).toContain('faction storage');
+    expect(help).toContain('facility-management rights');
+    expect(help).toContain('faction action log');
+    expect(help).toContain('repair completion timing');
+    expect(help).toContain('get_action_log');
   });
 
   test('facility_set_description is curated on the facility group', () => {

@@ -710,6 +710,55 @@ export const dismantleOutpostFixture = {
   },
 };
 
+const storageAutoDockedLocation = {
+  system_id: 'sol',
+  system_name: 'Sol',
+  empire: 'solarian',
+  security_status: 'high',
+  connections: ['alpha_centauri'],
+  poi_id: 'earth_station',
+  poi_name: 'Earth Station',
+  poi_type: 'station',
+  docked_at: 'earth_station',
+  resources: [],
+  nearby_players: [],
+  nearby_player_count: 0,
+  nearby_pirates: [],
+  nearby_pirate_count: 0,
+  nearby_empire_npcs: [],
+  nearby_empire_npc_count: 0,
+};
+
+/** Live-shaped nested SC: details = DepositItemsResponse after storage auto-docks at the POI base. */
+export const storageDepositAutoDockedFixture = {
+  details: {
+    action: 'deposit_items',
+    item_id: 'ore_iron',
+    quantity: 12,
+    storage_total: 42,
+    cargo_remaining: 8,
+    cargo_space: 92,
+    auto_docked: true,
+    message: 'Deposited 12 Iron Ore into personal storage.',
+  },
+  location: storageAutoDockedLocation,
+};
+
+/** Live-shaped nested SC: details = WithdrawItemsResponse after storage auto-docks at the POI base. */
+export const storageWithdrawAutoDockedFixture = {
+  details: {
+    action: 'withdraw_items',
+    item_id: 'ore_iron',
+    quantity: 7,
+    storage_remaining: 35,
+    cargo_total: 15,
+    cargo_space: 85,
+    auto_docked: true,
+    message: 'Withdrew 7 Iron Ore from personal storage.',
+  },
+  location: storageAutoDockedLocation,
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
@@ -739,4 +788,14 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   facility_dismantle: { command: 'facility_dismantle', fixture: facilityDismantleFixture },
   faction_dismantle: { command: 'faction_dismantle', fixture: factionDismantleFixture },
   dismantle_outpost: { command: 'dismantle_outpost', fixture: dismantleOutpostFixture },
+  storage_deposit_auto_docked: {
+    command: 'storage_deposit',
+    fixture: storageDepositAutoDockedFixture,
+    schemaTarget: 'details',
+  },
+  storage_withdraw_auto_docked: {
+    command: 'storage_withdraw',
+    fixture: storageWithdrawAutoDockedFixture,
+    schemaTarget: 'details',
+  },
 };

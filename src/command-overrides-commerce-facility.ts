@@ -200,7 +200,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[item_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON; ship tow: <ship_id> target=self)',
     description:
-      'Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own ships of equal or smaller class scale. Plain deposit moves cargo→personal storage when source/target are omitted. With a tow rig fitted, pass a ship instance UUID and target=self while docked at the same station as that ship (class scale must not be larger than your active ship; same scale is allowed) to tow it; you can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.',
+      "Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own ships of equal or smaller class scale. Plain deposit moves cargo→personal storage when source/target are omitted. Local personal/faction paths (omitted target, target=self, or target=faction) auto-dock at the current POI's base; a fleet leader docks the fleet as well. Docking happens before deposit validation, so a failed deposit may still leave you docked. Player gifts, empire donations, and faction:TAG donations retain their own docking rules. With a tow rig fitted, pass a ship instance UUID and target=self to tow it; the ship must be at the same station, and this local path can auto-dock first (class scale must not be larger than your active ship; same scale is allowed). You can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.",
     example:
       'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self',
     discoverWith: ['get_status', 'get_cargo', 'list_ships'],
@@ -216,7 +216,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       item_id: {
         type: 'string',
         description:
-          'Item ID for normal transfers, credits for treasury/gift credit ops, or a ship instance UUID: target=self attaches a tow (tow rig required; docked; class scale equal to or smaller than your active ship), while target=<player_name> gifts the ship. Use list_ships for ship instance IDs; ship_id is an alias.',
+          'Item ID for normal transfers, credits for treasury/gift credit ops, or a ship instance UUID: target=self attaches a tow (tow rig required; the ship must be at the same station, and the local path can auto-dock first; class scale equal to or smaller than your active ship), while target=<player_name> gifts the ship. Use list_ships for ship instance IDs; ship_id is an alias.',
       },
       credits: {
         type: 'integer',
@@ -228,7 +228,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[item_id] [quantity] [target=self|faction] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [items=JSON]  (item_id/quantity required unless items=JSON; release tow: <ship_id>)',
     description:
-      'Withdraw from personal or faction storage into cargo (default personal→cargo when source/target omitted), move faction compartments, or release a towed own ship. Pass the towed ship instance UUID as item_id while docked to drop the tow (distinct from release_tow, which only drops a towed wreck).',
+      "Withdraw from personal or faction storage into cargo (default personal→cargo when source/target omitted), move faction compartments, or release a towed own ship. Local personal/faction paths (omitted target, target=self, or target=faction) auto-dock at the current POI's base; a fleet leader docks the fleet as well. To release a towed own ship, pass its instance UUID as item_id; the ship must be at the same station, and this local path can auto-dock first (distinct from release_tow, which only drops a towed wreck).",
     example: 'spacemolt storage_withdraw ore_iron 10; release tow: storage withdraw <ship_id>',
     discoverWith: ['get_status', 'storage_view', 'list_ships'],
     seeAlso: ['storage_view', 'storage_deposit', 'get_cargo', 'list_ships', 'release_tow', 'get_status'],
@@ -243,7 +243,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       item_id: {
         type: 'string',
         description:
-          'Item ID for normal transfers, credits for treasury ops, or a ship instance UUID to release a ship you are towing once docked. ship_id is an alias. Use release_tow for a towed wreck.',
+          'Item ID for normal transfers, credits for treasury ops, or a ship instance UUID to release a ship you are towing. The towed ship must be at the same station, and the local withdrawal path can auto-dock first. ship_id is an alias. Use release_tow for a towed wreck.',
       },
     },
   },
@@ -580,13 +580,20 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_repair: {
     usage: '<facility_id>',
     description:
-      'Repair a damaged facility after a station is wrecked (costs ~30% of original materials and build time).',
+      'Repair a damaged facility after a station is wrecked (costs ~30% of original materials and build time). Faction-owned repairs draw materials from faction storage and may be initiated by members with facility-management rights; the spend is recorded in the faction action log (see get_action_log). Facility listings expose when an in-progress repair completes.',
     example: 'spacemolt facility_repair facility-1',
     discoverWith: ['facility_list', 'facility_owned', 'faction_facility_list'],
-    seeAlso: ['facility_list', 'facility_owned', 'faction_facility_list', 'facility_dismantle'],
+    seeAlso: ['facility_list', 'facility_owned', 'faction_facility_list', 'facility_dismantle', 'get_action_log'],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/repair',
     positionals: ['facility_id'],
+    schemaExtensions: {
+      facility_id: {
+        type: 'string',
+        description:
+          'Facility instance ID to repair. Find personal IDs with facility_list or facility_owned, and faction-owned IDs with faction_facility_list; those listings also show repair completion timing.',
+      },
+    },
   },
   facility_upgrade: {
     usage: '<facility_type> [facility_id] [package_ids=id[,id...]]',

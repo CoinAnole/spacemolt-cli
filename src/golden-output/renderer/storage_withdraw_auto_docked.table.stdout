@@ -1,0 +1,22 @@
+
+=== Withdraw Items ===
+Action: withdraw_items
+Item Id: ore_iron
+Quantity: 7
+Storage Remaining: 35
+Cargo Total: 15
+Cargo Space: 85
+Auto Docked: true
+Message: Withdrew 7 Iron Ore from personal storage.
+System Id: sol
+System Name: Sol
+Poi Id: earth_station
+Poi: Earth Station
+Poi Name: Earth Station
+Docked At: earth_station
+Station Id: earth_station
+Station Name: Earth Station
+Base Id: earth_station
+Base Name: Earth Station
+Online Players: 0 item(s)
+Online Players Count: 0

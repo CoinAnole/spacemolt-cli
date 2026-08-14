@@ -1,0 +1,32 @@
+{
+  "details": {
+    "action": "deposit_items",
+    "item_id": "ore_iron",
+    "quantity": 12,
+    "storage_total": 42,
+    "cargo_remaining": 8,
+    "cargo_space": 92,
+    "auto_docked": true,
+    "message": "Deposited 12 Iron Ore into personal storage."
+  },
+  "location": {
+    "system_id": "sol",
+    "system_name": "Sol",
+    "empire": "solarian",
+    "security_status": "high",
+    "connections": [
+      "alpha_centauri"
+    ],
+    "poi_id": "earth_station",
+    "poi_name": "Earth Station",
+    "poi_type": "station",
+    "docked_at": "earth_station",
+    "resources": [],
+    "nearby_players": [],
+    "nearby_player_count": 0,
+    "nearby_pirates": [],
+    "nearby_pirate_count": 0,
+    "nearby_empire_npcs": [],
+    "nearby_empire_npc_count": 0
+  }
+}

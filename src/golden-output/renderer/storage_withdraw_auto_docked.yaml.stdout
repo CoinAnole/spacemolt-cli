@@ -1,0 +1,28 @@
+
+details:
+  action: withdraw_items
+  item_id: ore_iron
+  quantity: 7
+  storage_remaining: 35
+  cargo_total: 15
+  cargo_space: 85
+  auto_docked: true
+  message: "Withdrew 7 Iron Ore from personal storage."
+location:
+  system_id: sol
+  system_name: Sol
+  empire: solarian
+  security_status: high
+  connections:
+    - alpha_centauri
+  poi_id: earth_station
+  poi_name: "Earth Station"
+  poi_type: station
+  docked_at: earth_station
+  resources: []
+  nearby_players: []
+  nearby_player_count: 0
+  nearby_pirates: []
+  nearby_pirate_count: 0
+  nearby_empire_npcs: []
+  nearby_empire_npc_count: 0
