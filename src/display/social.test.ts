@@ -187,6 +187,28 @@ test('renders facility list item req. stock and labor per cycle', () => {
   expect(stdout).toContain('320cr');
 });
 
+test('renders repair completion ticks in shared facility tables', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const playerFacilities = facilityList.player_facilities as Array<Record<string, unknown>>;
+  if (!playerFacilities[0]) throw new Error('Player facility fixture is incomplete.');
+  playerFacilities[0].repair_complete_tick = 901500;
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Repair Tick');
+  expect(stdout).toContain('901500');
+});
+
+test('omits repair completion ticks from shared facility tables when absent', () => {
+  const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Repair Tick');
+});
+
 test('renders facility maintenance_fuel as fuel stock in Req. stock', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
@@ -832,6 +854,8 @@ test('faction_facility_list renders status, damaged yes/no, and custom names', (
   expect(stdout).toContain('Faction Facilities at earth_station');
   expect(stdout).toMatch(/Status/);
   expect(stdout).toMatch(/Damaged/);
+  expect(stdout).toContain('Repair Tick');
+  expect(stdout).toContain('901412');
   expect(stdout).toContain('active');
   expect(stdout).toContain('damaged');
   expect(stdout).toContain('under_construction');
@@ -907,7 +931,7 @@ test('faction_facility_list omits Damaged column when no damaged fields', () => 
   };
   const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join('\n');
 
-  expect(stdout).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Level\s+\|\s+Status\s+\|\s+Service/);
+  expect(stdout).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Level\s+\|\s+Status\s+\|\s+Building\s+\|\s+Service/);
   expect(stdout).not.toMatch(/\|\s*Damaged\s*\|/);
   expect(stdout).toMatch(/\|\s*Building\s*$|\|\s*Building\b/);
   expect(stdout).toContain('12');
@@ -937,5 +961,6 @@ test('faction_facility_list omits Building column without ticks_until_complete',
 
   expect(stdout).toMatch(/\|\s*Damaged\s*\|/);
   expect(stdout).not.toMatch(/\|\s*Building\b/);
+  expect(stdout).not.toContain('Repair Tick');
   expect(stdout).toContain('no');
 });

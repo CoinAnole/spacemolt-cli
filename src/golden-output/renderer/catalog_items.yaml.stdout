@@ -20,7 +20,19 @@ items:
     stackable: true
     tradeable: true
     effect: {type: ammo, ammo: {damage_mod: 0.9, armor_bypass: 0.3, untraceable: true, wear_per_shot: 0.01}}
-message: "Items: showing 2 of 537"
+  - base_value: 600
+    category: ore
+    compression: ore
+    description: "Unstable particles that exist in multiple states simultaneously."
+    extracted_by: mining
+    id: quantum_fragments
+    name: "Quantum Fragments"
+    rarity: legendary
+    region_lock: [outerrim]
+    size: 3
+    stackable: true
+    tradeable: true
+message: "Items: showing 3 of 537"
 page: 1
 page_size: 20
 total: 537

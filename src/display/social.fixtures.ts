@@ -300,6 +300,7 @@ export const factionFacilityListFixture = {
       rent_per_cycle: 800,
       status: 'damaged',
       damaged: true,
+      repair_complete_tick: 901412,
     },
     {
       facility_id: 'faction-yard',

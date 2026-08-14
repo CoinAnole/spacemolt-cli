@@ -8,6 +8,7 @@ import {
   emitStationFuelPricing,
   formatDepletionRemainingSuffix,
   formatPlayer,
+  formatReputationChangesSummary,
   formatter,
   isRecord,
   namedFormatter,
@@ -344,12 +345,14 @@ function summarizeRewardForDisplay(rewards: unknown): string {
 function summarizeCompletionRewards(r: Record<string, unknown>): {
   creditsLine?: string;
   itemsLine?: string;
+  reputationLine?: string;
   skillXpLine?: string;
   communityLine?: string;
 } {
   const result: {
     creditsLine?: string;
     itemsLine?: string;
+    reputationLine?: string;
     skillXpLine?: string;
     communityLine?: string;
   } = {};
@@ -364,6 +367,9 @@ function summarizeCompletionRewards(r: Record<string, unknown>): {
       .map(([item, quantity]) => `${item} x${formatNumber(quantity)}`);
     if (items.length) result.itemsLine = `Items received: ${items.join(', ')}`;
   }
+
+  const reputation = formatReputationChangesSummary(r.reputation_changes);
+  if (reputation) result.reputationLine = `Reputation changes: ${reputation}`;
 
   if (isRecord(r.skill_xp_gained)) {
     const skills = Object.entries(r.skill_xp_gained)
@@ -1064,6 +1070,7 @@ export const statusFormatters = [
       const rewards = summarizeCompletionRewards(r);
       if (rewards.creditsLine) emitLine(rewards.creditsLine);
       if (rewards.itemsLine) emitLine(rewards.itemsLine);
+      if (rewards.reputationLine) emitLine(rewards.reputationLine);
       if (rewards.skillXpLine) emitLine(rewards.skillXpLine);
       if (rewards.communityLine) emitLine(rewards.communityLine);
       if (r.chain_next) emitLine(`Next: ${r.chain_next}`);

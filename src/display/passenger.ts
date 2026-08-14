@@ -1,5 +1,5 @@
 import { formatBerthSummary } from './berths.ts';
-import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { c, emitLine, formatReputationChangesSummary, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 function passengerRows(value: unknown): Array<Record<string, unknown>> | undefined {
   if (!Array.isArray(value)) return undefined;
@@ -44,18 +44,6 @@ function singleUnloadRows(result: Record<string, unknown>): Array<Record<string,
     return undefined;
   }
   return [result];
-}
-
-function reputationChangesSummary(value: unknown): string | undefined {
-  if (!isRecord(value)) return undefined;
-  const parts = Object.entries(value)
-    .filter(([, change]) => hasValue(change))
-    .map(([empire, change]) => {
-      const number = Number(change);
-      const prefix = Number.isFinite(number) && number > 0 ? '+' : '';
-      return `${empire} ${prefix}${change}`;
-    });
-  return parts.length ? parts.join(', ') : undefined;
 }
 
 function rowsHaveField(rows: Array<Record<string, unknown>>, field: string): boolean {
@@ -251,7 +239,7 @@ export const passengerFormatters = [
       }
 
       if (hasValue(r.fare_collected)) emitLine(`Fare collected: ${r.fare_collected}`);
-      const reputation = reputationChangesSummary(r.reputation_changes);
+      const reputation = formatReputationChangesSummary(r.reputation_changes);
       if (reputation) emitLine(`Reputation changes: ${reputation}`);
 
       if (singleRows) {

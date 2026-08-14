@@ -345,6 +345,7 @@ export const completeMissionFixture = {
     credits_earned: 2500,
     message: 'Mission complete. Rewards claimed.',
     items_received: { food_rations: 5, repair_patch: 1 },
+    reputation_changes: { solarian: 3, pirate_voss: -1 },
     skill_xp_gained: { piloting: 25, hauling: 10 },
     chain_next: 'mission-refinery-check',
   },

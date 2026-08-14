@@ -155,6 +155,64 @@ test('renders catalog ships with prestige lock notes when present', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders catalog item compression when at least one item declares it', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          id: 'quantum_fragments',
+          name: 'Quantum Fragments',
+          category: 'ore',
+          base_value: 600,
+          size: 3,
+          compression: 'ore',
+        },
+        {
+          id: 'food_rations',
+          name: 'Food Rations',
+          category: 'consumable',
+          base_value: 10,
+          size: 1,
+        },
+      ],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toMatch(/Size\s+\|\s+Compression/);
+  expect(stdout).toContain('Quantum Fragments');
+  expect(stdout).toContain('ore');
+});
+
+test('omits catalog item compression when no item declares it', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          id: 'food_rations',
+          name: 'Food Rations',
+          category: 'consumable',
+          base_value: 10,
+          size: 1,
+        },
+      ],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Compression');
+});
+
 test('renders catalog facilities with maintenance_fuel and maintenance_inputs req. stock', () => {
   const rendered = renderStructuredResult(
     'catalog',

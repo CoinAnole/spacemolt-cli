@@ -41,8 +41,22 @@ export const catalogItemsFixture = {
         },
       },
     },
+    {
+      base_value: 600,
+      category: 'ore',
+      compression: 'ore',
+      description: 'Unstable particles that exist in multiple states simultaneously.',
+      extracted_by: 'mining',
+      id: 'quantum_fragments',
+      name: 'Quantum Fragments',
+      rarity: 'legendary',
+      region_lock: ['outerrim'],
+      size: 3,
+      stackable: true,
+      tradeable: true,
+    },
   ],
-  message: 'Items: showing 2 of 537',
+  message: 'Items: showing 3 of 537',
   page: 1,
   page_size: 20,
   total: 537,
@@ -147,6 +161,7 @@ export const activeMissionsFixture = {
       {
         difficulty: 2,
         expires_in_ticks: 17,
+        issuing_base: 'Markab Rescue Station',
         mission_id: 'mission-distress-combatdummy6',
         objectives: [
           {
@@ -166,6 +181,7 @@ export const activeMissionsFixture = {
       {
         difficulty: 3,
         expires_in_ticks: 22,
+        issuing_base: 'Electra Rescue Station',
         mission_id: 'mission-distress-wealthyminer2023',
         objectives: [
           {
@@ -180,6 +196,33 @@ export const activeMissionsFixture = {
         },
         title: 'Distress Call: WealthyMiner2023',
         type: 'distress',
+      },
+      {
+        accepted_at: '2026-06-18T21:15:00Z',
+        description: 'Deliver faction supplies to the contract issuer.',
+        difficulty: 2,
+        expires_in_ticks: 31,
+        issuing_base: 'Earth Station',
+        issuing_base_id: 'earth_station',
+        mission_id: 'mission-faction-delivery-1',
+        objectives: [
+          {
+            completed: false,
+            current: 0,
+            description: 'Deliver Food Rations',
+            item_id: 'food_rations',
+            required: 5,
+            target_base: 'earth_station',
+            type: 'deliver_item',
+          },
+        ],
+        percent_complete: 0,
+        rewards: {
+          credits: 1200,
+          reputation: 2,
+        },
+        title: 'Faction Supply Delivery',
+        type: 'delivery',
       },
     ],
     max_missions: 5,

@@ -2987,6 +2987,7 @@ describe('structuredContent formatters', () => {
         credits_earned: 2500,
         message: 'Mission complete. Rewards claimed.',
         items_received: { food_rations: 5, repair_patch: 1 },
+        reputation_changes: { solarian: 3, pirate_voss: -1, voidborn: 0 },
         skill_xp_gained: { piloting: 25, hauling: 10 },
         chain_next: 'mission-refinery-check',
       },
@@ -2997,7 +2998,10 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('ID: mission-delivery-1');
     expect(stdout).toContain('Credits earned: 2,500');
     expect(stdout).toContain('Items received: food_rations x5, repair_patch x1');
+    expect(stdout).toContain('Reputation changes: solarian +3, pirate_voss -1, voidborn 0');
     expect(stdout).toContain('Skill XP: piloting +25, hauling +10');
+    expect(stdout.indexOf('Items received:')).toBeLessThan(stdout.indexOf('Reputation changes:'));
+    expect(stdout.indexOf('Reputation changes:')).toBeLessThan(stdout.indexOf('Skill XP:'));
     expect(stdout).toContain('Next: mission-refinery-check');
     expect(stdout).toContain('Mission complete. Rewards claimed.');
     expect(stdout).not.toContain('=== Active Missions ===');
@@ -3022,6 +3026,23 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Credits earned: 100');
     expect(stdout).toContain('Community: 12.5% (ore_iron: 90/720; contributed ore_iron x40)');
     expect(stdout).toContain('Contribution recorded.');
+    expect(stdout).not.toContain('Reputation changes:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission omits empty reputation changes', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-no-reputation',
+        title: 'Routine Delivery',
+        credits_earned: 100,
+        message: 'Mission complete.',
+        reputation_changes: {},
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Reputation changes:');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -3528,10 +3549,60 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Distress Call: CombatDummy6');
     expect(stdout).toContain('mission-distress-wealthyminer2023');
     expect(stdout).toContain('Rescue WealthyMiner2023 WealthyMiner2023 0/1');
+    expect(stdout).toContain('Issuing Base');
+    expect(stdout).toContain('Earth Station');
+    expect(stdout).toContain('Deliver Food Rations earth_station 0/5');
     expect(stdout).toContain('piloting XP +50');
-    expect(stdout).toContain('missions 2/5');
+    expect(stdout).toContain('missions 3/5');
     expect(stdout).not.toContain('OK: Active missions');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions prefers destination names and falls back to IDs', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-destination-name',
+            title: 'Named Delivery',
+            type: 'delivery',
+            issuing_base: 'Nova Station',
+            objectives: [
+              {
+                description: 'Deliver Supplies',
+                target_base_name: 'Kepler Hub',
+                target_base: 'kepler_hub',
+                current: 0,
+                required: 1,
+              },
+            ],
+            rewards: {},
+          },
+          {
+            mission_id: 'mission-destination-id',
+            title: 'ID Delivery',
+            type: 'delivery',
+            issuing_base_id: 'nova_station',
+            objectives: [
+              {
+                description: 'Deliver Parts',
+                target_base: 'frontier_cache',
+                current: 0,
+                required: 2,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Deliver Supplies Kepler Hub 0/1');
+    expect(stdout).not.toContain('kepler_hub');
+    expect(stdout).toContain('Deliver Parts frontier_cache 0/2');
+    expect(stdout).toContain('nova_station');
   });
 
   test('completed_missions formats history table with giver and completion time', () => {
@@ -3827,7 +3898,7 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Items ===');
     expect(stdout).toContain('Antimatter Torpedoes');
-    expect(stdout).toContain('(Showing 2 of 537 items. Use --page 2 for more results.)');
+    expect(stdout).toContain('(Showing 3 of 537 items. Use --page 2 for more results.)');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -3855,7 +3926,7 @@ describe('structuredContent formatters', () => {
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(stdout)).toEqual(catalogItemsFixture);
-    expect(stderr).toBe('(Showing 2 of 537 items. Use --page 2 for more results.)');
+    expect(stderr).toBe('(Showing 3 of 537 items. Use --page 2 for more results.)');
   });
 
   test('catalog ship responses include passive recipe ids', () => {
@@ -4876,11 +4947,11 @@ describe('structuredContent formatters', () => {
 
       === Faction Facilities at earth_station ===
 
-        Name                      | Type                   | ID              | Level | Status             | Damaged | Service    | Rent    | Building
-        --------------------------+------------------------+-----------------+-------+--------------------+---------+------------+---------+---------
-        Alloy One (Alloy Smelter) | alloy_smelter          | faction-smelter | 1     | active             | no      | production | 1,200cr |
-        Faction Fuel Bunker       | fuel_bunker            | faction-bunker  | 2     | damaged            | yes     | fuel       | 800cr   |
-        Shipyard Berth            | faction_shipyard_berth | faction-yard    | 1     | under_construction |         | shipyard   | 1,200cr | 12
+        Name                      | Type                   | ID              | Level | Status             | Damaged | Building | Repair Tick | Service    | Rent
+        --------------------------+------------------------+-----------------+-------+--------------------+---------+----------+-------------+------------+--------
+        Alloy One (Alloy Smelter) | alloy_smelter          | faction-smelter | 1     | active             | no      |          |             | production | 1,200cr
+        Faction Fuel Bunker       | fuel_bunker            | faction-bunker  | 2     | damaged            | yes     |          | 901412      | fuel       | 800cr
+        Shipyard Berth            | faction_shipyard_berth | faction-yard    | 1     | under_construction |         | 12       |             | shipyard   | 1,200cr
 
       Faction storage: 50,000cr, 14 types, 3 rooms
 

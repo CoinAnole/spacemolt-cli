@@ -183,6 +183,9 @@ function facilityColumns(
   if (hasAnyField(rows, ['under_construction'])) {
     columns.push(['Building', ['under_construction']]);
   }
+  if (hasAnyField(rows, ['repair_complete_tick'])) {
+    columns.push(['Repair Tick', ['repair_complete_tick']]);
+  }
   if (hasAnyField(rows, ['power_throttled'])) {
     columns.push(['Power Throttled', ['power_throttled']]);
   }
@@ -983,11 +986,14 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['damaged', 'damaged_display'])) {
         columns.push(['Damaged', ['damaged_display', 'damaged']]);
       }
-      columns.push(['Service', ['faction_service']]);
-      columns.push(['Rent', ['rent_display', 'rent_per_cycle']]);
       if (hasAnyField(rows, ['ticks_until_complete'])) {
         columns.push(['Building', ['ticks_until_complete']]);
       }
+      if (hasAnyField(rows, ['repair_complete_tick'])) {
+        columns.push(['Repair Tick', ['repair_complete_tick']]);
+      }
+      columns.push(['Service', ['faction_service']]);
+      columns.push(['Rent', ['rent_display', 'rent_per_cycle']]);
       if (hasAnyField(rows, ['capacity'])) {
         columns.push(['Capacity', ['capacity']]);
       }

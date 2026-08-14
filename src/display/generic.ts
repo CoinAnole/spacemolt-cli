@@ -50,6 +50,7 @@ function summarizeObjective(objective: unknown): string {
     objective.target_name ??
     objective.target_username ??
     objective.target_base_name ??
+    objective.target_base ??
     objective.system_name ??
     objective.item_id;
   const parts = [description, isRecord(target) ? (target.name ?? target.id) : target, summarizeProgress(objective)]
@@ -220,6 +221,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Rarity', ['rarity']],
     ['Value', ['base_value', 'price_each', 'price']],
     ['Size', ['size']],
+    ['Compression', ['compression']],
     ['Effects', ['effects_summary']],
   ],
   missions: [
@@ -877,20 +879,20 @@ export const genericFormatters = [
         rewards_summary: summarizeRewards(mission.rewards),
       }));
 
-      printCompactTable(
-        'Active Missions',
-        rows,
-        [
-          ['Title', ['title', 'name']],
-          ['ID', ['mission_id', 'id']],
-          ['Type', ['type']],
-          ['Difficulty', ['difficulty']],
-          ['Objectives', ['objectives_summary']],
-          ['Rewards', ['rewards_summary']],
-          ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
-        ],
-        { maxCellWidth: 64 },
-      );
+      const columns: Array<[string, string[]]> = [
+        ['Title', ['title', 'name']],
+        ['ID', ['mission_id', 'id']],
+        ['Type', ['type']],
+        ['Difficulty', ['difficulty']],
+        ['Objectives', ['objectives_summary']],
+        ['Rewards', ['rewards_summary']],
+        ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
+      ];
+      if (rows.some((mission) => hasScalarValue(mission, ['issuing_base', 'issuing_base_id']))) {
+        columns.splice(4, 0, ['Issuing Base', ['issuing_base', 'issuing_base_id']]);
+      }
+
+      printCompactTable('Active Missions', rows, columns, { maxCellWidth: 64 });
 
       const capacity = activeMissionCapacity(r, missions.length);
       if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);

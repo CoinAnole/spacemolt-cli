@@ -8,6 +8,10 @@
       "food_rations": 5,
       "repair_patch": 1
     },
+    "reputation_changes": {
+      "solarian": 3,
+      "pirate_voss": -1
+    },
     "skill_xp_gained": {
       "piloting": 25,
       "hauling": 10

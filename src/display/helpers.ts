@@ -80,6 +80,19 @@ export function finiteNumber(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
+/** Format API reputation-change maps consistently across human-readable output. */
+export function formatReputationChangesSummary(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const parts = Object.entries(value)
+    .filter(([, change]) => change !== undefined && change !== null && change !== '')
+    .map(([empire, change]) => {
+      const number = Number(change);
+      const prefix = Number.isFinite(number) && number > 0 ? '+' : '';
+      return `${empire} ${prefix}${change}`;
+    });
+  return parts.length ? parts.join(', ') : undefined;
+}
+
 function formatMaintenanceItemList(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
   const parts = value
