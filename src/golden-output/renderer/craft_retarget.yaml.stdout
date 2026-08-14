@@ -1,0 +1,10 @@
+
+details:
+  action: job_retarget
+  kind: retarget
+  job_id: "craft-job-1"
+  previous_deliver_to: storage
+  deliver_to: "faction:Workshop"
+  runs_remaining: 12
+  auto_docked: true
+  message: "Crafting job craft-job-1 will deliver its remaining output to faction:Workshop."

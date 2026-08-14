@@ -1,0 +1,8 @@
+
+=== Recycle Job Retargeted ===
+Job: recycle-job-1
+Previous destination: faction:Scrap
+New destination: storage
+Runs remaining: 0
+Auto-undocked: yes
+Recycling job recycle-job-1 will deliver its remaining output to storage.

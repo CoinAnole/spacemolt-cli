@@ -1,0 +1,12 @@
+{
+  "details": {
+    "action": "job_retarget",
+    "kind": "retarget",
+    "job_id": "recycle-job-1",
+    "previous_deliver_to": "faction:Scrap",
+    "deliver_to": "storage",
+    "runs_remaining": 0,
+    "auto_undocked": true,
+    "message": "Recycling job recycle-job-1 will deliver its remaining output to storage."
+  }
+}

@@ -1019,6 +1019,10 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(queue.payload).toEqual({ action: 'queue' });
 
     expect(parseOk(['craft', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
+    expect(parseOk(['craft', 'job_id=job-1', 'deliver_to=faction:Workshop']).payload).toEqual({
+      job_id: 'job-1',
+      deliver_to: 'faction:Workshop',
+    });
 
     const cancelManyPayload = convertPayloadTypes(parseOk(['craft', 'job_ids=["job-1","job-2"]']).payload, 'craft');
     expect(cancelManyPayload).toEqual({ job_ids: ['job-1', 'job-2'] });
@@ -1094,6 +1098,10 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
 
   test('recycle parses recipe positionals and bulk jobs JSON', () => {
     expect(parseOk(['recycle', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
+    expect(parseOk(['recycle', 'job_id=job-1', 'deliver_to=faction:Scrap']).payload).toEqual({
+      job_id: 'job-1',
+      deliver_to: 'faction:Scrap',
+    });
 
     const cancelManyPayload = convertPayloadTypes(parseOk(['recycle', 'job_ids=["job-1","job-2"]']).payload, 'recycle');
     expect(cancelManyPayload).toEqual({ job_ids: ['job-1', 'job-2'] });

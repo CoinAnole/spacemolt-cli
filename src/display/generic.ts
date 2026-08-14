@@ -518,6 +518,10 @@ function craftTitle(command: string, result: Record<string, unknown>): string {
   return base;
 }
 
+function isCraftRetarget(result: Record<string, unknown>): boolean {
+  return result.action === 'job_retarget' || result.kind === 'retarget';
+}
+
 function craftTitleWithStation(command: string, result: Record<string, unknown>): string {
   const station = formatCraftStation(result);
   const title = craftTitle(command, result);
@@ -658,6 +662,7 @@ export const genericFormatters = [
           ['Status', ['status']],
           ['Pos', ['position']],
         ];
+        insertOptionalColumn(columns, rows, 'Destination', ['deliver_to'], 'Output');
         insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
         // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
         insertOptionalColumn(
@@ -727,6 +732,19 @@ export const genericFormatters = [
       }
 
       const packagedQuote = isPackagedCraftQuote(r);
+
+      if (isCraftRetarget(r)) {
+        const base = command === 'recycle' ? 'Recycle' : 'Craft';
+        emitLine(`\n${c.bright}=== ${base} Job Retargeted ===${c.reset}`);
+        emitOptionalValue('Job', r.job_id);
+        emitOptionalValue('Previous destination', r.previous_deliver_to);
+        emitOptionalValue('New destination', r.deliver_to);
+        emitOptionalValue('Runs remaining', r.runs_remaining);
+        if (r.auto_docked === true) emitOptionalValue('Auto-docked', 'yes');
+        if (r.auto_undocked === true) emitOptionalValue('Auto-undocked', 'yes');
+        if (r.message) emitLine(String(r.message));
+        return true;
+      }
 
       emitLine(`\n${c.bright}=== ${craftTitleWithStation(command, r)} ===${c.reset}`);
       emitOptionalValue('Job', r.job_id);

@@ -337,9 +337,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [package_ids=id[,id...]] [output_package_label=...] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel; package recipes pack_package/unpack_package; package_ids/output_package_label for packaged ordinary craft; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
+      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [package_ids=id[,id...]] [output_package_label=...] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue, cancel, or retarget; package recipes pack_package/unpack_package; package_ids/output_package_label for packaged ordinary craft; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
     description:
-      'Queue crafting work or cancel queued jobs. Default routing prefers your own facility, then your faction\'s, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Pass package_ids=id[,id…] to source inputs from sealed packages in the source location: pooled contents must match the recipe inputs × quantity exactly (no storage/cargo backfill); empty cargo_containers are reclaimed only when accessible Logistics is present. Pass output_package_label=… to seal all job outputs into one labeled package on completion (needs accessible Logistics and one cargo_container; total output size ≤ 100; cancel refunds inputs with no package). dry_run=true previews packaged craft gates without consuming anything (not with bulk jobs). Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target) — e.g. spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'. Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
+      'Queue crafting work, cancel queued jobs, or retarget their remaining output. Pass job_id alone to cancel; pass job_id with deliver_to to redirect remaining output without changing recipe, runs, escrow, cost, or queue position — e.g. spacemolt craft job_id=craft-job-1 deliver_to=faction:Workshop. Only the job orderer may retarget, the destination must be at the same base, completed runs are unaffected, and package pack/unpack jobs cannot be retargeted. Default routing prefers your own facility, then your faction\'s, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Pass package_ids=id[,id…] to source inputs from sealed packages in the source location: pooled contents must match the recipe inputs × quantity exactly (no storage/cargo backfill); empty cargo_containers are reclaimed only when accessible Logistics is present. Pass output_package_label=… to seal all job outputs into one labeled package on completion (needs accessible Logistics and one cargo_container; total output size ≤ 100; cancel refunds inputs with no package). dry_run=true previews packaged craft gates without consuming anything (not with bulk jobs). Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target) — e.g. spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'. Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
     example: "spacemolt craft iron_plates 10 package_ids=pkg-1,pkg-2 output_package_label='Plate Pack'",
     discoverWith: ['catalog', 'storage', 'get_status', 'inspect'],
     seeAlso: ['recycle', 'catalog', 'storage', 'inspect', 'get_guide'],
@@ -356,7 +356,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       deliver_to: {
         type: 'string',
         description:
-          "Ordinary craft output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. For package recipes, deliver_to is accepted as an alias for target (which may also be cargo).",
+          "Ordinary craft output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Pass with job_id to redirect an already queued job's remaining output. For package recipes, deliver_to is accepted as an alias for target (which may also be cargo).",
       },
       source: {
         type: 'string',
@@ -411,7 +411,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       },
       job_id: {
         type: 'string',
-        description: 'Queued crafting job ID to cancel; use action=queue to list job IDs.',
+        description:
+          'Queued crafting job to act on. Pass job_id alone to cancel it; pass job_id with deliver_to to retarget its remaining output without changing recipe, runs, escrow, cost, or queue position. Use action=queue to list job IDs.',
       },
       job_ids: {
         type: 'array',
@@ -431,9 +432,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   recycle: {
     usage:
-      '<recipe_id> [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue or cancel lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
+      '[recipe_id] [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own] [source=storage|faction|faction:<bucket>] [deliver_to=storage|faction|faction:<bucket>] [jobs=JSON]  (queue, cancel, or retarget lossy reverse production; split source/deliver_to to route feedstock and recovered inputs separately)',
     description:
-      "Queue a recycling job or cancel queued jobs. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets. Default routing prefers your own recycler, then your faction's, then an ally-granted recycler, then a public rental. The fast preset chooses the soonest-finishing eligible recycler globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted recyclers free to you; prefer_own stays on those own/faction/ally-granted recyclers and rents publicly only when none can run the job. Recycling always needs a real recycler facility; workshop does not apply.",
+      "Queue a recycling job, cancel queued jobs, or retarget their remaining output. Pass job_id alone to cancel; pass job_id with deliver_to to redirect remaining output without changing the job — e.g. spacemolt recycle job_id=recycle-job-1 deliver_to=faction:Scrap. Only the job orderer may retarget, the destination must be at the same base, and completed runs are unaffected. Feedstock is pulled from source (defaults to deliver_to) and recovered inputs go to deliver_to (default: storage). Use faction:<bucket> for Storage Extension buckets. Default routing prefers your own recycler, then your faction's, then an ally-granted recycler, then a public rental. The fast preset chooses the soonest-finishing eligible recycler globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted recyclers free to you; prefer_own stays on those own/faction/ally-granted recyclers and rents publicly only when none can run the job. Recycling always needs a real recycler facility; workshop does not apply.",
     example: 'spacemolt recycle basic_iron_smelting 20 source=faction:Scrap deliver_to=storage',
     discoverWith: ['catalog', 'facility_list', 'storage'],
     seeAlso: ['craft', 'catalog', 'storage', 'get_guide'],
@@ -444,7 +445,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       deliver_to: {
         type: 'string',
         description:
-          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Recycling never delivers to cargo.",
+          "Output destination: 'storage' (default), 'faction', or 'faction:<bucket name or id>'. Pass with job_id to redirect an already queued job's remaining output. Recycling never delivers to cargo.",
       },
       source: {
         type: 'string',
@@ -471,7 +472,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       job_id: {
         type: 'string',
         description:
-          'Queued recycling job ID to cancel; use action=queue on craft or facility job list output to find IDs.',
+          'Queued recycling job to act on. Pass job_id alone to cancel it; pass job_id with deliver_to to retarget its remaining output without changing anything else about the job. Use action=queue on craft or facility job list output to find IDs.',
       },
       job_ids: {
         type: 'array',

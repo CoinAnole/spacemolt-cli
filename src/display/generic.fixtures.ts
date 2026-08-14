@@ -268,6 +268,72 @@ export const craftQueuedFixture = {
   },
 };
 
+export const craftRetargetFixture = {
+  details: {
+    action: 'job_retarget',
+    kind: 'retarget',
+    job_id: 'craft-job-1',
+    previous_deliver_to: 'storage',
+    deliver_to: 'faction:Workshop',
+    runs_remaining: 12,
+    auto_docked: true,
+    message: 'Crafting job craft-job-1 will deliver its remaining output to faction:Workshop.',
+  },
+};
+
+export const craftQueueFixture = {
+  details: {
+    action: 'queue',
+    jobs: [
+      {
+        job_id: 'craft-job-1',
+        recipe: 'Refine Steel',
+        mode: 'craft',
+        runs_done: 2,
+        runs_remaining: 8,
+        runs_total: 10,
+        produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 10 }],
+        deliver_to: 'faction:Workshop',
+        venue: 'Station Workshop',
+        facility_id: 'workshop:player-1:nova_terra_central',
+        eta_ticks: 14,
+        status: 'running',
+        position: 0,
+      },
+      {
+        job_id: 'recycle-job-1',
+        recipe: 'Recycle Power Cell',
+        mode: 'recycle',
+        runs_done: 0,
+        runs_remaining: 3,
+        runs_total: 3,
+        produces: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 3 }],
+        deliver_to: 'storage',
+        venue: 'Faction Recycler',
+        facility_id: 'recycler-facility-1',
+        eta_ticks: 9,
+        status: 'queued',
+        position: 1,
+      },
+      {
+        job_id: 'legacy-job-1',
+        recipe: 'Build Power Cell',
+        mode: 'craft',
+        runs_done: 0,
+        runs_remaining: 1,
+        runs_total: 1,
+        produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+        venue: 'Station Workshop',
+        facility_id: 'workshop:player-1:nova_terra_central',
+        eta_ticks: 3,
+        status: 'queued',
+        position: 2,
+      },
+    ],
+    total_jobs: 3,
+  },
+};
+
 /** Packaged craft dry-run (kind=packaged_quote): gates/ready + output package preview. */
 export const craftPackagedQuoteFixture = {
   details: {
@@ -362,6 +428,19 @@ export const recycleQuoteFixture = {
     runs: 1,
     venue: 'Public Recycler',
     venue_type: 'facility',
+  },
+};
+
+export const recycleRetargetFixture = {
+  details: {
+    action: 'job_retarget',
+    kind: 'retarget',
+    job_id: 'recycle-job-1',
+    previous_deliver_to: 'faction:Scrap',
+    deliver_to: 'storage',
+    runs_remaining: 0,
+    auto_undocked: true,
+    message: 'Recycling job recycle-job-1 will deliver its remaining output to storage.',
   },
 };
 
@@ -596,9 +675,12 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
   craft: { command: 'craft', fixture: craftQueuedFixture },
+  craft_retarget: { command: 'craft', fixture: craftRetargetFixture },
+  craft_queue: { command: 'craft', fixture: craftQueueFixture },
   craft_packaged_quote: { command: 'craft', fixture: craftPackagedQuoteFixture },
   craft_packaged_job: { command: 'craft', fixture: craftPackagedJobFixture },
   recycle: { command: 'recycle', fixture: recycleQuoteFixture },
+  recycle_retarget: { command: 'recycle', fixture: recycleRetargetFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },

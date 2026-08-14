@@ -586,6 +586,9 @@ describe('command metadata', () => {
     expect(config?.example).toContain('output_package_label');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
+    expect(config?.schema?.deliver_to?.description).toContain(
+      "with job_id to redirect an already queued job's remaining output",
+    );
     expect(config?.schema?.deliver_to?.description).toContain('alias for target');
     expect(config?.schema?.source?.type).toBe('string');
     expect(config?.schema?.source?.description).toContain('cargo');
@@ -606,6 +609,9 @@ describe('command metadata', () => {
     expect(config?.schema?.target?.type).toBe('string');
     expect(config?.schema?.action?.enum).toEqual(['queue']);
     expect(config?.schema?.job_id?.type).toBe('string');
+    expect(config?.schema?.job_id?.description).toContain('job_id alone to cancel');
+    expect(config?.schema?.job_id?.description).toContain('job_id with deliver_to to retarget');
+    expect(config?.schema?.job_id?.description).toContain('queue position');
     expect(config?.schema?.quantity?.description).toContain('Number of output items');
     expect(config?.schema?.quantity?.description).not.toContain('server-capped by crafting skill level');
     expect(config?.schema?.preset?.enum).toEqual(['fast', 'cheap', 'prefer_own', 'workshop']);
@@ -633,6 +639,8 @@ describe('command metadata', () => {
     expect(help).toContain('jobs');
     expect(help).toContain('action=queue');
     expect(help).toContain('job_id');
+    expect(help).toContain('spacemolt craft job_id=craft-job-1 deliver_to=faction:Workshop');
+    expect(help).toContain('package pack/unpack jobs cannot be retargeted');
     expect(help).toContain('prefer_own');
     expect(help).toContain('own facility');
     expect(help).toContain('faction');
@@ -664,13 +672,20 @@ describe('command metadata', () => {
     });
     expect(config?.args).toEqual(['recipe_id', 'quantity']);
     expect(config?.aliases).toMatchObject({ recipe_id: 'id' });
+    expect(config?.usage).toStartWith('[recipe_id]');
+    expect(config?.usage).not.toContain('<recipe_id>');
     expect(config?.usage).toContain('source=storage|faction|faction:<bucket>');
     expect(config?.usage).toContain('deliver_to=storage|faction|faction:<bucket>');
     expect(config?.usage).toContain('preset=fast|cheap|prefer_own');
     expect(config?.schema?.deliver_to?.enum).toBeUndefined();
     expect(config?.schema?.deliver_to?.description).toContain('faction:<bucket name or id>');
+    expect(config?.schema?.deliver_to?.description).toContain(
+      "with job_id to redirect an already queued job's remaining output",
+    );
     expect(config?.schema?.source?.type).toBe('string');
     expect(config?.schema?.job_id?.type).toBe('string');
+    expect(config?.schema?.job_id?.description).toContain('job_id alone to cancel');
+    expect(config?.schema?.job_id?.description).toContain('job_id with deliver_to to retarget');
     expect(config?.schema?.preset?.enum).toEqual(['fast', 'cheap', 'prefer_own']);
     const recyclePresetHelp = config?.schema?.preset?.description ?? '';
     expect(recyclePresetHelp).toContain("'fast'");
@@ -696,6 +711,7 @@ describe('command metadata', () => {
     expect(help).toContain('dry_run');
     expect(help).toContain('jobs');
     expect(help).toContain('job_id');
+    expect(help).toContain('spacemolt recycle job_id=recycle-job-1 deliver_to=faction:Scrap');
     expect(help).toContain('preset');
     expect(help).toContain('prefer_own');
   });

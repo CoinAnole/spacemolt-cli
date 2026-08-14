@@ -356,6 +356,69 @@ test('renders queued craft details with job id and output', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders craft job retarget details instead of a queued response', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'job_retarget',
+        kind: 'retarget',
+        job_id: 'craft-job-1',
+        previous_deliver_to: 'storage',
+        deliver_to: 'faction:Workshop',
+        runs_remaining: 12,
+        auto_docked: true,
+        message: 'Crafting job output redirected.',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Job Retargeted ===');
+  expect(stdout).toContain('Job: craft-job-1');
+  expect(stdout).toContain('Previous destination: storage');
+  expect(stdout).toContain('New destination: faction:Workshop');
+  expect(stdout).toContain('Runs remaining: 12');
+  expect(stdout).toContain('Auto-docked: yes');
+  expect(stdout).toContain('Crafting job output redirected.');
+  expect(stdout).not.toContain('=== Craft Queued ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders recycle job retarget with zero remaining runs and auto-undock', () => {
+  const rendered = renderStructuredResult(
+    'recycle',
+    {
+      details: {
+        action: 'job_retarget',
+        kind: 'retarget',
+        job_id: 'recycle-job-1',
+        previous_deliver_to: 'faction:Scrap',
+        deliver_to: 'storage',
+        runs_remaining: 0,
+        auto_undocked: true,
+        message: 'Recycling job output redirected.',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recycle Job Retargeted ===');
+  expect(stdout).toContain('Job: recycle-job-1');
+  expect(stdout).toContain('Previous destination: faction:Scrap');
+  expect(stdout).toContain('New destination: storage');
+  expect(stdout).toContain('Runs remaining: 0');
+  expect(stdout).toContain('Auto-undocked: yes');
+  expect(stdout).not.toContain('=== Recycle Queued ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders package pack job with action package label and eta', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -502,6 +565,55 @@ test('renders craft queue total_jobs and truncation message', () => {
   expect(stdout).toContain('job-1');
   expect(stdout).toContain('Total jobs: 450 (showing 1)');
   expect(stdout).toContain('Showing the 200 soonest-finishing jobs.');
+  expect(stdout).not.toContain('Destination');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders queued craft destinations when present', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'queue',
+        jobs: [
+          {
+            job_id: 'storage-job-1',
+            recipe: 'Refine Steel',
+            mode: 'craft',
+            runs_done: 1,
+            runs_remaining: 4,
+            runs_total: 5,
+            produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 5 }],
+            deliver_to: 'storage',
+            venue: 'Station Workshop',
+            eta_ticks: 8,
+            status: 'running',
+          },
+          {
+            job_id: 'faction-job-1',
+            recipe: 'Recycle Power Cell',
+            mode: 'recycle',
+            runs_done: 0,
+            runs_remaining: 2,
+            runs_total: 2,
+            produces: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 }],
+            deliver_to: 'faction:Scrap',
+            venue: 'Faction Recycler',
+            eta_ticks: 5,
+            status: 'queued',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Destination');
+  expect(stdout).toContain('storage');
+  expect(stdout).toContain('faction:Scrap');
   expect(stdout).not.toContain('=== Response ===');
 });
 

@@ -1,0 +1,9 @@
+
+=== Craft Queue ===
+
+  Job           | Recipe             | Mode    | Runs          | Output           | Destination      | Venue            | Station            | ETA | Status  | Pos
+  --------------+--------------------+---------+---------------+------------------+------------------+------------------+--------------------+-----+---------+----
+  craft-job-1   | Refine Steel       | craft   | 2/10 (8 left) | 10x Steel Plate  | faction:Workshop | Station Workshop | nova_terra_central | 14  | running | 0  
+  recycle-job-1 | Recycle Power Cell | recycle | 0/3 (3 left)  | 3x Circuit Board | storage          | Faction Recycler |                    | 9   | queued  | 1  
+  legacy-job-1  | Build Power Cell   | craft   | 0/1 (1 left)  | 1x Power Cell    |                  | Station Workshop | nova_terra_central | 3   | queued  | 2  
+Total jobs: 3

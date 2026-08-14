@@ -1,0 +1,8 @@
+
+=== Craft Job Retargeted ===
+Job: craft-job-1
+Previous destination: storage
+New destination: faction:Workshop
+Runs remaining: 12
+Auto-docked: yes
+Crafting job craft-job-1 will deliver its remaining output to faction:Workshop.

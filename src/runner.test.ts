@@ -803,6 +803,63 @@ describe('runInvocation option isolation', () => {
     }
   });
 
+  test('craft and recycle retarget requests dispatch job_id with deliver_to unchanged', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-retarget-'));
+    const configHome = path.join(tempDir, 'config');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{
+      command: string;
+      route: { tool?: string; action?: string; method?: string };
+      payload: Record<string, unknown>;
+    }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(
+        command: string,
+        config: { route: { tool?: string; action?: string; method?: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, route: config.route, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' };
+      expect(
+        await runInvocation(
+          ['--structured', 'craft', 'job_id=craft-job-1', 'deliver_to=faction:Workshop'],
+          client,
+          fakeContext(stdout, stderr, env),
+        ),
+      ).toBe(0);
+      expect(
+        await runInvocation(
+          ['--structured', 'recycle', 'job_id=recycle-job-1', 'deliver_to=faction:Scrap'],
+          client,
+          fakeContext(stdout, stderr, env),
+        ),
+      ).toBe(0);
+
+      expect(stderr).toEqual([]);
+      expect(calls).toEqual([
+        {
+          command: 'craft',
+          route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+          payload: { job_id: 'craft-job-1', deliver_to: 'faction:Workshop' },
+        },
+        {
+          command: 'recycle',
+          route: { tool: 'spacemolt', action: 'recycle', method: 'POST' },
+          payload: { job_id: 'recycle-job-1', deliver_to: 'faction:Scrap' },
+        },
+      ]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('facility_upgrade flag syntax prints structured API errors', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
