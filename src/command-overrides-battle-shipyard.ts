@@ -2,6 +2,12 @@ import type { CommandOverride } from './commands';
 
 export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   battle_engage: {
+    usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
+    description:
+      'Join an existing battle. This command cannot start a battle; omit side_id for faction-based auto-assignment.',
+    example: 'spacemolt battle_engage 1',
+    discoverWith: ['get_battle_status'],
+    seeAlso: ['attack', 'get_battle_status', 'battle_target', 'battle_stance'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/engage',
     positionals: ['side_id'],

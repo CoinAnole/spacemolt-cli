@@ -362,6 +362,17 @@ describe('help output branches', () => {
     expect(output).not.toContain('facility build <type>     Build a player facility');
   });
 
+  test('full help distinguishes starting an attack from joining an existing battle', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('attack <target_id>        Start/join persistent system battle');
+    expect(output).toContain('battle_engage [side_id]   Join an existing battle only');
+    expect(output).not.toContain('Join or start a battle');
+  });
+
   test('full help advertises Company Store workflow on normal market commands', () => {
     const capture = captureWriter();
 

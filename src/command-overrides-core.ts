@@ -112,11 +112,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt/mine',
   },
   attack: {
-    usage: '<target_id>  (player, NPC, pirate, or creature from get_nearby)',
-    description: 'Attack a nearby player, NPC, pirate, or wildlife creature. Creature targets start a hunt.',
+    usage: '<target_id>  (player, pirate, empire NPC, wildlife, or station/base)',
+    description:
+      'Attack a nearby player, pirate, empire NPC, wildlife creature, or station/base. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Wildlife stays single-target, while station attacks start sieges.',
     example: 'spacemolt attack <target_id>',
     discoverWith: ['get_nearby', 'get_status'],
-    seeAlso: ['hunt', 'scan', 'get_battle_status'],
+    seeAlso: ['hunt', 'scan', 'get_battle_status', 'battle_target', 'battle_stance'],
     category: 'Combat',
     apiRoute: 'POST /api/v2/spacemolt/attack',
     positionals: ['target_id'],

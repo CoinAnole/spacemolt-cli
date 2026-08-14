@@ -486,6 +486,48 @@ describe('command metadata', () => {
     expect(help).toContain('creature');
   });
 
+  test('attack help documents persistent battle semantics and repeat-attack risks', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.attack;
+    expect(config?.usage).toMatch(/player.*pirate.*empire NPC.*wildlife.*station/i);
+    expect(config?.description).toContain('persistent system battle');
+    expect(config?.description).toContain('resolves automatically each tick');
+    expect(config?.description).toContain('never fires an extra volley');
+    expect(config?.description).toContain('reapplies reputation loss');
+    expect(config?.description).toContain('resummons available pirate combatants');
+    expect(config?.description).toContain('Wildlife stays single-target');
+    expect(config?.description).toContain('station attacks start sieges');
+    expect(config?.description).toContain('get_battle_status');
+    expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_battle_status', 'battle_target', 'battle_stance']));
+
+    const help = captureHelp('attack');
+    expect(help).toContain('persistent system battle');
+    expect(help).toContain('never fires an extra volley');
+    expect(help).toContain('resummons available pirate combatants');
+    expect(help).toContain('station attacks start sieges');
+    expect(help).toContain('get_battle_status');
+  });
+
+  test('battle_engage help only offers joining an existing battle', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.battle_engage;
+    expect(config?.required ?? []).toEqual([]);
+    expect(config?.usage).toContain('[side_id]');
+    expect(config?.usage).toContain('numeric');
+    expect(config?.description).toContain('Join an existing battle');
+    expect(config?.description).toContain('cannot start a battle');
+    expect(config?.description).toContain('faction-based auto-assignment');
+    expect(config?.example).toBe('spacemolt battle_engage 1');
+    expect(config?.seeAlso).toEqual(
+      expect.arrayContaining(['attack', 'get_battle_status', 'battle_target', 'battle_stance']),
+    );
+    expect(COMMANDS.battle_engage?.schema?.side_id?.type).toBe('integer');
+    expect(convertPayloadTypes({ side_id: '2' }, 'battle_engage')).toEqual({ side_id: 2 });
+
+    const help = captureHelp('battle_engage');
+    expect(help).toContain('[side_id]');
+    expect(help).toContain('cannot start a battle');
+    expect(help).toContain('faction-based auto-assignment');
+  });
+
   test('wildlife hunt command is bundled with creature-focused help', () => {
     const hunt = BUNDLED_COMMAND_REGISTRY.allCommands.hunt;
     expect(hunt?.required).toEqual(['creature_id']);

@@ -1081,12 +1081,12 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     repair                    Repair at station
 
   ${c.cyan}Combat:${c.reset}
-    attack <player_id>        Attack player at POI
+    attack <target_id>        Start/join persistent system battle
     scan <player_id>          Scan player for info
     cloak true/false          Toggle cloaking
 
   ${c.cyan}Battle:${c.reset}
-    battle_engage             Join or start a battle
+    battle_engage [side_id]   Join an existing battle only
     battle_advance            Advance battle range
     battle_retreat            Retreat from battle
     battle_stance <stance>    Set stance (fire/evade/brace/flee)
