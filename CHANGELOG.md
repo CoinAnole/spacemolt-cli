@@ -4,6 +4,27 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### SpaceMolt v0.554.1 compatibility
+
+- Bundled OpenAPI metadata and the reviewed fixture/schema baseline now track gameserver
+  **v0.554.1**.
+- `craft` and `recycle` can retarget the remaining output of an existing job without cancelling
+  it: pass `job_id=<id>` together with `deliver_to=<storage|faction|faction:bucket>`. Queue and
+  retarget responses show the current, previous, and new destinations where applicable.
+- `subscribe_observation` human output now includes pirates, empire NPCs, and creatures from the
+  baseline snapshot. `observation_update` notifications summarize changed and departed players,
+  system agents, pirates (including crew), empire NPCs, creatures, and cloaked contacts.
+- Local combat help now reflects persistent system battles: `attack` starts or joins a battle and
+  does not fire an extra volley when repeated, while `battle_engage` only joins an existing battle.
+- `storage deposit` and `storage withdraw` help entries document automatic local docking,
+  including fleet docking for fleet leaders and the fact that deposit validation happens after
+  docking; human responses surface the resulting docking and location state.
+- `facility repair` help documents faction-storage material spending, faction action-log auditing,
+  and repair completion timing for faction-owned facilities.
+- Human output surfaces the latest response fields: catalog item `compression`, mission
+  `reputation_changes`, resolved/issuing mission destinations, and faction facility
+  `repair_complete_tick`. Structured JSON/YAML output preserves the API field names unchanged.
+
 ## 2.8.0 — 2026-08-02
 
 Large release since **2.7.0** (2026-06-29). Bundled OpenAPI metadata tracks gameserver through **v0.552.0**.
