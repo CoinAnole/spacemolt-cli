@@ -27,7 +27,8 @@ export interface CliRuntimeContext {
   env: CliEnv;
   writer: CliWriter;
   clock: CliClock;
-  sleep(ms: number): Promise<void>;
+  /** Resolve after the delay, or promptly when the optional signal is aborted. */
+  sleep(ms: number, signal?: AbortSignal): Promise<void>;
   config?: SpaceMoltConfig;
   output?: CliOutputOptions;
 }
@@ -54,8 +55,20 @@ export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRun
         return new Date();
       },
     },
-    sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+    sleep(ms, signal) {
+      return new Promise((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          signal?.removeEventListener('abort', finish);
+          resolve();
+        };
+        const timer = setTimeout(finish, ms);
+        if (signal?.aborted) finish();
+        else signal?.addEventListener('abort', finish, { once: true });
+      });
     },
     config,
     output: config

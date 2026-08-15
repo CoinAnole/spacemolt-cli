@@ -1859,6 +1859,7 @@ describe('command metadata', () => {
       '--structured',
       '--watch',
       '-w',
+      '--follow',
       '--format',
       '-fmt',
       '--jq',

@@ -122,9 +122,11 @@ function renderPreviewInline(
   c: NotificationColors,
   writeLine: (message?: string) => void,
   verbose = false,
+  noTimestamp = false,
 ): void {
   const tagColor = previewTagColor(preview.tag, c);
-  writeLine(`${c.dim}[${time}]${c.reset} ${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`);
+  const timestamp = noTimestamp ? '' : `${c.dim}[${time}]${c.reset} `;
+  writeLine(`${timestamp}${tagColor}[${preview.tag}]${c.reset} ${preview.headline}`);
   for (const detail of preview.details) {
     writeLine(`  ${detail}`);
   }
@@ -143,6 +145,7 @@ function formatGenericNotification(
   c: NotificationColors,
   writeLine: (message?: string) => void,
   verbose = false,
+  noTimestamp = false,
 ): void {
   const preview = formatNotificationPreview(
     {
@@ -153,7 +156,7 @@ function formatGenericNotification(
     },
     { verbose },
   );
-  renderPreviewInline(preview, time, c, writeLine, verbose);
+  renderPreviewInline(preview, time, c, writeLine, verbose, noTimestamp);
 }
 
 /**
@@ -172,7 +175,7 @@ export const NOTIFICATION_TYPES = [...PREVIEW_HANDLER_TYPES];
  */
 export function formatNotification(
   notification: Notification,
-  options?: { plain?: boolean; verbose?: boolean },
+  options?: { plain?: boolean; verbose?: boolean; noTimestamp?: boolean },
 ): string[] {
   const lines: string[] = [];
   const writeLine = (message = '') => lines.push(message);
@@ -191,14 +194,14 @@ export function formatNotification(
       },
       { verbose },
     );
-    renderPreviewInline(preview, time, c, writeLine, verbose);
+    renderPreviewInline(preview, time, c, writeLine, verbose, Boolean(options?.noTimestamp));
     if (lines.length > 0 && !hasDiagnosticToken(lines)) return lines;
   } catch {
     // Malformed pure preview should not make rendering fail.
   }
 
   lines.length = 0;
-  formatGenericNotification(normalized, time, c, writeLine, Boolean(options?.verbose));
+  formatGenericNotification(normalized, time, c, writeLine, Boolean(options?.verbose), Boolean(options?.noTimestamp));
   return lines;
 }
 
@@ -206,14 +209,18 @@ export function displayNotifications(
   notifications?: APIResponse['notifications'],
   writer?: CliWriter,
   quiet = false,
-  options?: { plain?: boolean; verbose?: boolean },
+  options?: { plain?: boolean; verbose?: boolean; noTimestamp?: boolean },
 ): void {
   if (!Array.isArray(notifications) || !notifications.length) return;
   if (quiet) return;
 
   const out = writer?.out.bind(writer) ?? console.log;
   for (const notification of notifications) {
-    for (const line of formatNotification(notification, { plain: options?.plain, verbose: options?.verbose })) {
+    for (const line of formatNotification(notification, {
+      plain: options?.plain,
+      verbose: options?.verbose,
+      noTimestamp: options?.noTimestamp,
+    })) {
       out(line);
     }
   }

@@ -335,6 +335,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   subscribe_market: {
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/subscribe_market',
+    description:
+      'Subscribe once and return the current market snapshot. Add --follow to keep polling market notifications every 10 seconds until stopped.',
+    example: 'spacemolt subscribe_market --follow',
     discoverWith: ['view_market'],
     seeAlso: ['view_market', 'unsubscribe_market'],
   },

@@ -173,6 +173,21 @@ bun run src/client.ts --watch get_status
 bun run src/client.ts -w 5 get_cargo
 ```
 
+Market and observation subscriptions remain one-shot by default: they subscribe and render the
+baseline snapshot, then return. Add `--follow` to keep the process active with append-only human
+updates from 10-second HTTP notification polling:
+
+```bash
+spacemolt subscribe_market --follow
+spacemolt subscribe_observation active_scan=true --follow
+```
+
+Press Ctrl+C to stop; the CLI makes one best-effort unsubscribe request. If cleanup cannot finish,
+run `spacemolt unsubscribe_market` or `spacemolt unsubscribe_observation` manually. Observation
+notifications cannot currently be filtered server-side, so observation follow mode drains and
+displays the session's entire shared notification queue. Machine-readable streaming is not yet
+supported; automation can use one-shot subscription plus explicit `get_notifications` polling.
+
 Dry run previews supported mutations without sending them:
 
 ```bash

@@ -6,6 +6,8 @@ import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
 import { renderStructuredResult } from './display';
 import { getStatusFixture, highValueCommandFixtures, viewMarketFixture } from './display/formatter-fixtures';
+import { subscribeMarketFixture } from './display/market.fixtures';
+import { getNotificationsFixture } from './display/notifications.fixtures';
 import type { GeneratedApiRoute } from './openapi-metadata';
 import { type RunnerDependencies, runInvocation } from './runner';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
@@ -88,16 +90,25 @@ interface CliGoldenCase {
   stdoutFormat?: GoldenStdoutFormat;
   stderrFormat?: GoldenStdoutFormat;
   expectedYamlKeys?: string[];
+  responsesByCommand?: Record<string, APIResponse[]>;
+  stopFollowAfterPoll?: boolean;
 }
 
-function fakeClient(response: APIResponse): SpaceMoltClient {
+function fakeClient(response: APIResponse, responsesByCommand?: Record<string, APIResponse[]>): SpaceMoltClient {
+  const responseQueues = Object.fromEntries(
+    Object.entries(responsesByCommand ?? {}).map(([command, responses]) => [command, [...responses]]),
+  );
+  const responseFor = (command: string): APIResponse => {
+    const queued = responseQueues[command]?.shift();
+    return structuredClone(queued ?? response);
+  };
   return {
     config: {},
-    async execute() {
-      return structuredClone(response);
+    async execute(command: string) {
+      return responseFor(command);
     },
-    async executeCommandConfig() {
-      return structuredClone(response);
+    async executeCommandConfig(command: string) {
+      return responseFor(command);
     },
   } as unknown as SpaceMoltClient;
 }
@@ -107,7 +118,7 @@ interface CliStreamCapture {
   stderr: string;
 }
 
-function cliContext(tempDir: string, capture: CliStreamCapture): CliRuntimeContext {
+function cliContext(tempDir: string, capture: CliStreamCapture, onSleep?: () => void): CliRuntimeContext {
   return {
     env: {
       XDG_CONFIG_HOME: path.join(tempDir, 'config'),
@@ -131,6 +142,7 @@ function cliContext(tempDir: string, capture: CliStreamCapture): CliRuntimeConte
       },
     },
     sleep() {
+      onSleep?.();
       return Promise.resolve();
     },
     output: {
@@ -149,6 +161,8 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
   const originalActiveProfile = ACTIVE_PROFILE;
   const originalConfigHome = process.env.XDG_CONFIG_HOME;
   const configHome = path.join(tempDir, 'config');
+  let sigintListener: (() => void) | undefined;
+  let sleepCount = 0;
 
   try {
     process.env.XDG_CONFIG_HOME = configHome;
@@ -171,14 +185,23 @@ async function renderCliCase(testCase: CliGoldenCase): Promise<GoldenOutput> {
       getDefaultProfile() {
         return undefined;
       },
-      onSigint() {
+      onSigint(listener) {
+        sigintListener = listener;
+        return () => {
+          sigintListener = undefined;
+        };
+      },
+      onSigterm() {
         return () => undefined;
       },
     };
     const exitCode = await runInvocation(
       testCase.argv,
-      fakeClient(testCase.response ?? { structuredContent: { ok: true } }),
-      cliContext(tempDir, capture),
+      fakeClient(testCase.response ?? { structuredContent: { ok: true } }, testCase.responsesByCommand),
+      cliContext(tempDir, capture, () => {
+        sleepCount += 1;
+        if (testCase.stopFollowAfterPoll && sleepCount === 2) sigintListener?.();
+      }),
       dependencies,
     );
 
@@ -377,6 +400,24 @@ const cliCases: CliGoldenCase[] = [
         items: [{ id: 'alpha', name: 'Alpha Probe', type: 'experimental' }],
         total: 1,
       },
+    },
+  },
+  {
+    name: 'subscribe-market-follow.table',
+    argv: ['--plain', '--no-timestamp', 'subscribe_market', '--follow'],
+    stopFollowAfterPoll: true,
+    responsesByCommand: {
+      subscribe_market: [{ structuredContent: subscribeMarketFixture }],
+      get_notifications: [
+        {
+          structuredContent: {
+            count: 1,
+            notifications: [getNotificationsFixture.notifications[2]],
+            remaining: 0,
+          },
+        },
+      ],
+      unsubscribe_market: [{ structuredContent: { action: 'unsubscribe_market', message: 'Unsubscribed.' } }],
     },
   },
 ];

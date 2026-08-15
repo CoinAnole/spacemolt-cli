@@ -817,6 +817,7 @@ ${c.bright}Global Flags:${c.reset}
   --structured      Output structuredContent only (for automation)
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
+  --follow          Follow market/observation subscriptions via 10-second HTTP polling
   --jq              Extract with path syntax (.key, .key[], .key | length, ...)
   --fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)
   --fuzzy-ids       Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only
@@ -917,6 +918,7 @@ ${c.bright}Global Flags:${c.reset}
   --structured      Output structuredContent only (for automation)
   --no-timestamp    Suppress timestamps on output
   --watch, -w       Re-run command on interval (seconds, default 10)
+  --follow          Follow market/observation subscriptions via 10-second HTTP polling
   --jq              Extract with path syntax (.key, .key[], .key | length, ...)
   --fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)
   --fuzzy-ids       Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only
@@ -1008,6 +1010,7 @@ ${c.bright}Usage:${c.reset}
       --structured        Output structuredContent only (for automation)
       --no-timestamp      Suppress timestamps on output
       --watch, -w <secs>  Re-run command on interval (default 10s)
+      --follow            Follow market/observation subscriptions via 10-second HTTP polling
       --jq <expr>         Extract with path syntax (.key, .key[], .key | length, ...)
       --fuzzy             Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)
       --fuzzy-ids         Soft ID-cache payload match (prefix/substring; system/poi prefix-only); default is exact id/name only
@@ -1179,8 +1182,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Market / Exchange:${c.reset}
     view_market [item_id] [category] [company_store=true]  Order book; company_store shows private faction listings
-    subscribe_market                  Snapshot order book, then receive market_update notifications
-    unsubscribe_market                Stop live market updates
+    subscribe_market                  Subscribe once; add --follow for live market_update notifications
+    unsubscribe_market                Stop live market updates (manual fallback after interrupted follow)
     view_orders [station_id]          Your orders at station
     create_sell_order <item> <qty> <price>  List items for sale
     create_buy_order <item> <qty> <price>   Place a buy offer

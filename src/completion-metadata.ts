@@ -45,6 +45,7 @@ export const GLOBAL_COMPLETION_OPTIONS: CompletionOption[] = [
   { long: '--compact', description: 'Use compact output where supported' },
   { long: '--structured', description: 'Prefer structured response output' },
   { long: '--watch', short: '-w', description: 'Repeat command every N seconds', takesValue: true },
+  { long: '--follow', description: 'Follow supported subscriptions by polling notifications' },
   {
     long: '--format',
     short: '-fmt',

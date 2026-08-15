@@ -2047,6 +2047,20 @@ describe('CLI output modes', () => {
     expect(result.options.args).toEqual(['get_status']);
   });
 
+  test('--follow is a global boolean flag in any option position', () => {
+    for (const argv of [
+      ['--follow', 'subscribe_market'],
+      ['subscribe_market', '--follow'],
+      ['subscribe_observation', 'active_scan=true', '--plain', '--follow'],
+    ]) {
+      const result = parseGlobalOptions(argv);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.error.message);
+      expect(result.options.follow).toBe(true);
+      expect(result.options.args).not.toContain('--follow');
+    }
+  });
+
   test('global option parser handles watch, format, jq, profile, fuzzy, and dry-run values', () => {
     const result = parseGlobalOptions([
       '--watch',

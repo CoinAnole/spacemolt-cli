@@ -106,6 +106,7 @@ export async function renderResponse(
     displayNotifications(response.notifications, writer, renderOptions.quiet, {
       plain: renderOptions.plain,
       verbose: renderOptions.verboseNotifications,
+      noTimestamp: renderOptions.noTimestamp,
     });
     if (writer) writer.out('');
     else console.log('');

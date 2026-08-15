@@ -231,6 +231,8 @@ export function parseGlobalOptions(args: string[]): GlobalOptionParseResult {
       const parsed = parseWatchValue('--watch', arg.slice('--watch='.length), outputState(result));
       if (typeof parsed !== 'number') return parsed;
       result.watch = parsed;
+    } else if (arg === '--follow') {
+      result.follow = true;
     } else if (arg === '--format' || arg === '-fmt') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {

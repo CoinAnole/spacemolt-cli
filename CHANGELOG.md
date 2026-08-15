@@ -14,6 +14,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `subscribe_observation` human output now includes pirates, empire NPCs, and creatures from the
   baseline snapshot. `observation_update` notifications summarize changed and departed players,
   system agents, pirates (including crew), empire NPCs, creatures, and cloaked contacts.
+- `subscribe_market --follow` and `subscribe_observation active_scan=true --follow` now keep a
+  subscription open using 10-second HTTP notification polling. The existing commands remain
+  one-shot without the flag, machine-readable follow output is intentionally rejected, and
+  Ctrl+C/SIGTERM makes one best-effort unsubscribe request. Observation follow mode warns that it
+  must drain and display the shared, currently unfilterable notification queue.
 - Local combat help now reflects persistent system battles: `attack` starts or joins a battle and
   does not fire an extra volley when repeated, while `battle_engage` only joins an existing battle.
 - `storage deposit` and `storage withdraw` help entries document automatic local docking,

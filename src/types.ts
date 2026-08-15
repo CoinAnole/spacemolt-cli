@@ -51,6 +51,8 @@ export interface GlobalOptions {
   compact: boolean;
   structured?: boolean;
   watch?: number;
+  /** Keep supported subscription commands active by polling notifications over HTTP. */
+  follow?: boolean;
   jq?: string;
   keys?: string;
   outputSearch?: string;

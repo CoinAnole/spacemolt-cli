@@ -374,6 +374,14 @@ describe('shell completion generation', () => {
     expect(labels).toContain('--raw-notifications');
   });
 
+  test('runtime completion suggests subscription follow mode', () => {
+    const labels = completeWords({ shell: 'fish', words: ['spacemolt', '--fol'], current: '--fol' }).map(
+      (entry) => entry.value,
+    );
+
+    expect(labels).toContain('--follow');
+  });
+
   test('runtime completion exposes groups and hides grouped flat command names', () => {
     const values = completeWords({ shell: 'fish', words: ['spacemolt', 'fa'], current: 'fa' }).map(
       (candidate) => candidate.value,

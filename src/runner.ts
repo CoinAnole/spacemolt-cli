@@ -28,6 +28,7 @@ import { colorsForPlain } from './output-style.ts';
 import { API_BASE } from './runtime.ts';
 import { resolveFuzzyIdsEnabled } from './runtime-config.ts';
 import { getDefaultProfile, loadCliConfig, setActiveProfile, validateProfileName } from './session.ts';
+import { runSubscriptionFollow, validateSubscriptionFollow } from './subscription-follow.ts';
 import type { GlobalOptions } from './types.ts';
 import { checkForUpdates } from './update.ts';
 
@@ -45,6 +46,7 @@ export interface RunnerDependencies {
   resolveHandler?: typeof resolveHandler;
   createClient?: (config: SpaceMoltClient['config']) => SpaceMoltClient;
   onSigint?: (listener: () => void) => () => void;
+  onSigterm?: (listener: () => void) => () => void;
 }
 
 const defaultRunnerDependencies: Required<RunnerDependencies> = {
@@ -60,6 +62,10 @@ const defaultRunnerDependencies: Required<RunnerDependencies> = {
   onSigint(listener) {
     process.on('SIGINT', listener);
     return () => process.removeListener('SIGINT', listener);
+  },
+  onSigterm(listener) {
+    process.on('SIGTERM', listener);
+    return () => process.removeListener('SIGTERM', listener);
   },
 };
 
@@ -266,7 +272,16 @@ async function runInvocationWithContext(
   });
   const isDynamicCompletion = invocation.args[0] === '__complete';
 
-  if (!isDynamicCompletion && !invocation.options.json && !invocation.options.quiet && !invocation.options.watch) {
+  const followError = validateSubscriptionFollow(invocation);
+  if (followError) return renderCommandError(followError, invocation.options, resolvedContext);
+
+  if (
+    !isDynamicCompletion &&
+    !invocation.options.json &&
+    !invocation.options.quiet &&
+    !invocation.options.watch &&
+    !invocation.options.follow
+  ) {
     deps.checkForUpdates({
       env: resolvedContext.env,
       clock: resolvedContext.clock,
@@ -278,6 +293,20 @@ async function runInvocationWithContext(
 
   const handler = deps.resolveHandler(invocation.args, invocation.options, commandRegistry);
   const activeClient = client ?? deps.createClient(config);
+
+  if (invocation.options.follow) {
+    if (!handler) return renderUnknownCommand(invocation, resolvedContext, commandRegistry);
+    return runSubscriptionFollow(invocation, handler, activeClient, resolvedContext, {
+      onSigint: deps.onSigint,
+      onSigterm: deps.onSigterm,
+      renderCommandError(error) {
+        return renderCommandError(error, invocation.options, resolvedContext);
+      },
+      renderConnectionError(error) {
+        return renderConnectionError(error, invocation.options, resolvedContext);
+      },
+    });
+  }
 
   if (invocation.options.watch) {
     if (!handler) return renderUnknownCommand(invocation, resolvedContext, commandRegistry);

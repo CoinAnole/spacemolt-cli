@@ -134,6 +134,8 @@ describe('help output branches', () => {
     expect(output).toContain('Render raw notification streams');
     expect(output).toContain('--verbose-notifications');
     expect(output).toContain('omitted-field hints');
+    expect(output).toContain('--follow');
+    expect(output).toContain('10-second HTTP polling');
     expect(output).toContain('--jq              Extract with path syntax');
     expect(output).toContain(
       '--fuzzy           Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)',
@@ -1083,6 +1085,8 @@ describe('help output branches', () => {
     expect(output).toContain('Render raw notification streams');
     expect(output).toContain('--verbose-notifications');
     expect(output).toContain('omitted-field hints');
+    expect(output).toContain('--follow');
+    expect(output).toContain('10-second HTTP polling');
     expect(output).toContain('--jq <expr>         Extract with path syntax');
     expect(output).toContain(
       '--fuzzy             Auto-resolve simple --jq paths to similar keys (jq only; not ID soft match)',
