@@ -3,11 +3,18 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
+import { ServiceUnavailableError } from './errors.ts';
 import { colorsForPlain } from './output-style.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
-import { API_BASE, DEFAULT_USER_AGENT, userAgentFromConfigValue } from './runtime.ts';
+import { requestWithServiceUnavailableRetry } from './retry-after.ts';
+import {
+  API_BASE,
+  DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS,
+  DEFAULT_USER_AGENT,
+  userAgentFromConfigValue,
+} from './runtime.ts';
 import { requestJson } from './transport.ts';
-import type { APIResponse, Session } from './types.ts';
+import type { APIResponse, JsonRequestOptions, JsonResponse, Session } from './types.ts';
 
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
@@ -364,6 +371,11 @@ export function showDefaultProfile(
   else console.log(message);
 }
 
+type SessionTransport = <T>(
+  url: string,
+  options?: JsonRequestOptions,
+) => Promise<Pick<JsonResponse<T>, 'status' | 'data'> & Partial<Pick<JsonResponse<T>, 'ok' | 'retryAfterHeader'>>>;
+
 export interface SessionManagerOptions {
   apiBase?: string;
   profile?: string;
@@ -372,8 +384,10 @@ export interface SessionManagerOptions {
   plain?: boolean;
   userAgent?: string;
   logger?: { log(message: string): void };
-  transport?: typeof requestJson;
+  transport?: SessionTransport;
   clock?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+  onRetryWait?: (seconds: number) => void;
   env?: EnvLike;
 }
 
@@ -386,8 +400,10 @@ export class SessionManager {
   private readonly _plain: boolean;
   private readonly _userAgent?: string;
   private readonly _logger: { log(message: string): void };
-  private readonly _transport: typeof requestJson;
+  private readonly _transport: SessionTransport;
   private readonly _clock: () => number;
+  private readonly _sleep: (ms: number) => Promise<void>;
+  private readonly _onRetryWait?: (seconds: number) => void;
   private readonly _env: EnvLike;
 
   constructor(options?: SessionManagerOptions) {
@@ -401,7 +417,39 @@ export class SessionManager {
     this._logger = options?.logger ?? { log: (message) => console.log(message) };
     this._transport = options?.transport ?? requestJson;
     this._clock = options?.clock ?? Date.now;
+    this._sleep = options?.sleep ?? ((ms) => Bun.sleep(ms));
+    this._onRetryWait = options?.onRetryWait;
     this._env = options?.env ?? process.env;
+  }
+
+  private serviceUnavailableRetryOpts() {
+    return {
+      sleep: this._sleep,
+      now: this._clock,
+      onRetryWait: this._onRetryWait,
+    };
+  }
+
+  private exhaustedServiceUnavailableError(response: JsonResponse<APIResponse>): ServiceUnavailableError {
+    return new ServiceUnavailableError(
+      response.data.error?.message?.trim() ||
+        'The authentication provider is temporarily unreachable. Wait and retry; do not change your password.',
+      typeof response.data.error?.retry_after === 'number'
+        ? response.data.error.retry_after
+        : DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS,
+    );
+  }
+
+  private asRetryResponse(
+    response: Pick<JsonResponse<APIResponse>, 'status' | 'data'> &
+      Partial<Pick<JsonResponse<APIResponse>, 'ok' | 'retryAfterHeader'>>,
+  ): JsonResponse<APIResponse> {
+    return {
+      status: response.status,
+      ok: response.ok ?? (response.status >= 200 && response.status < 400),
+      data: response.data,
+      retryAfterHeader: response.retryAfterHeader,
+    };
   }
 
   get apiBase(): string {
@@ -492,12 +540,21 @@ export class SessionManager {
   async createTransientSession(savedCredentials?: Pick<Session, 'username' | 'password'>): Promise<Session> {
     const colors = colorsForPlain(this._plain);
     if (this.debug) this._logger.log(`${colors.dim}[DEBUG] Creating new session...${colors.reset}`);
-    const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
-    });
+    const response = await requestWithServiceUnavailableRetry(
+      async () =>
+        this.asRetryResponse(
+          await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
+          }),
+        ),
+      this.serviceUnavailableRetryOpts(),
+    );
     const data = response.data;
+    if (response.status === 503 || data.error?.code === 'service_unavailable') {
+      throw this.exhaustedServiceUnavailableError(response);
+    }
     if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
     if (!data.session) throw new Error('No session in response');
     const session: Session = {
@@ -547,13 +604,22 @@ export class SessionManager {
       this._logger.log(
         `${colors.dim}[DEBUG] Authenticating profile ${profName} as ${session.username}...${colors.reset}`,
       );
-    const response = await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
-      method: 'POST',
-      sessionId: session.id,
-      payload: { username: session.username, password: session.password },
-      userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
-    });
+    const response = await requestWithServiceUnavailableRetry(
+      async () =>
+        this.asRetryResponse(
+          await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/spacemolt_auth/login`, {
+            method: 'POST',
+            sessionId: session.id,
+            payload: { username: session.username, password: session.password },
+            userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
+          }),
+        ),
+      this.serviceUnavailableRetryOpts(),
+    );
     const data = response.data;
+    if (response.status === 503 || data.error?.code === 'service_unavailable') {
+      return this.exhaustedServiceUnavailableError(response).toAPIResponse();
+    }
     if (data.error) return data;
 
     if (data.session) {

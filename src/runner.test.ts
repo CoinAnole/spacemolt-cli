@@ -1780,6 +1780,106 @@ describe('runInvocation option isolation', () => {
     }
   });
 
+  test('login JSON 503s on /session are service_unavailable not connection_error', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-login-503-json-'));
+    const configHome = path.join(tempDir, 'config');
+
+    try {
+      const result = await withConfigHome(configHome, async () =>
+        captureInvocation(
+          ['--json', '--plain', 'login', 'Pilot', 'secret'],
+          { XDG_CONFIG_HOME: configHome },
+          {
+            createClient(config) {
+              return new RealSpaceMoltClient({
+                config,
+                sessionStore: new SessionManager({
+                  apiBase: config.apiBase,
+                  profile: config.profile,
+                  profileIsExplicit: config.profileIsExplicit,
+                  env: { XDG_CONFIG_HOME: configHome } as EnvLike,
+                  sleep: () => Promise.resolve(),
+                  transport: async <T>() => ({
+                    status: 503,
+                    ok: false,
+                    retryAfterHeader: '0',
+                    data: {
+                      error: { code: 'service_unavailable', message: 'auth provider down' },
+                    } as T,
+                  }),
+                }),
+                sleep: () => Promise.resolve(),
+                transport: {
+                  async requestJson() {
+                    throw new Error('command URL should not be requested after session 503 exhaustion');
+                  },
+                },
+              });
+            },
+          },
+        ),
+      );
+
+      expect(result.exitCode).toBe(1);
+      const payload = JSON.parse(result.stderr || result.stdout);
+      expect(payload.error?.code).toBe('service_unavailable');
+      expect(payload.error?.code).not.toBe('connection_error');
+      expect(result.stderr).not.toContain('connection_error');
+      expect(result.stderr).not.toContain('Connection Error:');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('login human 503s on /session are service_unavailable not Connection Error', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-login-503-human-'));
+    const configHome = path.join(tempDir, 'config');
+
+    try {
+      const result = await withConfigHome(configHome, async () =>
+        captureInvocation(
+          ['--plain', 'login', 'Pilot', 'secret'],
+          { XDG_CONFIG_HOME: configHome },
+          {
+            createClient(config) {
+              return new RealSpaceMoltClient({
+                config,
+                sessionStore: new SessionManager({
+                  apiBase: config.apiBase,
+                  profile: config.profile,
+                  profileIsExplicit: config.profileIsExplicit,
+                  env: { XDG_CONFIG_HOME: configHome } as EnvLike,
+                  sleep: () => Promise.resolve(),
+                  transport: async <T>() => ({
+                    status: 503,
+                    ok: false,
+                    retryAfterHeader: '0',
+                    data: {
+                      error: { code: 'service_unavailable', message: 'auth provider down' },
+                    } as T,
+                  }),
+                }),
+                sleep: () => Promise.resolve(),
+                transport: {
+                  async requestJson() {
+                    throw new Error('command URL should not be requested after session 503 exhaustion');
+                  },
+                },
+              });
+            },
+          },
+        ),
+      );
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Error [service_unavailable]');
+      expect(result.stderr).not.toContain('Connection Error:');
+      expect(result.stderr).not.toContain('connection_error');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('connection errors use explicit output state after parsing', async () => {
     const result = await captureInvocation(
       ['--plain', '--debug', 'get_status'],

@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { ServiceUnavailableError } from './errors.ts';
 import type { requestJson } from './transport.ts';
 import type { APIResponse, JsonRequestOptions, JsonResponse } from './types.ts';
 
@@ -639,5 +640,121 @@ describe('SessionManager', () => {
 
     const loaded = await manager.loadSession();
     expect(loaded).toEqual(session);
+  });
+
+  test('createTransientSession retries a 503 then succeeds', async () => {
+    const waits: number[] = [];
+    const sleeps: number[] = [];
+    let calls = 0;
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      onRetryWait: (seconds) => {
+        waits.push(seconds);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        if (calls === 1) {
+          return {
+            status: 503,
+            ok: false,
+            retryAfterHeader: '2',
+            data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+          };
+        }
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_after_503',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    const session = await manager.createTransientSession();
+    expect(session.id).toBe('sess_after_503');
+    expect(calls).toBe(2);
+    expect(sleeps).toEqual([2000]);
+    expect(waits).toEqual([2]);
+  });
+
+  test('createTransientSession throws ServiceUnavailableError after four 503s', async () => {
+    let calls = 0;
+    const waits: number[] = [];
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async () => {},
+      onRetryWait: (seconds) => {
+        waits.push(seconds);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '2',
+          data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    try {
+      await manager.createTransientSession();
+      throw new Error('expected ServiceUnavailableError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ServiceUnavailableError);
+      expect((error as Error).message).not.toContain('Failed to create session: invalid token');
+      expect((error as ServiceUnavailableError).code).toBe('service_unavailable');
+    }
+    expect(calls).toBe(4);
+    expect(waits).toEqual([2, 2, 2]);
+  });
+
+  test('authenticateProfileSession returns service_unavailable after four 503s', async () => {
+    let calls = 0;
+    const waits: number[] = [];
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async () => {},
+      onRetryWait: (seconds) => {
+        waits.push(seconds);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '0',
+          data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+        };
+      }) as unknown as typeof requestJson,
+    });
+    const sessionObj: Session = {
+      id: 'sess_auth_503',
+      username: 'my_user',
+      password: 'my_password',
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 3600000).toISOString(),
+    };
+
+    const result = await manager.authenticateProfileSession(sessionObj);
+    expect(result?.error?.code).toBe('service_unavailable');
+    expect(result?.error?.code).not.toBe('invalid_credentials');
+    expect(calls).toBe(4);
+    expect(waits).toEqual([0, 0, 0]);
+    expect(sessionObj.player_id).toBeUndefined();
   });
 });

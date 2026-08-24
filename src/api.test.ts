@@ -4,8 +4,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { SpaceMoltClient, type SpaceMoltClientOptions } from './api.ts';
 import { reservedRoutingActionError } from './args.ts';
+import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
 import { BUNDLED_COMMAND_REGISTRY } from './command-registry.ts';
 import type { CommandConfig } from './commands.ts';
+import { ServiceUnavailableError } from './errors.ts';
+import { displayError } from './help.ts';
 import { createCommandConfigDryRunResponse } from './preview.ts';
 import { runCommand } from './response-renderer.ts';
 import { VERSION } from './runtime.ts';
@@ -74,8 +77,33 @@ function createStore(initial = session()): NonNullable<SpaceMoltClientOptions['s
   };
 }
 
+/** HTTP-layer mock. Distinct from APIResponse because those fixtures have no `data` key. */
+type QueuedHttp = {
+  status?: number; // default 200
+  data: APIResponse;
+  retryAfterHeader?: string;
+};
+
+function queuedHttp(data: APIResponse, extras: { status?: number; retryAfterHeader?: string } = {}): QueuedHttp {
+  return { data, status: extras.status ?? 200, retryAfterHeader: extras.retryAfterHeader };
+}
+
+function unavailableFrame(retryAfterHeader = '2', message = 'auth provider down'): QueuedHttp {
+  return queuedHttp(
+    response({
+      error: { code: 'service_unavailable', message },
+      session: {
+        id: 'sess_should_not_persist',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2099-01-01T00:00:00.000Z',
+      },
+    }),
+    { status: 503, retryAfterHeader },
+  );
+}
+
 function createClient(
-  responses: APIResponse[],
+  responses: Array<APIResponse | QueuedHttp>,
   store = createStore(),
   options: Partial<SpaceMoltClientOptions> = {},
 ): {
@@ -101,7 +129,18 @@ function createClient(
     transport: {
       async requestJson<T>(url: string, requestOptions?: JsonRequestOptions) {
         calls.push({ url, options: requestOptions });
-        return { status: 200, data: (responses.shift() ?? response()) as T };
+        const next = responses.shift() ?? response();
+        if (next && typeof next === 'object' && 'data' in next) {
+          const frame = next as QueuedHttp;
+          const status = frame.status ?? 200;
+          return {
+            status,
+            ok: status >= 200 && status < 400,
+            data: frame.data as T,
+            retryAfterHeader: frame.retryAfterHeader,
+          };
+        }
+        return { status: 200, ok: true, data: next as T };
       },
     },
     sleep: async (ms) => {
@@ -1412,5 +1451,644 @@ describe('SpaceMoltClient', () => {
     }
 
     expect(calls).toEqual([]);
+  });
+
+  test('retries a command HTTP 503 using Retry-After then succeeds', async () => {
+    const { client, calls, sleeps } = createClient([unavailableFrame('2'), response()]);
+
+    const result = await client.execute('mine');
+
+    expect(result.error).toBeUndefined();
+    expect(calls).toHaveLength(2);
+    expect(sleeps).toEqual([2000]);
+  });
+
+  test('HTTP-date Retry-After on a command 503 uses the injectable clock', async () => {
+    const nowMs = Date.parse('Wed, 21 Oct 2015 07:28:00 GMT');
+    const { client, calls, sleeps } = createClient(
+      [
+        queuedHttp(response({ error: { code: 'service_unavailable', message: 'down' } }), {
+          status: 503,
+          retryAfterHeader: 'Wed, 21 Oct 2015 07:28:12 GMT',
+        }),
+        response(),
+      ],
+      createStore(),
+      { clock: { now: () => nowMs } },
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error).toBeUndefined();
+    expect(calls).toHaveLength(2);
+    expect(sleeps).toEqual([12000]);
+  });
+
+  test('four command 503s return service_unavailable without throwing or persisting session', async () => {
+    const store = createStore();
+    const { client, calls, sleeps } = createClient(
+      [unavailableFrame('2'), unavailableFrame('2'), unavailableFrame('2'), unavailableFrame('2'), response()],
+      store,
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('service_unavailable');
+    expect(result.error?.retry_after).toBe(2);
+    expect(calls).toHaveLength(4);
+    expect(sleeps).toEqual([2000, 2000, 2000]);
+    expect(store.saved).toEqual([]);
+    expect(store.current?.id).toBe('sess_old');
+  });
+
+  test('503 retries do not consume the rate-limit budget', async () => {
+    const rateLimited = response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 1 } });
+    const { client, calls, sleeps } = createClient([
+      unavailableFrame('2'),
+      rateLimited,
+      rateLimited,
+      rateLimited,
+      rateLimited,
+      response(),
+    ]);
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('rate_limited');
+    expect(calls).toHaveLength(5);
+    expect(sleeps).toEqual([2000, 1000, 1000, 1000]);
+  });
+
+  test('exhausted command 503 is not returned as invalid_credentials', async () => {
+    const invalidToken = queuedHttp(response({ error: { code: 'invalid_credentials', message: 'invalid token' } }), {
+      status: 503,
+      retryAfterHeader: '0',
+    });
+    const { client } = createClient([invalidToken, invalidToken, invalidToken, invalidToken]);
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('service_unavailable');
+    expect(result.error?.code).not.toBe('invalid_credentials');
+    expect(result.error?.message).toBe('invalid token');
+  });
+
+  test('login 503 then success persists credentials', async () => {
+    const { client, store, calls, sleeps } = createClient([
+      unavailableFrame('2'),
+      response({
+        structuredContent: { player: { id: 'player_login' } },
+        session: {
+          id: 'sess_old',
+          created_at: '2026-01-01T00:00:00.000Z',
+          expires_at: '2099-01-01T00:00:00.000Z',
+        },
+      }),
+    ]);
+
+    const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+
+    expect(result.error).toBeUndefined();
+    expect(calls).toHaveLength(2);
+    expect(sleeps).toEqual([2000]);
+    expect(store.current?.username).toBe('Pilot');
+    expect(store.current?.password).toBe('secret');
+    expect(store.current?.player_id).toBe('player_login');
+  });
+
+  test('login with four POST /session 503s returns service_unavailable and does not persist credentials', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-session-503-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const sessionCalls: string[] = [];
+    const commandCalls: string[] = [];
+    const manager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env: { XDG_CONFIG_HOME: configRoot },
+      sleep: async () => {},
+      transport: async <T>(url: string) => {
+        sessionCalls.push(url);
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '0',
+          data: { error: { code: 'invalid_credentials', message: 'invalid token' } } as T,
+        };
+      },
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: manager,
+      sleep: async () => {},
+      transport: {
+        async requestJson<T>(url: string) {
+          commandCalls.push(url);
+          return { status: 200, data: response() as T };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+      expect(result.error?.code).toBe('service_unavailable');
+      expect(result.error?.code).not.toBe('invalid_credentials');
+      expect(sessionCalls).toHaveLength(4);
+      expect(commandCalls).toEqual([]);
+      expect(fs.existsSync(path.join(configRoot, 'spacemolt-cli', 'sessions', 'pilot.json'))).toBe(false);
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('authenticateProfileSession service_unavailable is not stacked onto a command 503 budget', async () => {
+    const store = createStore();
+    store.authError = {
+      error: {
+        code: 'service_unavailable',
+        message: 'The authentication provider is temporarily unreachable.',
+        retry_after: 5,
+      },
+    };
+    const { client, calls, sleeps } = createClient(
+      [unavailableFrame('2'), unavailableFrame('2'), unavailableFrame('2'), unavailableFrame('2')],
+      store,
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('service_unavailable');
+    expect(calls).toHaveLength(0);
+    expect(sleeps).toEqual([]);
+  });
+
+  test('profile auth HTTP 503 budget does not start command-URL 503 retries', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-auth-503-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const authCalls: string[] = [];
+    const commandCalls: string[] = [];
+    const manager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      profile: 'pilot',
+      profileIsExplicit: true,
+      env: { XDG_CONFIG_HOME: configRoot },
+      sleep: async () => {},
+      transport: async <T>(url: string) => {
+        authCalls.push(url);
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '0',
+          data: { error: { code: 'invalid_credentials', message: 'invalid token' } } as T,
+        };
+      },
+    });
+    await manager.saveSession(session({ username: 'Pilot', password: 'secret' }));
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+        profile: 'pilot',
+        profileIsExplicit: true,
+      },
+      sessionStore: manager,
+      sleep: async () => {},
+      transport: {
+        async requestJson<T>(url: string) {
+          commandCalls.push(url);
+          return {
+            status: 503,
+            ok: false,
+            retryAfterHeader: '0',
+            data: { error: { code: 'service_unavailable', message: 'down' } } as T,
+          };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('mine');
+      expect(result.error?.code).toBe('service_unavailable');
+      expect(result.error?.code).not.toBe('invalid_credentials');
+      expect(authCalls).toEqual([
+        'https://game.test/api/v2/spacemolt_auth/login',
+        'https://game.test/api/v2/spacemolt_auth/login',
+        'https://game.test/api/v2/spacemolt_auth/login',
+        'https://game.test/api/v2/spacemolt_auth/login',
+      ]);
+      expect(commandCalls).toEqual([]);
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('recovery 503 returns service_unavailable instead of session_expired and does not prompt login', async () => {
+    const logs: string[] = [];
+    const store = createStore(session({ username: 'Pilot', password: 'secret' }));
+    const { client, calls } = createClient(
+      [
+        response({ error: { code: 'session_expired', message: 'expired' } }),
+        unavailableFrame('2'),
+        unavailableFrame('2'),
+        unavailableFrame('2'),
+        unavailableFrame('2'),
+      ],
+      store,
+      {
+        config: {
+          apiBase: 'https://game.test/api/v2/',
+          jsonOutput: false,
+          debug: false,
+          plain: true,
+          quiet: false,
+          format: 'table',
+          compact: false,
+        },
+        logger: {
+          debug(message) {
+            logs.push(message);
+          },
+          error(message) {
+            logs.push(message);
+          },
+          warn(message) {
+            logs.push(message);
+          },
+        },
+      },
+    );
+
+    const result = await client.execute('mine');
+
+    expect(result.error?.code).toBe('service_unavailable');
+    expect(result.error?.code).not.toBe('session_expired');
+    expect(result.error?.code).not.toBe('session_invalid');
+    expect(result.error?.code).not.toBe('connection_error');
+    expect(calls.map((call) => call.url)).toEqual([
+      'https://game.test/api/v2/spacemolt/mine',
+      'https://game.test/api/v2/spacemolt_auth/login',
+      'https://game.test/api/v2/spacemolt_auth/login',
+      'https://game.test/api/v2/spacemolt_auth/login',
+      'https://game.test/api/v2/spacemolt_auth/login',
+    ]);
+
+    const stderr: string[] = [];
+    const writer: CliWriter = {
+      out() {},
+      err(message = '') {
+        stderr.push(message);
+      },
+      writeOut() {},
+    };
+    const context: CliRuntimeContext = {
+      env: {},
+      writer,
+      clock: { now: () => new Date('2026-01-01T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+    displayError('mine', result.error ?? {}, { context });
+
+    const combined = `${logs.join('\n')}\n${stderr.join('\n')}`;
+    expect(combined).not.toContain('Run "spacemolt login');
+    expect(combined.toLowerCase()).not.toContain('authentication error');
+    expect(combined).toMatch(/UNAVAILABLE|Do not change your password/);
+  });
+
+  test('login in-loop createSession 503s return service_unavailable without throwing', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-login-loop-503-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const sessionPayload = {
+      session: {
+        id: 'sess_boot',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2099-01-01T00:00:00.000Z',
+      },
+    };
+    const sessionQueue: Array<{ status: number; retryAfterHeader?: string; data: APIResponse }> = [
+      { status: 200, data: sessionPayload },
+      {
+        status: 503,
+        retryAfterHeader: '0',
+        data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+      },
+      {
+        status: 503,
+        retryAfterHeader: '0',
+        data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+      },
+      {
+        status: 503,
+        retryAfterHeader: '0',
+        data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+      },
+      {
+        status: 503,
+        retryAfterHeader: '0',
+        data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+      },
+    ];
+    const sessionCalls: string[] = [];
+    const manager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env: { XDG_CONFIG_HOME: configRoot },
+      sleep: async () => {},
+      transport: async <T>(url: string) => {
+        sessionCalls.push(url);
+        const next = sessionQueue.shift() ?? {
+          status: 503,
+          retryAfterHeader: '0',
+          data: { error: { code: 'service_unavailable', message: 'down' } },
+        };
+        return {
+          status: next.status,
+          ok: next.status >= 200 && next.status < 400,
+          retryAfterHeader: next.retryAfterHeader,
+          data: next.data as T,
+        };
+      },
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: manager,
+      sleep: async () => {},
+      transport: {
+        async requestJson<T>() {
+          return {
+            status: 200,
+            data: { error: { code: 'session_invalid', message: 'stale session' } } as T,
+          };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+      expect(result.error?.code).toBe('service_unavailable');
+      expect(result.error?.code).not.toBe('session_invalid');
+      expect(result.error?.code).not.toBe('connection_error');
+      expect(sessionCalls).toHaveLength(5);
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('DEBUG logs Retry-After on the Response line', async () => {
+    const logs: string[] = [];
+    const { client } = createClient([unavailableFrame('8'), response()], createStore(), {
+      config: {
+        apiBase: 'https://game.test/api/v2/',
+        jsonOutput: true,
+        debug: true,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      logger: {
+        debug(message) {
+          logs.push(message);
+        },
+        error() {},
+        warn() {},
+      },
+    });
+
+    await client.execute('mine');
+
+    expect(logs.some((line) => /Response: 503 \(\d+ms\) Retry-After: 8/.test(line))).toBe(true);
+  });
+
+  test('recoverSession createSession 503s propagate as service_unavailable', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-recover-create-503-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const manager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      profile: 'pilot',
+      profileIsExplicit: true,
+      env: { XDG_CONFIG_HOME: configRoot },
+      sleep: async () => {},
+      transport: async <T>() => ({
+        status: 503,
+        ok: false,
+        retryAfterHeader: '0',
+        data: { error: { code: 'invalid_credentials', message: 'invalid token' } } as T,
+      }),
+    });
+    await manager.saveSession(session({ username: 'Pilot', password: 'secret', player_id: 'player_1' }));
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+        profile: 'pilot',
+        profileIsExplicit: true,
+      },
+      sessionStore: manager,
+      sleep: async () => {},
+      transport: {
+        async requestJson<T>() {
+          return { status: 200, data: { error: { code: 'session_expired', message: 'expired' } } as T };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('mine');
+      expect(result.error?.code).toBe('service_unavailable');
+      expect(result.error?.code).not.toBe('session_expired');
+      expect(await manager.loadSession()).toMatchObject({
+        username: 'Pilot',
+        password: 'secret',
+        player_id: 'player_1',
+      });
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('execute() does not throw ServiceUnavailableError after exhausted 503s', async () => {
+    const { client } = createClient([
+      unavailableFrame('0'),
+      unavailableFrame('0'),
+      unavailableFrame('0'),
+      unavailableFrame('0'),
+    ]);
+
+    const result = await client.execute('mine');
+    expect(result.error?.code).toBe('service_unavailable');
+    expect(result).not.toBeInstanceOf(ServiceUnavailableError);
+  });
+
+  test('default SessionManager uses client sleep and omits wait banners when jsonOutput is true', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-default-session-json-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const logs: string[] = [];
+    const sleeps: number[] = [];
+    const urls: string[] = [];
+    let sessionAttempts = 0;
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: true,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      logger: {
+        debug() {},
+        error(message) {
+          logs.push(message);
+        },
+        warn(message) {
+          logs.push(message);
+        },
+      },
+      transport: {
+        async requestJson<T>(url: string) {
+          urls.push(url);
+          if (url.endsWith('/session')) {
+            sessionAttempts += 1;
+            if (sessionAttempts === 1) {
+              return {
+                status: 503,
+                ok: false,
+                retryAfterHeader: '2',
+                data: { error: { code: 'service_unavailable', message: 'down' } } as T,
+              };
+            }
+            return {
+              status: 200,
+              ok: true,
+              data: {
+                session: {
+                  id: 'sess_default_json',
+                  created_at: '2026-01-01T00:00:00.000Z',
+                  expires_at: '2099-01-01T00:00:00.000Z',
+                },
+              } as T,
+            };
+          }
+          return {
+            status: 200,
+            ok: true,
+            data: { structuredContent: { player: { id: 'player_login' } } } as T,
+          };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+      expect(result.error).toBeUndefined();
+      expect(sessionAttempts).toBe(2);
+      expect(sleeps).toEqual([2000]);
+      expect(logs.join('\n')).not.toContain('[UNAVAILABLE]');
+      expect(urls.some((url) => url.endsWith('/spacemolt_auth/login'))).toBe(true);
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('default SessionManager records the wait banner when jsonOutput is false', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-default-session-human-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const logs: string[] = [];
+    const sleeps: number[] = [];
+    let sessionAttempts = 0;
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: true,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      logger: {
+        debug() {},
+        error(message) {
+          logs.push(message);
+        },
+        warn(message) {
+          logs.push(message);
+        },
+      },
+      transport: {
+        async requestJson<T>(url: string) {
+          if (url.endsWith('/session')) {
+            sessionAttempts += 1;
+            if (sessionAttempts === 1) {
+              return {
+                status: 503,
+                ok: false,
+                retryAfterHeader: '2',
+                data: { error: { code: 'service_unavailable', message: 'down' } } as T,
+              };
+            }
+            return {
+              status: 200,
+              ok: true,
+              data: {
+                session: {
+                  id: 'sess_default_human',
+                  created_at: '2026-01-01T00:00:00.000Z',
+                  expires_at: '2099-01-01T00:00:00.000Z',
+                },
+              } as T,
+            };
+          }
+          return {
+            status: 200,
+            ok: true,
+            data: { structuredContent: { player: { id: 'player_login' } } } as T,
+          };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+      expect(result.error).toBeUndefined();
+      expect(sessionAttempts).toBe(2);
+      expect(sleeps).toEqual([2000]);
+      expect(logs.join('\n')).toContain(
+        '[UNAVAILABLE] Authentication provider unreachable. Waiting 2 seconds before retry...',
+      );
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
   });
 });

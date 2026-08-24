@@ -1,4 +1,3 @@
-import { execute } from './api.ts';
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
 import { type CommandGroupEntryConfig, commandGroup, groupedCommandParts } from './command-groups.ts';
@@ -12,9 +11,10 @@ import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { schemaAllowsType } from './openapi-metadata.ts';
 import { colorsForPlain } from './output-style.ts';
-import { getStructuredResult, isRecord } from './response.ts';
-import { VERSION } from './runtime.ts';
+import { getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
+import { API_BASE, VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
+import { requestJson } from './transport.ts';
 import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions, Session } from './types.ts';
 
 const COMMAND_GROUPS: CommandGroup[] = [
@@ -685,7 +685,14 @@ async function getPlayerState(): Promise<PlayerState> {
   if (!session?.player_id) return { authenticated: false };
 
   try {
-    const response = await execute('get_status');
+    // Cheap local probe: do not inherit command 503 retries (worst case 90s).
+    const probed = await requestJson<APIResponse>(`${trimTrailingSlash(API_BASE)}/spacemolt/get_status`, {
+      method: 'POST',
+      sessionId: session.id,
+      timeoutMs: 5000,
+    });
+    if (probed.status >= 500) return { authenticated: true };
+    const response = probed.data;
     const structured = getStructuredResult(response);
     const data =
       structured && isRecord(structured) ? structured : isRecord(response.result) ? response.result : undefined;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { retryAfterWaitSeconds } from './retry-after.ts';
+import { requestWithServiceUnavailableRetry, retryAfterWaitSeconds } from './retry-after.ts';
 
 const NOW_MS = Date.parse('Wed, 21 Oct 2015 07:28:00 GMT');
 
@@ -31,5 +31,115 @@ describe('retryAfterWaitSeconds', () => {
   test('HTTP-date in the past or equal to nowMs floors to 1 second, not 0', () => {
     expect(retryAfterWaitSeconds('Wed, 21 Oct 2015 07:28:00 GMT', NOW_MS)).toBe(1);
     expect(retryAfterWaitSeconds('Wed, 21 Oct 2015 07:27:00 GMT', NOW_MS)).toBe(1);
+  });
+});
+
+describe('requestWithServiceUnavailableRetry', () => {
+  test('retries one 503 then returns the successful response', async () => {
+    const sleeps: number[] = [];
+    const warnings: string[] = [];
+    let calls = 0;
+    const result = await requestWithServiceUnavailableRetry(
+      async () => {
+        calls += 1;
+        if (calls === 1) {
+          return {
+            status: 503,
+            ok: false,
+            retryAfterHeader: '2',
+            data: { error: { code: 'service_unavailable', message: 'down' } },
+          };
+        }
+        return { status: 200, ok: true, data: { structuredContent: { ok: true } } };
+      },
+      {
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+        now: () => NOW_MS,
+        warn: (message) => {
+          warnings.push(message);
+        },
+      },
+    );
+
+    expect(result.status).toBe(200);
+    expect(calls).toBe(2);
+    expect(sleeps).toEqual([2000]);
+    expect(warnings).toEqual(['[UNAVAILABLE] Authentication provider unreachable. Waiting 2 seconds before retry...']);
+  });
+
+  test('exhausts after four 503s and attaches numeric retry_after', async () => {
+    let calls = 0;
+    const result = await requestWithServiceUnavailableRetry(
+      async () => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '8',
+          data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+        };
+      },
+      {
+        sleep: async () => {},
+        now: () => NOW_MS,
+      },
+    );
+
+    expect(calls).toBe(4);
+    expect(result.status).toBe(503);
+    expect(result.data.error).toEqual({
+      code: 'service_unavailable',
+      message: 'invalid token',
+      retry_after: 8,
+    });
+  });
+
+  test('onRetryWait receives ceil wait seconds without parsing the banner', async () => {
+    const waits: number[] = [];
+    await requestWithServiceUnavailableRetry(
+      async () => ({
+        status: 503,
+        ok: false,
+        retryAfterHeader: '2',
+        data: { error: { code: 'service_unavailable', message: 'down' } },
+      }),
+      {
+        sleep: async () => {},
+        now: () => NOW_MS,
+        onRetryWait: (seconds) => {
+          waits.push(seconds);
+        },
+        maxRetries: 1,
+      },
+    );
+    expect(waits).toEqual([2]);
+  });
+
+  test('maxRetries 0 exhausts on the first 503 without sleeping', async () => {
+    const sleeps: number[] = [];
+    let calls = 0;
+    const result = await requestWithServiceUnavailableRetry(
+      async () => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '30',
+          data: { error: { code: 'service_unavailable', message: 'down' } },
+        };
+      },
+      {
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+        now: () => NOW_MS,
+        maxRetries: 0,
+      },
+    );
+    expect(calls).toBe(1);
+    expect(sleeps).toEqual([]);
+    expect(result.data.error?.code).toBe('service_unavailable');
   });
 });

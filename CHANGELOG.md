@@ -8,6 +8,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   underpays. Full-payout copy is unchanged.
 - `battle_left` notification previews include flee, destroyed, and emergency-warp reasons.
 
+### Auth-provider 503 retries
+
+- HTTP 503 from the authentication provider is retried using `Retry-After` instead of being
+  treated as a bad credential. After retries are exhausted the CLI reports `service_unavailable`
+  and tells you to wait and retry the same command. Do not change your password — this is not
+  an invalid-credentials error. (API-key agents should likewise retry rather than mint a new key;
+  the server revokes the old one.)
+
 ### Breaking: list the crafting queue with `spacemolt craft`
 
 - To list queued crafting (and recycling) jobs, run `spacemolt craft` with no recipe.
