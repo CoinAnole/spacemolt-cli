@@ -57,6 +57,30 @@ function formatStorageHint(hint: string): string {
   return hint.replace(/[ \t]+(Fuel bunker here:)/g, '\n$1');
 }
 
+function hasNonEmptyBaseId(value: unknown): boolean {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function storageLocations(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  return Array.isArray(result.locations) ? (result.locations as Array<Record<string, unknown>>) : undefined;
+}
+
+function isStorageViewShape(result: Record<string, unknown>): boolean {
+  if (!Array.isArray(result.items)) return false;
+  if (storageLocations(result)) return true;
+  return hasNonEmptyBaseId(result.base_id);
+}
+
+function printStorageLocationsTable(locations: Array<Record<string, unknown>>): void {
+  printCompactTable('Locations', locations, [
+    ['Station', ['base_name']],
+    ['System', ['system_name', 'system']],
+    ['Items', ['item_count']],
+    ['Ships', ['ship_count']],
+    ['ID', ['base_id']],
+  ]);
+}
+
 function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return items.map((item) => {
     const buy = formatPriceDepth(bestPriceDepth(item.buy_orders as Array<Record<string, unknown>> | undefined, 'buy'));
@@ -655,13 +679,19 @@ export const marketFormatters = [
     'storage',
     ['base_id', 'items'],
     (r, _command) => {
-      if (!r.base_id || !Array.isArray(r.items)) return false;
+      if (!isStorageViewShape(r)) return false;
       const items = r.items as Array<Record<string, unknown>>;
       const ships = (r.ships as Array<Record<string, unknown>>) || [];
+      const locations = storageLocations(r);
+      const isLocationsOnly = !hasNonEmptyBaseId(r.base_id);
       const isFactionStorage = r.target === 'faction';
-      const title = isFactionStorage ? 'Faction Storage' : 'Storage';
-      const location = typeof r.storage_title === 'string' ? r.storage_title : r.base_id ? `at ${r.base_id}` : '';
-      emitLine(`\n${c.bright}=== ${title}${location ? ` ${location}` : ''} ===${c.reset}\n`);
+      if (isLocationsOnly) {
+        emitLine(`\n${c.bright}=== Storage Locations ===${c.reset}\n`);
+      } else {
+        const title = isFactionStorage ? 'Faction Storage' : 'Storage';
+        const location = typeof r.storage_title === 'string' ? r.storage_title : r.base_id ? `at ${r.base_id}` : '';
+        emitLine(`\n${c.bright}=== ${title}${location ? ` ${location}` : ''} ===${c.reset}\n`);
+      }
       const factionFuelReserve = r.faction_fuel_reserve;
       const factionFuelCapacity = r.faction_fuel_capacity;
       if (isFactionStorage && r.credits !== undefined) {
@@ -672,30 +702,37 @@ export const marketFormatters = [
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }
       if (typeof r.hint === 'string' && r.hint) emitLine(`${c.dim}${formatStorageHint(r.hint)}${c.reset}\n`);
-      printItemTable(items);
-      if (ships.length) {
-        const shipDisplayName = (ship: Record<string, unknown>) =>
-          String(ship.custom_name || ship.ship_name || ship.class_name || ship.class_id || '');
-        const nameW = Math.max(9, ...ships.map((s) => shipDisplayName(s).length));
-        const classW = Math.max(5, ...ships.map((s) => String(s.class_id || '').length));
-        const idW = Math.max(2, ...ships.map((s) => String(s.ship_id || '').length));
-        const modsW = Math.max(4, ...ships.map((s) => String(s.modules ?? '').length));
-        const cargoW = Math.max(5, ...ships.map((s) => String(s.cargo_used ?? '').length));
-        emitLine(`\n${c.bright}Ships (${ships.length}):${c.reset}\n`);
-        emitLine(
-          `  ${'Ship Name'.padEnd(nameW)} | ${'Class'.padEnd(classW)} | ${'Mods'.padStart(modsW)} | ${'Cargo'.padStart(cargoW)} | ${'ID'.padEnd(idW)}`,
-        );
-        emitLine(
-          `  ${'-'.repeat(nameW)}-+-${'-'.repeat(classW)}-+-${'-'.repeat(modsW)}-+-${'-'.repeat(cargoW)}-+-${'-'.repeat(idW)}`,
-        );
-        for (const s of ships) {
-          const name = shipDisplayName(s).padEnd(nameW);
-          const cls = String(s.class_id || '').padEnd(classW);
-          const mods = String(s.modules ?? '').padStart(modsW);
-          const cargo = String(s.cargo_used ?? '').padStart(cargoW);
-          const id = String(s.ship_id || '').padEnd(idW);
-          emitLine(`  ${name} | ${cls} | ${mods} | ${cargo} | ${id}`);
+      if (!isLocationsOnly) {
+        printItemTable(items);
+        if (ships.length) {
+          const shipDisplayName = (ship: Record<string, unknown>) =>
+            String(ship.custom_name || ship.ship_name || ship.class_name || ship.class_id || '');
+          const nameW = Math.max(9, ...ships.map((s) => shipDisplayName(s).length));
+          const classW = Math.max(5, ...ships.map((s) => String(s.class_id || '').length));
+          const idW = Math.max(2, ...ships.map((s) => String(s.ship_id || '').length));
+          const modsW = Math.max(4, ...ships.map((s) => String(s.modules ?? '').length));
+          const cargoW = Math.max(5, ...ships.map((s) => String(s.cargo_used ?? '').length));
+          emitLine(`\n${c.bright}Ships (${ships.length}):${c.reset}\n`);
+          emitLine(
+            `  ${'Ship Name'.padEnd(nameW)} | ${'Class'.padEnd(classW)} | ${'Mods'.padStart(modsW)} | ${'Cargo'.padStart(cargoW)} | ${'ID'.padEnd(idW)}`,
+          );
+          emitLine(
+            `  ${'-'.repeat(nameW)}-+-${'-'.repeat(classW)}-+-${'-'.repeat(modsW)}-+-${'-'.repeat(cargoW)}-+-${'-'.repeat(idW)}`,
+          );
+          for (const s of ships) {
+            const name = shipDisplayName(s).padEnd(nameW);
+            const cls = String(s.class_id || '').padEnd(classW);
+            const mods = String(s.modules ?? '').padStart(modsW);
+            const cargo = String(s.cargo_used ?? '').padStart(cargoW);
+            const id = String(s.ship_id || '').padEnd(idW);
+            emitLine(`  ${name} | ${cls} | ${mods} | ${cargo} | ${id}`);
+          }
         }
+      }
+      if (isLocationsOnly) {
+        printStorageLocationsTable(locations ?? []);
+      } else if (locations?.length) {
+        printStorageLocationsTable(locations);
       }
       return true;
     },

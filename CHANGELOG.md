@@ -64,6 +64,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `observation` is a first-class notification type on `get_notifications` and GET `notifications`
   (`types=observation`), alongside chat, combat, trade, market, crafting, and system.
 
+### SpaceMolt v0.555.0 compatibility
+
+- `storage view` prints a Locations table (station, system, item and ship counts, ID) whenever the
+  response includes `locations`. Personal views summarize every station where you hold items or
+  parked ships. Undocked with no `station_id` shows `=== Storage Locations ===` instead of a raw
+  JSON dump.
+
 ## 2.8.0 — 2026-08-02
 
 Large release since **2.7.0** (2026-06-29). Bundled OpenAPI metadata tracks gameserver through **v0.552.0**.

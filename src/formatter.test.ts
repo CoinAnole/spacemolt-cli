@@ -29,6 +29,7 @@ import {
   nearbyFixture,
   poiInfoFixture,
   storageFixture,
+  storageViewUndockedFixture,
   subscribeMarketFixture,
   subscribeObservationFixture,
   systemInfoFixture,
@@ -1070,6 +1071,117 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('iron_ore');
     expect(stdout).toContain('718');
     expect(stdout).not.toContain('Fuel Cell');
+  });
+
+  test('storage view undocked empty base_id renders locations table', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: storageViewUndockedFixture },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Storage Locations ===');
+    expect(stdout).toContain('Earth Station');
+    expect(stdout).toContain('Nova Terra Central');
+    expect(stdout).toContain('Sol');
+    expect(stdout).toContain('Sirius');
+    expect(stdout).toContain('12');
+    expect(stdout).toContain('3');
+    expect(stdout).toContain('earth_station');
+    expect(stdout).toContain('nova_terra_central');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Storage at');
+  });
+
+  test('storage view docked response includes locations table', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: storageFixture },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Storage at earth_station ===');
+    expect(stdout).toContain('=== Locations ===');
+    expect(stdout).toContain('earth_station');
+    expect(stdout).toContain('Earth Station');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('storage view faction without locations keeps faction heading', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          base_id: 'earth_station',
+          target: 'faction',
+          credits: 12345,
+          items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 }],
+          ships: [],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { target: 'faction' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Storage at earth_station ===');
+    expect(stdout).toContain('Faction credits: 12,345');
+    expect(stdout).not.toContain('=== Locations ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('storage view undocked faction uses locations-only heading', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageViewUndockedFixture,
+          target: 'faction',
+          credits: 12345,
+          faction_fuel_reserve: 320,
+          faction_fuel_capacity: 500,
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { target: 'faction' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Storage Locations ===');
+    expect(stdout).toContain('Faction credits: 12,345');
+    expect(stdout).toContain('Fuel bunker: 320 / 500 units');
+    expect(stdout).toContain('=== Locations ===');
+    expect(stdout).not.toContain('=== Faction Storage');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('storage view item filter keeps locations rows', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageFixture,
+          items: [
+            { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 },
+          ],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { item_id: 'iron_ore' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).toContain('iron_ore');
+    expect(stdout).not.toContain('Fuel Cell');
+    expect(stdout).toContain('=== Locations ===');
+    expect(stdout).toContain('Earth Station');
+    expect(stdout).toContain('earth_station');
   });
 
   test('storage view displays stored ship custom names', async () => {
@@ -5324,7 +5436,13 @@ describe('structuredContent formatters', () => {
 
         Ship Name  | Class      | Mods | Cargo | ID
         -----------+------------+------+-------+-------
-        Prospector | prospector |    3 |    10 | ship-1"
+        Prospector | prospector |    3 |    10 | ship-1
+ 
+      === Locations ===
+
+        Station       | System | Items | Ships | ID
+        --------------+--------+-------+-------+--------------
+        Earth Station | Sol    | 12    | 1     | earth_station"
       ,
         "system_info": 
       "

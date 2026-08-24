@@ -140,6 +140,42 @@ export const storageFixture = {
       cargo_used: 10,
     },
   ],
+  locations: [
+    {
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      system: 'sol',
+      system_name: 'Sol',
+      item_count: 12,
+      ship_count: 1,
+    },
+  ],
+};
+
+export const storageViewUndockedFixture = {
+  action: 'view_storage',
+  base_id: '',
+  hint: 'Holdings at 2 stations',
+  items: [],
+  ships: [],
+  locations: [
+    {
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      system: 'sol',
+      system_name: 'Sol',
+      item_count: 12,
+      ship_count: 1,
+    },
+    {
+      base_id: 'nova_terra_central',
+      base_name: 'Nova Terra Central',
+      system: 'sirius',
+      system_name: 'Sirius',
+      item_count: 3,
+      ship_count: 0,
+    },
+  ],
 };
 
 export const marketOrdersFixture = {
@@ -578,6 +614,11 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   storage_view: {
     command: 'storage_view',
     fixture: { ...storageFixture, gifts: [], messages: [] },
+    apiRoute: 'POST /api/v2/spacemolt_storage/view',
+  },
+  storage_view_undocked: {
+    command: 'storage_view',
+    fixture: storageViewUndockedFixture,
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
   },
   faction_query_trade_intel: { command: 'faction_query_trade_intel', fixture: intelFixture },

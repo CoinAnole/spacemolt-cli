@@ -14,3 +14,9 @@ Ships (1):
   Ship Name  | Class      | Mods | Cargo | ID    
   -----------+------------+------+-------+-------
   Prospector | prospector |    3 |    10 | ship-1
+
+=== Locations ===
+
+  Station       | System | Items | Ships | ID           
+  --------------+--------+-------+-------+--------------
+  Earth Station | Sol    | 12    | 1     | earth_station

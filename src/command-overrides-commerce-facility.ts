@@ -182,7 +182,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   storage_view: {
     usage: '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]',
     description:
-      'View personal or faction station storage. Optional station_id views personal storage at a remote station without docking.',
+      'View personal or faction station storage. Optional station_id views personal storage at a remote station without docking. Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked.',
     example: 'spacemolt storage_view target=faction',
     discoverWith: ['get_status', 'get_cargo'],
     seeAlso: ['storage_deposit', 'storage_withdraw', 'get_cargo'],

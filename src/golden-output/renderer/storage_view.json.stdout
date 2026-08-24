@@ -19,6 +19,16 @@
       "cargo_used": 10
     }
   ],
+  "locations": [
+    {
+      "base_id": "earth_station",
+      "base_name": "Earth Station",
+      "system": "sol",
+      "system_name": "Sol",
+      "item_count": 12,
+      "ship_count": 1
+    }
+  ],
   "gifts": [],
   "messages": []
 }

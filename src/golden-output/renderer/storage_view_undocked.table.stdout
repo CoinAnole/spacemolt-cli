@@ -1,0 +1,12 @@
+
+=== Storage Locations ===
+
+Holdings at 2 stations
+
+
+=== Locations ===
+
+  Station            | System | Items | Ships | ID                
+  -------------------+--------+-------+-------+-------------------
+  Earth Station      | Sol    | 12    | 1     | earth_station     
+  Nova Terra Central | Sirius | 3     | 0     | nova_terra_central
