@@ -9,7 +9,7 @@ import {
 } from './runtime.ts';
 import { profileNameForUsername, SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
-import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
+import type { APIResponse, JsonRequestOptions, JsonResponse, Session } from './types.ts';
 
 const SESSION_BOOTSTRAP_ERROR_CODES = new Set([
   'not_authenticated',
@@ -104,7 +104,10 @@ function appendQueryPayload(url: string, payload?: Record<string, unknown>): str
 export interface SpaceMoltClientOptions {
   config?: SpaceMoltConfig;
   transport?: {
-    requestJson<T>(url: string, options?: JsonRequestOptions): Promise<{ status: number; data: T }>;
+    requestJson<T>(
+      url: string,
+      options?: JsonRequestOptions,
+    ): Promise<Pick<JsonResponse<T>, 'status' | 'data'> & Partial<Pick<JsonResponse<T>, 'ok' | 'retryAfterHeader'>>>;
   };
   sessionStore?: {
     getSession(profile?: string): Promise<Session>;

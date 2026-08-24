@@ -1,3 +1,5 @@
+import type { APIResponse } from './types.ts';
+
 export interface ErrorCodeEntry {
   code: string;
   message: string;
@@ -55,6 +57,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     retryable: true,
     auth: false,
     relatedCommands: [],
+  },
+  service_unavailable: {
+    code: 'service_unavailable',
+    message: 'Service temporarily unavailable.',
+    suggestion:
+      'The authentication provider is temporarily unreachable. Wait and retry the same command. Do not change your password — this is not an invalid-credentials error.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['login'],
   },
   persist_failed: {
     code: 'persist_failed',
@@ -308,4 +319,21 @@ export function getErrorSuggestion(code: string): string | undefined {
 
 export function getRelatedCommands(code: string): string[] {
   return ERROR_REGISTRY[code]?.relatedCommands ?? [];
+}
+
+export class ServiceUnavailableError extends Error {
+  readonly code = 'service_unavailable' as const;
+  readonly retryAfter: number;
+
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+    this.retryAfter = retryAfter;
+  }
+
+  toAPIResponse(): APIResponse {
+    return {
+      error: { code: this.code, message: this.message, retry_after: this.retryAfter },
+    };
+  }
 }

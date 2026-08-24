@@ -94,4 +94,76 @@ describe('requestJson', () => {
       'Server returned invalid JSON response (200)',
     );
   });
+
+  test('exposes Retry-After on JSON 200 without rewriting the body', async () => {
+    globalThis.fetch = (async () => {
+      return new Response('{"ok":true}', {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'Retry-After': '8' },
+      });
+    }) as unknown as typeof fetch;
+
+    const response = await requestJson<{ ok: boolean }>('https://example.test/api');
+
+    expect(response.status).toBe(200);
+    expect(response.ok).toBe(true);
+    expect(response.data).toEqual({ ok: true });
+    expect(response.retryAfterHeader).toBe('8');
+  });
+
+  test('returns JSON 503 with the raw Retry-After header and does not rewrite data.error', async () => {
+    const body = { error: { code: 'provider_down', message: 'auth provider timeout' } };
+    globalThis.fetch = (async () => {
+      return new Response(JSON.stringify(body), {
+        status: 503,
+        headers: { 'content-type': 'application/json', 'Retry-After': '12' },
+      });
+    }) as unknown as typeof fetch;
+
+    const response = await requestJson('https://example.test/api');
+
+    expect(response.status).toBe(503);
+    expect(response.ok).toBe(false);
+    expect(response.retryAfterHeader).toBe('12');
+    expect(response.data).toEqual(body);
+  });
+
+  test('synthesizes service_unavailable for text/plain 503 without stuffing retry_after', async () => {
+    globalThis.fetch = (async () => {
+      return new Response('service down', {
+        status: 503,
+        headers: { 'content-type': 'text/plain', 'Retry-After': '8' },
+      });
+    }) as unknown as typeof fetch;
+
+    const response = await requestJson('https://example.test/api');
+
+    expect(response.status).toBe(503);
+    expect(response.ok).toBe(false);
+    expect(response.retryAfterHeader).toBe('8');
+    expect(response.data).toEqual({
+      error: {
+        code: 'service_unavailable',
+        message: 'The authentication provider is temporarily unreachable. Wait and retry; do not change your password.',
+      },
+    });
+    expect(response.data.error).not.toHaveProperty('retry_after');
+  });
+
+  test('synthesizes service_unavailable for invalid JSON 503 without throwing', async () => {
+    globalThis.fetch = (async () => {
+      return new Response('{bad json', {
+        status: 503,
+        headers: { 'content-type': 'application/json', 'Retry-After': '4' },
+      });
+    }) as unknown as typeof fetch;
+
+    const response = await requestJson('https://example.test/api');
+
+    expect(response.status).toBe(503);
+    expect(response.ok).toBe(false);
+    expect(response.retryAfterHeader).toBe('4');
+    expect(response.data.error?.code).toBe('service_unavailable');
+    expect(response.data.error).not.toHaveProperty('retry_after');
+  });
 });

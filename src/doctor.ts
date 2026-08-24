@@ -16,7 +16,7 @@ import { API_BASE, type SpaceMoltConfig, VERSION } from './runtime.ts';
 import { resolveFuzzyIdsEnabled } from './runtime-config.ts';
 import { ACTIVE_PROFILE, getDefaultProfile, loadCliConfig, SessionManager, tryGetSessionPath } from './session.ts';
 import { requestJson } from './transport.ts';
-import type { GlobalOptions } from './types.ts';
+import type { APIResponse, GlobalOptions } from './types.ts';
 
 export interface DoctorCheck {
   name: string;
@@ -66,7 +66,19 @@ export async function runDoctor(
       method: 'GET',
       timeoutMs: 5000,
     });
-    checks.push(pass('api', `reachable (HTTP ${resp.status})`));
+    if (resp.status >= 500) {
+      checks.push(
+        fail(
+          'api',
+          `unreachable (HTTP ${resp.status})`,
+          resp.data && typeof resp.data === 'object' && 'error' in resp.data
+            ? String((resp.data as APIResponse).error?.message ?? '')
+            : undefined,
+        ),
+      );
+    } else {
+      checks.push(pass('api', `reachable (HTTP ${resp.status})`));
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     checks.push(fail('api', 'unreachable', msg));

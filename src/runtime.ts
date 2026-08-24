@@ -90,5 +90,9 @@ export { createDefaultConfig } from './output-state.ts';
 export const FETCH_TIMEOUT_MS = 600_000;
 export const MAX_SESSION_RECOVERY_ATTEMPTS = 1;
 export const MAX_RATE_LIMIT_RETRIES = 3;
+export const MAX_SERVICE_UNAVAILABLE_RETRIES = 3; // sleeps; total HTTP attempts = 1 + this
+export const DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS = 5;
+export const MAX_SERVICE_UNAVAILABLE_WAIT_SECONDS = 30;
+export const MIN_SERVICE_UNAVAILABLE_WAIT_SECONDS = 1; // floor unless header is explicit 0
 export const GITHUB_REPO = 'CoinAnole/spacemolt-cli';
 export const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes

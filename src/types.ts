@@ -84,6 +84,8 @@ export interface JsonResponse<T> {
   status: number;
   ok: boolean;
   data: T;
+  /** Present when the server sent Retry-After (raw header, unparsed). */
+  retryAfterHeader?: string;
 }
 
 export interface CommandSearchMatch {
