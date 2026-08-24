@@ -71,6 +71,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   parked ships. Undocked with no `station_id` shows `=== Storage Locations ===` instead of a raw
   JSON dump.
 
+### SpaceMolt v0.557.0 compatibility
+
+- `get_ship` table output shows drone bay counters and racked drones when `drone_bay` is present.
+  Use `list_drones` / `get_drone` for hull, cargo, and script. Ships without a bay omit the section.
+
 ## 2.8.0 — 2026-08-02
 
 Large release since **2.7.0** (2026-06-29). Bundled OpenAPI metadata tracks gameserver through **v0.552.0**.

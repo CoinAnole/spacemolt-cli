@@ -55,9 +55,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['id'],
   },
   get_ship: {
-    description: 'Show ship stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo.',
+    description:
+      'Show ship stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo. Includes drone bay counters and racked drones when present.',
     example: 'spacemolt get_ship',
-    seeAlso: ['install_mod', 'repair_module', 'reload'],
+    seeAlso: ['install_mod', 'repair_module', 'reload', 'list_drones', 'get_drone'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_ship',
   },

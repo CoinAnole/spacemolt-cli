@@ -222,6 +222,22 @@ export const shipFormatters = [
       }
       const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
       if (passiveRecipeDetails) printPassiveRecipeTable(passiveRecipeDetails);
+
+      const droneBay = isRecord(r.drone_bay) ? r.drone_bay : undefined;
+      if (droneBay) {
+        emitLine(`\n${c.bright}=== Drone Bay ===${c.reset}`);
+        emitLine(
+          `Bay: ${droneBay.bay_count ?? '?'}  Capacity: ${droneBay.bay_capacity ?? '?'}  Deployed: ${droneBay.deployed_count ?? '?'}`,
+        );
+        emitLine(`Bandwidth: ${droneBay.bandwidth_used ?? '?'}/${droneBay.bandwidth_total ?? '?'}`);
+        const inBay = Array.isArray(droneBay.in_bay) ? (droneBay.in_bay as Array<Record<string, unknown>>) : [];
+        printCompactTable('In Bay', inBay, [
+          ['Name', ['name']],
+          ['Type', ['type']],
+          ['ID', ['id']],
+        ]);
+        emitLine(`${c.dim}Use list_drones / get_drone for hull, cargo, and script.${c.reset}`);
+      }
       return true;
     },
     { commands: ['get_ship'], shapeFallback: true },

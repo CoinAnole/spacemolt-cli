@@ -1,0 +1,33 @@
+
+=== Ship: Deep Survey ===
+Credits: 12,345
+ID: ship-1
+Class: Deep Survey
+Custom Name: Asteroid Accessory
+Hull: 420/420
+Shield: 300/300 (+4/tick)
+Armor: 18
+Fuel: 240/240
+Cargo: 0/1250
+CPU: 16/34
+Power: 23/75
+Slots: 1 weapon, 1 defense, 5 utility
+Berths: Economy: 3/4 free | Business: 1/1 free | First: 0/0 free
+
+=== Modules ===
+
+  Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID      
+  --------+--------------------+---------+----------+-----+-------+------+---------
+  utility | Cargo Expander III | utility | Pristine | 2   | 2     | 10   | module-1
+  weapon  | Pulse Laser III    | weapon  | Scuffed  | 3   | 8     | 10   | module-2
+
+=== Drone Bay ===
+Bay: 2  Capacity: 2  Deployed: 1
+Bandwidth: 1/4
+
+=== In Bay ===
+
+  Name         | Type   | ID     
+  -------------+--------+--------
+  Survey Drone | survey | drone-1
+Use list_drones / get_drone for hull, cargo, and script.

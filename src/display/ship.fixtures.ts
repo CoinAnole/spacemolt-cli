@@ -340,6 +340,18 @@ export const stationRefuelFixture = {
   cost: 15992,
 };
 
+export const shipDroneBayFixture = {
+  ...shipFixture,
+  drone_bay: {
+    bay_count: 2,
+    bay_capacity: 2,
+    deployed_count: 1,
+    bandwidth_used: 1,
+    bandwidth_total: 4,
+    in_bay: [{ id: 'drone-1', name: 'Survey Drone', type: 'survey' }],
+  },
+};
+
 export const shipFixtureCases = {
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   ship: { command: 'get_ship', fixture: shipFixture },
@@ -352,6 +364,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
+  get_ship_drone_bay: { command: 'get_ship', fixture: shipDroneBayFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
   tow_wreck: { command: 'tow_wreck', fixture: towWreckFixture },

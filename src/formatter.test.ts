@@ -28,6 +28,8 @@ import {
   missionsFixture,
   nearbyFixture,
   poiInfoFixture,
+  shipDroneBayFixture,
+  shipFixture,
   storageFixture,
   storageViewUndockedFixture,
   subscribeMarketFixture,
@@ -4883,6 +4885,44 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Cargo Expander III');
     expect(stdout).toContain('module-nested-1');
     expect(stdout).not.toContain('(None)');
+  });
+
+  test('get_ship renders drone_bay summary and in-bay table', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', shipDroneBayFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Drone Bay ===');
+    expect(stdout).toContain('Bay:');
+    expect(stdout).toContain('Bandwidth:');
+    expect(stdout).toContain('Survey Drone');
+    expect(stdout).toContain('list_drones');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship omits drone bay when drone_bay is absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', shipFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Drone Bay ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship renders empty in_bay as none', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ...shipDroneBayFixture,
+      drone_bay: {
+        ...shipDroneBayFixture.drone_bay,
+        in_bay: [],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Drone Bay ===');
+    expect(stdout).toContain('Bay:');
+    expect(stdout).toContain('Bandwidth:');
+    expect(stdout).toContain('=== In Bay ===');
+    expect(stdout).toContain('(None)');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('get_battle_status formats current combat state from schema response', () => {
