@@ -2998,6 +2998,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Mission Complete: Food Delivery ===');
     expect(stdout).toContain('ID: mission-delivery-1');
     expect(stdout).toContain('Credits earned: 2,500');
+    expect(stdout).not.toContain('promised');
+    expect(stdout).not.toContain('shortfall');
     expect(stdout).toContain('Items received: food_rations x5, repair_patch x1');
     expect(stdout).toContain('Reputation changes: solarian +3, pirate_voss -1, voidborn 0');
     expect(stdout).toContain('Skill XP: piloting +25, hauling +10');
@@ -3025,6 +3027,8 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Mission Complete: Community Ore Drive ===');
     expect(stdout).toContain('Credits earned: 100');
+    expect(stdout).not.toContain('promised');
+    expect(stdout).not.toContain('shortfall');
     expect(stdout).toContain('Community: 12.5% (ore_iron: 90/720; contributed ore_iron x40)');
     expect(stdout).toContain('Contribution recorded.');
     expect(stdout).not.toContain('Reputation changes:');
@@ -3044,6 +3048,162 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).not.toContain('Reputation changes:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission shows promised and shortfall when the treasury underpays', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-empire-1',
+        title: 'Empire Escort',
+        credits_earned: 1000,
+        credits_promised: 2500,
+        credits_shortfall: 1500,
+        message:
+          'Mission complete. Empire treasury could not cover the full reward; you were paid 1000 of 2500 credits.',
+        items_received: { repair_patch: 1 },
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 1,000 of 2,500 promised (shortfall 1,500)');
+    expect(stdout).toContain(
+      'Mission complete. Empire treasury could not cover the full reward; you were paid 1000 of 2500 credits.',
+    );
+    expect(stdout).toContain('Items received: repair_patch x1');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission keeps zero earned visible with promised and shortfall', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-zero-pay',
+        title: 'Empty Treasury',
+        credits_earned: 0,
+        credits_promised: 2500,
+        credits_shortfall: 2500,
+        message: 'Mission complete. Empire treasury paid nothing.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 0 of 2,500 promised (shortfall 2,500)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission appends only finite promised without shortfall', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-promised-only',
+        title: 'Partial Fields',
+        credits_earned: 1000,
+        credits_promised: 2500,
+        message: 'Mission complete.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 1,000 of 2,500 promised');
+    expect(stdout).not.toContain('shortfall');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission appends only finite shortfall without promised', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-shortfall-only',
+        title: 'Partial Fields',
+        credits_earned: 1000,
+        credits_shortfall: 1500,
+        message: 'Mission complete.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 1,000 (shortfall 1,500)');
+    expect(stdout).not.toContain('promised');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission shows finite shortfall of zero', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-zero-shortfall',
+        title: 'Exact Pay',
+        credits_earned: 2500,
+        credits_promised: 2500,
+        credits_shortfall: 0,
+        message: 'Mission complete.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 2,500 of 2,500 promised (shortfall 0)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission ignores malformed promised and shortfall values', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-malformed-credits',
+        title: 'Malformed Credits',
+        credits_earned: 1000,
+        credits_promised: { n: 1 },
+        credits_shortfall: '1500',
+        message: 'Mission complete.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 1,000');
+    expect(stdout).not.toContain('promised');
+    expect(stdout).not.toContain('shortfall');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission ignores NaN and Infinity promised and shortfall', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-nan-credits',
+        title: 'Non-finite Credits',
+        credits_earned: 1000,
+        credits_promised: Number.NaN,
+        credits_shortfall: Number.POSITIVE_INFINITY,
+        message: 'Mission complete.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Credits earned: 1,000');
+    expect(stdout).not.toContain('promised');
+    expect(stdout).not.toContain('shortfall');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('Infinity');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission omits credits line when earned is missing', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-no-earned',
+        title: 'No Earned',
+        credits_promised: 2500,
+        credits_shortfall: 1500,
+        message: 'Mission complete without a recorded payout.',
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Mission Complete: No Earned ===');
+    expect(stdout).toContain('ID: mission-no-earned');
+    expect(stdout).toContain('Mission complete without a recorded payout.');
+    expect(stdout).not.toContain('Credits earned:');
+    expect(stdout).not.toContain('promised');
+    expect(stdout).not.toContain('shortfall');
     expect(stdout).not.toContain('=== Response ===');
   });
 

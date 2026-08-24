@@ -449,6 +449,19 @@ export const completeMissionFixture = {
   },
 };
 
+/** Treasury underpay: credits_promised / credits_shortfall are omitted on a full payout. */
+export const completeMissionShortfallFixture = {
+  details: {
+    mission_id: 'mission-empire-1',
+    title: 'Empire Escort',
+    credits_earned: 1000,
+    credits_promised: 2500,
+    credits_shortfall: 1500,
+    message: 'Mission complete. Empire treasury could not cover the full reward; you were paid 1000 of 2500 credits.',
+    items_received: { repair_patch: 1 },
+  },
+};
+
 /** Flat CompletedMissionsResponse (P3). Sample IDs pair with view_completed_mission. */
 export const completedMissionsFixture = {
   total_count: 2,
@@ -592,6 +605,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   scan_creature: { command: 'scan', fixture: scanCreatureFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
+  complete_mission_shortfall: { command: 'complete_mission', fixture: completeMissionShortfallFixture },
   completed_missions: { command: 'completed_missions', fixture: completedMissionsFixture },
   decline_mission: { command: 'decline_mission', fixture: declineMissionFixture },
   travel: { command: 'travel', fixture: arrivalFixture },

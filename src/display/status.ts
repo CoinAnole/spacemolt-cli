@@ -22,6 +22,11 @@ function formatNumber(value: unknown): string {
   return typeof value === 'number' ? value.toLocaleString() : String(value);
 }
 
+/** OpenAPI integers only — do not coerce strings/empty so '' cannot become 0. */
+function completionCreditAmount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
 function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
   const text = String(value);
@@ -358,7 +363,12 @@ function summarizeCompletionRewards(r: Record<string, unknown>): {
   } = {};
 
   if (r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '') {
-    result.creditsLine = `Credits earned: ${formatNumber(r.credits_earned)}`;
+    let creditsLine = `Credits earned: ${formatNumber(r.credits_earned)}`;
+    const promised = completionCreditAmount(r.credits_promised);
+    const shortfall = completionCreditAmount(r.credits_shortfall);
+    if (promised !== undefined) creditsLine += ` of ${formatNumber(promised)} promised`;
+    if (shortfall !== undefined) creditsLine += ` (shortfall ${formatNumber(shortfall)})`;
+    result.creditsLine = creditsLine;
   }
 
   if (isRecord(r.items_received)) {
