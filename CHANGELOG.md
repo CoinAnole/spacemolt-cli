@@ -4,6 +4,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+- Human `complete_mission` output shows credits promised and shortfall when the empire treasury
+  underpays. Full-payout copy is unchanged.
+
 ### Breaking: list the crafting queue with `spacemolt craft`
 
 - To list queued crafting (and recycling) jobs, run `spacemolt craft` with no recipe.
