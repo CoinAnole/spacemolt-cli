@@ -492,7 +492,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     category: 'Exploration',
     apiRoute: 'POST /api/v2/spacemolt/subscribe_observation',
     description:
-      'Subscribe once and return the current observation snapshot. Add --follow to poll the shared notification queue every 10 seconds until stopped.',
+      'Subscribe once and return the current observation snapshot. Add --follow to keep polling observation notifications every 10 seconds until stopped.',
     example: 'spacemolt subscribe_observation active_scan=true --follow',
     discoverWith: ['get_nearby', 'get_system_agents'],
     seeAlso: ['unsubscribe_observation'],

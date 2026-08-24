@@ -106,11 +106,6 @@ export async function runSubscriptionFollow(
   context.writer.out(
     `${colors.dim}[following ${command === 'subscribe_market' ? 'market' : 'observation'} notifications every ${FOLLOW_POLL_INTERVAL_SECONDS}s — Ctrl+C to stop]${colors.reset}`,
   );
-  if (command === 'subscribe_observation') {
-    context.writer.err(
-      `${colors.yellow}Warning:${colors.reset} observation notifications cannot yet be filtered; --follow drains the shared notification queue and displays all events.`,
-    );
-  }
 
   let retryIndex = 0;
   let delaySeconds = FOLLOW_POLL_INTERVAL_SECONDS;
@@ -183,7 +178,11 @@ export async function runSubscriptionFollow(
 }
 
 function pollPayload(command: 'subscribe_market' | 'subscribe_observation'): Record<string, unknown> {
-  return command === 'subscribe_market' ? { clear: true, limit: 100, types: ['market'] } : { clear: true, limit: 100 };
+  return {
+    clear: true,
+    limit: 100,
+    types: [command === 'subscribe_market' ? 'market' : 'observation'],
+  };
 }
 
 async function interruptibleSleep(

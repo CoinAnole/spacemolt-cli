@@ -12,6 +12,7 @@ import {
   validatePayloadAgainstSchema,
   validateRequiredArgs,
 } from './client';
+import { NOTIFICATION_TYPE_ENUM } from './command-overrides-query-reference';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
 import { COMMANDS } from './commands';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
@@ -278,8 +279,13 @@ describe('convertPayloadTypes', () => {
     expect(applyPayloadTransforms('get_notifications', typed)).toEqual({ types: ['market'] });
   });
 
+  test('notification commands accept observation type', () => {
+    expect(parseOk(['notifications', 'types=observation']).payload).toEqual({ types: 'observation' });
+    expect(parseOk(['get_notifications', 'types=observation']).payload).toEqual({ types: 'observation' });
+  });
+
   test('notification commands reject types the server does not emit', () => {
-    const expectedTypes = 'chat, combat, trade, market, crafting, system';
+    const expectedTypes = NOTIFICATION_TYPE_ENUM.join(', ');
     for (const command of ['get_notifications', 'notifications']) {
       for (const removedType of ['faction', 'friend', 'forum']) {
         expect(parseArgs([command, `types=${removedType}`])).toEqual({

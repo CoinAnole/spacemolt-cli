@@ -11,7 +11,7 @@ import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-sh
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
-import { QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
+import { NOTIFICATION_TYPE_ENUM, QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
 import {
   BUNDLED_COMMAND_REGISTRY,
   buildCommandRegistrySnapshot,
@@ -1352,7 +1352,7 @@ describe('command metadata', () => {
         clear: { type: 'boolean' },
         types: {
           type: 'array',
-          enum: ['chat', 'combat', 'trade', 'market', 'crafting', 'system'],
+          enum: [...NOTIFICATION_TYPE_ENUM],
         },
       },
     });
@@ -1500,16 +1500,23 @@ describe('command metadata', () => {
   });
 
   test('notification commands expose exactly the server-emitted type choices', () => {
-    const emittedTypes = ['chat', 'combat', 'trade', 'market', 'crafting', 'system'];
+    const emittedTypes = [...NOTIFICATION_TYPE_ENUM];
+    expect(COMMANDS.notifications?.schema?.types?.enum).toEqual(emittedTypes);
+    expect(COMMANDS.get_notifications?.schema?.types?.enum).toEqual(emittedTypes);
     for (const command of ['get_notifications', 'notifications']) {
       const config = COMMANDS[command];
       expect(config?.schema?.types?.enum).toEqual(emittedTypes);
       const typesArg = completionArgsForCommand(command, config).find((arg) => arg.name === 'types');
       expect(typesArg?.values).toEqual(emittedTypes);
       const help = captureHelp(command);
-      expect(help).toContain('types (chat|combat|trade|market|crafting|system)');
+      expect(help).toContain(`types (${NOTIFICATION_TYPE_ENUM.join('|')})`);
       expect(help).not.toContain('types (chat|combat|trade|faction|friend|forum');
     }
+    const subscribeHelp = captureHelp('subscribe_observation');
+    expect(subscribeHelp).toContain('observation notifications');
+    expect(subscribeHelp).not.toContain('shared notification queue');
+    expect(COMMANDS.subscribe_observation?.description).toContain('observation notifications');
+    expect(COMMANDS.subscribe_observation?.description).not.toContain('shared notification queue');
   });
 
   test('get_action_log advertises explicit event arrays and polling cursors', () => {

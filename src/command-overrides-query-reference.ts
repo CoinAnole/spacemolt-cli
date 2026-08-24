@@ -1,5 +1,15 @@
 import type { CommandOverride } from './commands';
 
+export const NOTIFICATION_TYPE_ENUM = [
+  'chat',
+  'combat',
+  'trade',
+  'market',
+  'crafting',
+  'observation',
+  'system',
+] as const;
+
 export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_status: {
     usage: '[--summary]',
@@ -202,7 +212,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
-    description: 'Poll queued game events across chat, combat, trade, market, crafting, and system categories.',
+    description:
+      'Poll queued game events across chat, combat, trade, market, crafting, observation, and system categories.',
     example: 'spacemolt get_notifications limit=10 types=chat,market',
     seeAlso: ['get_status', 'get_action_log', 'notifications'],
     category: 'Query commands',
@@ -230,8 +241,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       },
       types: {
         type: 'array',
-        enum: ['chat', 'combat', 'trade', 'market', 'crafting', 'system'],
-        description: 'Filter by notification types. Omit for all types.',
+        enum: [...NOTIFICATION_TYPE_ENUM],
+        description: `Filter by notification types (${NOTIFICATION_TYPE_ENUM.join(', ')}). Omit for all types.`,
       },
     },
   },

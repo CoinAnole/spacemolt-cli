@@ -184,8 +184,8 @@ spacemolt subscribe_observation active_scan=true --follow
 
 Press Ctrl+C to stop; the CLI makes one best-effort unsubscribe request. If cleanup cannot finish,
 run `spacemolt unsubscribe_market` or `spacemolt unsubscribe_observation` manually. Observation
-notifications cannot currently be filtered server-side, so observation follow mode drains and
-displays the session's entire shared notification queue. Machine-readable streaming is not yet
+follow polls `get_notifications` with `types=observation`, the same pattern as market follow
+(`types=market`). Machine-readable streaming is not yet
 supported; automation can use one-shot subscription plus explicit `get_notifications` polling.
 
 Dry run previews supported mutations without sending them:

@@ -144,22 +144,32 @@ describe('subscription follow runner integration', () => {
     expect(result.sleeps).toEqual([10_000, 10_000]);
   });
 
-  test('observation polling is unfiltered and displays unrelated shared-queue events', async () => {
+  test('observation polling filters observation notifications and displays them', async () => {
     const result = await runFollowHarness({
       command: 'subscribe_observation',
       poll: () => ({
         structuredContent: {
-          notifications: [notification('chat-1', 'misc', 'unrelated_shared_event', 'Docking soon')],
+          notifications: [
+            {
+              id: 'obs-1',
+              type: 'observation',
+              msg_type: 'observation_update',
+              timestamp: '2026-08-15T12:00:10.000Z',
+              data: { poi_id: 'sol_earth', system_id: 'sol', tick: 901501, active_scan: true },
+            },
+          ],
         },
       }),
     });
 
     expect(result.calls[1]).toEqual({
       command: 'get_notifications',
-      payload: { clear: true, limit: 100 },
+      payload: { clear: true, limit: 100, types: ['observation'] },
     });
-    expect(result.stdout.join('\n')).toContain('Docking soon');
-    expect(result.stderr.join('\n')).toContain('drains the shared notification queue');
+    expect(result.stdout.join('\n')).toContain(
+      'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; active scan',
+    );
+    expect(result.stderr.join('\n')).not.toContain('drains the shared notification queue');
   });
 
   test('deduplicates overlapping structured, result, and top-level notification envelopes by id', async () => {
