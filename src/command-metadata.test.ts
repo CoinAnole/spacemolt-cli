@@ -994,24 +994,55 @@ describe('command metadata', () => {
     expect(release?.description).toContain('storage withdraw');
   });
 
-  test('facility repair help documents faction repair permissions, accounting, and completion discovery', () => {
+  test('facility repair help documents auto-rebuild, faction permissions, accounting, and completion discovery', () => {
     const repair = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.repair?.config;
+    expect(repair?.description).toContain('rebuilds its own faction');
+    expect(repair?.description).toContain('jump the queue');
+    expect(repair?.description).toContain("somebody else's station");
     expect(repair?.description).toContain('draw materials from faction storage');
     expect(repair?.description).toContain('facility-management rights');
-    expect(repair?.description).toContain('spend is recorded in the faction action log');
+    expect(repair?.description).toContain(
+      'automatic rebuild spends and manual spends are recorded in the faction action log',
+    );
     expect(repair?.description).toContain('Facility listings expose when an in-progress repair completes');
     expect(repair?.description).toContain('get_action_log');
     expect(repair?.seeAlso).toContain('get_action_log');
+    expect(repair?.schema?.facility_id?.description).toContain('auto-rebuilds');
     expect(repair?.schema?.facility_id?.description).toContain('facility_list or facility_owned');
     expect(repair?.schema?.facility_id?.description).toContain('faction_facility_list');
     expect(repair?.schema?.facility_id?.description).toContain('repair completion timing');
 
     const help = captureHelp('facility repair');
+    expect(help).toContain('jump the queue');
     expect(help).toContain('faction storage');
-    expect(help).toContain('facility-management rights');
-    expect(help).toContain('faction action log');
-    expect(help).toContain('repair completion timing');
     expect(help).toContain('get_action_log');
+    expect(help).toContain('repair completion timing');
+  });
+
+  test('faction post_mission help documents item_id validation and objective-type rules', () => {
+    const postMission = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.post_mission?.config;
+    expect(postMission?.description).toContain('invalid_item');
+    expect(postMission?.description).toContain('see Fields');
+    expect(postMission?.description).not.toContain('kill_pirate');
+    expect(postMission?.description).not.toContain('Intel Center');
+    expect(postMission?.schema?.objectives?.description).toContain('deliver_item');
+    expect(postMission?.schema?.objectives?.description).toContain('kill_pirate');
+    expect(postMission?.schema?.objectives?.description).toContain('visit_system');
+    expect(postMission?.schema?.objectives?.description).toContain('dock_at_base');
+    expect(postMission?.schema?.objectives?.description).toMatch(/omit/i);
+    expect(postMission?.schema?.objectives?.description).toContain('Intel Center');
+    expect(postMission?.schema?.objectives?.description).toContain('Commerce Terminal');
+    expect(postMission?.schema?.rewards?.description).toContain('invalid_item');
+    expect(postMission?.schema?.rewards?.description).toContain('merged by quantity');
+    expect(postMission?.schema?.rewards?.description).toContain('Names work as ids');
+
+    const help = captureHelp('faction post_mission');
+    expect(help).toContain('invalid_item');
+    expect(help).toContain('deliver_item');
+    expect(help).toContain('--payload-json');
+    expect(help).toContain('Intel Center');
+    expect(help).toContain('spacemolt faction post_mission');
+    expect(help).not.toContain('spacemolt faction_post_mission');
   });
 
   test('facility_set_description is curated on the facility group', () => {
@@ -1341,7 +1372,6 @@ describe('command metadata', () => {
       'shipping_cancel',
       'shipping_pay_debt',
       'shipping_profile',
-      'shipping_quote',
     ]);
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');
@@ -1425,23 +1455,48 @@ describe('command metadata', () => {
     if (!shippingQuote) throw new Error('shipping_quote command missing');
     expect(shippingQuote).toMatchObject({
       required: ['package_id', 'destination_base_id'],
-      category: 'Generated API',
+      category: 'Missions',
       route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
     });
-    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_post).toMatchObject({
+    expect(shippingQuote.seeAlso).toEqual(['shipping_post', 'shipping_list', 'shipping_active', 'get_cargo']);
+    expect(shippingQuote.usage).toBe(
+      '<package_id> <destination_base_id>  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+    );
+    expect(shippingQuote.description).toContain('package:<id>');
+    expect(shippingQuote.description).toContain('POI');
+    const shippingPost = BUNDLED_COMMAND_REGISTRY.commands.shipping_post;
+    if (!shippingPost) throw new Error('shipping_post command missing');
+    expect(shippingPost).toMatchObject({
       args: ['package_id', 'destination_base_id', 'base_reward'],
       required: ['package_id', 'destination_base_id', 'base_reward'],
-      usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',
+      usage:
+        '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
       category: 'Missions',
       route: { tool: 'spacemolt_shipping', action: 'post', method: 'POST' },
       schema: {
         base_reward: { type: 'integer', minimum: 1 },
       },
     });
+    expect(shippingPost.description).toContain('package:<id>');
+    expect(shippingPost.description).toContain('POI');
+    expect(shippingPost.seeAlso).toEqual(['shipping_quote', 'shipping_list', 'shipping_active', 'get_cargo']);
+    for (const cmd of [shippingQuote, shippingPost]) {
+      expect(cmd.schema?.package_id?.description).toContain('package:<id>');
+      expect(cmd.schema?.destination_base_id?.description).toContain('POI ID');
+      expect(cmd.schema?.recipient_id?.description).toContain('station POI ID');
+    }
     expect(shippingQuote.schema?.base_reward).toMatchObject({
       type: 'integer',
     });
     expect(shippingQuote.schema?.base_reward).not.toHaveProperty('minimum');
+    const postHelp = captureHelp('shipping_post');
+    const quoteHelp = captureHelp('shipping_quote');
+    expect(postHelp).toContain('package:<id>');
+    expect(postHelp).toContain('POI');
+    expect(postHelp).toContain('spacemolt shipping_post package:package-1');
+    expect(quoteHelp).toContain('package:<id>');
+    expect(quoteHelp).toContain('POI');
+    expect(quoteHelp).toContain('spacemolt shipping_quote package:package-1');
   });
 
   test('notification commands expose exactly the server-emitted type choices', () => {

@@ -318,7 +318,7 @@ export const factionFacilityListFixture = {
     item_types: 14,
     rooms: 3,
   },
-  hint: 'Damaged facilities produce nothing until repaired with facility_repair.',
+  hint: "Damaged facilities produce nothing. A station rebuilds its own faction's facilities automatically from that faction's storage at the station; use facility repair for a facility it will not rebuild, or to jump the queue.",
 };
 
 export const fleetFixture = {

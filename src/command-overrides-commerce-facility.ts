@@ -106,9 +106,13 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: [],
   },
   shipping_post: {
-    usage: '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]',
-    description: 'Post a sealed-package freight contract with a carrier reward you set.',
-    example: 'spacemolt shipping_post package-1 nova-station 5000 speed_bonus=500',
+    usage:
+      '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+    description:
+      'Post a sealed-package freight contract with a carrier reward you set. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first with shipping_quote.',
+    example: 'spacemolt shipping_post package:package-1 nova-station 5000 speed_bonus=500',
+    discoverWith: ['get_cargo', 'shipping_quote', 'inspect'],
+    seeAlso: ['shipping_quote', 'shipping_list', 'shipping_active', 'get_cargo'],
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt_shipping/post',
     positionals: ['package_id', 'destination_base_id', 'base_reward'],
@@ -116,6 +120,18 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       base_reward: { minimum: 1 },
     },
+  },
+  shipping_quote: {
+    usage:
+      '<package_id> <destination_base_id>  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+    description:
+      'Estimate freight fees and a suggested carrier reward for a sealed package. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first, then shipping_post.',
+    example: 'spacemolt shipping_quote package:package-1 nova-station',
+    discoverWith: ['get_cargo', 'inspect', 'shipping_post'],
+    seeAlso: ['shipping_post', 'shipping_list', 'shipping_active', 'get_cargo'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/quote',
+    positionals: ['package_id', 'destination_base_id'],
   },
   // Explicit usage required: buildUsageFromSchema returns undefined when required=[]
   // even though package_id / shipment_id are optional schema fields (see commands.ts).
@@ -583,7 +599,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_repair: {
     usage: '<facility_id>',
     description:
-      'Repair a damaged facility after a station is wrecked (costs ~30% of original materials and build time). Faction-owned repairs draw materials from faction storage and may be initiated by members with facility-management rights; the spend is recorded in the faction action log (see get_action_log). Facility listings expose when an in-progress repair completes.',
+      "Repair a damaged facility (costs ~30% of original materials and build time). A station rebuilds its own faction's damaged facilities automatically, one at a time in priority order, paid from that faction's storage at the station — keep that store stocked and a raided station puts itself back with no command. Use this for a facility the station will not rebuild (your own, or your faction's on somebody else's station), or to jump the queue. Faction-owned repairs draw materials from faction storage and may be initiated by members with facility-management rights; automatic rebuild spends and manual spends are recorded in the faction action log (see get_action_log). Facility listings expose when an in-progress repair completes.",
     example: 'spacemolt facility_repair facility-1',
     discoverWith: ['facility_list', 'facility_owned', 'faction_facility_list'],
     seeAlso: ['facility_list', 'facility_owned', 'faction_facility_list', 'facility_dismantle', 'get_action_log'],
@@ -594,7 +610,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       facility_id: {
         type: 'string',
         description:
-          'Facility instance ID to repair. Find personal IDs with facility_list or facility_owned, and faction-owned IDs with faction_facility_list; those listings also show repair completion timing.',
+          'Facility instance ID to repair yourself. A station auto-rebuilds facilities it owns for its own faction; use this ID for a facility it will not rebuild, or to jump that queue. Find personal IDs with facility_list or facility_owned, and faction-owned IDs with faction_facility_list; those listings also show repair completion timing.',
       },
     },
   },
