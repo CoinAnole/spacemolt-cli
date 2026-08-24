@@ -860,6 +860,87 @@ describe('runInvocation option isolation', () => {
     }
   });
 
+  test('empty craft lists the queue with an empty POST body', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-craft-list-'));
+    const configHome = path.join(tempDir, 'config');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: Array<{
+      command: string;
+      route: { tool?: string; action?: string; method?: string };
+      payload: Record<string, unknown>;
+    }> = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(
+        command: string,
+        config: { route: { tool?: string; action?: string; method?: string } },
+        payload: Record<string, unknown>,
+      ) {
+        calls.push({ command, route: config.route, payload });
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      expect(
+        await runInvocation(
+          ['--structured', 'craft'],
+          client,
+          fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' }),
+        ),
+      ).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(calls).toEqual([
+        {
+          command: 'craft',
+          route: { tool: 'spacemolt', action: 'craft', method: 'POST' },
+          payload: {},
+        },
+      ]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('craft and recycle leftover action is rejected before execute or dry-run', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-craft-action-'));
+    const configHome = path.join(tempDir, 'config');
+    const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_PROFILE: 'pilot' };
+    const calls: string[] = [];
+    const client = {
+      config: { profile: 'pilot' },
+      async executeCommandConfig(command: string) {
+        calls.push(command);
+        return { structuredContent: { ok: true } };
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      for (const argv of [
+        ['craft', 'action=queue'],
+        ['--allow-unknown', 'craft', 'action=queue'],
+        ['--allow-unknown', 'recycle', 'action=queue'],
+        ['--dry-run', 'craft', 'action=queue'],
+      ]) {
+        const stdout: string[] = [];
+        const stderr: string[] = [];
+        const exitCode = await runInvocation(argv, client, fakeContext(stdout, stderr, env));
+        expect(exitCode).not.toBe(0);
+        expect(calls).toEqual([]);
+        expect(stdout).toEqual([]);
+        expect(stderr.join('\n')).toContain('To list queued crafting jobs, run "spacemolt craft" with no recipe.');
+        expect(stderr.join('\n')).not.toContain('--allow-unknown');
+        expect(stderr.join('\n')).not.toContain('--raw');
+        expect(stderr.join('\n')).not.toContain('server_request_sent');
+        expect(stderr.join('\n')).not.toContain('"payload": {}');
+        expect(stderr.join('\n')).not.toContain('"payload":{"action":"queue"}');
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('facility_upgrade flag syntax prints structured API errors', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

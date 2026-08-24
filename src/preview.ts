@@ -1,4 +1,4 @@
-import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
+import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
 import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
@@ -54,6 +54,18 @@ function buildRoutePreview(
   payload: Record<string, unknown>,
   stateSections?: string[],
 ): Record<string, unknown> {
+  const reserved = reservedRoutingActionError(command, payload);
+  if (reserved) {
+    return {
+      dry_run: true,
+      command,
+      method: mapping.method || 'POST',
+      server_request_sent: false,
+      error: { code: reserved.code, message: reserved.message },
+      notes: [reserved.message, 'No mutation was sent. This is a client-side route and payload preview.'],
+    };
+  }
+
   const requestPayload = mapping.defaults ? { ...mapping.defaults, ...payload } : payload;
   let url: string;
   let residualPayload: Record<string, unknown>;

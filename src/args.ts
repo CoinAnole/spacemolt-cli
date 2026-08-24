@@ -362,6 +362,9 @@ export function parseArgs(args: string[], options: ParseArgsOptions = {}): Comma
     }
   }
 
+  const reserved = reservedRoutingActionError(parsed.command, payload);
+  if (reserved) return { ok: false, errors: [reserved] };
+
   const errors = [
     ...(parsed.errors ?? []),
     ...(options.allowUnknown ? [] : validateKnownPayloadFields(parsed.command, payload, registry)),
@@ -425,7 +428,25 @@ export interface ValidationError {
     | 'file_read_error'
     | 'missing_private_chat_content'
     | 'ambiguous_private_chat_target'
-    | 'ambiguous_chat_content';
+    | 'ambiguous_chat_content'
+    | 'reserved_routing_field';
+}
+
+export const CRAFT_QUEUE_LIST_HINT = 'To list queued crafting jobs, run "spacemolt craft" with no recipe.';
+
+const RESERVED_ROUTING_ACTION_COMMANDS = new Set(['craft', 'recycle']);
+
+export function reservedRoutingActionError(
+  command: string,
+  payload: Record<string, unknown>,
+): ValidationError | undefined {
+  if (!RESERVED_ROUTING_ACTION_COMMANDS.has(command)) return undefined;
+  if (!Object.hasOwn(payload, 'action')) return undefined;
+  return {
+    field: 'action',
+    code: 'reserved_routing_field',
+    message: `${CRAFT_QUEUE_LIST_HINT} v2 reserves "action" for routing and does not accept it in the craft or recycle request body.`,
+  };
 }
 
 export function validateKnownPayloadFields(

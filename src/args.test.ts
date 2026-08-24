@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { reservedRoutingActionError } from './args';
 import {
   applyPayloadTransforms,
   convertPayloadTypes,
@@ -46,6 +47,27 @@ function parseOk(
   expect(result.ok).toBe(true);
   if (!result.ok) throw new Error(result.errors.map((error) => error.message).join('; '));
   return result;
+}
+
+function reservedActionError(
+  command: 'craft' | 'recycle' = 'craft',
+): NonNullable<ReturnType<typeof reservedRoutingActionError>> {
+  const error = reservedRoutingActionError(command, { action: 'queue' });
+  expect(error).toBeDefined();
+  if (!error) throw new Error('expected reserved routing error');
+  return error;
+}
+
+function expectReservedRoutingAction(result: ReturnType<typeof parseArgs>, command: 'craft' | 'recycle'): void {
+  expect(result.ok).toBe(false);
+  if (result.ok) throw new Error('expected parse failure');
+  expect(result.errors).toHaveLength(1);
+  expect(result.errors[0]?.field).toBe('action');
+  expect(result.errors[0]?.code).toBe('reserved_routing_field');
+  expect(result.errors[0]?.message).toBe(reservedActionError(command).message);
+  const joined = result.errors.map((error) => error.message).join('; ');
+  expect(joined).not.toContain('--allow-unknown');
+  expect(joined).not.toContain('--raw');
 }
 
 function parseInternalOk(args: string[]): Extract<ReturnType<typeof parseArgs>, { ok: true }> {
@@ -1015,8 +1037,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
   });
 
   test('craft accepts queued production options and bulk jobs JSON', () => {
-    const queue = parseOk(['craft', 'action=queue']);
-    expect(queue.payload).toEqual({ action: 'queue' });
+    expect(parseOk(['craft']).payload).toEqual({});
 
     expect(parseOk(['craft', 'job_id=job-1']).payload).toEqual({ job_id: 'job-1' });
     expect(parseOk(['craft', 'job_id=job-1', 'deliver_to=faction:Workshop']).payload).toEqual({
@@ -1055,6 +1076,47 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
         { recipe_id: 'basic_copper_processing', quantity: 50 },
       ],
     });
+  });
+
+  test('reservedRoutingActionError rejects any action key on craft and recycle', () => {
+    expect(reservedRoutingActionError('buy', { action: 'queue' })).toBeUndefined();
+    expect(reservedRoutingActionError('craft', { id: 'iron_plates' })).toBeUndefined();
+    expect(reservedRoutingActionError('craft', { action: 'queue' })).toEqual({
+      field: 'action',
+      code: 'reserved_routing_field',
+      message:
+        'To list queued crafting jobs, run "spacemolt craft" with no recipe. v2 reserves "action" for routing and does not accept it in the craft or recycle request body.',
+    });
+    const reservedMessage = reservedActionError().message;
+    expect(reservedRoutingActionError('craft', { action: 'foo' })?.message).toBe(reservedMessage);
+    expect(reservedRoutingActionError('recycle', { action: '' })?.message).toBe(reservedMessage);
+  });
+
+  test('craft and recycle reject leftover action without suggesting --allow-unknown', () => {
+    const reservedMessage = reservedActionError().message;
+    const cases: Array<{ args: string[]; options?: Parameters<typeof parseArgs>[1]; command: 'craft' | 'recycle' }> = [
+      { args: ['craft', 'action=queue'], command: 'craft' },
+      { args: ['craft', 'action=foo'], command: 'craft' },
+      { args: ['craft', '--action=queue'], command: 'craft' },
+      { args: ['craft', '--action', 'queue'], command: 'craft' },
+      { args: ['craft', '--payload-json', '{"action":"queue"}'], command: 'craft' },
+      { args: ['craft', 'action=queue'], options: { allowUnknown: true }, command: 'craft' },
+      { args: ['recycle', 'action=queue'], command: 'recycle' },
+      { args: ['recycle', 'action=foo'], command: 'recycle' },
+      { args: ['recycle', '--action=queue'], command: 'recycle' },
+      { args: ['recycle', '--action', 'queue'], command: 'recycle' },
+      { args: ['recycle', '--payload-json', '{"action":"queue"}'], command: 'recycle' },
+      { args: ['recycle', 'action=queue'], options: { allowUnknown: true }, command: 'recycle' },
+      { args: ['craft', 'iron_plates', '10', 'action=queue'], command: 'craft' },
+    ];
+
+    for (const { args, options, command } of cases) {
+      expectReservedRoutingAction(parseArgs(args, options), command);
+    }
+
+    expect(reservedMessage).toContain('spacemolt craft');
+    expect(reservedMessage).toContain('craft or recycle request body');
+    expect(reservedMessage).not.toContain('0.554.15');
   });
 
   test('craft accepts faction storage extension bucket destinations', () => {

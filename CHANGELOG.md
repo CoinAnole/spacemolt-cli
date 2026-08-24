@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Breaking: list the crafting queue with `spacemolt craft`
+
+- To list queued crafting (and recycling) jobs, run `spacemolt craft` with no recipe.
+  `action=queue` is rejected and is not sent. Gameserver 0.554.15 does not accept that
+  field on v2 transports; following it could silently enqueue a real job.
+- Cancel/retarget still use `job_id` / `job_ids` on `craft` and `recycle`. Find IDs from
+  `spacemolt craft` or `facility_job_list`.
+
 ### SpaceMolt v0.554.1 compatibility
 
 - Bundled OpenAPI metadata and the reviewed fixture/schema baseline now track gameserver

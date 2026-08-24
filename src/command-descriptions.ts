@@ -20,7 +20,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   commission_status: 'Check the status of your ship commissions',
   complete_mission: 'Complete a mission and claim rewards',
   completed_missions: 'List all missions you have completed',
-  craft: 'Queue crafting or package pack/unpack jobs (storage/faction; cargo for packages).',
+  craft: 'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (storage/faction; cargo for packages).',
   create_buy_order: 'Place a buy offer on the station exchange',
   create_faction: 'Create a new faction',
   create_note: 'Create a new note document',
