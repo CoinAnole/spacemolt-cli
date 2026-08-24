@@ -1,8 +1,11 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
 import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import { getErrorSuggestion, ServiceUnavailableError } from './errors.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
+import { requestWithServiceUnavailableRetry } from './retry-after.ts';
 import {
   createDefaultConfig,
+  DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS,
   MAX_RATE_LIMIT_RETRIES,
   MAX_SESSION_RECOVERY_ATTEMPTS,
   type SpaceMoltConfig,
@@ -142,6 +145,13 @@ export class SpaceMoltClient {
   constructor(options: SpaceMoltClientOptions = {}) {
     this.config = options.config ?? createDefaultConfig();
     this.transport = options.transport ?? { requestJson };
+    this.clock = options.clock ?? { now: Date.now };
+    this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
+    this.logger = options.logger ?? {
+      debug: (msg) => console.log(`[DEBUG] ${msg}`),
+      error: (msg) => console.error(msg),
+      warn: (msg) => console.log(msg),
+    };
     this.sessionStore =
       options.sessionStore ??
       new SessionManager({
@@ -151,16 +161,26 @@ export class SpaceMoltClient {
         debug: this.config.debug,
         plain: this.config.plain,
         userAgent: this.config.userAgent,
+        transport: this.transport.requestJson,
+        clock: () => this.clock.now(),
+        sleep: this.sleep,
+        onRetryWait: this.jsonOutput
+          ? undefined
+          : (seconds) =>
+              this.logger.warn(
+                `[UNAVAILABLE] Authentication provider unreachable. Waiting ${Math.ceil(seconds)} seconds before retry...`,
+              ),
       });
-    this.clock = options.clock ?? { now: Date.now };
-    this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
-    this.logger = options.logger ?? {
-      debug: (msg) => console.log(`[DEBUG] ${msg}`),
-      error: (msg) => console.error(msg),
-      warn: (msg) => console.log(msg),
-    };
     this.maxSessionRecoveryAttempts = MAX_SESSION_RECOVERY_ATTEMPTS;
     this.maxRateLimitRetries = MAX_RATE_LIMIT_RETRIES;
+  }
+
+  private serviceUnavailableRetryOpts() {
+    return {
+      sleep: this.sleep,
+      now: () => this.clock.now(),
+      warn: this.jsonOutput ? undefined : (message: string) => this.logger.warn(message),
+    };
   }
 
   get baseUrl(): string {
@@ -194,6 +214,19 @@ export class SpaceMoltClient {
   }
 
   private async executeRoute(
+    command: string,
+    mapping: V2Route,
+    payload: Record<string, unknown>,
+  ): Promise<APIResponse> {
+    try {
+      return await this.executeRouteBody(command, mapping, payload);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableError) return error.toAPIResponse();
+      throw error;
+    }
+  }
+
+  private async executeRouteBody(
     command: string,
     mapping: V2Route,
     payload: Record<string, unknown>,
@@ -235,10 +268,14 @@ export class SpaceMoltClient {
         if (authError) return authError;
       }
 
-      const { status, data: rawData } = await this.sendRequest(session, url, method, residualPayload, sessionProfile, {
-        persistSession: !transientSession && !fullyUnauth,
-        fullyUnauthenticated: fullyUnauth,
-      });
+      const { status, data: rawData } = await requestWithServiceUnavailableRetry(
+        () =>
+          this.sendRequest(session, url, method, residualPayload, sessionProfile, {
+            persistSession: !transientSession && !fullyUnauth,
+            fullyUnauthenticated: fullyUnauth,
+          }),
+        this.serviceUnavailableRetryOpts(),
+      );
       const data = normalizeBareResponse(rawData, mapping, fullyUnauth, status);
 
       if (!fullyUnauth && data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
@@ -293,7 +330,7 @@ export class SpaceMoltClient {
     requestPayload?: Record<string, unknown>,
     sessionProfile?: string,
     options: { persistSession?: boolean; fullyUnauthenticated?: boolean } = {},
-  ): Promise<{ status: number; data: APIResponse }> {
+  ): Promise<JsonResponse<APIResponse>> {
     const finalRequestUrl = requestMethod === 'GET' ? appendQueryPayload(requestUrl, requestPayload) : requestUrl;
     const fullyUnauth = options.fullyUnauthenticated === true;
 
@@ -324,19 +361,25 @@ export class SpaceMoltClient {
     const data = response.data;
 
     if (this.debug) {
-      this.logger.debug(`Response: ${response.status} (${elapsed}ms)`);
+      const retryAfterSuffix = response.retryAfterHeader ? ` Retry-After: ${response.retryAfterHeader}` : '';
+      this.logger.debug(`Response: ${response.status} (${elapsed}ms)${retryAfterSuffix}`);
       const errorText = formatDebugError(data);
       if (errorText) this.logger.debug(`Error: ${errorText}`);
       if (data?.notifications?.length) this.logger.debug(`Notifications: ${data.notifications.length}`);
     }
 
-    if (data?.session && options.persistSession !== false && !fullyUnauth) {
+    if (data?.session && options.persistSession !== false && !fullyUnauth && response.status < 400 && !data.error) {
       currentSession.expires_at = data.session.expires_at;
       if (data.session.player_id) currentSession.player_id = data.session.player_id;
       await this.sessionStore.saveSession(currentSession, sessionProfile);
     }
 
-    return { status: response.status, data };
+    return {
+      status: response.status,
+      ok: response.ok ?? (response.status >= 200 && response.status < 400),
+      data,
+      retryAfterHeader: response.retryAfterHeader,
+    };
   }
 
   private async loginWithSession(currentSession: Session, username: string, password: string): Promise<APIResponse> {
@@ -344,7 +387,10 @@ export class SpaceMoltClient {
     if (!loginMapping) throw new Error('Command "login" has no v2 route mapping.');
     const loginPayload = applyPayloadTransforms('login', { username, password });
     const loginUrl = buildRequestUrl(this.baseUrl, loginMapping);
-    const { data } = await this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload);
+    const { data } = await requestWithServiceUnavailableRetry(
+      () => this.sendRequest(currentSession, loginUrl, loginMapping.method || 'POST', loginPayload),
+      this.serviceUnavailableRetryOpts(),
+    );
     return data;
   }
 
@@ -431,6 +477,19 @@ export class SpaceMoltClient {
     await this.sessionStore.saveSession(newSession);
     if (this.debug) this.logger.debug(`Re-authenticating as ${oldSession.username}...`);
     const loginResp = await this.loginWithSession(newSession, oldSession.username, oldSession.password);
+    if (loginResp.error?.code === 'service_unavailable') {
+      if (!this.jsonOutput) {
+        this.logger.warn(`[UNAVAILABLE] Authentication provider unreachable. ${loginResp.error.message}`);
+        const suggestion = getErrorSuggestion('service_unavailable');
+        if (suggestion) this.logger.warn(suggestion);
+      }
+      throw new ServiceUnavailableError(
+        loginResp.error.message,
+        typeof loginResp.error.retry_after === 'number'
+          ? loginResp.error.retry_after
+          : DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS,
+      );
+    }
     if (loginResp.error) {
       if (!this.jsonOutput) {
         this.logger.error(`[SESSION] Session expired and auto-login failed: ${loginResp.error.message}`);
