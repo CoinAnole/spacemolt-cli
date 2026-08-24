@@ -852,7 +852,18 @@ function previewBattleLeft(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return headlinePreview('BATTLE', `${safeScalar(data.username) ?? 'Someone'} left the battle`, options);
+  const name = safeScalar(data.username) ?? 'Someone';
+  const raw = safeScalar(data.reason);
+  const reason = typeof raw === 'string' ? raw.trim().toLowerCase() : undefined;
+  let headline = `${name} left the battle`;
+  if (reason === 'fled') {
+    headline = `${name} fled the battle`;
+  } else if (reason === 'destroyed') {
+    headline = `${name} was destroyed — combat over`;
+  } else if (reason === 'emergency_warp') {
+    headline = `${name} emergency-warped out of the battle`;
+  }
+  return headlinePreview('BATTLE', headline, options);
 }
 
 function previewBattleEnded(

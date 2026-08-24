@@ -1119,6 +1119,62 @@ describe('notification formatting', () => {
       ).toBe('Battle ended! Victory');
     });
 
+    test('battle_left headlines map known reasons and never interpolate unknown tokens', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe', reason: 'fled' },
+        }).headline,
+      ).toContain('Marlowe fled the battle');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe', reason: 'destroyed' },
+        }).headline,
+      ).toContain('Marlowe was destroyed — combat over');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe', reason: 'emergency_warp' },
+        }).headline,
+      ).toBe('Marlowe emergency-warped out of the battle');
+
+      const disconnected = formatNotificationPreview({
+        msg_type: 'battle_left',
+        data: { username: 'Marlowe', reason: 'disconnected' },
+      }).headline;
+      expect(disconnected).toContain('Marlowe left the battle');
+      expect(disconnected).not.toContain('disconnected');
+
+      const totallyNew = formatNotificationPreview({
+        msg_type: 'battle_left',
+        data: { username: 'Marlowe', reason: 'totally_new' },
+      }).headline;
+      expect(totallyNew).toContain('Marlowe left the battle');
+      expect(totallyNew).not.toContain('totally_new');
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe', reason: 1 },
+        }).headline,
+      ).toContain('Marlowe left the battle');
+
+      const booleanReason = formatNotificationPreview({
+        msg_type: 'battle_left',
+        data: { username: 'Marlowe', reason: true },
+      }).headline;
+      expect(booleanReason).toContain('Marlowe left the battle');
+      expect(booleanReason).not.toContain('true');
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { reason: 'destroyed' },
+        }).headline,
+      ).toContain('Someone was destroyed — combat over');
+    });
+
     test('K13: table Type stays raw msg_type; Message uses pure preview headline', () => {
       const notification = {
         type: 'combat',
