@@ -6,6 +6,7 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 - Human `complete_mission` output shows credits promised and shortfall when the empire treasury
   underpays. Full-payout copy is unchanged.
+- `battle_left` notification previews include flee, destroyed, and emergency-warp reasons.
 
 ### Breaking: list the crafting queue with `spacemolt craft`
 
