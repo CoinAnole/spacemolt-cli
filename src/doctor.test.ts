@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { CliRuntimeContext } from './cli-context';
@@ -416,5 +416,73 @@ describe('doctor', () => {
     });
     expect(result.exitCode).not.toBeNull();
     expect(result.stdout).toContain('SpaceMolt Doctor');
+  });
+});
+
+describe('doctor API reachability', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  function probeConfig() {
+    return createDefaultConfig(
+      { apiBase: 'https://doctor.test/api/v2' },
+      { ...process.env, SPACEMOLT_PROFILE: undefined },
+    );
+  }
+
+  function mockJson(status: number, body: unknown = {}) {
+    globalThis.fetch = (async () => {
+      return new Response(JSON.stringify(body), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+  }
+
+  test('JSON 503 fails the api check as unreachable without retrying', async () => {
+    mockJson(503, { error: { code: 'service_unavailable', message: 'auth provider down' } });
+    const started = Date.now();
+    const result = await runDoctor(probeConfig());
+    const elapsed = Date.now() - started;
+    const apiCheck = result.checks.find((c) => c.name === 'api');
+
+    expect(apiCheck?.ok).toBe(false);
+    expect(apiCheck?.message).toContain('503');
+    expect(apiCheck?.message).toContain('unreachable');
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  test('non-JSON 503 fails the api check as unreachable without retrying', async () => {
+    globalThis.fetch = (async () => {
+      return new Response('<html>unavailable</html>', {
+        status: 503,
+        headers: { 'content-type': 'text/html' },
+      });
+    }) as unknown as typeof fetch;
+
+    const started = Date.now();
+    const result = await runDoctor(probeConfig());
+    const elapsed = Date.now() - started;
+    const apiCheck = result.checks.find((c) => c.name === 'api');
+
+    expect(apiCheck?.ok).toBe(false);
+    expect(apiCheck?.message).toContain('503');
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  test('JSON 200, 404, and 405 stay reachable', async () => {
+    for (const status of [200, 404, 405]) {
+      mockJson(
+        status,
+        status === 200 ? { session: { id: 's' } } : { error: { code: 'not_found', message: 'use POST' } },
+      );
+      const result = await runDoctor(probeConfig());
+      const apiCheck = result.checks.find((c) => c.name === 'api');
+      expect(apiCheck?.ok).toBe(true);
+      expect(apiCheck?.message).toBe(`reachable (HTTP ${status})`);
+    }
   });
 });

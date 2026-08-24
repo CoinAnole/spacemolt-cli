@@ -1211,6 +1211,36 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('\x1b[');
   });
 
+  test('displayError treats service_unavailable as retryable, not an authentication error', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'travel',
+      {
+        code: 'service_unavailable',
+        message: 'The authentication provider is temporarily unreachable.',
+        retry_after: 8,
+      },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [service_unavailable]');
+    expect(output).toContain('Wait 8.0 seconds before retrying.');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('Do not change your password');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('Run "spacemolt login"');
+    expect(output.toLowerCase()).not.toContain('authentication error');
+  });
+
   test('displayError gives invalid_payload a parameter spelling suggestion', () => {
     const capture = captureWriter();
     const context: CliRuntimeContext = {
