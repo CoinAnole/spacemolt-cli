@@ -910,8 +910,10 @@ describe('help output branches', () => {
     showCommandSearch('shipping quote', search.writer, BUNDLED_COMMAND_REGISTRY);
 
     expect(full.stdout.join('\n')).toContain('Generated API Commands');
-    expect(full.stdout.join('\n')).toContain('shipping_quote');
+    expect(full.stdout.join('\n')).toContain('shipping_accept');
+    expect(full.stdout.join('\n')).not.toContain('shipping_quote');
     expect(command.stdout.join('\n')).toContain('spacemolt shipping_quote');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/quote');
     expect(search.stdout.join('\n')).toContain('shipping_quote');
   });
@@ -971,6 +973,44 @@ describe('help output branches', () => {
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/active');
   });
 
+  test('shipping_post help documents package and station identifier forms', () => {
+    const capture = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_post', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(showCommandExplanation('shipping_post', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('package:<id>');
+    expect(output).toContain('POI');
+    expect(output).toContain('spacemolt shipping_post package:package-1');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/post');
+  });
+
+  test('shipping_quote help is curated Missions with package and station identifier forms', () => {
+    const capture = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_quote', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_quote', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('package:<id>');
+    expect(output).toContain('POI');
+    expect(output).toContain('spacemolt shipping_quote package:package-1');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/quote');
+
+    const group = captureWriter();
+    expect(showCommandGroup('misc', group.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(group.stdout.join('\n')).toContain('shipping_quote');
+  });
+
   test('shipping_deliver help documents package_id dual identifier usage', () => {
     const capture = captureWriter();
     const explanation = captureWriter();
@@ -998,7 +1038,8 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     const generatedIndex = output.indexOf('Generated API Commands');
     const generatedSection = generatedIndex === -1 ? '' : output.slice(generatedIndex);
-    expect(generatedSection).toContain('shipping_quote');
+    expect(generatedSection).not.toContain('shipping_quote');
+    expect(generatedSection).toContain('shipping_accept');
     expect(generatedSection).not.toContain('faction create_buy_order');
     expect(generatedSection).not.toContain('facility upgrade');
     expect(generatedSection).not.toContain('station info');

@@ -377,10 +377,10 @@ describe('runInvocation option isolation', () => {
         fetchedAt: '2026-07-17T00:00:00.000Z',
         gameserverVersion: 'v999.0.0',
         routes: {
-          'POST /api/v2/spacemolt_shipping/quote': {
-            operationId: 'spacemolt_shipping_quote',
-            summary: 'Cached shipping quote',
-            route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
+          'POST /api/v2/spacemolt_shipping/accept': {
+            operationId: 'spacemolt_shipping_accept',
+            summary: 'Cached shipping accept',
+            route: { tool: 'spacemolt_shipping', action: 'accept', method: 'POST' },
             required: ['cache_only'],
             schema: { cache_only: { type: 'string' } },
           },
@@ -400,7 +400,7 @@ describe('runInvocation option isolation', () => {
 
     try {
       const exitCode = await runInvocation(
-        ['--json', 'shipping_quote', 'cache_only=accepted'],
+        ['--json', 'shipping_accept', 'cache_only=accepted'],
         client,
         fakeContext(stdout, stderr, {
           HOME: tempDir,
@@ -439,7 +439,7 @@ describe('runInvocation option isolation', () => {
     );
 
     try {
-      const result = await captureInvocation(['--plain', 'commands', '--search', 'shipping_quote'], {
+      const result = await captureInvocation(['--plain', 'commands', '--search', 'shipping_accept'], {
         HOME: tempDir,
         XDG_CONFIG_HOME: configHome,
         SPACEMOLT_NO_UPDATE_CHECK: 'true',
@@ -449,15 +449,15 @@ describe('runInvocation option isolation', () => {
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('(No local command matches)');
 
-      const invocation = await captureInvocation(['--plain', 'shipping_quote'], {
+      const invocation = await captureInvocation(['--plain', 'shipping_accept'], {
         HOME: tempDir,
         XDG_CONFIG_HOME: configHome,
         SPACEMOLT_NO_UPDATE_CHECK: 'true',
       });
 
       expect(invocation.exitCode).toBe(1);
-      expect(invocation.stderr).toContain('Unknown command "shipping_quote"');
-      expect(invocation.stderr).not.toContain('Did you mean: shipping_quote');
+      expect(invocation.stderr).toContain('Unknown command "shipping_accept"');
+      expect(invocation.stderr).not.toContain('Did you mean: shipping_accept');
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

@@ -863,7 +863,10 @@ test('faction_facility_list renders status, damaged yes/no, and custom names', (
   expect(stdout).toContain('no');
   expect(stdout).toContain('Alloy One (Alloy Smelter)');
   expect(stdout).toContain('Faction storage:');
-  expect(stdout).toContain('Damaged facilities produce nothing until repaired with facility_repair.');
+  expect(stdout).toContain('Damaged facilities produce nothing.');
+  expect(stdout).toContain('rebuilds its own faction');
+  expect(stdout).toContain('facility repair');
+  expect(stdout).toContain('jump the queue');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
 });

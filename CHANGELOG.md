@@ -32,8 +32,17 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `storage deposit` and `storage withdraw` help entries document automatic local docking,
   including fleet docking for fleet leaders and the fact that deposit validation happens after
   docking; human responses surface the resulting docking and location state.
-- `facility repair` help documents faction-storage material spending, faction action-log auditing,
-  and repair completion timing for faction-owned facilities.
+- `faction post_mission` help documents that unknown objective/reward item_ids fail with
+  `invalid_item`. Fields cover type-specific item_id rules, quantity merge, and that
+  `visit_system` needs an Intel Center while `dock_at_base` needs a Commerce Terminal.
+- `facility repair` help teaches that a station rebuilds its own faction's damaged facilities
+  automatically from that faction's storage at the station; use the command for a facility the
+  station will not rebuild, or to jump the queue. Automatic rebuild spends and manual spends are
+  recorded in the faction action log. `faction facility_list` human output mentions the same
+  auto-rebuild path.
+- `shipping_post` and `shipping_quote` help document `package_id` as a bare id or `package:<id>`,
+  `destination_base_id` as a station base ID or station POI ID, and station `recipient_id` the
+  same way. `shipping_quote` is now a curated Missions command.
 - Human output surfaces the latest response fields: catalog item `compression`, mission
   `reputation_changes`, resolved/issuing mission destinations, and faction facility
   `repair_complete_tick`. Structured JSON/YAML output preserves the API field names unchanged.
