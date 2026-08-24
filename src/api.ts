@@ -1,4 +1,4 @@
-import { applyCommandPayloadTransforms, applyPayloadTransforms } from './args.ts';
+import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
 import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import {
@@ -195,6 +195,11 @@ export class SpaceMoltClient {
     mapping: V2Route,
     payload: Record<string, unknown>,
   ): Promise<APIResponse> {
+    const reserved = reservedRoutingActionError(command, payload);
+    if (reserved) {
+      return { error: { code: reserved.code, message: reserved.message } };
+    }
+
     if (mapping.defaults) {
       payload = { ...mapping.defaults, ...payload };
     }

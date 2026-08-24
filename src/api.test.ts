@@ -3,7 +3,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { SpaceMoltClient, type SpaceMoltClientOptions } from './api.ts';
+import { reservedRoutingActionError } from './args.ts';
+import { BUNDLED_COMMAND_REGISTRY } from './command-registry.ts';
 import type { CommandConfig } from './commands.ts';
+import { createCommandConfigDryRunResponse } from './preview.ts';
 import { runCommand } from './response-renderer.ts';
 import { VERSION } from './runtime.ts';
 import { getDefaultProfile, profileNameForUsername, SessionManager, setDefaultProfile } from './session.ts';
@@ -1372,5 +1375,42 @@ describe('SpaceMoltClient', () => {
     expect(calls.map((call) => call.url)).toEqual(['https://game.test/api/v2/spacemolt/mine']);
     expect(store.current?.id).toBe('sess_old');
     expect(store.saved).toEqual([]);
+  });
+
+  test('refuses craft and recycle action without sending a request', async () => {
+    const { client, calls } = createClient([response()]);
+    const reserved = reservedRoutingActionError('craft', { action: 'queue' });
+    expect(reserved).toBeDefined();
+    if (!reserved) throw new Error('expected reserved routing error');
+    const craftConfig = BUNDLED_COMMAND_REGISTRY.commands.craft;
+    const recycleConfig = BUNDLED_COMMAND_REGISTRY.commands.recycle;
+    expect(craftConfig).toBeDefined();
+    expect(recycleConfig).toBeDefined();
+    if (!craftConfig || !recycleConfig) throw new Error('craft/recycle configs missing');
+
+    const cases: Array<{ command: 'craft' | 'recycle'; payload: Record<string, unknown>; config: CommandConfig }> = [
+      { command: 'craft', payload: { action: 'queue' }, config: craftConfig },
+      { command: 'recycle', payload: { action: 'queue' }, config: recycleConfig },
+      { command: 'craft', payload: { action: 'queue', id: 'iron_plates' }, config: craftConfig },
+    ];
+
+    for (const { command, payload, config } of cases) {
+      const executeResult = await client.execute(command, payload);
+      expect(executeResult).toEqual({ error: { code: 'reserved_routing_field', message: reserved.message } });
+
+      const configResult = await client.executeCommandConfig(command, config, payload);
+      expect(configResult).toEqual({ error: { code: 'reserved_routing_field', message: reserved.message } });
+
+      const dryRun = createCommandConfigDryRunResponse(command, config, payload);
+      expect(dryRun.error).toEqual({ code: 'reserved_routing_field', message: reserved.message });
+      expect(dryRun.structuredContent).toMatchObject({
+        dry_run: true,
+        server_request_sent: false,
+        error: { code: 'reserved_routing_field', message: reserved.message },
+      });
+      expect(JSON.stringify(dryRun.structuredContent?.payload ?? null)).not.toBe('{}');
+    }
+
+    expect(calls).toEqual([]);
   });
 });

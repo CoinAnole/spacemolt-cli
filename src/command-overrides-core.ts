@@ -338,9 +338,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   craft: {
     usage:
-      '[recipe_id] [quantity] [action=queue] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [package_ids=id[,id...]] [output_package_label=...] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (queue, cancel, or retarget; package recipes pack_package/unpack_package; package_ids/output_package_label for packaged ordinary craft; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
+      '[recipe_id] [quantity] [job_id=<id>|job_ids=JSON] [dry_run=true] [preset=fast|cheap|prefer_own|workshop] [source=storage|faction|faction:<bucket>|cargo] [deliver_to=storage|faction|faction:<bucket>] [package_ids=id[,id...]] [output_package_label=...] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>] [jobs=JSON]  (list jobs with no recipe; start, cancel, or retarget; package recipes pack_package/unpack_package; package_ids/output_package_label for packaged ordinary craft; cargo on source/target is for packages; split source/deliver_to for ordinary craft)',
     description:
-      'Queue crafting work, cancel queued jobs, or retarget their remaining output. Pass job_id alone to cancel; pass job_id with deliver_to to redirect remaining output without changing recipe, runs, escrow, cost, or queue position — e.g. spacemolt craft job_id=craft-job-1 deliver_to=faction:Workshop. Only the job orderer may retarget, the destination must be at the same base, completed runs are unaffected, and package pack/unpack jobs cannot be retargeted. Default routing prefers your own facility, then your faction\'s, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Pass package_ids=id[,id…] to source inputs from sealed packages in the source location: pooled contents must match the recipe inputs × quantity exactly (no storage/cargo backfill); empty cargo_containers are reclaimed only when accessible Logistics is present. Pass output_package_label=… to seal all job outputs into one labeled package on completion (needs accessible Logistics and one cargo_container; total output size ≤ 100; cancel refunds inputs with no package). dry_run=true previews packaged craft gates without consuming anything (not with bulk jobs). Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target) — e.g. spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'. Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
+      'List queued crafting and recycling jobs, queue new work, cancel queued jobs, or retarget remaining output. Run with no recipe (spacemolt craft) to list jobs and job IDs. Pass job_id alone to cancel; pass job_id with deliver_to to redirect remaining output without changing recipe, runs, escrow, cost, or queue position — e.g. spacemolt craft job_id=craft-job-1 deliver_to=faction:Workshop. Only the job orderer may retarget, the destination must be at the same base, completed runs are unaffected, and package pack/unpack jobs cannot be retargeted. Default routing prefers your own facility, then your faction\'s, then an ally-granted facility, then a public rental, and finally the Station Workshop. The fast preset chooses the soonest-finishing eligible venue globally, so a paid public rental may win; cheap chooses the lowest fee you would actually pay, with your own, faction, and ally-granted facilities free to you; prefer_own stays on those own/faction/ally-granted facilities and rents publicly only when none can run the job. Ordinary production escrows inputs from source (defaults to deliver_to) and delivers to deliver_to (default: storage); use faction:<bucket> for Storage Extension buckets. Pass package_ids=id[,id…] to source inputs from sealed packages in the source location: pooled contents must match the recipe inputs × quantity exactly (no storage/cargo backfill); empty cargo_containers are reclaimed only when accessible Logistics is present. Pass output_package_label=… to seal all job outputs into one labeled package on completion (needs accessible Logistics and one cargo_container; total output size ≤ 100; cancel refunds inputs with no package). dry_run=true previews packaged craft gates without consuming anything (not with bulk jobs). Package recipes pack_package and unpack_package run at Logistics (including the station-owned T1 Package Logistics Bay at empire stations for 1 credit per operation): pack with items=JSON and label, unpack with package_id, and use source/target (cargo allowed; target defaults to source; deliver_to aliases target) — e.g. spacemolt craft pack_package items=\'[{"item_id":"iron_ore","quantity":20}]\' source=cargo target=cargo label=\'Survey Kit\'. Workshop unpack (preset=workshop) is slower and does not recover the cargo_container. Inspect finished packages with inspect.',
     example: "spacemolt craft iron_plates 10 package_ids=pkg-1,pkg-2 output_package_label='Plate Pack'",
     discoverWith: ['catalog', 'storage', 'get_status', 'inspect'],
     seeAlso: ['recycle', 'catalog', 'storage', 'inspect', 'get_guide'],
@@ -349,11 +349,6 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['recipe_id', 'quantity'],
     arrayFields: ['package_ids'],
     schemaExtensions: {
-      action: {
-        type: 'string',
-        enum: ['queue'],
-        description: 'Use action=queue, or omit recipe_id, to view queued crafting work without starting a new job.',
-      },
       deliver_to: {
         type: 'string',
         description:
@@ -413,11 +408,11 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       job_id: {
         type: 'string',
         description:
-          'Queued crafting job to act on. Pass job_id alone to cancel it; pass job_id with deliver_to to retarget its remaining output without changing recipe, runs, escrow, cost, or queue position. Use action=queue to list job IDs.',
+          'Queued crafting job to act on. Pass job_id alone to cancel it; pass job_id with deliver_to to retarget its remaining output without changing recipe, runs, escrow, cost, or queue position. Run spacemolt craft with no recipe to list job IDs.',
       },
       job_ids: {
         type: 'array',
-        description: 'Queued crafting job IDs to cancel in bulk; use action=queue to list job IDs.',
+        description: 'Queued crafting job IDs to cancel in bulk; run spacemolt craft with no recipe to list job IDs.',
       },
       preset: {
         type: 'string',
@@ -473,12 +468,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       job_id: {
         type: 'string',
         description:
-          'Queued recycling job to act on. Pass job_id alone to cancel it; pass job_id with deliver_to to retarget its remaining output without changing anything else about the job. Use action=queue on craft or facility job list output to find IDs.',
+          'Queued recycling job to act on. Pass job_id alone to cancel it; pass job_id with deliver_to to retarget its remaining output without changing anything else about the job. Run spacemolt craft with no recipe, or facility_job_list, to find IDs.',
       },
       job_ids: {
         type: 'array',
         description:
-          'Queued recycling job IDs to cancel in bulk; use action=queue on craft or facility job list output to find IDs.',
+          'Queued recycling job IDs to cancel in bulk; run spacemolt craft with no recipe, or facility_job_list, to find IDs.',
       },
       preset: {
         type: 'string',

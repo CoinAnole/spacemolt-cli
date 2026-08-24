@@ -269,7 +269,7 @@ There is **no compatibility shim**. Unknown tokens such as `action=view` or `tar
 
 Storage actions use **ordinary sequential positionals** (facility-like). Named `key=value` fields do **not** skip later bare slots the way the old multi-action parser did (“skip already-filled fields”). Safe mixes keep bare tokens for leading positionals and use `key=value` for optional later fields (e.g. `storage deposit ore_iron 50 target=PlayerName`), or use all named. Do not rely on the old skip behavior — e.g. `storage deposit item_id=ore_iron 2` no longer maps `2` to quantity; under ordinary positionals it collides with `item_id`.
 
-**Docs submodule lag:** guides under `spacemolt-docs/` (for example `miner.md`, `crafting.md`) may still show `storage action=deposit` until a separate docs submodule update. Trust CLI `help storage` / this README for the current grammar.
+**Docs submodule lag:** guides under `spacemolt-docs/` (for example `miner.md`, `crafting.md`, `packages.md`) may still show `storage action=deposit` or `craft action=queue` until a separate docs submodule update. Trust CLI `help storage` / `help craft` / this README and CHANGELOG for the current grammar. Live `spacemolt server-help craft` / `get_guide` may still document the old craft form.
 
 Flat internal names (`storage_view`, `storage_deposit`, …) are registry keys only — not top-level public commands (same as `facility_job_add`).
 
