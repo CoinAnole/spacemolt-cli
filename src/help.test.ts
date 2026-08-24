@@ -17,8 +17,10 @@ import {
   showCommandSearch,
   showFullHelp,
   showHelp,
+  showProgressiveHelp,
 } from './help';
 import { runInvocation } from './main';
+import { setDefaultProfile } from './session';
 
 function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWriter } {
   const stdout: string[] = [];
@@ -182,6 +184,41 @@ describe('help output branches', () => {
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
     expect(stdout.join('\n')).toContain('spacemolt login <username> <password>');
+  });
+
+  test('progressive help get_status probe does not retry HTTP 503', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-help-503-probe-'));
+    const env = { XDG_CONFIG_HOME: configHome };
+    const sessionsDir = path.join(configHome, 'spacemolt-cli', 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    setDefaultProfile('pilot', undefined, undefined, env);
+    fs.writeFileSync(
+      path.join(sessionsDir, 'pilot.json'),
+      `${JSON.stringify({
+        id: 'sess_help_probe',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2099-01-01T00:00:00.000Z',
+        player_id: 'player_help',
+      })}\n`,
+    );
+
+    const capture = captureWriter();
+    let statusCalls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes('/spacemolt/get_status')) statusCalls += 1;
+      return new Response('unavailable', { status: 503, headers: { 'Retry-After': '30' } });
+    }) as typeof fetch;
+
+    try {
+      await withConfigHome(configHome, () => showProgressiveHelp(capture.writer, { plain: true }));
+      expect(statusCalls).toBe(1);
+      expect(capture.stdout.join('\n')).toContain('SpaceMolt CLI');
+    } finally {
+      globalThis.fetch = originalFetch;
+      fs.rmSync(configHome, { recursive: true, force: true });
+    }
   });
 
   test('renderProgressiveHelp writes travel state without calling the API', () => {

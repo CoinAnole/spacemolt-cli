@@ -95,4 +95,51 @@ describe('requestWithServiceUnavailableRetry', () => {
       retry_after: 8,
     });
   });
+
+  test('onRetryWait receives ceil wait seconds without parsing the banner', async () => {
+    const waits: number[] = [];
+    await requestWithServiceUnavailableRetry(
+      async () => ({
+        status: 503,
+        ok: false,
+        retryAfterHeader: '2',
+        data: { error: { code: 'service_unavailable', message: 'down' } },
+      }),
+      {
+        sleep: async () => {},
+        now: () => NOW_MS,
+        onRetryWait: (seconds) => {
+          waits.push(seconds);
+        },
+        maxRetries: 1,
+      },
+    );
+    expect(waits).toEqual([2]);
+  });
+
+  test('maxRetries 0 exhausts on the first 503 without sleeping', async () => {
+    const sleeps: number[] = [];
+    let calls = 0;
+    const result = await requestWithServiceUnavailableRetry(
+      async () => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '30',
+          data: { error: { code: 'service_unavailable', message: 'down' } },
+        };
+      },
+      {
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+        now: () => NOW_MS,
+        maxRetries: 0,
+      },
+    );
+    expect(calls).toBe(1);
+    expect(sleeps).toEqual([]);
+    expect(result.data.error?.code).toBe('service_unavailable');
+  });
 });

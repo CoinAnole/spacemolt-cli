@@ -1942,4 +1942,153 @@ describe('SpaceMoltClient', () => {
     expect(result.error?.code).toBe('service_unavailable');
     expect(result).not.toBeInstanceOf(ServiceUnavailableError);
   });
+
+  test('default SessionManager uses client sleep and omits wait banners when jsonOutput is true', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-default-session-json-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const logs: string[] = [];
+    const sleeps: number[] = [];
+    const urls: string[] = [];
+    let sessionAttempts = 0;
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: true,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      logger: {
+        debug() {},
+        error(message) {
+          logs.push(message);
+        },
+        warn(message) {
+          logs.push(message);
+        },
+      },
+      transport: {
+        async requestJson<T>(url: string) {
+          urls.push(url);
+          if (url.endsWith('/session')) {
+            sessionAttempts += 1;
+            if (sessionAttempts === 1) {
+              return {
+                status: 503,
+                ok: false,
+                retryAfterHeader: '2',
+                data: { error: { code: 'service_unavailable', message: 'down' } } as T,
+              };
+            }
+            return {
+              status: 200,
+              ok: true,
+              data: {
+                session: {
+                  id: 'sess_default_json',
+                  created_at: '2026-01-01T00:00:00.000Z',
+                  expires_at: '2099-01-01T00:00:00.000Z',
+                },
+              } as T,
+            };
+          }
+          return {
+            status: 200,
+            ok: true,
+            data: { structuredContent: { player: { id: 'player_login' } } } as T,
+          };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+      expect(result.error).toBeUndefined();
+      expect(sessionAttempts).toBe(2);
+      expect(sleeps).toEqual([2000]);
+      expect(logs.join('\n')).not.toContain('[UNAVAILABLE]');
+      expect(urls.some((url) => url.endsWith('/spacemolt_auth/login'))).toBe(true);
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('default SessionManager records the wait banner when jsonOutput is false', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-api-default-session-human-'));
+    process.env.XDG_CONFIG_HOME = configRoot;
+    const logs: string[] = [];
+    const sleeps: number[] = [];
+    let sessionAttempts = 0;
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: true,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      logger: {
+        debug() {},
+        error(message) {
+          logs.push(message);
+        },
+        warn(message) {
+          logs.push(message);
+        },
+      },
+      transport: {
+        async requestJson<T>(url: string) {
+          if (url.endsWith('/session')) {
+            sessionAttempts += 1;
+            if (sessionAttempts === 1) {
+              return {
+                status: 503,
+                ok: false,
+                retryAfterHeader: '2',
+                data: { error: { code: 'service_unavailable', message: 'down' } } as T,
+              };
+            }
+            return {
+              status: 200,
+              ok: true,
+              data: {
+                session: {
+                  id: 'sess_default_human',
+                  created_at: '2026-01-01T00:00:00.000Z',
+                  expires_at: '2099-01-01T00:00:00.000Z',
+                },
+              } as T,
+            };
+          }
+          return {
+            status: 200,
+            ok: true,
+            data: { structuredContent: { player: { id: 'player_login' } } } as T,
+          };
+        },
+      },
+    });
+
+    try {
+      const result = await client.execute('login', { username: 'Pilot', password: 'secret' });
+      expect(result.error).toBeUndefined();
+      expect(sessionAttempts).toBe(2);
+      expect(sleeps).toEqual([2000]);
+      expect(logs.join('\n')).toContain(
+        '[UNAVAILABLE] Authentication provider unreachable. Waiting 2 seconds before retry...',
+      );
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
 });

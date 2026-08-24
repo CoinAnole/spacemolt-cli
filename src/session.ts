@@ -426,12 +426,7 @@ export class SessionManager {
     return {
       sleep: this._sleep,
       now: this._clock,
-      warn: this._onRetryWait
-        ? (message: string) => {
-            const match = /Waiting (\d+) seconds/.exec(message);
-            this._onRetryWait?.(match ? Number(match[1]) : 0);
-          }
-        : undefined,
+      onRetryWait: this._onRetryWait,
     };
   }
 

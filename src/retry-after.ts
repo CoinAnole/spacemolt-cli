@@ -33,8 +33,9 @@ export async function requestWithServiceUnavailableRetry(
   opts: {
     sleep: (ms: number) => Promise<void>;
     now: () => number;
-    warn?: (message: string) => void; // omitted when jsonOutput
-    maxRetries?: number; // MAX_SERVICE_UNAVAILABLE_RETRIES
+    warn?: (message: string) => void;
+    onRetryWait?: (seconds: number) => void;
+    maxRetries?: number;
   },
 ): Promise<JsonResponse<APIResponse>> {
   let retries = 0;
@@ -46,10 +47,10 @@ export async function requestWithServiceUnavailableRetry(
     }
     retries += 1;
     const waitSeconds = retryAfterWaitSeconds(response.retryAfterHeader, opts.now());
-    opts.warn?.(
-      `[UNAVAILABLE] Authentication provider unreachable. Waiting ${Math.ceil(waitSeconds)} seconds before retry...`,
-    );
-    await opts.sleep(Math.ceil(waitSeconds) * 1000);
+    const waitCeil = Math.ceil(waitSeconds);
+    opts.onRetryWait?.(waitCeil);
+    opts.warn?.(`[UNAVAILABLE] Authentication provider unreachable. Waiting ${waitCeil} seconds before retry...`);
+    await opts.sleep(waitCeil * 1000);
   }
 }
 
