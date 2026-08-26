@@ -515,6 +515,7 @@ describe('command metadata', () => {
     expect(config?.description).toContain('Join an existing battle');
     expect(config?.description).toContain('cannot start a battle');
     expect(config?.description).toContain('faction-based auto-assignment');
+    expect(config?.description).toContain('Does not cost a tick');
     expect(config?.example).toBe('spacemolt battle_engage 1');
     expect(config?.seeAlso).toEqual(
       expect.arrayContaining(['attack', 'get_battle_status', 'battle_target', 'battle_stance']),
@@ -526,6 +527,25 @@ describe('command metadata', () => {
     expect(help).toContain('[side_id]');
     expect(help).toContain('cannot start a battle');
     expect(help).toContain('faction-based auto-assignment');
+    expect(help).toContain('Does not cost a tick');
+  });
+
+  test('tactical battle commands document that only reload costs a tick', () => {
+    for (const command of ['battle_advance', 'battle_retreat', 'battle_stance', 'battle_target', 'battle_engage']) {
+      const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
+      expect(config?.description).toContain('Does not cost a tick');
+      expect(captureHelp(command)).toContain('Does not cost a tick');
+    }
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.reload?.description).toContain('only battle command that costs a tick');
+    expect(captureHelp('reload')).toContain('only battle command that costs a tick');
+
+    const fullHelp = captureFullHelp();
+    expect(fullHelp).toContain('Join an existing battle only (no tick)');
+    expect(fullHelp).toContain('Advance battle range (no tick)');
+    expect(fullHelp).toContain('Retreat from battle (no tick)');
+    expect(fullHelp).toContain('Set stance (fire/evade/brace/flee; no tick)');
+    expect(fullHelp).toContain('Focus by ID or name (any combatant; no tick)');
+    expect(fullHelp).toContain('Reload weapon with ammo (costs a tick)');
   });
 
   test('wildlife hunt command is bundled with creature-focused help', () => {
@@ -564,7 +584,7 @@ describe('command metadata', () => {
     expect(help).toMatch(/pirate|station|combatant/i);
 
     // KD-9: Battle cheatsheet in full help stays aligned with command help
-    expect(captureFullHelp()).toContain('Focus by ID or name (any combatant)');
+    expect(captureFullHelp()).toContain('Focus by ID or name (any combatant; no tick)');
   });
 
   test('unload_passenger help documents all-passenger bulk unload', () => {
@@ -997,6 +1017,11 @@ describe('command metadata', () => {
   test('facility repair help documents auto-rebuild, faction permissions, accounting, and completion discovery', () => {
     const repair = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.repair?.config;
     expect(repair?.description).toContain('rebuilds its own faction');
+    expect(repair?.description).toContain('every facility it can afford at once');
+    expect(repair?.description).toContain('unpayable bill');
+    expect(repair?.description).toContain('NPC-station repair bills');
+    expect(repair?.description).toContain('player-faction stations pay full price');
+    expect(repair?.description).not.toContain('one at a time');
     expect(repair?.description).toContain('jump the queue');
     expect(repair?.description).toContain("somebody else's station");
     expect(repair?.description).toContain('draw materials from faction storage');
@@ -1014,6 +1039,8 @@ describe('command metadata', () => {
 
     const help = captureHelp('facility repair');
     expect(help).toContain('jump the queue');
+    expect(help).toContain('every facility it can afford at once');
+    expect(help).toContain('player-faction stations pay full price');
     expect(help).toContain('faction storage');
     expect(help).toContain('get_action_log');
     expect(help).toContain('repair completion timing');
@@ -1510,8 +1537,12 @@ describe('command metadata', () => {
       expect(typesArg?.values).toEqual(emittedTypes);
       const help = captureHelp(command);
       expect(help).toContain(`types (${NOTIFICATION_TYPE_ENUM.join('|')})`);
+      expect(help).toContain('types=chat,combat,market,observation');
       expect(help).not.toContain('types (chat|combat|trade|faction|friend|forum');
     }
+    expect(COMMANDS.get_notifications?.example).toContain('types=chat,market,observation');
+    expect(COMMANDS.notifications?.example).toContain('types=chat,observation');
+    expect(captureHelp('get_notifications')).toContain('types=chat,market,observation');
     const subscribeHelp = captureHelp('subscribe_observation');
     expect(subscribeHelp).toContain('observation notifications');
     expect(subscribeHelp).not.toContain('shared notification queue');

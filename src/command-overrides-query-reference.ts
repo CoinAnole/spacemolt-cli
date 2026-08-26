@@ -212,10 +212,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   get_notifications: {
-    usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
+    usage: '[clear=true/false] [limit=50] [types=chat,combat,market,observation]',
     description:
       'Poll queued game events across chat, combat, trade, market, crafting, observation, and system categories.',
-    example: 'spacemolt get_notifications limit=10 types=chat,market',
+    example: 'spacemolt get_notifications limit=10 types=chat,market,observation',
     seeAlso: ['get_status', 'get_action_log', 'notifications'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_notifications',
@@ -223,9 +223,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     arrayFields: ['types'],
   },
   notifications: {
-    usage: '[clear=true/false] [limit=50] [types=chat,combat,market]',
+    usage: '[clear=true/false] [limit=50] [types=chat,combat,market,observation]',
     description: 'Poll pending game events via GET query parameters. Prefer get_notifications for the primary poll UX.',
-    example: 'spacemolt notifications limit=10 clear=false types=chat',
+    example: 'spacemolt notifications limit=10 clear=false types=chat,observation',
     seeAlso: ['get_notifications', 'get_status', 'get_action_log'],
     category: 'Query commands',
     apiRoute: 'GET /api/v2/notifications',

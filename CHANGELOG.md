@@ -7,6 +7,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Human `complete_mission` output shows credits promised and shortfall when the empire treasury
   underpays. Full-payout copy is unchanged.
 - `battle_left` notification previews include flee, destroyed, and emergency-warp reasons.
+- `facility repair` help now matches gameserver 0.559.0: a wrecked station rebuilds every
+  facility it can afford at once (it will not stall on one unpayable bill), NPC megaproject
+  repair bills are capped, and player-faction stations pay full price.
+- `get_notifications` / `notifications` usage and examples include `observation` in `types=`.
+- Battle help states that advance, retreat, stance, target, and engage do not cost a tick;
+  only `reload` does.
 
 ### Auth-provider 503 retries
 

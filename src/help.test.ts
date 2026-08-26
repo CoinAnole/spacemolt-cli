@@ -408,7 +408,8 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('attack <target_id>        Start/join persistent system battle');
-    expect(output).toContain('battle_engage [side_id]   Join an existing battle only');
+    expect(output).toContain('battle_engage [side_id]   Join an existing battle only (no tick)');
+    expect(output).toContain('reload <weapon> <ammo>    Reload weapon with ammo (costs a tick)');
     expect(output).not.toContain('Join or start a battle');
   });
 

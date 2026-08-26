@@ -1096,14 +1096,14 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     cloak true/false          Toggle cloaking
 
   ${c.cyan}Battle:${c.reset}
-    battle_engage [side_id]   Join an existing battle only
-    battle_advance            Advance battle range
-    battle_retreat            Retreat from battle
-    battle_stance <stance>    Set stance (fire/evade/brace/flee)
-    battle_target <target>    Focus by ID or name (any combatant)
+    battle_engage [side_id]   Join an existing battle only (no tick)
+    battle_advance            Advance battle range (no tick)
+    battle_retreat            Retreat from battle (no tick)
+    battle_stance <stance>    Set stance (fire/evade/brace/flee; no tick)
+    battle_target <target>    Focus by ID or name (any combatant; no tick)
     get_battle_summary <id>   Aggregate battle result by ID
     get_battle_log <id>       Tick-by-tick battle replay by ID
-    reload <weapon> <ammo>    Reload weapon with ammo
+    reload <weapon> <ammo>    Reload weapon with ammo (costs a tick)
 
   ${c.cyan}Drones:${c.reset}
     load_drone <item_id>      Load a drone from cargo

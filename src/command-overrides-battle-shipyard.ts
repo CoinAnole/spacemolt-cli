@@ -4,7 +4,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_engage: {
     usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
     description:
-      'Join an existing battle. This command cannot start a battle; omit side_id for faction-based auto-assignment.',
+      'Join an existing battle. This command cannot start a battle; omit side_id for faction-based auto-assignment. Does not cost a tick — only reload does.',
     example: 'spacemolt battle_engage 1',
     discoverWith: ['get_battle_status'],
     seeAlso: ['attack', 'get_battle_status', 'battle_target', 'battle_stance'],
@@ -13,15 +13,18 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['side_id'],
   },
   battle_advance: {
+    description: 'Advance toward the inner battle zone. Does not cost a tick — only reload does.',
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/advance',
   },
   battle_retreat: {
+    description: 'Retreat toward the outer battle zone. Does not cost a tick — only reload does.',
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/retreat',
   },
   battle_stance: {
     usage: '<stance>',
+    description: 'Set your battle stance (fire, evade, brace, or flee). Does not cost a tick — only reload does.',
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/stance',
     positionals: ['stance'],
@@ -32,7 +35,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_target: {
     usage: '<target_id_or_name>',
     description:
-      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, or stations.',
+      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, or stations. Does not cost a tick — only reload does.',
     example: 'spacemolt battle_target "Pirate Skiff"',
     discoverWith: ['get_battle_status'],
     seeAlso: ['get_battle_status', 'battle_stance', 'reload'],
@@ -75,6 +78,8 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   reload: {
     usage: '<weapon_instance_id> <ammo_item_id>',
+    description:
+      'Reload a weapon magazine from ammo in cargo. This is the only battle command that costs a tick; advance, retreat, stance, target, and engage do not.',
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/reload',
     positionals: ['weapon_instance_id', 'ammo_item_id'],
