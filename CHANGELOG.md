@@ -11,6 +11,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Human `inspect` of catalog ship classes now shows hull/shield/slots, the full default loadout,
   distinct achievement / faction achievement / lock lines, capabilities, and truncated build materials.
 
+### Catalog item tables
+
+- Catalog item tables show a Slot column when items declare a slot, and Effects now include
+  module combat and utility effects as well as ammo.
+
 ### Breaking: `repair_module` removed (gameserver v0.567.1)
 
 - Modules no longer accumulate wear, so `spacemolt repair_module` is gone with the API
