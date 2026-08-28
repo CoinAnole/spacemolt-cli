@@ -88,7 +88,7 @@ function formatYesNo(value: unknown): string | undefined {
   return value ? 'yes' : 'no';
 }
 
-/** REST BattleSummaryResponse.winning_side / WS battle_ended sentinel (−1 = no winner). */
+/** Omit the no-winner sentinel so this side-id label is not printed as -1. */
 function formatWinningSide(value: unknown): unknown {
   const n = Number(value);
   if (Number.isFinite(n) && n === -1) return undefined;
