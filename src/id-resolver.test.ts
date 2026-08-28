@@ -62,6 +62,125 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'sol_earth' } });
   });
 
+  test('travel earth stays unique when get_system POIs include base_id', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          ...systemInfoFixture,
+          system: {
+            ...systemInfoFixture.system,
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+          },
+        },
+      },
+      sessionPath,
+    );
+
+    expect(preparePayload('travel', { target_poi: 'earth' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'sol_earth' },
+    });
+  });
+
+  test('exact cached Base ID is sent unchanged, not rewritten to the POI id', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          ...systemInfoFixture,
+          system: {
+            ...systemInfoFixture.system,
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+          },
+        },
+      },
+      sessionPath,
+    );
+    const stderr: string[] = [];
+
+    const prepared = preparePayload(
+      'travel',
+      { target_poi: 'earth_station' },
+      options(),
+      sessionPath,
+      writer([], stderr),
+    );
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'earth_station' } });
+    expect(stderr).toEqual([]);
+  });
+
+  test('fuzzy prefix of Base ID expands to the full context.base_id', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          ...systemInfoFixture,
+          system: {
+            ...systemInfoFixture.system,
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+          },
+        },
+      },
+      sessionPath,
+    );
+    const stderr: string[] = [];
+
+    expect(preparePayload('travel', { target_poi: 'earth_st' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'earth_st' },
+    });
+
+    const prepared = preparePayload(
+      'travel',
+      { target_poi: 'earth_st' },
+      options({ fuzzyIds: true, plain: true }),
+      sessionPath,
+      writer([], stderr),
+    );
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'earth_station' } });
+    expect(stderr.join('\n')).toContain('resolved travel.id "earth_st" → "earth_station" (prefix)');
+    expect(stderr.join('\n')).not.toContain('"earth_st" → "earth_st"');
+  });
+
+  test('get_base poi cache resolves a Base ID prefix that does not also match the station name', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse(
+      'get_base',
+      {
+        structuredContent: {
+          base: { id: 'nova_terra_central', poi_id: 'sol_earth', name: 'Earth Station' },
+        },
+      },
+      sessionPath,
+    );
+
+    expect(preparePayload('travel', { target_poi: 'nova_terra_central' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'nova_terra_central' },
+    });
+
+    const stderr: string[] = [];
+    expect(
+      preparePayload(
+        'travel',
+        { target_poi: 'nova_t' },
+        options({ fuzzyIds: true, plain: true }),
+        sessionPath,
+        writer([], stderr),
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'nova_terra_central' },
+    });
+    expect(stderr.join('\n')).toContain('resolved travel.id "nova_t" → "nova_terra_central" (prefix)');
+  });
+
   test('keeps numeric jump bearings instead of resolving cached system IDs', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

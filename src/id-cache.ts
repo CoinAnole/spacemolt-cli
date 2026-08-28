@@ -290,7 +290,7 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
           kind: 'poi',
           id: stringValue(poi.id),
           name: stringValue(poi.name),
-          context: pick(poi, ['type', 'has_base']),
+          context: pick(poi, ['type', 'has_base', 'base_id']),
         });
     }
     for (const connection of arrayRecordsOrStrings(system.connections)) {
@@ -312,8 +312,30 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
       kind: 'poi',
       id: stringValue(poi.id || poi.poi_id),
       name: stringValue(poi.name || poi.poi_name),
-      context: pick(poi, ['type', 'system_id']),
+      context: pick(poi, ['type', 'system_id', 'base_id']),
     });
+
+  const base = isRecord(result.base) ? result.base : undefined;
+  if (base) {
+    const poiId = stringValue(base.poi_id);
+    const baseId = stringValue(base.id);
+    if (poiId) {
+      const existing = hints.find((hint) => hint.kind === 'poi' && hint.id === poiId);
+      if (existing) {
+        existing.context = compactContext({
+          ...existing.context,
+          ...(baseId ? { base_id: baseId } : {}),
+        });
+      } else {
+        push({
+          kind: 'poi',
+          id: poiId,
+          name: stringValue(base.name),
+          context: baseId ? { base_id: baseId } : undefined,
+        });
+      }
+    }
+  }
 
   const faction = isRecord(result.faction) ? result.faction : undefined;
   if (faction) pushFaction(push, faction);
@@ -412,17 +434,20 @@ export function resolveCachedId(
   const lookup = kind === 'package' ? normalizePackageId(trimmed) || trimmed : trimmed;
 
   const candidates = dedupeHintsById(hintsForKind(kind, hints));
-  // Exact always runs against hint.id OR hint.name (K13).
-  const exact = findMatches(candidates, lookup, 'exact');
-  if (exact.length > 0) return resolveMatches(kind, lookup, exact, 'exact');
+  // Exact id/name first so a POI id is never rewritten when it also equals another hint's Base ID.
+  const exactNamed = findMatches(candidates, lookup, 'exact', 'id_or_name');
+  if (exactNamed.length > 0) return resolveMatches(kind, lookup, exactNamed, 'exact');
+
+  const exactBaseId = findMatches(candidates, lookup, 'exact', 'base_id');
+  if (exactBaseId.length > 0) return resolveMatches(kind, lookup, exactBaseId, 'exact');
 
   if (policy.allowPrefix) {
-    const prefix = findMatches(candidates, lookup, 'prefix');
+    const prefix = findMatches(candidates, lookup, 'prefix', 'all');
     if (prefix.length > 0) return resolveMatches(kind, lookup, prefix, 'prefix');
   }
 
   if (policy.allowSubstring) {
-    const substring = findMatches(candidates, lookup, 'substring');
+    const substring = findMatches(candidates, lookup, 'substring', 'id_or_name');
     if (substring.length > 0) return resolveMatches(kind, lookup, substring, 'substring');
   }
 
@@ -559,7 +584,20 @@ export function printWhereCanI(
 
 function mergeHints(newHints: IdHint[], existing: IdHint[]): IdHint[] {
   const merged = new Map<string, IdHint>();
-  for (const hint of [...existing, ...newHints]) merged.set(`${hint.kind}:${hint.id}:${hint.sourceCommand}`, hint);
+  for (const hint of [...existing, ...newHints]) {
+    const key = `${hint.kind}:${hint.id}:${hint.sourceCommand}`;
+    const previous = merged.get(key);
+    if (!previous) {
+      merged.set(key, hint);
+      continue;
+    }
+    merged.set(key, {
+      ...previous,
+      ...hint,
+      name: hint.name || previous.name,
+      context: compactContext({ ...previous.context, ...hint.context }),
+    });
+  }
   return sortNewest([...merged.values()]);
 }
 
@@ -591,21 +629,53 @@ function sortNewest(hints: IdHint[]): IdHint[] {
   return [...hints].sort((a, b) => b.seenAt.localeCompare(a.seenAt) || a.id.localeCompare(b.id));
 }
 
-function findMatches(hints: IdHint[], query: string, match: IdMatchKind): IdHint[] {
+type IdMatchSource = 'id_or_name' | 'base_id' | 'all';
+
+function findMatches(hints: IdHint[], query: string, match: IdMatchKind, source: IdMatchSource): IdHint[] {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return [];
   return hints.filter((hint) => {
-    const values = [hint.id, hint.name || ''].map(normalizeSearchText).filter(Boolean);
-    if (match === 'exact') return values.some((value) => value === normalizedQuery);
-    if (match === 'prefix') return values.some((value) => value.startsWith(normalizedQuery));
-    return values.some((value) => value.includes(normalizedQuery));
+    const namedHit =
+      source !== 'base_id' && idOrNameValues(hint).some((value) => valueMatches(value, normalizedQuery, match));
+    if (namedHit) return true;
+    if (source === 'id_or_name' || match === 'substring') return false;
+    const baseId = normalizedBaseId(hint);
+    return Boolean(baseId) && valueMatches(baseId, normalizedQuery, match);
   });
 }
 
 function resolveMatches(kind: IdKind, query: string, matches: IdHint[], match: IdMatchKind): CachedIdResolveResult {
   const hint = matches[0];
-  if (matches.length === 1 && hint) return { type: 'resolved', value: hint.id, hint, match };
-  return { type: 'ambiguous', kind, query, matches };
+  if (matches.length !== 1 || !hint) return { type: 'ambiguous', kind, query, matches };
+
+  const normalizedQuery = normalizeSearchText(query);
+  const namedHit = idOrNameValues(hint).some((value) => valueMatches(value, normalizedQuery, match));
+  if (namedHit) return { type: 'resolved', value: hint.id, hint, match };
+
+  const canonicalBaseId = rawBaseId(hint);
+  // Exact typed Base ID stays as typed; a unique prefix expands to the full cached Base ID.
+  return { type: 'resolved', value: match === 'exact' ? query : canonicalBaseId || hint.id, hint, match };
+}
+
+function idOrNameValues(hint: IdHint): string[] {
+  return [hint.id, hint.name || ''].map(normalizeSearchText).filter(Boolean);
+}
+
+function rawBaseId(hint: IdHint): string {
+  const value = hint.context?.base_id;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+}
+
+function normalizedBaseId(hint: IdHint): string {
+  const value = rawBaseId(hint);
+  return value ? normalizeSearchText(value) : '';
+}
+
+function valueMatches(value: string, normalizedQuery: string, match: IdMatchKind): boolean {
+  if (match === 'exact') return value === normalizedQuery;
+  if (match === 'prefix') return value.startsWith(normalizedQuery);
+  return value.includes(normalizedQuery);
 }
 
 function formatHint(hint: IdHint, colors: DirectColors = DEFAULT_COLORS): string {

@@ -35,6 +35,134 @@ describe('id cache', () => {
     );
   });
 
+  test('records station base_id on a single poi hint from system.pois, get_poi, and get_base', () => {
+    const systemHints = extractIdHints(
+      'get_system',
+      {
+        ...systemInfoFixture,
+        system: {
+          ...systemInfoFixture.system,
+          pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+        },
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+    const earthHints = systemHints.filter((hint) => hint.kind === 'poi' && hint.name === 'Earth');
+
+    expect(new Set(earthHints.map((hint) => hint.id))).toEqual(new Set(['sol_earth']));
+    expect(earthHints).toContainEqual(
+      expect.objectContaining({
+        kind: 'poi',
+        id: 'sol_earth',
+        name: 'Earth',
+        context: expect.objectContaining({ base_id: 'earth_station', type: 'planet', has_base: true }),
+      }),
+    );
+
+    const poiHints = extractIdHints(
+      'get_poi',
+      {
+        poi: { id: 'sol_earth', name: 'Earth', type: 'planet', system_id: 'sol', base_id: 'earth_station' },
+        base: { id: 'earth_station', poi_id: 'sol_earth', name: 'Earth Station' },
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+    expect(poiHints.filter((hint) => hint.kind === 'poi' && hint.id === 'sol_earth')).toHaveLength(1);
+    expect(poiHints).toContainEqual(
+      expect.objectContaining({
+        kind: 'poi',
+        id: 'sol_earth',
+        name: 'Earth',
+        context: expect.objectContaining({ base_id: 'earth_station' }),
+      }),
+    );
+
+    const baseHints = extractIdHints(
+      'get_base',
+      { base: { id: 'earth_station', poi_id: 'sol_earth', name: 'Earth Station' } },
+      '2026-05-18T00:00:00.000Z',
+    );
+    expect(baseHints.filter((hint) => hint.kind === 'poi')).toHaveLength(1);
+    expect(baseHints).toContainEqual(
+      expect.objectContaining({
+        kind: 'poi',
+        id: 'sol_earth',
+        name: 'Earth Station',
+        sourceCommand: 'get_base',
+        context: { base_id: 'earth_station' },
+      }),
+    );
+  });
+
+  test('travel earth stays unique when the cached POI also has context.base_id', () => {
+    const hints = extractIdHints(
+      'get_system',
+      {
+        ...systemInfoFixture,
+        system: {
+          ...systemInfoFixture.system,
+          pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+        },
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(
+      new Set(
+        hints
+          .filter((hint) => hint.kind === 'poi' && (hint.name || '').toLowerCase() === 'earth')
+          .map((hint) => hint.id),
+      ),
+    ).toEqual(new Set(['sol_earth']));
+    expect(resolveCachedId('poi', 'earth', hints)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'sol_earth', match: 'exact' }),
+    );
+  });
+
+  test('exact Base ID pass-through does not rewrite to the POI id', () => {
+    const hints = [
+      {
+        kind: 'poi' as const,
+        id: 'sol_earth',
+        name: 'Earth',
+        sourceCommand: 'get_system',
+        seenAt: '2026-05-18T00:00:00.000Z',
+        context: { type: 'planet', has_base: true, base_id: 'earth_station' },
+      },
+    ];
+
+    expect(resolveCachedId('poi', 'earth_station', hints)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'earth_station', match: 'exact' }),
+    );
+    expect(resolveCachedId('poi', 'sol_earth', hints)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'sol_earth', match: 'exact' }),
+    );
+  });
+
+  test('unique prefix of Base ID expands to the full context.base_id, never the typed prefix', () => {
+    const hints = [
+      {
+        kind: 'poi' as const,
+        id: 'sol_earth',
+        name: 'Earth',
+        sourceCommand: 'get_system',
+        seenAt: '2026-05-18T00:00:00.000Z',
+        context: { base_id: 'earth_station' },
+      },
+    ];
+    const soft = softIdResolutionPolicy('poi');
+
+    expect(resolveCachedId('poi', 'earth_st', hints, soft)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'earth_station', match: 'prefix' }),
+    );
+    expect(resolveCachedId('poi', 'earth_st', hints)).toEqual({ type: 'unresolved', value: 'earth_st' });
+    // id/name win when the same prefix also matches the POI name.
+    expect(resolveCachedId('poi', 'ear', hints, soft)).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'sol_earth', match: 'prefix' }),
+    );
+    expect(resolveCachedId('poi', 'station', hints, soft)).toEqual({ type: 'unresolved', value: 'station' });
+  });
+
   test('extracts item and player IDs from common query outputs', () => {
     const cargoHints = extractIdHints('get_cargo', cargoFixture, '2026-05-18T00:00:00.000Z');
     const marketHints = extractIdHints('view_market', viewMarketFixture, '2026-05-18T00:00:00.000Z');
@@ -193,6 +321,27 @@ describe('id cache', () => {
       type: 'unresolved',
       value: 'unknown_pkg',
     });
+  });
+
+  test('get_base populates poi cache with context.base_id', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-base-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+
+    await cacheIdsFromResponse(
+      'get_base',
+      { structuredContent: { base: { id: 'earth_station', poi_id: 'sol_earth', name: 'Earth Station' } } },
+      sessionPath,
+    );
+
+    expect(hintsForKind('poi', loadIdCacheSync(sessionPath))).toContainEqual(
+      expect.objectContaining({
+        kind: 'poi',
+        id: 'sol_earth',
+        name: 'Earth Station',
+        sourceCommand: 'get_base',
+        context: { base_id: 'earth_station' },
+      }),
+    );
   });
 
   test('persists hints next to the active session path', async () => {
@@ -474,6 +623,31 @@ describe('id cache', () => {
     );
 
     expect(stderr).toEqual([]);
+  });
+
+  test('printIds includes base_id on poi hints', async () => {
+    const sessionPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-poi-base-')), 'pilot.json');
+    await saveIdCache(
+      [
+        {
+          kind: 'poi',
+          id: 'sol_earth',
+          name: 'Earth',
+          sourceCommand: 'get_system',
+          seenAt: '2026-05-18T00:00:00.000Z',
+          context: { type: 'planet', has_base: true, base_id: 'earth_station' },
+        },
+      ],
+      sessionPath,
+    );
+    const stdout: string[] = [];
+
+    printIds('poi', sessionPath, { out: (message = '') => stdout.push(message), err() {} }, undefined, {
+      plain: true,
+    });
+
+    expect(stdout.join('\n')).toContain('sol_earth (Earth)');
+    expect(stdout.join('\n')).toContain('base_id=earth_station');
   });
 
   test('printIds supports explicit plain output', async () => {
