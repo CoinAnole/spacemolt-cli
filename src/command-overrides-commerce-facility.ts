@@ -264,8 +264,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   storage_loot: {
     usage: '[wreck_id] [item_id] [quantity] [module_id=…]',
     description:
-      'Loot items and modules from a wreck into cargo via spacemolt_storage/loot. Omit wreck_id while towing. Distinct from loot_wreck (spacemolt_salvage/loot).',
-    example: 'spacemolt storage_loot',
+      'Loot wreck cargo into your hold via spacemolt_storage/loot, or fit a module onto your ship with module_id=. Omit wreck_id while towing; distinct from loot_wreck (spacemolt_salvage/loot).',
+    example: 'spacemolt storage_loot wreck-1 module_id=module-1',
     category: 'Wrecks',
     apiRoute: 'POST /api/v2/spacemolt_storage/loot',
     positionals: ['wreck_id', 'item_id', 'quantity', 'module_id'],
@@ -278,7 +278,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       },
       module_id: {
         type: 'string',
-        description: 'Optional module instance ID to loot.',
+        description:
+          'Module instance ID to fit directly onto your ship (not cargo). Requires a free slot plus CPU/power; withdrawn types cannot be fitted. Get module IDs from get_wrecks. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).',
       },
     },
   },
