@@ -16,6 +16,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Catalog item tables show a Slot column when items declare a slot, and Effects now include
   module combat and utility effects as well as ammo.
 
+### Catalog ships list
+
+- Human `catalog` ship tables keep the `=== Items ===` title and add optional Loadout, Req. items,
+  Lock (`prestige_lock` only), and Availability columns when those values are present. A one-row
+  ship catalog also prints a full Details block after the table.
+
 ### Breaking: `repair_module` removed (gameserver v0.567.1)
 
 - Modules no longer accumulate wear, so `spacemolt repair_module` is gone with the API
