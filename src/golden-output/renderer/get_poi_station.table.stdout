@@ -10,5 +10,10 @@ Station: Earth Station
   ID: earth_station
   POI: sol_earth
   Type: station
+  A busy trade hub.
   Empire: Terran
+  Hull: 900/1000
+  Shield: 200/300
+  Armor: 50
+  Guns: 40 DPS (reach 2)
   Fuel: 500/1000
