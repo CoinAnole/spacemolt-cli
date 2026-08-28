@@ -1612,12 +1612,34 @@ describe('command metadata', () => {
     expect(config.usage).not.toContain(config.description);
     expect(config.aliases?.ship_id).toBe('id');
     expect(config.example).toContain('ship-abc');
-    expect(COMMANDS.list_ships?.description).toContain('get_ship');
+    expect(COMMANDS.list_ships?.description).toContain('get_ship <id>');
+    expect(COMMANDS.list_ships?.description).not.toContain('<ship_id>');
 
     const help = captureHelp('get_ship');
     expect(help).toMatch(/omit for the (hull|ship) you are flying/i);
     expect(help).toMatch(/anywhere/i);
     expect(help).toMatch(/faction garage/i);
+  });
+
+  test('faction_garages documents remote get_ship as the fit path', () => {
+    const config = COMMANDS.faction_garages;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('faction_garages command is missing from COMMANDS');
+    expect(config.route).toEqual({ tool: 'spacemolt_faction', action: 'garages', method: 'POST' });
+    expect(config.description).toContain('get_ship');
+    expect(config.description).toMatch(/anywhere|without docking/i);
+    expect(config.description).toContain('switch_ship');
+    expect(config.description).not.toContain('ship_id=');
+    expect(config.example).toContain('spacemolt faction garages');
+    expect(config.example).toMatch(/get_ship id=/);
+    expect(config.seeAlso).toEqual(['list_ships', 'switch_ship', 'get_ship']);
+
+    const help = captureHelp('faction garages');
+    expect(help).toMatch(/get_ship <id>|get_ship id=/);
+    expect(help).toMatch(/without docking|from anywhere/i);
+    expect(help).toMatch(/claim/i);
+    expect(help).toContain('See also:');
+    expect(help).not.toContain('ship_id=');
   });
 
   test('pay_bounty is curated under Taxes with empire aliases', () => {

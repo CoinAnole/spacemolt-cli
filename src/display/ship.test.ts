@@ -84,7 +84,7 @@ test('list_ships happy path shows fleet, module types, garage, and footer', () =
   expect(stdout).toContain('Rock Skipper');
   expect(stdout).toContain('Ibis');
   expect(stdout).toContain('12,500 cr');
-  expect(stdout).toContain('Use get_ship <ship_id> for the full fit.');
+  expect(stdout).toContain('Use get_ship <id> for the full fit.');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toMatch(/\bStation\b/);
 
@@ -130,7 +130,7 @@ test('list_ships omits module types section when no ship has module_type_ids', (
 
   const stdout = renderListShips(fixture).stdout.join('\n');
   expect(stdout).not.toContain('=== Module types ===');
-  expect(stdout).toContain('Use get_ship <ship_id> for the full fit.');
+  expect(stdout).toContain('Use get_ship <id> for the full fit.');
   expect(stdout).toContain('=== Ships ===');
 });
 
