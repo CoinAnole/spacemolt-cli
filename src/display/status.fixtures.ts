@@ -596,12 +596,6 @@ export const getStatusDetainedFixture = {
   ...getStatusFixture,
   player: {
     ...getStatusFixture.player,
-    jail: {
-      empire_id: 'solarian',
-      bounty_owed: 2500,
-      jailed_until: '2026-07-18T12:34:56Z',
-      rep_restoration: 10,
-    },
     standings: {
       ...getStatusFixture.player.standings,
       solarian: {

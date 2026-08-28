@@ -27,11 +27,6 @@ player:
       baseline: 0
       outstanding_bounty: 0
       reputation: 5
-  jail:
-    empire_id: solarian
-    bounty_owed: 2500
-    jailed_until: 2026-07-18T12:34:56Z
-    rep_restoration: 10
 ship:
   name: Surveyor
   class_id: prospector

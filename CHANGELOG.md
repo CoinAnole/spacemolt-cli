@@ -15,7 +15,7 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Human `pay_bounty` output shows amount paid, paid-from (`self` / `faction`), remaining bounties,
   and whether detention for that empire was released.
 - `get_status`, `get_state`, and `get_player` table output show non-zero outstanding bounty on
-  standings and a detention line when `player.jail` identifies the empire or until-time.
+  standings and a detention line when a standing includes a detention until-time.
 
 - Human `complete_mission` output shows credits promised and shortfall when the empire treasury
   underpays. Full-payout copy is unchanged.

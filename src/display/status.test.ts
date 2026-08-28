@@ -309,7 +309,7 @@ test('get_status omits zero outstanding bounties from standings', () => {
   expect(stdout).not.toContain('outstanding_bounty');
 });
 
-test('get_status annotates standing jailed_until without inventing a detention line', () => {
+test('get_status prints a detention line from standing jailed_until', () => {
   const rendered = renderStructuredResult(
     'get_status',
     statusWithPlayer({
@@ -327,16 +327,18 @@ test('get_status annotates standing jailed_until without inventing a detention l
   );
   const stdout = rendered.stdout.join('\n');
 
+  expect(stdout).toContain('Detained by: solarian until 2026-07-18 12:34:56');
   expect(stdout).toContain('solarian: 12 (jailed until 2026-07-18 12:34:56)');
-  expect(stdout).not.toContain('Detained');
+  expect(stdout).not.toContain('(owe');
 });
 
 test('get_status prints a fully populated detention line before standings', () => {
   const rendered = renderStructuredResult('get_status', structuredClone(getStatusDetainedFixture), options, context);
   const stdout = rendered.stdout.join('\n');
 
-  expect(stdout).toContain('Detained by: solarian until 2026-07-18 12:34:56 (owe 2,500 cr; restore 10)');
+  expect(stdout).toContain('Detained by: solarian until 2026-07-18 12:34:56 (owe 2,500 cr)');
   expect(stdout).toContain('solarian: 12 (bounty 2,500, jailed until 2026-07-18 12:34:56)');
+  expect(stdout).not.toContain('restore');
   const tradingIdx = stdout.indexOf('Trading restricted until:');
   const detainedIdx = stdout.indexOf('Detained by:');
   const standingsIdx = stdout.indexOf('Standings:');
@@ -348,16 +350,15 @@ test('get_status prints a fully populated detention line before standings', () =
 
 test('get_player prints detention after trading restriction and before stats', () => {
   const fixture = structuredClone(playerProfileFixture) as {
-    player: Record<string, unknown>;
+    player: { standings: Record<string, Record<string, unknown>> };
   };
-  fixture.player.jail = {
-    empire_id: 'solarian',
-    bounty_owed: 2500,
+  fixture.player.standings.crimson = {
+    ...fixture.player.standings.crimson,
     jailed_until: '2026-07-18T12:34:56Z',
-    rep_restoration: 10,
   };
   const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
 
+  expect(stdout).toContain('Detained by: crimson until 2026-07-18 12:34:56');
   const restrictionIdx = stdout.indexOf('Trading restricted until:');
   const detainedIdx = stdout.indexOf('Detained by:');
   const statsIdx = stdout.indexOf('Stats:');
@@ -367,34 +368,48 @@ test('get_player prints detention after trading restriction and before stats', (
   expect(standingsIdx).toBeGreaterThan(statsIdx);
 });
 
-test('get_status omits detention when jail cannot identify empire or until-time', () => {
-  for (const jail of [
-    undefined,
-    null,
-    {},
-    { bounty_owed: 2500, rep_restoration: 10 },
-    { empire_id: '', jailed_until: '', bounty_owed: 2500 },
+test('get_status omits detention when standings have no jailed_until', () => {
+  for (const standings of [
+    {
+      solarian: { baseline: 0, outstanding_bounty: 2500, reputation: 12 },
+    },
+    {
+      solarian: { baseline: 0, outstanding_bounty: 2500, reputation: 12, jailed_until: '' },
+    },
   ]) {
-    const rendered = renderStructuredResult('get_status', statusWithPlayer({ jail }), options, context);
+    const rendered = renderStructuredResult('get_status', statusWithPlayer({ standings }), options, context);
     expect(rendered.stdout.join('\n')).not.toContain('Detained');
   }
 });
 
-test('get_status composes partial detention fragments', () => {
-  const cases: Array<[Record<string, unknown>, string]> = [
-    [
-      { empire_id: 'solarian', jailed_until: '2026-07-18T12:34:56Z' },
-      'Detained by: solarian until 2026-07-18 12:34:56',
-    ],
-    [{ jailed_until: '2026-07-18T12:34:56Z', bounty_owed: 2500 }, 'Detained until 2026-07-18 12:34:56 (owe 2,500 cr)'],
-    [{ empire_id: 'solarian', bounty_owed: 2500 }, 'Detained by: solarian (owe 2,500 cr)'],
-    [{ empire_id: 'solarian' }, 'Detained by: solarian'],
-  ];
+test('get_status composes detention fragments from standings', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({
+      standings: {
+        solarian: {
+          baseline: 0,
+          outstanding_bounty: 2500,
+          reputation: 12,
+          jailed_until: '2026-07-18T12:34:56Z',
+        },
+        crimson: {
+          baseline: 10,
+          outstanding_bounty: 0,
+          reputation: 94,
+          jailed_until: '2026-07-19T08:00:00Z',
+        },
+      },
+    }),
+    options,
+    context,
+  ).stdout.join('\n');
 
-  for (const [jail, line] of cases) {
-    const stdout = renderStructuredResult('get_status', statusWithPlayer({ jail }), options, context).stdout.join('\n');
-    expect(stdout).toContain(line);
-  }
+  expect(stdout).toContain('Detained by: solarian until 2026-07-18 12:34:56 (owe 2,500 cr)');
+  expect(stdout).toContain('Detained by: crimson until 2026-07-19 08:00:00');
+  const solarianIdx = stdout.indexOf('Detained by: solarian');
+  const crimsonIdx = stdout.indexOf('Detained by: crimson');
+  expect(crimsonIdx).toBeGreaterThan(solarianIdx);
 });
 
 test('get_status_summary stays compact without detention or bounty', () => {

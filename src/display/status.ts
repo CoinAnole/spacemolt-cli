@@ -57,27 +57,22 @@ function emitTradingRestriction(player: Record<string, unknown>): void {
   emitLine(`Trading restricted until: ${value}`);
 }
 
-/** Print player.jail only when it identifies who detained you or until when. */
 function emitDetention(player: Record<string, unknown>): void {
-  const jail = player.jail;
-  if (!isRecord(jail) || Object.keys(jail).length === 0) return;
+  if (!isRecord(player.standings)) return;
+  for (const [empire, value] of Object.entries(player.standings)) {
+    if (!isRecord(value)) continue;
+    const jailedUntil =
+      typeof value.jailed_until === 'string' && value.jailed_until !== '' ? value.jailed_until : undefined;
+    if (!jailedUntil) continue;
 
-  const empireId = typeof jail.empire_id === 'string' && jail.empire_id !== '' ? jail.empire_id : undefined;
-  const jailedUntil = typeof jail.jailed_until === 'string' && jail.jailed_until !== '' ? jail.jailed_until : undefined;
-  if (!empireId && !jailedUntil) return;
-
-  const who = empireId ? `Detained by: ${empireId}` : 'Detained';
-  const until = jailedUntil ? `until ${formatTimestampPreview(jailedUntil)}` : undefined;
-  const head = until ? `${who} ${until}` : who;
-
-  const fragments: string[] = [];
-  if (typeof jail.bounty_owed === 'number' && Number.isFinite(jail.bounty_owed)) {
-    fragments.push(`owe ${formatNumber(jail.bounty_owed)} cr`);
+    const head = `Detained by: ${empire} until ${formatTimestampPreview(jailedUntil)}`;
+    const bounty = value.outstanding_bounty;
+    const owe =
+      typeof bounty === 'number' && Number.isFinite(bounty) && bounty > 0
+        ? `owe ${formatNumber(bounty)} cr`
+        : undefined;
+    emitLine(owe ? `${head} (${owe})` : head);
   }
-  if (typeof jail.rep_restoration === 'number' && Number.isFinite(jail.rep_restoration)) {
-    fragments.push(`restore ${formatNumber(jail.rep_restoration)}`);
-  }
-  emitLine(fragments.length ? `${head} (${fragments.join('; ')})` : head);
 }
 
 function formatSummaryLine(label: string, value: unknown): string {
@@ -274,7 +269,6 @@ function formatStandingValue(value: unknown): string | undefined {
   return String(value);
 }
 
-/** Reputation plus non-zero bounty / jailed_until; baseline stays hidden. */
 function emitStandings(player: Record<string, unknown>): void {
   if (!isRecord(player.standings)) return;
   const standings = Object.entries(player.standings)

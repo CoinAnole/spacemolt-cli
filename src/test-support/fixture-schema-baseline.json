@@ -202,7 +202,6 @@
     "get_state|get_state|required-missing|ship.speed",
     "get_state|get_state|required-missing|ship.utility_slots",
     "get_state|get_state|required-missing|ship.weapon_slots",
-    "get_status_detained|get_status|extra-in-fixture|player.jail",
     "get_status_detained|get_status|required-missing|location.connections",
     "get_status_detained|get_status|required-missing|location.empire",
     "get_status_detained|get_status|required-missing|location.nearby_empire_npc_count",
