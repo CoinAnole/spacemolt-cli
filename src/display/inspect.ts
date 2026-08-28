@@ -1,4 +1,9 @@
-import { summarizeAmmoEffects } from './combat-effects.ts';
+import {
+  emitCatalogItemDetail,
+  emitCatalogModuleDetail,
+  emitCatalogShipDetail,
+  packageOperationLabel,
+} from './catalog-detail.ts';
 import {
   c,
   emitLine,
@@ -63,48 +68,6 @@ function summarizeItemQuantities(value: unknown): string {
     .filter(isRecord)
     .map((item) => `${item.quantity ?? '?'}× ${text(item.name) ?? text(item.item_id) ?? text(item.id) ?? '?'}`)
     .join(', ');
-}
-
-function summarizeScalarEffectEntry(entry: unknown): string | undefined {
-  if (entry === undefined || entry === null || entry === '') return undefined;
-  if (typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean') return String(entry);
-  return undefined;
-}
-
-function summarizeEffect(value: unknown): string {
-  if (!isRecord(value)) return summarizeScalarEffectEntry(value) ?? '';
-
-  // Prefer the shared ammo formatter for nested ammo effect records.
-  const ammoSummary = summarizeAmmoEffects({ effect: value });
-  if (ammoSummary) {
-    const type = text(value.type);
-    return type ? `type: ${type}, ${ammoSummary}` : ammoSummary;
-  }
-
-  return Object.entries(value)
-    .map(([key, entry]) => {
-      if (isRecord(entry)) {
-        const nested = summarizeEffect(entry);
-        return nested ? `${key}: (${nested})` : undefined;
-      }
-      if (Array.isArray(entry)) {
-        const parts = entry.map((item) => summarizeScalarEffectEntry(item) ?? summarizeEffect(item)).filter(Boolean);
-        return parts.length ? `${key}: [${parts.join(', ')}]` : undefined;
-      }
-      const scalar = summarizeScalarEffectEntry(entry);
-      return scalar !== undefined ? `${key}: ${scalar}` : undefined;
-    })
-    .filter(Boolean)
-    .join(', ');
-}
-
-function packageOperationLabel(...values: unknown[]): string | undefined {
-  for (const value of values) {
-    if (typeof value === 'string' && value.trim()) return value.trim();
-    if (value === true) return 'yes';
-    if (value === false) return 'no';
-  }
-  return undefined;
 }
 
 function emitOptionalLine(label: string, value: unknown): void {
@@ -383,24 +346,6 @@ function emitBase(basePayload: Record<string, unknown>): void {
   }
 }
 
-function emitCatalogItemDetail(entry: Record<string, unknown>, catalog: Record<string, unknown>): void {
-  emitLine(`\n${c.bright}Details${c.reset}`);
-  const description = text(entry.description);
-  if (description) emitLine(description);
-
-  emitOptionalLine('Size', entry.size);
-  emitOptionalLine('Base value', entry.base_value);
-  emitOptionalLine('Category', entry.category ?? entry.type);
-  emitOptionalLine('Class', entry.class_name);
-  emitOptionalLine('Tier', entry.tier);
-
-  const effect = summarizeEffect(entry.effect);
-  if (effect) emitLine(`Effect: ${effect}`);
-
-  const packageOperation = packageOperationLabel(entry.package_operation, catalog.package_operation);
-  if (packageOperation) emitLine(`Package operation: ${packageOperation}`);
-}
-
 function emitCatalogRecipeDetail(recipe: Record<string, unknown>): void {
   emitLine(`\n${c.bright}Details${c.reset}`);
   const description = text(recipe.description);
@@ -425,19 +370,32 @@ function emitCatalog(catalog: Record<string, unknown>): void {
   const recipes = Array.isArray(catalog.recipes) ? catalog.recipes.filter(isRecord) : [];
 
   if (items.length) {
-    printCompactTable(
-      items.length === 1 ? 'Entry' : 'Entries',
-      items,
-      [
-        ['Name', ['name', 'class_name', 'id']],
-        ['ID', ['id', 'item_id', 'recipe_id']],
-        ['Category', ['category', 'type']],
-        ['Size', ['size']],
-        ['Value', ['base_value']],
-      ],
-      { maxCellWidth: 48 },
-    );
-    if (items.length === 1 && items[0]) emitCatalogItemDetail(items[0], catalog);
+    const columns: Array<[string, string[]]> =
+      catalogType === 'ships'
+        ? [
+            ['Name', ['name', 'class_name', 'id']],
+            ['ID', ['id', 'item_id', 'class_id']],
+            ['Class', ['class', 'category']],
+            ['Tier', ['tier']],
+            ['Empire', ['empire', 'faction']],
+          ]
+        : [
+            ['Name', ['name', 'class_name', 'id']],
+            ['ID', ['id', 'item_id', 'recipe_id']],
+            ['Category', ['category', 'type']],
+            ['Size', ['size']],
+            ['Value', ['base_value']],
+          ];
+    if (catalogType !== 'ships' && items.length === 1 && typeof items[0]?.slot === 'string') {
+      columns.push(['Slot', ['slot']]);
+    }
+    printCompactTable(items.length === 1 ? 'Entry' : 'Entries', items, columns, { maxCellWidth: 48 });
+    const entry = items.length === 1 ? items[0] : undefined;
+    if (entry) {
+      if (catalogType === 'ships') emitCatalogShipDetail(entry, catalog);
+      else if (catalogType === 'items' && typeof entry.slot === 'string') emitCatalogModuleDetail(entry, catalog);
+      else emitCatalogItemDetail(entry, catalog);
+    }
   }
 
   if (recipes.length) {

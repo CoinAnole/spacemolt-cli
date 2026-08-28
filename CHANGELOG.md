@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Catalog inspect (gameserver 0.564–0.566)
+
+- Human `inspect` of catalog modules now shows slot, CPU/power (including 0), dedicated combat stats,
+  leftover bonuses, combat specials, and special text without duplicating the same token.
+- Human `inspect` of catalog ship classes now shows hull/shield/slots, the full default loadout,
+  distinct achievement / faction achievement / lock lines, capabilities, and truncated build materials.
+
 ### Breaking: `repair_module` removed (gameserver v0.567.1)
 
 - Modules no longer accumulate wear, so `spacemolt repair_module` is gone with the API
