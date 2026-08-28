@@ -76,6 +76,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
       'Agent logging',
       'Petition (empire messages)',
       'P2P Trading',
+      'Taxes',
     ],
   },
 ];
@@ -799,7 +800,7 @@ ${c.bright}Once logged in, try:${c.reset}`);
   write(`
 ${c.bright}Command Discovery:${c.reset}
   spacemolt help <command>        Local usage, args, route
-  spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
+  spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info, misc
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Local command help
@@ -900,7 +901,7 @@ ${c.bright}Useful Commands:${c.reset}
 
 ${c.bright}Command Discovery:${c.reset}
   spacemolt help <command>        Local usage, args, route
-  spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
+  spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info, misc
   spacemolt commands --search fuel
   spacemolt help all              Full local command reference
   spacemolt help command=<name>   Local command help
@@ -1041,7 +1042,7 @@ ${c.bright}Usage:${c.reset}
 
     Local command discovery:
      spacemolt help <command>        Local usage, args, route
-     spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info
+     spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info, misc
      spacemolt commands --search fuel
      spacemolt help all              Full local command reference
      spacemolt help command=<name>   Local command help
@@ -1089,6 +1090,10 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     buy <item_id> [qty]       Buy from market
     refuel [fuel_cell_id]     Refuel at station to full or use fuel cells
     repair                    Repair at station
+
+  ${c.cyan}Taxes:${c.reset}
+    prepay_tax <amount>       Prepay personal tax
+    pay_bounty [id]           Settle outstanding bounty from anywhere
 
   ${c.cyan}Combat:${c.reset}
     attack <target_id>        Start/join persistent system battle

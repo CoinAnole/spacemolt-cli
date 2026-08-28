@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### SpaceMolt v0.564.0 compatibility
+
+- `pay_bounty` is a first-class Taxes command. Settle outstanding bounty with one empire from
+  anywhere (`spacemolt pay_bounty solarian`, or `spacemolt pay_bounty solarian faction` to pay
+  from the faction treasury). `empire` and `empire_id` are aliases for `id`. Omit `id` when you
+  owe exactly one empire; use `source=faction` if you omit `id` and pay from the treasury.
+- `help misc` lists Taxes (`prepay_tax` and `pay_bounty`). Command-group discovery copy includes
+  `misc` (`spacemolt help <group>`).
+
 - Human `complete_mission` output shows credits promised and shortfall when the empire treasury
   underpays. Full-payout copy is unchanged.
 - `battle_left` notification previews include flee, destroyed, and emergency-warp reasons.

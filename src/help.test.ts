@@ -91,7 +91,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('spacemolt help <command>        Local usage, args, route');
     expect(output).toContain(
-      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info',
+      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info, misc',
     );
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
@@ -238,7 +238,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('spacemolt help <command>        Local usage, args, route');
     expect(output).toContain(
-      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info',
+      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info, misc',
     );
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');
@@ -1068,6 +1068,51 @@ describe('help output branches', () => {
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/deliver');
   });
 
+  test('pay_bounty is curated Taxes help under misc, not Generated API or info', () => {
+    const command = captureWriter();
+    const explanation = captureWriter();
+    expect(showCommandHelp('pay_bounty', command.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(showCommandExplanation('pay_bounty', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+
+    const commandOutput = command.stdout.join('\n');
+    expect(commandOutput).toContain('CLI aliases:');
+    expect(commandOutput).toContain('empire -> id');
+    expect(commandOutput).toContain('empire_id -> id');
+    expect(commandOutput).toContain('spacemolt pay_bounty solarian faction');
+    expect(explanation.stdout.join('\n')).toContain('Category: Taxes');
+
+    const misc = captureWriter();
+    expect(showCommandGroup('misc', misc.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const miscOutput = misc.stdout.join('\n');
+    expect(miscOutput).toContain('Taxes:');
+    expect(miscOutput).toContain('pay_bounty');
+    expect(miscOutput).toContain('prepay_tax');
+
+    const info = captureWriter();
+    const query = captureWriter();
+    expect(showCommandGroup('info', info.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(showCommandGroup('query', query.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(info.stdout.join('\n')).not.toContain('pay_bounty');
+    expect(info.stdout.join('\n')).not.toContain('prepay_tax');
+    expect(query.stdout.join('\n')).not.toContain('pay_bounty');
+    expect(query.stdout.join('\n')).not.toContain('prepay_tax');
+
+    const full = captureWriter();
+    showFullHelp(full.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const fullOutput = full.stdout.join('\n');
+    const actionIndex = fullOutput.indexOf('Action Commands (1 per tick');
+    const infoIndex = fullOutput.indexOf('Information Commands (unlimited):');
+    const generatedIndex = fullOutput.indexOf('Generated API Commands');
+    expect(actionIndex).toBeGreaterThan(-1);
+    expect(infoIndex).toBeGreaterThan(-1);
+    expect(fullOutput.indexOf('pay_bounty [id]')).toBeGreaterThan(actionIndex);
+    expect(fullOutput.slice(infoIndex, actionIndex)).not.toContain('pay_bounty');
+    const generatedSection = generatedIndex === -1 ? '' : fullOutput.slice(generatedIndex);
+    expect(generatedSection).not.toContain('pay_bounty');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 
@@ -1091,7 +1136,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('spacemolt help <command>        Local usage, args, route');
     expect(output).toContain(
-      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info',
+      'spacemolt help <group>          Groups: nav, market, storage, combat, ship, facility, faction, info, misc',
     );
     expect(output).toContain('spacemolt commands --search fuel');
     expect(output).toContain('spacemolt help all              Full local command reference');

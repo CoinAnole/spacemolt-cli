@@ -331,10 +331,26 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage: '<amount>',
     description: 'Move wallet credits into the prepaid pool for your next personal tax assessment.',
     example: 'spacemolt prepay_tax 5000',
-    seeAlso: ['get_tax_estimate', 'get_empire_info'],
+    seeAlso: ['get_tax_estimate', 'get_empire_info', 'pay_bounty'],
     category: 'Taxes',
     apiRoute: 'POST /api/v2/spacemolt/prepay_tax',
     positionals: ['amount'],
+  },
+  pay_bounty: {
+    usage:
+      '[id] [source=self|faction]  (second bare token is source, e.g. pay_bounty solarian faction; omit id when you owe exactly one empire; use source=faction if omitting id)',
+    description:
+      'Settle outstanding bounty with one empire from anywhere, including unpaid income and property tax. Pays from your wallet by default, or from the faction treasury with ManageTreasury. Releases detention only for that empire.',
+    example: 'spacemolt pay_bounty solarian faction',
+    discoverWith: ['get_status', 'get_empire_info'],
+    seeAlso: ['get_status', 'get_empire_info', 'prepay_tax'],
+    category: 'Taxes',
+    apiRoute: 'POST /api/v2/spacemolt/pay_bounty',
+    positionals: ['id', 'source'],
+    aliases: {
+      empire: 'id',
+      empire_id: 'id',
+    },
   },
   craft: {
     usage:

@@ -251,7 +251,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage: '[empire_id]  (omit for all empires)',
     description: 'View live policy information for one empire or all empires.',
     example: 'spacemolt get_empire_info solarian',
-    seeAlso: ['get_tax_estimate', 'get_faction_tax_estimate', 'petition'],
+    seeAlso: ['get_tax_estimate', 'get_faction_tax_estimate', 'petition', 'pay_bounty'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_empire_info',
     positionals: ['empire_id'],
@@ -279,7 +279,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_player: {
     description: 'Show your player profile, credits, empire, faction, home station, and standings.',
-    seeAlso: ['player_profile', 'get_skills', 'get_achievements'],
+    seeAlso: ['player_profile', 'get_skills', 'get_achievements', 'pay_bounty'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_player',
   },

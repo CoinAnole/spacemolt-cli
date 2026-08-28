@@ -1400,6 +1400,7 @@ describe('command metadata', () => {
       'shipping_pay_debt',
       'shipping_profile',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.pay_bounty?.category).not.toBe('Generated API');
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');
     expect(shippingList).toMatchObject({
@@ -1524,6 +1525,27 @@ describe('command metadata', () => {
     expect(quoteHelp).toContain('package:<id>');
     expect(quoteHelp).toContain('POI');
     expect(quoteHelp).toContain('spacemolt shipping_quote package:package-1');
+  });
+
+  test('pay_bounty is curated under Taxes with empire aliases', () => {
+    const config = COMMANDS.pay_bounty;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('pay_bounty command is missing from COMMANDS');
+    expect(config.category).toBe('Taxes');
+    expect(config.route).toEqual({ tool: 'spacemolt', action: 'pay_bounty', method: 'POST' });
+    expect(config.args).toEqual(['id', 'source']);
+    expect(config.aliases).toEqual({
+      empire: 'id',
+      empire_id: 'id',
+    });
+    expect(config.route.defaults).toBeUndefined();
+    expect(config.example).toBe('spacemolt pay_bounty solarian faction');
+    expect(config.seeAlso).toEqual(['get_status', 'get_empire_info', 'prepay_tax']);
+    expect(config.discoverWith).toEqual(['get_status', 'get_empire_info']);
+    expect(COMMANDS.prepay_tax?.seeAlso).toContain('pay_bounty');
+    expect(COMMANDS.get_empire_info?.seeAlso).toContain('pay_bounty');
+    expect(COMMANDS.get_player?.seeAlso).toContain('pay_bounty');
+    expect(COMMANDS.get_status?.seeAlso).not.toContain('pay_bounty');
   });
 
   test('notification commands expose exactly the server-emitted type choices', () => {

@@ -1357,6 +1357,26 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseInternalOk(['station_remove_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
   });
 
+  test('pay_bounty accepts id/source positionals and empire aliases', () => {
+    expect(parseOk(['pay_bounty', 'solarian']).payload).toEqual({ id: 'solarian' });
+    expect(parseOk(['pay_bounty', 'solarian', 'faction']).payload).toEqual({
+      id: 'solarian',
+      source: 'faction',
+    });
+    expect(parseOk(['pay_bounty', 'source=faction']).payload).toEqual({ source: 'faction' });
+
+    const empireNamed = parseOk(['pay_bounty', 'empire=solarian']);
+    expect(empireNamed.payload).toEqual({ empire: 'solarian' });
+    expect(normalizeParsedPayload('pay_bounty', empireNamed.payload)).toEqual({ id: 'solarian' });
+
+    const empireIdNamed = parseOk(['pay_bounty', 'empire_id=solarian']);
+    expect(empireIdNamed.payload).toEqual({ empire_id: 'solarian' });
+    expect(normalizeParsedPayload('pay_bounty', empireIdNamed.payload)).toEqual({ id: 'solarian' });
+
+    expect(normalizeParsedPayload('pay_bounty', { empire: 'solarian' })).toEqual({ id: 'solarian' });
+    expect(normalizeParsedPayload('pay_bounty', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
+  });
+
   test('tax and faction scan additions from v0.410 parse natural positionals', () => {
     const prepay = parseOk(['prepay_tax', '5000']);
     expect(normalizeParsedPayload('prepay_tax', prepay.payload)).toEqual({ quantity: '5000' });
