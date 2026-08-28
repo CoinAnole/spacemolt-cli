@@ -88,6 +88,22 @@ function formatYesNo(value: unknown): string | undefined {
   return value ? 'yes' : 'no';
 }
 
+/** Omit the no-winner sentinel so this side-id label is not printed as -1. */
+function formatWinningSide(value: unknown): unknown {
+  const n = Number(value);
+  if (Number.isFinite(n) && n === -1) return undefined;
+  return value;
+}
+
+function formatBattleEndedCell(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.outcome === 'string') {
+    const token = value.outcome.trim();
+    if (token) return token;
+  }
+  return 'yes';
+}
+
 function formatPercentValue(value: unknown): string | undefined {
   const number = formatNumber(value);
   return number === undefined ? undefined : `${number}%`;
@@ -1270,7 +1286,7 @@ export const socialFormatters = [
         emitLine(`Has Station: ${formatYesNo(r.has_station) ?? r.has_station}`);
       }
       emitOptionalLine('Outcome', r.outcome);
-      emitOptionalLine('Winning Side', r.winning_side);
+      emitOptionalLine('Winning Side', formatWinningSide(r.winning_side));
       emitOptionalLine('Start Tick', r.start_tick);
       emitOptionalLine('Duration', r.duration_ticks === undefined ? undefined : `${r.duration_ticks} ticks`);
       emitOptionalLine('Participants', r.participant_count);
@@ -1327,7 +1343,6 @@ export const socialFormatters = [
           const burns = Array.isArray(entry.burns) ? entry.burns.length : 0;
           const flees = Array.isArray(entry.flee) ? entry.flee.length : 0;
           const kills = Array.isArray(entry.kills) ? entry.kills.length : 0;
-          const ended = isRecord(entry.battle_ended);
           return {
             tick: entry.tick ?? entry.battle_tick ?? index,
             attacks: attacks.length,
@@ -1338,7 +1353,7 @@ export const socialFormatters = [
             burns: burns || undefined,
             flee: flees || undefined,
             kills: kills || undefined,
-            ended: ended ? 'yes' : undefined,
+            ended: formatBattleEndedCell(entry.battle_ended),
           };
         });
         const tickColumns: Array<[string, string[]]> = [

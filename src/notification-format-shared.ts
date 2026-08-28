@@ -871,9 +871,32 @@ function previewBattleEnded(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
+  const reason = safeScalar(data.reason);
   const message = safeScalar(data.message);
-  const suffix = message !== undefined ? ` ${firstLine(String(message))}` : '';
-  return headlinePreview('BATTLE', `Battle ended!${suffix}`, options);
+  const reasonToken = typeof reason === 'string' ? reason.trim() : '';
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+
+  let headline: string;
+  if (reasonToken) {
+    headline = `Battle ended (${reasonToken})`;
+  } else if (messageLine) {
+    headline = `Battle ended! ${messageLine}`;
+  } else {
+    headline = 'Battle ended!';
+  }
+
+  const details: string[] = [];
+  const winningSide = Number(data.winning_side);
+  if (Number.isFinite(winningSide) && winningSide === -1) {
+    details.push('no winning side');
+  }
+  if (reasonToken && messageLine && messageLine !== reasonToken && !headline.includes(messageLine)) {
+    details.push(messageLine);
+  }
+
+  return details.length > 0
+    ? detailPreview('BATTLE', headline, details, options)
+    : headlinePreview('BATTLE', headline, options);
 }
 
 /**

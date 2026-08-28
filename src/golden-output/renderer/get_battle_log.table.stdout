@@ -7,10 +7,10 @@ Has More: no
 
 === Ticks ===
 
-  Tick | Attacks | Hits | Damage | Shield | Hull | Burns | Flee | Kills | Ended
-  -----+---------+------+--------+--------+------+-------+------+-------+------
-  0    | 1       | 1    | 420    | 300    | 120  |       |      |       |      
-  1    | 2       | 1    | 520    | 340    | 180  | 1     |      | 1     | yes  
+  Tick | Attacks | Hits | Damage | Shield | Hull | Burns | Flee | Kills | Ended         
+  -----+---------+------+--------+--------+------+-------+------+-------+---------------
+  0    | 1       | 1    | 420    | 300    | 120  |       |      |       |               
+  1    | 2       | 1    | 520    | 340    | 180  | 1     |      | 1     | side_1_victory
 
 Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H = shield/hull. Trailing flags may truncate.
 
