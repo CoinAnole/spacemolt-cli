@@ -1377,6 +1377,15 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(normalizeParsedPayload('pay_bounty', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
   });
 
+  test('get_ship accepts optional ship_id positional and aliases it to id', () => {
+    expect(parseOk(['get_ship']).payload).toEqual({});
+    expect(parseOk(['get_ship', 'ship-abc']).payload.ship_id).toBe('ship-abc');
+    expect(parseOk(['get_ship', 'ship_id=ship-abc']).payload).toEqual({ ship_id: 'ship-abc' });
+    expect(parseOk(['get_ship', 'id=ship-abc']).payload.id).toBe('ship-abc');
+    expect(normalizeParsedPayload('get_ship', { ship_id: 'ship-abc' })).toEqual({ id: 'ship-abc' });
+    expect(parseArgs(['get_ship', 'ship_id=ship-abc']).ok).toBe(true);
+  });
+
   test('tax and faction scan additions from v0.410 parse natural positionals', () => {
     const prepay = parseOk(['prepay_tax', '5000']);
     expect(normalizeParsedPayload('prepay_tax', prepay.payload)).toEqual({ quantity: '5000' });

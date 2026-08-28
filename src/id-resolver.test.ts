@@ -579,6 +579,29 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'ship-dust-devil', price: 1000 } });
   });
 
+  test('resolves get_ship after ship_id alias normalizes to id', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'ship',
+            id: 'ship-dust-devil',
+            name: 'dust_devil',
+            sourceCommand: 'list_ships',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload('get_ship', { ship_id: 'dust_devil' }, options(), sessionPath);
+
+    expect(prepared).toEqual({ type: 'payload', payload: { id: 'ship-dust-devil' } });
+  });
+
   test('resolves reload ammo as an item but leaves weapon instance id unchanged', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

@@ -1053,7 +1053,7 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_system          Current system's POIs and connections
   get_poi             Current POI details and resources
   get_base            Base info (when docked)
-  get_ship            Detailed ship info with modules
+  get_ship            Current or remote owned/faction-garage ship fit
   get_cargo           Cargo contents
   get_nearby          Other players at your POI
   get_skills          Your skill levels and XP

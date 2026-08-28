@@ -55,12 +55,27 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['id'],
   },
   get_ship: {
+    usage: '[ship_id]  (omit for the hull you are flying; ID from list_ships or faction garages)',
     description:
-      'Show ship stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo. Includes drone bay counters and racked drones when present.',
-    example: 'spacemolt get_ship',
-    seeAlso: ['install_mod', 'uninstall_mod', 'reload', 'list_drones', 'get_drone', 'list_ships'],
+      'Show stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo for the ship you are flying, or for any other ship you own (parked, faction-garaged, or in a carrier bay) or any hull in your faction garage pool. Remote reads work from anywhere — no docking or travel. A remote hull names its location and omits drone_bay (drones stay with you). Current-ship output includes drone bay counters and racked drones when present.',
+    example: 'spacemolt get_ship; spacemolt get_ship ship-abc; spacemolt get_ship ship_id=ship-abc',
+    discoverWith: ['list_ships', 'faction_garages'],
+    seeAlso: [
+      'list_ships',
+      'faction_garages',
+      'switch_ship',
+      'install_mod',
+      'uninstall_mod',
+      'reload',
+      'list_drones',
+      'get_drone',
+    ],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_ship',
+    positionals: ['ship_id'],
+    aliases: {
+      ship_id: 'id',
+    },
   },
   get_cargo: {
     usage: '[--items item_id,item_id] [--top N|--limit N] [--show-empty]',
