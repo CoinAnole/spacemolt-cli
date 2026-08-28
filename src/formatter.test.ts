@@ -1621,7 +1621,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Crafting: Level 2 (175 XP)');
     expect(stdout).toContain('crimson: 94');
     expect(stdout).toContain('nebula: 20');
-    expect(stdout).toContain('pirate_voss: -30');
+    expect(stdout).toContain('pirate_voss: -30 (bounty 2,500)');
     expect(stdout).toContain('pirate_kael: 5');
     expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('=== Response ===');
@@ -5019,7 +5019,7 @@ describe('structuredContent formatters', () => {
       Trading restricted until: 2026-07-18T12:34:56Z
 
       Standings:
-        solarian: 12, crimson: 94, pirate_voss: -10, pirate_kael: 5
+        solarian: 12, crimson: 94, pirate_voss: -10 (bounty 500), pirate_kael: 5
 
       Location:
         System: Sol

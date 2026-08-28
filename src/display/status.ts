@@ -57,6 +57,29 @@ function emitTradingRestriction(player: Record<string, unknown>): void {
   emitLine(`Trading restricted until: ${value}`);
 }
 
+/** Print player.jail only when it identifies who detained you or until when. */
+function emitDetention(player: Record<string, unknown>): void {
+  const jail = player.jail;
+  if (!isRecord(jail) || Object.keys(jail).length === 0) return;
+
+  const empireId = typeof jail.empire_id === 'string' && jail.empire_id !== '' ? jail.empire_id : undefined;
+  const jailedUntil = typeof jail.jailed_until === 'string' && jail.jailed_until !== '' ? jail.jailed_until : undefined;
+  if (!empireId && !jailedUntil) return;
+
+  const who = empireId ? `Detained by: ${empireId}` : 'Detained';
+  const until = jailedUntil ? `until ${formatTimestampPreview(jailedUntil)}` : undefined;
+  const head = until ? `${who} ${until}` : who;
+
+  const fragments: string[] = [];
+  if (typeof jail.bounty_owed === 'number' && Number.isFinite(jail.bounty_owed)) {
+    fragments.push(`owe ${formatNumber(jail.bounty_owed)} cr`);
+  }
+  if (typeof jail.rep_restoration === 'number' && Number.isFinite(jail.rep_restoration)) {
+    fragments.push(`restore ${formatNumber(jail.rep_restoration)}`);
+  }
+  emitLine(fragments.length ? `${head} (${fragments.join('; ')})` : head);
+}
+
 function formatSummaryLine(label: string, value: unknown): string {
   return `${label.padEnd(11)}${value === undefined || value === null || value === '' ? 'unknown' : String(value)}`;
 }
@@ -236,12 +259,22 @@ function formatStandingValue(value: unknown): string | undefined {
   if (isRecord(value)) {
     const reputation = value.reputation;
     if (reputation === undefined || reputation === null || reputation === '') return undefined;
-    return String(reputation);
+    const parts: string[] = [];
+    const bounty = value.outstanding_bounty;
+    if (typeof bounty === 'number' && Number.isFinite(bounty) && bounty > 0) {
+      parts.push(`bounty ${formatNumber(bounty)}`);
+    }
+    const jailedUntil = value.jailed_until;
+    if (typeof jailedUntil === 'string' && jailedUntil !== '') {
+      parts.push(`jailed until ${formatTimestampPreview(jailedUntil)}`);
+    }
+    const annotation = parts.length ? ` (${parts.join(', ')})` : '';
+    return `${reputation}${annotation}`;
   }
   return String(value);
 }
 
-/** Emit standings block when present; no-op if empty/malformed. Reputation only (no bounty/baseline). */
+/** Reputation plus non-zero bounty / jailed_until; baseline stays hidden. */
 function emitStandings(player: Record<string, unknown>): void {
   if (!isRecord(player.standings)) return;
   const standings = Object.entries(player.standings)
@@ -428,6 +461,44 @@ export const statusFormatters = [
     { commands: ['get_queue'] },
   ),
 
+  formatter(
+    (r) => {
+      if (typeof r.empire !== 'string' || r.empire === '') return false;
+      if (typeof r.amount_paid !== 'number' || !Number.isFinite(r.amount_paid)) return false;
+      if (!Array.isArray(r.outstanding_bounties)) return false;
+
+      emitLine(`\n${c.bright}=== Bounty Paid ===${c.reset}`);
+      emitLine(`Empire: ${r.empire}`);
+      emitLine(`Amount paid: ${formatNumber(r.amount_paid)} cr`);
+      if (r.paid_from !== undefined && r.paid_from !== null && r.paid_from !== '') {
+        emitLine(`Paid from: ${r.paid_from}`);
+      }
+      if (r.credits !== undefined) emitLine(`Credits: ${formatNumber(r.credits)}`);
+      if (r.faction_credits !== undefined) emitLine(`Faction credits: ${formatNumber(r.faction_credits)}`);
+      if (r.reputation_after !== undefined) emitLine(`Reputation after: ${r.reputation_after}`);
+      if (typeof r.released_from_detention === 'boolean') {
+        emitLine(`Released from detention: ${r.released_from_detention ? 'yes' : 'no'}`);
+      }
+      const rows = r.outstanding_bounties.filter(isRecord);
+      if (rows.length) {
+        emitLine(`Outstanding bounties:`);
+        for (const row of rows) {
+          const empire = row.empire ?? 'unknown';
+          const bounty =
+            typeof row.bounty === 'number' && Number.isFinite(row.bounty)
+              ? `${formatNumber(row.bounty)} cr`
+              : String(row.bounty ?? 'unknown');
+          emitLine(`  ${empire}: ${bounty}`);
+        }
+      } else {
+        emitLine('Outstanding bounties: none');
+      }
+      if (typeof r.message === 'string' && r.message) emitLine(r.message);
+      return true;
+    },
+    { commands: ['pay_bounty'] },
+  ),
+
   // Player profile
   formatter(
     (r) => {
@@ -448,6 +519,7 @@ export const statusFormatters = [
       }
       if (player.home_base) emitLine(`Home Station: ${formatDisplayValue(player.home_base)}`);
       emitTradingRestriction(player);
+      emitDetention(player);
 
       const stats = isRecord(player.stats) ? player.stats : undefined;
       if (stats) {
@@ -586,6 +658,7 @@ export const statusFormatters = [
       emitLine(`Credits: ${p.credits}`);
       emitLine(`Faction: ${p.faction_id ? `${p.faction_id} (${p.faction_rank})` : 'None'}`);
       emitTradingRestriction(p);
+      emitDetention(p);
       emitStandings(p);
 
       emitLine(`\n${c.bright}Location:${c.reset}`);

@@ -580,6 +580,40 @@ export const getQueueEmptyFixture = {
   queue: { has_pending: false },
 };
 
+export const payBountyFixture = {
+  action: 'pay_bounty',
+  empire: 'solarian',
+  amount_paid: 2500,
+  paid_from: 'self',
+  credits: 1742,
+  reputation_after: 12,
+  released_from_detention: true,
+  outstanding_bounties: [{ empire: 'crimson', bounty: 400 }],
+  message: 'Bounty settled with Solarian.',
+};
+
+export const getStatusDetainedFixture = {
+  ...getStatusFixture,
+  player: {
+    ...getStatusFixture.player,
+    jail: {
+      empire_id: 'solarian',
+      bounty_owed: 2500,
+      jailed_until: '2026-07-18T12:34:56Z',
+      rep_restoration: 10,
+    },
+    standings: {
+      ...getStatusFixture.player.standings,
+      solarian: {
+        baseline: 0,
+        outstanding_bounty: 2500,
+        reputation: 12,
+        jailed_until: '2026-07-18T12:34:56Z',
+      },
+    },
+  },
+};
+
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
   // Covers get_state on the shared status formatter
@@ -588,7 +622,13 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     command: 'get_state',
     fixture: getStatusFixture,
   },
+  get_status_detained: { command: 'get_status', fixture: getStatusDetainedFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
+  pay_bounty: {
+    command: 'pay_bounty',
+    fixture: payBountyFixture,
+    schemaTarget: 'details',
+  },
   player_profile: { command: 'player_profile', fixture: publicPlayerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },

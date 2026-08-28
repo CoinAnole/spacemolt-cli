@@ -1,7 +1,13 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { getStatusFixture, playerProfileFixture, scanCreatureFixture } from './status.fixtures.ts';
+import {
+  getStatusDetainedFixture,
+  getStatusFixture,
+  payBountyFixture,
+  playerProfileFixture,
+  scanCreatureFixture,
+} from './status.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -188,7 +194,7 @@ test('get_status prints Standings when player.standings is present including pir
   const tradingIdx = stdout.indexOf('Trading restricted until:');
   expect(standingsIdx).toBeGreaterThan(tradingIdx);
   expect(locationIdx).toBeGreaterThan(standingsIdx);
-  // Reputation only — no bounty/baseline expansion
+  expect(stdout).toContain('bounty 500');
   expect(stdout).not.toContain('outstanding_bounty');
   expect(stdout).not.toContain('baseline');
 });
@@ -263,6 +269,210 @@ test('get_state uses the status formatter and prints Standings', () => {
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('=== Player Status ===');
   expect(stdout).toContain('Standings:');
-  expect(stdout).toContain('pirate_voss: -10');
+  expect(stdout).toContain('pirate_voss: -10 (bounty 500)');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+function statusWithPlayer(player: Record<string, unknown>) {
+  const fixture = structuredClone(getStatusFixture) as {
+    player: Record<string, unknown>;
+  };
+  fixture.player = { ...fixture.player, ...player };
+  return fixture;
+}
+
+test('get_player table standings show non-zero bounty without the raw field name', () => {
+  const rendered = renderStructuredResult('get_player', structuredClone(playerProfileFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('pirate_voss: -30 (bounty 2,500)');
+  expect(stdout).not.toContain('outstanding_bounty');
+  expect(stdout).not.toContain('baseline');
+});
+
+test('get_status omits zero outstanding bounties from standings', () => {
+  const rendered = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({
+      standings: {
+        solarian: { baseline: 0, outstanding_bounty: 0, reputation: 12 },
+        crimson: { baseline: 10, outstanding_bounty: 0, reputation: 94 },
+      },
+    }),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(standingsSection(stdout)).toContain('solarian: 12, crimson: 94');
+  expect(stdout).not.toContain('bounty');
+  expect(stdout).not.toContain('outstanding_bounty');
+});
+
+test('get_status annotates standing jailed_until without inventing a detention line', () => {
+  const rendered = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({
+      standings: {
+        solarian: {
+          baseline: 0,
+          outstanding_bounty: 0,
+          reputation: 12,
+          jailed_until: '2026-07-18T12:34:56Z',
+        },
+      },
+    }),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('solarian: 12 (jailed until 2026-07-18 12:34:56)');
+  expect(stdout).not.toContain('Detained');
+});
+
+test('get_status prints a fully populated detention line before standings', () => {
+  const rendered = renderStructuredResult('get_status', structuredClone(getStatusDetainedFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('Detained by: solarian until 2026-07-18 12:34:56 (owe 2,500 cr; restore 10)');
+  expect(stdout).toContain('solarian: 12 (bounty 2,500, jailed until 2026-07-18 12:34:56)');
+  const tradingIdx = stdout.indexOf('Trading restricted until:');
+  const detainedIdx = stdout.indexOf('Detained by:');
+  const standingsIdx = stdout.indexOf('Standings:');
+  const locationIdx = stdout.indexOf('Location:');
+  expect(detainedIdx).toBeGreaterThan(tradingIdx);
+  expect(standingsIdx).toBeGreaterThan(detainedIdx);
+  expect(locationIdx).toBeGreaterThan(standingsIdx);
+});
+
+test('get_player prints detention after trading restriction and before stats', () => {
+  const fixture = structuredClone(playerProfileFixture) as {
+    player: Record<string, unknown>;
+  };
+  fixture.player.jail = {
+    empire_id: 'solarian',
+    bounty_owed: 2500,
+    jailed_until: '2026-07-18T12:34:56Z',
+    rep_restoration: 10,
+  };
+  const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
+
+  const restrictionIdx = stdout.indexOf('Trading restricted until:');
+  const detainedIdx = stdout.indexOf('Detained by:');
+  const statsIdx = stdout.indexOf('Stats:');
+  const standingsIdx = stdout.indexOf('Standings:');
+  expect(detainedIdx).toBeGreaterThan(restrictionIdx);
+  expect(statsIdx).toBeGreaterThan(detainedIdx);
+  expect(standingsIdx).toBeGreaterThan(statsIdx);
+});
+
+test('get_status omits detention when jail cannot identify empire or until-time', () => {
+  for (const jail of [
+    undefined,
+    null,
+    {},
+    { bounty_owed: 2500, rep_restoration: 10 },
+    { empire_id: '', jailed_until: '', bounty_owed: 2500 },
+  ]) {
+    const rendered = renderStructuredResult('get_status', statusWithPlayer({ jail }), options, context);
+    expect(rendered.stdout.join('\n')).not.toContain('Detained');
+  }
+});
+
+test('get_status composes partial detention fragments', () => {
+  const cases: Array<[Record<string, unknown>, string]> = [
+    [
+      { empire_id: 'solarian', jailed_until: '2026-07-18T12:34:56Z' },
+      'Detained by: solarian until 2026-07-18 12:34:56',
+    ],
+    [{ jailed_until: '2026-07-18T12:34:56Z', bounty_owed: 2500 }, 'Detained until 2026-07-18 12:34:56 (owe 2,500 cr)'],
+    [{ empire_id: 'solarian', bounty_owed: 2500 }, 'Detained by: solarian (owe 2,500 cr)'],
+    [{ empire_id: 'solarian' }, 'Detained by: solarian'],
+  ];
+
+  for (const [jail, line] of cases) {
+    const stdout = renderStructuredResult('get_status', statusWithPlayer({ jail }), options, context).stdout.join('\n');
+    expect(stdout).toContain(line);
+  }
+});
+
+test('get_status_summary stays compact without detention or bounty', () => {
+  const stdout = renderStructuredResult(
+    'get_status_summary',
+    structuredClone(getStatusDetainedFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Player:');
+  expect(stdout).not.toContain('Detained');
+  expect(stdout).not.toContain('bounty');
+  expect(stdout).not.toContain('Standings:');
+});
+
+test('pay_bounty prints a bounty paid receipt', () => {
+  const rendered = renderStructuredResult('pay_bounty', structuredClone(payBountyFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Bounty Paid ===');
+  expect(stdout).toContain('Empire: solarian');
+  expect(stdout).toContain('Amount paid: 2,500 cr');
+  expect(stdout).toContain('Paid from: self');
+  expect(stdout).toContain('Credits: 1,742');
+  expect(stdout).toContain('Reputation after: 12');
+  expect(stdout).toContain('Released from detention: yes');
+  expect(stdout).toContain('Outstanding bounties:');
+  expect(stdout).toContain('  crimson: 400 cr');
+  expect(stdout).toContain('Bounty settled with Solarian.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('pay_bounty prints none when remaining bounties are empty', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, outstanding_bounties: [] },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Outstanding bounties: none');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('pay_bounty prints released_from_detention no when still detained', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, released_from_detention: false },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Released from detention: no');
+});
+
+test('pay_bounty prints faction treasury source and faction credits', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, paid_from: 'faction', faction_credits: 90000 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Paid from: faction');
+  expect(stdout).toContain('Faction credits: 90,000');
+});
+
+test('pay_bounty declines to raw response without amount_paid', () => {
+  const rendered = renderStructuredResult(
+    'pay_bounty',
+    { empire: 'solarian', outstanding_bounties: [], paid_from: 'self' },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Bounty Paid ===');
 });

@@ -1,0 +1,16 @@
+{
+  "action": "pay_bounty",
+  "empire": "solarian",
+  "amount_paid": 2500,
+  "paid_from": "self",
+  "credits": 1742,
+  "reputation_after": 12,
+  "released_from_detention": true,
+  "outstanding_bounties": [
+    {
+      "empire": "crimson",
+      "bounty": 400
+    }
+  ],
+  "message": "Bounty settled with Solarian."
+}
