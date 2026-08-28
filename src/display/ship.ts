@@ -1,9 +1,11 @@
 import { formatBerthSummary } from './berths.ts';
+import { joinStringIds } from './catalog-detail.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
   emitCreditBalance,
   emitLine,
+  emitLines,
   emitStationConstruction,
   emitStationDefences,
   emitStationFuelPricing,
@@ -17,6 +19,7 @@ import {
   printCompactTable,
   printItemTable,
 } from './helpers.ts';
+import { formatCompactTable } from './tables.ts';
 
 function summarizeItemQuantities(value: unknown): string {
   if (!Array.isArray(value)) return '';
@@ -77,6 +80,84 @@ function optionalNumber(value: unknown): number | undefined {
 
 function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
+}
+
+function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
+  return rows.some((row) =>
+    fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''),
+  );
+}
+
+function ownedShipName(ship: Record<string, unknown>): string {
+  return String(ship.custom_name || ship.class_name || ship.class_id || ship.ship_name || ship.name || '');
+}
+
+function formatOwnedListingPrice(value: unknown): string {
+  const amount = finiteNumber(value);
+  return amount === undefined ? '' : formatCredits(amount);
+}
+
+function projectOwnedShipRow(ship: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...ship,
+    name_display: ownedShipName(ship),
+    active_display: ship.is_active === true ? 'yes' : ship.is_active === false ? 'no' : '',
+    listing_price_display: formatOwnedListingPrice(ship.listing_price),
+  };
+}
+
+function ownedShipColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['name_display']],
+    ['Class', ['class_name', 'class_id']],
+    ['ID', ['ship_id']],
+    ['Active', ['active_display']],
+    ['Location', ['location', 'location_base_id']],
+    ['Hull', ['hull']],
+    ['Fuel', ['fuel']],
+  ];
+  if (hasAnyField(rows, ['cargo_used'])) columns.push(['Cargo', ['cargo_used']]);
+  if (hasAnyField(rows, ['modules'])) columns.push(['Mods', ['modules']]);
+  if (hasAnyField(rows, ['listing_id'])) columns.push(['Listing', ['listing_id']]);
+  if (hasAnyField(rows, ['listing_price_display'])) columns.push(['Price', ['listing_price_display']]);
+  return columns;
+}
+
+function activeShipLabel(result: Record<string, unknown>, ships: Array<Record<string, unknown>>): string {
+  const id = String(result.active_ship_id);
+  const matching = ships.find((ship) => String(ship.ship_id) === id);
+  const fromRow = matching ? ownedShipName(matching) : '';
+  const fromClass = typeof result.active_ship_class === 'string' ? result.active_ship_class : '';
+  const name = fromRow || fromClass;
+  if (name && name !== id) return `${name} (${id})`;
+  return id;
+}
+
+function emitFactionGarage(result: Record<string, unknown>, garage: Array<Record<string, unknown>> | undefined): void {
+  const usedPresent = result.faction_garage_used !== undefined;
+  const capacityPresent = result.faction_garage_capacity !== undefined;
+  if (garage === undefined && !usedPresent && !capacityPresent) return;
+
+  emitLine(`\n${c.bright}=== Faction garage ===${c.reset}`);
+  if (usedPresent || capacityPresent) {
+    const used = usedPresent ? result.faction_garage_used : '?';
+    const capacity = capacityPresent ? result.faction_garage_capacity : '?';
+    emitLine(`Used: ${used}/${capacity}`);
+  }
+
+  const lines = formatCompactTable(
+    'Faction garage',
+    garage ?? [],
+    [
+      ['Name', ['custom_name', 'class_name', 'class_id']],
+      ['Class', ['class_name', 'class_id']],
+      ['ID', ['ship_id']],
+      ['Depositor', ['depositor_name', 'depositor_id']],
+      ['Tick', ['deposited_tick']],
+    ],
+    { maxCellWidth: 40 },
+  );
+  emitLines(lines.slice(1));
 }
 
 function formatPerFuel(value: number): string {
@@ -175,6 +256,36 @@ export const shipFormatters = [
       return true;
     },
     { commands: ['get_cargo'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      const ships = Array.isArray(r.ships) ? r.ships.filter(isRecord) : undefined;
+      const garage = Array.isArray(r.faction_garage) ? r.faction_garage.filter(isRecord) : undefined;
+      if (ships === undefined && garage === undefined && r.count === undefined) return false;
+
+      emitLine(`Owned: ${r.count !== undefined ? r.count : (ships ?? []).length}`);
+      if (typeof r.active_ship_id === 'string' && r.active_ship_id) {
+        emitLine(`Active ship: ${activeShipLabel(r, ships ?? [])}`);
+      }
+
+      const shipRows = (ships ?? []).map(projectOwnedShipRow);
+      printCompactTable('Ships', shipRows, ownedShipColumns(shipRows), { maxCellWidth: 40 });
+
+      const moduleLines = (ships ?? []).filter((ship) => joinStringIds(ship.module_type_ids));
+      if (moduleLines.length) {
+        emitLine(`\n${c.bright}=== Module types ===${c.reset}`);
+        for (const ship of moduleLines) {
+          emitLine(`  ${ownedShipName(ship)} (${ship.ship_id}): ${joinStringIds(ship.module_type_ids)}`);
+        }
+      }
+
+      emitFactionGarage(r, garage);
+      emitLine(`${c.dim}Use get_ship <ship_id> for the full fit.${c.reset}`);
+      if (typeof r.message === 'string' && r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['list_ships'] },
   ),
 
   // Ship status

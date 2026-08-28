@@ -1,0 +1,55 @@
+{
+  "count": 2,
+  "active_ship_id": "ship-active",
+  "active_ship_class": "lithosphere",
+  "ships": [
+    {
+      "ship_id": "ship-active",
+      "class_id": "lithosphere",
+      "class_name": "Lithosphere",
+      "custom_name": "Burn-Rate Betty",
+      "is_active": true,
+      "location": "active (with you)",
+      "hull": "420/420",
+      "fuel": "240/240",
+      "cargo_used": 12,
+      "modules": 3,
+      "module_type_ids": [
+        "survey_scanner_ii",
+        "mining_laser_i",
+        "cargo_expander_iii"
+      ]
+    },
+    {
+      "ship_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "class_id": "dust_devil",
+      "class_name": "Dust Devil",
+      "is_active": false,
+      "location": "stored at Nova Terra Central",
+      "location_base_id": "nova_terra_central",
+      "hull": "80/100",
+      "fuel": "40/80",
+      "cargo_used": 0,
+      "modules": 1,
+      "module_type_ids": [
+        "cargo_expander_i"
+      ],
+      "listing_id": "listing-1",
+      "listing_price": 12500,
+      "listing_base_id": "nova_terra_central"
+    }
+  ],
+  "faction_garage_used": 1,
+  "faction_garage_capacity": 4,
+  "faction_garage": [
+    {
+      "ship_id": "ship-garage",
+      "class_id": "prospector",
+      "class_name": "Prospector",
+      "custom_name": "Rock Skipper",
+      "depositor_id": "player-1",
+      "depositor_name": "Ibis",
+      "deposited_tick": 12050
+    }
+  ]
+}

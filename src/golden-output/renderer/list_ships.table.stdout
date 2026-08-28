@@ -1,0 +1,21 @@
+Owned: 2
+Active ship: Burn-Rate Betty (ship-active)
+
+=== Ships ===
+
+  Name            | Class       | ID                                   | Active | Location                     | Hull    | Fuel    | Cargo | Mods | Listing   | Price    
+  ----------------+-------------+--------------------------------------+--------+------------------------------+---------+---------+-------+------+-----------+----------
+  Burn-Rate Betty | Lithosphere | ship-active                          | yes    | active (with you)            | 420/420 | 240/240 | 12    | 3    |           |          
+  Dust Devil      | Dust Devil  | aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee | no     | stored at Nova Terra Central | 80/100  | 40/80   | 0     | 1    | listing-1 | 12,500 cr
+
+=== Module types ===
+  Burn-Rate Betty (ship-active): survey_scanner_ii, mining_laser_i, cargo_expander_iii
+  Dust Devil (aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee): cargo_expander_i
+
+=== Faction garage ===
+Used: 1/4
+
+  Name         | Class      | ID          | Depositor | Tick 
+  -------------+------------+-------------+-----------+------
+  Rock Skipper | Prospector | ship-garage | Ibis      | 12050
+Use get_ship <ship_id> for the full fit.
