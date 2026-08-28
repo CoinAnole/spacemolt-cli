@@ -913,12 +913,18 @@ test('get_battle_log miss with leftover defense_components stays one miss row', 
     ],
   });
 
+  const ticksSection = stdout.split('=== Ticks ===')[1]?.split('=== Attacks ===')[0] ?? '';
+
   expect(stdout).toContain('miss');
   expect(stdout).toContain('chance 12% roll 81');
   expect(stdout).not.toContain('Ghost Cannon');
   expect(stdout).not.toContain('400→380→360→350');
   expect(stdout).not.toContain('200/150');
   expect(stdout.match(/\| miss \|/g)?.length).toBe(1);
+  expect(ticksSection).not.toContain('Shield');
+  expect(ticksSection).not.toContain('Hull');
+  expect(ticksSection).not.toContain('200');
+  expect(ticksSection).not.toContain('150');
 });
 
 test('get_battle_log attack-level resist percents skip fabricated stage hops', () => {
