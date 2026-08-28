@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { listShipsFixture } from './ship.fixtures.ts';
+import { factionGaragesFixture, listShipsFixture } from './ship.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -57,6 +57,10 @@ function nameCell(row: string, header: string): string {
 
 function renderListShips(fixture: Record<string, unknown>, extraOptions: Partial<GlobalOptions> = {}) {
   return renderStructuredResult('list_ships', structuredClone(fixture), { ...options, ...extraOptions }, context);
+}
+
+function renderFactionGarages(fixture: Record<string, unknown>, extraOptions: Partial<GlobalOptions> = {}) {
+  return renderStructuredResult('faction_garages', structuredClone(fixture), { ...options, ...extraOptions }, context);
 }
 
 test('list_ships happy path shows fleet, module types, garage, and footer', () => {
@@ -235,4 +239,92 @@ test('list_ships does not truncate a 36-character ship UUID', () => {
   expect(stdout).toContain('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
   expect(stdout).not.toContain('aaaaaaa...');
   expect(stdout).not.toContain('aaaaaaaa-bbbb-cccc-dddd-eeeeeee...');
+});
+
+test('faction_garages happy path shows stations and ships', () => {
+  const rendered = renderFactionGarages(factionGaragesFixture);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Faction garages ===');
+  expect(stdout).toContain('Stations: 2');
+  expect(stdout).toContain('Ships: 2');
+  expect(stdout).toContain('=== Nova Terra Central (nova_terra_central) ===');
+  expect(stdout).toContain('System: Sol');
+  expect(stdout).toContain('Used: 1/4');
+  expect(stdout).toContain('Rock Skipper');
+  expect(stdout).toContain('Ibis');
+  expect(stdout).toContain('ship-garage');
+  expect(stdout).toContain('=== Alpha Centauri Colonial Station (alpha_centauri_colonial_station) ===');
+  expect(stdout).toContain('System: Alpha Centauri');
+  expect(stdout).toContain('Claim Candidate');
+  expect(stdout).toContain('Fabrini');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_garages empty stations prints totals only', () => {
+  const stdout = renderFactionGarages({
+    station_count: 0,
+    total_ships: 0,
+    stations: [],
+  }).stdout.join('\n');
+
+  expect(stdout).toContain('=== Faction garages ===');
+  expect(stdout).toContain('Stations: 0');
+  expect(stdout).toContain('Ships: 0');
+  expect(stdout).not.toContain('Used:');
+  expect(stdout).not.toContain('System:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_garages omits optional station and ship names when absent', () => {
+  const stdout = renderFactionGarages({
+    station_count: 1,
+    total_ships: 1,
+    stations: [
+      {
+        base_id: 'nova_terra_central',
+        used: 1,
+        capacity: 4,
+        ships: [
+          {
+            ship_id: 'ship-garage',
+            class_id: 'prospector',
+            depositor_id: 'player-1',
+            deposited_tick: 12050,
+          },
+        ],
+      },
+    ],
+  }).stdout.join('\n');
+
+  expect(stdout).toContain('=== nova_terra_central ===');
+  expect(stdout).toContain('prospector');
+  expect(stdout).toContain('player-1');
+  expect(stdout).not.toContain('System:');
+  expect(stdout).not.toContain('Nova Terra Central');
+  expect(stdout).not.toContain('Rock Skipper');
+  expect(stdout).not.toContain('Ibis');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_garages station with empty ships prints none', () => {
+  const stdout = renderFactionGarages({
+    station_count: 1,
+    total_ships: 0,
+    stations: [
+      {
+        base_id: 'nova_terra_central',
+        base_name: 'Nova Terra Central',
+        used: 0,
+        capacity: 4,
+        ships: [],
+      },
+    ],
+  }).stdout.join('\n');
+
+  expect(stdout).toContain('=== Nova Terra Central (nova_terra_central) ===');
+  expect(stdout).toContain('Used: 0/4');
+  expect(stdout).toContain('(None)');
+  expect(stdout).not.toContain('=== Response ===');
 });

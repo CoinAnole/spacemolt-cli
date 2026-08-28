@@ -1,0 +1,20 @@
+
+=== Faction garages ===
+Stations: 2
+Ships: 2
+
+=== Nova Terra Central (nova_terra_central) ===
+System: Sol
+Used: 1/4
+
+  Name         | Class      | ID          | Depositor | Tick 
+  -------------+------------+-------------+-----------+------
+  Rock Skipper | Prospector | ship-garage | Ibis      | 12050
+
+=== Alpha Centauri Colonial Station (alpha_centauri_colonial_station) ===
+System: Alpha Centauri
+Used: 1/2
+
+  Name            | Class       | ID             | Depositor | Tick 
+  ----------------+-------------+----------------+-----------+------
+  Claim Candidate | Deep Survey | ship-garaged-1 | Fabrini   | 12100
