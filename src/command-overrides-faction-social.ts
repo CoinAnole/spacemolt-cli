@@ -277,7 +277,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
       objectives: {
         type: 'array',
         description:
-          'JSON array of objectives (type + description, plus type-specific fields). deliver_item requires item_id (optional quantity; target_base_id defaults to the current station). kill_pirate uses pirate_tier; visit_system uses system_id; dock_at_base has no item. Omit item_id on kill_pirate, visit_system, and dock_at_base — a non-empty value is rejected. Each item_id must be a real catalog item, module, or package (id or display name). visit_system requires an Intel Center (tier 2 intel; error no_intel_center); dock_at_base requires a Commerce Terminal (tier 2 trade-intel; error no_commerce_terminal). Prefer --payload-json for this field.',
+          'JSON array of objectives (type + description, plus type-specific fields). deliver_item requires item_id (optional quantity; target_base_id defaults to the current station). kill_pirate uses pirate_tier; visit_system uses system_id; dock_at_base has no item. Omit item_id on kill_pirate, visit_system, and dock_at_base — a non-empty value is rejected. Each item_id must be a real catalog item, module, or package (id or display name). visit_system requires an Intel Center (tier 2 intel; error no_intel_center); dock_at_base requires a Commerce Terminal (tier 2 trade-intel; error no_commerce_terminal). target_base_id for deliver_item / dock_at_base accepts the destination station base ID or station POI ID. Prefer --payload-json for this field.',
       },
       rewards: {
         type: 'object',
@@ -322,8 +322,9 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_intel/espionage',
   },
   faction_scan_poi: {
-    usage: '<poi_id>',
-    description: "Run a long-range sensor scan from your faction's sensor facility coverage.",
+    usage: '<poi_id>  (for a station: station base ID or station POI ID)',
+    description:
+      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID.",
     example: 'spacemolt faction_scan_poi <poi_id>',
     discoverWith: ['get_system', 'faction_intel_status'],
     seeAlso: ['faction_intel_status', 'faction_query_intel'],
@@ -336,6 +337,8 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_intel/submit_trade_intel',
   },
   faction_query_trade_intel: {
+    usage: '[base_id] [item_id] [station_name]  (base_id: station base ID or station POI ID)',
+    description: "Search your faction's market price database. base_id accepts a station base ID or station POI ID.",
     category: 'Faction missions & intel',
     apiRoute: 'POST /api/v2/spacemolt_intel/query_trade_intel',
     positionals: ['base_id', 'item_id', 'station_name'],

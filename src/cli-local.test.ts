@@ -87,6 +87,7 @@ describe('CLI local usability behavior', () => {
     expect(result.stderr).toContain('Missing required argument');
     expect(result.stderr).toContain('Usage:');
     expect(result.stderr).toContain('spacemolt travel <poi_id_or_cached_name>');
+    expect(result.stderr).toContain('station base ID or station POI ID');
     expect(result.stderr).toContain('spacemolt get_system');
   });
 

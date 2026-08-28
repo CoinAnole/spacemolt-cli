@@ -79,7 +79,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
     description:
-      'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
+      'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown. filter_destination accepts a station base ID or station POI ID.',
     example:
       'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
     discoverWith: ['get_status'],
@@ -180,9 +180,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['item_id', 'quantity', 'items'],
   },
   storage_view: {
-    usage: '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]',
+    usage:
+      '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]  (station_id: station base ID or station POI ID)',
     description:
-      'View personal or faction station storage. Optional station_id views personal storage at a remote station without docking. Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked.',
+      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked.',
     example: 'spacemolt storage_view target=faction',
     discoverWith: ['get_status', 'get_cargo'],
     seeAlso: ['storage_deposit', 'storage_withdraw', 'get_cargo'],
@@ -190,6 +191,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
     positionals: ['station_id', 'target'],
     aliases: { item: 'item_id' },
+    // Do not re-add station_id.description — it hides the generated dual-ID sentence.
     schemaExtensions: {
       search: {
         type: 'string',
@@ -204,10 +206,6 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       item_id: {
         type: 'string',
         description: 'Client-side exact item ID filter for view output (not sent to the server).',
-      },
-      station_id: {
-        type: 'string',
-        description: 'Optional station ID; view personal storage at a remote station without docking.',
       },
     },
     clientOnlyFields: ['search', 'items', 'item_id'],
@@ -365,9 +363,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   view_orders: {
     usage:
-      '[station_id] [--item item_id] [--search text] [order_type=buy|sell] [scope=personal|faction] [page=1] [page_size=20] [sort_by=newest|oldest|price_asc|price_desc]',
+      '[station_id] [--item item_id] [--search text] [order_type=buy|sell] [scope=personal|faction] [page=1] [page_size=20] [sort_by=newest|oldest|price_asc|price_desc]  (station_id: station base ID or station POI ID)',
     description:
-      'Show your market orders at the current or selected station, optionally filtered by item or search text.',
+      'Show your market orders at the current or selected station. station_id accepts a station base ID or station POI ID; omit it when docked.',
     example: 'spacemolt view_orders --item iron_ore',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/view_orders',

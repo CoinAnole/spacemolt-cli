@@ -765,7 +765,7 @@ function printStateSection(state: PlayerState, writer?: CliWriter, options?: Hel
 
   write(`  ${c.cyan}[IN SPACE]${c.reset}`);
   write(`    spacemolt get_system          # See POIs and connections`);
-  write(`    spacemolt travel <poi_id>     # Move to a POI`);
+  write(`    spacemolt travel <poi_or_station>     # Move to a POI or station`);
   write(`    spacemolt get_status          # Check ship and location`);
 }
 
@@ -884,10 +884,10 @@ ${c.bright}Start:${c.reset}
 ${c.bright}Common Loop:${c.reset}
   spacemolt undock
   spacemolt get_system
-  spacemolt travel <poi_id>
+  spacemolt travel <poi_or_station>
   spacemolt mine
   spacemolt get_cargo
-  spacemolt travel <station_poi_id>
+  spacemolt travel <station>
   spacemolt dock
   spacemolt sell <item_id> <quantity>
 
@@ -1078,7 +1078,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   blocks until the result is ready and returns it directly.
 
   ${c.cyan}Navigation:${c.reset}
-    travel <poi_id>           Travel within system
+    travel <poi_or_station>   Travel within system
     jump <system|bearing>     Jump lane or Pathfinder bearing
     dock                      Enter station
     undock                    Leave station

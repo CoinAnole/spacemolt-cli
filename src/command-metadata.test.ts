@@ -1406,7 +1406,7 @@ describe('command metadata', () => {
     expect(shippingList).toMatchObject({
       args: ['eligible_as', 'filter_destination', 'filter_service_level', 'filter_shipper', 'page', 'per_page', 'sort'],
       description:
-        'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
+        'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown. filter_destination accepts a station base ID or station POI ID.',
       usage:
         '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
       example:
@@ -1525,6 +1525,35 @@ describe('command metadata', () => {
     expect(quoteHelp).toContain('package:<id>');
     expect(quoteHelp).toContain('POI');
     expect(quoteHelp).toContain('spacemolt shipping_quote package:package-1');
+  });
+
+  test('station-aware commands document station base ID or station POI ID', () => {
+    const phrase = 'station base ID or station POI ID';
+    expect(COMMANDS.travel?.usage).toContain('<poi_id_or_cached_name>');
+    expect(COMMANDS.travel?.usage).toContain(phrase);
+    expect(COMMANDS.travel?.description).toContain(phrase);
+    expect(COMMANDS.find_route?.usage).toContain('<system_id>');
+    expect(COMMANDS.find_route?.usage).toContain(phrase);
+    expect(COMMANDS.storage_view?.schema?.station_id?.description).toContain('station Base ID or station POI ID');
+    expect(COMMANDS.browse_ships?.schema?.base_id?.description).toContain('Base ID or station POI ID');
+    expect(COMMANDS.view_orders?.usage).toContain(phrase);
+    expect(COMMANDS.view_orders?.description).toContain(phrase);
+    expect(COMMANDS.load_passenger?.usage).toContain('station base ID');
+    expect(COMMANDS.load_passenger?.usage).toContain('station POI ID');
+    expect(COMMANDS.load_passenger?.description).toContain('station base ID');
+    expect(COMMANDS.load_passenger?.description).toContain('station POI ID');
+    expect(COMMANDS.faction_scan_poi?.usage).toContain(phrase);
+    expect(COMMANDS.faction_scan_poi?.description).toContain(phrase);
+    expect(COMMANDS.commission_status?.usage).toContain(phrase);
+    expect(COMMANDS.commission_status?.description).toContain(phrase);
+    expect(COMMANDS.shipping_list?.description).toContain(phrase);
+    expect(COMMANDS.faction_query_trade_intel?.usage).toContain(phrase);
+    expect(COMMANDS.faction_query_trade_intel?.description).toContain(phrase);
+    expect(COMMANDS.faction_post_mission?.schema?.objectives?.description).toContain('target_base_id');
+    expect(COMMANDS.faction_post_mission?.schema?.objectives?.description).toContain(phrase);
+    expect(COMMANDS.jump?.usage).toContain('bearing');
+    expect(COMMANDS.jump?.usage).not.toContain(phrase);
+    expect(COMMANDS.jump?.description).not.toContain(phrase);
   });
 
   test('pay_bounty is curated under Taxes with empire aliases', () => {

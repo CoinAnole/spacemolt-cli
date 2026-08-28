@@ -84,6 +84,17 @@ describe('help output branches', () => {
     expect(output).toContain(`spacemolt get_action_log --payload-json '{"event_type":[]}'`);
   });
 
+  test('showHelp Common Loop uses poi_or_station then a station hop', () => {
+    const capture = captureWriter();
+    showHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('travel <poi_or_station>');
+    expect(output).toContain('travel <station>');
+    expect(output).not.toContain('travel <poi_id>');
+    expect(output).not.toContain('travel <station_poi_id>');
+  });
+
   test('showHelp emphasizes local help command discovery before server help', () => {
     const capture = captureWriter();
     showHelp(capture.writer);
@@ -285,9 +296,15 @@ describe('help output branches', () => {
   test('renderProgressiveHelp writes docked, asteroid, escape pod, and space states', () => {
     const cases: Array<{ state: PlayerState; expected: string[] }> = [
       { state: { authenticated: true, docked: true }, expected: ['[DOCKED]', 'spacemolt view_market'] },
-      { state: { authenticated: true, atAsteroidBelt: true }, expected: ['[ASTEROID BELT]', 'spacemolt mine'] },
+      {
+        state: { authenticated: true, atAsteroidBelt: true },
+        expected: ['[ASTEROID BELT]', 'spacemolt mine', 'spacemolt travel <station>'],
+      },
       { state: { authenticated: true, escapePod: true }, expected: ['Escape Pod', '[IN SPACE]'] },
-      { state: { authenticated: true }, expected: ['[IN SPACE]', 'spacemolt travel <poi_id>'] },
+      {
+        state: { authenticated: true },
+        expected: ['[IN SPACE]', 'spacemolt travel <poi_or_station>', 'Move to a POI or station'],
+      },
     ];
 
     for (const { state, expected } of cases) {
@@ -389,6 +406,15 @@ describe('help output branches', () => {
     expect(joinFactionIndex).toBeGreaterThan(-1);
     expect(achievementsIndex).toBeGreaterThan(-1);
     expect(nestedIndex).toBeLessThan(createFactionIndex);
+  });
+
+  test('showFullHelp Navigation documents travel to a POI or station', () => {
+    const capture = captureWriter();
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('travel <poi_or_station>');
+    expect(output).not.toContain('travel <poi_id>');
   });
 
   test('full help facility section does not describe facility build as player-only', () => {
@@ -514,6 +540,7 @@ describe('help output branches', () => {
     expect(output).toContain('sort_by');
     expect(output).toContain('scope');
     expect(output).toContain('search');
+    expect(output).toContain('station base ID or station POI ID');
   });
 
   test('showCommandHelp documents action-log cursor polling', () => {

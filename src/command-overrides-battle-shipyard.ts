@@ -131,6 +131,9 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['ship_class'],
   },
   commission_status: {
+    usage: '[base_id]  (station base ID or station POI ID; omit to list all)',
+    description:
+      'Check the status of your ship commissions. filter `base_id` accepts a station base ID or station POI ID.',
     category: 'Shipyard',
     apiRoute: 'POST /api/v2/spacemolt_ship/commission_status',
     positionals: ['base_id'],
@@ -156,16 +159,13 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_ship/list_ship_for_sale',
     positionals: ['ship_id', 'price'],
   },
+  // Do not re-add base_id.description — it hides the generated dual-ID sentence.
   browse_ships: {
+    usage:
+      '[base_id] [class_id] [max_price]  (base_id: station base ID or station POI ID; defaults to current station)',
     category: 'Ship Exchange',
     apiRoute: 'POST /api/v2/spacemolt_ship/browse_ships',
     positionals: ['base_id', 'class_id', 'max_price'],
-    schemaExtensions: {
-      base_id: {
-        type: 'string',
-        description: 'Station to browse listings at (defaults to current station)',
-      },
-    },
   },
   place_ship_buy_order: {
     usage: '<class_id> <price>',

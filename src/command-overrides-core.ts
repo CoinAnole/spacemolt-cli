@@ -41,8 +41,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['registration_code'],
   },
   travel: {
-    usage: '<poi_id_or_cached_name>  (use get_system to cache POIs)',
-    description: 'Move to a POI in the current system. Use get_system first to cache valid POI IDs and names.',
+    usage: '<poi_id_or_cached_name>  (station: station base ID or station POI ID; get_system caches names)',
+    description:
+      'Move to a POI in the current system. A station accepts its station base ID or station POI ID. Use get_system first to cache names.',
     example: 'spacemolt travel earth',
     discoverWith: ['get_system', 'get_status'],
     seeAlso: ['get_system', 'get_location', 'jump'],
@@ -95,7 +96,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   find_route: {
-    usage: '<system_id>  (find shortest route from current system)',
+    usage: '<system_id>  (system ID, POI ID, or station base ID or station POI ID)',
     category: 'Navigation',
     apiRoute: 'POST /api/v2/spacemolt/find_route',
     positionals: ['target_system'],

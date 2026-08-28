@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### SpaceMolt v0.566.2 compatibility
+
+- Station-aware commands accept a station base ID or station POI ID (gameserver 0.565.1).
+  Help for `travel`, `find_route`, `view_orders`, `storage view`, `browse_ships`,
+  `commission_status`, `load_passenger`, `faction_scan_poi`, `shipping_list`,
+  `faction_query_trade_intel`, and `faction post_mission` (`target_base_id`) now says so.
+  `jump` remains a connected system ID or Pathfinder bearing. `shipping_post` /
+  `shipping_quote` were already documented this way.
+
 ### SpaceMolt v0.564.0 compatibility
 
 - `pay_bounty` is a first-class Taxes command. Settle outstanding bounty with one empire from
