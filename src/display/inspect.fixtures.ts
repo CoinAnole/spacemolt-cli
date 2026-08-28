@@ -1,4 +1,5 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+import { baseRepairsFixture } from './ship.fixtures.ts';
 
 export const inspectPackageFixture = {
   id: 'package:pkg_abc',
@@ -221,6 +222,13 @@ export const inspectBaseFixture = {
   },
 };
 
+export const inspectBaseRepairsFixture = {
+  id: 'frontier_cache',
+  kind: 'base',
+  source: 'station',
+  base: baseRepairsFixture,
+};
+
 export const inspectFixtureCases = {
   inspect_package: { command: 'inspect', fixture: inspectPackageFixture },
   inspect_package_shipment: { command: 'inspect', fixture: inspectPackageShipmentFixture },
@@ -237,4 +245,5 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_catalog_ship: { command: 'inspect', fixture: inspectCatalogShipFixture },
   inspect_catalog_recipe: { command: 'inspect', fixture: inspectCatalogRecipeFixture },
   inspect_base: { command: 'inspect', fixture: inspectBaseFixture },
+  inspect_base_repairs: { command: 'inspect', fixture: inspectBaseRepairsFixture },
 };

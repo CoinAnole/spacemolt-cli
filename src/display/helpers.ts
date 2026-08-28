@@ -410,23 +410,31 @@ export function emitStationFuelPricing(result: Record<string, unknown>, indent =
   return true;
 }
 
-function summarizeConstructionMaterials(value: unknown): string {
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value ? value : undefined;
+}
+
+function formatStationMaterial(material: Record<string, unknown>): string | undefined {
+  const name = nonEmptyString(material.name) ?? nonEmptyString(material.item_id);
+  if (!name) return undefined;
+  const required = material.quantity_required;
+  const stored = material.quantity_in_storage;
+  const missing = material.quantity_missing;
+  const progress =
+    required !== undefined || stored !== undefined
+      ? `${formatDisplayNumber(stored ?? '?')}/${formatDisplayNumber(required ?? '?')}`
+      : '';
+  const missingText = missing !== undefined ? `${formatDisplayNumber(missing)} missing` : '';
+  const detail = [progress, missingText].filter(Boolean).join(', ');
+  return detail ? `${name}: ${detail}` : name;
+}
+
+function summarizeStationMaterials(value: unknown): string {
   if (!Array.isArray(value)) return '';
   return value
     .filter(isRecord)
-    .map((material) => {
-      const name = material.name ?? material.item_id ?? '?';
-      const required = material.quantity_required;
-      const stored = material.quantity_in_storage;
-      const missing = material.quantity_missing;
-      const progress =
-        required !== undefined || stored !== undefined
-          ? `${formatDisplayNumber(stored ?? '?')}/${formatDisplayNumber(required ?? '?')}`
-          : '';
-      const missingText = missing !== undefined ? `${formatDisplayNumber(missing)} missing` : '';
-      const detail = [progress, missingText].filter(Boolean).join(', ');
-      return detail ? `${name}: ${detail}` : String(name);
-    })
+    .map(formatStationMaterial)
+    .filter((part): part is string => Boolean(part))
     .join('; ');
 }
 
@@ -435,7 +443,7 @@ function constructionRows(value: unknown): Array<Record<string, unknown>> | unde
   return value.filter(isRecord).map((row) => ({
     ...row,
     eta: row.ticks_until_complete === undefined ? undefined : `${formatDisplayNumber(row.ticks_until_complete)} ticks`,
-    materials_summary: summarizeConstructionMaterials(row.materials),
+    materials_summary: summarizeStationMaterials(row.materials),
   }));
 }
 
@@ -460,6 +468,138 @@ export function emitStationConstruction(construction: unknown): boolean {
     printCompactTable('Under Construction', underConstruction, columns, {
       maxCellWidth: 64,
     });
+  return true;
+}
+
+function stationJobEta(value: unknown): string | undefined {
+  const ticks = finiteNumber(value);
+  return ticks === undefined ? undefined : `${formatDisplayNumber(ticks)} ticks`;
+}
+
+function hasPrintableRepairEntry(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  if (
+    nonEmptyString(value.name) ||
+    nonEmptyString(value.instance_id) ||
+    nonEmptyString(value.definition_id) ||
+    nonEmptyString(value.status) ||
+    nonEmptyString(value.category)
+  ) {
+    return true;
+  }
+  if (finiteNumber(value.ticks_until_complete) !== undefined) return true;
+  if (!Array.isArray(value.materials)) return false;
+  return value.materials.filter(isRecord).some((material) => Boolean(formatStationMaterial(material)));
+}
+
+function hasStationRepairWork(repairs: Record<string, unknown>): boolean {
+  if (repairs.wrecked === true) return true;
+  for (const key of ['damaged_count', 'repairing_count', 'waiting_count'] as const) {
+    const count = finiteNumber(repairs[key]);
+    if (count !== undefined && count > 0) return true;
+  }
+  if (Array.isArray(repairs.facilities) && repairs.facilities.some(hasPrintableRepairEntry)) return true;
+  if (hasPrintableRepairEntry(repairs.next_blocked)) return true;
+  const hullMissing = finiteNumber(repairs.hull_missing);
+  if (hullMissing !== undefined && hullMissing > 0) return true;
+  const hullCurrent = finiteNumber(repairs.hull_current);
+  const hullRequired = finiteNumber(repairs.hull_required);
+  if (hullCurrent !== undefined && hullRequired !== undefined && hullCurrent !== hullRequired) return true;
+  return Boolean(nonEmptyString(repairs.remediation));
+}
+
+function repairQueueRows(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value.filter(hasPrintableRepairEntry).map((row) => ({
+    name: nonEmptyString(row.name) ?? '',
+    instance_id: nonEmptyString(row.instance_id) ?? '',
+    definition_id: nonEmptyString(row.definition_id) ?? '',
+    category: nonEmptyString(row.category) ?? '',
+    status: nonEmptyString(row.status) ?? '',
+    eta: stationJobEta(row.ticks_until_complete),
+    materials_summary: summarizeStationMaterials(row.materials),
+  }));
+}
+
+/** StationRepairResponse from get_base / inspect docked base. No-op if empty. */
+export function emitStationRepairs(repairs: unknown, options: { skipWrecked?: boolean } = {}): boolean {
+  if (!isRecord(repairs) || !hasStationRepairWork(repairs)) return false;
+
+  emitLine('');
+  emitLine(`${c.bright}=== Repairs ===${c.reset}`);
+
+  if (repairs.wrecked === true && !options.skipWrecked) emitLine('Wrecked: yes');
+
+  const queueSegments: string[] = [];
+  for (const [key, label] of [
+    ['damaged_count', 'damaged'],
+    ['repairing_count', 'repairing'],
+    ['waiting_count', 'waiting'],
+  ] as const) {
+    const count = finiteNumber(repairs[key]);
+    if (count !== undefined) queueSegments.push(`${formatDisplayNumber(count)} ${label}`);
+  }
+  if (queueSegments.length) emitLine(`Queue: ${queueSegments.join(', ')}`);
+
+  const supply = nonEmptyString(repairs.supply_method);
+  if (supply) emitLine(`Supply: ${supply}`);
+
+  const hullCurrent = finiteNumber(repairs.hull_current);
+  const hullRequired = finiteNumber(repairs.hull_required);
+  const hullMissing = finiteNumber(repairs.hull_missing);
+  if (hullCurrent !== undefined || hullRequired !== undefined || hullMissing !== undefined) {
+    const currentText = hullCurrent === undefined ? '?' : formatDisplayNumber(hullCurrent);
+    const requiredText = hullRequired === undefined ? '?' : formatDisplayNumber(hullRequired);
+    const missingText = hullMissing === undefined ? '' : ` (${formatDisplayNumber(hullMissing)} missing)`;
+    emitLine(`Hull recovery: ${currentText}/${requiredText}${missingText}`);
+  }
+
+  const nextBlocked = repairs.next_blocked;
+  if (hasPrintableRepairEntry(nextBlocked)) {
+    const title =
+      nonEmptyString(nextBlocked.name) ??
+      nonEmptyString(nextBlocked.instance_id) ??
+      nonEmptyString(nextBlocked.definition_id);
+    emitLine(`Next blocked:${title ? ` ${title}` : ''}`);
+    const instanceId = nonEmptyString(nextBlocked.instance_id);
+    if (instanceId) emitLine(`  Facility ID: ${instanceId}`);
+    const definitionId = nonEmptyString(nextBlocked.definition_id);
+    if (definitionId) emitLine(`  Type: ${definitionId}`);
+    const category = nonEmptyString(nextBlocked.category);
+    if (category) emitLine(`  Category: ${category}`);
+    const status = nonEmptyString(nextBlocked.status);
+    if (status) emitLine(`  Status: ${status}`);
+    const eta = stationJobEta(nextBlocked.ticks_until_complete);
+    if (eta) emitLine(`  ETA: ${eta}`);
+    if (Array.isArray(nextBlocked.materials)) {
+      for (const material of nextBlocked.materials) {
+        if (!isRecord(material)) continue;
+        const formatted = formatStationMaterial(material);
+        if (formatted) emitLine(`  ${formatted}`);
+      }
+    }
+  }
+
+  const facilityRows = repairQueueRows(repairs.facilities);
+  if (facilityRows.length) {
+    printCompactTable(
+      'Repair Queue',
+      facilityRows,
+      [
+        ['Name', ['name']],
+        ['Facility ID', ['instance_id']],
+        ['Type', ['definition_id']],
+        ['Category', ['category']],
+        ['Status', ['status']],
+        ['ETA', ['eta']],
+        ['Materials', ['materials_summary']],
+      ],
+      { maxCellWidth: 64 },
+    );
+  }
+
+  const remediation = nonEmptyString(repairs.remediation);
+  if (remediation) emitLine(`  ${remediation}`);
   return true;
 }
 

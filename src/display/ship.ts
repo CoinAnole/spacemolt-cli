@@ -11,6 +11,7 @@ import {
   emitStationFuelPricing,
   emitStationLifeSupport,
   emitStationPower,
+  emitStationRepairs,
   finiteNumber,
   firstArray,
   formatter,
@@ -399,6 +400,7 @@ export const shipFormatters = [
         }
       }
 
+      emitStationRepairs(r.repairs, { skipWrecked: base.wrecked === true });
       emitStationConstruction(r.construction);
 
       if (base.description) emitLine(`\n${base.description}`);

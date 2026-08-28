@@ -1,0 +1,110 @@
+{
+  "base": {
+    "armor": 400,
+    "description": "A raided frontier cache.",
+    "empire": "solarian",
+    "facilities": [
+      "fuel_grid",
+      "life_support_mk1"
+    ],
+    "fuel": 800,
+    "hull": 4200,
+    "id": "frontier_cache",
+    "max_fuel": 2400,
+    "max_hull": 10000,
+    "max_shield": 3000,
+    "name": "Frontier Cache",
+    "poi_id": "frontier_cache",
+    "public_access": true,
+    "shield": 0,
+    "type": "outpost",
+    "weapon_dps": 40,
+    "weapon_reach": 1,
+    "wrecked": true
+  },
+  "condition": {
+    "condition": "critical",
+    "condition_text": "Critical infrastructure failure.",
+    "satisfaction_pct": 16,
+    "satisfied_count": 2,
+    "total_service_infra": 12
+  },
+  "services": [
+    "market",
+    "storage"
+  ],
+  "repairs": {
+    "wrecked": true,
+    "damaged_count": 3,
+    "repairing_count": 1,
+    "waiting_count": 2,
+    "supply_method": "example",
+    "hull_current": 4200,
+    "hull_required": 10000,
+    "hull_missing": 5800,
+    "remediation": "Sell Steel Plate into this station market to unblock the next repair.",
+    "next_blocked": {
+      "instance_id": "fac-ls-1",
+      "definition_id": "life_support_mk1",
+      "name": "Life Support Mk I",
+      "category": "infrastructure",
+      "status": "waiting",
+      "materials": [
+        {
+          "item_id": "circuit_board",
+          "name": "Circuit Board",
+          "quantity_required": 40,
+          "quantity_in_storage": 12,
+          "quantity_missing": 28
+        },
+        {
+          "item_id": "steel_plate",
+          "name": "Steel Plate",
+          "quantity_required": 10,
+          "quantity_in_storage": 0,
+          "quantity_missing": 10
+        }
+      ]
+    },
+    "facilities": [
+      {
+        "instance_id": "fac-ls-1",
+        "definition_id": "life_support_mk1",
+        "name": "Life Support Mk I",
+        "category": "infrastructure",
+        "status": "waiting",
+        "materials": [
+          {
+            "item_id": "circuit_board",
+            "name": "Circuit Board",
+            "quantity_required": 40,
+            "quantity_in_storage": 12,
+            "quantity_missing": 28
+          },
+          {
+            "item_id": "steel_plate",
+            "name": "Steel Plate",
+            "quantity_required": 10,
+            "quantity_in_storage": 0,
+            "quantity_missing": 10
+          }
+        ]
+      },
+      {
+        "instance_id": "fac-fg-2",
+        "definition_id": "fuel_grid",
+        "name": "Fuel Grid",
+        "category": "infrastructure",
+        "status": "repairing",
+        "ticks_until_complete": 4
+      },
+      {
+        "instance_id": "fac-st-3",
+        "definition_id": "storage_bay",
+        "name": "Storage Bay",
+        "category": "infrastructure",
+        "status": "damaged"
+      }
+    ]
+  }
+}

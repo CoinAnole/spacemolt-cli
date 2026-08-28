@@ -13,6 +13,7 @@ import {
   emitStationIds,
   emitStationLifeSupport,
   emitStationPower,
+  emitStationRepairs,
   formatter,
   isRecord,
   printCompactTable,
@@ -339,6 +340,7 @@ function emitBase(basePayload: Record<string, unknown>): void {
     }
   }
 
+  emitStationRepairs(basePayload.repairs, { skipWrecked: base.wrecked === true });
   emitStationConstruction(basePayload.construction);
 
   if (typeof base.description === 'string' && base.description.trim()) {
