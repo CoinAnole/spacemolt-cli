@@ -177,7 +177,7 @@ export const poiInfoFixture = {
   ],
 };
 
-/** Station POI with nested base (canonical Base ID + station POI ID). */
+/** Station POI with nested TrimmedBase (canonical Base ID + station POI ID, 0.562+ combat stats). */
 export const stationPoiInfoFixture = {
   kind: 'normal',
   poi: {
@@ -194,9 +194,18 @@ export const stationPoiInfoFixture = {
     poi_id: 'sol_earth',
     name: 'Earth Station',
     type: 'station',
+    description: 'A busy trade hub.',
     empire: 'Terran',
     fuel: 500,
     max_fuel: 1000,
+    hull: 900,
+    max_hull: 1000,
+    shield: 200,
+    max_shield: 300,
+    armor: 50,
+    weapon_dps: 40,
+    weapon_reach: 2,
+    public_access: true,
   },
 };
 

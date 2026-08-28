@@ -494,6 +494,11 @@ test('get_poi nested station prints indented ID and POI and skips Station Base I
   expect(stdout).toContain('  POI: sol_earth');
   expect(stdout).toContain('  Type: station');
   expect(stdout).toContain('  Empire: Terran');
+  expect(stdout).toContain('  A busy trade hub.');
+  expect(stdout).toContain('  Hull: 900/1000');
+  expect(stdout).toContain('  Shield: 200/300');
+  expect(stdout).toContain('  Armor: 50');
+  expect(stdout).toContain('  Guns: 40 DPS (reach 2)');
   expect(stdout).toContain('  Fuel: 500/1000');
   expect(stdout).not.toContain('Station Base ID:');
   expect(stdout).not.toContain("Station: earth_station (use 'dock' to enter)");
