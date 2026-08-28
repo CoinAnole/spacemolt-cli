@@ -1,10 +1,10 @@
 Error: Missing required argument: target_poi
 
 Usage:
-  spacemolt travel <poi_id_or_cached_name>  (use get_system to cache POIs)
+  spacemolt travel <poi_id_or_cached_name>  (station: station base ID or station POI ID; get_system caches names)
 
 Accepted forms:
-  spacemolt travel <poi_id_or_cached_name>  (use get_system to cache POIs)
+  spacemolt travel <poi_id_or_cached_name>  (station: station base ID or station POI ID; get_system caches names)
   spacemolt travel target_poi=...
   spacemolt travel --target-poi ...
 
