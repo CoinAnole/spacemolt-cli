@@ -841,6 +841,72 @@ test('get_battle_summary omits Has Station when has_station is absent', () => {
   expect(stdout).not.toContain('Has Station:');
 });
 
+test('get_battle_summary omits Winning Side on stalemate winning_side -1', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.outcome = 'stalemate';
+  fixture.winning_side = -1;
+  fixture.ships_destroyed = 0;
+  delete fixture.destroyed_names;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Outcome: stalemate');
+  expect(stdout).not.toContain('Winning Side:');
+  expect(stdout).not.toContain('-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_battle_summary still prints Winning Side: 1 on victory', () => {
+  const stdout = renderStructuredResult(
+    'get_battle_summary',
+    structuredClone(battleSummaryFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Winning Side: 1');
+});
+
+test("get_battle_summary omits Winning Side when winning_side is the string '-1'", () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.outcome = 'stalemate';
+  fixture.winning_side = '-1';
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Outcome: stalemate');
+  expect(stdout).not.toContain('Winning Side:');
+});
+
+test('get_battle_summary JSON passthrough keeps winning_side -1', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.outcome = 'stalemate';
+  fixture.winning_side = -1;
+  const rendered = renderStructuredResult('get_battle_summary', fixture, { ...options, format: 'json' }, context);
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as Record<string, unknown>;
+
+  expect(parsed.winning_side).toBe(-1);
+  expect(parsed.outcome).toBe('stalemate');
+});
+
+test('get_battle_summary omits Winning Side on mutual_destruction with winning_side -1', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.outcome = 'mutual_destruction';
+  fixture.winning_side = -1;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Outcome: mutual_destruction');
+  expect(stdout).not.toContain('Winning Side:');
+});
+
+test('get_battle_summary omits Winning Side on -1 without fabricating Outcome: stalemate', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  delete fixture.outcome;
+  fixture.winning_side = -1;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Winning Side:');
+  expect(stdout).not.toContain('Outcome: stalemate');
+});
+
 function renderBattleLog(fixture: Record<string, unknown>): string {
   const rendered = renderStructuredResult('get_battle_log', fixture, options, context);
   const stdout = rendered.stdout.join('\n');
@@ -885,6 +951,66 @@ test('get_battle_log renders shield/hull ticks, defense legend, and attacks with
   expect(stdout).toContain('chance 12% roll 81');
   expect(stdout).toContain('Railgun energy 400→380→360→350 (S5 T5 F3)');
   expect(stdout).toContain('Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)');
+});
+
+function battleLogTicksSection(stdout: string): string {
+  return stdout.split('=== Ticks ===')[1]?.split('=== Attacks ===')[0] ?? '';
+}
+
+function withBattleEnded(
+  fixture: Record<string, unknown>,
+  battleEnded: Record<string, unknown>,
+): Record<string, unknown> {
+  const entries = fixture.entries as Array<Record<string, unknown>>;
+  const entry = entries.at(1);
+  if (!entry) throw new Error('expected ending battle log entry');
+  entry.battle_ended = battleEnded;
+  return fixture;
+}
+
+test('get_battle_log Ticks Ended prints fixture outcome instead of yes', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogFixture) as Record<string, unknown>);
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(ticks).toContain('side_1_victory');
+  expect(ticks).not.toMatch(/\|\s*yes\s*$/m);
+  expect(ticks).not.toContain('| yes');
+});
+
+test('get_battle_log Ticks Ended prints stalemate outcome and not winning_side -1', () => {
+  const fixture = withBattleEnded(structuredClone(battleLogFixture) as Record<string, unknown>, {
+    outcome: 'stalemate',
+    winning_side: -1,
+  });
+  const ticks = battleLogTicksSection(renderBattleLog(fixture));
+
+  expect(ticks).toContain('stalemate');
+  expect(ticks).not.toContain('-1');
+});
+
+test('get_battle_log Ticks Ended falls back to yes when battle_ended has no outcome', () => {
+  const fixture = withBattleEnded(structuredClone(battleLogFixture) as Record<string, unknown>, {
+    winning_side: -1,
+  });
+  const ticks = battleLogTicksSection(renderBattleLog(fixture));
+
+  expect(ticks).toContain('yes');
+});
+
+test('get_battle_log JSON passthrough keeps nested winning_side -1', () => {
+  const fixture = withBattleEnded(structuredClone(battleLogFixture) as Record<string, unknown>, {
+    outcome: 'stalemate',
+    winning_side: -1,
+    total_damage: 8420,
+  });
+  const rendered = renderStructuredResult('get_battle_log', fixture, { ...options, format: 'json' }, context);
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    entries: Array<{ battle_ended?: { winning_side?: unknown; outcome?: unknown } }>;
+  };
+  const ended = parsed.entries.at(1)?.battle_ended;
+
+  expect(ended?.winning_side).toBe(-1);
+  expect(ended?.outcome).toBe('stalemate');
 });
 
 test('get_battle_log miss with leftover defense_components stays one miss row', () => {

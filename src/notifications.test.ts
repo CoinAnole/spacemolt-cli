@@ -1126,6 +1126,47 @@ describe('notification formatting', () => {
       ).toBe('Battle ended! Victory');
     });
 
+    test('battle_ended prefers raw reason, keeps message, and notes no winning side on -1', () => {
+      const stalemate = formatNotificationPreview({
+        msg_type: 'battle_ended',
+        data: { reason: 'stalemate', winning_side: -1 },
+      });
+      expect(stalemate.headline).toBe('Battle ended (stalemate)');
+      expect(stalemate.details).toContain('no winning side');
+      expect(tableMessageFromPreview(stalemate)).toContain('Battle ended (stalemate)');
+      expect(tableMessageFromPreview(stalemate)).toContain('no winning side');
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_ended',
+          data: { reason: 'mutual_destruction' },
+        }).headline,
+      ).toBe('Battle ended (mutual_destruction)');
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_ended',
+          data: { reason: 'victory' },
+        }).headline,
+      ).toBe('Battle ended (victory)');
+
+      const mixed = formatNotificationPreview({
+        msg_type: 'battle_ended',
+        data: { reason: 'stalemate', message: 'Victory' },
+      });
+      expect(mixed.headline).toBe('Battle ended (stalemate)');
+      expect(mixed.details.join('\n')).toContain('Victory');
+      expect(tableMessageFromPreview(mixed)).toContain('Victory');
+
+      const sentinelOnly = formatNotificationPreview({
+        msg_type: 'battle_ended',
+        data: { winning_side: -1 },
+      });
+      expect(sentinelOnly.headline).toBe('Battle ended!');
+      expect(sentinelOnly.details).toContain('no winning side');
+      expect(sentinelOnly.headline).not.toContain('stalemate');
+    });
+
     test('battle_left headlines map known reasons and never interpolate unknown tokens', () => {
       expect(
         formatNotificationPreview({

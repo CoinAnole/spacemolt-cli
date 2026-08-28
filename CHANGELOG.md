@@ -24,6 +24,17 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `--json` / `--yaml` / `--jq` / `--structured` field names are unchanged.
 - `help list_ships` documents module types and `get_ship <ship_id>` for the full fit.
 
+### SpaceMolt v0.567.6 compatibility
+
+- Human `get_battle_summary` omits **Winning Side** when the API returns `winning_side: -1`
+  (stalemate). `Outcome` still prints the raw server token. JSON/YAML still pass through `-1`.
+- Human `get_battle_log` Ticks **Ended** prints the raw `battle_ended.outcome` token
+  (for example `stalemate` or `side_1_victory`) instead of `yes`. JSON/YAML nested fields
+  are unchanged. Defense-stage columns are unchanged.
+- `battle_ended` notification previews prefer raw `reason` (`Battle ended (stalemate)`),
+  keep legacy `message` when `reason` is absent (`Battle ended! Victory`), and say
+  **no winning side** when `winning_side` is `-1`.
+
 ### `get_base` repair queue (gameserver 0.567.5)
 
 - Human `get_base` (and `inspect` of a docked base) now prints `repairs` when
