@@ -1,0 +1,39 @@
+
+id: comet
+kind: catalog
+source: catalog
+catalog:
+  type: ships
+  items:
+    - id: comet
+      name: Comet
+      description: "Nebula's most exclusive liner — every berth a first-class suite, every crossing made at the fastest pace the galaxy allows. Built for passengers whose time is the most expensive thing aboard."
+      class: Liner
+      tier: 4
+      scale: 4
+      faction: nebula
+      category: Civilian
+      base_hull: 700
+      base_shield: 700
+      base_shield_recharge: 12
+      base_armor: 20
+      base_speed: 6
+      base_fuel: 900
+      cargo_capacity: 200
+      cpu_capacity: 55
+      power_capacity: 150
+      weapon_slots: 0
+      defense_slots: 4
+      utility_slots: 5
+      default_modules: [shield_booster_iii, shield_booster_iii, ship_scanner_ii]
+      required_achievement: galactic_concierge
+      prestige_lock: "Locked: prestige hull reserved for pilots who have earned the \"Galactic Concierge\" achievement."
+      inherent_capabilities: [{type: passenger_first_berths, value: 48}, {type: fuel_efficiency_bonus, value: 50}, {type: passenger_dining_points, value: 3}, {type: passenger_leisure_points, value: 8}, {type: passenger_comfort, value: 40}]
+      shipyard_tier: 3
+      build_materials: [{item_id: jump_coil, quantity: 24}, {item_id: life_support_array, quantity: 12}, {item_id: titanium_alloy, quantity: 1200}, {item_id: durasteel_plate, quantity: 200}, {item_id: thruster_nozzle, quantity: 150}, {item_id: life_support_unit, quantity: 400}, {item_id: station_reactor_core, quantity: 12}, {item_id: fuel_tank, quantity: 300}, {item_id: capital_ship_frame, quantity: 30}, {item_id: engine_core, quantity: 60}, {item_id: navigation_core, quantity: 200}, {item_id: navigation_array, quantity: 16}, {item_id: prismatic_lens, quantity: 120}, {item_id: shield_emitter, quantity: 300}, {item_id: cargo_container, quantity: 150}]
+      build_time: 16000
+  page: 1
+  page_size: 20
+  total: 1
+  total_pages: 1
+  message: "Ships: showing 1 of 1"

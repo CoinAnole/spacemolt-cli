@@ -1,0 +1,31 @@
+
+id: blood_reaver
+kind: catalog
+source: catalog
+catalog:
+  type: items
+  items:
+    - id: blood_reaver
+      type_id: blood_reaver
+      type: weapon
+      slot: weapon
+      name: "Blood Reaver"
+      description: "Deals 45 kinetic damage and repairs its user for 20% of damage dealt. Fires every 2 ticks at reach 3."
+      size: 10
+      base_value: 8700
+      cpu_usage: 9
+      power_usage: 20
+      damage: 45
+      damage_type: kinetic
+      ammo_type: autocannon
+      reach: 3
+      cooldown: 2
+      magazine_size: 1000
+      special: lifesteal_20
+      combat_effects: {lifesteal_pct: 20}
+      required_skills: {weapons: 4}
+  page: 1
+  page_size: 20
+  total: 1
+  total_pages: 1
+  message: "Items: showing 1 of 1"

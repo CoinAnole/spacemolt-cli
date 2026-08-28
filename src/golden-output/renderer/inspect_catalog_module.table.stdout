@@ -1,0 +1,32 @@
+
+=== Inspect: blood_reaver ===
+Kind: catalog
+Source: catalog
+
+Catalog (items)
+Items: showing 1 of 1
+
+=== Entry ===
+
+  Name         | ID           | Category | Size | Value | Slot  
+  -------------+--------------+----------+------+-------+-------
+  Blood Reaver | blood_reaver | weapon   | 10   | 8700  | weapon
+
+Details
+Deals 45 kinetic damage and repairs its user for 20% of damage dealt. Fires every 2 ticks at reach 3.
+Size: 10
+Base value: 8700
+Slot: weapon
+Type: weapon
+CPU: 9
+Power: 20
+Reach: 3
+Damage: 45
+Damage type: kinetic
+Cooldown: 2
+Magazine: 1000
+Ammo: autocannon
+Required skills: weapons 4
+Combat: lifesteal 20%
+Special: lifesteal_20
+Page 1/1 (1 total)

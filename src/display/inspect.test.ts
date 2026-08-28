@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { packageOperationLabel } from './catalog-detail.ts';
 import { renderStructuredResult } from './index.ts';
+import { inspectCatalogModuleFixture, inspectCatalogShipFixture } from './inspect.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -398,6 +400,230 @@ test('renders unpack recipe package_operation string', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Package operation: unpack');
   expect(stdout).not.toContain('Package operation: yes');
+});
+
+test('packageOperationLabel trims strings and maps booleans', () => {
+  expect(packageOperationLabel(' pack ', false)).toBe('pack');
+  expect(packageOperationLabel(true)).toBe('yes');
+  expect(packageOperationLabel(false)).toBe('no');
+  expect(packageOperationLabel(undefined, 'unpack')).toBe('unpack');
+});
+
+function renderCatalogInspect(catalog: Record<string, unknown>, id = 'entry'): string {
+  const rendered = renderStructuredResult(
+    'inspect',
+    { id, kind: 'catalog', source: 'catalog', catalog },
+    options,
+    context,
+  );
+  expect(rendered.success).toBe(true);
+  return rendered.stdout.join('\n');
+}
+
+test('module inspect prints scramble, reach, CPU 0, and omits empty Combat', () => {
+  const stdout = renderCatalogInspect({
+    type: 'items',
+    items: [
+      {
+        id: 'warp_scrambler',
+        type_id: 'warp_scrambler',
+        type: 'utility',
+        slot: 'utility',
+        name: 'Warp Scrambler',
+        description: 'Prevents target from jumping to hyperspace.',
+        size: 10,
+        base_value: 4500,
+        cpu_usage: 0,
+        power_usage: 8,
+        reach: 3,
+        combat_effects: {},
+        scramble_power: 2,
+        required_skills: { scanning: 3 },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Slot: utility');
+  expect(stdout).toContain('CPU: 0');
+  expect(stdout).toContain('Reach: 3');
+  expect(stdout).toContain('Scramble: 2');
+  expect(stdout).toContain('Required skills: scanning 3');
+  expect(stdout).not.toContain('Combat:');
+  expect(stdout).not.toContain('Bonuses:');
+});
+
+test('Adaptive Shield leftover Bonuses do not duplicate Special', () => {
+  const stdout = renderCatalogInspect({
+    type: 'items',
+    items: [
+      {
+        id: 'adaptive_shield_i',
+        type_id: 'adaptive_shield_i',
+        type: 'defense',
+        slot: 'defense',
+        name: 'Adaptive Shield I',
+        description: 'Adds 60 maximum shield points and 10% flat/adaptive damage reduction.',
+        size: 10,
+        base_value: 21000,
+        cpu_usage: 5,
+        power_usage: 10,
+        shield_bonus: 60,
+        damage_reduction: 10,
+        special: 'adaptive_resistance_10',
+        combat_effects: {},
+        required_skills: { shields: 4 },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Bonuses: shield +60, damage reduction 10');
+  expect(stdout).toContain('Special: adaptive_resistance_10');
+  expect(stdout).not.toContain('Combat:');
+  expect(stdout.match(/adaptive_resistance_10/g)?.length).toBe(1);
+});
+
+test('Blood Reaver inspect prints dedicated Damage/Magazine plus Combat and Special', () => {
+  const stdout = renderStructuredResult('inspect', inspectCatalogModuleFixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Slot: weapon');
+  expect(stdout).toContain('Damage: 45');
+  expect(stdout).toContain('Damage type: kinetic');
+  expect(stdout).toContain('Magazine: 1000');
+  expect(stdout).toContain('Ammo: autocannon');
+  expect(stdout).toContain('Combat: lifesteal 20%');
+  expect(stdout).toContain('Special: lifesteal_20');
+  expect(stdout).toContain('Reach: 3');
+  expect(stdout).not.toContain('Bonuses:');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('module inspect prints Effect and Slot when both exist', () => {
+  const stdout = renderCatalogInspect({
+    type: 'items',
+    items: [
+      {
+        id: 'hybrid_round',
+        name: 'Hybrid Round',
+        slot: 'weapon',
+        type: 'weapon',
+        size: 1,
+        base_value: 0,
+        cpu_usage: 1,
+        power_usage: 1,
+        combat_effects: {},
+        effect: { type: 'ammo', ammo: { damage_mod: 1.0 } },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Slot: weapon');
+  expect(stdout).toContain('Base value: 0');
+  expect(stdout).toContain('Effect: type: ammo, damage 100%');
+});
+
+test('ship-class inspect prints full loadout, Achievement, and Lock verbatim', () => {
+  const stdout = renderStructuredResult('inspect', inspectCatalogShipFixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Catalog (ships)');
+  expect(stdout).toContain('Class: Liner');
+  expect(stdout).toContain('Empire: nebula');
+  expect(stdout).toContain('Hull: 700');
+  expect(stdout).toContain('Shield: 700 (+12/tick)');
+  expect(stdout).toContain('Slots: 0 weapon, 4 defense, 5 utility');
+  expect(stdout).toContain('Default loadout: shield_booster_iii, shield_booster_iii, ship_scanner_ii');
+  expect(stdout).toContain('Achievement: galactic_concierge');
+  expect(stdout).toContain(
+    'Lock: Locked: prestige hull reserved for pilots who have earned the "Galactic Concierge" achievement.',
+  );
+  expect(stdout).toContain('Capabilities: passenger_first_berths 48, fuel_efficiency_bonus 50');
+  expect(stdout).toContain('Build materials:');
+  expect(stdout).toContain(', ... and 3 more');
+  expect(stdout).not.toContain('prismatic_lens');
+  expect(stdout).not.toContain('Faction: nebula');
+  expect(stdout).not.toContain('Achievement: galactic_concierge)');
+  expect(stdout.match(/galactic_concierge/g)?.length).toBe(1);
+});
+
+test('ship-class inspect keeps an untruncated default loadout and gated acquisition lines', () => {
+  const modules = [
+    'judgment_beam',
+    'solar_lance',
+    'focused_beam_iii',
+    'focused_beam_iii',
+    'heavy_pulse_laser',
+    'heavy_pulse_laser',
+    'pulse_laser_iii',
+    'pulse_laser_iii',
+    'solarian_aegis',
+    'adaptive_shield_iii',
+    'shield_booster_iv',
+    'shield_booster_iii',
+    'darksteel_armor',
+    'nanite_hull_coating',
+  ];
+  const stdout = renderCatalogInspect({
+    type: 'ships',
+    items: [
+      {
+        id: 'opus_magna',
+        name: 'Opus Magna',
+        class: 'Titan',
+        tier: 5,
+        empire: 'solarian',
+        faction: 'solarian',
+        description: 'Flagship hull.',
+        default_modules: modules,
+        required_faction_achievement: 'imperial_footprint',
+        required_faction_leader: true,
+        prestige_lock:
+          'Locked: prestige hull reserved for the leader of a faction that has earned the "Imperial Footprint" achievement.',
+        hidden: true,
+        legacy: true,
+        price: 0,
+        required_items: [{ name: 'Steel Plate', quantity: 3 }],
+        passive_recipes: ['refine_steel', 'smelt_lead_ingot'],
+      },
+    ],
+  });
+
+  expect(stdout).toContain(`Default loadout: ${modules.join(', ')}`);
+  expect(stdout).not.toContain('and 2 more');
+  expect(stdout).toContain('Empire: solarian');
+  expect(stdout).not.toContain('Faction: solarian');
+  expect(stdout).toContain('Faction achievement: imperial_footprint');
+  expect(stdout).toContain('Faction leader: yes');
+  expect(stdout).toContain(
+    'Lock: Locked: prestige hull reserved for the leader of a faction that has earned the "Imperial Footprint" achievement.',
+  );
+  expect(stdout).toContain('Availability: hidden, legacy');
+  expect(stdout).toContain('Price: 0');
+  expect(stdout).toContain('Required items: 3x Steel Plate');
+  expect(stdout).toContain('Passive recipes: refine_steel, smelt_lead_ingot');
+});
+
+test('ship-class inspect still emits details when default_modules is missing', () => {
+  const stdout = renderCatalogInspect({
+    type: 'ships',
+    items: [
+      {
+        id: 'money_pit',
+        name: 'Money Pit',
+        description: 'Outer Rim mobile refinery.',
+        class: 'Refinery',
+        tier: 3,
+        faction: 'outerrim',
+        base_hull: 450,
+        base_shield: 160,
+        base_shield_recharge: 3,
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Details');
+  expect(stdout).toContain('Outer Rim mobile refinery.');
+  expect(stdout).toContain('Hull: 450');
+  expect(stdout).toContain('Shield: 160 (+3/tick)');
+  expect(stdout).not.toContain('Default loadout');
 });
 
 test('renders ammo catalog effect without [object Object]', () => {
