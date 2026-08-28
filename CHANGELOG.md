@@ -6,6 +6,8 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ### SpaceMolt v0.566.2 compatibility
 
+- Human `get_battle_log` now prints the shield/hull split and compact per-weapon defense stages.
+  JSON/YAML output is unchanged.
 - Station-aware commands accept a station base ID or station POI ID (gameserver 0.565.1).
   Help for `travel`, `find_route`, `view_orders`, `storage view`, `browse_ships`,
   `commission_status`, `load_passenger`, `faction_scan_poi`, `shipping_list`,
