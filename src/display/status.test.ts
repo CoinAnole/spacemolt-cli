@@ -7,6 +7,7 @@ import {
   payBountyFixture,
   playerProfileFixture,
   scanCreatureFixture,
+  stationPoiInfoFixture,
 } from './status.fixtures.ts';
 
 const options: GlobalOptions = {
@@ -477,6 +478,63 @@ test('pay_bounty prints faction treasury source and faction credits', () => {
 
   expect(stdout).toContain('Paid from: faction');
   expect(stdout).toContain('Faction credits: 90,000');
+});
+
+test('get_poi nested station prints indented ID and POI and skips Station Base ID', () => {
+  const rendered = renderStructuredResult('get_poi', structuredClone(stationPoiInfoFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  expect(stdout).toContain('=== POI: Earth ===');
+  expect(stdout).toContain('ID: sol_earth');
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('=== Station: Earth Station ===');
+  expect(stdout).toContain('  ID: earth_station');
+  expect(stdout).toContain('  POI: sol_earth');
+  expect(stdout).toContain('  Type: station');
+  expect(stdout).toContain('  Empire: Terran');
+  expect(stdout).toContain('  Fuel: 500/1000');
+  expect(stdout).not.toContain('Station Base ID:');
+  expect(stdout).not.toContain("Station: earth_station (use 'dock' to enter)");
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_poi with poi.base_id and no nested base prints Station Base ID', () => {
+  const rendered = renderStructuredResult(
+    'get_poi',
+    {
+      poi: {
+        id: 'sol_earth',
+        name: 'Earth',
+        type: 'station',
+        system_id: 'sol',
+        base_id: 'earth_station',
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain("Station Base ID: earth_station (use 'dock' to enter)");
+  expect(stdout).not.toContain('Station: Earth Station');
+  expect(stdout).not.toContain('  ID:');
+  expect(stdout).not.toContain('  POI:');
+  expect(stdout).not.toContain("Station: earth_station (use 'dock' to enter)");
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_poi nested station omits POI when poi_id is absent', () => {
+  const fixture = structuredClone(stationPoiInfoFixture) as {
+    base: { poi_id?: string };
+  };
+  delete fixture.base.poi_id;
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('  ID: earth_station');
+  expect(stdout).not.toContain('  POI:');
 });
 
 test('pay_bounty declines to raw response without amount_paid', () => {

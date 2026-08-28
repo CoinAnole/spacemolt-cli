@@ -12,6 +12,8 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `faction_query_trade_intel`, and `faction post_mission` (`target_base_id`) now says so.
   `jump` remains a connected system ID or Pathfinder bearing. `shipping_post` /
   `shipping_quote` were already documented this way.
+- `get_poi` labels a nested station's canonical Base ID and POI ID separately; a lone `base_id`
+  prints as Station Base ID.
 
 ### SpaceMolt v0.564.0 compatibility
 

@@ -548,10 +548,39 @@ test('renders base inspect results with station defences', () => {
   expect(stdout).toContain('=== Inspect: earth_station ===');
   expect(stdout).toContain('Station: Earth Station');
   expect(stdout).not.toContain('=== Station: Earth Station ===');
+  expect(stdout).toMatch(/^ID: earth_station$/m);
+  expect(stdout).toMatch(/^POI: earth_orbit$/m);
+  expect(stdout).not.toContain('  ID: earth_station');
+  expect(stdout).not.toContain('  POI: earth_orbit');
   expect(stdout).toContain('Hull: 900/1000');
   expect(stdout).toContain('Shield: 200/300');
   expect(stdout).toContain('Guns: 40 DPS');
   expect(stdout).toContain('Facilities: 3');
   expect(stdout).toContain('A busy trade hub.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders base inspect identity without POI when poi_id is absent', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          empire: 'solarian',
+        },
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toMatch(/^ID: earth_station$/m);
+  expect(stdout).not.toMatch(/^POI:/m);
   expect(stdout).not.toContain('=== Response ===');
 });

@@ -177,6 +177,29 @@ export const poiInfoFixture = {
   ],
 };
 
+/** Station POI with nested base (canonical Base ID + station POI ID). */
+export const stationPoiInfoFixture = {
+  kind: 'normal',
+  poi: {
+    id: 'sol_earth',
+    name: 'Earth',
+    type: 'station',
+    system_id: 'sol',
+    description: 'Orbital station above Earth',
+    class: 'major',
+    base_id: 'earth_station',
+  },
+  base: {
+    id: 'earth_station',
+    poi_id: 'sol_earth',
+    name: 'Earth Station',
+    type: 'station',
+    empire: 'Terran',
+    fuel: 500,
+    max_fuel: 1000,
+  },
+};
+
 export const nearbyFixture = {
   nearby: [
     {
@@ -627,6 +650,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
+  get_poi_station: { command: 'get_poi', fixture: stationPoiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },

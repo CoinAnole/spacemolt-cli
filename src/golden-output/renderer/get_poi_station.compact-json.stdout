@@ -1,0 +1,1 @@
+{"kind":"normal","poi":{"id":"sol_earth","name":"Earth","type":"station","system_id":"sol","description":"Orbital station above Earth","class":"major","base_id":"earth_station"},"base":{"id":"earth_station","poi_id":"sol_earth","name":"Earth Station","type":"station","empire":"Terran","fuel":500,"max_fuel":1000}}

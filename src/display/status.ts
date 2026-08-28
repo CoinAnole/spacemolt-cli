@@ -6,6 +6,7 @@ import {
   emitLine,
   emitStationDefences,
   emitStationFuelPricing,
+  emitStationIds,
   formatDepletionRemainingSuffix,
   formatPlayer,
   formatReputationChangesSummary,
@@ -884,11 +885,12 @@ export const statusFormatters = [
         }
       }
 
-      if (poi.base_id) emitLine(`\nStation: ${poi.base_id} (use 'dock' to enter)`);
-
       const base = r.base as Record<string, unknown> | undefined;
+      if (poi.base_id && !base) emitLine(`\nStation Base ID: ${poi.base_id} (use 'dock' to enter)`);
+
       if (base) {
         emitLine(`\n${c.bright}Station: ${base.name}${c.reset}`);
+        emitStationIds(base, '  ');
         if (typeof base.type === 'string' && base.type) emitLine(`  Type: ${base.type}`);
         if (base.description) emitLine(`  ${base.description}`);
         emitLine(`  Empire: ${base.empire || 'None'}`);

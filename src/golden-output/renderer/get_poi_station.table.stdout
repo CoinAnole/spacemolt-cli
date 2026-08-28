@@ -1,0 +1,14 @@
+
+=== POI: Earth ===
+ID: sol_earth
+Type: station
+System: sol
+Description: Orbital station above Earth
+Class: major
+
+Station: Earth Station
+  ID: earth_station
+  POI: sol_earth
+  Type: station
+  Empire: Terran
+  Fuel: 500/1000

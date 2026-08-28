@@ -5,6 +5,7 @@ import {
   emitStationConstruction,
   emitStationDefences,
   emitStationFuelPricing,
+  emitStationIds,
   emitStationLifeSupport,
   emitStationPower,
   formatter,
@@ -344,8 +345,7 @@ function emitBase(basePayload: Record<string, unknown>): void {
   if (!isRecord(base)) return;
 
   emitLine(`\n${c.bright}Station: ${base.name || base.id}${c.reset}`);
-  emitLine(`ID: ${base.id || base.base_id || 'unknown'}`);
-  if (base.poi_id) emitLine(`POI: ${base.poi_id}`);
+  emitStationIds(base, '');
   emitLine(`Empire: ${base.empire || 'None'}`);
   if (base.faction_id) emitLine(`Faction: ${base.faction_id}`);
   emitStationDefences(base);
