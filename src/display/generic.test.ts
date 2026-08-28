@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import {
   catalogItemsModulesFixture,
+  catalogShipsFixture,
   storageDepositAutoDockedFixture,
   storageWithdrawAutoDockedFixture,
 } from './generic.fixtures.ts';
@@ -174,6 +175,306 @@ test('renders catalog ships with prestige lock notes when present', () => {
   expect(stdout).toContain('Concierge Liner');
   expect(stdout).toContain('Locked: prestige hull reserved');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+function catalogShipsHeader(stdout: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes('Name') && line.includes('ID') && line.includes('Class'));
+}
+
+test('renders catalog ship Loadout when default_modules are present and omits it when absent', () => {
+  const withLoadout = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'capital_refinery',
+          default_modules: ['ore_processor_i', 'fuel_converter_i'],
+          empire: 'outerrim',
+          id: 'money_pit',
+          name: 'Money Pit',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const withLoadoutOut = withLoadout.stdout.join('\n');
+  expect(withLoadout.success).toBe(true);
+  expect(catalogShipsHeader(withLoadoutOut)).toContain('Loadout');
+  expect(withLoadoutOut).toContain('ore_processor_i, fuel_converter_i');
+  expect(withLoadoutOut).not.toContain('Details');
+
+  const withoutLoadout = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'capital_refinery',
+          empire: 'outerrim',
+          id: 'money_pit',
+          name: 'Money Pit',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const withoutLoadoutOut = withoutLoadout.stdout.join('\n');
+  expect(withoutLoadout.success).toBe(true);
+  expect(catalogShipsHeader(withoutLoadoutOut)).not.toContain('Loadout');
+  expect(withoutLoadoutOut).not.toContain('Details');
+});
+
+test('omits catalog ship Lock when required_achievement is set without prestige_lock', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          required_achievement: 'galactic_concierge',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+        {
+          class: 'capital_refinery',
+          empire: 'outerrim',
+          id: 'money_pit',
+          name: 'Money Pit',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogShipsHeader(stdout)).not.toContain('Lock');
+  expect(stdout).not.toContain('Details');
+});
+
+test('renders catalog ship Req. items when required_items are present', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'capital_refinery',
+          empire: 'outerrim',
+          id: 'money_pit',
+          name: 'Money Pit',
+          required_items: [{ name: 'Steel Plate', quantity: 3 }],
+          shipyard_tier: 5,
+          tier: 5,
+        },
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogShipsHeader(stdout)).toContain('Req. items');
+  expect(stdout).toContain('3x Steel Plate');
+  expect(stdout).not.toContain('Details');
+});
+
+test('omits catalog ship Availability when hidden is false or absent', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'capital_refinery',
+          empire: 'outerrim',
+          hidden: false,
+          id: 'money_pit',
+          name: 'Money Pit',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogShipsHeader(stdout)).not.toContain('Availability');
+  expect(stdout).not.toContain('Details');
+});
+
+test('renders catalog ship Availability when hidden or legacy', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'capital_refinery',
+          empire: 'outerrim',
+          hidden: true,
+          id: 'money_pit',
+          legacy: true,
+          name: 'Money Pit',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+        {
+          class: 'luxury_liner',
+          empire: 'solarian',
+          id: 'concierge_liner',
+          name: 'Concierge Liner',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogShipsHeader(stdout)).toContain('Availability');
+  expect(stdout).toContain('hidden, legacy');
+  expect(stdout).not.toContain('Details');
+});
+
+test('renders catalog ship Empire from faction when empire is absent', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'capital_refinery',
+          empire: 'outerrim',
+          id: 'money_pit',
+          name: 'Money Pit',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+        {
+          class: 'luxury_liner',
+          faction: 'nebula',
+          id: 'comet',
+          name: 'Comet',
+          shipyard_tier: 3,
+          tier: 4,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogShipsHeader(stdout)).toContain('Empire');
+  expect(stdout).toContain('outerrim');
+  expect(stdout).toContain('nebula');
+  expect(stdout).not.toContain('Details');
+});
+
+test('renders catalog ship Details with a full untruncated loadout for a one-row list', () => {
+  const modules = [
+    'judgment_beam',
+    'solar_lance',
+    'focused_beam_iii',
+    'focused_beam_iii',
+    'heavy_pulse_laser',
+    'heavy_pulse_laser',
+    'pulse_laser_iii',
+    'pulse_laser_iii',
+    'solarian_aegis',
+    'adaptive_shield_iii',
+    'shield_booster_iv',
+    'shield_booster_iii',
+    'darksteel_armor',
+    'nanite_hull_coating',
+  ];
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'Titan',
+          default_modules: modules,
+          empire: 'solarian',
+          id: 'opus_magna',
+          name: 'Opus Magna',
+          shipyard_tier: 5,
+          tier: 5,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  const loadout = modules.join(', ');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Items ===');
+  expect(stdout).toContain('Details');
+  expect(stdout.indexOf('=== Items ===')).toBeLessThan(stdout.indexOf('Details'));
+  expect(stdout).toContain(`Default loadout: ${loadout}`);
+  expect(catalogShipsHeader(stdout)).toContain('Loadout');
+});
+
+test('does not render catalog ship Details for a multi-row list', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogShipsFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Items ===');
+  expect(stdout).toContain('Money Pit');
+  expect(stdout).toContain('Concierge Liner');
+  expect(stdout).not.toContain('Details');
 });
 
 test('renders catalog item compression when at least one item declares it', () => {

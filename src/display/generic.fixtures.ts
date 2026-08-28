@@ -163,6 +163,7 @@ export const catalogShipsFixture = {
   items: [
     {
       class: 'capital_refinery',
+      default_modules: ['ore_processor_i', 'fuel_converter_i', 'cargo_expander_ii'],
       empire: 'outerrim',
       id: 'money_pit',
       name: 'Money Pit',

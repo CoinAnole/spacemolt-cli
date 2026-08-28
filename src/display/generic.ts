@@ -1,4 +1,10 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
+import {
+  emitCatalogShipDetail,
+  formatShipAvailability,
+  joinStringIds,
+  summarizeNamedItemQuantities as summarizeShipRequiredItems,
+} from './catalog-detail.ts';
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
 import {
   c,
@@ -930,8 +936,12 @@ export const genericFormatters = [
   formatter(
     (r) => {
       if (r.type !== 'ships' || !Array.isArray(r.items) || !r.items.every(isRecord)) return false;
-      const rows = (r.items as Array<Record<string, unknown>>).map((ship) => ({
+      const items = r.items as Array<Record<string, unknown>>;
+      const rows: Array<Record<string, unknown>> = items.map((ship) => ({
         ...ship,
+        loadout_summary: joinStringIds(ship.default_modules),
+        required_items_summary: summarizeShipRequiredItems(ship.required_items),
+        availability_summary: formatShipAvailability(ship),
         passive_recipes_summary: summarizePassiveRecipes(ship.passive_recipes),
       }));
       const columns: Array<[string, string[]]> = [
@@ -939,16 +949,31 @@ export const genericFormatters = [
         ['ID', ['id', 'class_id']],
         ['Class', ['class', 'category']],
         ['Tier', ['tier']],
-        ['Empire', ['empire']],
+        ['Empire', ['empire', 'faction']],
         ['Yard', ['shipyard_tier']],
         ['Pilot', ['piloting_required']],
         ['Rep', ['required_reputation']],
         ['Passive Recipes', ['passive_recipes_summary']],
       ];
-      if ((rows as Array<Record<string, unknown>>).some((ship) => ship.prestige_lock || ship.required_achievement)) {
-        columns.push(['Lock', ['prestige_lock']]);
-      }
+      insertOptionalColumn(columns, rows, 'Loadout', ['loadout_summary'], 'Rep');
+      insertOptionalColumn(
+        columns,
+        rows,
+        'Req. items',
+        ['required_items_summary'],
+        rows.some((row) => row.loadout_summary) ? 'Loadout' : 'Rep',
+      );
+      insertOptionalColumn(columns, rows, 'Lock', ['prestige_lock'], 'Passive Recipes');
+      insertOptionalColumn(
+        columns,
+        rows,
+        'Availability',
+        ['availability_summary'],
+        rows.some((row) => row.prestige_lock) ? 'Lock' : 'Passive Recipes',
+      );
       printCompactTable('Items', rows, columns, { maxCellWidth: 72 });
+      const onlyShip = items.length === 1 ? items[0] : undefined;
+      if (onlyShip) emitCatalogShipDetail(onlyShip, r);
 
       const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
       if (passiveRecipeDetails) printRecipeRows('Passive Recipes', passiveRecipeDetails, { passive: true });
