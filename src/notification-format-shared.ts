@@ -470,7 +470,7 @@ export function formatActionResultDetails(details: Record<string, unknown>): str
     const quantity = finiteNumber(details.quantity);
     bits.push(quantity !== undefined ? `${quantity}× ${item}` : String(item));
   }
-  for (const key of ['module_id', 'wear_status', 'storage_total', 'cargo_remaining'] as const) {
+  for (const key of ['module_id', 'storage_total', 'cargo_remaining'] as const) {
     const value = safeScalar(details[key]);
     if (value !== undefined) bits.push(`${key}=${value}`);
   }

@@ -37,7 +37,6 @@ export const catalogItemsFixture = {
           damage_mod: 0.9,
           armor_bypass: 0.3,
           untraceable: true,
-          wear_per_shot: 0.01,
         },
       },
     },

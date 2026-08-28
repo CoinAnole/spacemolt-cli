@@ -16,7 +16,7 @@ Berths: Economy: 3/4 free | Business: 1/1 free | First: 0/0 free
 
 === Modules ===
 
-  Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID      
-  --------+--------------------+---------+----------+-----+-------+------+---------
-  utility | Cargo Expander III | utility | Pristine | 2   | 2     | 10   | module-1
-  weapon  | Pulse Laser III    | weapon  | Scuffed  | 3   | 8     | 10   | module-2
+  Slot    | Name               | Type    | CPU | Power | Size | ID      
+  --------+--------------------+---------+-----+-------+------+---------
+  utility | Cargo Expander III | utility | 2   | 2     | 10   | module-1
+  weapon  | Pulse Laser III    | weapon  | 3   | 8     | 10   | module-2

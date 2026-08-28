@@ -213,7 +213,6 @@ export const shipFormatters = [
           ['Slot', ['slot']],
           ['Name', ['name', 'type_name']],
           ['Type', ['type', 'type_id']],
-          ['Wear', ['wear_status', 'wear']],
           ['CPU', ['cpu_usage', 'cpu']],
           ['Power', ['power_usage', 'power']],
           ['Size', ['size']],
