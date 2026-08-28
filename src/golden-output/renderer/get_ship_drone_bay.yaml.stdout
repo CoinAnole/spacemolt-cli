@@ -10,8 +10,6 @@ modules:
     slot: utility
     type: utility
     type_id: cargo_expander_iii
-    wear: 0
-    wear_status: Pristine
   - cpu_usage: 3
     module_id: "module-2"
     name: "Pulse Laser III"
@@ -20,8 +18,6 @@ modules:
     slot: weapon
     type: weapon
     type_id: pulse_laser_iii
-    wear: 2
-    wear_status: Scuffed
 ship:
   armor: 18
   berths:

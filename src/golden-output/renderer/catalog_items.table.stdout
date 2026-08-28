@@ -1,11 +1,11 @@
 
 === Items ===
 
-  Name                 | ID                   | Category | Rarity    | Value | Size | Compression | Effects                                                 
-  ---------------------+----------------------+----------+-----------+-------+------+-------------+---------------------------------------------------------
-  Antimatter Torpedoes | antimatter_torpedoes | ammo     | exotic    | 500   | 1    |             | damage 50%, hull 100%, splash 60%                       
-  Ghost Rounds Box     | ghost_rounds_box     | ammo     | rare      | 85    | 1    |             | damage 90%, armor bypass 30%, untraceable, wear/shot +1%
-  Quantum Fragments    | quantum_fragments    | ore      | legendary | 600   | 3    | ore         |                                                         
+  Name                 | ID                   | Category | Rarity    | Value | Size | Compression | Effects                                  
+  ---------------------+----------------------+----------+-----------+-------+------+-------------+------------------------------------------
+  Antimatter Torpedoes | antimatter_torpedoes | ammo     | exotic    | 500   | 1    |             | damage 50%, hull 100%, splash 60%        
+  Ghost Rounds Box     | ghost_rounds_box     | ammo     | rare      | 85    | 1    |             | damage 90%, armor bypass 30%, untraceable
+  Quantum Fragments    | quantum_fragments    | ore      | legendary | 600   | 3    | ore         |                                          
 page 1/27 | page size 20 | total 537
 (Showing 3 of 537 items. Use --page 2 for more results.)
 Items: showing 3 of 537

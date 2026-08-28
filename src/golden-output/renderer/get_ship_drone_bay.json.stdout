@@ -10,9 +10,7 @@
       "size": 10,
       "slot": "utility",
       "type": "utility",
-      "type_id": "cargo_expander_iii",
-      "wear": 0,
-      "wear_status": "Pristine"
+      "type_id": "cargo_expander_iii"
     },
     {
       "cpu_usage": 3,
@@ -22,9 +20,7 @@
       "size": 10,
       "slot": "weapon",
       "type": "weapon",
-      "type_id": "pulse_laser_iii",
-      "wear": 2,
-      "wear_status": "Scuffed"
+      "type_id": "pulse_laser_iii"
     }
   ],
   "ship": {

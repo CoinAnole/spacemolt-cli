@@ -684,6 +684,13 @@ describe('notification formatting', () => {
         ship: { hull: 130 },
       } as Record<string, unknown>),
     ).toBe('undock');
+    const leftoverWear = formatActionResultDetails({
+      action: 'install_module',
+      module_id: 'module-1',
+      wear_status: 'Pristine',
+    });
+    expect(leftoverWear).toContain('module_id=module-1');
+    expect(leftoverWear).not.toContain('wear_status=');
   });
 
   test.each([

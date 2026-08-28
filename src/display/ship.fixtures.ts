@@ -41,8 +41,6 @@ export const shipFixture = {
       slot: 'utility',
       type: 'utility',
       type_id: 'cargo_expander_iii',
-      wear: 0,
-      wear_status: 'Pristine',
     },
     {
       cpu_usage: 3,
@@ -53,8 +51,6 @@ export const shipFixture = {
       slot: 'weapon',
       type: 'weapon',
       type_id: 'pulse_laser_iii',
-      wear: 2,
-      wear_status: 'Scuffed',
     },
   ],
   ship: {
@@ -225,7 +221,6 @@ export const wrecksFixture = {
           type_id: 'pulse_laser_i',
           name: 'Pulse Laser I',
           type: 'weapon',
-          wear: 0.2,
         },
       ],
       salvage_value: 1250,

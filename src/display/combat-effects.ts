@@ -91,7 +91,6 @@ export function summarizeAmmoEffects(item: Record<string, unknown>): string {
   pushSignedPercentEffect(parts, 'large', ammo.anti_large_mod);
   pushSignedPercentEffect(parts, 'drone', ammo.anti_drone_mod);
   if (ammo.untraceable === true) parts.push('untraceable');
-  pushSignedPercentEffect(parts, 'wear/shot', ammo.wear_per_shot);
 
   return parts.join(', ');
 }

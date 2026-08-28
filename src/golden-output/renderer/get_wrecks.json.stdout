@@ -23,8 +23,7 @@
           "id": "module-1",
           "type_id": "pulse_laser_i",
           "name": "Pulse Laser I",
-          "type": "weapon",
-          "wear": 0.2
+          "type": "weapon"
         }
       ],
       "salvage_value": 1250,

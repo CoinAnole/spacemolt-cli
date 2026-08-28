@@ -8,6 +8,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 - Modules no longer accumulate wear, so `spacemolt repair_module` is gone with the API
   route. Repair Kits still repair ship hull via `spacemolt repair`.
+- Human `get_ship` module tables no longer include a Wear column. JSON/YAML still
+  pass through any leftover `wear` / `wear_status` keys the server sends.
+- Catalog ammo effect summaries no longer print `wear/shot`.
 
 ### SpaceMolt v0.566.2 compatibility
 

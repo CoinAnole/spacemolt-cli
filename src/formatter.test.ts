@@ -4885,6 +4885,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Cargo Expander III');
     expect(stdout).toContain('module-nested-1');
     expect(stdout).not.toContain('(None)');
+    expect(stdout).not.toContain('Wear');
+    expect(stdout).not.toContain('Pristine');
   });
 
   test('get_ship renders drone_bay summary and in-bay table', () => {
@@ -5455,10 +5457,10 @@ describe('structuredContent formatters', () => {
 
       === Modules ===
 
-        Slot    | Name               | Type    | Wear     | CPU | Power | Size | ID
-        --------+--------------------+---------+----------+-----+-------+------+---------
-        utility | Cargo Expander III | utility | Pristine | 2   | 2     | 10   | module-1
-        weapon  | Pulse Laser III    | weapon  | Scuffed  | 3   | 8     | 10   | module-2"
+        Slot    | Name               | Type    | CPU | Power | Size | ID
+        --------+--------------------+---------+-----+-------+------+---------
+        utility | Cargo Expander III | utility | 2   | 2     | 10   | module-1
+        weapon  | Pulse Laser III    | weapon  | 3   | 8     | 10   | module-2"
       ,
         "storage": 
       "
@@ -5477,7 +5479,7 @@ describe('structuredContent formatters', () => {
         Ship Name  | Class      | Mods | Cargo | ID
         -----------+------------+------+-------+-------
         Prospector | prospector |    3 |    10 | ship-1
- 
+
       === Locations ===
 
         Station       | System | Items | Ships | ID

@@ -1349,6 +1349,7 @@ describe('response renderer', () => {
     expect(output).toContain('untraceable');
     expect(output).toContain('armor melt 20%/4t');
     expect(output).toContain('splash 15%');
+    expect(output).not.toContain('wear/shot');
   });
 
   test('renderResponse prints dock arrival stories without raw JSON fallback', async () => {
