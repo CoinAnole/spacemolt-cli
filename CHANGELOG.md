@@ -4,6 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### SpaceMolt v0.568.0 compatibility — `list_ships` table
+
+- Human `list_ships` is no longer the generic Name / ID / Type list. It shows custom name,
+  class, id, active, location, hull, fuel, cargo, module count, listings when present, fitted
+  module type ids, and faction garage used/capacity.
+- Table headers changed (`Type` removed; Class / Active / Location / Hull / Fuel and optional
+  Cargo / Mods / Listing / Price added). Scripts that scrape human headers must update.
+  `--json` / `--yaml` / `--jq` / `--structured` field names are unchanged.
+- `help list_ships` documents module types and `get_ship <ship_id>` for the full fit.
+
 ### Catalog inspect (gameserver 0.564–0.566)
 
 - Human `inspect` of catalog modules now shows slot, CPU/power (including 0), dedicated combat stats,

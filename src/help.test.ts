@@ -1143,6 +1143,18 @@ describe('help output branches', () => {
     expect(generatedSection).not.toContain('pay_bounty');
   });
 
+  test('help list_ships documents module types, locations, and get_ship', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('list_ships', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('module type');
+    expect(output).toContain('locations');
+    expect(output).toContain('get_ship');
+    expect(output).not.toContain('--jq');
+  });
+
   test('loot_wreck help documents named module_id= ship fit', () => {
     const capture = captureWriter();
 
