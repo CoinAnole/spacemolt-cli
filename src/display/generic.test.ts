@@ -1,6 +1,10 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
-import { storageDepositAutoDockedFixture, storageWithdrawAutoDockedFixture } from './generic.fixtures.ts';
+import {
+  catalogItemsModulesFixture,
+  storageDepositAutoDockedFixture,
+  storageWithdrawAutoDockedFixture,
+} from './generic.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
 
 const options: GlobalOptions = {
@@ -204,6 +208,49 @@ test('renders catalog item compression when at least one item declares it', () =
   expect(stdout).toMatch(/Size\s+\|\s+Compression/);
   expect(stdout).toContain('Quantum Fragments');
   expect(stdout).toContain('ore');
+});
+
+test('renders catalog item slot and module effects when present', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogItemsModulesFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+  const tableHeader = stdout.split('\n').find((line) => line.includes('Name') && line.includes('Effects'));
+
+  expect(rendered.success).toBe(true);
+  expect(tableHeader).toBeDefined();
+  expect(tableHeader).toMatch(/Slot\s+\|\s+Effects/);
+  expect(stdout).toContain('Warp Scrambler');
+  expect(stdout).toContain('utility');
+  expect(stdout).toContain('reach 3, scramble 2');
+  expect(stdout).toContain('Adaptive Shield I');
+  expect(stdout).toContain('defense');
+  expect(stdout).toContain('shield +60, damage reduction 10, adaptive_resistance_10');
+  expect(stdout).toContain('Ghost Rounds Box');
+  expect(stdout).toContain('damage 90%, armor bypass 30%, untraceable');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits catalog item slot when no item declares it', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          id: 'food_rations',
+          name: 'Food Rations',
+          category: 'consumable',
+          base_value: 10,
+          size: 1,
+        },
+      ],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Slot');
 });
 
 test('omits catalog item compression when no item declares it', () => {

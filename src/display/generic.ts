@@ -1,5 +1,5 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
-import { summarizeAmmoEffects } from './combat-effects.ts';
+import { summarizeCatalogItemEffects } from './combat-effects.ts';
 import {
   c,
   commandNameEquals,
@@ -222,6 +222,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Value', ['base_value', 'price_each', 'price']],
     ['Size', ['size']],
     ['Compression', ['compression']],
+    ['Slot', ['slot']],
     ['Effects', ['effects_summary']],
   ],
   missions: [
@@ -1040,7 +1041,7 @@ export const genericFormatters = [
       const rows = r[key] as unknown[];
       if (!rows.every(isRecord)) return false;
       const recordRows = (rows as Array<Record<string, unknown>>).map((row) => {
-        if (key === 'items') return { ...row, effects_summary: summarizeAmmoEffects(row) };
+        if (key === 'items') return { ...row, effects_summary: summarizeCatalogItemEffects(row) };
         if (key === 'missions') return { ...row, rewards_summary: summarizeRewards(row.rewards) };
         return row;
       });

@@ -1,0 +1,74 @@
+{
+  "items": [
+    {
+      "base_value": 4500,
+      "category": "module",
+      "description": "Prevents target from jumping to hyperspace.",
+      "id": "warp_scrambler",
+      "name": "Warp Scrambler",
+      "rarity": "uncommon",
+      "size": 10,
+      "slot": "utility",
+      "stackable": false,
+      "tradeable": true,
+      "type": "utility",
+      "type_id": "warp_scrambler",
+      "reach": 3,
+      "scramble_power": 2,
+      "combat_effects": {},
+      "cpu_usage": 6,
+      "power_usage": 8,
+      "required_skills": {
+        "scanning": 3
+      }
+    },
+    {
+      "base_value": 21000,
+      "category": "module",
+      "description": "Adds 60 maximum shield points and 10% flat/adaptive damage reduction. Flat and adaptive reductions add and cap at 75%, applied after typed resistance.",
+      "id": "adaptive_shield_i",
+      "name": "Adaptive Shield I",
+      "rarity": "rare",
+      "size": 10,
+      "slot": "defense",
+      "stackable": false,
+      "tradeable": true,
+      "type": "defense",
+      "type_id": "adaptive_shield_i",
+      "shield_bonus": 60,
+      "damage_reduction": 10,
+      "special": "adaptive_resistance_10",
+      "combat_effects": {},
+      "cpu_usage": 5,
+      "power_usage": 10,
+      "required_skills": {
+        "shields": 4
+      }
+    },
+    {
+      "base_value": 85,
+      "category": "ammo",
+      "description": "Ghost rounds are untraceable when used exclusively.",
+      "id": "ghost_rounds_box",
+      "name": "Ghost Rounds Box",
+      "rarity": "rare",
+      "size": 1,
+      "stackable": true,
+      "tradeable": true,
+      "effect": {
+        "type": "ammo",
+        "ammo": {
+          "damage_mod": 0.9,
+          "armor_bypass": 0.3,
+          "untraceable": true
+        }
+      }
+    }
+  ],
+  "message": "Items: showing 3 of 12",
+  "page": 1,
+  "page_size": 20,
+  "total": 12,
+  "total_pages": 1,
+  "type": "items"
+}

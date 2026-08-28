@@ -1,0 +1,11 @@
+
+=== Items ===
+
+  Name              | ID                | Category | Rarity   | Value | Size | Slot    | Effects                                                
+  ------------------+-------------------+----------+----------+-------+------+---------+--------------------------------------------------------
+  Warp Scrambler    | warp_scrambler    | module   | uncommon | 4500  | 10   | utility | reach 3, scramble 2                                    
+  Adaptive Shield I | adaptive_shield_i | module   | rare     | 21000 | 10   | defense | shield +60, damage reduction 10, adaptive_resistance_10
+  Ghost Rounds Box  | ghost_rounds_box  | ammo     | rare     | 85    | 1    |         | damage 90%, armor bypass 30%, untraceable              
+page 1/1 | page size 20 | total 12
+(Showing 3 of 12 items. Use --page 2 for more results.)
+Items: showing 3 of 12
