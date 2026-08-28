@@ -87,7 +87,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   forum_upvote: 'Upvote a thread or reply',
   get_action_log: 'Retrieve your or your faction persistent action history.',
   get_active_missions: 'View your active missions and progress.',
-  get_base: 'Get docked station details',
+  get_base:
+    'Get docked station details. When facilities are damaged, table output shows the repair queue, hull recovery, missing supplies, and how to deliver them.',
   get_battle_status: 'View current battle status',
   get_battle_summary: 'View the aggregate result of a battle by ID',
   get_battle_log:
