@@ -5,11 +5,11 @@ total_ticks: 14
 has_more: false
 entries:
   - tick: 0
-    attacks: [{attacker_id: "player-1", target_id: "pirate-1", hit_success: true, final_damage: 420, hull_damage: 120, shield_damage: 300}]
+    attacks: [{attacker_id: "player-1", target_id: "pirate-1", hit_success: true, final_damage: 420, hull_damage: 120, shield_damage: 300, damage_type: kinetic, defense_components: [{weapon_instance_id: "w-pulse", weapon_name: "Pulse Laser", damage_type: kinetic, incoming_damage: 500, shield_resist_pct: 6, after_shield_resist: 470, type_resist_pct: 3, after_type_resist: 455, flat_reduction_pct: 3, after_flat_reduction: 440, shield_bypass_pct: 0, armor_bypass_pct: 0, ignore_all_defense: false, final_damage: 440, shield_damage: 300, hull_damage: 120}]}]
     burns: []
     flee: []
   - tick: 1
-    attacks: [{attacker_id: "pirate-1", target_id: "player-1", hit_success: false, final_damage: 0}, {attacker_id: "player-1", target_id: "pirate-1", hit_success: true, final_damage: 380}]
+    attacks: [{attacker_id: "pirate-1", target_id: "player-1", hit_success: false, final_damage: 0, hit_chance: 12, hit_roll: 81}, {attacker_id: "player-1", target_id: "pirate-1", hit_success: true, final_damage: 520, shield_damage: 340, hull_damage: 180, defense_components: [{weapon_instance_id: "w-rail", weapon_name: Railgun, damage_type: energy, incoming_damage: 400, shield_resist_pct: 5, after_shield_resist: 380, type_resist_pct: 5, after_type_resist: 360, flat_reduction_pct: 3, after_flat_reduction: 350, shield_bypass_pct: 0, armor_bypass_pct: 0, ignore_all_defense: false, final_damage: 350, shield_damage: 200, hull_damage: 150}, {weapon_instance_id: "w-cannon", weapon_name: "Pulse Cannon", damage_type: kinetic, incoming_damage: 200, shield_resist_pct: 5, after_shield_resist: 190, type_resist_pct: 5, after_type_resist: 180, flat_reduction_pct: 6, after_flat_reduction: 170, shield_bypass_pct: 0, armor_bypass_pct: 0, ignore_all_defense: false, final_damage: 170, shield_damage: 140, hull_damage: 30}]}]
     burns: [{target_id: "pirate-1", damage: 20, ticks_remaining: 2}]
     flee: []
     kills: [{victim_id: "pirate-1", killer_id: "player-1"}]

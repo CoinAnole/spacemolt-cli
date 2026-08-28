@@ -3,6 +3,7 @@ import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   actionLogCursorFixture,
+  battleLogFixture,
   battleSummaryFixture,
   facilityListFixture,
   factionFacilityListFixture,
@@ -838,6 +839,318 @@ test('get_battle_summary omits Has Station when has_station is absent', () => {
   const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
 
   expect(stdout).not.toContain('Has Station:');
+});
+
+function renderBattleLog(fixture: Record<string, unknown>): string {
+  const rendered = renderStructuredResult('get_battle_log', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('=== Response ===');
+  return stdout;
+}
+
+function leftoverDefenseComponent(): Record<string, unknown> {
+  return {
+    weapon_instance_id: 'w-leftover',
+    weapon_name: 'Ghost Cannon',
+    damage_type: 'energy',
+    incoming_damage: 400,
+    shield_resist_pct: 5,
+    after_shield_resist: 380,
+    type_resist_pct: 5,
+    after_type_resist: 360,
+    flat_reduction_pct: 3,
+    after_flat_reduction: 350,
+    shield_bypass_pct: 0,
+    armor_bypass_pct: 0,
+    ignore_all_defense: false,
+    final_damage: 350,
+    shield_damage: 200,
+    hull_damage: 150,
+  };
+}
+
+test('get_battle_log renders shield/hull ticks, defense legend, and attacks without falling back', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogFixture) as Record<string, unknown>);
+
+  expect(stdout).toContain('=== Battle Log ===');
+  expect(stdout).toContain('=== Ticks ===');
+  expect(stdout).toContain('Shield');
+  expect(stdout).toContain('Hull');
+  expect(stdout).toContain('=== Attacks ===');
+  expect(stdout).toContain(
+    'Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H = shield/hull. Trailing flags may truncate.',
+  );
+  expect(stdout).toContain('Pulse Laser kinetic 500→470→455→440 (S6 T3 F3)');
+  expect(stdout).toContain('chance 12% roll 81');
+  expect(stdout).toContain('Railgun energy 400→380→360→350 (S5 T5 F3)');
+  expect(stdout).toContain('Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)');
+});
+
+test('get_battle_log miss with leftover defense_components stays one miss row', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-miss',
+    status: 'completed',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 0,
+        attacks: [
+          {
+            attacker_id: 'pirate-1',
+            target_id: 'player-1',
+            hit_success: false,
+            final_damage: 0,
+            shield_damage: 200,
+            hull_damage: 150,
+            hit_chance: 12,
+            hit_roll: 81,
+            defense_components: [leftoverDefenseComponent()],
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('miss');
+  expect(stdout).toContain('chance 12% roll 81');
+  expect(stdout).not.toContain('Ghost Cannon');
+  expect(stdout).not.toContain('400→380→360→350');
+  expect(stdout).not.toContain('200/150');
+  expect(stdout.match(/\| miss \|/g)?.length).toBe(1);
+});
+
+test('get_battle_log attack-level resist percents skip fabricated stage hops', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-fallback',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 3,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            raw_damage: 900,
+            pre_hit_damage: 800,
+            final_damage: 420,
+            shield_damage: 300,
+            hull_damage: 120,
+            damage_type: 'kinetic',
+            shield_resist_pct: 6,
+            type_resist_pct: 3,
+            flat_reduction_pct: 3,
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('kinetic (S6 T3 F3)');
+  expect(stdout).toContain('300/120');
+  expect(stdout).not.toContain('900→');
+  expect(stdout).not.toContain('800→');
+  expect(stdout).not.toContain('→420');
+});
+
+test('get_battle_log uses weapons[0].name when defense_components are absent', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-weapon-name',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 2,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 90,
+            shield_damage: 60,
+            hull_damage: 30,
+            damage_type: 'energy',
+            weapons: [{ name: 'Ion Lance', instance_id: 'w-ion' }],
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Ion Lance energy');
+  expect(stdout).toContain('60/30');
+});
+
+test('get_battle_log maps snapshot usernames and falls back to id when username is empty', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-names',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 0,
+        snapshots: [
+          { player_id: 'player-1', username: 'Ace' },
+          { player_id: 'pirate-1', username: '' },
+        ],
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 10,
+            shield_damage: 7,
+            hull_damage: 3,
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Ace');
+  expect(stdout).toContain('pirate-1');
+  expect(stdout).not.toContain('player-1');
+});
+
+test('get_battle_log blanks Hit when hit_success is missing', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-no-hit-flag',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 4,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            final_damage: 50,
+            shield_damage: 20,
+            hull_damage: 30,
+            shield_resist_pct: 4,
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('|     |');
+  expect(stdout).toContain('20/30');
+  expect(stdout).toContain('(S4)');
+  expect(stdout).not.toContain('| hit |');
+  expect(stdout).not.toContain('| miss |');
+});
+
+test('get_battle_log ticks do not double-count mixed-weapon component final_damage', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-mixed',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 1,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 520,
+            shield_damage: 340,
+            hull_damage: 180,
+            defense_components: [
+              leftoverDefenseComponent(),
+              {
+                ...leftoverDefenseComponent(),
+                weapon_instance_id: 'w-cannon',
+                weapon_name: 'Pulse Cannon',
+                damage_type: 'kinetic',
+                incoming_damage: 200,
+                after_shield_resist: 190,
+                after_type_resist: 180,
+                after_flat_reduction: 170,
+                flat_reduction_pct: 6,
+                final_damage: 170,
+                shield_damage: 140,
+                hull_damage: 30,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toMatch(/\|\s*520\s*\|\s*340\s*\|\s*180\s*\|/);
+  expect(stdout).not.toContain('1040');
+  expect(stdout).toContain('200/150');
+  expect(stdout).toContain('140/30');
+});
+
+test('get_battle_log keeps Shield/Hull 0 on a full absorb with blank Damage', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-absorb',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 0,
+        attacks: [
+          {
+            attacker_id: 'pirate-1',
+            target_id: 'player-1',
+            hit_success: true,
+            final_damage: 0,
+            shield_damage: 0,
+            hull_damage: 0,
+            defense_components: [
+              {
+                ...leftoverDefenseComponent(),
+                incoming_damage: 100,
+                after_shield_resist: 0,
+                after_type_resist: 0,
+                after_flat_reduction: 0,
+                final_damage: 0,
+                shield_damage: 0,
+                hull_damage: 0,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(stdout).toMatch(/\|\s*1\s*\|\s*1\s*\|\s+\|\s*0\s*\|\s*0\s*\|/);
+  expect(stdout).toContain('0/0');
+});
+
+test('get_battle_log omits Attacks and legend when no attack objects exist', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-burns',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 8,
+        burns: [{ target_id: 'pirate-1', damage: 20, ticks_remaining: 2 }],
+        kills: [{ victim_id: 'pirate-1', killer_id: 'player-1' }],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ticks ===');
+  expect(stdout).not.toContain('=== Attacks ===');
+  expect(stdout).not.toContain('incoming→shield skill');
 });
 
 test('faction_facility_list renders status, damaged yes/no, and custom names', () => {

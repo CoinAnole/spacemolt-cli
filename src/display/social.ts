@@ -1,3 +1,4 @@
+import { battleLogAttackRows } from './battle-log.ts';
 import {
   c,
   commandNameEquals,
@@ -11,6 +12,7 @@ import {
   isRecord,
   namedFormatter,
   printCompactTable,
+  sumNumericField,
 } from './helpers.ts';
 
 function formatTimestampPreview(value: unknown): string {
@@ -1316,6 +1318,7 @@ export const socialFormatters = [
       if (entries) {
         const rows = entries.map((entry, index) => {
           const attacks = Array.isArray(entry.attacks) ? entry.attacks.filter(isRecord) : [];
+          const nonMissAttacks = attacks.filter((attack) => attack.hit_success !== false);
           const totalDamage = attacks.reduce((sum, attack) => {
             const dmg = typeof attack.final_damage === 'number' ? attack.final_damage : 0;
             return sum + dmg;
@@ -1330,22 +1333,45 @@ export const socialFormatters = [
             attacks: attacks.length,
             hits,
             damage: totalDamage || undefined,
+            shield: sumNumericField(nonMissAttacks, 'shield_damage'),
+            hull: sumNumericField(nonMissAttacks, 'hull_damage'),
             burns: burns || undefined,
             flee: flees || undefined,
             kills: kills || undefined,
             ended: ended ? 'yes' : undefined,
           };
         });
-        printCompactTable('Ticks', rows, [
+        const tickColumns: Array<[string, string[]]> = [
           ['Tick', ['tick']],
           ['Attacks', ['attacks']],
           ['Hits', ['hits']],
           ['Damage', ['damage']],
-          ['Burns', ['burns']],
-          ['Flee', ['flee']],
-          ['Kills', ['kills']],
-          ['Ended', ['ended']],
-        ]);
+        ];
+        if (hasAnyField(rows, ['shield'])) tickColumns.push(['Shield', ['shield']]);
+        if (hasAnyField(rows, ['hull'])) tickColumns.push(['Hull', ['hull']]);
+        tickColumns.push(['Burns', ['burns']], ['Flee', ['flee']], ['Kills', ['kills']], ['Ended', ['ended']]);
+        printCompactTable('Ticks', rows, tickColumns);
+
+        const hasAttacks = entries.some((entry) => Array.isArray(entry.attacks) && entry.attacks.length > 0);
+        if (hasAttacks) {
+          emitLine();
+          emitLine(
+            `${c.dim}Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H = shield/hull. Trailing flags may truncate.${c.reset}`,
+          );
+          printCompactTable(
+            'Attacks',
+            battleLogAttackRows(entries),
+            [
+              ['Tick', ['tick']],
+              ['From', ['from']],
+              ['To', ['to']],
+              ['Hit', ['hit']],
+              ['S/H', ['shieldHull']],
+              ['Defense', ['defense']],
+            ],
+            { maxCellWidth: 96 },
+          );
+        }
       }
       return true;
     },

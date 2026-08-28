@@ -7,7 +7,18 @@ Has More: no
 
 === Ticks ===
 
-  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Ended
-  -----+---------+------+--------+-------+------+-------+------
-  0    | 1       | 1    | 420    |       |      |       |      
-  1    | 2       | 1    | 380    | 1     |      | 1     | yes  
+  Tick | Attacks | Hits | Damage | Shield | Hull | Burns | Flee | Kills | Ended
+  -----+---------+------+--------+--------+------+-------+------+-------+------
+  0    | 1       | 1    | 420    | 300    | 120  |       |      |       |      
+  1    | 2       | 1    | 520    | 340    | 180  | 1     |      | 1     | yes  
+
+Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H = shield/hull. Trailing flags may truncate.
+
+=== Attacks ===
+
+  Tick | From     | To       | Hit  | S/H     | Defense                                        
+  -----+----------+----------+------+---------+------------------------------------------------
+  0    | player-1 | pirate-1 | hit  | 300/120 | Pulse Laser kinetic 500→470→455→440 (S6 T3 F3) 
+  1    | pirate-1 | player-1 | miss |         | chance 12% roll 81                             
+  1    | player-1 | pirate-1 | hit  | 200/150 | Railgun energy 400→380→360→350 (S5 T5 F3)      
+  1    | player-1 | pirate-1 | hit  | 140/30  | Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)
