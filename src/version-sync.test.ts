@@ -48,7 +48,6 @@ describe('client.ts source integrity', () => {
       'completed_missions',
       'distress_signal',
       'get_action_log',
-      'repair_module',
       'session',
       'supply_commission',
       'view_completed_mission',
@@ -83,6 +82,7 @@ describe('client.ts source integrity', () => {
       'claim_insurance',
       // dual name removed; single curated command is faction_build
       'faction_facility_build',
+      'repair_module',
     ];
     for (const cmd of removedCommands) {
       expect(COMMANDS[cmd]).toBeUndefined();

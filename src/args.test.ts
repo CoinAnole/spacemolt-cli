@@ -1459,9 +1459,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload).toEqual({});
   });
 
-  test('repair_module - positional', () => {
-    const { payload } = parseOk(['repair_module', 'mod_uuid_123']);
-    expect(payload.module_id).toBe('mod_uuid_123');
+  test('repair_module is removed', () => {
+    expect(COMMANDS.repair_module).toBeUndefined();
   });
 
   test('supply_commission - three positional args', () => {

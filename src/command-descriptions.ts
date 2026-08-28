@@ -123,7 +123,6 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   refit_ship: 'Refit your active ship to its latest class specifications',
   release_tow: 'Release a towed wreck at your current location',
   reload: 'Reload a weapon magazine from ammo in cargo. Costs a tick; other battle commands do not.',
-  repair_module: 'Repair wear on a module using a Repair Kit',
   scrap_ship: 'Permanently destroy a stored ship you no longer want.',
   scrap_wreck: 'Scrap a towed wreck for salvage materials',
   search_systems: 'Search for systems by name',

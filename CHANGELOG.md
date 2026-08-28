@@ -4,6 +4,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Breaking: `repair_module` removed (gameserver v0.567.1)
+
+- Modules no longer accumulate wear, so `spacemolt repair_module` is gone with the API
+  route. Repair Kits still repair ship hull via `spacemolt repair`.
+
 ### SpaceMolt v0.566.2 compatibility
 
 - Human `get_battle_log` now prints the shield/hull split and compact per-weapon defense stages.

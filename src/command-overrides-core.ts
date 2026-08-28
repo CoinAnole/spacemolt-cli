@@ -272,15 +272,6 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       module_id: 'id',
     },
   },
-  repair_module: {
-    usage: '<module_id>  (use get_ship to see modules, requires Repair Kit in cargo)',
-    category: 'Ship management',
-    apiRoute: 'POST /api/v2/spacemolt/repair_module',
-    positionals: ['module_id'],
-    aliases: {
-      module_id: 'id',
-    },
-  },
   refit_ship: {
     usage: '(reset ship to class specs, strips modules)',
     category: 'Ship management',
