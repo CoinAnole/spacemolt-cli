@@ -1714,6 +1714,29 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('loot_wreck and storage_loot accept named module_id=', () => {
+    const salvage = parseInternalOk(['loot_wreck', 'wreck-1', 'module_id=module-1']);
+    expect(normalizeInternalPayload('loot_wreck', salvage.payload)).toMatchObject({
+      id: 'wreck-1',
+      module_id: 'module-1',
+    });
+
+    const storage = parseInternalOk(['storage_loot', 'wreck-1', 'module_id=module-1']);
+    expect(normalizeInternalPayload('storage_loot', storage.payload)).toMatchObject({
+      wreck_id: 'wreck-1',
+      module_id: 'module-1',
+    });
+  });
+
+  test('loot_wreck bare second token is item_id, not module_id', () => {
+    const salvage = parseInternalOk(['loot_wreck', 'wreck-1', 'module-uuid']);
+    expect(normalizeInternalPayload('loot_wreck', salvage.payload)).toMatchObject({
+      id: 'wreck-1',
+      item_id: 'module-uuid',
+    });
+    expect(normalizeInternalPayload('loot_wreck', salvage.payload).module_id).toBeUndefined();
+  });
+
   test('faction_declare_war with reason', () => {
     const { payload } = parseInternalOk(['faction_declare_war', 'faction_xyz', 'territorial dispute']);
     expect(payload.target_faction_id).toBe('faction_xyz');

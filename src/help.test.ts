@@ -482,7 +482,9 @@ describe('help output branches', () => {
     expect(output).toContain('storage loot');
     expect(output).toContain('storage jettison');
     expect(output).toContain('jettison [item_id] [quantity] [items=JSON]');
-    expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity]');
+    expect(output).toContain('storage loot [wreck_id] [item_id] [quantity] [module_id=…]');
+    expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity] [module_id=…]');
+    expect(output).toContain('fit a module onto your ship');
     expect(output).toContain('omit wreck_id while towing');
     expect(output).not.toContain('salvage_wreck <wreck_id>');
   });
@@ -499,7 +501,8 @@ describe('help output branches', () => {
     );
     expect(output).toContain('storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)');
     expect(output).toContain('jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison');
-    expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity]');
+    expect(output).toContain('storage loot [wreck_id] [item_id] [quantity] [module_id=…]');
+    expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity] [module_id=…]');
     expect(output).not.toContain('salvage_wreck <wreck_id>');
   });
 
@@ -1138,6 +1141,41 @@ describe('help output branches', () => {
     expect(fullOutput.slice(infoIndex, actionIndex)).not.toContain('pay_bounty');
     const generatedSection = generatedIndex === -1 ? '' : fullOutput.slice(generatedIndex);
     expect(generatedSection).not.toContain('pay_bounty');
+  });
+
+  test('loot_wreck help documents named module_id= ship fit', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('loot_wreck', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('withdrawn');
+    expect(output).toContain('[module_id=…]');
+    expect(output).toContain('spacemolt loot_wreck wreck-1 module_id=module-1');
+    expect(output).toContain('not cargo');
+    expect(output).toContain('withdrawn types cannot be fitted');
+  });
+
+  test('storage loot help documents named module_id= ship fit', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('storage loot', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('fit a module onto your ship');
+    expect(output).not.toContain('from a wreck into cargo via');
+    expect(output).toContain('spacemolt storage loot wreck-1 module_id=module-1');
+    expect(output).toContain('withdrawn');
+  });
+
+  test('help misc documents loot_wreck module_id fit', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('misc', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('[module_id=…]');
+    expect(output).toContain('withdrawn types cannot be fitted');
   });
 
   test('Generated API Commands excludes bundled nested command actions', () => {

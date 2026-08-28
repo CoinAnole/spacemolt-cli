@@ -1185,10 +1185,10 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)
     storage withdraw [item_id] [qty] [items=JSON] [source=faction] [target=self|faction]  Direct transfers
     storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]
-    storage loot [wreck_id] [item_id] [quantity]
+    storage loot [wreck_id] [item_id] [quantity] [module_id=…]
     storage jettison [item_id] [qty] [items=JSON]
     jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison
-    loot_wreck [wreck_id] [item_id] [quantity]  Standalone wreck loot
+    loot_wreck [wreck_id] [item_id] [quantity] [module_id=…]  Standalone wreck loot
     faction deposit_credits <amount>  Wallet -> faction treasury
     faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
 

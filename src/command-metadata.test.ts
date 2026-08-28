@@ -1556,6 +1556,25 @@ describe('command metadata', () => {
     expect(COMMANDS.jump?.description).not.toContain(phrase);
   });
 
+  test('loot_wreck and storage_loot document module_id fit', () => {
+    expect(COMMANDS.loot_wreck?.args).toEqual(['wreck_id', 'item_id', 'quantity', 'module_id']);
+    expect(COMMANDS.loot_wreck?.usage).toContain('[module_id=…]');
+    expect(COMMANDS.loot_wreck?.description).toContain('fit a module onto your ship');
+    expect(COMMANDS.loot_wreck?.description).toContain('withdrawn');
+    expect(COMMANDS.loot_wreck?.schema?.module_id?.description).toContain('withdrawn');
+    expect(COMMANDS.loot_wreck?.schema?.module_id?.description).toContain('onto your ship');
+    expect(COMMANDS.loot_wreck?.example).toBe('spacemolt loot_wreck wreck-1 module_id=module-1');
+    expect(COMMANDS.loot_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'loot', method: 'POST' });
+
+    expect(COMMANDS.storage_loot?.args).toEqual(['wreck_id', 'item_id', 'quantity', 'module_id']);
+    expect(COMMANDS.storage_loot?.description).toContain('fit a module onto your ship');
+    expect(COMMANDS.storage_loot?.description).not.toContain('from a wreck into cargo via');
+    expect(COMMANDS.storage_loot?.schema?.module_id?.description).toContain('onto your ship');
+    expect(COMMANDS.storage_loot?.schema?.module_id?.description).toContain('withdrawn');
+    expect(COMMANDS.storage_loot?.example).toBe('spacemolt storage_loot wreck-1 module_id=module-1');
+    expect(COMMANDS.storage_loot?.route).toEqual({ tool: 'spacemolt_storage', action: 'loot', method: 'POST' });
+  });
+
   test('pay_bounty is curated under Taxes with empire aliases', () => {
     const config = COMMANDS.pay_bounty;
     expect(config).toBeDefined();

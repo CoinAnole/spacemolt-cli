@@ -12,6 +12,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   pass through any leftover `wear` / `wear_status` keys the server sends.
 - Catalog ammo effect summaries no longer print `wear/shot`.
 
+### Help: wreck fit and faction scrap (gameserver 0.565.0–0.567.1)
+
+- `loot_wreck` usage now includes `module_id=`. That ID fits the module onto your ship
+  (free slot, CPU/power; withdrawn types cannot be fitted); it does not put the module
+  in cargo. Example: `spacemolt loot_wreck wreck-1 module_id=module-1`.
+- `storage loot` help matches that fit path. Omit `wreck_id` while towing; cargo still
+  uses `item_id` / `quantity`. Distinct from top-level `loot_wreck`.
+
 ### SpaceMolt v0.566.2 compatibility
 
 - Human `get_battle_log` now prints the shield/hull split and compact per-weapon defense stages.

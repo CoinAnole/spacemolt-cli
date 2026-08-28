@@ -229,10 +229,23 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['trade_id'],
   },
   loot_wreck: {
-    usage: '[wreck_id] [item_id] [quantity]  (omit wreck_id while towing; use get_wrecks to see wrecks)',
+    usage:
+      '[wreck_id] [item_id] [quantity] [module_id=…]  (omit wreck_id while towing; module_id= fits that module onto your ship; use get_wrecks to see wrecks)',
+    description:
+      'Loot wreck cargo into your hold, or fit a module onto your ship with module_id= (withdrawn types cannot be fitted). Omit wreck_id while towing; distinct from storage loot (spacemolt_storage/loot).',
+    example: 'spacemolt loot_wreck wreck-1 module_id=module-1',
+    discoverWith: ['get_wrecks'],
+    seeAlso: ['storage_loot', 'get_wrecks'],
     category: 'Wrecks',
     apiRoute: 'POST /api/v2/spacemolt_salvage/loot',
-    positionals: ['wreck_id', 'item_id', 'quantity'],
+    positionals: ['wreck_id', 'item_id', 'quantity', 'module_id'],
+    schemaExtensions: {
+      module_id: {
+        type: 'string',
+        description:
+          'Module instance ID to fit directly onto your ship (not cargo). Requires a free slot plus CPU/power; withdrawn types cannot be fitted. Get module IDs from get_wrecks. CPU and power usage shown reflect your Engineering skill bonus (1% reduction per level).',
+      },
+    },
   },
   name_ship: {
     usage: '<name>  (set ship name, empty to clear)',
