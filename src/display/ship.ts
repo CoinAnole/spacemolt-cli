@@ -301,6 +301,8 @@ export const shipFormatters = [
       emitLine(`ID: ${ship.id || ship.ship_id || 'unknown'}`);
       emitLine(`Class: ${ship.class_name || ship.class_id || 'unknown'}`);
       if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
+      const remoteLocation = typeof ship.location === 'string' && ship.location ? ship.location : undefined;
+      if (remoteLocation) emitLine(`Location: ${remoteLocation}`);
       emitLine(`Hull: ${ship.hull ?? '?'}/${ship.max_hull ?? '?'}`);
       emitLine(`Shield: ${ship.shield ?? '?'}/${ship.max_shield ?? '?'} (+${ship.shield_recharge ?? 0}/tick)`);
       emitLine(`Armor: ${ship.armor ?? 0}`);
@@ -347,6 +349,9 @@ export const shipFormatters = [
           ['ID', ['id']],
         ]);
         emitLine(`${c.dim}Use list_drones / get_drone for hull, cargo, and script.${c.reset}`);
+      }
+      if (remoteLocation && typeof r.message === 'string' && r.message && r.message !== remoteLocation) {
+        emitLine(`${c.dim}${r.message}${c.reset}`);
       }
       return true;
     },

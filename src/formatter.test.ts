@@ -30,6 +30,7 @@ import {
   poiInfoFixture,
   shipDroneBayFixture,
   shipFixture,
+  shipRemoteFixture,
   storageFixture,
   storageViewUndockedFixture,
   subscribeMarketFixture,
@@ -4906,6 +4907,71 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).not.toContain('=== Drone Bay ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship omits Location and current-hull caption when ship.location is absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', shipFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Location:');
+    expect(stdout).not.toContain('Ship status');
+    expect(stdout).not.toContain('=== Drone Bay ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship prints remote Location and distinct message without drone bay', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', shipRemoteFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Location: Faction garage — Nova Terra Central');
+    expect(stdout).toContain('Parked in your faction garage at Nova Terra Central.');
+    expect(stdout).not.toContain('=== Drone Bay ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship de-dupes remote message when it matches ship.location', () => {
+    const location = shipRemoteFixture.ship.location;
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ...shipRemoteFixture,
+      message: location,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(`Location: ${location}`);
+    expect(stdout.match(/Location:/g)?.length).toBe(1);
+    expect(stdout.split(location).length - 1).toBe(1);
+    expect(stdout).not.toContain('=== Drone Bay ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship omits empty remote message after Location', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ...shipRemoteFixture,
+      message: '',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(`Location: ${shipRemoteFixture.ship.location}`);
+    expect(stdout.match(/Location:/g)?.length).toBe(1);
+    expect(stdout).not.toContain('Parked in your faction garage');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_ship ignores non-string ship.location and player envelope location', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_ship', {
+      ...shipFixture,
+      location: { system_id: 'sol', poi_id: 'nova_terra_central' },
+      ship: {
+        ...shipFixture.ship,
+        location: { system_id: 'sol', poi_id: 'nova_terra_central' },
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Location:');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('Ship status');
     expect(stdout).not.toContain('=== Response ===');
   });
 
