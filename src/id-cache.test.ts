@@ -810,6 +810,22 @@ describe('id cache', () => {
     expect(stdout.join('\n')).not.toContain('\x1b[');
   });
 
+  test('empty ship ID cache lists cache-populating commands only', () => {
+    const sessionPath = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-ship-empty-')),
+      'pilot.json',
+    );
+    const stdout: string[] = [];
+
+    printIds('ship', sessionPath, { out: (message = '') => stdout.push(message), err() {} });
+
+    const output = stdout.join('\n');
+    expect(output).toContain('list_ships');
+    expect(output).toContain('storage view');
+    expect(output).not.toContain('faction_garages');
+    expect(output).not.toContain('faction garages');
+  });
+
   test('printWhereCanI supports explicit plain output', async () => {
     const sessionPath = path.join(
       fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-where-test-')),
@@ -841,6 +857,8 @@ describe('id cache', () => {
     expect(idKindForCommandField('sell', 'id')).toBe('item');
     expect(idKindForCommandField('fleet_invite', 'id')).toBe('player');
     expect(idKindForCommandField('switch_ship', 'id')).toBe('ship');
+    expect(idKindForCommandField('get_ship', 'id')).toBe('ship');
+    expect(commandResolverFields('get_ship')?.ship).toEqual(expect.arrayContaining(['id', 'ship_id']));
     expect(idKindForCommandField('craft', 'package_id')).toBe('package');
     expect(idKindForCommandField('facility_job_add', 'package_id')).toBe('package');
     expect(idKindForCommandField('facility_ranch_set_cull', 'facility_id')).toBe('facility');
@@ -856,6 +874,7 @@ describe('id cache', () => {
       ['switch_ship', 'ship_id', 'id', 'ship'],
       ['scrap_ship', 'ship_id', 'id', 'ship'],
       ['list_ship_for_sale', 'ship_id', 'id', 'ship'],
+      ['get_ship', 'ship_id', 'id', 'ship'],
       ['buy_listed_ship', 'listing_id', 'id', 'listing'],
       ['cancel_ship_listing', 'listing_id', 'id', 'listing'],
       ['faction_invite', 'player_id', 'id', 'player'],

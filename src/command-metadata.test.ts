@@ -1582,6 +1582,22 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
 
+  test('get_ship accepts optional ship_id and documents remote fleet reads', () => {
+    const config = COMMANDS.get_ship;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_ship command is missing from COMMANDS');
+    expect(config.usage).toContain('[ship_id]');
+    expect(config.usage).not.toContain(config.description);
+    expect(config.aliases?.ship_id).toBe('id');
+    expect(config.example).toContain('ship-abc');
+    expect(COMMANDS.list_ships?.description).toContain('get_ship');
+
+    const help = captureHelp('get_ship');
+    expect(help).toMatch(/omit for the (hull|ship) you are flying/i);
+    expect(help).toMatch(/anywhere/i);
+    expect(help).toMatch(/faction garage/i);
+  });
+
   test('pay_bounty is curated under Taxes with empire aliases', () => {
     const config = COMMANDS.pay_bounty;
     expect(config).toBeDefined();

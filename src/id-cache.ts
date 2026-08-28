@@ -165,6 +165,7 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   switch_ship: { ship: ['ship_id', 'id'] },
   scrap_ship: { ship: ['ship_id', 'id'] },
   list_ship_for_sale: { ship: ['ship_id', 'id'] },
+  get_ship: { ship: ['ship_id', 'id'] },
   craft: { package: ['package_id'] },
 };
 

@@ -258,7 +258,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     description:
       'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <ship_id> for the full fit of a parked, garaged, or carried hull.',
     example: 'spacemolt list_ships',
-    seeAlso: ['get_ship', 'switch_ship', 'faction_garages', 'storage_view'],
+    seeAlso: ['get_ship', 'switch_ship', 'scrap_ship', 'faction_garages', 'storage_view'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt_ship/list_ships',
   },

@@ -1223,6 +1223,15 @@ describe('help output branches', () => {
     expect(output).toContain('Scrap towed wreck at salvage yard or faction station');
   });
 
+  test('full help get_ship line names current or remote owned/faction-garage ship fit', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Current or remote owned/faction-garage ship fit');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 

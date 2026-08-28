@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### get_ship remote fleet reads (gameserver 0.568.0)
+
+- `get_ship` accepts optional `ship_id` (alias of `id`); omit for the flying hull. Copy the ID from
+  `list_ships` or `faction garages` (cached names resolve only for hulls already in the local ID
+  cache, typically owned ships from `list_ships` / `storage view`).
+- Help documents remote owned / faction-garage reads from anywhere.
+- `list_ships` / `faction garages` help point at `get_ship` for the full fit.
+
 ### SpaceMolt v0.568.0 compatibility — `list_ships` table
 
 - Human `list_ships` is no longer the generic Name / ID / Type list. It shows custom name,

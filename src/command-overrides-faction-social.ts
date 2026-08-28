@@ -91,7 +91,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   faction_garages: {
     description: "View your faction's full ship-garage roster across all stations",
     example: 'spacemolt faction garages',
-    seeAlso: ['list_ships', 'switch_ship'],
+    seeAlso: ['list_ships', 'switch_ship', 'get_ship'],
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/garages',
   },
