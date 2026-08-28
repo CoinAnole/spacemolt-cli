@@ -36,15 +36,15 @@ export type CachedIdResolveResult =
   | { type: 'ambiguous'; kind: IdKind; query: string; matches: IdHint[] }
   | { type: 'unresolved'; value: string };
 
-/** Controls which non-exact stages may rewrite payload IDs. Exact id/name always runs. */
+/** Controls which non-exact stages may rewrite payload IDs. Exact id/name always runs; exact poi `context.base_id` does too. */
 export interface IdResolutionPolicy {
-  /** When false, only exact (id or name) and reserved/package normalization may rewrite. */
+  /** When false, only exact (id or name, plus poi context.base_id) and reserved/package normalization may rewrite. */
   allowPrefix: boolean;
   /** When false, substring matches are never applied to the payload. */
   allowSubstring: boolean;
 }
 
-/** Default / strict policy for all kinds. Exact id/name still runs. */
+/** Default / strict policy for all kinds. Exact id/name still runs, as does exact poi context.base_id. */
 export const STRICT_ID_RESOLUTION_POLICY: IdResolutionPolicy = {
   allowPrefix: false,
   allowSubstring: false,
@@ -433,13 +433,14 @@ export function resolveCachedId(
   // Package instance IDs are cached bare; accept inspect/cargo `package:<id>` form on resolve.
   const lookup = kind === 'package' ? normalizePackageId(trimmed) || trimmed : trimmed;
 
-  const candidates = dedupeHintsById(hintsForKind(kind, hints));
-  // Exact id/name first so a POI id is never rewritten when it also equals another hint's Base ID.
+  const candidates = collapseHintsById(hintsForKind(kind, hints));
   const exactNamed = findMatches(candidates, lookup, 'exact', 'id_or_name');
   if (exactNamed.length > 0) return resolveMatches(kind, lookup, exactNamed, 'exact');
 
-  const exactBaseId = findMatches(candidates, lookup, 'exact', 'base_id');
-  if (exactBaseId.length > 0) return resolveMatches(kind, lookup, exactBaseId, 'exact');
+  if (kind === 'poi') {
+    const exactBaseId = findMatches(candidates, lookup, 'exact', 'base_id');
+    if (exactBaseId.length > 0) return resolveMatches(kind, lookup, exactBaseId, 'exact');
+  }
 
   if (policy.allowPrefix) {
     const prefix = findMatches(candidates, lookup, 'prefix', 'all');
@@ -613,14 +614,31 @@ function dedupeHints(hints: IdHint[]): IdHint[] {
   return result;
 }
 
-function dedupeHintsById(hints: IdHint[]): IdHint[] {
-  const seen = new Set<string>();
-  const result: IdHint[] = [];
+const extraMatchNames = new WeakMap<IdHint, readonly string[]>();
+
+function collapseHintsById(hints: IdHint[]): IdHint[] {
+  const groups = new Map<string, IdHint[]>();
   for (const hint of hints) {
     const key = `${hint.kind}:${hint.id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(hint);
+    const list = groups.get(key);
+    if (list) list.push(hint);
+    else groups.set(key, [hint]);
+  }
+
+  const result: IdHint[] = [];
+  for (const group of groups.values()) {
+    const ordered = sortNewest(group);
+    const newest = ordered[0];
+    if (!newest) continue;
+    let context: Record<string, string | number | boolean> = {};
+    for (const hint of [...ordered].reverse()) {
+      if (hint.context) context = { ...context, ...hint.context };
+    }
+    const collapsed: IdHint = { ...newest, context: compactContext(context) };
+    const names = [...new Set(ordered.map((hint) => hint.name).filter((name): name is string => Boolean(name)))];
+    const extra = names.filter((name) => name !== newest.name);
+    if (extra.length > 0) extraMatchNames.set(collapsed, extra);
+    result.push(collapsed);
   }
   return result;
 }
@@ -638,7 +656,7 @@ function findMatches(hints: IdHint[], query: string, match: IdMatchKind, source:
     const namedHit =
       source !== 'base_id' && idOrNameValues(hint).some((value) => valueMatches(value, normalizedQuery, match));
     if (namedHit) return true;
-    if (source === 'id_or_name' || match === 'substring') return false;
+    if (source === 'id_or_name' || match === 'substring' || hint.kind !== 'poi') return false;
     const baseId = normalizedBaseId(hint);
     return Boolean(baseId) && valueMatches(baseId, normalizedQuery, match);
   });
@@ -653,12 +671,11 @@ function resolveMatches(kind: IdKind, query: string, matches: IdHint[], match: I
   if (namedHit) return { type: 'resolved', value: hint.id, hint, match };
 
   const canonicalBaseId = rawBaseId(hint);
-  // Exact typed Base ID stays as typed; a unique prefix expands to the full cached Base ID.
   return { type: 'resolved', value: match === 'exact' ? query : canonicalBaseId || hint.id, hint, match };
 }
 
 function idOrNameValues(hint: IdHint): string[] {
-  return [hint.id, hint.name || ''].map(normalizeSearchText).filter(Boolean);
+  return [hint.id, hint.name || '', ...(extraMatchNames.get(hint) ?? [])].map(normalizeSearchText).filter(Boolean);
 }
 
 function rawBaseId(hint: IdHint): string {

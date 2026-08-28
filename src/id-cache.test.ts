@@ -163,6 +163,68 @@ describe('id cache', () => {
     expect(resolveCachedId('poi', 'station', hints, soft)).toEqual({ type: 'unresolved', value: 'station' });
   });
 
+  test('item and facility context.base_id are not ID-resolution candidates', () => {
+    const itemHints = extractIdHints('view_market', viewMarketFixture, '2026-05-18T00:00:00.000Z');
+    expect(itemHints.some((hint) => hint.kind === 'item' && hint.context?.base_id === 'earth_station')).toBe(true);
+    expect(resolveCachedId('item', 'earth_station', itemHints)).toEqual({
+      type: 'unresolved',
+      value: 'earth_station',
+    });
+    expect(resolveCachedId('item', 'earth_st', itemHints, softIdResolutionPolicy('item'))).toEqual({
+      type: 'unresolved',
+      value: 'earth_st',
+    });
+
+    const facilityHints = extractIdHints(
+      'facility_list',
+      {
+        facilities: [
+          { facility_id: 'facility-1', name: 'Fuel Bunker', facility_type: 'fuel_bunker', base_id: 'earth_station' },
+          { facility_id: 'facility-2', name: 'Shipyard', facility_type: 'shipyard', base_id: 'earth_station' },
+        ],
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+    expect(
+      facilityHints.filter((hint) => hint.kind === 'facility' && hint.context?.base_id === 'earth_station'),
+    ).toHaveLength(2);
+    expect(resolveCachedId('facility', 'earth_station', facilityHints)).toEqual({
+      type: 'unresolved',
+      value: 'earth_station',
+    });
+    expect(resolveCachedId('facility', 'earth_st', facilityHints, softIdResolutionPolicy('facility'))).toEqual({
+      type: 'unresolved',
+      value: 'earth_st',
+    });
+  });
+
+  test('poi id of one hint wins over another hint whose context.base_id equals that id', () => {
+    const hints = [
+      {
+        kind: 'poi' as const,
+        id: 'sol_earth',
+        name: 'Earth',
+        sourceCommand: 'get_system',
+        seenAt: '2026-05-18T00:00:00.000Z',
+        context: { base_id: 'earth_station' },
+      },
+      {
+        kind: 'poi' as const,
+        id: 'sol_mars',
+        name: 'Mars',
+        sourceCommand: 'get_system',
+        seenAt: '2026-05-18T00:01:00.000Z',
+        context: { base_id: 'sol_earth' },
+      },
+    ];
+
+    const result = resolveCachedId('poi', 'sol_earth', hints);
+    expect(result).toEqual(expect.objectContaining({ type: 'resolved', value: 'sol_earth', match: 'exact' }));
+    if (result.type !== 'resolved') throw new Error('expected resolved');
+    expect(result.hint.id).toBe('sol_earth');
+    expect(result.hint.name).toBe('Earth');
+  });
+
   test('extracts item and player IDs from common query outputs', () => {
     const cargoHints = extractIdHints('get_cargo', cargoFixture, '2026-05-18T00:00:00.000Z');
     const marketHints = extractIdHints('view_market', viewMarketFixture, '2026-05-18T00:00:00.000Z');
@@ -340,6 +402,80 @@ describe('id cache', () => {
         name: 'Earth Station',
         sourceCommand: 'get_base',
         context: { base_id: 'earth_station' },
+      }),
+    );
+  });
+
+  test('get_system then get_base still resolves travel earth to the POI id', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-earth-seq-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          ...systemInfoFixture,
+          system: {
+            ...systemInfoFixture.system,
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+          },
+        },
+      },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:00:00.000Z') },
+    );
+    await cacheIdsFromResponse(
+      'get_base',
+      { structuredContent: { base: { id: 'earth_station', poi_id: 'sol_earth', name: 'Earth Station' } } },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:01:00.000Z') },
+    );
+
+    expect(resolveCachedId('poi', 'earth', loadIdCacheSync(sessionPath))).toEqual(
+      expect.objectContaining({ type: 'resolved', value: 'sol_earth', match: 'exact' }),
+    );
+  });
+
+  test('mergeHints keeps prior context.base_id when a later same-key poi omits it', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-merge-base-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          system: {
+            id: 'sol',
+            name: 'Sol',
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+          },
+        },
+      },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:00:00.000Z') },
+    );
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          system: {
+            id: 'sol',
+            name: 'Sol',
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet' }],
+          },
+          poi: { id: 'sol_earth', name: 'Earth', type: 'planet' },
+        },
+      },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:01:00.000Z') },
+    );
+
+    expect(hintsForKind('poi', loadIdCacheSync(sessionPath))).toContainEqual(
+      expect.objectContaining({
+        kind: 'poi',
+        id: 'sol_earth',
+        sourceCommand: 'get_system',
+        context: expect.objectContaining({ base_id: 'earth_station' }),
       }),
     );
   });

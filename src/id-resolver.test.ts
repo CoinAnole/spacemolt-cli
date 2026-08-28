@@ -148,6 +148,33 @@ describe('cached ID payload resolver', () => {
     expect(stderr.join('\n')).not.toContain('"earth_st" → "earth_st"');
   });
 
+  test('get_system then get_base still sends travel earth as the POI id', async () => {
+    const sessionPath = useTempSession();
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          ...systemInfoFixture,
+          system: {
+            ...systemInfoFixture.system,
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
+          },
+        },
+      },
+      sessionPath,
+    );
+    await cacheIdsFromResponse(
+      'get_base',
+      { structuredContent: { base: { id: 'earth_station', poi_id: 'sol_earth', name: 'Earth Station' } } },
+      sessionPath,
+    );
+
+    expect(preparePayload('travel', { target_poi: 'earth' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'sol_earth' },
+    });
+  });
+
   test('get_base poi cache resolves a Base ID prefix that does not also match the station name', async () => {
     const sessionPath = useTempSession();
     await cacheIdsFromResponse(
