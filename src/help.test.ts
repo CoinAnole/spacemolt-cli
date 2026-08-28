@@ -1178,6 +1178,39 @@ describe('help output branches', () => {
     expect(output).toContain('withdrawn types cannot be fitted');
   });
 
+  test('scrap_wreck help documents faction-station salvage unlocks', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('scrap_wreck', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('A Lucrative Sideline');
+    expect(output).toContain('Cut It Apart Yourself');
+    expect(output).toContain("faction's own player station");
+    expect(output).toContain('Salvaging 2+');
+  });
+
+  test('help misc documents scrap_wreck faction-station salvage unlocks', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('misc', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('A Lucrative Sideline');
+    expect(output).toContain('Cut It Apart Yourself');
+    expect(output).toContain("faction's own player station");
+    expect(output).toContain('Salvaging 2+');
+  });
+
+  test('full help scrap_wreck line names salvage yard or faction station', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Scrap towed wreck at salvage yard or faction station');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 

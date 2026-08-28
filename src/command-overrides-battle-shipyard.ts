@@ -110,6 +110,11 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_salvage/release',
   },
   scrap_wreck: {
+    description:
+      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+.',
+    example: 'spacemolt scrap_wreck',
+    discoverWith: ['get_wrecks', 'get_status'],
+    seeAlso: ['sell_wreck', 'tow_wreck', 'get_wrecks'],
     category: 'Salvage & Tow',
     apiRoute: 'POST /api/v2/spacemolt_salvage/scrap',
   },

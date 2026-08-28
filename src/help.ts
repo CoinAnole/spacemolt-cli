@@ -1119,7 +1119,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
   ${c.cyan}Salvage & Tow:${c.reset}
     tow_wreck <wreck_id>      Tow a wreck
     release_tow               Release towed wreck
-    scrap_wreck               Scrap towed wreck for materials
+    scrap_wreck               Scrap towed wreck at salvage yard or faction station
     sell_wreck                Sell towed wreck at station
 
   ${c.cyan}Shipyard:${c.reset}
