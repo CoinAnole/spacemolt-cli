@@ -10,6 +10,8 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `list_ships` or `faction garages` (cached names resolve only for hulls already in the local ID
   cache, typically owned ships from `list_ships` / `storage view`).
 - Help documents remote owned / faction-garage reads from anywhere.
+- Table output prints `Location:` from `ship.location` on remote reads, plus dim `message` when that
+  message is not a duplicate of `ship.location`. Current-hull table is unchanged.
 - `list_ships` / `faction garages` help point at `get_ship` for the full fit.
 
 ### SpaceMolt v0.568.0 compatibility — `list_ships` table

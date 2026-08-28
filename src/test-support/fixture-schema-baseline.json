@@ -170,6 +170,7 @@
     "get_player|get_player|required-missing|player.status_message",
     "get_poi|get_poi|required-missing|resources[0].remaining_display",
     "get_ship_drone_bay|get_ship|required-missing|ship.speed",
+    "get_ship_remote|get_ship|required-missing|ship.speed",
     "get_ship|get_ship|required-missing|ship.speed",
     "get_state|get_state|required-missing|location.connections",
     "get_state|get_state|required-missing|location.empire",

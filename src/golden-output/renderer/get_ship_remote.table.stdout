@@ -1,0 +1,24 @@
+
+=== Ship: Deep Survey ===
+Credits: 12,345
+ID: ship-garaged-1
+Class: Deep Survey
+Custom Name: Claim Candidate
+Location: Faction garage — Nova Terra Central
+Hull: 420/420
+Shield: 300/300 (+4/tick)
+Armor: 18
+Fuel: 240/240
+Cargo: 0/1250
+CPU: 16/34
+Power: 23/75
+Slots: 1 weapon, 1 defense, 5 utility
+Berths: Economy: 3/4 free | Business: 1/1 free | First: 0/0 free
+
+=== Modules ===
+
+  Slot    | Name               | Type    | CPU | Power | Size | ID      
+  --------+--------------------+---------+-----+-------+------+---------
+  utility | Cargo Expander III | utility | 2   | 2     | 10   | module-1
+  weapon  | Pulse Laser III    | weapon  | 3   | 8     | 10   | module-2
+Parked in your faction garage at Nova Terra Central.

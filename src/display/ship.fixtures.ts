@@ -347,6 +347,18 @@ export const shipDroneBayFixture = {
   },
 };
 
+export const shipRemoteFixture = {
+  message: 'Parked in your faction garage at Nova Terra Central.',
+  credits: 12345,
+  modules: shipFixture.modules,
+  ship: {
+    ...shipFixture.ship,
+    id: 'ship-garaged-1',
+    custom_name: 'Claim Candidate',
+    location: 'Faction garage — Nova Terra Central',
+  },
+};
+
 export const shipFixtureCases = {
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   ship: { command: 'get_ship', fixture: shipFixture },
@@ -410,6 +422,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_ship_drone_bay: { command: 'get_ship', fixture: shipDroneBayFixture },
+  get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
   tow_wreck: { command: 'tow_wreck', fixture: towWreckFixture },
