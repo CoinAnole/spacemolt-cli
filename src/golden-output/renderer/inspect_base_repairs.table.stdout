@@ -1,0 +1,42 @@
+
+=== Inspect: frontier_cache ===
+Kind: base
+Source: station
+
+Station: Frontier Cache
+ID: frontier_cache
+POI: frontier_cache
+Empire: solarian
+Wrecked: facilities offline until repaired
+Hull: 4200/10000
+Shield: 0/3000
+Armor: 400
+Guns: 40 DPS (reach 1)
+Fuel: 800/2400
+Condition: Critical infrastructure failure. (16% satisfaction)
+Services: market, storage
+Facilities: 2
+  fuel_grid, life_support_mk1
+
+=== Repairs ===
+Queue: 3 damaged, 1 repairing, 2 waiting
+Supply: example
+Hull recovery: 4,200/10,000 (5,800 missing)
+Next blocked: Life Support Mk I
+  Facility ID: fac-ls-1
+  Type: life_support_mk1
+  Category: infrastructure
+  Status: waiting
+  Circuit Board: 12/40, 28 missing
+  Steel Plate: 0/10, 10 missing
+
+=== Repair Queue ===
+
+  Name              | Facility ID | Type             | Category       | Status    | ETA     | Materials                                                      
+  ------------------+-------------+------------------+----------------+-----------+---------+----------------------------------------------------------------
+  Life Support Mk I | fac-ls-1    | life_support_mk1 | infrastructure | waiting   |         | Circuit Board: 12/40, 28 missing; Steel Plate: 0/10, 10 missing
+  Fuel Grid         | fac-fg-2    | fuel_grid        | infrastructure | repairing | 4 ticks |                                                                
+  Storage Bay       | fac-st-3    | storage_bay      | infrastructure | damaged   |         |                                                                
+  Sell Steel Plate into this station market to unblock the next repair.
+
+A raided frontier cache.

@@ -2,7 +2,12 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { packageOperationLabel } from './catalog-detail.ts';
 import { renderStructuredResult } from './index.ts';
-import { inspectCatalogModuleFixture, inspectCatalogShipFixture } from './inspect.fixtures.ts';
+import {
+  inspectBaseFixture,
+  inspectBaseRepairsFixture,
+  inspectCatalogModuleFixture,
+  inspectCatalogShipFixture,
+} from './inspect.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -783,6 +788,36 @@ test('renders base inspect results with station defences', () => {
   expect(stdout).toContain('Guns: 40 DPS');
   expect(stdout).toContain('Facilities: 3');
   expect(stdout).toContain('A busy trade hub.');
+  expect(stdout).not.toContain('=== Repairs ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders nested base repairs without a second wrecked line', () => {
+  const rendered = renderStructuredResult('inspect', inspectBaseRepairsFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: frontier_cache ===');
+  expect(stdout).toContain('Station: Frontier Cache');
+  expect(stdout).toContain('Wrecked: facilities offline until repaired');
+  expect(stdout).not.toContain('Wrecked: yes');
+  expect(stdout).toContain('=== Repairs ===');
+  expect(stdout).toContain('Next blocked: Life Support Mk I');
+  expect(stdout).toContain('Facility ID: fac-ls-1');
+  expect(stdout).toContain('=== Repair Queue ===');
+  expect(stdout).toContain('fac-fg-2');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders base inspect without a repairs section when repairs are absent', () => {
+  const rendered = renderStructuredResult('inspect', inspectBaseFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).toMatch(/^ID: earth_station$/m);
+  expect(stdout).not.toContain('=== Repairs ===');
+  expect(stdout).not.toContain('=== Repair Queue ===');
   expect(stdout).not.toContain('=== Response ===');
 });
 

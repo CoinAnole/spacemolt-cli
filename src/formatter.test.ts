@@ -4,6 +4,7 @@ import { displayStructuredResult } from './client';
 import { renderResult, renderStructuredResult } from './display';
 import {
   activeMissionsFixture,
+  baseRepairsFixture,
   browseShipsFixture,
   cargoFixture,
   catalogItemsFixture,
@@ -4653,6 +4654,351 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('4 missing');
     expect(stdout).not.toContain('Defense:');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints repairs and skips wrecked when base is wrecked', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', baseRepairsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Wrecked: facilities offline until repaired');
+    expect(stdout).not.toContain('Wrecked: yes');
+    expect(stdout).toContain('=== Repairs ===');
+    expect(stdout).toContain('Queue: 3 damaged, 1 repairing, 2 waiting');
+    expect(stdout).toContain('Supply: example');
+    expect(stdout).toContain('Hull recovery: 4,200/10,000 (5,800 missing)');
+    expect(stdout).toContain('Next blocked: Life Support Mk I');
+    expect(stdout).toContain('Facility ID: fac-ls-1');
+    expect(stdout).toContain('Type: life_support_mk1');
+    expect(stdout).toContain('Category: infrastructure');
+    expect(stdout).toContain('Status: waiting');
+    expect(stdout).toContain('Circuit Board: 12/40, 28 missing');
+    expect(stdout).toContain('Steel Plate: 0/10, 10 missing');
+    expect(stdout).toContain('=== Repair Queue ===');
+    expect(stdout).toContain('Facility ID');
+    expect(stdout).toContain('fac-ls-1');
+    expect(stdout).toContain('fac-fg-2');
+    expect(stdout).toContain('4 ticks');
+    expect(stdout).toContain('  Sell Steel Plate into this station market to unblock the next repair.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base omits repairs when the payload has no repairs object', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Station: Earth Station ===');
+    expect(stdout).not.toContain('=== Repairs ===');
+    expect(stdout).not.toContain('=== Repair Queue ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base omits zeroed repairs with empty facilities', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 0,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        facilities: [],
+      },
+    });
+
+    expect(stdout).not.toContain('=== Repairs ===');
+    expect(stdout).not.toContain('=== Repair Queue ===');
+  });
+
+  test('get_base omits next_blocked empty object with zeroed counts', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 0,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        next_blocked: {},
+      },
+    });
+
+    expect(stdout).not.toContain('=== Repairs ===');
+    expect(stdout).not.toContain('Next blocked');
+  });
+
+  test('get_base prints next_blocked without an empty Repair Queue table', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 1,
+        supply_method: 'example',
+        facilities: [],
+        next_blocked: {
+          instance_id: 'fac-ls-1',
+          definition_id: 'life_support_mk1',
+          name: 'Life Support Mk I',
+          category: 'infrastructure',
+          status: 'waiting',
+        },
+      },
+    });
+
+    expect(stdout).toContain('=== Repairs ===');
+    expect(stdout).toContain('Next blocked: Life Support Mk I');
+    expect(stdout).toContain('Facility ID: fac-ls-1');
+    expect(stdout).not.toContain('=== Repair Queue ===');
+    expect(stdout).not.toContain('(None)');
+  });
+
+  test('get_base queue line includes only finite counts and keeps zero segments when mixed', () => {
+    const onlyDamaged = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: { wrecked: false, damaged_count: 3, supply_method: 'example' },
+    });
+    const mixedZeros = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 3,
+        repairing_count: 0,
+        waiting_count: 2,
+        supply_method: 'example',
+      },
+    });
+
+    expect(onlyDamaged.stdout).toContain('Queue: 3 damaged');
+    expect(onlyDamaged.stdout).not.toContain('repairing');
+    expect(onlyDamaged.stdout).not.toContain('waiting');
+    expect(mixedZeros.stdout).toContain('Queue: 3 damaged, 0 repairing, 2 waiting');
+  });
+
+  test('get_base hull recovery uses ?, hides without hull_*, and prints (0 missing)', () => {
+    const missingRatio = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        hull_current: 4200,
+        hull_missing: 5800,
+      },
+    });
+    const hiddenHull = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian', wrecked: true },
+      services: ['market'],
+      repairs: {
+        wrecked: true,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+      },
+    });
+    const zeroMissing = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        hull_current: 10000,
+        hull_required: 10000,
+        hull_missing: 0,
+      },
+    });
+
+    expect(missingRatio.stdout).toContain('Hull recovery: 4,200/? (5,800 missing)');
+    expect(hiddenHull.stdout).toContain('=== Repairs ===');
+    expect(hiddenHull.stdout).not.toContain('Hull recovery:');
+    expect(zeroMissing.stdout).toContain('Hull recovery: 10,000/10,000 (0 missing)');
+  });
+
+  test('get_base keeps the next_blocked facility as a duplicate Repair Queue row', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 1,
+        supply_method: 'example',
+        next_blocked: {
+          instance_id: 'fac-ls-1',
+          definition_id: 'life_support_mk1',
+          name: 'Life Support Mk I',
+          category: 'infrastructure',
+          status: 'waiting',
+        },
+        facilities: [
+          {
+            instance_id: 'fac-ls-1',
+            definition_id: 'life_support_mk1',
+            name: 'Life Support Mk I',
+            category: 'infrastructure',
+            status: 'waiting',
+          },
+        ],
+      },
+    });
+
+    expect(stdout).toContain('Next blocked: Life Support Mk I');
+    expect(stdout).toContain('=== Repair Queue ===');
+    expect(stdout.match(/fac-ls-1/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('get_base prints 0 ticks for a completed repair ETA', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 0,
+        repairing_count: 1,
+        waiting_count: 0,
+        supply_method: 'example',
+        facilities: [
+          {
+            instance_id: 'fac-fg-2',
+            definition_id: 'fuel_grid',
+            name: 'Fuel Grid',
+            category: 'infrastructure',
+            status: 'repairing',
+            ticks_until_complete: 0,
+          },
+        ],
+      },
+    });
+
+    expect(stdout).toContain('0 ticks');
+  });
+
+  test('get_base prints Wrecked: yes only when defences did not already banner wrecked', () => {
+    const repairsOnly = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian', wrecked: false },
+      services: ['market'],
+      repairs: {
+        wrecked: true,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+      },
+    });
+    const bothWrecked = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian', wrecked: true },
+      services: ['market'],
+      repairs: {
+        wrecked: true,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+      },
+    });
+
+    expect(repairsOnly.stdout).toContain('Wrecked: yes');
+    expect(repairsOnly.stdout).not.toContain('Wrecked: facilities offline until repaired');
+    expect(bothWrecked.stdout).toContain('Wrecked: facilities offline until repaired');
+    expect(bothWrecked.stdout).not.toContain('Wrecked: yes');
+  });
+
+  test('get_base skips malformed repairs without [object Object] fallback', () => {
+    const stringRepairs = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: 'x',
+    });
+    const arrayRepairs = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: [],
+    });
+    const objectNames = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        next_blocked: {
+          instance_id: 'fac-ls-1',
+          definition_id: 'life_support_mk1',
+          name: { id: 'Life Support' },
+          category: 'infrastructure',
+          status: 'waiting',
+          materials: [{ item_id: { id: 'x' }, name: { id: 'y' }, quantity_required: 1, quantity_in_storage: 0 }],
+        },
+        facilities: [
+          {
+            instance_id: 'fac-ls-1',
+            definition_id: 'life_support_mk1',
+            name: { id: 'Life Support' },
+            category: 'infrastructure',
+            status: 'waiting',
+            materials: [{ item_id: { id: 'x' }, name: { id: 'y' }, quantity_required: 1, quantity_in_storage: 0 }],
+          },
+        ],
+      },
+    });
+
+    expect(stringRepairs.stdout).not.toContain('=== Repairs ===');
+    expect(arrayRepairs.stdout).not.toContain('=== Repairs ===');
+    expect(objectNames.stdout).toContain('=== Repairs ===');
+    expect(objectNames.stdout).toContain('Facility ID: fac-ls-1');
+    expect(stringRepairs.stdout).not.toContain('[object Object]');
+    expect(arrayRepairs.stdout).not.toContain('[object Object]');
+    expect(objectNames.stdout).not.toContain('[object Object]');
+    expect(stringRepairs.stdout).not.toContain('=== Response ===');
+    expect(objectNames.stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base construction malformed material name uses item_id', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      construction: {
+        pending: [
+          {
+            definition_id: 'life_support_mk3',
+            name: 'Life Support Mk III',
+            category: 'infrastructure',
+            status: 'gathering_materials',
+            materials: [
+              {
+                item_id: 'oxygen_generator',
+                name: { id: 'x' },
+                quantity_required: 10,
+                quantity_in_storage: 6,
+                quantity_missing: 4,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(stdout).toContain('=== Construction ===');
+    expect(stdout).toContain('oxygen_generator: 6/10, 4 missing');
+    expect(stdout).not.toContain('[object Object]');
   });
 
   test('get_poi includes faction fuel reserve when present', () => {
