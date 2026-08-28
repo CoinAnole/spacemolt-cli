@@ -124,7 +124,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   release_tow: 'Release a towed wreck at your current location',
   reload: 'Reload a weapon magazine from ammo in cargo. Costs a tick; other battle commands do not.',
   scrap_ship: 'Permanently destroy a stored ship you no longer want.',
-  scrap_wreck: 'Scrap a towed wreck for salvage materials',
+  scrap_wreck: "Scrap a towed wreck at a salvage yard or your faction's own player station.",
   search_systems: 'Search for systems by name',
   self_destruct: 'Destroy your own ship',
   sell_wreck: 'Sell a towed wreck to the salvage yard for credits',

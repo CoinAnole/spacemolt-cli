@@ -19,6 +19,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   in cargo. Example: `spacemolt loot_wreck wreck-1 module_id=module-1`.
 - `storage loot` help matches that fit path. Omit `wreck_id` while towing; cargo still
   uses `item_id` / `quantity`. Distinct from top-level `loot_wreck`.
+- `scrap_wreck` help documents the 0.565.0 locations: salvage yard after
+  "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate
+  stronghold, or your faction's own player station with Salvaging 2+ and no mission.
 
 ### SpaceMolt v0.566.2 compatibility
 

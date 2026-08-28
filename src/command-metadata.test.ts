@@ -1575,6 +1575,13 @@ describe('command metadata', () => {
     expect(COMMANDS.storage_loot?.route).toEqual({ tool: 'spacemolt_storage', action: 'loot', method: 'POST' });
   });
 
+  test('scrap_wreck documents faction-station scrap', () => {
+    expect(COMMANDS.scrap_wreck?.description).toContain("faction's own player station");
+    expect(COMMANDS.scrap_wreck?.description).toContain('Salvaging 2+');
+    expect(COMMANDS.scrap_wreck?.description).toContain('A Lucrative Sideline');
+    expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
+  });
+
   test('pay_bounty is curated under Taxes with empire aliases', () => {
     const config = COMMANDS.pay_bounty;
     expect(config).toBeDefined();
