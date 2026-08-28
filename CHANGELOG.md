@@ -24,6 +24,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `--json` / `--yaml` / `--jq` / `--structured` field names are unchanged.
 - `help list_ships` documents module types and `get_ship <ship_id>` for the full fit.
 
+### `get_base` repair queue (gameserver 0.567.5)
+
+- Human `get_base` (and `inspect` of a docked base) now prints `repairs` when
+  facilities are damaged: queue counts, supply method, hull recovery, the next
+  blocked facility with exact missing materials, and a repair-queue table whose
+  Facility ID column is the `facility_id` for `facility repair`.
+- JSON/YAML field names are unchanged. `facility repair` remains the mutation.
+  Help for that command notes that damaged-station IDs also appear on `get_base`.
+
 ### Catalog inspect (gameserver 0.564–0.566)
 
 - Human `inspect` of catalog modules now shows slot, CPU/power (including 0), dedicated combat stats,

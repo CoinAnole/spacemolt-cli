@@ -598,10 +598,17 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_repair: {
     usage: '<facility_id>',
     description:
-      "Repair a damaged facility (costs ~30% of original materials and build time). A station rebuilds its own faction's damaged facilities automatically, every facility it can afford at once, paid from that faction's storage at the station — it will not stall behind one unpayable bill. NPC-station repair bills for megaproject infrastructure are capped; player-faction stations pay full price. Keep that store stocked and a raided station puts itself back with no command. Use this for a facility the station will not rebuild (your own, or your faction's on somebody else's station), or to jump the queue. Faction-owned repairs draw materials from faction storage and may be initiated by members with facility-management rights; automatic rebuild spends and manual spends are recorded in the faction action log (see get_action_log). Facility listings expose when an in-progress repair completes.",
+      "Repair a damaged facility (costs ~30% of original materials and build time). A station rebuilds its own faction's damaged facilities automatically, every facility it can afford at once, paid from that faction's storage at the station — it will not stall behind one unpayable bill. NPC-station repair bills for megaproject infrastructure are capped; player-faction stations pay full price. Keep that store stocked and a raided station puts itself back with no command. Use this for a facility the station will not rebuild (your own, or your faction's on somebody else's station), or to jump the queue. Faction-owned repairs draw materials from faction storage and may be initiated by members with facility-management rights; automatic rebuild spends and manual spends are recorded in the faction action log (see get_action_log). Facility listings expose when an in-progress repair completes. Damaged-station facility IDs also appear on get_base and inspect of a docked base.",
     example: 'spacemolt facility_repair facility-1',
-    discoverWith: ['facility_list', 'facility_owned', 'faction_facility_list'],
-    seeAlso: ['facility_list', 'facility_owned', 'faction_facility_list', 'facility_dismantle', 'get_action_log'],
+    discoverWith: ['facility_list', 'facility_owned', 'faction_facility_list', 'get_base'],
+    seeAlso: [
+      'facility_list',
+      'facility_owned',
+      'faction_facility_list',
+      'facility_dismantle',
+      'get_action_log',
+      'get_base',
+    ],
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/repair',
     positionals: ['facility_id'],
@@ -609,7 +616,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       facility_id: {
         type: 'string',
         description:
-          'Facility instance ID to repair yourself. A station auto-rebuilds facilities it owns for its own faction; use this ID for a facility it will not rebuild, or to jump that queue. Find personal IDs with facility_list or facility_owned, and faction-owned IDs with faction_facility_list; those listings also show repair completion timing.',
+          'Facility instance ID to repair yourself. A station auto-rebuilds facilities it owns for its own faction; use this ID for a facility it will not rebuild, or to jump that queue. Find personal IDs with facility_list or facility_owned, and faction-owned IDs with faction_facility_list; those listings also show repair completion timing. On a damaged docked station, get_base and inspect also list these IDs as Facility ID in the repair queue.',
       },
     },
   },

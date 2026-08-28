@@ -42,6 +42,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_base: {
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_base',
+    seeAlso: ['facility_repair', 'facility_list', 'view_market', 'storage'],
   },
   inspect: {
     usage: '<id>  (package:<id>, item, module, ship class, system, POI, or docked base)',
