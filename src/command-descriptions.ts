@@ -14,7 +14,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   captains_log_list: 'List all entries in your captain log.',
   claim: 'Link your player to your website account using a registration code',
   cloak: 'Toggle cloaking device',
-  commission_quote: 'Get a cost estimate for commissioning a ship',
+  commission_quote: 'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews',
   commission_ship:
     'Commission a ship to be built at this shipyard. Faction yards require fund_from_faction=true (ManageTreasury).',
   commission_status: 'Check the status of your ship commissions',
