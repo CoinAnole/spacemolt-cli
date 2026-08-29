@@ -449,6 +449,47 @@ export const commissionQuoteFixture = {
   ],
 };
 
+export const commissionShipFixture = {
+  details: {
+    message: 'Commission created.',
+    commission_id: 'commission-1',
+    ship_class: 'prospector',
+    ship_name: 'Lucky Strike',
+    status: 'pending',
+    credits_paid: 16700,
+    credits_left: 5000,
+    bare_hull: false,
+    source_missing_materials: true,
+    build_time: 18,
+    labor_cost: 3000,
+    material_cost: 8000,
+    sourcing_material_cost: 4000,
+    yard_margin: 1500,
+    sales_tax: 200,
+    materials_supplied: [{ item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 }],
+    materials_to_source: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, size: 1 }],
+  },
+  player: { username: 'Marlowe', credits: 5000 },
+};
+
+export const commissionShipCreditsOnlyFixture = {
+  details: {
+    message: 'Commission created.',
+    commission_id: 'commission-1',
+    ship_class: 'prospector',
+    ship_name: 'Prospector',
+    status: 'pending',
+    credits_paid: 15000,
+    credits_left: 5000,
+    bare_hull: false,
+    source_missing_materials: false,
+    build_time: 18,
+    labor_cost: 3000,
+    material_cost: 12000,
+  },
+  player: { username: 'Marlowe', credits: 5000 },
+};
+
 export const insuranceQuoteFixture = {
   message: 'Quote calculated from galaxy-wide loss statistics.',
   notice: 'Recent deaths dominate pricing.',
@@ -608,6 +649,16 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
   commission_quote: { command: 'commission_quote', fixture: commissionQuoteFixture },
+  commission_ship: {
+    command: 'commission_ship',
+    fixture: commissionShipFixture,
+    schemaTarget: 'details',
+  },
+  commission_ship_credits_only: {
+    command: 'commission_ship',
+    fixture: commissionShipCreditsOnlyFixture,
+    schemaTarget: 'details',
+  },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
   // Explicit storage_view case exercises gifts/messages empty arrays (schema parity).

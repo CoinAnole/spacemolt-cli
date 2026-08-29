@@ -1,0 +1,28 @@
+
+=== Commission Created ===
+Commission created.
+Ship: Lucky Strike (prospector)
+ID: commission-1
+Status: pending
+Bare hull: no
+Source missing materials: yes
+Build time: 18 ticks
+Materials: 8,000 cr
+Labor: 3,000 cr
+Yard fee: 1,500 cr
+Sales tax: 200 cr
+Sourcing cost: 4,000 cr
+Credits paid: 16,700 cr
+Credits left: 5,000 cr
+
+=== Materials Supplied ===
+
+  Item       | Qty | Size
+  -----------+-----+-----
+  Hull Plate | 40  | 2   
+
+=== Materials To Source ===
+
+  Item          | Qty | Size
+  --------------+-----+-----
+  Circuit Board | 20  | 1   

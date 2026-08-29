@@ -422,6 +422,74 @@ function renderFactionBulkOrders(result: Record<string, unknown>, command?: stri
   return true;
 }
 
+function formatYesNoBoolean(value: unknown): string | undefined {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return undefined;
+}
+
+function scalarDisplayString(value: unknown): string | undefined {
+  if (typeof value === 'string' && value !== '') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+function emitCommissionCredit(label: string, value: unknown): void {
+  if (isRecord(value) || Array.isArray(value) || isMissingDisplayValue(value)) return;
+  if (typeof value === 'number' && !Number.isFinite(value)) return;
+  const text = formatCreditCell(value);
+  if (!text) return;
+  emitLine(`${label}: ${text}`);
+}
+
+function printCommissionMaterials(title: string, value: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows = value.filter(isRecord);
+  if (!rows.length) return;
+  printCompactTable(title, rows, [
+    ['Item', ['name', 'item_id']],
+    ['Qty', ['quantity', 'amount']],
+    ['Size', ['size']],
+  ]);
+}
+
+function formatCommissionShip(r: Record<string, unknown>): boolean {
+  if (r.commission_id === undefined && r.ship_class === undefined) return false;
+
+  emitLine(`\n${c.bright}=== Commission Created ===${c.reset}`);
+  if (typeof r.message === 'string' && r.message) emitLine(r.message);
+  const shipName = scalarDisplayString(r.ship_name);
+  const shipClass = scalarDisplayString(r.ship_class);
+  if (shipName || shipClass) {
+    emitLine(`Ship: ${shipName ?? shipClass}${shipClass && shipName ? ` (${shipClass})` : ''}`);
+  }
+  const commissionId = scalarDisplayString(r.commission_id);
+  if (commissionId) emitLine(`ID: ${commissionId}`);
+  if (typeof r.status === 'string' && r.status) emitLine(`Status: ${r.status}`);
+  const bareHull = formatYesNoBoolean(r.bare_hull);
+  if (bareHull) emitLine(`Bare hull: ${bareHull}`);
+  const sourcing = formatYesNoBoolean(r.source_missing_materials);
+  if (sourcing) emitLine(`Source missing materials: ${sourcing}`);
+  if (!isMissingDisplayValue(r.build_time)) {
+    const buildTime = finiteNumber(r.build_time);
+    if (buildTime !== undefined) emitLine(`Build time: ${buildTime.toLocaleString()} ticks`);
+  }
+  emitCommissionCredit('Materials', r.material_cost);
+  emitCommissionCredit('Labor', r.labor_cost);
+  emitCommissionCredit('Yard fee', r.yard_margin);
+  emitCommissionCredit('Sales tax', r.sales_tax);
+  emitCommissionCredit('Sourcing cost', r.sourcing_material_cost);
+  emitCommissionCredit('Credits paid', r.credits_paid);
+  emitCommissionCredit('Credits left', r.credits_left);
+  const autoDocked = formatYesNoBoolean(r.auto_docked);
+  if (autoDocked) emitLine(`Auto-docked: ${autoDocked}`);
+  const autoUndocked = formatYesNoBoolean(r.auto_undocked);
+  if (autoUndocked) emitLine(`Auto-undocked: ${autoUndocked}`);
+  printCommissionMaterials('Materials Supplied', r.materials_supplied);
+  printCommissionMaterials('Materials To Source', r.materials_to_source);
+  return true;
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -834,6 +902,10 @@ export const marketFormatters = [
     },
     { commands: ['commission_status'] },
   ),
+
+  namedFormatter('commission_ship', ['commission_id', 'ship_class'], formatCommissionShip, {
+    commands: ['commission_ship'],
+  }),
 
   // Commission quote (includes yard_margin; build_materials items use size, not inventory "have")
   formatter(

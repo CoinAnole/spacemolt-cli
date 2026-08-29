@@ -45,6 +45,7 @@ import {
   viewShipBuyOrdersFixture,
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
+import { commissionShipCreditsOnlyFixture, commissionShipFixture } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
 import type { GlobalOptions } from './types';
@@ -103,6 +104,10 @@ const {
 } = formatterFixtureCases;
 const namedFormatterFixtureCases = {
   ...otherFormatterFixtureCases,
+  commission_ship: {
+    command: 'commission_ship',
+    fixture: commissionShipFixture,
+  },
   create_market_order: createMarketOrderFixtureCase,
   faction_bulk_orders: {
     command: 'faction_create_buy_order',
@@ -3441,7 +3446,7 @@ describe('structuredContent formatters', () => {
         },
         player: { credits: 5000 },
       },
-      'Commission Id: commission-1',
+      'ID: commission-1',
     ],
     [
       'cancel_commission',
@@ -3512,6 +3517,206 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain(expected);
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats a full 19-key commission_ship details receipt', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', {
+      details: {
+        message: 'Commission created.',
+        commission_id: 'commission-1',
+        ship_class: 'prospector',
+        ship_name: 'Lucky Strike',
+        status: 'pending',
+        credits_paid: 16700,
+        credits_left: 5000,
+        bare_hull: false,
+        source_missing_materials: true,
+        build_time: 18,
+        labor_cost: 3000,
+        material_cost: 8000,
+        sourcing_material_cost: 4000,
+        yard_margin: 1500,
+        sales_tax: 200,
+        materials_supplied: [{ item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 }],
+        materials_to_source: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, size: 1 }],
+        auto_docked: true,
+        auto_undocked: false,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commission Created ===');
+    expect(stdout).toContain('Commission created.');
+    expect(stdout).toContain('Ship: Lucky Strike (prospector)');
+    expect(stdout).toContain('ID: commission-1');
+    expect(stdout).toContain('Status: pending');
+    expect(stdout).toContain('Bare hull: no');
+    expect(stdout).toContain('Source missing materials: yes');
+    expect(stdout).toContain('Build time: 18 ticks');
+    expect(stdout).toContain('Materials: 8,000 cr');
+    expect(stdout).toContain('Labor: 3,000 cr');
+    expect(stdout).toContain('Yard fee: 1,500 cr');
+    expect(stdout).toContain('Sales tax: 200 cr');
+    expect(stdout).toContain('Sourcing cost: 4,000 cr');
+    expect(stdout).toContain('Credits paid: 16,700 cr');
+    expect(stdout).toContain('Credits left: 5,000 cr');
+    expect(stdout).toContain('Auto-docked: yes');
+    expect(stdout).toContain('Auto-undocked: no');
+    expect(stdout).toContain('=== Materials Supplied ===');
+    expect(stdout).toContain('Hull Plate');
+    expect(stdout).toContain('=== Materials To Source ===');
+    expect(stdout).toContain('Circuit Board');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('formats a credits-only sparse commission_ship receipt', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', commissionShipCreditsOnlyFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commission Created ===');
+    expect(stdout).toContain('Ship: Prospector (prospector)');
+    expect(stdout).toContain('ID: commission-1');
+    expect(stdout).toContain('Bare hull: no');
+    expect(stdout).toContain('Source missing materials: no');
+    expect(stdout).toContain('Materials: 12,000 cr');
+    expect(stdout).toContain('Labor: 3,000 cr');
+    expect(stdout).toContain('Credits paid: 15,000 cr');
+    expect(stdout).toContain('Credits left: 5,000 cr');
+    expect(stdout).not.toContain('Yard fee:');
+    expect(stdout).not.toContain('Sales tax:');
+    expect(stdout).not.toContain('Sourcing cost:');
+    expect(stdout).not.toContain('=== Materials Supplied ===');
+    expect(stdout).not.toContain('=== Materials To Source ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats provide-materials commission_ship with supplied table only', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', {
+      details: {
+        message: 'Commission created.',
+        commission_id: 'commission-1',
+        ship_class: 'prospector',
+        ship_name: 'Lucky Strike',
+        status: 'pending',
+        credits_paid: 4500,
+        credits_left: 5000,
+        bare_hull: false,
+        source_missing_materials: false,
+        build_time: 18,
+        labor_cost: 3000,
+        material_cost: 0,
+        yard_margin: 1500,
+        materials_supplied: [{ item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 }],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Source missing materials: no');
+    expect(stdout).toContain('=== Materials Supplied ===');
+    expect(stdout).toContain('Hull Plate');
+    expect(stdout).not.toContain('=== Materials To Source ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits empty commission_ship material arrays instead of printing (None)', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', {
+      details: {
+        commission_id: 'commission-1',
+        ship_class: 'prospector',
+        materials_supplied: [],
+        materials_to_source: [],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commission Created ===');
+    expect(stdout).not.toContain('=== Materials Supplied ===');
+    expect(stdout).not.toContain('=== Materials To Source ===');
+    expect(stdout).not.toContain('(None)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('ignores non-record commission_ship material entries', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', {
+      details: {
+        commission_id: 'commission-1',
+        ship_class: 'prospector',
+        materials_supplied: ['skip', null, { item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 }, 12],
+        materials_to_source: [null, 'circuit_board'],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Materials Supplied ===');
+    expect(stdout).toContain('Hull Plate');
+    expect(stdout).not.toContain('=== Materials To Source ===');
+    expect(stdout).not.toContain('skip');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits nested objects and non-finite values in commission_ship scalar slots', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', {
+      details: {
+        commission_id: 'commission-1',
+        ship_class: 'prospector',
+        message: '',
+        status: '',
+        ship_name: { nested: true },
+        build_time: '',
+        credits_paid: { nested: true },
+        labor_cost: Number.NaN,
+        yard_margin: Number.POSITIVE_INFINITY,
+        credits_left: undefined,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commission Created ===');
+    expect(stdout).toContain('ID: commission-1');
+    expect(stdout).toContain('Ship: prospector');
+    expect(stdout).not.toContain('Build time:');
+    expect(stdout).not.toContain('Credits paid:');
+    expect(stdout).not.toContain('Labor:');
+    expect(stdout).not.toContain('Yard fee:');
+    expect(stdout).not.toContain('Credits left:');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats nested commission_ship envelope details rather than the outer player state', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', commissionShipFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commission Created ===');
+    expect(stdout).toContain('Ship: Lucky Strike (prospector)');
+    expect(stdout).toContain('ID: commission-1');
+    expect(stdout).toContain('Credits paid: 16,700 cr');
+    expect(stdout).toContain('=== Materials Supplied ===');
+    expect(stdout).toContain('=== Materials To Source ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints details-level commission_ship auto-dock lines without envelope banners', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_ship', {
+      details: {
+        commission_id: 'commission-1',
+        ship_class: 'prospector',
+        auto_docked: true,
+        auto_undocked: true,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Auto-docked: yes');
+    expect(stdout).toContain('Auto-undocked: yes');
+    expect(stdout).not.toContain('[AUTO-DOCKED]');
+    expect(stdout).not.toContain('[AUTO-UNDOCKED]');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -5525,10 +5730,12 @@ describe('structuredContent formatters', () => {
     }
 
     expect(outputs.create_market_order).toContain('=== Sell Order Created ===');
+    expect(outputs.commission_ship).toContain('=== Commission Created ===');
     expect(outputs.direct_buy).toContain('=== Buy Complete ===');
     expect(outputs.direct_sell).toContain('=== Sell Complete ===');
     expect(outputs.faction_bulk_orders).toContain('=== Faction Buy Orders ===');
     delete outputs.create_market_order;
+    delete outputs.commission_ship;
     delete outputs.direct_buy;
     delete outputs.direct_sell;
     delete outputs.faction_bulk_orders;
