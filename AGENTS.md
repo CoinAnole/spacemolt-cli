@@ -8,9 +8,9 @@ This repository is a Bun-based command-line client for the SpaceMolt v2 API. It 
 - `src/commands.ts`: user-facing commands, aliases, examples, and v2 route overrides.
 - `src/generated/api-commands.ts`: generated route/schema metadata.
 - `src/api-sync.test.ts`: checks local command metadata against the OpenAPI spec.
-- `src/output-golden.test.ts`: exact stdout/stderr golden testing (652 cases → 1304 committed files) for renderer and CLI output paths.
+- `src/output-golden.test.ts`: exact stdout/stderr golden testing (664 cases → 1328 committed files) for renderer and CLI output paths.
 - `src/test-support/output-golden.ts`: golden harness, normalization, guardrails (blocks `NaN`/`undefined`/`[object Object]`, `=== Response ===` fallback, enforces stdout/stderr separation).
-- `src/golden-output/`: committed `.stdout` and `.stderr` files (641 renderer cases from `highValueCommandFixtures` + 11 CLI cases).
+- `src/golden-output/`: committed `.stdout` and `.stderr` files (653 renderer cases from `highValueCommandFixtures` + 11 CLI cases).
 - `src/test-support/fixture-schema-compare.ts` + `scripts/report-fixture-schema-divergences.ts`: compare curated golden fixtures against response schemas in `spacemolt-docs/openapi.json`.
 - `src/version-sync.test.ts`: package, runtime, and README version consistency.
 - `src/args.test.ts`, `src/runner.test.ts`, and related command tests: parser, option, and behavior coverage.
@@ -55,8 +55,8 @@ The project uses committed golden files for exact output stability of both human
   ```bash
   bun test src/output-golden.test.ts
   ```
-- 159 high-value fixtures (in `src/display/*-fixtures.ts`) generate 641 renderer cases (table + json + yaml + compact-json, plus projections) + 11 CLI cases exercising `runInvocation`.
-- All 1304 files live under `src/golden-output/{renderer,cli}/`. Use `UPDATE_GOLDENS=1` only for intentional output changes.
+- 162 high-value fixtures (in `src/display/*-fixtures.ts`) generate 653 renderer cases (table + json + yaml + compact-json, plus projections) + 11 CLI cases exercising `runInvocation`.
+- All 1328 files live under `src/golden-output/{renderer,cli}/`. Use `UPDATE_GOLDENS=1` only for intentional output changes.
 
 Golden maintenance helpers:
 
