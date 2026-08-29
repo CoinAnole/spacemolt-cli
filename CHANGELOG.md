@@ -4,6 +4,18 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### commission_ship / commission_quote help (gameserver 0.569)
+
+- `help commission_ship` documents `bare_hull=true` (opt-in unfitted hull at NPC, empire, and faction yards) and
+  `source_missing_materials=true` (NPC/empire only: contribute cargo then station storage; pay the deficit).
+- Empire/NPC material modes are credits-only (default), `provide_materials=true`, or `source_missing_materials=true`.
+  Do not combine the two material flags. Faction yards still require `fund_from_faction=true` (ManageTreasury)
+  and do not market-source missing materials.
+- `help commission_quote` Usage lists `bare_hull` and `source_missing_materials`; quote with the same flags as
+  `commission_ship`. Human quote and `commission_ship` receipts print Materials Supplied / Materials To Source;
+  `commission_status` prints Item / Required / Supplied / Gathered (no Missing header). JSON/YAML/jq field names
+  are unchanged.
+
 ### commission_status table (gameserver 0.569)
 
 - Human `commission_status` prints a **Bare hull** column (`yes`/`no`) when any row has a boolean
@@ -22,7 +34,6 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   Materials Supplied / Materials To Source tables when the server sends them.
   Credits-only and provide-materials lines are unchanged. JSON/YAML/jq field names
   are unchanged.
-- `help commission_quote` Usage lists `bare_hull` and `source_missing_materials`.
 
 ### commission_ship table receipt (gameserver 0.569)
 

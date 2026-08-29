@@ -1123,8 +1123,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     sell_wreck                Sell towed wreck at station
 
   ${c.cyan}Shipyard:${c.reset}
-    commission_ship <class>   Order a custom ship build
-    commission_quote <class>  Get build quote
+    commission_ship <class>   Order a custom ship (fitted default; optional bare hull)
+    commission_quote <class>  Quote a build (bare hull / partial sourcing)
     commission_status         Check build progress
     cancel_commission <id>    Cancel active commission
     scrap_ship <ship_id>      Permanently destroy a stored ship

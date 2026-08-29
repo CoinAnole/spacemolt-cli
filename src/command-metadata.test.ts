@@ -6,6 +6,7 @@ import {
   parseArgs,
   validatePayloadAgainstSchema,
 } from './args';
+import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import type { GroupedCommandName } from './command-groups';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
@@ -614,6 +615,22 @@ describe('command metadata', () => {
     expect(commission?.usage).toContain('fund_from_faction');
     expect(commission?.description).toContain('fund_from_faction');
     expect(commission?.schema?.fund_from_faction?.type).toBe('boolean');
+    expect(commission?.usage).toContain('bare_hull=true/false');
+    expect(commission?.usage).toContain('source_missing_materials=true/false');
+    expect(commission?.usage).toContain('provide_materials=true/false');
+    expect(commission?.description).toContain('bare_hull=true');
+    expect(commission?.description).toContain('source_missing_materials=true');
+    expect(commission?.description).toContain('Do not combine provide_materials with source_missing_materials');
+    expect(commission?.description).toContain('do not market-source missing materials');
+    expect(commission?.description).toContain('NPC, empire, and faction yards');
+    expect(commission?.example).toBe('spacemolt commission_ship viper source_missing_materials=true');
+    expect(commission?.seeAlso).toEqual(['commission_quote', 'commission_status', 'catalog']);
+    expect(commission?.args).toEqual(['ship_class', 'provide_materials']);
+    expect(commission?.schema?.bare_hull?.type).toBe('boolean');
+    expect(commission?.schema?.source_missing_materials?.type).toBe('boolean');
+    expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).toBe(
+      'Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing.',
+    );
 
     const licenseHelp = captureHelp('buy_ship_license');
     expect(licenseHelp).toContain('ship_class');
@@ -621,6 +638,14 @@ describe('command metadata', () => {
 
     const commissionHelp = captureHelp('commission_ship');
     expect(commissionHelp).toContain('fund_from_faction');
+    expect(commissionHelp).toContain('bare_hull=true/false');
+    expect(commissionHelp).toContain('source_missing_materials=true/false');
+    expect(commissionHelp).toContain('Do not combine provide_materials with source_missing_materials');
+    expect(commissionHelp).toContain('do not market-source missing materials');
+    expect(commissionHelp).toContain('If true, commission only the hull without its default module loadout.');
+    expect(commissionHelp).toContain('Do not combine with provide_materials.');
+    expect(commissionHelp).toContain('spacemolt commission_ship viper source_missing_materials=true');
+    expect(commissionHelp).toMatch(/Arguments:\n {2}ship_class, provide_materials\n/);
   });
 
   test('commission_quote documents bare_hull and source_missing_materials', () => {
@@ -633,6 +658,9 @@ describe('command metadata', () => {
       'source_missing_materials=true previews stacks taken from cargo then station storage',
     );
     expect(config?.description).not.toContain('provide_materials');
+    expect(config?.description).toContain('Default quotes a fitted hull');
+    expect(config?.description).toContain('faction yards do not market-source missing materials');
+    expect(config?.description).toContain('same bare_hull and source_missing_materials choices');
     expect(config?.example).toBe('spacemolt commission_quote viper source_missing_materials=true');
     expect(config?.seeAlso).toEqual(['commission_ship', 'commission_status']);
     expect(config?.args).toEqual(['ship_class']);
@@ -645,7 +673,15 @@ describe('command metadata', () => {
       'Preview the materials you can contribute, the remaining deficit, and partial-sourcing total.',
     );
     expect(help).toContain('spacemolt commission_quote viper source_missing_materials=true');
+    expect(help).toContain('Default quotes a fitted hull');
+    expect(help).toContain('faction yards do not market-source missing materials');
     expect(help).not.toContain('provide_materials');
+  });
+
+  test('full help shipyard notes fitted default and partial sourcing', () => {
+    const help = captureFullHelp();
+    expect(help).toContain('Order a custom ship (fitted default; optional bare hull)');
+    expect(help).toContain('Quote a build (bare hull / partial sourcing)');
   });
 
   test('craft help documents queued station-storage production and packages', () => {

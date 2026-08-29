@@ -123,9 +123,12 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_salvage/sell',
   },
   commission_ship: {
-    usage: '<ship_class> [provide_materials=true/false] [fund_from_faction=true/false]',
+    usage:
+      '<ship_class> [bare_hull=true/false] [provide_materials=true/false] [source_missing_materials=true/false] [fund_from_faction=true/false]',
     description:
-      'Commission a ship at this shipyard. At a faction shipyard use fund_from_faction=true (ManageTreasury): materials come from faction storage and the treasury pays labor. At empire/NPC yards, provide_materials=true supplies materials from cargo/storage instead of paying full credits.',
+      'Commission a ship at this shipyard. Default is a fitted hull; bare_hull=true works at NPC, empire, and faction yards. At empire/NPC yards choose one material mode: credits-only (default), provide_materials=true, or source_missing_materials=true. Do not combine provide_materials with source_missing_materials. Faction yards require fund_from_faction=true (ManageTreasury) and do not market-source missing materials. Quote first with commission_quote using the same bare_hull and source_missing_materials choices.',
+    example: 'spacemolt commission_ship viper source_missing_materials=true',
+    seeAlso: ['commission_quote', 'commission_status', 'catalog'],
     category: 'Shipyard',
     apiRoute: 'POST /api/v2/spacemolt_ship/commission_ship',
     positionals: ['ship_class', 'provide_materials'],
@@ -133,7 +136,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   commission_quote: {
     usage: '<ship_class> [bare_hull=true/false] [source_missing_materials=true/false]',
     description:
-      'Get a cost estimate for commissioning a ship at this shipyard without placing an order. bare_hull=true quotes the hull without its default module loadout; source_missing_materials=true previews stacks taken from cargo then station storage, the remaining deficit, and the partial-sourcing total.',
+      'Get a cost estimate for commissioning a ship at this shipyard without placing an order. Default quotes a fitted hull; bare_hull=true quotes the hull without its default module loadout. source_missing_materials=true previews stacks taken from cargo then station storage, the remaining deficit, and the partial-sourcing total (NPC/empire yards; faction yards do not market-source missing materials). Pass the same bare_hull and source_missing_materials choices you will use on commission_ship. Human output lists Materials Supplied / Materials To Source when the server sends them; commission_status lists Item / Required / Supplied / Gathered.',
     example: 'spacemolt commission_quote viper source_missing_materials=true',
     seeAlso: ['commission_ship', 'commission_status'],
     category: 'Shipyard',
