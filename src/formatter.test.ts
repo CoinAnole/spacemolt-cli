@@ -4230,6 +4230,45 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('zero-fills Required from a defined empty required_materials map', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          materials_provided: false,
+          bare_hull: true,
+          required_materials: {},
+          materials_initially_supplied: { hull_plate: 40 },
+          materials_gathered: { hull_plate: 40, circuit_board: 5 },
+        },
+      ],
+      count: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Materials: Bare Fang (commission-2) ===');
+    const materialsHeader = stdout.split('\n').find((line) => line.includes('|') && line.includes('Required'));
+    expect(materialsHeader).toBeDefined();
+    expect(materialsHeader).toContain('Item');
+    expect(materialsHeader).toContain('Required');
+    expect(materialsHeader).toContain('Supplied');
+    expect(materialsHeader).toContain('Gathered');
+    expect(materialsHeader).not.toContain('Missing');
+    expect(stdout).not.toMatch(/\bMissing\b/);
+    expect(stdout.indexOf('circuit_board')).toBeLessThan(stdout.indexOf('hull_plate'));
+    const circuit = stdout.split('\n').find((line) => line.includes('|') && line.includes('circuit_board'));
+    const hull = stdout.split('\n').find((line) => line.includes('|') && line.includes('hull_plate'));
+    expect(circuit).toMatch(/circuit_board\s+\|\s+0\s+\|\s+0\s+\|\s+5/);
+    expect(hull).toMatch(/hull_plate\s+\|\s+0\s+\|\s+40\s+\|\s+40/);
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('omits commission_status materials follow-on for non-record maps', () => {
     const { stdout, stderr } = captureStructuredOutput('commission_status', {
       commissions: [

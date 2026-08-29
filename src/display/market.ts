@@ -487,7 +487,6 @@ function integerQuantityMap(value: unknown): Map<string, number> | undefined {
   const map = new Map<string, number>();
   for (const [itemId, raw] of Object.entries(value)) {
     if (!itemId) continue;
-    // Skip floats, negatives, and numeric strings; wire integers only.
     if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0) continue;
     map.set(itemId, raw);
   }
