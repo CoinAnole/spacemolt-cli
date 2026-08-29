@@ -51,6 +51,7 @@ import {
   commissionShipCreditsOnlyFixture,
   commissionShipFixture,
   commissionStatusFixture,
+  commissionStatusSourcingFixture,
   emptyCommissionStatusFixture,
 } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture } from './display/social.fixtures';
@@ -4168,6 +4169,197 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('not-a-commission');
     expect(stdout).toContain('Bare hull');
     expect(stdout).toMatch(/yes\s+\|\s+no\s+\|\s+commission-1/);
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints commission_status sourcing materials Required/Supplied/Gathered', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', commissionStatusSourcingFixture);
+
+    expect(stderr).toBe('');
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Sourcing'));
+    expect(header).toBeDefined();
+    expect(header).toContain('Bare hull');
+    expect(header).toContain('Sourcing');
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Bare Fang'));
+    expect(row).toBeDefined();
+    expect(row).toMatch(/no\s+\|\s+yes\s+\|\s+yes\s+\|\s+commission-2/);
+    expect(stdout).toContain('=== Materials: Bare Fang (commission-2) ===');
+    const materialsHeader = stdout.split('\n').find((line) => line.includes('|') && line.includes('Required'));
+    expect(materialsHeader).toBeDefined();
+    expect(materialsHeader).toContain('Item');
+    expect(materialsHeader).toContain('Required');
+    expect(materialsHeader).toContain('Supplied');
+    expect(materialsHeader).toContain('Gathered');
+    expect(materialsHeader).not.toContain('Missing');
+    expect(stdout).not.toMatch(/\bMissing\b/);
+    const circuit = stdout.split('\n').find((line) => line.includes('|') && line.includes('circuit_board'));
+    const hull = stdout.split('\n').find((line) => line.includes('|') && line.includes('hull_plate'));
+    expect(circuit).toBeDefined();
+    expect(hull).toBeDefined();
+    expect(stdout.indexOf('circuit_board')).toBeLessThan(stdout.indexOf('hull_plate'));
+    expect(circuit).toMatch(/circuit_board\s+\|\s+20\s+\|\s+0\s+\|\s+5/);
+    expect(hull).toMatch(/hull_plate\s+\|\s+40\s+\|\s+40\s+\|\s+40/);
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits commission_status materials follow-on for empty maps', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          ...commissionStatusSourcingFixture.commissions[0],
+          required_materials: {},
+          materials_initially_supplied: {},
+          materials_gathered: {},
+        },
+      ],
+      count: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commissions ===');
+    expect(stdout).toContain('Bare Fang');
+    expect(stdout).not.toContain('=== Materials:');
+    expect(stdout).not.toContain('(None)');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits commission_status materials follow-on for non-record maps', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          materials_provided: false,
+          bare_hull: true,
+          required_materials: [],
+          materials_initially_supplied: 'hull_plate',
+          materials_gathered: 40,
+        },
+      ],
+      count: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Bare Fang');
+    expect(stdout).not.toContain('=== Materials:');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('skips non-integer commission_status material map values and prints sibling integers', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          materials_provided: false,
+          bare_hull: true,
+          required_materials: {
+            circuit_board: 20,
+            hull_plate: 20.5,
+            fuel_cell: -1,
+            ore_iron: Number.NaN,
+            steel_plate: '40',
+            '': 1,
+            nested: { qty: 40 },
+          },
+          materials_initially_supplied: { circuit_board: 0 },
+          materials_gathered: { circuit_board: 5 },
+        },
+      ],
+      count: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Materials: Bare Fang (commission-2) ===');
+    expect(stdout).toContain('circuit_board');
+    expect(stdout).not.toContain('hull_plate');
+    expect(stdout).not.toContain('fuel_cell');
+    expect(stdout).not.toContain('ore_iron');
+    expect(stdout).not.toContain('steel_plate');
+    expect(stdout).not.toContain('nested');
+    const circuit = stdout.split('\n').find((line) => line.includes('|') && line.includes('circuit_board'));
+    expect(circuit).toMatch(/circuit_board\s+\|\s+20\s+\|\s+0\s+\|\s+5/);
+    expect(stdout).not.toContain('20.5');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits Required column when commission_status required_materials is absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          materials_provided: false,
+          bare_hull: true,
+          materials_initially_supplied: { hull_plate: 40 },
+          materials_gathered: { hull_plate: 40, circuit_board: 5 },
+        },
+      ],
+      count: 1,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Materials: Bare Fang (commission-2) ===');
+    const materialsHeader = stdout.split('\n').find((line) => line.includes('|') && line.includes('Supplied'));
+    expect(materialsHeader).toBeDefined();
+    expect(materialsHeader).toContain('Item');
+    expect(materialsHeader).toContain('Supplied');
+    expect(materialsHeader).toContain('Gathered');
+    expect(materialsHeader).not.toContain('Required');
+    expect(materialsHeader).not.toContain('Missing');
+    expect(stdout.indexOf('circuit_board')).toBeLessThan(stdout.indexOf('hull_plate'));
+    const circuit = stdout.split('\n').find((line) => line.includes('|') && line.includes('circuit_board'));
+    const hull = stdout.split('\n').find((line) => line.includes('|') && line.includes('hull_plate'));
+    expect(circuit).toMatch(/circuit_board\s+\|\s+0\s+\|\s+5/);
+    expect(hull).toMatch(/hull_plate\s+\|\s+40\s+\|\s+40/);
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints one commission_status materials follow-on for a mixed list', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        commissionStatusSourcingFixture.commissions[0],
+        {
+          commission_id: 'commission-1',
+          ship_class_id: 'prospector',
+          ship_name: 'Lucky Strike',
+          status: 'building',
+          base_name: 'Earth Station',
+          ticks_remaining: 12,
+          materials_provided: true,
+          bare_hull: false,
+        },
+      ],
+      count: 2,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Materials: Bare Fang (commission-2) ===');
+    expect(stdout).not.toContain('=== Materials: Lucky Strike (commission-1) ===');
+    expect(stdout.split('=== Materials:').length - 1).toBe(1);
+    expect(stdout).toContain('circuit_board');
+    expect(stdout).toContain('Lucky Strike');
+    expect(stdout).not.toMatch(/\bMissing\b/);
     expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('undefined');
     expect(stdout).not.toContain('NaN');

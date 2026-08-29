@@ -1,0 +1,28 @@
+{
+  "commissions": [
+    {
+      "commission_id": "commission-2",
+      "ship_class_id": "viper",
+      "ship_name": "Bare Fang",
+      "status": "pending",
+      "base_id": "earth_station",
+      "base_name": "Earth Station",
+      "ticks_remaining": 48,
+      "materials_provided": false,
+      "bare_hull": true,
+      "source_missing_materials": true,
+      "required_materials": {
+        "circuit_board": 20,
+        "hull_plate": 40
+      },
+      "materials_initially_supplied": {
+        "hull_plate": 40
+      },
+      "materials_gathered": {
+        "hull_plate": 40,
+        "circuit_board": 5
+      }
+    }
+  ],
+  "count": 1
+}

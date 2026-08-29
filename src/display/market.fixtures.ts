@@ -426,6 +426,27 @@ export const emptyCommissionStatusFixture = {
   count: 0,
 };
 
+export const commissionStatusSourcingFixture = {
+  commissions: [
+    {
+      commission_id: 'commission-2',
+      ship_class_id: 'viper',
+      ship_name: 'Bare Fang',
+      status: 'pending',
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      ticks_remaining: 48,
+      materials_provided: false,
+      bare_hull: true,
+      source_missing_materials: true,
+      required_materials: { circuit_board: 20, hull_plate: 40 },
+      materials_initially_supplied: { hull_plate: 40 },
+      materials_gathered: { hull_plate: 40, circuit_board: 5 },
+    },
+  ],
+  count: 1,
+};
+
 // credits_only = material + labor + yard + tax; provide_materials = labor + yard + tax;
 // partial_sourcing = labor + yard + tax + sourcing
 export const commissionQuoteFixture = {
@@ -687,6 +708,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   view_orders: { command: 'view_orders', fixture: marketOrdersFixture },
   commission_status: { command: 'commission_status', fixture: commissionStatusFixture },
   commission_status_empty: { command: 'commission_status', fixture: emptyCommissionStatusFixture },
+  commission_status_sourcing: { command: 'commission_status', fixture: commissionStatusSourcingFixture },
   commission_quote: { command: 'commission_quote', fixture: commissionQuoteFixture },
   commission_quote_credits_only: {
     command: 'commission_quote',
