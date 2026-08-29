@@ -30,7 +30,9 @@
         "quantity": 20,
         "size": 1
       }
-    ]
+    ],
+    "auto_docked": true,
+    "auto_undocked": false
   },
   "player": {
     "username": "Marlowe",
