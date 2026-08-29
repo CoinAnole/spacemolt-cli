@@ -112,7 +112,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   leave_faction: 'Leave your faction',
   list_ship_for_sale: 'List a stored ship for sale on the exchange',
   list_ships:
-    'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <ship_id> for the full fit of a parked, garaged, or carried hull.',
+    'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',
   loot_wreck: 'Loot wreck cargo into your hold, or fit a module onto your ship with module_id=.',
   modify_order: 'Change the price on an existing order',

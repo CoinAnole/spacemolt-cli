@@ -18,4 +18,4 @@ Used: 1/4
   Name         | Class      | ID          | Depositor | Tick 
   -------------+------------+-------------+-----------+------
   Rock Skipper | Prospector | ship-garage | Ibis      | 12050
-Use get_ship <ship_id> for the full fit.
+Use get_ship <id> for the full fit.

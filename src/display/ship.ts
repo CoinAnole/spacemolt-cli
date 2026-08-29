@@ -282,7 +282,7 @@ export const shipFormatters = [
       }
 
       emitFactionGarage(r, garage);
-      emitLine(`${c.dim}Use get_ship <ship_id> for the full fit.${c.reset}`);
+      emitLine(`${c.dim}Use get_ship <id> for the full fit.${c.reset}`);
       if (typeof r.message === 'string' && r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
