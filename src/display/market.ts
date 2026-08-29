@@ -453,6 +453,17 @@ function printCommissionMaterials(title: string, value: unknown): void {
   ]);
 }
 
+function formatCommissionShipyardTier(here: unknown, required: unknown): string | undefined {
+  const hereTier =
+    isRecord(here) || Array.isArray(here) || isMissingDisplayValue(here) ? undefined : finiteNumber(here);
+  const requiredTier =
+    isRecord(required) || Array.isArray(required) || isMissingDisplayValue(required)
+      ? undefined
+      : finiteNumber(required);
+  if (hereTier === undefined && requiredTier === undefined) return undefined;
+  return `${hereTier ?? '?'}/${requiredTier ?? '?'}`;
+}
+
 function formatCommissionShip(r: Record<string, unknown>): boolean {
   if (r.commission_id === undefined && r.ship_class === undefined) return false;
 
@@ -485,6 +496,65 @@ function formatCommissionShip(r: Record<string, unknown>): boolean {
   if (autoDocked) emitLine(`Auto-docked: ${autoDocked}`);
   const autoUndocked = formatYesNoBoolean(r.auto_undocked);
   if (autoUndocked) emitLine(`Auto-undocked: ${autoUndocked}`);
+  printCommissionMaterials('Materials Supplied', r.materials_supplied);
+  printCommissionMaterials('Materials To Source', r.materials_to_source);
+  return true;
+}
+
+function formatCommissionQuote(r: Record<string, unknown>): boolean {
+  if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
+    return false;
+  }
+  if (r.can_commission === undefined && r.material_cost === undefined && !Array.isArray(r.build_materials)) {
+    return false;
+  }
+
+  emitLine(`\n${c.bright}=== Commission Quote ===${c.reset}`);
+  const message = scalarDisplayString(r.message);
+  if (message) emitLine(message);
+  const shipName = scalarDisplayString(r.ship_name);
+  const shipClass = scalarDisplayString(r.ship_class);
+  if (shipName || shipClass) {
+    emitLine(`Ship: ${shipName ?? shipClass}${shipClass && shipName ? ` (${shipClass})` : ''}`);
+  }
+  const shipyardTier = formatCommissionShipyardTier(r.shipyard_tier_here, r.shipyard_tier_required);
+  if (shipyardTier) emitLine(`Shipyard tier: ${shipyardTier}`);
+  const bareHull = formatYesNoBoolean(r.bare_hull);
+  if (bareHull) emitLine(`Bare hull: ${bareHull}`);
+  const sourcing = formatYesNoBoolean(r.source_missing_materials);
+  if (sourcing) emitLine(`Source missing materials: ${sourcing}`);
+  const factionFundedOnly = formatYesNoBoolean(r.faction_funded_only);
+  if (factionFundedOnly) emitLine(`Faction funded only: ${factionFundedOnly}`);
+  if (!isMissingDisplayValue(r.build_time)) {
+    const buildTime = finiteNumber(r.build_time);
+    if (buildTime !== undefined) emitLine(`Build time: ${buildTime.toLocaleString()} ticks`);
+  }
+  emitCommissionCredit('Materials', r.material_cost);
+  emitCommissionCredit('Labor', r.labor_cost);
+  emitCommissionCredit('Yard fee', r.yard_margin);
+  emitCommissionCredit('Sales tax', r.sales_tax);
+  emitCommissionCredit('Credits-only total', r.credits_only_total);
+  emitCommissionCredit('Provide-materials total', r.provide_materials_total);
+  emitCommissionCredit('Sourcing cost', r.sourcing_material_cost);
+  emitCommissionCredit('Partial-sourcing total', r.partial_sourcing_total);
+  emitCommissionCredit('Your credits', r.player_credits);
+  const canCommission = formatYesNoBoolean(r.can_commission);
+  if (canCommission) emitLine(`Can commission: ${canCommission}`);
+  const creditsOnlyAvailable = formatYesNoBoolean(r.credits_only_available);
+  if (creditsOnlyAvailable) emitLine(`Credits-only available: ${creditsOnlyAvailable}`);
+  const affordCreditsOnly = formatYesNoBoolean(r.can_afford_credits_only);
+  if (affordCreditsOnly) emitLine(`Afford credits-only: ${affordCreditsOnly}`);
+  const affordProvideMaterials = formatYesNoBoolean(r.can_afford_provide_materials);
+  if (affordProvideMaterials) emitLine(`Afford provide-materials: ${affordProvideMaterials}`);
+  const affordPartialSourcing = formatYesNoBoolean(r.can_afford_partial_sourcing);
+  if (affordPartialSourcing) emitLine(`Afford partial-sourcing: ${affordPartialSourcing}`);
+  if (Array.isArray(r.blockers) && r.blockers.length) {
+    const blockers = r.blockers
+      .filter((entry) => typeof entry === 'string' || (typeof entry === 'number' && Number.isFinite(entry)))
+      .map(String);
+    if (blockers.length) emitLine(`Blockers: ${blockers.join('; ')}`);
+  }
+  printCommissionMaterials('Build Materials', r.build_materials);
   printCommissionMaterials('Materials Supplied', r.materials_supplied);
   printCommissionMaterials('Materials To Source', r.materials_to_source);
   return true;
@@ -907,59 +977,9 @@ export const marketFormatters = [
     commands: ['commission_ship'],
   }),
 
-  // Commission quote (includes yard_margin; build_materials items use size, not inventory "have")
-  formatter(
-    (r) => {
-      if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
-        return false;
-      }
-      if (r.can_commission === undefined && r.material_cost === undefined && !Array.isArray(r.build_materials)) {
-        return false;
-      }
-
-      emitLine(`\n${c.bright}=== Commission Quote ===${c.reset}`);
-      if (r.message) emitLine(String(r.message));
-      if (r.ship_name || r.ship_class) {
-        emitLine(`Ship: ${r.ship_name ?? r.ship_class}${r.ship_class && r.ship_name ? ` (${r.ship_class})` : ''}`);
-      }
-      if (r.shipyard_tier_here !== undefined || r.shipyard_tier_required !== undefined) {
-        emitLine(`Shipyard tier: ${r.shipyard_tier_here ?? '?'}/${r.shipyard_tier_required ?? '?'}`);
-      }
-      if (r.build_time !== undefined) emitLine(`Build time: ${r.build_time} ticks`);
-      if (r.material_cost !== undefined) emitLine(`Materials: ${formatCreditCell(r.material_cost)}`);
-      if (r.labor_cost !== undefined) emitLine(`Labor: ${formatCreditCell(r.labor_cost)}`);
-      if (r.yard_margin !== undefined) emitLine(`Yard fee: ${formatCreditCell(r.yard_margin)}`);
-      if (r.credits_only_total !== undefined) emitLine(`Credits-only total: ${formatCreditCell(r.credits_only_total)}`);
-      if (r.provide_materials_total !== undefined) {
-        emitLine(`Provide-materials total: ${formatCreditCell(r.provide_materials_total)}`);
-      }
-      if (r.player_credits !== undefined) emitLine(`Your credits: ${formatCreditCell(r.player_credits)}`);
-      if (r.can_commission !== undefined) emitLine(`Can commission: ${r.can_commission ? 'yes' : 'no'}`);
-      if (r.credits_only_available !== undefined) {
-        emitLine(`Credits-only available: ${r.credits_only_available ? 'yes' : 'no'}`);
-      }
-      if (r.can_afford_credits_only !== undefined) {
-        emitLine(`Afford credits-only: ${r.can_afford_credits_only ? 'yes' : 'no'}`);
-      }
-      if (r.can_afford_provide_materials !== undefined) {
-        emitLine(`Afford provide-materials: ${r.can_afford_provide_materials ? 'yes' : 'no'}`);
-      }
-      const blockers = firstArray(r, ['blockers']);
-      if (blockers?.length) {
-        emitLine(`Blockers: ${blockers.map(String).join('; ')}`);
-      }
-      const materials = firstArray(r, ['build_materials']);
-      if (materials) {
-        printCompactTable('Build Materials', materials, [
-          ['Item', ['name', 'item_id']],
-          ['Qty', ['quantity', 'amount']],
-          ['Size', ['size']],
-        ]);
-      }
-      return true;
-    },
-    { commands: ['commission_quote'] },
-  ),
+  namedFormatter('commission_quote', ['ship_class', 'credits_only_total'], formatCommissionQuote, {
+    commands: ['commission_quote'],
+  }),
 
   // Insurance quote
   formatter(
