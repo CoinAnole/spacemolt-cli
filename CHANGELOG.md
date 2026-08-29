@@ -4,6 +4,10 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### commission_quote table (gameserver 0.569)
+
+- `help commission_quote` Usage lists `bare_hull` and `source_missing_materials`.
+
 ### commission_ship table receipt (gameserver 0.569)
 
 - Human `commission_ship` prints a dedicated receipt (hull/sourcing modes, costs, supplied / to-source

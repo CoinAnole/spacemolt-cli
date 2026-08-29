@@ -131,7 +131,11 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['ship_class', 'provide_materials'],
   },
   commission_quote: {
-    usage: '<ship_class>',
+    usage: '<ship_class> [bare_hull=true/false] [source_missing_materials=true/false]',
+    description:
+      'Get a cost estimate for commissioning a ship at this shipyard without placing an order. bare_hull=true quotes the hull without its default module loadout; source_missing_materials=true previews stacks taken from cargo then station storage, the remaining deficit, and the partial-sourcing total.',
+    example: 'spacemolt commission_quote viper source_missing_materials=true',
+    seeAlso: ['commission_ship', 'commission_status'],
     category: 'Shipyard',
     apiRoute: 'POST /api/v2/spacemolt_ship/commission_quote',
     positionals: ['ship_class'],

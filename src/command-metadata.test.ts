@@ -623,6 +623,31 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('fund_from_faction');
   });
 
+  test('commission_quote documents bare_hull and source_missing_materials', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.commission_quote;
+    expect(config?.usage).toContain('<ship_class>');
+    expect(config?.usage).toContain('bare_hull=true/false');
+    expect(config?.usage).toContain('source_missing_materials=true/false');
+    expect(config?.description).toContain('bare_hull=true quotes the hull without its default module loadout');
+    expect(config?.description).toContain(
+      'source_missing_materials=true previews stacks taken from cargo then station storage',
+    );
+    expect(config?.description).not.toContain('provide_materials');
+    expect(config?.example).toBe('spacemolt commission_quote viper source_missing_materials=true');
+    expect(config?.seeAlso).toEqual(['commission_ship', 'commission_status']);
+    expect(config?.args).toEqual(['ship_class']);
+
+    const help = captureHelp('commission_quote');
+    expect(help).toContain('<ship_class> [bare_hull=true/false] [source_missing_materials=true/false]');
+    expect(help).toContain('bare_hull=true quotes the hull without its default module loadout');
+    expect(help).toContain('If true, quote the hull without its default module loadout.');
+    expect(help).toContain(
+      'Preview the materials you can contribute, the remaining deficit, and partial-sourcing total.',
+    );
+    expect(help).toContain('spacemolt commission_quote viper source_missing_materials=true');
+    expect(help).not.toContain('provide_materials');
+  });
+
   test('craft help documents queued station-storage production and packages', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(config?.args).toEqual(['recipe_id', 'quantity']);

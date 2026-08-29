@@ -1295,6 +1295,32 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       id: 'prospector',
       fund_from_faction: true,
     });
+    expect(
+      convertPayloadTypes(
+        normalizeParsedPayload(
+          'commission_quote',
+          parseOk(['commission_quote', 'viper', 'bare_hull=true', 'source_missing_materials=true']).payload,
+        ),
+        'commission_quote',
+      ),
+    ).toEqual({
+      id: 'viper',
+      bare_hull: true,
+      source_missing_materials: true,
+    });
+    expect(
+      convertPayloadTypes(
+        normalizeParsedPayload(
+          'commission_quote',
+          parseOk(['commission_quote', 'viper', '--bare-hull', '--source-missing-materials']).payload,
+        ),
+        'commission_quote',
+      ),
+    ).toEqual({
+      id: 'viper',
+      bare_hull: true,
+      source_missing_materials: true,
+    });
 
     expect(parseInternalOk(['station_info']).payload).toEqual({});
     expect(parseInternalOk(['station_set_name', 'Aurora Freeport']).payload).toEqual({
