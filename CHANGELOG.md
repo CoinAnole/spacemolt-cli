@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### commission_status table (gameserver 0.569)
+
+- Human `commission_status` prints a **Bare hull** column (`yes`/`no`) when any row has a boolean
+  `bare_hull`. An optional **Sourcing** column (`yes`/`no`) appears when any row has
+  `source_missing_materials` (the default curated golden still omits it).
+- **Materials** cells print `yes`/`no` instead of `true`/`false`. Scripts that scrape the human
+  Materials cell for `true` must switch to `yes`. JSON/YAML/jq field names are unchanged.
+
 ### commission_quote table (gameserver 0.569)
 
 - Human `commission_quote` prints bare-hull / partial-sourcing flags, sales tax,

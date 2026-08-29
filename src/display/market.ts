@@ -453,6 +453,35 @@ function printCommissionMaterials(title: string, value: unknown): void {
   ]);
 }
 
+function commissionsHaveBoolean(rows: Array<Record<string, unknown>>, field: string): boolean {
+  return rows.some((row) => typeof row[field] === 'boolean');
+}
+
+function projectCommissionStatusRow(commission: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...commission,
+    bare_hull_display: formatYesNoBoolean(commission.bare_hull) ?? '',
+    sourcing_display: formatYesNoBoolean(commission.source_missing_materials) ?? '',
+    materials_provided_display: formatYesNoBoolean(commission.materials_provided) ?? '',
+  };
+}
+
+function commissionStatusColumns(records: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Ship', ['ship_name', 'ship_class_id']],
+    ['Status', ['status']],
+    ['Station', ['base_name', 'base_id']],
+    ['Ticks', ['ticks_remaining']],
+    ['Materials', ['materials_provided_display']],
+  ];
+  if (commissionsHaveBoolean(records, 'bare_hull')) columns.push(['Bare hull', ['bare_hull_display']]);
+  if (commissionsHaveBoolean(records, 'source_missing_materials')) {
+    columns.push(['Sourcing', ['sourcing_display']]);
+  }
+  columns.push(['ID', ['commission_id']]);
+  return columns;
+}
+
 function formatCommissionShipyardTier(here: unknown, required: unknown): string | undefined {
   const hereTier =
     isRecord(here) || Array.isArray(here) || isMissingDisplayValue(here) ? undefined : finiteNumber(here);
@@ -959,14 +988,9 @@ export const marketFormatters = [
     (r) => {
       const commissions = firstArray(r, ['commissions']);
       if (!commissions) return false;
-      printCompactTable('Commissions', commissions, [
-        ['Ship', ['ship_name', 'ship_class_id']],
-        ['Status', ['status']],
-        ['Station', ['base_name', 'base_id']],
-        ['Ticks', ['ticks_remaining']],
-        ['Materials', ['materials_provided']],
-        ['ID', ['commission_id']],
-      ]);
+      const records = commissions.filter(isRecord);
+      const rows = records.map(projectCommissionStatusRow);
+      printCompactTable('Commissions', rows, commissionStatusColumns(records), { maxCellWidth: 32 });
       if (r.count !== undefined && commissions.length !== r.count) emitLine(`${c.dim}count ${r.count}${c.reset}`);
       return true;
     },
