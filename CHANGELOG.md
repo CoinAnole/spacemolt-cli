@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### commission_ship table receipt (gameserver 0.569)
+
+- Human `commission_ship` prints a dedicated receipt (hull/sourcing modes, costs, supplied / to-source
+  tables) instead of the generic scalar dump or `=== Response ===` JSON. Table labels changed
+  (`Commission Id:` → `ID:`; credits as `N cr`). `--json` / `--yaml` / `--jq` field names are unchanged.
+
 ### get_ship remote fleet reads (gameserver 0.568.0)
 
 - `get_ship` accepts optional `ship_id` (alias of `id`); omit for the flying hull. Copy the ID from
