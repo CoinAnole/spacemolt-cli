@@ -6,6 +6,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ### commission_quote table (gameserver 0.569)
 
+- Human `commission_quote` prints bare-hull / partial-sourcing flags, sales tax,
+  faction-funded-only, sourcing cost, partial-sourcing total, afford-partial, and
+  Materials Supplied / Materials To Source tables when the server sends them.
+  Credits-only and provide-materials lines are unchanged. JSON/YAML/jq field names
+  are unchanged.
 - `help commission_quote` Usage lists `bare_hull` and `source_missing_materials`.
 
 ### commission_ship table receipt (gameserver 0.569)

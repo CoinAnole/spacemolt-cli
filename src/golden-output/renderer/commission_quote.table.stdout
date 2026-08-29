@@ -3,21 +3,40 @@
 Commission quote ready.
 Ship: Lucky Strike (prospector)
 Shipyard tier: 2/1
+Bare hull: no
+Source missing materials: yes
+Faction funded only: no
 Build time: 48 ticks
 Materials: 70,000 cr
 Labor: 40,000 cr
 Yard fee: 15,000 cr
-Credits-only total: 125,000 cr
-Provide-materials total: 45,000 cr
+Sales tax: 2,500 cr
+Credits-only total: 127,500 cr
+Provide-materials total: 57,500 cr
+Sourcing cost: 18,000 cr
+Partial-sourcing total: 75,500 cr
 Your credits: 200,000 cr
 Can commission: yes
 Credits-only available: yes
 Afford credits-only: yes
 Afford provide-materials: yes
+Afford partial-sourcing: yes
 
 === Build Materials ===
 
   Item          | Qty | Size
   --------------+-----+-----
   Hull Plate    | 40  | 2   
+  Circuit Board | 20  | 1   
+
+=== Materials Supplied ===
+
+  Item       | Qty | Size
+  -----------+-----+-----
+  Hull Plate | 40  | 2   
+
+=== Materials To Source ===
+
+  Item          | Qty | Size
+  --------------+-----+-----
   Circuit Board | 20  | 1   

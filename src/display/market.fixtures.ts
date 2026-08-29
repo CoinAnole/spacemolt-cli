@@ -425,19 +425,28 @@ export const emptyCommissionStatusFixture = {
   count: 0,
 };
 
+// credits_only = material + labor + yard + tax; provide_materials = labor + yard + tax;
+// partial_sourcing = labor + yard + tax + sourcing
 export const commissionQuoteFixture = {
   message: 'Commission quote ready.',
   ship_class: 'prospector',
   ship_name: 'Lucky Strike',
   can_commission: true,
-  credits_only_total: 125000,
-  provide_materials_total: 45000,
+  credits_only_total: 127500,
+  provide_materials_total: 57500,
   credits_only_available: true,
   can_afford_credits_only: true,
   can_afford_provide_materials: true,
+  can_afford_partial_sourcing: true,
+  bare_hull: false,
+  source_missing_materials: true,
+  faction_funded_only: false,
   material_cost: 70000,
   labor_cost: 40000,
   yard_margin: 15000,
+  sales_tax: 2500,
+  sourcing_material_cost: 18000,
+  partial_sourcing_total: 75500,
   build_time: 48,
   player_credits: 200000,
   shipyard_tier_here: 2,
@@ -447,6 +456,8 @@ export const commissionQuoteFixture = {
     { item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 },
     { item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, size: 1 },
   ],
+  materials_supplied: [{ item_id: 'hull_plate', name: 'Hull Plate', quantity: 40, size: 2 }],
+  materials_to_source: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 20, size: 1 }],
 };
 
 export const commissionShipFixture = {
