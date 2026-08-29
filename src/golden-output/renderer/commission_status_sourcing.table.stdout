@@ -1,0 +1,13 @@
+
+=== Commissions ===
+
+  Ship      | Status  | Station       | Ticks | Materials | Bare hull | Sourcing | ID          
+  ----------+---------+---------------+-------+-----------+-----------+----------+-------------
+  Bare Fang | pending | Earth Station | 48    | no        | yes       | yes      | commission-2
+
+=== Materials: Bare Fang (commission-2) ===
+
+  Item          | Required | Supplied | Gathered
+  --------------+----------+----------+---------
+  circuit_board | 20       | 0        | 5       
+  hull_plate    | 40       | 40       | 40      

@@ -482,6 +482,80 @@ function commissionStatusColumns(records: Array<Record<string, unknown>>): Array
   return columns;
 }
 
+function integerQuantityMap(value: unknown): Map<string, number> | undefined {
+  if (!isRecord(value)) return undefined;
+  const map = new Map<string, number>();
+  for (const [itemId, raw] of Object.entries(value)) {
+    if (!itemId) continue;
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0) continue;
+    map.set(itemId, raw);
+  }
+  return map;
+}
+
+function mapQuantity(map: Map<string, number> | undefined, itemId: string): number | undefined {
+  if (!map) return undefined;
+  return map.get(itemId) ?? 0;
+}
+
+function commissionStatusMaterialsTitle(commission: Record<string, unknown>): string {
+  const shipName = scalarDisplayString(commission.ship_name);
+  const commissionId = scalarDisplayString(commission.commission_id);
+  const shipClassId = scalarDisplayString(commission.ship_class_id);
+  if (shipName && commissionId && shipName !== commissionId) return `${shipName} (${commissionId})`;
+  if (shipClassId && commissionId && shipClassId !== commissionId) return `${shipClassId} (${commissionId})`;
+  return commissionId ?? shipName ?? shipClassId ?? 'unknown';
+}
+
+function projectCommissionStatusMaterialRow(joined: {
+  item_id: string;
+  required: number | undefined;
+  supplied: number | undefined;
+  gathered: number | undefined;
+}): Record<string, unknown> {
+  return {
+    item_id: joined.item_id,
+    required_display: formatDisplayNumber(joined.required),
+    supplied_display: formatDisplayNumber(joined.supplied),
+    gathered_display: formatDisplayNumber(joined.gathered),
+  };
+}
+
+function printCommissionStatusMaterials(commission: Record<string, unknown>): void {
+  const required = integerQuantityMap(commission.required_materials);
+  const supplied = integerQuantityMap(commission.materials_initially_supplied);
+  const gathered = integerQuantityMap(commission.materials_gathered);
+  const ids = [
+    ...new Set([
+      ...(required ? required.keys() : []),
+      ...(supplied ? supplied.keys() : []),
+      ...(gathered ? gathered.keys() : []),
+    ]),
+  ];
+  ids.sort();
+  const joined = ids
+    .filter((itemId) => itemId)
+    .map((item_id) => ({
+      item_id,
+      required: mapQuantity(required, item_id),
+      supplied: mapQuantity(supplied, item_id),
+      gathered: mapQuantity(gathered, item_id),
+    }));
+  if (!joined.length) return;
+
+  const columns: Array<[string, string[]]> = [['Item', ['item_id']]];
+  if (joined.some((row) => row.required !== undefined)) columns.push(['Required', ['required_display']]);
+  if (joined.some((row) => row.supplied !== undefined)) columns.push(['Supplied', ['supplied_display']]);
+  if (joined.some((row) => row.gathered !== undefined)) columns.push(['Gathered', ['gathered_display']]);
+
+  printCompactTable(
+    `Materials: ${commissionStatusMaterialsTitle(commission)}`,
+    joined.map(projectCommissionStatusMaterialRow),
+    columns,
+    { maxCellWidth: 48 },
+  );
+}
+
 function formatCommissionShipyardTier(here: unknown, required: unknown): string | undefined {
   const hereTier =
     isRecord(here) || Array.isArray(here) || isMissingDisplayValue(here) ? undefined : finiteNumber(here);
@@ -991,6 +1065,9 @@ export const marketFormatters = [
       const records = commissions.filter(isRecord);
       const rows = records.map(projectCommissionStatusRow);
       printCompactTable('Commissions', rows, commissionStatusColumns(records), { maxCellWidth: 32 });
+      for (const commission of records) {
+        printCommissionStatusMaterials(commission);
+      }
       if (r.count !== undefined && commissions.length !== r.count) emitLine(`${c.dim}count ${r.count}${c.reset}`);
       return true;
     },

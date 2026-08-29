@@ -11,6 +11,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `source_missing_materials` (the default curated golden still omits it).
 - **Materials** cells print `yes`/`no` instead of `true`/`false`. Scripts that scrape the human
   Materials cell for `true` must switch to `yes`. JSON/YAML/jq field names are unchanged.
+- When a commission includes printable material maps, a follow-on table lists **Item**, **Required**,
+  **Supplied**, and **Gathered** from the server maps only (no **Missing** header). The section is
+  omitted when maps are absent, empty, or unparsable.
 
 ### commission_quote table (gameserver 0.569)
 
