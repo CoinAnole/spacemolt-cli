@@ -415,6 +415,7 @@ export const commissionStatusFixture = {
       base_name: 'Earth Station',
       ticks_remaining: 12,
       materials_provided: true,
+      bare_hull: false,
     },
   ],
   count: 1,

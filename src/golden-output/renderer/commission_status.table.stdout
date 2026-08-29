@@ -1,6 +1,6 @@
 
 === Commissions ===
 
-  Ship         | Status   | Station       | Ticks | Materials | ID          
-  -------------+----------+---------------+-------+-----------+-------------
-  Lucky Strike | building | Earth Station | 12    | true      | commission-1
+  Ship         | Status   | Station       | Ticks | Materials | Bare hull | ID          
+  -------------+----------+---------------+-------+-----------+-----------+-------------
+  Lucky Strike | building | Earth Station | 12    | yes       | no        | commission-1

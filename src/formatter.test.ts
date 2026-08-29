@@ -50,6 +50,8 @@ import {
   commissionQuoteFixture,
   commissionShipCreditsOnlyFixture,
   commissionShipFixture,
+  commissionStatusFixture,
+  emptyCommissionStatusFixture,
 } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
@@ -3965,6 +3967,210 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('Afford partial-sourcing:');
     expect(stdout).not.toContain('=== Materials Supplied ===');
     expect(stdout).not.toContain('=== Materials To Source ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints commission_status Bare hull no without a Sourcing column', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', commissionStatusFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commissions ===');
+    expect(stdout).toContain('Bare hull');
+    expect(stdout).not.toContain('Sourcing');
+    expect(stdout).toContain('yes');
+    expect(stdout).toContain('no');
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Materials'));
+    expect(header).toBeDefined();
+    expect(header).toContain('Bare hull');
+    expect(header).not.toContain('Sourcing');
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Lucky Strike'));
+    expect(row).toBeDefined();
+    expect(row).toMatch(/yes\s+\|\s+no\s+\|\s+commission-1/);
+    expect(stdout).not.toContain('=== Materials:');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints commission_status Sourcing yes or no without material maps', () => {
+    const yesFlags = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          base_name: 'Earth Station',
+          ticks_remaining: 48,
+          materials_provided: false,
+          bare_hull: true,
+          source_missing_materials: true,
+        },
+      ],
+      count: 1,
+    });
+    const noSourcing = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          base_name: 'Earth Station',
+          ticks_remaining: 48,
+          materials_provided: false,
+          bare_hull: true,
+          source_missing_materials: false,
+        },
+      ],
+      count: 1,
+    });
+
+    expect(yesFlags.stderr).toBe('');
+    expect(noSourcing.stderr).toBe('');
+    const yesHeader = yesFlags.stdout.split('\n').find((line) => line.includes('|') && line.includes('Sourcing'));
+    expect(yesHeader).toBeDefined();
+    expect(yesHeader).toContain('Bare hull');
+    expect(yesHeader).toContain('Sourcing');
+    const yesRow = yesFlags.stdout.split('\n').find((line) => line.includes('|') && line.includes('Bare Fang'));
+    expect(yesRow).toBeDefined();
+    expect(yesRow).toMatch(/no\s+\|\s+yes\s+\|\s+yes\s+\|\s+commission-2/);
+    expect(yesFlags.stdout).not.toContain('=== Materials:');
+    expect(yesFlags.stdout).not.toContain('[object Object]');
+    expect(yesFlags.stdout).not.toContain('=== Response ===');
+
+    const noHeader = noSourcing.stdout.split('\n').find((line) => line.includes('|') && line.includes('Sourcing'));
+    expect(noHeader).toBeDefined();
+    expect(noHeader).toContain('Sourcing');
+    const noRow = noSourcing.stdout.split('\n').find((line) => line.includes('|') && line.includes('Bare Fang'));
+    expect(noRow).toBeDefined();
+    expect(noRow).toMatch(/no\s+\|\s+yes\s+\|\s+no\s+\|\s+commission-2/);
+    expect(noSourcing.stdout).not.toContain('=== Materials:');
+    expect(noSourcing.stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats a pre-0.569 commission_status without Bare hull or Sourcing', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-1',
+          ship_class_id: 'prospector',
+          ship_name: 'Lucky Strike',
+          status: 'building',
+          base_name: 'Earth Station',
+          ticks_remaining: 12,
+          materials_provided: true,
+        },
+      ],
+      count: 1,
+    });
+
+    expect(stderr).toBe('');
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Materials'));
+    expect(header).toBeDefined();
+    expect(header).not.toContain('Bare hull');
+    expect(header).not.toContain('Sourcing');
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Lucky Strike'));
+    expect(row).toBeDefined();
+    expect(row).toMatch(/yes\s+\|\s+commission-1/);
+    expect(stdout).not.toContain('=== Materials:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints empty commission_status as (None) without optional flag columns', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', emptyCommissionStatusFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Commissions ===');
+    expect(stdout).toContain('(None)');
+    expect(stdout).not.toContain('Bare hull');
+    expect(stdout).not.toContain('Sourcing');
+    expect(stdout).not.toContain('=== Materials:');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('keeps mixed commission_status Bare hull and Sourcing columns with blank sibling cells', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        {
+          commission_id: 'commission-1',
+          ship_class_id: 'viper',
+          ship_name: 'Bare Fang',
+          status: 'pending',
+          base_name: 'Earth Station',
+          ticks_remaining: 48,
+          materials_provided: false,
+          bare_hull: true,
+          source_missing_materials: true,
+        },
+        {
+          commission_id: 'commission-2',
+          ship_class_id: 'prospector',
+          ship_name: 'Lucky Strike',
+          status: 'building',
+          base_name: 'Earth Station',
+          ticks_remaining: 12,
+          materials_provided: true,
+        },
+      ],
+      count: 2,
+    });
+
+    expect(stderr).toBe('');
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Bare hull'));
+    expect(header).toBeDefined();
+    expect(header).toContain('Sourcing');
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const headers = cells(header ?? '');
+    const bareIndex = headers.indexOf('Bare hull');
+    const sourcingIndex = headers.indexOf('Sourcing');
+    expect(bareIndex).toBeGreaterThan(-1);
+    expect(sourcingIndex).toBeGreaterThan(-1);
+    const first = stdout.split('\n').find((line) => line.includes('|') && line.includes('Bare Fang'));
+    const second = stdout.split('\n').find((line) => line.includes('|') && line.includes('Lucky Strike'));
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    expect(cells(first ?? '')[bareIndex]).toBe('yes');
+    expect(cells(first ?? '')[sourcingIndex]).toBe('yes');
+    expect(cells(second ?? '')[bareIndex]).toBe('');
+    expect(cells(second ?? '')[sourcingIndex]).toBe('');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('skips malformed commission_status array entries and prints remaining rows', () => {
+    const { stdout, stderr } = captureStructuredOutput('commission_status', {
+      commissions: [
+        'not-a-commission',
+        null,
+        {
+          commission_id: 'commission-1',
+          ship_class_id: 'prospector',
+          ship_name: 'Lucky Strike',
+          status: 'building',
+          base_name: 'Earth Station',
+          ticks_remaining: 12,
+          materials_provided: true,
+          bare_hull: false,
+        },
+      ],
+      count: 3,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Lucky Strike');
+    expect(stdout).not.toContain('not-a-commission');
+    expect(stdout).toContain('Bare hull');
+    expect(stdout).toMatch(/yes\s+\|\s+no\s+\|\s+commission-1/);
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('undefined');
+    expect(stdout).not.toContain('NaN');
     expect(stdout).not.toContain('=== Response ===');
   });
 
