@@ -452,6 +452,49 @@ export const shipFixtureCases = {
   drones: { command: 'list_drones', fixture: dronesFixture },
 };
 
+export const factionGaragesFixture = {
+  station_count: 2,
+  total_ships: 2,
+  stations: [
+    {
+      base_id: 'nova_terra_central',
+      base_name: 'Nova Terra Central',
+      system_name: 'Sol',
+      used: 1,
+      capacity: 4,
+      ships: [
+        {
+          ship_id: 'ship-garage',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          custom_name: 'Rock Skipper',
+          depositor_id: 'player-1',
+          depositor_name: 'Ibis',
+          deposited_tick: 12050,
+        },
+      ],
+    },
+    {
+      base_id: 'alpha_centauri_colonial_station',
+      base_name: 'Alpha Centauri Colonial Station',
+      system_name: 'Alpha Centauri',
+      used: 1,
+      capacity: 2,
+      ships: [
+        {
+          ship_id: 'ship-garaged-1',
+          class_id: 'deep_survey',
+          class_name: 'Deep Survey',
+          custom_name: 'Claim Candidate',
+          depositor_id: 'player-2',
+          depositor_name: 'Fabrini',
+          deposited_tick: 12100,
+        },
+      ],
+    },
+  ],
+};
+
 export const listShipsFixture = {
   count: 2,
   active_ship_id: 'ship-active',
@@ -521,4 +564,5 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
   list_ships: { command: 'list_ships', fixture: listShipsFixture },
+  faction_garages: { command: 'faction_garages', fixture: factionGaragesFixture },
 };

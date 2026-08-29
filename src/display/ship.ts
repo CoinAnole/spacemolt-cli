@@ -134,6 +134,25 @@ function activeShipLabel(result: Record<string, unknown>, ships: Array<Record<st
   return id;
 }
 
+const FACTION_GARAGE_SHIP_COLUMNS: Array<[string, string[]]> = [
+  ['Name', ['custom_name', 'class_name', 'class_id']],
+  ['Class', ['class_name', 'class_id']],
+  ['ID', ['ship_id']],
+  ['Depositor', ['depositor_name', 'depositor_id']],
+  ['Tick', ['deposited_tick']],
+];
+
+function stationGarageTitle(station: Record<string, unknown>): string {
+  const id = typeof station.base_id === 'string' && station.base_id ? station.base_id : '';
+  const name = typeof station.base_name === 'string' && station.base_name ? station.base_name : '';
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name || id || 'unknown';
+}
+
+function emitFactionGarageShips(ships: Array<Record<string, unknown>>): void {
+  emitLines(formatCompactTable('Ships', ships, FACTION_GARAGE_SHIP_COLUMNS, { maxCellWidth: 40 }).slice(1));
+}
+
 function emitFactionGarage(result: Record<string, unknown>, garage: Array<Record<string, unknown>> | undefined): void {
   const usedPresent = result.faction_garage_used !== undefined;
   const capacityPresent = result.faction_garage_capacity !== undefined;
@@ -146,19 +165,7 @@ function emitFactionGarage(result: Record<string, unknown>, garage: Array<Record
     emitLine(`Used: ${used}/${capacity}`);
   }
 
-  const lines = formatCompactTable(
-    'Faction garage',
-    garage ?? [],
-    [
-      ['Name', ['custom_name', 'class_name', 'class_id']],
-      ['Class', ['class_name', 'class_id']],
-      ['ID', ['ship_id']],
-      ['Depositor', ['depositor_name', 'depositor_id']],
-      ['Tick', ['deposited_tick']],
-    ],
-    { maxCellWidth: 40 },
-  );
-  emitLines(lines.slice(1));
+  emitFactionGarageShips(garage ?? []);
 }
 
 function formatPerFuel(value: number): string {
@@ -287,6 +294,29 @@ export const shipFormatters = [
       return true;
     },
     { commands: ['list_ships'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.stations)) return false;
+
+      const stations = r.stations.filter(isRecord);
+      emitLine(`\n${c.bright}=== Faction garages ===${c.reset}`);
+      emitLine(`Stations: ${r.station_count ?? stations.length}`);
+      emitLine(`Ships: ${r.total_ships ?? '?'}`);
+
+      for (const station of stations) {
+        emitLine(`\n${c.bright}=== ${stationGarageTitle(station)} ===${c.reset}`);
+        if (typeof station.system_name === 'string' && station.system_name) {
+          emitLine(`System: ${station.system_name}`);
+        }
+        emitLine(`Used: ${station.used ?? '?'}/${station.capacity ?? '?'}`);
+        const ships = Array.isArray(station.ships) ? station.ships.filter(isRecord) : [];
+        emitFactionGarageShips(ships);
+      }
+      return true;
+    },
+    { commands: ['faction_garages'] },
   ),
 
   // Ship status
