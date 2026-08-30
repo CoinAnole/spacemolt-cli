@@ -393,6 +393,63 @@ describe('shell completion generation', () => {
     }
   });
 
+  test('hidden __complete lists curated personnel and prize names only', async () => {
+    const home = tempDir();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const generatedNames = [
+      'ship_recruit_personnel',
+      'ship_treat_personnel',
+      'ship_transfer_personnel',
+      'ship_faction_personnel',
+      'salvage_claim_prize',
+      'salvage_service_prize',
+    ];
+    const curatedNames = ['recruit_personnel', 'treat_personnel', 'transfer_personnel', 'claim_prize', 'service_prize'];
+
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', ''], undefined, {
+      env: {
+        HOME: home,
+        XDG_CONFIG_HOME: path.join(home, '.config'),
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      },
+      writer: {
+        out(message = '') {
+          stdout.push(message);
+        },
+        err(message = '') {
+          stderr.push(message);
+        },
+        writeOut(chunk) {
+          stdout.push(chunk);
+        },
+      },
+      clock: { now: () => new Date('2026-07-17T00:00:00.000Z') },
+      sleep: async () => {},
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const completed = stdout.join('');
+    for (const name of curatedNames) {
+      expect(completed).toContain(`${name}\t`);
+    }
+    expect(completed).toContain('faction\t');
+    expect(completed).not.toContain('faction_personnel');
+    for (const generatedName of generatedNames) {
+      expect(completed).not.toContain(generatedName);
+    }
+
+    const personnelAction = completeWords({
+      shell: 'fish',
+      words: ['spacemolt', 'faction', 'per'],
+      current: 'per',
+    }).map((candidate) => candidate.value);
+    expect(personnelAction).toContain('personnel');
+    expect(personnelAction).not.toContain('faction_personnel');
+    expect(personnelAction).not.toContain('ship_faction_personnel');
+  });
+
   test('bundled generated commands appear in runtime and static completion', () => {
     const values = completeWords({ shell: 'fish', words: ['spacemolt', 'shipping_q'], current: 'shipping_q' }).map(
       (candidate) => candidate.value,

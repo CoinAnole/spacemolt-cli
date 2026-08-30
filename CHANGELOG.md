@@ -33,6 +33,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   the server default (`status`). Recruit and withdraw require ManageTreasury; any member may deposit.
 - Generated `ship_faction_personnel` is removed. There is no command-name alias; use the grouped form.
 
+### Full help listings (personnel and intact prizes)
+
+- `spacemolt help all` lists Personnel immediately after Combat (`recruit_personnel`, `treat_personnel`,
+  `transfer_personnel`), prize recovery only under Salvage & Tow (`claim_prize`, `service_prize`), and
+  `faction personnel` in the Faction block. Generated `ship_*` / `salvage_*` names stay out of help.
+
 ### commission_ship / commission_quote help (gameserver 0.569)
 
 - `help commission_ship` documents `bare_hull=true` (opt-in unfitted hull at NPC, empire, and faction yards) and

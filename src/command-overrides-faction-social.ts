@@ -103,7 +103,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
       'View, recruit into, deposit to, or withdraw from faction local personnel reserve. Defaults to status. Recruit and withdraw require ManageTreasury; any member may deposit.',
     example: 'spacemolt faction personnel status',
     discoverWith: ['get_status', 'get_ship', 'get_base'],
-    seeAlso: ['faction_garages', 'get_guide'],
+    seeAlso: ['recruit_personnel', 'treat_personnel', 'transfer_personnel', 'faction_garages', 'get_guide'],
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_ship/faction_personnel',
     positionals: ['personnel_action'],
