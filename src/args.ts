@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
-import type { CommandConfig, CommandFieldSchema } from './commands.ts';
+import { type CommandConfig, type CommandFieldSchema, schemaFieldForKey } from './commands.ts';
 import { type OpenApiFieldType, schemaAllowsType, schemaRequiredScalarType } from './openapi-metadata.ts';
 
 type CommandRegistrySource = Pick<CommandRegistrySnapshot, 'commands'>;
@@ -484,7 +484,7 @@ export function validatePayloadAgainstSchema(
   if (!schema) return errors;
 
   for (const [key, value] of Object.entries(payload)) {
-    const fieldSchema = schema[key];
+    const fieldSchema = schemaFieldForKey(config, key);
     if (!fieldSchema) continue;
 
     if (fieldSchema.enum && fieldSchema.enum.length > 0) {

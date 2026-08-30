@@ -23,13 +23,25 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_battle/retreat',
   },
   battle_stance: {
-    usage: '<stance>',
-    description: 'Set your battle stance (fire, evade, brace, or flee). Does not cost a tick — only reload does.',
+    usage: '<stance> [target] [marines=N]',
+    description:
+      'Set your battle stance (fire, evade, brace, flee, or board). For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does.',
+    example: 'spacemolt battle_stance board pirate-1 marines=8',
+    discoverWith: ['get_battle_status'],
+    seeAlso: ['get_battle_status', 'battle_target'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/stance',
-    positionals: ['stance'],
+    positionals: ['stance', 'target'],
     aliases: {
       stance: 'id',
+      target_id: 'target',
+    },
+    schemaExtensions: {
+      id: {
+        description:
+          'Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). Changing away from board begins non-instant withdrawal.',
+      },
+      marines: { minimum: 1 },
     },
   },
   battle_target: {

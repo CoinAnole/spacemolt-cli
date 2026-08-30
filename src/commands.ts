@@ -61,6 +61,19 @@ export interface CommandConfig {
 
 export type LocalCommandConfig = Omit<CommandConfig, 'route' | 'schema'>;
 
+export function schemaFieldForKey(
+  config: {
+    schema?: Record<string, CommandFieldSchema>;
+    aliases?: Record<string, string>;
+  },
+  key: string,
+): CommandFieldSchema | undefined {
+  const schema = config.schema;
+  if (!schema) return undefined;
+  const canonical = config.aliases?.[key] || key;
+  return schema[canonical] || schema[key];
+}
+
 export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
 
 export type CommandOverride = {
