@@ -120,6 +120,15 @@ function formatYesFlags(flags: Array<[string, unknown]>): string | undefined {
   return parts.length ? parts.join(' ') : undefined;
 }
 
+function formatJoinedIds(...values: unknown[]): string | undefined {
+  const parts = values.map(identifierText).filter((part): part is string => Boolean(part));
+  return parts.length ? parts.join(' / ') : undefined;
+}
+
+function eventCount(value: unknown): number | undefined {
+  return Array.isArray(value) && value.length ? value.length : undefined;
+}
+
 function firstNonEmptyRecords(...candidates: unknown[]): Array<Record<string, unknown>> | undefined {
   for (const candidate of candidates) {
     if (!Array.isArray(candidate) || candidate.length === 0) continue;
@@ -225,7 +234,7 @@ function personnelCasualtyRows(entries: Array<Record<string, unknown>>): Array<R
       ['applied', row.triage_applied],
       ['converted', row.triage_converted],
     ]),
-    provider_display: identifierText(row.triage_provider_id) ?? identifierText(row.triage_provider_ship_id),
+    provider_display: formatJoinedIds(row.triage_provider_id, row.triage_provider_ship_id),
   }));
 }
 
@@ -1513,9 +1522,9 @@ export const socialFormatters = [
             burns: burns || undefined,
             flee: flees || undefined,
             kills: kills || undefined,
-            boarding: Array.isArray(entry.boarding) ? entry.boarding.length : undefined,
-            captures: Array.isArray(entry.captures) ? entry.captures.length : undefined,
-            casualties: Array.isArray(entry.personnel_casualties) ? entry.personnel_casualties.length : undefined,
+            boarding: eventCount(entry.boarding),
+            captures: eventCount(entry.captures),
+            casualties: eventCount(entry.personnel_casualties),
             ended: formatBattleEndedCell(entry.battle_ended),
           };
         });

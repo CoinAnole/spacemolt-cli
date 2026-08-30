@@ -847,7 +847,7 @@ test('get_battle_status prints qualitative boarding after participants', () => {
   expect(stdout.indexOf('=== Participants ===')).toBeLessThan(stdout.indexOf('=== Boarding ==='));
   expect(boarding).toContain('board-1');
   expect(boarding).toContain('breach');
-  expect(boarding).toContain('0.4');
+  expect(boarding).toContain('40%');
   expect(boarding).toContain('player-1');
   expect(boarding).toContain('pirate-1');
   expect(boarding).toContain('3');
@@ -1436,6 +1436,7 @@ test('get_battle_log prints boarding detail tables after ticks when there are no
   expect(stdout).toContain('Corsair-7 (pirate-1)');
   expect(stdout).toContain('applied');
   expect(stdout).not.toContain('converted');
+  expect(stdout).toContain('player-1 / ship-marlowe-1');
   expectNoPersonnelCounts(stdout);
 });
 
@@ -1472,9 +1473,43 @@ test('get_battle_log prints boarding tables after Attacks when both are present'
   expect(stdout).toContain('latch');
   const ticks = battleLogTicksSection(stdout);
   expect(ticks).toContain('Board');
-  expect(ticks).toMatch(/\|\s*0\s*\|/);
+  expect(ticks).not.toContain('Captures');
+  expect(ticks).not.toContain('Casualties');
   expect(stdout).not.toContain('=== Captures ===');
   expect(stdout).not.toContain('=== Personnel casualties ===');
+});
+
+test('get_battle_log omits Board column when boarding is an empty array', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-empty-board',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 1,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 10,
+            shield_damage: 6,
+            hull_damage: 4,
+          },
+        ],
+        boarding: [],
+        captures: [],
+        personnel_casualties: [],
+      },
+    ],
+  });
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(ticks).not.toContain('Board');
+  expect(ticks).not.toContain('Captures');
+  expect(ticks).not.toContain('Casualties');
+  expect(stdout).not.toContain('=== Boarding ===');
 });
 
 test('get_battle_log casualty flags stay qualitative and hide false destroyed/incapacitated', () => {

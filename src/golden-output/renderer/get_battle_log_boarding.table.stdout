@@ -25,6 +25,6 @@ Has More: no
 
 === Personnel casualties ===
 
-  Tick | Target   | Casualties | Incapacitated | Triage  | Provider
-  -----+----------+------------+---------------+---------+---------
-  3    | pirate-1 | yes        | yes           | applied | player-1
+  Tick | Target   | Casualties | Incapacitated | Triage  | Provider                 
+  -----+----------+------------+---------------+---------+--------------------------
+  3    | pirate-1 | yes        | yes           | applied | player-1 / ship-marlowe-1

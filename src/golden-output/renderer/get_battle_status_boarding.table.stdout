@@ -25,4 +25,4 @@ Tick Duration: 30
 
   ID      | Phase  | Progress | Attacker | Target   | Self-destruct
   --------+--------+----------+----------+----------+--------------
-  board-1 | breach | 0.4      | player-1 | pirate-1 | 3            
+  board-1 | breach | 40%      | player-1 | pirate-1 | 3            

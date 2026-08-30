@@ -53,7 +53,7 @@ participants:
 boarding:
   - operation_id: "board-1"
     phase: breach
-    progress: 0.4
+    progress: "40%"
     attacker_id: "player-1"
     target_id: "pirate-1"
     self_destruct_countdown: 3
