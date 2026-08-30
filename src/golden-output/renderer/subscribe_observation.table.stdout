@@ -13,3 +13,11 @@ Empire NPCs (1):
 
 Creatures (1):
   Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale) - grazer - hull 80/120
+
+Prizes (1):
+
+=== Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       

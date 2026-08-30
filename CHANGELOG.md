@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Intact prizes in nearby / status / location tables (gameserver 0.572.0)
+
+- `get_nearby` and `subscribe_observation` print a **Prizes** table with copyable Prize ID and Actor columns
+  from `prizes` (plus Class, Status, Hull; optional Name, Wait, Shield, Combat). Empty lists are omitted.
+- `get_status`, `get_state`, and `get_location` print **Nearby Prizes** from `location.nearby_prizes`.
+- JSON/YAML/jq field names are unchanged.
+
 ### battle_stance board (gameserver 0.572.0)
 
 - Second bare token is now `target` (including on fire/evade/brace/flee); `board <enemy> marines=N` no longer drops the enemy. Leftover tokens after `target` are still ignored; use `marines=N`.

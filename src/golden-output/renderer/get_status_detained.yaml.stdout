@@ -53,3 +53,17 @@ location:
   nearby_players:
     - username: Ibis
       ship_class: hauler
+  nearby_prizes:
+    - prize_id: "prize-dust-1"
+      actor_id: "actor-prize-1"
+      ship_id: "ship-prize-1"
+      ship_class: frigate
+      ship_name: "Dust Devil"
+      status: intact
+      wait_reason: awaiting_claim
+      hull: 40
+      max_hull: 80
+      shield: 10
+      max_shield: 20
+      in_combat: false
+  nearby_prize_count: 1

@@ -2,12 +2,15 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import {
+  getLocationFixture,
   getStatusDetainedFixture,
   getStatusFixture,
+  nearbyFixture,
   payBountyFixture,
   playerProfileFixture,
   scanCreatureFixture,
   stationPoiInfoFixture,
+  subscribeObservationFixture,
 } from './status.fixtures.ts';
 
 const options: GlobalOptions = {
@@ -553,4 +556,248 @@ test('pay_bounty declines to raw response without amount_paid', () => {
 
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('=== Bounty Paid ===');
+});
+
+const personnelLeak = [
+  'fit_crew',
+  'fit_marines',
+  'injured_crew',
+  'injured_marines',
+  'prize_crew_fit',
+  'crew_disposition',
+];
+
+function assertCopyablePrizeIds(stdout: string, header: string): void {
+  expect(stdout).toContain(`${header} (1):`);
+  expect(stdout).toContain('Prize ID');
+  expect(stdout).toContain('prize-dust-1');
+  expect(stdout).toContain('Actor');
+  expect(stdout).toContain('actor-prize-1');
+  expect(stdout).toContain('Dust Devil');
+  expect(stdout).toContain('frigate');
+  expect(stdout).toContain('intact');
+  expect(stdout).toContain('40/80');
+  for (const field of personnelLeak) {
+    expect(stdout).not.toContain(field);
+  }
+}
+
+test('get_nearby prints copyable Prize ID and Actor and omits personnel', () => {
+  const rendered = renderStructuredResult('get_nearby', structuredClone(nearbyFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  expect(stdout).toContain('=== Nearby ===');
+  assertCopyablePrizeIds(stdout, 'Prizes');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('subscribe_observation prints prizes without prize_count', () => {
+  const fixture = structuredClone(subscribeObservationFixture) as Record<string, unknown>;
+  expect(fixture).not.toHaveProperty('prize_count');
+  const stdout = renderStructuredResult('subscribe_observation', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Nearby ===');
+  assertCopyablePrizeIds(stdout, 'Prizes');
+  expect(stdout).not.toContain('prize_count');
+});
+
+test('get_location prints nearby prizes after players and before pirate counts', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    structuredClone(getLocationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).not.toContain('=== Nearby ===');
+  assertCopyablePrizeIds(stdout, 'Nearby Prizes');
+  const playersIdx = stdout.indexOf('Nearby Players');
+  const prizesIdx = stdout.indexOf('Nearby Prizes');
+  const piratesIdx = stdout.indexOf('Nearby Pirates');
+  expect(prizesIdx).toBeGreaterThan(playersIdx);
+  expect(piratesIdx).toBeGreaterThan(prizesIdx);
+});
+
+test('get_status and get_state print location.nearby_prizes', () => {
+  for (const command of ['get_status', 'get_state'] as const) {
+    const stdout = renderStructuredResult(command, structuredClone(getStatusFixture), options, context).stdout.join(
+      '\n',
+    );
+    expect(stdout).toContain('=== Player Status ===');
+    assertCopyablePrizeIds(stdout, 'Nearby Prizes');
+    expect(stdout).toContain('Nearby Players:');
+  }
+});
+
+test('get_status falls back to top-level nearby_prizes when location omits them', () => {
+  const fixture = structuredClone(getStatusFixture) as {
+    location: Record<string, unknown>;
+    nearby_prizes?: unknown;
+    nearby_prize_count?: unknown;
+  };
+  delete fixture.location.nearby_prizes;
+  delete fixture.location.nearby_prize_count;
+  fixture.nearby_prizes = [
+    {
+      prize_id: 'prize-hoisted-1',
+      actor_id: 'actor-hoisted-1',
+      ship_class: 'hauler',
+      status: 'intact',
+      hull: 12,
+      max_hull: 20,
+    },
+  ];
+  fixture.nearby_prize_count = 1;
+
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Nearby Prizes (1):');
+  expect(stdout).toContain('prize-hoisted-1');
+  expect(stdout).toContain('actor-hoisted-1');
+});
+
+test('nearby prize sections are omitted when count is 0 and the array is empty', () => {
+  const nearbyEmpty = renderStructuredResult(
+    'get_nearby',
+    { nearby: [], prizes: [], prize_count: 0 },
+    options,
+    context,
+  ).stdout.join('\n');
+  const observationEmpty = renderStructuredResult(
+    'subscribe_observation',
+    { nearby: [], prizes: [] },
+    options,
+    context,
+  ).stdout.join('\n');
+  const locationEmpty = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        nearby_prizes: [],
+        nearby_prize_count: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const statusEmpty = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
+  statusEmpty.location.nearby_prizes = [];
+  statusEmpty.location.nearby_prize_count = 0;
+  const statusOut = renderStructuredResult('get_status', statusEmpty, options, context).stdout.join('\n');
+
+  for (const stdout of [nearbyEmpty, observationEmpty, locationEmpty, statusOut]) {
+    expect(stdout).not.toContain('Prizes (0):');
+    expect(stdout).not.toContain('Nearby Prizes (0):');
+    expect(stdout).not.toContain('(none)');
+    expect(stdout).not.toContain('(None)');
+  }
+});
+
+test('nearby prizes omit gated columns and never print personnel even when present on PrizeInfo', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    {
+      nearby: [],
+      prizes: [
+        {
+          prize_id: 'prize-bare-1',
+          actor_id: 'actor-bare-1',
+          ship_class: 'scout',
+          status: 'intact',
+          hull: 8,
+          max_hull: 10,
+          fit_crew: 4,
+          fit_marines: 2,
+          injured_crew: 1,
+          prize_crew_fit: 3,
+          crew_disposition: 'aboard',
+        },
+      ],
+      prize_count: 1,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('prize-bare-1');
+  expect(stdout).toContain('actor-bare-1');
+  expect(stdout).toContain('Prize ID');
+  expect(stdout).toContain('Actor');
+  expect(stdout).not.toContain('Name');
+  expect(stdout).not.toContain('Wait');
+  expect(stdout).not.toContain('Shield');
+  expect(stdout).not.toContain('Combat');
+  for (const field of personnelLeak) {
+    expect(stdout).not.toContain(field);
+  }
+});
+
+test('nearby prize Combat is yes when in_combat is true and blank when false', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    {
+      nearby: [],
+      prizes: [
+        {
+          prize_id: 'prize-fight-1',
+          actor_id: 'actor-fight-1',
+          ship_class: 'frigate',
+          status: 'intact',
+          in_combat: true,
+        },
+        {
+          prize_id: 'prize-idle-1',
+          actor_id: 'actor-idle-1',
+          ship_class: 'frigate',
+          status: 'intact',
+          in_combat: false,
+        },
+      ],
+      prize_count: 2,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Combat');
+  expect(stdout).toContain('yes');
+  expect(stdout).not.toContain('true');
+  expect(stdout).not.toContain('false');
+});
+
+test('nearby prizes cap rows at 10 and print a remainder footer', () => {
+  const prizes = Array.from({ length: 12 }, (_, index) => ({
+    prize_id: `prize-${index + 1}`,
+    actor_id: `actor-${index + 1}`,
+    ship_class: 'frigate',
+    status: 'intact',
+  }));
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    { nearby: [], prizes, prize_count: 12 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Prizes (12):');
+  expect(stdout).toContain('prize-10');
+  expect(stdout).not.toContain('prize-11');
+  expect(stdout).toContain('... and 2 more');
+});
+
+test('get_nearby still declines when location is an object so get_location keeps the location formatter', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(getLocationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).not.toContain('=== Nearby ===');
+  assertCopyablePrizeIds(stdout, 'Nearby Prizes');
 });
