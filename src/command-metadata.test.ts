@@ -67,6 +67,20 @@ function captureHelp(
   return stdout.join('\n').replace(ANSI_PATTERN, '');
 }
 
+function registryHasRelatedCommand(name: string): boolean {
+  if (BUNDLED_COMMAND_REGISTRY.commands[name] || BUNDLED_COMMAND_REGISTRY.allCommands[name] || COMMANDS[name]) {
+    return true;
+  }
+  for (const group of Object.values(BUNDLED_COMMAND_REGISTRY.commandGroups)) {
+    if (!group) continue;
+    if (group.name === name || group.actions[name]) return true;
+    for (const action of Object.values(group.actions)) {
+      if (action.command === name || action.displayName === name) return true;
+    }
+  }
+  return false;
+}
+
 function visibleBundledCommandName(command: string): string {
   if (BUNDLED_COMMAND_REGISTRY.commands[command]) return command;
 
@@ -1112,6 +1126,77 @@ describe('command metadata', () => {
     expect(release?.description).toContain('storage withdraw');
   });
 
+  test('claim_prize and service_prize are curated Salvage & Tow commands, not generated salvage_* names', () => {
+    const claim = COMMANDS.claim_prize;
+    expect(claim).toBeDefined();
+    if (!claim) throw new Error('claim_prize command is missing from COMMANDS');
+    expect(claim.usage).toBe('<prize_id> <destination_base_id> [crew_disposition=aboard|faction_reserve]');
+    expect(claim.example).toBe('spacemolt claim_prize prize-1 earth_station');
+    expect(claim.discoverWith).toEqual(['get_nearby', 'get_status', 'get_guide']);
+    expect(claim.seeAlso).toEqual(['service_prize', 'ship_recruit_personnel', 'get_status', 'get_guide']);
+    expect(claim.category).toBe('Salvage & Tow');
+    expect(claim.description).toBe('Assign prize crew and begin recovery of an intact captured ship');
+    expect(CURATED_COMMAND_DESCRIPTIONS.claim_prize).toBe(claim.description);
+    expect(claim.args).toEqual(['prize_id', 'destination_base_id']);
+    expect(claim.aliases).toEqual({ prize_id: 'id', destination_base_id: 'target' });
+    expect(claim.aliases?.target).toBeUndefined();
+    expect(claim.route).toEqual({ tool: 'spacemolt_salvage', action: 'claim_prize', method: 'POST' });
+
+    const service = COMMANDS.service_prize;
+    expect(service).toBeDefined();
+    if (!service) throw new Error('service_prize command is missing from COMMANDS');
+    expect(service.usage).toBe(
+      '<prize_id> <service_action> [quantity=N] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
+    );
+    expect(service.example).toBe('spacemolt service_prize prize-1 refuel');
+    expect(service.discoverWith).toEqual(['get_nearby', 'get_status']);
+    expect(service.seeAlso).toEqual(['claim_prize', 'refuel', 'repair', 'get_guide']);
+    expect(service.category).toBe('Salvage & Tow');
+    expect(service.description).toBe('Stop, resume, redirect, refuel, or repair a claimed intact prize');
+    expect(CURATED_COMMAND_DESCRIPTIONS.service_prize).toBe(service.description);
+    expect(service.args).toEqual(['prize_id', 'service_action']);
+    expect(service.required).toEqual(['prize_id', 'service_action']);
+    expect(getArgNames(service)).toEqual(['prize_id', 'service_action']);
+    expect(service.aliases).toEqual({
+      prize_id: 'id',
+      action: 'service_action',
+      destination_base_id: 'target',
+    });
+    expect(service.aliases?.target).toBeUndefined();
+    expect(service.route).toEqual({ tool: 'spacemolt_salvage', action: 'service_prize', method: 'POST' });
+
+    expect(BUNDLED_COMMAND_REGISTRY.commands.salvage_claim_prize).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.salvage_service_prize).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.claim_prize?.category).not.toBe('Generated API');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.service_prize?.category).not.toBe('Generated API');
+
+    for (const related of [...(claim.discoverWith ?? []), ...(claim.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `claim_prize related command "${related}"`).toBe(true);
+    }
+    for (const related of [...(service.discoverWith ?? []), ...(service.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `service_prize related command "${related}"`).toBe(true);
+    }
+
+    const claimHelp = captureHelp('claim_prize');
+    expect(claimHelp).toContain('prize_id -> id');
+    expect(claimHelp).toContain('destination_base_id -> target');
+    const serviceHelp = captureHelp('service_prize');
+    expect(serviceHelp).toMatch(/Arguments:\n {2}prize_id, service_action\n/);
+    expect(serviceHelp).not.toMatch(/Arguments:\n {2}prize_id, service_action, action\n/);
+    expect(serviceHelp).toContain('action -> service_action');
+
+    const claimDryRun = createCommandConfigDryRunResponse('claim_prize', claim, {
+      id: 'prize-1',
+      target: 'earth_station',
+    });
+    expect(claimDryRun.result).toContain('Assigns minimum crew from the active ship');
+    const serviceDryRun = createCommandConfigDryRunResponse('service_prize', service, {
+      id: 'prize-1',
+      service_action: 'refuel',
+    });
+    expect(serviceDryRun.result).toContain('refuel/repair consume ship fuel or repair kits');
+  });
+
   test('facility repair help documents auto-rebuild, faction permissions, accounting, and completion discovery', () => {
     const repair = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.repair?.config;
     expect(repair?.description).toContain('rebuilds its own faction');
@@ -1516,8 +1601,6 @@ describe('command metadata', () => {
       'auth_login_link',
       'auth_login_link_poll',
       'battle_self_destruct',
-      'salvage_claim_prize',
-      'salvage_service_prize',
       'ship_faction_personnel',
       'shipping_accept',
       'shipping_cancel',

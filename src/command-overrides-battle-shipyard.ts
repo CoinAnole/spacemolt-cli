@@ -112,6 +112,34 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_salvage/tow',
     positionals: ['wreck_id'],
   },
+  claim_prize: {
+    usage: '<prize_id> <destination_base_id> [crew_disposition=aboard|faction_reserve]',
+    example: 'spacemolt claim_prize prize-1 earth_station',
+    discoverWith: ['get_nearby', 'get_status', 'get_guide'],
+    seeAlso: ['service_prize', 'ship_recruit_personnel', 'get_status', 'get_guide'],
+    category: 'Salvage & Tow',
+    apiRoute: 'POST /api/v2/spacemolt_salvage/claim_prize',
+    positionals: ['prize_id', 'destination_base_id'],
+    aliases: {
+      prize_id: 'id',
+      destination_base_id: 'target',
+    },
+  },
+  service_prize: {
+    usage: '<prize_id> <service_action> [quantity=N] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
+    example: 'spacemolt service_prize prize-1 refuel',
+    discoverWith: ['get_nearby', 'get_status'],
+    seeAlso: ['claim_prize', 'refuel', 'repair', 'get_guide'],
+    category: 'Salvage & Tow',
+    apiRoute: 'POST /api/v2/spacemolt_salvage/service_prize',
+    positionals: ['prize_id', 'service_action'],
+    required: ['prize_id', 'service_action'],
+    aliases: {
+      prize_id: 'id',
+      action: 'service_action',
+      destination_base_id: 'target',
+    },
+  },
   release_tow: {
     description:
       'Release a towed wreck at your current location. To release a towed own ship, use storage withdraw <ship_id> while docked instead.',

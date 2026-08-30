@@ -16,6 +16,12 @@ const RISK_NOTES: Record<string, string[]> = {
   jump: ['Moves your ship to a connected system and may consume fuel or time.'],
   scrap_ship: ['Permanently destroys a stored ship. This cannot be undone.'],
   self_destruct: ['Destroys your active ship, creates a wreck, and respawns you at your home base.'],
+  claim_prize: [
+    'Assigns minimum crew from the active ship (must keep one fit crew); starts interceptable autonomous recovery.',
+  ],
+  service_prize: [
+    'refuel/repair consume ship fuel or repair kits; redirect changes destination; stop/resume do not rewind transit.',
+  ],
   facility_build: [
     'Builds a facility at the current base and spends required resources/credits; faction facility types are accepted by the server.',
   ],
