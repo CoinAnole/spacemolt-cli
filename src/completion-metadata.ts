@@ -1,4 +1,4 @@
-import type { CommandArg, CommandConfig, LocalCommandConfig } from './commands.ts';
+import { type CommandArg, type CommandConfig, type LocalCommandConfig, schemaFieldForKey } from './commands.ts';
 import { schemaAllowsType } from './openapi-metadata.ts';
 
 export interface CompletionOption {
@@ -104,8 +104,7 @@ function isIdLikeArg(name: string): boolean {
 
 function fieldSchema(commandConfig: CommandConfig | LocalCommandConfig, arg: string) {
   if (!('schema' in commandConfig) || !commandConfig.schema) return undefined;
-  const canonicalArg = commandConfig.aliases?.[arg] || arg;
-  return commandConfig.schema[canonicalArg] || commandConfig.schema[arg];
+  return schemaFieldForKey(commandConfig, arg);
 }
 
 export function completionArgsForCommand(

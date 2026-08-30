@@ -544,7 +544,7 @@ describe('command metadata', () => {
     expect(fullHelp).toContain('Join an existing battle only (no tick)');
     expect(fullHelp).toContain('Advance battle range (no tick)');
     expect(fullHelp).toContain('Retreat from battle (no tick)');
-    expect(fullHelp).toContain('Set stance (fire/evade/brace/flee; no tick)');
+    expect(fullHelp).toContain('Set stance (fire/evade/brace/flee/board; no tick)');
     expect(fullHelp).toContain('Focus by ID or name (any combatant; no tick)');
     expect(fullHelp).toContain('Reload weapon with ammo (costs a tick)');
   });
@@ -567,6 +567,43 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt hunt <creature_id>');
     expect(help).toContain('wildlife creature');
     expect(help).toContain('get_nearby');
+  });
+
+  test('battle_stance documents board, optional target, and server-required marines', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.battle_stance;
+    expect(config?.usage).toContain('[target]');
+    expect(config?.usage).toContain('[marines=N]');
+    expect(config?.description).toContain('server requires');
+    expect(config?.description).toContain('board');
+    expect(config?.description).toContain('marines');
+    expect(config?.description).toContain('Does not cost a tick');
+    expect(config?.example).toBe('spacemolt battle_stance board pirate-1 marines=8');
+    expect(config?.discoverWith).toEqual(expect.arrayContaining(['get_battle_status']));
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_stance?.positionals).toEqual(['stance', 'target']);
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_stance?.aliases).toEqual({
+      stance: 'id',
+      target_id: 'target',
+    });
+    expect(config?.required).toEqual(['stance']);
+    expect(config?.schema?.id?.enum).toEqual(expect.arrayContaining(['board']));
+    expect(config?.schema?.id?.description).toContain('target');
+    expect(config?.schema?.id?.description).not.toContain('target_id');
+    expect(config?.schema?.marines?.minimum).toBe(1);
+
+    const help = captureHelp('battle_stance');
+    expect(help).toContain('[target]');
+    expect(help).toContain('[marines=N]');
+    expect(help).toContain('server requires');
+    expect(help).toContain('Does not cost a tick');
+
+    expect(captureFullHelp()).toContain('Set stance (fire/evade/brace/flee/board; no tick)');
+
+    const completionArgs = completionArgsForCommand('battle_stance', config);
+    expect(completionArgs.find((arg) => arg.name === 'stance')).toMatchObject({
+      kind: 'enum',
+      values: expect.arrayContaining(['board']),
+    });
+    expect(completionArgs.some((arg) => arg.name === 'target')).toBe(true);
   });
 
   test('battle_target help documents ID or name targeting for any combatant', () => {
@@ -1478,6 +1515,13 @@ describe('command metadata', () => {
       // MCP-only auth helpers remain generated fallbacks (not curated CLI commands).
       'auth_login_link',
       'auth_login_link_poll',
+      'battle_self_destruct',
+      'salvage_claim_prize',
+      'salvage_service_prize',
+      'ship_faction_personnel',
+      'ship_recruit_personnel',
+      'ship_transfer_personnel',
+      'ship_treat_personnel',
       'shipping_accept',
       'shipping_cancel',
       'shipping_pay_debt',

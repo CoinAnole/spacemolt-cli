@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### battle_stance board (gameserver 0.572.0)
+
+- Second bare token is now `target` (including on fire/evade/brace/flee); `board <enemy> marines=N` no longer drops the enemy. Leftover tokens after `target` are still ignored; use `marines=N`.
+- Local reject of unknown stances (`charge` → `invalid_enum` listing `board`).
+- Local reject of non-positive `marines` (`marines=0` → `below_minimum`). Help Fields say `target`, not `target_id`; `target_id=` aliases to `target` on this command only.
+
 ### commission_ship / commission_quote help (gameserver 0.569)
 
 - `help commission_ship` documents `bare_hull=true` (opt-in unfitted hull at NPC, empire, and faction yards) and

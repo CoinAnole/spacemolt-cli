@@ -1857,6 +1857,124 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('battle_stance binds optional target and validates stance/marines locally', () => {
+    expect(parseOk(['battle_stance', 'board', 'pirate-1']).payload).toEqual({
+      stance: 'board',
+      target: 'pirate-1',
+    });
+    expect(parseOk(['battle_stance', 'board', 'pirate-1', 'marines=8']).payload).toEqual({
+      stance: 'board',
+      target: 'pirate-1',
+      marines: '8',
+    });
+    expect(parseOk(['battle_stance', 'board', 'target=pirate-1', 'marines=8']).payload).toEqual({
+      stance: 'board',
+      target: 'pirate-1',
+      marines: '8',
+    });
+    expect(parseOk(['battle_stance', 'board']).payload).toEqual({ stance: 'board' });
+    expect(parseOk(['battle_stance', 'board', 'pirate-1', '8']).payload).toEqual({
+      stance: 'board',
+      target: 'pirate-1',
+    });
+    expect(parseOk(['battle_stance', 'fire', 'pirate-1']).payload).toEqual({
+      stance: 'fire',
+      target: 'pirate-1',
+    });
+    expect(parseOk(['battle_stance', 'board', 'target=pirate-1', '8']).payload).toEqual({
+      stance: 'board',
+      target: ['pirate-1', '8'],
+    });
+
+    const targetIdAlias = parseOk(['battle_stance', 'board', 'target_id=pirate-1']);
+    expect(targetIdAlias.payload).toEqual({ stance: 'board', target_id: 'pirate-1' });
+    expect(normalizeParsedPayload('battle_stance', targetIdAlias.payload)).toEqual({
+      id: 'board',
+      target: 'pirate-1',
+    });
+
+    const boardPayload = parseOk(['battle_stance', 'board', 'pirate-1', 'marines=8']).payload;
+    expect(normalizeParsedPayload('battle_stance', boardPayload)).toEqual({
+      id: 'board',
+      target: 'pirate-1',
+      marines: '8',
+    });
+    expect(convertPayloadTypes(normalizeParsedPayload('battle_stance', boardPayload), 'battle_stance')).toEqual({
+      id: 'board',
+      target: 'pirate-1',
+      marines: 8,
+    });
+
+    const stanceEnumMessage = 'Invalid value "charge" for "stance". Expected one of: fire, evade, brace, flee, board';
+    expect(parseArgs(['battle_stance', 'charge'])).toEqual({
+      ok: false,
+      errors: [{ field: 'stance', message: stanceEnumMessage, code: 'invalid_enum' }],
+    });
+    expect(parseArgs(['battle_stance', 'stance=charge'])).toEqual({
+      ok: false,
+      errors: [{ field: 'stance', message: stanceEnumMessage, code: 'invalid_enum' }],
+    });
+    expect(parseArgs(['battle_stance', 'id=charge'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'id',
+          message: 'Invalid value "charge" for "id". Expected one of: fire, evade, brace, flee, board',
+          code: 'invalid_enum',
+        },
+      ],
+    });
+    expect(parseOk(['battle_stance', 'id=board']).payload).toEqual({ id: 'board' });
+
+    expect(parseArgs(['battle_stance', 'board', 'pirate-1', 'marines=0'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'marines',
+          message: 'Parameter "marines" must be at least 1, but received "0".',
+          code: 'below_minimum',
+        },
+      ],
+    });
+    expect(parseArgs(['battle_stance', 'board', 'pirate-1', 'marines=-1'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'marines',
+          message: 'Parameter "marines" must be at least 1, but received "-1".',
+          code: 'below_minimum',
+        },
+      ],
+    });
+    expect(parseArgs(['battle_stance', 'board', 'pirate-1', 'marines=1.5'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'marines',
+          message: 'Parameter "marines" must be an integer, but received "1.5".',
+          code: 'invalid_integer',
+        },
+      ],
+    });
+  });
+
+  test('buy delivery alias receives canonical deliver_to enum checks', () => {
+    expect(parseOk(['buy', 'ore_iron', 'delivery=cargo']).payload).toEqual({
+      item_id: 'ore_iron',
+      delivery: 'cargo',
+    });
+    expect(parseArgs(['buy', 'ore_iron', 'delivery=bogus'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'delivery',
+          message: 'Invalid value "bogus" for "delivery". Expected one of: cargo, storage',
+          code: 'invalid_enum',
+        },
+      ],
+    });
+  });
+
   test('battle summary and log normalize battle_id to id and convert integers', () => {
     expect(normalizeParsedPayload('get_battle_summary', { battle_id: 'battle-1' })).toEqual({ id: 'battle-1' });
     const normalized = normalizeParsedPayload('get_battle_log', {
