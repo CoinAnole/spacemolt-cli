@@ -387,8 +387,11 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('faction create_buy_order');
     expect(output).toContain('faction info');
+    expect(output).toContain('faction personnel');
     expect(output).not.toContain('faction_create_buy_order');
     expect(output).not.toContain('faction_info');
+    expect(output).not.toContain('faction_personnel');
+    expect(output).not.toContain('ship_faction_personnel');
   });
 
   test('full faction group help lists nested actions before semantic commands', () => {
@@ -1326,6 +1329,8 @@ describe('help output branches', () => {
     const generatedSection = generatedIndex === -1 ? '' : output.slice(generatedIndex);
     expect(generatedSection).not.toContain('shipping_quote');
     expect(generatedSection).toContain('shipping_accept');
+    expect(generatedSection).not.toContain('ship_faction_personnel');
+    expect(generatedSection).not.toContain('faction personnel');
     expect(generatedSection).not.toContain('faction create_buy_order');
     expect(generatedSection).not.toContain('facility upgrade');
     expect(generatedSection).not.toContain('station info');
@@ -1670,6 +1675,20 @@ describe('help output branches', () => {
     expect(output).toContain('Storage Extension bucket name "Reserve" is ambiguous');
     expect(output).toContain('pass the bucket id');
     expect(output).not.toContain('Target not found');
+  });
+
+  test('generated ship_faction_personnel is not a dispatchable command after faction personnel curation', () => {
+    const help = captureWriter();
+    const unknown = captureWriter();
+
+    expect(showCommandHelp('ship_faction_personnel', help.writer, BUNDLED_COMMAND_REGISTRY)).toBe(false);
+    expect(showCommandHelp('faction_personnel', help.writer, BUNDLED_COMMAND_REGISTRY)).toBe(false);
+    expect(showCommandHelp('faction personnel', help.writer, BUNDLED_COMMAND_REGISTRY)).toBe(true);
+    expect(help.stdout.join('\n')).toContain('spacemolt faction personnel');
+    expect(help.stdout.join('\n')).not.toContain('spacemolt ship_faction_personnel');
+
+    displayUnknownCommand('ship_faction_personnel', unknown.writer);
+    expect(unknown.stderr.join('\n')).toContain('Unknown command "ship_faction_personnel"');
   });
 
   test('displayUnknownCommand points executable command groups to group help', () => {

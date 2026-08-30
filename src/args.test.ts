@@ -419,6 +419,8 @@ describe('command metadata', () => {
   test('flat grouped command tokens parse raw but are absent from bundled command registry', () => {
     expect(parseArgs(['faction_info'])).toEqual({ ok: true, command: 'faction_info', payload: {} });
     expect(BUNDLED_COMMAND_REGISTRY.commands.faction_info).toBeUndefined();
+    expect(parseArgs(['faction_personnel'])).toEqual({ ok: true, command: 'faction_personnel', payload: {} });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.faction_personnel).toBeUndefined();
   });
 });
 
@@ -457,6 +459,9 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeParsedPayload('battle_target', { target_id: 'player_1' })).toEqual({ id: 'player_1' });
     expect(normalizeInternalPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
+    expect(normalizeInternalPayload('faction_personnel', { action: 'status' })).toEqual({
+      personnel_action: 'status',
+    });
     expect(normalizeInternalPayload('faction_propose_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeInternalPayload('treat_personnel', { target: 'ally' })).toEqual({ id: 'ally' });
     expect(normalizeParsedPayload('treat_personnel', { target: 'ally' })).toEqual({ id: 'ally' });
@@ -1114,6 +1119,7 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     const reservedMessage = reservedActionError().message;
     expect(reservedRoutingActionError('craft', { action: 'foo' })?.message).toBe(reservedMessage);
     expect(reservedRoutingActionError('recycle', { action: '' })?.message).toBe(reservedMessage);
+    expect(reservedRoutingActionError('faction_personnel', { action: 'status' })).toBeUndefined();
   });
 
   test('craft and recycle reject leftover action without suggesting --allow-unknown', () => {
@@ -2123,6 +2129,8 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       types: 'chat,combat',
     });
     expect(parseOk(['scrap_ship', 'ship_1']).payload.ship_id).toBe('ship_1');
+    expect(parseInternalOk(['faction_personnel', 'status']).payload.personnel_action).toBe('status');
+    expect(parseInternalOk(['faction_personnel', 'action=status']).payload.action).toBe('status');
     expect(parseInternalOk(['faction_propose_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseInternalOk(['faction_accept_ally', 'NOVA']).payload.target_faction_id).toBe('NOVA');
     expect(parseInternalOk(['faction_accept_invite', 'fac_1']).payload.faction_id).toBe('fac_1');

@@ -31,6 +31,9 @@ const RISK_NOTES: Record<string, string[]> = {
   facility_cancel_listing: ['Cancels a facility sale listing.'],
   faction_build: ['Builds a faction facility and spends faction resources/credits.'],
   faction_facility_upgrade: ['Upgrades a faction facility and spends faction resources/credits.'],
+  faction_personnel: [
+    'status is read-only; recruit spends faction credits from station pools; withdraw requires ManageTreasury; deposit does not.',
+  ],
   refuel: [
     'Station credit refueling ignores quantity and fills the tank to full.',
     'quantity applies only to fuel cells or ship-to-ship transfers.',
