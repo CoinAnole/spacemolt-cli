@@ -1,5 +1,20 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
 
+const intactPrizeInfo = {
+  prize_id: 'prize-dust-1',
+  actor_id: 'actor-prize-1',
+  ship_id: 'ship-prize-1',
+  ship_class: 'frigate',
+  ship_name: 'Dust Devil',
+  status: 'intact',
+  wait_reason: 'awaiting_claim',
+  hull: 40,
+  max_hull: 80,
+  shield: 10,
+  max_shield: 20,
+  in_combat: false,
+};
+
 export const getLocationFixture = {
   message: 'Location retrieved',
   credits: 12345,
@@ -15,6 +30,8 @@ export const getLocationFixture = {
     docked_at: 'earth_station',
     nearby_player_count: 1,
     nearby_players: [{ username: 'Marlowe', faction_tag: 'SMC', ship_class: 'prospector' }],
+    nearby_prizes: [intactPrizeInfo],
+    nearby_prize_count: 1,
     nearby_pirate_count: 2,
     nearby_pirates: [{ name: 'Raider', faction: 'pirate_kael', faction_name: 'Admiral Kael' }],
     nearby_empire_npc_count: 1,
@@ -64,6 +81,8 @@ export const getStatusFixture = {
     poi_name: 'Earth',
     docked_at: 'earth_station',
     nearby_players: [{ username: 'Ibis', ship_class: 'hauler' }],
+    nearby_prizes: [intactPrizeInfo],
+    nearby_prize_count: 1,
   },
 };
 
@@ -268,6 +287,8 @@ export const nearbyFixture = {
     },
   ],
   creature_count: 1,
+  prizes: [intactPrizeInfo],
+  prize_count: 1,
   poi_id: 'sol_cloudbank',
 };
 
@@ -302,6 +323,7 @@ export const subscribeObservationFixture = {
       branded: true,
     },
   ],
+  prizes: [intactPrizeInfo],
   empire_npcs: [
     {
       npc_id: 'npc-patrol-7',

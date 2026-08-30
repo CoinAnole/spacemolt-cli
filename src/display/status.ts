@@ -15,6 +15,7 @@ import {
   namedFormatter,
   printCompactTable,
 } from './helpers.ts';
+import { emitNearbyPrizes } from './prizes.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
@@ -713,6 +714,12 @@ export const statusFormatters = [
         }
         if (nearby.length > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${nearby.length - NEARBY_TABLE_LIMIT} more`);
       }
+      const location = isRecord(r.location) ? r.location : undefined;
+      emitNearbyPrizes({
+        prizes: location?.nearby_prizes ?? r.nearby_prizes,
+        prizeCount: location?.nearby_prize_count ?? r.nearby_prize_count,
+        title: 'Nearby Prizes',
+      });
       return true;
     },
     { commands: ['get_status', 'get_state'], shapeFallback: true },
@@ -911,7 +918,7 @@ export const statusFormatters = [
   // Nearby players, pirates, and empire NPCs
   namedFormatter(
     'nearby',
-    ['nearby'],
+    ['nearby', 'prizes'],
     (r) => {
       if (r.location && typeof r.location === 'object') return false;
       const playerSource = Array.isArray(r.nearby) ? r.nearby : r.players;
@@ -920,6 +927,7 @@ export const statusFormatters = [
       const pirates = Array.isArray(r.pirates) ? r.pirates.filter(isRecord) : [];
       const npcs = Array.isArray(r.empire_npcs) ? r.empire_npcs.filter(isRecord) : [];
       const creatures = Array.isArray(r.creatures) ? r.creatures.filter(isRecord) : [];
+      const prizes = Array.isArray(r.prizes) ? r.prizes.filter(isRecord) : [];
       const playerCount =
         typeof r.nearby_player_count === 'number'
           ? r.nearby_player_count
@@ -980,6 +988,10 @@ export const statusFormatters = [
         }
         if (creatureCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${creatureCount - NEARBY_TABLE_LIMIT} more`);
       }
+      emitNearbyPrizes({
+        prizes,
+        prizeCount: typeof r.prize_count === 'number' ? r.prize_count : prizes.length,
+      });
       return true;
     },
     { commands: ['get_nearby', 'subscribe_observation'], shapeFallback: true },
@@ -1071,6 +1083,11 @@ export const statusFormatters = [
           emitLine(`  ... and ${nearbyPlayerCount - NEARBY_TABLE_LIMIT} more`);
         }
       }
+      emitNearbyPrizes({
+        prizes: loc.nearby_prizes,
+        prizeCount: loc.nearby_prize_count,
+        title: 'Nearby Prizes',
+      });
       if (nearbyPirateCount > 0) {
         emitLine(`\n${c.red}Nearby Pirates: ${nearbyPirateCount}${c.reset}`);
       }

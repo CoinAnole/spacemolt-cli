@@ -11,6 +11,14 @@ Docked at: earth_station
 Nearby Players (1):
   Marlowe [SMC] (prospector)
 
+Nearby Prizes (1):
+
+=== Nearby Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       
+
 Nearby Pirates: 2
 
 Nearby NPCs: 1

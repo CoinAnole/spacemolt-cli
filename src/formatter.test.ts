@@ -1569,6 +1569,14 @@ describe('structuredContent formatters', () => {
       Nearby Players (1):
         Marlowe [SMC] (prospector)
 
+      Nearby Prizes (1):
+
+      === Nearby Prizes ===
+
+        Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
+        -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       
+
       Nearby Pirates: 2
 
       Nearby NPCs: 1"
@@ -4632,6 +4640,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('Pirates (');
     expect(stdout).not.toContain('Empire NPCs (');
     expect(stdout).not.toContain('Creatures (');
+    expect(stdout).not.toContain('Prizes (');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -6321,7 +6330,15 @@ describe('structuredContent formatters', () => {
         Power: 10/25
 
       Nearby Players: 1
-        - Ibis (hauler)"
+        - Ibis (hauler)
+
+      Nearby Prizes (1):
+
+      === Nearby Prizes ===
+
+        Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
+        -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       "
     `);
   });
 
@@ -6711,7 +6728,15 @@ describe('structuredContent formatters', () => {
         Patrol (interceptor)
 
       Creatures (1):
-        Pilot-Whale Pod [creature_pilot_whale_1] (pilot_whale) - grazer - hull 80/120"
+        Pilot-Whale Pod [creature_pilot_whale_1] (pilot_whale) - grazer - hull 80/120
+
+      Prizes (1):
+
+      === Prizes ===
+
+        Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
+        -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |"
       ,
         "poi_info": 
       "
