@@ -1100,6 +1100,11 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     scan <player_id>          Scan player for info
     cloak true/false          Toggle cloaking
 
+  ${c.cyan}Personnel:${c.reset}
+    recruit_personnel [crew] [marines]   Hire from station pools
+    treat_personnel [target]             Heal crew/marines (station/field/faction)
+    transfer_personnel <ally>            Move personnel to an allied ship
+
   ${c.cyan}Battle:${c.reset}
     battle_engage [side_id]   Join an existing battle only (no tick)
     battle_advance            Advance battle range (no tick)
@@ -1121,6 +1126,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     release_tow               Release towed wreck
     scrap_wreck               Scrap towed wreck at salvage yard or faction station
     sell_wreck                Sell towed wreck at station
+    claim_prize <prize_id> <station>  Assign crew and recover an intact prize
+    service_prize <prize_id> <action> Stop/resume/redirect/refuel/repair a prize
 
   ${c.cyan}Shipyard:${c.reset}
     commission_ship <class>   Order a custom ship (fitted default; optional bare hull)
@@ -1235,6 +1242,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction get_invites                Pending invites
     faction decline_invite <faction_id>  Decline invite
     faction garages                    Shared ship garages at every station
+    faction personnel [status|recruit|deposit|withdraw]  Local crew/marine reserve
     faction post_mission <title> <description> <type> <objectives> <rewards>
     faction cancel_mission <template_id>  Cancel faction mission
     faction list_missions              Faction missions at current station

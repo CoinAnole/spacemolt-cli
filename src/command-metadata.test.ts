@@ -1134,7 +1134,7 @@ describe('command metadata', () => {
     expect(claim.usage).toBe('<prize_id> <destination_base_id> [crew_disposition=aboard|faction_reserve]');
     expect(claim.example).toBe('spacemolt claim_prize prize-1 earth_station');
     expect(claim.discoverWith).toEqual(['get_nearby', 'get_status', 'get_guide']);
-    expect(claim.seeAlso).toEqual(['service_prize', 'ship_recruit_personnel', 'get_status', 'get_guide']);
+    expect(claim.seeAlso).toEqual(['service_prize', 'recruit_personnel', 'get_status', 'get_guide']);
     expect(claim.category).toBe('Salvage & Tow');
     expect(claim.description).toBe('Assign prize crew and begin recovery of an intact captured ship');
     expect(CURATED_COMMAND_DESCRIPTIONS.claim_prize).toBe(claim.description);
@@ -1312,7 +1312,13 @@ describe('command metadata', () => {
     expect(config?.aliases).toEqual({ action: 'personnel_action' });
     expect(config?.args).toEqual(['personnel_action']);
     expect(config?.example).toBe('spacemolt faction personnel status');
-    expect(config?.seeAlso).toEqual(['faction_garages', 'get_guide']);
+    expect(config?.seeAlso).toEqual([
+      'recruit_personnel',
+      'treat_personnel',
+      'transfer_personnel',
+      'faction_garages',
+      'get_guide',
+    ]);
     expect(config?.description).not.toContain('v1');
     expect(config?.description).not.toContain('personnel_action (legacy');
     expect(config?.schema?.fit_crew?.description).toBeTruthy();
@@ -1325,9 +1331,10 @@ describe('command metadata', () => {
     expect(help).toContain('ManageTreasury');
     expect(help).toContain('faction garages');
     expect(help).toContain('get_guide');
-    expect(help).not.toContain('recruit_personnel');
-    expect(help).not.toContain('treat_personnel');
-    expect(help).not.toContain('transfer_personnel');
+    expect(help).toContain(
+      'See also: recruit_personnel, treat_personnel, transfer_personnel, faction garages, get_guide',
+    );
+    expect(help).not.toContain('See also: faction_personnel');
     expect(help).not.toContain('legacy docs');
   });
 
@@ -1652,17 +1659,22 @@ describe('command metadata', () => {
       usage: '[crew=N] [marines=N]  (docked; at least one count must be positive)',
       example: 'spacemolt recruit_personnel crew=4 marines=2',
       discoverWith: ['get_status', 'get_ship', 'get_base'],
-      seeAlso: ['treat_personnel', 'transfer_personnel', 'get_guide'],
+      seeAlso: ['treat_personnel', 'transfer_personnel', 'faction_personnel', 'get_guide'],
       route: { tool: 'spacemolt_ship', action: 'recruit_personnel', method: 'POST' },
     });
     expect(COMMANDS.recruit_personnel?.aliases ?? {}).toEqual({});
     expect(COMMANDS.recruit_personnel?.required ?? []).toEqual([]);
+    for (const command of ['recruit_personnel', 'treat_personnel', 'transfer_personnel']) {
+      const help = captureHelp(command);
+      expect(help).toContain('faction personnel');
+      expect(help).not.toContain('faction_personnel');
+    }
     expect(COMMANDS.treat_personnel).toMatchObject({
       category: 'Ship management',
       usage: '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]',
       example: 'spacemolt treat_personnel provider=station',
       discoverWith: ['get_ship', 'get_status'],
-      seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'get_guide'],
+      seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'faction_personnel', 'get_guide'],
       aliases: { target: 'id' },
       route: { tool: 'spacemolt_ship', action: 'treat_personnel', method: 'POST' },
     });
@@ -1686,7 +1698,7 @@ describe('command metadata', () => {
         '<target> [fit_crew=N] [fit_marines=N] [injured_crew=N] [injured_marines=N]  (allied player at same POI; out of combat)',
       example: 'spacemolt transfer_personnel ally fit_crew=2',
       discoverWith: ['get_nearby', 'get_ship'],
-      seeAlso: ['recruit_personnel', 'treat_personnel', 'get_guide'],
+      seeAlso: ['recruit_personnel', 'treat_personnel', 'faction_personnel', 'get_guide'],
       aliases: { target: 'id' },
       route: { tool: 'spacemolt_ship', action: 'transfer_personnel', method: 'POST' },
     });

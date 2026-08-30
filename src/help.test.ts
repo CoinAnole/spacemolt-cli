@@ -443,6 +443,52 @@ describe('help output branches', () => {
     expect(output).not.toContain('Join or start a battle');
   });
 
+  test('showFullHelp lists personnel after Combat, prizes under Salvage & Tow, and faction personnel', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    const combatIndex = output.indexOf('Combat:');
+    const personnelIndex = output.indexOf('Personnel:');
+    const battleIndex = output.indexOf('Battle:');
+    const salvageIndex = output.indexOf('Salvage & Tow:');
+    const shipyardIndex = output.indexOf('Shipyard:');
+    const factionIndex = output.indexOf('\n  Faction:');
+    const factionIntelIndex = output.indexOf('Faction Intel & Trade:');
+    const generatedIndex = output.indexOf('Generated API Commands');
+
+    expect(combatIndex).toBeGreaterThan(-1);
+    expect(personnelIndex).toBeGreaterThan(combatIndex);
+    expect(battleIndex).toBeGreaterThan(personnelIndex);
+    expect(salvageIndex).toBeGreaterThan(battleIndex);
+    expect(shipyardIndex).toBeGreaterThan(salvageIndex);
+    expect(factionIndex).toBeGreaterThan(-1);
+    expect(factionIntelIndex).toBeGreaterThan(factionIndex);
+    expect(generatedIndex).toBeGreaterThan(factionIntelIndex);
+
+    expect(output).toContain('recruit_personnel [crew] [marines]   Hire from station pools');
+    expect(output).toContain('treat_personnel [target]             Heal crew/marines (station/field/faction)');
+    expect(output).toContain('transfer_personnel <ally>            Move personnel to an allied ship');
+    expect(output).toContain('claim_prize <prize_id> <station>  Assign crew and recover an intact prize');
+    expect(output).toContain('service_prize <prize_id> <action> Stop/resume/redirect/refuel/repair a prize');
+    expect(output).toContain('faction personnel [status|recruit|deposit|withdraw]  Local crew/marine reserve');
+
+    const combatSection = output.slice(combatIndex, personnelIndex);
+    expect(combatSection).not.toContain('claim_prize');
+    expect(combatSection).not.toContain('service_prize');
+    expect(combatSection).not.toContain('recruit_personnel');
+
+    const salvageSection = output.slice(salvageIndex, shipyardIndex);
+    expect(salvageSection).toContain('claim_prize <prize_id> <station>');
+    expect(salvageSection).toContain('service_prize <prize_id> <action>');
+
+    const factionSection = output.slice(factionIndex, factionIntelIndex);
+    expect(factionSection).toContain('faction personnel [status|recruit|deposit|withdraw]');
+    expect(factionSection).not.toContain('faction_personnel');
+    expect(factionSection).not.toContain('ship_faction_personnel');
+  });
+
   test('full help advertises Company Store workflow on normal market commands', () => {
     const capture = captureWriter();
 
@@ -1329,7 +1375,13 @@ describe('help output branches', () => {
     const generatedSection = generatedIndex === -1 ? '' : output.slice(generatedIndex);
     expect(generatedSection).not.toContain('shipping_quote');
     expect(generatedSection).toContain('shipping_accept');
+    expect(generatedSection).toContain('battle_self_destruct');
+    expect(generatedSection).not.toContain('ship_recruit_personnel');
+    expect(generatedSection).not.toContain('ship_treat_personnel');
+    expect(generatedSection).not.toContain('ship_transfer_personnel');
     expect(generatedSection).not.toContain('ship_faction_personnel');
+    expect(generatedSection).not.toContain('salvage_claim_prize');
+    expect(generatedSection).not.toContain('salvage_service_prize');
     expect(generatedSection).not.toContain('faction personnel');
     expect(generatedSection).not.toContain('faction create_buy_order');
     expect(generatedSection).not.toContain('facility upgrade');
