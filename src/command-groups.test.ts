@@ -63,6 +63,12 @@ describe('nested command groups', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.faction_info).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.allCommands.faction_info).toBeUndefined();
     expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'faction')?.actions.info?.command).toBe('faction_info');
+    expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'faction')?.actions.personnel?.command).toBe(
+      'faction_personnel',
+    );
+    expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'faction')?.actions.personnel?.displayName).toBe(
+      'faction personnel',
+    );
     expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'facility')?.actions.job_add?.command).toBe(
       'facility_job_add',
     );

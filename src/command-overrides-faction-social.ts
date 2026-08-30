@@ -96,6 +96,37 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/garages',
   },
+  faction_personnel: {
+    usage:
+      '[personnel_action=status|recruit|deposit|withdraw] [fit_crew=N] [fit_marines=N] [injured_crew=N] [injured_marines=N]',
+    description:
+      'View, recruit into, deposit to, or withdraw from faction local personnel reserve. Defaults to status. Recruit and withdraw require ManageTreasury; any member may deposit.',
+    example: 'spacemolt faction personnel status',
+    discoverWith: ['get_status', 'get_ship', 'get_base'],
+    seeAlso: ['faction_garages', 'get_guide'],
+    category: 'Factions',
+    apiRoute: 'POST /api/v2/spacemolt_ship/faction_personnel',
+    positionals: ['personnel_action'],
+    aliases: { action: 'personnel_action' },
+    schemaExtensions: {
+      fit_crew: {
+        type: 'integer',
+        description: 'Fit crew to recruit into, deposit to, or withdraw from the faction local reserve.',
+      },
+      fit_marines: {
+        type: 'integer',
+        description: 'Fit marines to recruit into, deposit to, or withdraw from the faction local reserve.',
+      },
+      injured_crew: {
+        type: 'integer',
+        description: 'Injured crew to deposit to or withdraw from the faction local reserve.',
+      },
+      injured_marines: {
+        type: 'integer',
+        description: 'Injured marines to deposit to or withdraw from the faction local reserve.',
+      },
+    },
+  },
   faction_accept_invite: {
     category: 'Factions',
     apiRoute: 'POST /api/v2/spacemolt_faction/accept_invite',

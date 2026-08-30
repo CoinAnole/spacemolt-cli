@@ -405,6 +405,7 @@ describe('command metadata', () => {
       'citizenship_apply',
       'facility_job_add',
       'faction_info',
+      'faction_personnel',
       'fleet_invite',
       'forum_get_thread',
       'station_set_name',
@@ -1294,6 +1295,42 @@ describe('command metadata', () => {
     expect(help).toContain('4000');
   });
 
+  test('faction_personnel is curated on the faction group', () => {
+    const action = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.personnel;
+    const config = action?.config ?? COMMANDS.faction_personnel;
+    expect(action?.displayName).toBe('faction personnel');
+    expect(action?.command).toBe('faction_personnel');
+    expect(COMMANDS.faction_personnel).toBeDefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.faction_personnel).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_faction_personnel).toBeUndefined();
+    expect(config?.route).toEqual({
+      tool: 'spacemolt_ship',
+      action: 'faction_personnel',
+      method: 'POST',
+    });
+    expect(config?.route.defaults).toBeUndefined();
+    expect(config?.aliases).toEqual({ action: 'personnel_action' });
+    expect(config?.args).toEqual(['personnel_action']);
+    expect(config?.example).toBe('spacemolt faction personnel status');
+    expect(config?.seeAlso).toEqual(['faction_garages', 'get_guide']);
+    expect(config?.description).not.toContain('v1');
+    expect(config?.description).not.toContain('personnel_action (legacy');
+    expect(config?.schema?.fit_crew?.description).toBeTruthy();
+    expect(config?.schema?.personnel_action?.enum).toEqual(['status', 'recruit', 'deposit', 'withdraw']);
+
+    const help = captureHelp(action?.displayName || 'faction personnel');
+    expect(help).toContain('spacemolt faction personnel status');
+    expect(help).not.toContain('spacemolt faction_personnel');
+    expect(help).toContain('personnel_action');
+    expect(help).toContain('ManageTreasury');
+    expect(help).toContain('faction garages');
+    expect(help).toContain('get_guide');
+    expect(help).not.toContain('recruit_personnel');
+    expect(help).not.toContain('treat_personnel');
+    expect(help).not.toContain('transfer_personnel');
+    expect(help).not.toContain('legacy docs');
+  });
+
   test('faction_espionage is curated on the faction group', () => {
     const action = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.espionage;
     const config = action?.config;
@@ -1601,7 +1638,6 @@ describe('command metadata', () => {
       'auth_login_link',
       'auth_login_link_poll',
       'battle_self_destruct',
-      'ship_faction_personnel',
       'shipping_accept',
       'shipping_cancel',
       'shipping_pay_debt',
@@ -1662,6 +1698,11 @@ describe('command metadata', () => {
       'injured_marines',
     ]);
     expect(COMMANDS.transfer_personnel?.required).toEqual(['target']);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_faction_personnel).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.salvage_claim_prize).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.salvage_service_prize).toBeUndefined();
+    expect(COMMANDS.faction_personnel).toBeDefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.faction_personnel).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.pay_bounty?.category).not.toBe('Generated API');
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');
@@ -2277,7 +2318,7 @@ describe('command metadata', () => {
   });
 
   test('shell completions include nested command group action values', () => {
-    const expected = ['info', 'create_buy_order', 'invite'];
+    const expected = ['info', 'create_buy_order', 'invite', 'personnel'];
     for (const shell of ['bash', 'zsh', 'fish']) {
       const completion = generateCompletion(shell);
       if (shell === 'zsh') {

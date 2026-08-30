@@ -26,6 +26,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Generated fallbacks `salvage_claim_prize` and `salvage_service_prize` are a breaking cutover. Those names are
   gone, have no hidden aliases, and will **not** fuzzy-map to `claim_prize` / `service_prize`.
 
+### Faction personnel group action (breaking)
+
+- `spacemolt faction personnel` views, recruits into, deposits to, or withdraws from the faction local
+  personnel reserve (`POST /api/v2/spacemolt_ship/faction_personnel`). Omitting `personnel_action` leaves
+  the server default (`status`). Recruit and withdraw require ManageTreasury; any member may deposit.
+- Generated `ship_faction_personnel` is removed. There is no command-name alias; use the grouped form.
+
 ### commission_ship / commission_quote help (gameserver 0.569)
 
 - `help commission_ship` documents `bare_hull=true` (opt-in unfitted hull at NPC, empire, and faction yards) and
