@@ -32,7 +32,7 @@ const RISK_NOTES: Record<string, string[]> = {
   faction_build: ['Builds a faction facility and spends faction resources/credits.'],
   faction_facility_upgrade: ['Upgrades a faction facility and spends faction resources/credits.'],
   faction_personnel: [
-    'status is read-only; recruit spends faction credits from station pools; withdraw requires ManageTreasury; deposit does not.',
+    'status is read-only; recruit and withdraw require ManageTreasury; deposit does not; recruit also spends faction credits from station pools.',
   ],
   refuel: [
     'Station credit refueling ignores quantity and fills the tank to full.',

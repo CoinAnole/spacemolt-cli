@@ -1312,13 +1312,9 @@ describe('command metadata', () => {
     expect(config?.aliases).toEqual({ action: 'personnel_action' });
     expect(config?.args).toEqual(['personnel_action']);
     expect(config?.example).toBe('spacemolt faction personnel status');
-    expect(config?.seeAlso).toEqual([
-      'recruit_personnel',
-      'treat_personnel',
-      'transfer_personnel',
-      'faction_garages',
-      'get_guide',
-    ]);
+    expect(config?.seeAlso).toEqual(['faction_garages', 'get_guide']);
+    expect(config?.description).not.toContain('v1');
+    expect(config?.description).not.toContain('personnel_action (legacy');
     expect(config?.schema?.fit_crew?.description).toBeTruthy();
     expect(config?.schema?.personnel_action?.enum).toEqual(['status', 'recruit', 'deposit', 'withdraw']);
 
@@ -1327,6 +1323,12 @@ describe('command metadata', () => {
     expect(help).not.toContain('spacemolt faction_personnel');
     expect(help).toContain('personnel_action');
     expect(help).toContain('ManageTreasury');
+    expect(help).toContain('faction garages');
+    expect(help).toContain('get_guide');
+    expect(help).not.toContain('recruit_personnel');
+    expect(help).not.toContain('treat_personnel');
+    expect(help).not.toContain('transfer_personnel');
+    expect(help).not.toContain('legacy docs');
   });
 
   test('faction_espionage is curated on the faction group', () => {
