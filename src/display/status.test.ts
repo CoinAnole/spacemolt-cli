@@ -850,6 +850,25 @@ test('get_status prints personnel after Power and prize recoveries after nearby 
   expect(recoveriesIdx).toBeGreaterThan(nearbyIdx);
 });
 
+test('get_status indents INCAPACITATED in the personnel block before combat effects', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.incapacitated = true;
+  fixture.ship.personnel = {
+    ...(fixture.ship.personnel as Record<string, unknown>),
+    fit_crew: 0,
+  };
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('  INCAPACITATED: no fit crew — ship operations unavailable');
+  expect(stdout).not.toMatch(/^INCAPACITATED:/m);
+  const powerIdx = stdout.indexOf('  Power:');
+  const warningIdx = stdout.indexOf('  INCAPACITATED:');
+  const nearbyIdx = stdout.indexOf('Nearby Players:');
+  const podIdx = stdout.indexOf('WARNING: You are in an Escape Pod!');
+  expect(warningIdx).toBeGreaterThan(powerIdx);
+  expect(nearbyIdx).toBeGreaterThan(warningIdx);
+  expect(podIdx).toBe(-1);
+});
+
 test('get_status omits personnel when the ship has no personnel object or scalars', () => {
   const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
   delete fixture.ship.personnel;
@@ -921,6 +940,31 @@ test('prize recovery transit prefers POI ids for travel and systems when kind is
       poi_id: 'earth_station',
     },
   ];
+  const pathfinder = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  pathfinder.prize_recoveries = [
+    {
+      prize_id: 'prize-path-1',
+      ship_class: 'scout',
+      status: 'in_transit',
+      destination_base_id: 'earth_station',
+      transit_kind: 'pathfinder',
+      transit_from_system_id: 'sol',
+      transit_to_system_id: 'alpha_centauri',
+      transit_from_poi_id: 'sol_earth',
+      transit_to_poi_id: 'ac_station',
+    },
+  ];
+  const kindTo = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  kindTo.prize_recoveries = [
+    {
+      prize_id: 'prize-kind-to-1',
+      ship_class: 'scout',
+      status: 'in_transit',
+      destination_base_id: 'earth_station',
+      transit_kind: 'jump',
+      transit_to_system_id: 'alpha_centauri',
+    },
+  ];
 
   const travelOut = renderStructuredResult('get_status', travel, options, context).stdout.join('\n');
   expect(travelOut).toContain('travel sol_earth → ac_station');
@@ -936,6 +980,12 @@ test('prize recovery transit prefers POI ids for travel and systems when kind is
   const parkedOut = renderStructuredResult('get_status', parked, options, context).stdout.join('\n');
   expect(parkedOut).toContain('sol / earth_station');
   expect(parkedOut).toContain('3');
+
+  const pathfinderOut = renderStructuredResult('get_status', pathfinder, options, context).stdout.join('\n');
+  expect(pathfinderOut).toContain('pathfinder sol → alpha_centauri');
+
+  const kindToOut = renderStructuredResult('get_status', kindTo, options, context).stdout.join('\n');
+  expect(kindToOut).toContain('jump → alpha_centauri');
 });
 
 test('get_status_summary prints Crew occupancy and omits it without personnel or when riding', () => {

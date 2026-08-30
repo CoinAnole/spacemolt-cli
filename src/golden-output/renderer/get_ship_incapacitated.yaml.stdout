@@ -56,7 +56,6 @@ ship:
     injured_crew: 2
     fit_marines: 0
     injured_marines: 1
-    version: 7
   effective_crew_capacity: 6
   effective_marine_capacity: 4
   minimum_crew: 3

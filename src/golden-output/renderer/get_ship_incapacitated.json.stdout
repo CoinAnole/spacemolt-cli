@@ -64,8 +64,7 @@
       "fit_crew": 0,
       "injured_crew": 2,
       "fit_marines": 0,
-      "injured_marines": 1,
-      "version": 7
+      "injured_marines": 1
     },
     "effective_crew_capacity": 6,
     "effective_marine_capacity": 4,

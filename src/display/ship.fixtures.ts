@@ -105,7 +105,6 @@ export const shipIncapacitatedFixture = {
       injured_crew: 2,
       fit_marines: 0,
       injured_marines: 1,
-      version: 7,
     },
     crew_efficiency: 0,
     operational_speed: 0,

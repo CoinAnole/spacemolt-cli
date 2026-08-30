@@ -378,7 +378,11 @@ test('get_ship omits personnel lines when personnel and scalars are absent', () 
 });
 
 test('get_ship prints incapacitated warning, injured survivors, recovery, and no version', () => {
-  const stdout = renderShip(shipIncapacitatedFixture).stdout.join('\n');
+  const fixture = structuredClone(shipIncapacitatedFixture) as {
+    ship: { personnel: Record<string, unknown> };
+  };
+  fixture.ship.personnel.version = 7;
+  const stdout = renderShip(fixture).stdout.join('\n');
   expect(stdout).toContain('Crew: 0/6 fit, 2 injured (min 3)');
   expect(stdout).toContain('Marines: 0/4 fit, 1 injured');
   expect(stdout).toContain('Efficiency: 0%');
@@ -407,4 +411,33 @@ test('get_ship omits efficiency and incapacitated noise and prints recovery 0', 
   expect(stdout).toContain('Operational speed: 8');
   expect(stdout).not.toContain('(base 8)');
   expect(stdout).toContain('Survivor recovery: 0 ticks');
+});
+
+test('get_ship prints non-integer operational speed without coercing to int', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  fixture.ship.operational_speed = 8.5;
+  fixture.ship.speed = 8.5;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Operational speed: 8.5');
+  expect(stdout).not.toContain('Operational speed: 8\n');
+  expect(stdout).not.toContain('Operational speed: 9');
+  expect(stdout).not.toContain('(base 8.5)');
+});
+
+test('get_ship does not warn when incapacitated is not boolean true', () => {
+  for (const incapacitated of ['true', 1, 'yes']) {
+    const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+    fixture.ship.incapacitated = incapacitated;
+    const stdout = renderShip(fixture).stdout.join('\n');
+    expect(stdout).not.toContain('INCAPACITATED');
+  }
+});
+
+test('get_ship omits Survivor recovery when only personnel_recovery_tick is set', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  delete fixture.ship.personnel_recovery_ticks_remaining;
+  fixture.ship.personnel_recovery_tick = 12600;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).not.toContain('Survivor recovery:');
+  expect(stdout).not.toContain('tick 12600');
 });
