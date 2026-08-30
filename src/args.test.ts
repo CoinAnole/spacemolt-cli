@@ -458,6 +458,24 @@ describe('normalizeParsedPayload', () => {
     expect(normalizeInternalPayload('fleet_invite', { player_id: 'PlayerName' })).toEqual({ id: 'PlayerName' });
     expect(normalizeParsedPayload('delete_note', { note_id: 'note_1' })).toEqual({ target: 'note_1' });
     expect(normalizeInternalPayload('faction_propose_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
+    expect(normalizeInternalPayload('treat_personnel', { target: 'ally' })).toEqual({ id: 'ally' });
+    expect(normalizeParsedPayload('treat_personnel', { target: 'ally' })).toEqual({ id: 'ally' });
+    expect(normalizeInternalPayload('transfer_personnel', { target: 'ally' })).toEqual({ id: 'ally' });
+    expect(normalizeParsedPayload('transfer_personnel', { target: 'ally', fit_crew: 2 })).toEqual({
+      id: 'ally',
+      fit_crew: 2,
+    });
+    const treatParsed = parseInternalOk(['treat_personnel', 'target=ally']);
+    expect(treatParsed.payload.target).toBe('ally');
+    expect(treatParsed.payload.id).toBeUndefined();
+    expect(normalizeInternalPayload('treat_personnel', treatParsed.payload)).toEqual({ id: 'ally' });
+    const transferParsed = parseInternalOk(['transfer_personnel', 'ally', 'fit_crew=2']);
+    expect(transferParsed.payload.target).toBe('ally');
+    expect(transferParsed.payload.id).toBeUndefined();
+    expect(normalizeInternalPayload('transfer_personnel', transferParsed.payload)).toEqual({
+      id: 'ally',
+      fit_crew: '2',
+    });
     expect(normalizeInternalPayload('faction_accept_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeInternalPayload('faction_remove_ally', { target_faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
     expect(normalizeInternalPayload('faction_accept_invite', { faction_id: 'fac_1' })).toEqual({ id: 'fac_1' });
