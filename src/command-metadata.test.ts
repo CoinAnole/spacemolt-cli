@@ -1547,6 +1547,20 @@ describe('command metadata', () => {
       aliases: { target: 'id' },
       route: { tool: 'spacemolt_ship', action: 'treat_personnel', method: 'POST' },
     });
+    expect(COMMANDS.treat_personnel?.args).toEqual(['target', 'crew', 'marines', 'provider', 'reserve']);
+    expect(COMMANDS.treat_personnel?.required ?? []).toEqual([]);
+    expect(
+      completionArgsForCommand('treat_personnel', COMMANDS.treat_personnel).find((arg) => arg.name === 'provider'),
+    ).toMatchObject({
+      kind: 'enum',
+      values: ['station', 'field', 'faction'],
+    });
+    expect(
+      completionArgsForCommand('treat_personnel', COMMANDS.treat_personnel).find((arg) => arg.name === 'reserve'),
+    ).toMatchObject({
+      kind: 'boolean',
+      values: ['true', 'false'],
+    });
     expect(COMMANDS.transfer_personnel).toMatchObject({
       category: 'Ship management',
       usage:
@@ -1557,6 +1571,14 @@ describe('command metadata', () => {
       aliases: { target: 'id' },
       route: { tool: 'spacemolt_ship', action: 'transfer_personnel', method: 'POST' },
     });
+    expect(COMMANDS.transfer_personnel?.args).toEqual([
+      'target',
+      'fit_crew',
+      'fit_marines',
+      'injured_crew',
+      'injured_marines',
+    ]);
+    expect(COMMANDS.transfer_personnel?.required).toEqual(['target']);
     expect(BUNDLED_COMMAND_REGISTRY.commands.pay_bounty?.category).not.toBe('Generated API');
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');

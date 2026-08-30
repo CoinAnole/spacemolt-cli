@@ -1164,6 +1164,26 @@ describe('help output branches', () => {
     expect(curated.stdout.join('\n')).toContain('recruit_personnel');
   });
 
+  test('generated ship_* personnel names dispatch as unknown commands', async () => {
+    for (const generatedName of ['ship_recruit_personnel', 'ship_treat_personnel', 'ship_transfer_personnel']) {
+      const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-help-unknown-personnel-'));
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      let exitCode: number;
+      try {
+        exitCode = await withConfigHome(configHome, () =>
+          runInvocation([generatedName], undefined, fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome })),
+        );
+      } finally {
+        fs.rmSync(configHome, { recursive: true, force: true });
+      }
+
+      expect(exitCode).toBe(1);
+      expect(stderr.join('\n')).toContain(`Unknown command "${generatedName}"`);
+      expect(stdout.join('\n')).not.toContain('Hire from station pools');
+    }
+  });
+
   test('help list_ships documents module types, locations, and get_ship', () => {
     const capture = captureWriter();
 

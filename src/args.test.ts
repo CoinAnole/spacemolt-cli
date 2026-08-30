@@ -2190,6 +2190,13 @@ describe('validateRequiredArgs', () => {
     expect(validateRequiredArgs('delete_note', { target: 'note_1' })).toBeNull();
   });
 
+  test('transfer_personnel requires target; id= satisfies the friendly required field', () => {
+    expect(validateRequiredArgs('treat_personnel', {})).toBeNull();
+    expect(validateRequiredArgs('transfer_personnel', {})).toBe('target');
+    expect(validateRequiredArgs('transfer_personnel', { target: 'ally' })).toBeNull();
+    expect(validateRequiredArgs('transfer_personnel', { id: 'ally' })).toBeNull();
+  });
+
   test('supply_commission requires all three args', () => {
     expect(validateRequiredArgs('supply_commission', {})).toBe('commission_id');
     expect(validateRequiredArgs('supply_commission', { commission_id: 'c1' })).toBe('item_id');

@@ -288,7 +288,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'get_guide'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt_ship/treat_personnel',
-    positionals: ['target'],
+    positionals: ['target', 'crew', 'marines', 'provider', 'reserve'],
     aliases: {
       target: 'id',
     },
@@ -301,7 +301,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     seeAlso: ['recruit_personnel', 'treat_personnel', 'get_guide'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt_ship/transfer_personnel',
-    positionals: ['target'],
+    positionals: ['target', 'fit_crew', 'fit_marines', 'injured_crew', 'injured_marines'],
     aliases: {
       target: 'id',
     },
