@@ -957,6 +957,22 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { id: 'prize-1', service_action: 'redirect', target: 'earth_station' },
     });
+
+    const stderr: string[] = [];
+    expect(
+      preparePayload(
+        'claim_prize',
+        { prize_id: 'prize-1', destination_base_id: 'Ear' },
+        options({ fuzzyIds: true, plain: true }),
+        sessionPath,
+        writer([], stderr),
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'prize-1', target: 'earth_station' },
+    });
+    expect(stderr.join('\n')).toContain('resolved claim_prize.target "Ear" → "earth_station" (prefix)');
+    expect(stderr.join('\n')).not.toContain('sol_earth');
   });
 
   test('resolves facility and listing IDs from cache', () => {
