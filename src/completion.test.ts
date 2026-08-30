@@ -407,6 +407,35 @@ describe('shell completion generation', () => {
     );
   });
 
+  test('curated prize commands appear in completion without generated salvage_* names', () => {
+    const claimValues = completeWords({ shell: 'fish', words: ['spacemolt', 'claim_p'], current: 'claim_p' }).map(
+      (candidate) => candidate.value,
+    );
+    const serviceValues = completeWords({
+      shell: 'fish',
+      words: ['spacemolt', 'service_p'],
+      current: 'service_p',
+    }).map((candidate) => candidate.value);
+    const salvageValues = completeWords({
+      shell: 'fish',
+      words: ['spacemolt', 'salvage_'],
+      current: 'salvage_',
+    }).map((candidate) => candidate.value);
+    const bash = generateCompletion('bash');
+    const fish = generateCompletion('fish');
+
+    expect(claimValues).toContain('claim_prize');
+    expect(serviceValues).toContain('service_prize');
+    expect(salvageValues).not.toContain('salvage_claim_prize');
+    expect(salvageValues).not.toContain('salvage_service_prize');
+    expect(bash).toContain('claim_prize');
+    expect(bash).toContain('service_prize');
+    expect(bash).not.toContain('salvage_claim_prize');
+    expect(bash).not.toContain('salvage_service_prize');
+    expect(fish).not.toContain('salvage_claim_prize');
+    expect(fish).not.toContain('salvage_service_prize');
+  });
+
   test('curated shipping_list remains available in runtime and static completion', () => {
     const values = completeWords({ shell: 'fish', words: ['spacemolt', 'shipping_l'], current: 'shipping_l' }).map(
       (candidate) => candidate.value,

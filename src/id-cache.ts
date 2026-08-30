@@ -141,6 +141,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   set_drone_name: { drone: ['drone_id', 'id'] },
   reload: { item: ['ammo_item_id', 'target'] },
   tow_wreck: { wreck: ['wreck_id', 'id'] },
+  claim_prize: { poi: ['target', 'destination_base_id'] },
+  service_prize: { poi: ['target', 'destination_base_id'] },
   loot_wreck: { wreck: ['wreck_id', 'id'], item: ['item_id'] },
   facility_upgrade: { facility: ['facility_id'] },
   facility_repair: { facility: ['facility_id'] },

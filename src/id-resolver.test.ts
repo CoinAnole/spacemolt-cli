@@ -897,6 +897,54 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('resolves cached station names on claim_prize destination_base_id and target', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'earth_station',
+            name: 'Earth Station',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(
+      preparePayload(
+        'claim_prize',
+        { prize_id: 'prize-1', destination_base_id: 'Earth Station' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'prize-1', target: 'earth_station' },
+    });
+    expect(
+      preparePayload('claim_prize', { prize_id: 'prize-1', target: 'Earth Station' }, options(), sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'prize-1', target: 'earth_station' },
+    });
+    expect(
+      preparePayload(
+        'service_prize',
+        { prize_id: 'prize-1', action: 'redirect', destination_base_id: 'Earth Station' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'prize-1', service_action: 'redirect', target: 'earth_station' },
+    });
+  });
+
   test('resolves facility and listing IDs from cache', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

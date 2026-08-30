@@ -19,6 +19,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `treat_personnel` and `transfer_personnel` accept docs/v1 kwargs `target=` (alias of API `id=`).
 - Human output for these three commands is still the generic `=== Response ===` dump.
 
+### claim_prize / service_prize (Salvage & Tow)
+
+- `claim_prize` and `service_prize` are curated Salvage & Tow commands with docs/v1 field aliases
+  (`prize_id` → `id`, `destination_base_id` → `target`; `service_prize` also accepts `action` → `service_action`).
+- Generated fallbacks `salvage_claim_prize` and `salvage_service_prize` are a breaking cutover. Those names are
+  gone, have no hidden aliases, and will **not** fuzzy-map to `claim_prize` / `service_prize`.
+
 ### commission_ship / commission_quote help (gameserver 0.569)
 
 - `help commission_ship` documents `bare_hull=true` (opt-in unfitted hull at NPC, empire, and faction yards) and

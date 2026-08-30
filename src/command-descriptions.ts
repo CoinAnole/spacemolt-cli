@@ -13,6 +13,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   captains_log_get: 'Get a specific entry from your captain log.',
   captains_log_list: 'List all entries in your captain log.',
   claim: 'Link your player to your website account using a registration code',
+  claim_prize: 'Assign prize crew and begin recovery of an intact captured ship',
   cloak: 'Toggle cloaking device',
   commission_quote: 'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews',
   commission_ship:
@@ -131,6 +132,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   search_systems: 'Search for systems by name',
   self_destruct: 'Destroy your own ship',
   sell_wreck: 'Sell a towed wreck to the salvage yard for credits',
+  service_prize: 'Stop, resume, redirect, refuel, or repair a claimed intact prize',
   set_colors: 'Set your ship colors',
   set_drone_name: 'Set or clear a display name for a drone.',
   place_ship_buy_order: 'Place a standing buy order for a ship class at this station',

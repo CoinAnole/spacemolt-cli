@@ -1421,6 +1421,41 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(normalizeParsedPayload('pay_bounty', { empire_id: 'solarian' })).toEqual({ id: 'solarian' });
   });
 
+  test('claim_prize and service_prize docs kwargs normalize to API fields', () => {
+    expect(normalizeParsedPayload('claim_prize', { prize_id: 'p1', destination_base_id: 'earth_station' })).toEqual({
+      id: 'p1',
+      target: 'earth_station',
+    });
+    expect(normalizeParsedPayload('service_prize', { prize_id: 'p1', action: 'refuel' })).toEqual({
+      id: 'p1',
+      service_action: 'refuel',
+    });
+    expect(
+      normalizeParsedPayload('service_prize', {
+        prize_id: 'p1',
+        action: 'redirect',
+        destination_base_id: 'earth_station',
+      }),
+    ).toEqual({
+      id: 'p1',
+      service_action: 'redirect',
+      target: 'earth_station',
+    });
+
+    const parsed = parseArgs(['claim_prize', 'p1', 'earth_station']);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.errors.map((error) => error.message).join('; '));
+    expect(parsed.payload).toEqual({ prize_id: 'p1', destination_base_id: 'earth_station' });
+    expect(parsed.payload).not.toHaveProperty('id');
+    expect(parsed.payload).not.toHaveProperty('target');
+
+    const serviceParsed = parseArgs(['service_prize', 'prize-1', 'refuel']);
+    expect(serviceParsed.ok).toBe(true);
+    if (!serviceParsed.ok) throw new Error(serviceParsed.errors.map((error) => error.message).join('; '));
+    expect(serviceParsed.payload).toEqual({ prize_id: 'prize-1', service_action: 'refuel' });
+    expect(serviceParsed.payload).not.toHaveProperty('id');
+  });
+
   test('get_ship accepts optional ship_id positional and aliases it to id', () => {
     expect(parseOk(['get_ship']).payload).toEqual({});
     expect(parseOk(['get_ship', 'ship-abc']).payload.ship_id).toBe('ship-abc');

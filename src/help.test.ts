@@ -18,6 +18,7 @@ import {
   showFullHelp,
   showHelp,
   showProgressiveHelp,
+  suggestCommands,
 } from './help';
 import { runInvocation } from './main';
 import { setDefaultProfile } from './session';
@@ -1229,6 +1230,34 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('[module_id=…]');
     expect(output).toContain('withdrawn types cannot be fitted');
+  });
+
+  test('help and explain salvage_claim_prize do not resolve as claim_prize', () => {
+    const help = captureWriter();
+    const explain = captureWriter();
+    expect(showCommandHelp('salvage_claim_prize', help.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(false);
+    expect(
+      showCommandExplanation('salvage_claim_prize', explain.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(false);
+    expect(help.stdout.join('\n')).not.toContain('prize_id');
+    expect(explain.stdout.join('\n')).not.toContain('prize_id');
+    expect(suggestCommands('salvage_claim_prize')).not.toContain('claim_prize');
+    expect(suggestCommands('salvage_service_prize')).not.toContain('service_prize');
+
+    const unknown = captureWriter();
+    displayUnknownCommand('salvage_claim_prize', unknown.writer, { plain: true });
+    expect(unknown.stderr.join('\n')).not.toContain('Did you mean: claim_prize');
+  });
+
+  test('help claim_prize documents prize_id -> id field alias', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('claim_prize', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Fields:');
+    expect(output).toContain('prize_id -> id');
+    expect(output).toContain('destination_base_id -> target');
+    expect(output).toContain('Assign prize crew and begin recovery of an intact captured ship');
   });
 
   test('scrap_wreck help documents faction-station salvage unlocks', () => {
