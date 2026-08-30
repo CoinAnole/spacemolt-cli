@@ -163,6 +163,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   buy_listed_ship: { listing: ['listing_id', 'id'] },
   cancel_ship_listing: { listing: ['listing_id', 'id'] },
   switch_ship: { ship: ['ship_id', 'id'] },
+  treat_personnel: { player: ['id', 'target'] },
+  transfer_personnel: { player: ['id', 'target'] },
   scrap_ship: { ship: ['ship_id', 'id'] },
   list_ship_for_sale: { ship: ['ship_id', 'id'] },
   get_ship: { ship: ['ship_id', 'id'] },

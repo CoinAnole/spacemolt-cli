@@ -1143,6 +1143,47 @@ describe('help output branches', () => {
     expect(generatedSection).not.toContain('pay_bounty');
   });
 
+  test('generated ship_* personnel names do not resolve as curated personnel help', () => {
+    for (const generatedName of ['ship_recruit_personnel', 'ship_treat_personnel', 'ship_transfer_personnel']) {
+      const command = captureWriter();
+      const explanation = captureWriter();
+      expect(showCommandHelp(generatedName, command.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(false);
+      expect(showCommandExplanation(generatedName, explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+        false,
+      );
+      expect(command.stdout.join('\n')).not.toContain('recruit_personnel');
+      expect(command.stdout.join('\n')).not.toContain('treat_personnel');
+      expect(command.stdout.join('\n')).not.toContain('transfer_personnel');
+      expect(explanation.stdout.join('\n')).not.toContain('recruit_personnel');
+      expect(explanation.stdout.join('\n')).not.toContain('treat_personnel');
+      expect(explanation.stdout.join('\n')).not.toContain('transfer_personnel');
+    }
+
+    const curated = captureWriter();
+    expect(showCommandHelp('recruit_personnel', curated.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(curated.stdout.join('\n')).toContain('recruit_personnel');
+  });
+
+  test('generated ship_* personnel names dispatch as unknown commands', async () => {
+    for (const generatedName of ['ship_recruit_personnel', 'ship_treat_personnel', 'ship_transfer_personnel']) {
+      const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-help-unknown-personnel-'));
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      let exitCode: number;
+      try {
+        exitCode = await withConfigHome(configHome, () =>
+          runInvocation([generatedName], undefined, fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome })),
+        );
+      } finally {
+        fs.rmSync(configHome, { recursive: true, force: true });
+      }
+
+      expect(exitCode).toBe(1);
+      expect(stderr.join('\n')).toContain(`Unknown command "${generatedName}"`);
+      expect(stdout.join('\n')).not.toContain('Hire from station pools');
+    }
+  });
+
   test('help list_ships documents module types, locations, and get_ship', () => {
     const capture = captureWriter();
 

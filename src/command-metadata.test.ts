@@ -1519,14 +1519,66 @@ describe('command metadata', () => {
       'salvage_claim_prize',
       'salvage_service_prize',
       'ship_faction_personnel',
-      'ship_recruit_personnel',
-      'ship_transfer_personnel',
-      'ship_treat_personnel',
       'shipping_accept',
       'shipping_cancel',
       'shipping_pay_debt',
       'shipping_profile',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_recruit_personnel).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_treat_personnel).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_transfer_personnel).toBeUndefined();
+
+    expect(COMMANDS.recruit_personnel).toMatchObject({
+      category: 'Ship management',
+      usage: '[crew=N] [marines=N]  (docked; at least one count must be positive)',
+      example: 'spacemolt recruit_personnel crew=4 marines=2',
+      discoverWith: ['get_status', 'get_ship', 'get_base'],
+      seeAlso: ['treat_personnel', 'transfer_personnel', 'get_guide'],
+      route: { tool: 'spacemolt_ship', action: 'recruit_personnel', method: 'POST' },
+    });
+    expect(COMMANDS.recruit_personnel?.aliases ?? {}).toEqual({});
+    expect(COMMANDS.recruit_personnel?.required ?? []).toEqual([]);
+    expect(COMMANDS.treat_personnel).toMatchObject({
+      category: 'Ship management',
+      usage: '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]',
+      example: 'spacemolt treat_personnel provider=station',
+      discoverWith: ['get_ship', 'get_status'],
+      seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'get_guide'],
+      aliases: { target: 'id' },
+      route: { tool: 'spacemolt_ship', action: 'treat_personnel', method: 'POST' },
+    });
+    expect(COMMANDS.treat_personnel?.args).toEqual(['target', 'crew', 'marines', 'provider', 'reserve']);
+    expect(COMMANDS.treat_personnel?.required ?? []).toEqual([]);
+    expect(
+      completionArgsForCommand('treat_personnel', COMMANDS.treat_personnel).find((arg) => arg.name === 'provider'),
+    ).toMatchObject({
+      kind: 'enum',
+      values: ['station', 'field', 'faction'],
+    });
+    expect(
+      completionArgsForCommand('treat_personnel', COMMANDS.treat_personnel).find((arg) => arg.name === 'reserve'),
+    ).toMatchObject({
+      kind: 'boolean',
+      values: ['true', 'false'],
+    });
+    expect(COMMANDS.transfer_personnel).toMatchObject({
+      category: 'Ship management',
+      usage:
+        '<target> [fit_crew=N] [fit_marines=N] [injured_crew=N] [injured_marines=N]  (allied player at same POI; out of combat)',
+      example: 'spacemolt transfer_personnel ally fit_crew=2',
+      discoverWith: ['get_nearby', 'get_ship'],
+      seeAlso: ['recruit_personnel', 'treat_personnel', 'get_guide'],
+      aliases: { target: 'id' },
+      route: { tool: 'spacemolt_ship', action: 'transfer_personnel', method: 'POST' },
+    });
+    expect(COMMANDS.transfer_personnel?.args).toEqual([
+      'target',
+      'fit_crew',
+      'fit_marines',
+      'injured_crew',
+      'injured_marines',
+    ]);
+    expect(COMMANDS.transfer_personnel?.required).toEqual(['target']);
     expect(BUNDLED_COMMAND_REGISTRY.commands.pay_bounty?.category).not.toBe('Generated API');
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');

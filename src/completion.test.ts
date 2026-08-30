@@ -338,6 +338,61 @@ describe('shell completion generation', () => {
     expect(runtimeNoFuzzy.find((c) => c.value === '--no-fuzzy-ids')?.description).toContain('override env/config');
   });
 
+  test('generated ship_* personnel names are not completed', async () => {
+    const generatedNames = ['ship_recruit_personnel', 'ship_treat_personnel', 'ship_transfer_personnel'];
+    const prefixes = ['ship_', 'ship_recruit', 'ship_treat', 'ship_transfer', 'recruit_p'];
+    for (const current of prefixes) {
+      const values = completeWords({ shell: 'fish', words: ['spacemolt', current], current }).map(
+        (candidate) => candidate.value,
+      );
+      for (const generatedName of generatedNames) {
+        expect(values).not.toContain(generatedName);
+      }
+    }
+    expect(
+      completeWords({ shell: 'fish', words: ['spacemolt', 'recruit_p'], current: 'recruit_p' }).map(
+        (candidate) => candidate.value,
+      ),
+    ).toContain('recruit_personnel');
+
+    const bash = generateCompletion('bash');
+    const fish = generateCompletion('fish');
+    for (const generatedName of generatedNames) {
+      expect(bash).not.toContain(generatedName);
+      expect(fish).not.toContain(generatedName);
+    }
+
+    const home = tempDir();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const exitCode = await runInvocation(['__complete', 'fish', '--', 'spacemolt', 'ship_'], undefined, {
+      env: {
+        HOME: home,
+        XDG_CONFIG_HOME: path.join(home, '.config'),
+        SPACEMOLT_NO_UPDATE_CHECK: 'true',
+      },
+      writer: {
+        out(message = '') {
+          stdout.push(message);
+        },
+        err(message = '') {
+          stderr.push(message);
+        },
+        writeOut(chunk) {
+          stdout.push(chunk);
+        },
+      },
+      clock: { now: () => new Date('2026-07-17T00:00:00.000Z') },
+      sleep: async () => {},
+    });
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    const completed = stdout.join('');
+    for (const generatedName of generatedNames) {
+      expect(completed).not.toContain(generatedName);
+    }
+  });
+
   test('bundled generated commands appear in runtime and static completion', () => {
     const values = completeWords({ shell: 'fish', words: ['spacemolt', 'shipping_q'], current: 'shipping_q' }).map(
       (candidate) => candidate.value,

@@ -10,6 +10,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Local reject of unknown stances (`charge` → `invalid_enum` listing `board`).
 - Local reject of non-positive `marines` (`marines=0` → `below_minimum`). Help Fields say `target`, not `target_id`; `target_id=` aliases to `target` on this command only.
 
+### Ship personnel commands (breaking)
+
+- `recruit_personnel`, `treat_personnel`, and `transfer_personnel` are curated Ship management
+  commands (`POST /api/v2/spacemolt_ship/{recruit,treat,transfer}_personnel`). Generated names
+  `ship_recruit_personnel`, `ship_treat_personnel`, and `ship_transfer_personnel` no longer
+  dispatch, complete, or resolve as help for the curated commands.
+- `treat_personnel` and `transfer_personnel` accept docs/v1 kwargs `target=` (alias of API `id=`).
+- Human output for these three commands is still the generic `=== Response ===` dump.
+
 ### commission_ship / commission_quote help (gameserver 0.569)
 
 - `help commission_ship` documents `bare_hull=true` (opt-in unfitted hull at NPC, empire, and faction yards) and

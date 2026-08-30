@@ -29,6 +29,13 @@ const RISK_NOTES: Record<string, string[]> = {
     'Station credit refueling ignores quantity and fills the tank to full.',
     'quantity applies only to fuel cells or ship-to-ship transfers.',
   ],
+  recruit_personnel: [
+    'Spends credits; draws from finite station crew/marine pools; at least one of crew/marines must be positive.',
+  ],
+  treat_personnel: [
+    'Spends credits and/or medical supplies; reserve=true mutates faction reserve and requires ManageTreasury.',
+  ],
+  transfer_personnel: ['Moves personnel off your ship; the active hull keeps at least one fit crew.'],
 };
 
 export function getRoutePreview(command: string, payload: Record<string, unknown>): Record<string, unknown> {

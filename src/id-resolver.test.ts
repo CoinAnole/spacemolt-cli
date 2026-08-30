@@ -495,6 +495,36 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'player-marlowe' } });
   });
 
+  test('resolves cached player names on treat_personnel and transfer_personnel', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-marlowe',
+            name: 'Marlowe',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(prepareInternalPayload('treat_personnel', { target: 'marlowe' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'player-marlowe' },
+    });
+    expect(
+      prepareInternalPayload('transfer_personnel', { target: 'marlowe', fit_crew: 2 }, options(), sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { id: 'player-marlowe', fit_crew: 2 },
+    });
+  });
+
   test('resolves battle_target after target_id alias normalizes to id', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

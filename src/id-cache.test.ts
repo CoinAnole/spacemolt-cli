@@ -883,6 +883,8 @@ describe('id cache', () => {
       ['faction_promote', 'player_id', 'id', 'player'],
       ['faction_propose_ally', 'target_faction_id', 'id', 'faction'],
       ['battle_target', 'target_id', 'id', 'player'],
+      ['treat_personnel', 'target', 'id', 'player'],
+      ['transfer_personnel', 'target', 'id', 'player'],
       ['load_drone', 'drone_item_id', 'id', 'item'],
       ['reload', 'ammo_item_id', 'target', 'item'],
       ['craft', 'package_id', 'package_id', 'package'],

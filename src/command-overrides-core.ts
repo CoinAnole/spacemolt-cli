@@ -271,6 +271,41 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       ship_id: 'id',
     },
   },
+  recruit_personnel: {
+    usage: '[crew=N] [marines=N]  (docked; at least one count must be positive)',
+    description:
+      'Hire from station pools; at least one of crew/marines must be positive (server-enforced). See get_guide boarding.',
+    example: 'spacemolt recruit_personnel crew=4 marines=2',
+    discoverWith: ['get_status', 'get_ship', 'get_base'],
+    seeAlso: ['treat_personnel', 'transfer_personnel', 'get_guide'],
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/recruit_personnel',
+  },
+  treat_personnel: {
+    usage: '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]',
+    example: 'spacemolt treat_personnel provider=station',
+    discoverWith: ['get_ship', 'get_status'],
+    seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'get_guide'],
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/treat_personnel',
+    positionals: ['target', 'crew', 'marines', 'provider', 'reserve'],
+    aliases: {
+      target: 'id',
+    },
+  },
+  transfer_personnel: {
+    usage:
+      '<target> [fit_crew=N] [fit_marines=N] [injured_crew=N] [injured_marines=N]  (allied player at same POI; out of combat)',
+    example: 'spacemolt transfer_personnel ally fit_crew=2',
+    discoverWith: ['get_nearby', 'get_ship'],
+    seeAlso: ['recruit_personnel', 'treat_personnel', 'get_guide'],
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/transfer_personnel',
+    positionals: ['target', 'fit_crew', 'fit_marines', 'injured_crew', 'injured_marines'],
+    aliases: {
+      target: 'id',
+    },
+  },
   install_mod: {
     usage: '<module_id>  (module must be in cargo, use get_cargo to see)',
     category: 'Ship management',
