@@ -1,5 +1,5 @@
 
-message: "Parked in your faction garage at Nova Terra Central."
+message: "Ship status"
 credits: 12345
 modules:
   - cpu_usage: 2
@@ -36,11 +36,11 @@ ship:
   class_name: "Deep Survey"
   cpu_capacity: 34
   cpu_used: 16
-  custom_name: "Claim Candidate"
+  custom_name: "Asteroid Accessory"
   defense_slots: 1
   fuel: 240
   hull: 420
-  id: "ship-garaged-1"
+  id: "ship-1"
   max_fuel: 240
   max_hull: 420
   max_shield: 300
@@ -52,14 +52,16 @@ ship:
   utility_slots: 5
   weapon_slots: 1
   personnel:
-    fit_crew: 4
-    injured_crew: 0
-    fit_marines: 2
-    injured_marines: 0
+    fit_crew: 0
+    injured_crew: 2
+    fit_marines: 0
+    injured_marines: 1
   effective_crew_capacity: 6
   effective_marine_capacity: 4
   minimum_crew: 3
-  crew_efficiency: 0.67
-  operational_speed: 8
-  incapacitated: false
-  location: "Faction garage — Nova Terra Central"
+  crew_efficiency: 0
+  operational_speed: 0
+  incapacitated: true
+  speed: 12
+  personnel_recovery_ticks_remaining: 5
+  personnel_recovery_tick: 12600

@@ -443,6 +443,8 @@ test('get_status_summary stays compact without detention or bounty', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Player:');
+  expect(stdout).toContain('Crew:');
+  expect(stdout).toContain('4/6');
   expect(stdout).not.toContain('Detained');
   expect(stdout).not.toContain('bounty');
   expect(stdout).not.toContain('Standings:');
@@ -818,4 +820,208 @@ test('get_nearby still declines when location is an object so get_location keeps
   expect(stdout).toContain('=== Location ===');
   expect(stdout).not.toContain('=== Nearby ===');
   assertCopyablePrizeIds(stdout, 'Nearby Prizes');
+});
+
+test('get_status prints personnel after Power and prize recoveries after nearby prizes', () => {
+  const stdout = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toContain('  Crew: 4/6 fit (min 3)');
+  expect(stdout).toContain('  Marines: 2/4 fit');
+  expect(stdout).toContain('  Efficiency: 67%');
+  expect(stdout).toContain('  Operational speed: 8');
+  expect(stdout).not.toContain('injured');
+  expect(stdout).not.toContain('INCAPACITATED');
+  expect(stdout).toContain('Prize recoveries');
+  expect(stdout).toContain('prize-recover-1');
+  expect(stdout).toContain('earth_station');
+  expect(stdout).toContain('Captured Lark (frigate)');
+  expect(stdout).toContain('3 aboard');
+  expect(stdout).toContain('jump sol → alpha_centauri');
+  expect(stdout).not.toContain('return_crew_faction_id');
+  expect(stdout).not.toContain('other_faction');
+  expect(stdout).not.toContain('undefined');
+  const powerIdx = stdout.indexOf('Power:');
+  const crewIdx = stdout.indexOf('Crew:');
+  const nearbyIdx = stdout.indexOf('Nearby Prizes');
+  const recoveriesIdx = stdout.indexOf('Prize recoveries');
+  expect(crewIdx).toBeGreaterThan(powerIdx);
+  expect(recoveriesIdx).toBeGreaterThan(nearbyIdx);
+});
+
+test('get_status indents INCAPACITATED in the personnel block before combat effects', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.incapacitated = true;
+  fixture.ship.personnel = {
+    ...(fixture.ship.personnel as Record<string, unknown>),
+    fit_crew: 0,
+  };
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('  INCAPACITATED: no fit crew — ship operations unavailable');
+  expect(stdout).not.toMatch(/^INCAPACITATED:/m);
+  const powerIdx = stdout.indexOf('  Power:');
+  const warningIdx = stdout.indexOf('  INCAPACITATED:');
+  const nearbyIdx = stdout.indexOf('Nearby Players:');
+  const podIdx = stdout.indexOf('WARNING: You are in an Escape Pod!');
+  expect(warningIdx).toBeGreaterThan(powerIdx);
+  expect(nearbyIdx).toBeGreaterThan(warningIdx);
+  expect(podIdx).toBe(-1);
+});
+
+test('get_status omits personnel when the ship has no personnel object or scalars', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  delete fixture.ship.personnel;
+  delete fixture.ship.effective_crew_capacity;
+  delete fixture.ship.effective_marine_capacity;
+  delete fixture.ship.minimum_crew;
+  delete fixture.ship.crew_efficiency;
+  delete fixture.ship.operational_speed;
+  delete fixture.ship.incapacitated;
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).not.toContain('Crew:');
+  expect(stdout).not.toContain('Marines:');
+  expect(stdout).not.toContain('Efficiency:');
+  expect(stdout).not.toContain('Operational speed:');
+});
+
+test('get_status omits prize recoveries when the array is absent or empty', () => {
+  const absent = structuredClone(getStatusFixture) as { prize_recoveries?: unknown };
+  delete absent.prize_recoveries;
+  const empty = structuredClone(getStatusFixture) as { prize_recoveries?: unknown };
+  empty.prize_recoveries = [];
+  for (const fixture of [absent, empty]) {
+    const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+    expect(stdout).not.toContain('Prize recoveries');
+    expect(stdout).not.toContain('prize-recover-1');
+  }
+});
+
+test('prize recovery transit prefers POI ids for travel and systems when kind is omitted', () => {
+  const travel = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  travel.prize_recoveries = [
+    {
+      prize_id: 'prize-travel-1',
+      ship_class: 'hauler',
+      status: 'in_transit',
+      destination_base_id: 'earth_station',
+      prize_crew_fit: 0,
+      crew_disposition: 'faction_reserve',
+      transit_kind: 'travel',
+      transit_from_system_id: 'sol',
+      transit_to_system_id: 'alpha_centauri',
+      transit_from_poi_id: 'sol_earth',
+      transit_to_poi_id: 'ac_station',
+    },
+  ];
+  const omittedKind = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  omittedKind.prize_recoveries = [
+    {
+      prize_id: 'prize-kindless-1',
+      ship_class: 'scout',
+      status: 'docked',
+      destination_base_id: 'earth_station',
+      crew_disposition: 'aboard',
+      transit_from_system_id: 'sol',
+      transit_to_system_id: 'alpha_centauri',
+      transit_from_poi_id: 'sol_earth',
+      transit_to_poi_id: 'ac_station',
+    },
+  ];
+  const parked = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  parked.prize_recoveries = [
+    {
+      prize_id: 'prize-parked-1',
+      ship_class: 'frigate',
+      status: 'docked',
+      destination_base_id: 'earth_station',
+      prize_crew_fit: 3,
+      system_id: 'sol',
+      poi_id: 'earth_station',
+    },
+  ];
+  const pathfinder = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  pathfinder.prize_recoveries = [
+    {
+      prize_id: 'prize-path-1',
+      ship_class: 'scout',
+      status: 'in_transit',
+      destination_base_id: 'earth_station',
+      transit_kind: 'pathfinder',
+      transit_from_system_id: 'sol',
+      transit_to_system_id: 'alpha_centauri',
+      transit_from_poi_id: 'sol_earth',
+      transit_to_poi_id: 'ac_station',
+    },
+  ];
+  const kindTo = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
+  kindTo.prize_recoveries = [
+    {
+      prize_id: 'prize-kind-to-1',
+      ship_class: 'scout',
+      status: 'in_transit',
+      destination_base_id: 'earth_station',
+      transit_kind: 'jump',
+      transit_to_system_id: 'alpha_centauri',
+    },
+  ];
+
+  const travelOut = renderStructuredResult('get_status', travel, options, context).stdout.join('\n');
+  expect(travelOut).toContain('travel sol_earth → ac_station');
+  expect(travelOut).toContain('0 faction_reserve');
+  expect(travelOut).toContain('prize-travel-1');
+  expect(travelOut).toContain('earth_station');
+
+  const omittedOut = renderStructuredResult('get_status', omittedKind, options, context).stdout.join('\n');
+  expect(omittedOut).toContain('sol → alpha_centauri');
+  expect(omittedOut).toContain('aboard');
+  expect(omittedOut).not.toContain('undefined');
+
+  const parkedOut = renderStructuredResult('get_status', parked, options, context).stdout.join('\n');
+  expect(parkedOut).toContain('sol / earth_station');
+  expect(parkedOut).toContain('3');
+
+  const pathfinderOut = renderStructuredResult('get_status', pathfinder, options, context).stdout.join('\n');
+  expect(pathfinderOut).toContain('pathfinder sol → alpha_centauri');
+
+  const kindToOut = renderStructuredResult('get_status', kindTo, options, context).stdout.join('\n');
+  expect(kindToOut).toContain('jump → alpha_centauri');
+});
+
+test('get_status_summary prints Crew occupancy and omits it without personnel or when riding', () => {
+  const withCrew = renderStructuredResult(
+    'get_status_summary',
+    structuredClone(getStatusFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(withCrew).toContain('Crew:');
+  expect(withCrew).toContain('4/6');
+  expect(withCrew).not.toContain('Marines:');
+  expect(withCrew).not.toContain('INCAPACITATED');
+  expect(withCrew).not.toContain('injured');
+
+  const withoutPersonnel = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  delete withoutPersonnel.ship.personnel;
+  const omitted = renderStructuredResult('get_status_summary', withoutPersonnel, options, context).stdout.join('\n');
+  expect(omitted).not.toContain('Crew:');
+
+  const riding = structuredClone(getStatusFixture) as { riding?: Record<string, unknown> };
+  riding.riding = { carrier: 'Ibis', ship_id: 'ship-ibis-1' };
+  const ridingOut = renderStructuredResult('get_status_summary', riding, options, context).stdout.join('\n');
+  expect(ridingOut).not.toContain('Crew:');
+  expect(ridingOut).toContain('passenger on Ibis');
+});
+
+test('get_status_summary still prints Crew 0/6 when incapacitated', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.personnel = {
+    ...(fixture.ship.personnel as Record<string, unknown>),
+    fit_crew: 0,
+  };
+  fixture.ship.incapacitated = true;
+  const stdout = renderStructuredResult('get_status_summary', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Crew:');
+  expect(stdout).toContain('0/6');
+  expect(stdout).not.toContain('INCAPACITATED');
 });

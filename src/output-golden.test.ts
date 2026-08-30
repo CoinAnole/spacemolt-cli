@@ -303,6 +303,18 @@ const getStatusSummaryFixture = {
   ship: {
     name: 'Wayfarer',
     class_name: 'Dust Devil',
+    personnel: {
+      fit_crew: 4,
+      injured_crew: 0,
+      fit_marines: 2,
+      injured_marines: 0,
+    },
+    effective_crew_capacity: 6,
+    effective_marine_capacity: 4,
+    minimum_crew: 3,
+    crew_efficiency: 0.67,
+    operational_speed: 8,
+    incapacitated: false,
   },
   skills: {
     crafting: { name: 'Crafting', level: 11, xp: 4000, next_level_xp: 5000 },

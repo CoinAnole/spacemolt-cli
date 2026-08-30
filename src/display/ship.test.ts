@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { factionGaragesFixture, listShipsFixture } from './ship.fixtures.ts';
+import { formatCrewRatio } from './personnel.ts';
+import { factionGaragesFixture, listShipsFixture, shipFixture, shipIncapacitatedFixture } from './ship.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -327,4 +328,116 @@ test('faction_garages station with empty ships prints none', () => {
   expect(stdout).toContain('Used: 0/4');
   expect(stdout).toContain('(None)');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+function renderShip(fixture: Record<string, unknown>) {
+  return renderStructuredResult('get_ship', structuredClone(fixture), options, context);
+}
+
+test('formatCrewRatio prints occupancy and omits missing or non-finite counts', () => {
+  expect(formatCrewRatio(shipFixture.ship)).toBe('4/6');
+  expect(formatCrewRatio(shipIncapacitatedFixture.ship)).toBe('0/6');
+  expect(formatCrewRatio({ name: 'Bare' })).toBeUndefined();
+  expect(formatCrewRatio({ personnel: { fit_crew: 4 } })).toBeUndefined();
+  expect(formatCrewRatio({ personnel: { fit_crew: Number.NaN }, effective_crew_capacity: 6 })).toBeUndefined();
+});
+
+test('get_ship prints healthy personnel after berths and before modules', () => {
+  const stdout = renderShip(shipFixture).stdout.join('\n');
+  expect(stdout).toContain('Crew: 4/6 fit (min 3)');
+  expect(stdout).toContain('Marines: 2/4 fit');
+  expect(stdout).toContain('Efficiency: 67%');
+  expect(stdout).toContain('Operational speed: 8');
+  expect(stdout).not.toContain('injured');
+  expect(stdout).not.toContain('INCAPACITATED');
+  expect(stdout).not.toContain('Survivor recovery:');
+  expect(stdout).not.toContain('undefined');
+  const berthsIdx = stdout.indexOf('Berths:');
+  const crewIdx = stdout.indexOf('Crew:');
+  const modulesIdx = stdout.indexOf('=== Modules ===');
+  expect(crewIdx).toBeGreaterThan(berthsIdx);
+  expect(modulesIdx).toBeGreaterThan(crewIdx);
+});
+
+test('get_ship omits personnel lines when personnel and scalars are absent', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  delete fixture.ship.personnel;
+  delete fixture.ship.effective_crew_capacity;
+  delete fixture.ship.effective_marine_capacity;
+  delete fixture.ship.minimum_crew;
+  delete fixture.ship.crew_efficiency;
+  delete fixture.ship.operational_speed;
+  delete fixture.ship.incapacitated;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).not.toContain('Crew:');
+  expect(stdout).not.toContain('Marines:');
+  expect(stdout).not.toContain('Efficiency:');
+  expect(stdout).not.toContain('Operational speed:');
+  expect(stdout).not.toContain('INCAPACITATED');
+  expect(stdout).not.toContain('Survivor recovery:');
+});
+
+test('get_ship prints incapacitated warning, injured survivors, recovery, and no version', () => {
+  const fixture = structuredClone(shipIncapacitatedFixture) as {
+    ship: { personnel: Record<string, unknown> };
+  };
+  fixture.ship.personnel.version = 7;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Crew: 0/6 fit, 2 injured (min 3)');
+  expect(stdout).toContain('Marines: 0/4 fit, 1 injured');
+  expect(stdout).toContain('Efficiency: 0%');
+  expect(stdout).toContain('Operational speed: 0 (base 12)');
+  expect(stdout).toContain('INCAPACITATED: no fit crew — ship operations unavailable');
+  expect(stdout).toContain('Survivor recovery: 5 ticks (tick 12600)');
+  expect(stdout).not.toContain('version');
+  expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('=== Response ===');
+  const incapacitatedIdx = stdout.indexOf('INCAPACITATED:');
+  const modulesIdx = stdout.indexOf('=== Modules ===');
+  expect(incapacitatedIdx).toBeGreaterThan(stdout.indexOf('Operational speed:'));
+  expect(modulesIdx).toBeGreaterThan(incapacitatedIdx);
+});
+
+test('get_ship omits efficiency and incapacitated noise and prints recovery 0', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  delete fixture.ship.crew_efficiency;
+  fixture.ship.incapacitated = false;
+  fixture.ship.operational_speed = 8;
+  fixture.ship.speed = 8;
+  fixture.ship.personnel_recovery_ticks_remaining = 0;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).not.toContain('Efficiency:');
+  expect(stdout).not.toContain('INCAPACITATED');
+  expect(stdout).toContain('Operational speed: 8');
+  expect(stdout).not.toContain('(base 8)');
+  expect(stdout).toContain('Survivor recovery: 0 ticks');
+});
+
+test('get_ship prints non-integer operational speed without coercing to int', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  fixture.ship.operational_speed = 8.5;
+  fixture.ship.speed = 8.5;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Operational speed: 8.5');
+  expect(stdout).not.toContain('Operational speed: 8\n');
+  expect(stdout).not.toContain('Operational speed: 9');
+  expect(stdout).not.toContain('(base 8.5)');
+});
+
+test('get_ship does not warn when incapacitated is not boolean true', () => {
+  for (const incapacitated of ['true', 1, 'yes']) {
+    const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+    fixture.ship.incapacitated = incapacitated;
+    const stdout = renderShip(fixture).stdout.join('\n');
+    expect(stdout).not.toContain('INCAPACITATED');
+  }
+});
+
+test('get_ship omits Survivor recovery when only personnel_recovery_tick is set', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  delete fixture.ship.personnel_recovery_ticks_remaining;
+  fixture.ship.personnel_recovery_tick = 12600;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).not.toContain('Survivor recovery:');
+  expect(stdout).not.toContain('tick 12600');
 });

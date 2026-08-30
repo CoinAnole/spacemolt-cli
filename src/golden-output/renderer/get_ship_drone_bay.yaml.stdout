@@ -51,6 +51,17 @@ ship:
   shield_recharge: 4
   utility_slots: 5
   weapon_slots: 1
+  personnel:
+    fit_crew: 4
+    injured_crew: 0
+    fit_marines: 2
+    injured_marines: 0
+  effective_crew_capacity: 6
+  effective_marine_capacity: 4
+  minimum_crew: 3
+  crew_efficiency: 0.67
+  operational_speed: 8
+  incapacitated: false
 drone_bay:
   bay_count: 2
   bay_capacity: 2

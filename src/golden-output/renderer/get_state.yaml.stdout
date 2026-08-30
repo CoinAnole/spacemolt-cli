@@ -43,6 +43,37 @@ ship:
   cpu_capacity: 20
   power_used: 10
   power_capacity: 25
+  personnel:
+    fit_crew: 4
+    injured_crew: 0
+    fit_marines: 2
+    injured_marines: 0
+  effective_crew_capacity: 6
+  effective_marine_capacity: 4
+  minimum_crew: 3
+  crew_efficiency: 0.67
+  operational_speed: 8
+  incapacitated: false
+prize_recoveries:
+  - prize_id: "prize-recover-1"
+    actor_id: "actor-recover-1"
+    ship_id: "ship-recover-1"
+    ship_class: frigate
+    ship_name: "Captured Lark"
+    status: in_transit
+    destination_base_id: earth_station
+    prize_crew_fit: 3
+    crew_disposition: aboard
+    hull: 40
+    max_hull: 80
+    fuel: 20
+    max_fuel: 50
+    transit_kind: jump
+    transit_from_system_id: sol
+    transit_to_system_id: alpha_centauri
+    transit_arrival_tick: 12500
+    wait_reason: jump_cooldown
+    return_crew_faction_id: other_faction
 location:
   system_id: sol
   system_name: Sol

@@ -15,7 +15,8 @@ import {
   namedFormatter,
   printCompactTable,
 } from './helpers.ts';
-import { emitNearbyPrizes } from './prizes.ts';
+import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
+import { emitNearbyPrizes, emitPrizeRecoveries } from './prizes.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
@@ -182,14 +183,19 @@ function formatStatusSummary(r: Record<string, unknown>): string[] | undefined {
         ])) ?? 'unknown';
   const skills = compactSkillEntries(r.skills ?? player.skills ?? player.stats);
 
-  return [
+  const lines = [
     formatSummaryLine('Player:', playerName),
     formatSummaryLine('Credits:', typeof credits === 'number' ? formatNumber(credits) : credits),
     formatSummaryLine('System:', systemName),
     formatSummaryLine('Docked:', docked),
     formatSummaryLine('Ship:', shipClass),
-    formatSummaryLine('Skills:', skills.length ? skills.join(' | ') : 'None'),
   ];
+  if (!isRiding && isRecord(ship)) {
+    const crew = formatCrewRatio(ship);
+    if (crew) lines.push(formatSummaryLine('Crew:', crew));
+  }
+  lines.push(formatSummaryLine('Skills:', skills.length ? skills.join(' | ') : 'None'));
+  return lines;
 }
 
 function rowsHaveValue(rows: Array<Record<string, unknown>>, keys: string[]): boolean {
@@ -687,6 +693,7 @@ export const statusFormatters = [
         emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}`);
         emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}`);
         emitLine(`  Power: ${s.power_used}/${s.power_capacity}`);
+        emitShipPersonnel(s, { indent: '  ' });
         emitShipCombatEffects(s);
 
         if (s.class_id === 'escape_pod') {
@@ -720,6 +727,7 @@ export const statusFormatters = [
         prizeCount: location?.nearby_prize_count ?? r.nearby_prize_count,
         title: 'Nearby Prizes',
       });
+      emitPrizeRecoveries(r.prize_recoveries);
       return true;
     },
     { commands: ['get_status', 'get_state'], shapeFallback: true },
