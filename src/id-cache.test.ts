@@ -867,6 +867,11 @@ describe('id cache', () => {
     expect(idKindForCommandField('unknown_command', 'ship_id')).toBe('ship');
     expect(idKindForCommandField('unknown_command', 'package_id')).toBe('package');
     expect(idKindForCommandField('travel', 'target_system_id')).toBeUndefined();
+    expect(idKindForCommandField('claim_prize', 'target')).toBe('poi');
+    expect(idKindForCommandField('claim_prize', 'destination_base_id')).toBe('poi');
+    expect(idKindForCommandField('service_prize', 'target')).toBe('poi');
+    expect(idKindForCommandField('claim_prize', 'id')).toBeUndefined();
+    expect(idKindForCommandField('claim_prize', 'prize_id')).toBeUndefined();
   });
 
   test('resolver rules cover alias-normalized target fields for commands with friendly ID fields', () => {

@@ -1454,6 +1454,10 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     if (!serviceParsed.ok) throw new Error(serviceParsed.errors.map((error) => error.message).join('; '));
     expect(serviceParsed.payload).toEqual({ prize_id: 'prize-1', service_action: 'refuel' });
     expect(serviceParsed.payload).not.toHaveProperty('id');
+
+    expect(validateRequiredArgs('service_prize', { prize_id: 'p1' })).toBe('service_action');
+    expect(validateRequiredArgs('service_prize', { prize_id: 'p1', service_action: 'refuel' })).toBeNull();
+    expect(validateRequiredArgs('service_prize', { prize_id: 'p1', action: 'refuel' })).toBeNull();
   });
 
   test('get_ship accepts optional ship_id positional and aliases it to id', () => {

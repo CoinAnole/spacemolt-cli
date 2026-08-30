@@ -67,6 +67,20 @@ function captureHelp(
   return stdout.join('\n').replace(ANSI_PATTERN, '');
 }
 
+function registryHasRelatedCommand(name: string): boolean {
+  if (BUNDLED_COMMAND_REGISTRY.commands[name] || BUNDLED_COMMAND_REGISTRY.allCommands[name] || COMMANDS[name]) {
+    return true;
+  }
+  for (const group of Object.values(BUNDLED_COMMAND_REGISTRY.commandGroups)) {
+    if (!group) continue;
+    if (group.name === name || group.actions[name]) return true;
+    for (const action of Object.values(group.actions)) {
+      if (action.command === name || action.displayName === name) return true;
+    }
+  }
+  return false;
+}
+
 function visibleBundledCommandName(command: string): string {
   if (BUNDLED_COMMAND_REGISTRY.commands[command]) return command;
 
@@ -1119,7 +1133,7 @@ describe('command metadata', () => {
     expect(claim.usage).toBe('<prize_id> <destination_base_id> [crew_disposition=aboard|faction_reserve]');
     expect(claim.example).toBe('spacemolt claim_prize prize-1 earth_station');
     expect(claim.discoverWith).toEqual(['get_nearby', 'get_status', 'get_guide']);
-    expect(claim.seeAlso).toEqual(['service_prize', 'recruit_personnel', 'get_status', 'get_guide']);
+    expect(claim.seeAlso).toEqual(['service_prize', 'ship_recruit_personnel', 'get_status', 'get_guide']);
     expect(claim.category).toBe('Salvage & Tow');
     expect(claim.description).toBe('Assign prize crew and begin recovery of an intact captured ship');
     expect(CURATED_COMMAND_DESCRIPTIONS.claim_prize).toBe(claim.description);
@@ -1132,15 +1146,17 @@ describe('command metadata', () => {
     expect(service).toBeDefined();
     if (!service) throw new Error('service_prize command is missing from COMMANDS');
     expect(service.usage).toBe(
-      '<prize_id> <service_action> [quantity=N] [destination_base_id=...]  (stop|resume|redirect|refuel|repair)',
+      '<prize_id> <service_action> [quantity=N] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
     );
     expect(service.example).toBe('spacemolt service_prize prize-1 refuel');
-    expect(service.discoverWith).toEqual(['get_status']);
+    expect(service.discoverWith).toEqual(['get_nearby', 'get_status']);
     expect(service.seeAlso).toEqual(['claim_prize', 'refuel', 'repair', 'get_guide']);
     expect(service.category).toBe('Salvage & Tow');
     expect(service.description).toBe('Stop, resume, redirect, refuel, or repair a claimed intact prize');
     expect(CURATED_COMMAND_DESCRIPTIONS.service_prize).toBe(service.description);
     expect(service.args).toEqual(['prize_id', 'service_action']);
+    expect(service.required).toEqual(['prize_id', 'service_action']);
+    expect(getArgNames(service)).toEqual(['prize_id', 'service_action']);
     expect(service.aliases).toEqual({
       prize_id: 'id',
       action: 'service_action',
@@ -1154,9 +1170,20 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.claim_prize?.category).not.toBe('Generated API');
     expect(BUNDLED_COMMAND_REGISTRY.commands.service_prize?.category).not.toBe('Generated API');
 
+    for (const related of [...(claim.discoverWith ?? []), ...(claim.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `claim_prize related command "${related}"`).toBe(true);
+    }
+    for (const related of [...(service.discoverWith ?? []), ...(service.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `service_prize related command "${related}"`).toBe(true);
+    }
+
     const claimHelp = captureHelp('claim_prize');
     expect(claimHelp).toContain('prize_id -> id');
     expect(claimHelp).toContain('destination_base_id -> target');
+    const serviceHelp = captureHelp('service_prize');
+    expect(serviceHelp).toMatch(/Arguments:\n {2}prize_id, service_action\n/);
+    expect(serviceHelp).not.toMatch(/Arguments:\n {2}prize_id, service_action, action\n/);
+    expect(serviceHelp).toContain('action -> service_action');
 
     const claimDryRun = createCommandConfigDryRunResponse('claim_prize', claim, {
       id: 'prize-1',

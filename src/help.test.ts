@@ -1260,6 +1260,20 @@ describe('help output branches', () => {
     expect(output).toContain('Assign prize crew and begin recovery of an intact captured ship');
   });
 
+  test('help service_prize documents action alias, enum, and a single service_action argument', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('service_prize', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/Arguments:\n {2}prize_id, service_action\n/);
+    expect(output).not.toMatch(/Arguments:\n {2}prize_id, service_action, action\n/);
+    expect(output).toContain('action -> service_action');
+    expect(output).toContain('prize_id -> id');
+    expect(output).toContain('destination_base_id -> target');
+    expect(output).toContain('service_action (stop|resume|redirect|refuel|repair)');
+    expect(output).toContain('Stop, resume, redirect, refuel, or repair a claimed intact prize');
+  });
+
   test('scrap_wreck help documents faction-station salvage unlocks', () => {
     const capture = captureWriter();
 

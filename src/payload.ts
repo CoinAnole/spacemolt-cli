@@ -196,7 +196,7 @@ function resolveCachedIdsForPayload(
           if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
           if (resolved.type === 'resolved') {
             reportResolution(field, item, resolved);
-            resolvedArray.push(resolved.value);
+            resolvedArray.push(resolvedStationBaseId(command, kind, resolved));
           }
           // Use resolver-normalized unresolved values (e.g. package:id → bare package_id).
           else resolvedArray.push(resolved.value !== item ? resolved.value : item);
@@ -215,7 +215,7 @@ function resolveCachedIdsForPayload(
       if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
       if (resolved.type === 'resolved') {
         reportResolution(field, value, resolved);
-        resolvedPayload[field] = resolved.value;
+        resolvedPayload[field] = resolvedStationBaseId(command, kind, resolved);
       }
       // Apply package: prefix stripping even when the id is not in cache.
       else if (resolved.value !== value) resolvedPayload[field] = resolved.value;
@@ -223,6 +223,17 @@ function resolveCachedIdsForPayload(
   }
 
   return { type: 'payload', payload: resolvedPayload };
+}
+
+function resolvedStationBaseId(
+  command: string,
+  kind: IdKind,
+  resolved: Extract<CachedIdResolveResult, { type: 'resolved' }>,
+): string {
+  // Prize destinations are station base IDs; generic POI name/id hits would send hint.id.
+  if (kind !== 'poi' || (command !== 'claim_prize' && command !== 'service_prize')) return resolved.value;
+  const baseId = resolved.hint.context?.base_id;
+  return typeof baseId === 'string' && baseId ? baseId : resolved.value;
 }
 
 function reservedIdValue(command: string, field: string, value: string, kind: string | undefined): string | undefined {

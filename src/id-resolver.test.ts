@@ -897,28 +897,36 @@ describe('cached ID payload resolver', () => {
     });
   });
 
-  test('resolves cached station names on claim_prize destination_base_id and target', () => {
+  test('resolves claim_prize destinations to station base IDs from get_system / get_base cache', async () => {
     const sessionPath = useTempSession();
-    fs.writeFileSync(
-      getIdCachePath(sessionPath),
-      `${JSON.stringify({
-        version: 1,
-        hints: [
-          {
-            kind: 'poi',
-            id: 'earth_station',
-            name: 'Earth Station',
-            sourceCommand: 'get_nearby',
-            seenAt: '2026-05-18T00:00:00.000Z',
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          ...systemInfoFixture,
+          system: {
+            ...systemInfoFixture.system,
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true, base_id: 'earth_station' }],
           },
-        ],
-      })}\n`,
+        },
+      },
+      sessionPath,
+    );
+    await cacheIdsFromResponse(
+      'get_base',
+      {
+        structuredContent: {
+          base: { id: 'earth_station', poi_id: 'sol_earth', name: 'Earth Station' },
+        },
+      },
+      sessionPath,
     );
 
+    // Prize target is a station base ID, not the POI id generic name matches would emit.
     expect(
       preparePayload(
         'claim_prize',
-        { prize_id: 'prize-1', destination_base_id: 'Earth Station' },
+        { prize_id: 'prize-1', destination_base_id: 'earth_station' },
         options(),
         sessionPath,
       ),
@@ -927,15 +935,21 @@ describe('cached ID payload resolver', () => {
       payload: { id: 'prize-1', target: 'earth_station' },
     });
     expect(
-      preparePayload('claim_prize', { prize_id: 'prize-1', target: 'Earth Station' }, options(), sessionPath),
+      preparePayload('claim_prize', { prize_id: 'prize-1', destination_base_id: 'Earth' }, options(), sessionPath),
     ).toEqual({
       type: 'payload',
       payload: { id: 'prize-1', target: 'earth_station' },
     });
+    expect(preparePayload('claim_prize', { prize_id: 'prize-1', target: 'sol_earth' }, options(), sessionPath)).toEqual(
+      {
+        type: 'payload',
+        payload: { id: 'prize-1', target: 'earth_station' },
+      },
+    );
     expect(
       preparePayload(
         'service_prize',
-        { prize_id: 'prize-1', action: 'redirect', destination_base_id: 'Earth Station' },
+        { prize_id: 'prize-1', action: 'redirect', destination_base_id: 'Earth' },
         options(),
         sessionPath,
       ),
