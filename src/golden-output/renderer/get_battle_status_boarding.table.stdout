@@ -1,0 +1,28 @@
+
+=== Battle ===
+ID: battle-1
+System: sol
+Participant: yes
+Tick Duration: 30
+
+=== Sides ===
+
+  Side | Faction | Players
+  -----+---------+--------
+  1    | SMC     | 1      
+  2    |         | 0      
+
+=== Participants ===
+
+  Name          | ID            | Side | Kind     | Ship                    | Zone    | Distance | Stance | Target   | Hull | Shield
+  --------------+---------------+------+----------+-------------------------+---------+----------+--------+----------+------+-------
+  Marlowe       | player-1      | 1    | player   | Prospector (prospector) | outer   | 0        | fire   | pirate-1 | 82%  | 40%   
+  Pirate Skiff  | pirate-1      | 2    | pirate   | skiff                   | inner   | 3        |        |          |      |       
+  Pilot Whale   | creature-1    | 2    | creature |                         |         |          |        |          |      |       
+  Earth Station | station-earth | 1    | station  |                         | engaged |          |        |          | 97%  | 80%   
+
+=== Boarding ===
+
+  ID      | Phase  | Progress | Attacker | Target   | Self-destruct
+  --------+--------+----------+----------+----------+--------------
+  board-1 | breach | 40%      | player-1 | pirate-1 | 3            

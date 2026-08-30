@@ -3,7 +3,11 @@ import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   actionLogCursorFixture,
+  battleLogBoardingFixture,
   battleLogFixture,
+  battleStatusBoardingFixture,
+  battleStatusFixture,
+  battleSummaryCapturesFixture,
   battleSummaryFixture,
   facilityListFixture,
   factionFacilityListFixture,
@@ -811,6 +815,90 @@ test('renders get_guide server version', () => {
   expect(stdout).toContain('Server version: v0.461.0');
 });
 
+function expectNoPersonnelCounts(stdout: string): void {
+  expect(stdout).not.toContain('fit_crew');
+  expect(stdout).not.toContain('fit_marines');
+  expect(stdout).not.toMatch(/injured_/);
+}
+
+function renderBattleStatus(fixture: Record<string, unknown>): string {
+  const rendered = renderStructuredResult('get_battle_status', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('=== Response ===');
+  return stdout;
+}
+
+test('get_battle_status omits Boarding when boarding is absent or empty', () => {
+  const stdout = renderBattleStatus(structuredClone(battleStatusFixture) as Record<string, unknown>);
+  expect(stdout).toContain('=== Participants ===');
+  expect(stdout).not.toContain('=== Boarding ===');
+  expectNoPersonnelCounts(stdout);
+
+  const empty = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  empty.boarding = [];
+  expect(renderBattleStatus(empty)).not.toContain('=== Boarding ===');
+});
+
+test('get_battle_status prints qualitative boarding after participants', () => {
+  const stdout = renderBattleStatus(structuredClone(battleStatusBoardingFixture) as Record<string, unknown>);
+  const boarding = stdout.split('=== Boarding ===')[1] ?? '';
+
+  expect(stdout.indexOf('=== Participants ===')).toBeLessThan(stdout.indexOf('=== Boarding ==='));
+  expect(boarding).toContain('board-1');
+  expect(boarding).toContain('breach');
+  expect(boarding).toContain('40%');
+  expect(boarding).toContain('player-1');
+  expect(boarding).toContain('pirate-1');
+  expect(boarding).toContain('3');
+  expect(boarding).toContain('Progress');
+  expect(boarding).toContain('Self-destruct');
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_status reads boarding nested on battle and ignores personnel counts', () => {
+  const fixture = {
+    battle: {
+      ...(structuredClone(battleStatusFixture) as Record<string, unknown>),
+      boarding: [
+        {
+          operation_id: 'board-nested',
+          phase: 'latch',
+          attacker_id: 'player-1',
+          target_id: 'pirate-1',
+          fit_crew: 4,
+          fit_marines: 2,
+          injured_crew: 1,
+          injured_marines: 0,
+        },
+      ],
+    },
+  };
+  const stdout = renderBattleStatus(fixture);
+  const boarding = stdout.split('=== Boarding ===')[1] ?? '';
+
+  expect(boarding).toContain('board-nested');
+  expect(boarding).toContain('latch');
+  expect(boarding).not.toContain('Progress');
+  expect(boarding).not.toContain('Self-destruct');
+  expectNoPersonnelCounts(stdout);
+  expect(boarding).not.toContain('4');
+  expect(boarding).not.toContain('2');
+});
+
+test('get_battle_status omits optional boarding columns when those fields are absent', () => {
+  const fixture = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  fixture.boarding = [{ operation_id: 'board-lean', phase: 'hold' }];
+  const boarding = renderBattleStatus(fixture).split('=== Boarding ===')[1] ?? '';
+
+  expect(boarding).toContain('board-lean');
+  expect(boarding).toContain('hold');
+  expect(boarding).not.toContain('Progress');
+  expect(boarding).not.toContain('Attacker');
+  expect(boarding).not.toContain('Target');
+  expect(boarding).not.toContain('Self-destruct');
+});
+
 test('get_battle_summary shows Has Station yes when has_station is true', () => {
   const rendered = renderStructuredResult(
     'get_battle_summary',
@@ -905,6 +993,57 @@ test('get_battle_summary omits Winning Side on -1 without fabricating Outcome: s
 
   expect(stdout).not.toContain('Winning Side:');
   expect(stdout).not.toContain('Outcome: stalemate');
+});
+
+test('get_battle_summary prints Ships Captured 0 from the default fixture', () => {
+  const stdout = renderStructuredResult(
+    'get_battle_summary',
+    structuredClone(battleSummaryFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Ships Captured: 0');
+  expect(stdout).not.toContain('=== Captures ===');
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_summary omits Ships Captured when ships_captured is absent', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  delete fixture.ships_captured;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Ships Destroyed:');
+  expect(stdout).not.toContain('Ships Captured:');
+  expect(stdout).not.toContain('=== Captures ===');
+});
+
+test('get_battle_summary prints Captures identities after Ships Captured', () => {
+  const stdout = renderStructuredResult(
+    'get_battle_summary',
+    structuredClone(battleSummaryCapturesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Ships Captured: 1');
+  expect(stdout.indexOf('Ships Captured: 1')).toBeLessThan(stdout.indexOf('=== Captures ==='));
+  expect(stdout).toContain('ship-skiff-1');
+  expect(stdout).toContain('skiff');
+  expect(stdout).toContain('Marlowe (player-1)');
+  expect(stdout).toContain('Corsair-7 (pirate-1)');
+  expect(stdout).toContain('board-1');
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_summary omits empty captures table', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.ships_captured = 0;
+  fixture.captures = [];
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Ships Captured: 0');
+  expect(stdout).not.toContain('=== Captures ===');
 });
 
 function renderBattleLog(fixture: Record<string, unknown>): string {
@@ -1263,6 +1402,169 @@ test('get_battle_log keeps Shield/Hull 0 on a full absorb with blank Damage', ()
 
   expect(stdout).toMatch(/\|\s*1\s*\|\s*1\s*\|\s+\|\s*0\s*\|\s*0\s*\|/);
   expect(stdout).toContain('0/0');
+});
+
+test('get_battle_log omits Board Captures Casualties columns without those arrays', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogFixture) as Record<string, unknown>);
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(ticks).not.toContain('Board');
+  expect(ticks).not.toContain('Captures');
+  expect(ticks).not.toContain('Casualties');
+  expect(stdout).not.toContain('=== Boarding ===');
+  expect(stdout).not.toContain('=== Captures ===');
+  expect(stdout).not.toContain('=== Personnel casualties ===');
+});
+
+test('get_battle_log prints boarding detail tables after ticks when there are no attacks', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogBoardingFixture) as Record<string, unknown>);
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(stdout).not.toContain('=== Attacks ===');
+  expect(ticks).toContain('Board');
+  expect(ticks).toContain('Captures');
+  expect(ticks).toContain('Casualties');
+  expect(stdout.indexOf('=== Ticks ===')).toBeLessThan(stdout.indexOf('=== Boarding ==='));
+  expect(stdout.indexOf('=== Boarding ===')).toBeLessThan(stdout.indexOf('=== Captures ==='));
+  expect(stdout.indexOf('=== Captures ===')).toBeLessThan(stdout.indexOf('=== Personnel casualties ==='));
+  expect(stdout).toContain('board-1');
+  expect(stdout).toContain('progress');
+  expect(stdout).toContain('breach');
+  expect(stdout).toContain('marines_committed');
+  expect(stdout).toContain('yes attacker defender');
+  expect(stdout).toContain('Marlowe (player-1)');
+  expect(stdout).toContain('Corsair-7 (pirate-1)');
+  expect(stdout).toContain('applied');
+  expect(stdout).not.toContain('converted');
+  expect(stdout).toContain('player-1 / ship-marlowe-1');
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_log prints boarding tables after Attacks when both are present', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-board-attacks',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 4,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 50,
+            shield_damage: 20,
+            hull_damage: 30,
+          },
+        ],
+        boarding: [
+          { operation_id: 'board-2', event: 'latch', phase: 'latch', actor_id: 'player-1', target_id: 'pirate-1' },
+        ],
+        captures: [],
+        personnel_casualties: [],
+      },
+    ],
+  });
+
+  expect(stdout.indexOf('=== Attacks ===')).toBeLessThan(stdout.indexOf('=== Boarding ==='));
+  expect(stdout).toContain('board-2');
+  expect(stdout).toContain('latch');
+  const ticks = battleLogTicksSection(stdout);
+  expect(ticks).toContain('Board');
+  expect(ticks).not.toContain('Captures');
+  expect(ticks).not.toContain('Casualties');
+  expect(stdout).not.toContain('=== Captures ===');
+  expect(stdout).not.toContain('=== Personnel casualties ===');
+});
+
+test('get_battle_log omits Board column when boarding is an empty array', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-empty-board',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 1,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 10,
+            shield_damage: 6,
+            hull_damage: 4,
+          },
+        ],
+        boarding: [],
+        captures: [],
+        personnel_casualties: [],
+      },
+    ],
+  });
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(ticks).not.toContain('Board');
+  expect(ticks).not.toContain('Captures');
+  expect(ticks).not.toContain('Casualties');
+  expect(stdout).not.toContain('=== Boarding ===');
+});
+
+test('get_battle_log casualty flags stay qualitative and hide false destroyed/incapacitated', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-flags',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 5,
+        boarding: [
+          {
+            operation_id: 'board-3',
+            event: 'hold',
+            phase: 'hold',
+            actor_id: 'player-1',
+            target_id: 'pirate-1',
+            destroyed: false,
+            casualties_occurred: false,
+            attacker_casualties: false,
+            defender_casualties: true,
+            crew_lost: 6,
+            marines_lost: 3,
+            fit_crew: 8,
+            fit_marines: 4,
+            injured_crew: 2,
+          },
+        ],
+        personnel_casualties: [
+          {
+            target_id: 'pirate-1',
+            casualties_occurred: false,
+            incapacitated: false,
+            triage_applied: false,
+            triage_converted: true,
+            crew_lost: 6,
+            fit_crew: 8,
+          },
+        ],
+      },
+    ],
+  });
+  const boarding = stdout.split('=== Boarding ===')[1]?.split('=== Personnel casualties ===')[0] ?? '';
+  const casualties = stdout.split('=== Personnel casualties ===')[1] ?? '';
+
+  expect(boarding).toContain('defender');
+  expect(boarding).not.toContain('Destroyed');
+  expect(casualties).toContain('no');
+  expect(casualties).not.toContain('Incapacitated');
+  expect(casualties).toContain('converted');
+  expect(casualties).not.toContain('applied');
+  expectNoPersonnelCounts(stdout);
+  expect(stdout).not.toContain('crew_lost');
+  expect(stdout).not.toContain('marines_lost');
 });
 
 test('get_battle_log omits Attacks and legend when no attack objects exist', () => {

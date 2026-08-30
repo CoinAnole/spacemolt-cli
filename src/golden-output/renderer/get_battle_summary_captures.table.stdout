@@ -12,7 +12,13 @@ Duration: 14 ticks
 Participants: 3
 Total Damage: 8420
 Ships Destroyed: 1
-Ships Captured: 0
+Ships Captured: 1
+
+=== Captures ===
+
+  Ship         | Class | Captor             | Former owner         | Boarding
+  -------------+-------+--------------------+----------------------+---------
+  ship-skiff-1 | skiff | Marlowe (player-1) | Corsair-7 (pirate-1) | board-1 
 Players: Marlowe, Ibis
 Destroyed: Rust Bucket
 Top Damage: Marlowe (5100)

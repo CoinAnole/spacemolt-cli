@@ -40,5 +40,16 @@
       ]
     }
   ],
-  "ships_captured": 0
+  "ships_captured": 1,
+  "captures": [
+    {
+      "ship_id": "ship-skiff-1",
+      "ship_class": "skiff",
+      "captor_username": "Marlowe",
+      "captor_id": "player-1",
+      "former_owner_username": "Corsair-7",
+      "former_owner_id": "pirate-1",
+      "boarding_operation_id": "board-1"
+    }
+  ]
 }

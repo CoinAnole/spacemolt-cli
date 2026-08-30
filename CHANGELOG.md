@@ -11,6 +11,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `get_status`, `get_state`, and `get_location` print **Nearby Prizes** from `location.nearby_prizes`.
 - JSON/YAML/jq field names are unchanged.
 
+### Battle boarding and captures (gameserver 0.572.0)
+
+- Human `get_battle_status` prints **=== Boarding ===** (operation ID, phase, optional progress / attacker / target / self-destruct) when `boarding` is a non-empty array. Enemy crew/marine counts are never shown.
+- Human `get_battle_summary` prints **Ships Captured:** (including `0`) and a **Captures** table (ship, class, captor, former owner, boarding id) when `captures` is a non-empty array.
+- Human `get_battle_log` adds optional tick columns **Board** / **Captures** / **Casualties** and follow-on **Boarding** / **Captures** / **Personnel casualties** tables. Casualty cells are yes/no flags only.
+
 ### battle_stance board (gameserver 0.572.0)
 
 - Second bare token is now `target` (including on fire/evade/brace/flee); `board <enemy> marines=N` no longer drops the enemy. Leftover tokens after `target` are still ignored; use `marines=N`.

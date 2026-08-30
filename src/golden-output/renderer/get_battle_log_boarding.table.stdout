@@ -1,0 +1,30 @@
+
+=== Battle Log ===
+ID: battle-42
+Status: completed
+Total Ticks: 1
+Has More: no
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Board | Captures | Casualties | Ended
+  -----+---------+------+--------+-------+------+-------+-------+----------+------------+------
+  3    | 0       | 0    |        |       |      |       | 1     | 1        | 1          |      
+
+=== Boarding ===
+
+  Tick | ID      | Event    | Phase  | Attacker | Target   | Reason            | Destroyed | Casualties            | SD | Hull
+  -----+---------+----------+--------+----------+----------+-------------------+-----------+-----------------------+----+-----
+  3    | board-1 | progress | breach | player-1 | pirate-1 | marines_committed | yes       | yes attacker defender | 2  | 12  
+
+=== Captures ===
+
+  Tick | Ship         | Class | Captor             | Former owner         | Boarding
+  -----+--------------+-------+--------------------+----------------------+---------
+  3    | ship-skiff-1 | skiff | Marlowe (player-1) | Corsair-7 (pirate-1) | board-1 
+
+=== Personnel casualties ===
+
+  Tick | Target   | Casualties | Incapacitated | Triage  | Provider                 
+  -----+----------+------------+---------------+---------+--------------------------
+  3    | pirate-1 | yes        | yes           | applied | player-1 / ship-marlowe-1

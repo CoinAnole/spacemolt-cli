@@ -104,6 +104,169 @@ function formatBattleEndedCell(value: unknown): string | undefined {
   return 'yes';
 }
 
+function formatActorIdentity(username: unknown, id: unknown): string | undefined {
+  const name = identifierText(username);
+  const ident = identifierText(id);
+  if (name && ident) return `${name} (${ident})`;
+  return name ?? ident;
+}
+
+function formatYesBlank(value: unknown): string | undefined {
+  return value === true ? 'yes' : undefined;
+}
+
+function formatYesFlags(flags: Array<[string, unknown]>): string | undefined {
+  const parts = flags.filter(([, value]) => value === true).map(([label]) => label);
+  return parts.length ? parts.join(' ') : undefined;
+}
+
+function formatJoinedIds(...values: unknown[]): string | undefined {
+  const parts = values.map(identifierText).filter((part): part is string => Boolean(part));
+  return parts.length ? parts.join(' / ') : undefined;
+}
+
+function eventCount(value: unknown): number | undefined {
+  return Array.isArray(value) && value.length ? value.length : undefined;
+}
+
+function firstNonEmptyRecords(...candidates: unknown[]): Array<Record<string, unknown>> | undefined {
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate) || candidate.length === 0) continue;
+    const rows = candidate.filter(isRecord);
+    if (rows.length) return rows;
+  }
+  return undefined;
+}
+
+function captureIdentityRows(rows: Array<Record<string, unknown>>, tick?: unknown): Array<Record<string, unknown>> {
+  return rows.map((row) => ({
+    ...row,
+    tick: tick ?? row.tick,
+    captor_display: formatActorIdentity(row.captor_username, row.captor_id),
+    former_owner_display: formatActorIdentity(row.former_owner_username, row.former_owner_id),
+  }));
+}
+
+function captureTableColumns(includeTick: boolean): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [];
+  if (includeTick) columns.push(['Tick', ['tick']]);
+  columns.push(
+    ['Ship', ['ship_id']],
+    ['Class', ['ship_class']],
+    ['Captor', ['captor_display']],
+    ['Former owner', ['former_owner_display']],
+    ['Boarding', ['boarding_operation_id']],
+  );
+  return columns;
+}
+
+function boardingStatusColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['ID', ['operation_id']],
+    ['Phase', ['phase']],
+  ];
+  if (hasAnyField(rows, ['progress'])) columns.push(['Progress', ['progress']]);
+  if (hasAnyField(rows, ['attacker_id'])) columns.push(['Attacker', ['attacker_id']]);
+  if (hasAnyField(rows, ['target_id'])) columns.push(['Target', ['target_id']]);
+  if (hasAnyField(rows, ['self_destruct_countdown'])) {
+    columns.push(['Self-destruct', ['self_destruct_countdown']]);
+  }
+  return columns;
+}
+
+function emitBoardingStatusTable(battle: Record<string, unknown>, result: Record<string, unknown>): void {
+  const boarding = firstNonEmptyRecords(battle.boarding, result.boarding);
+  if (!boarding) return;
+  printCompactTable('Boarding', boarding, boardingStatusColumns(boarding));
+}
+
+function battleLogEntryTick(entry: Record<string, unknown>, index: number): unknown {
+  return entry.tick ?? entry.battle_tick ?? index;
+}
+
+function flattenTickRecords(entries: Array<Record<string, unknown>>, field: string): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  entries.forEach((entry, index) => {
+    const items = Array.isArray(entry[field]) ? entry[field].filter(isRecord) : [];
+    const tick = battleLogEntryTick(entry, index);
+    for (const item of items) {
+      rows.push({ ...item, tick });
+    }
+  });
+  return rows;
+}
+
+function boardingLogRows(entries: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return flattenTickRecords(entries, 'boarding').map((row) => ({
+    ...row,
+    destroyed_display: formatYesBlank(row.destroyed),
+    casualties_display: formatYesFlags([
+      ['yes', row.casualties_occurred],
+      ['attacker', row.attacker_casualties],
+      ['defender', row.defender_casualties],
+    ]),
+  }));
+}
+
+function boardingLogColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Tick', ['tick']],
+    ['ID', ['operation_id']],
+  ];
+  if (hasAnyField(rows, ['event', 'event_type'])) columns.push(['Event', ['event', 'event_type']]);
+  if (hasAnyField(rows, ['phase'])) columns.push(['Phase', ['phase']]);
+  if (hasAnyField(rows, ['actor_id', 'attacker_id'])) columns.push(['Attacker', ['actor_id', 'attacker_id']]);
+  if (hasAnyField(rows, ['target_id', 'target'])) columns.push(['Target', ['target_id', 'target']]);
+  if (hasAnyField(rows, ['reason'])) columns.push(['Reason', ['reason']]);
+  if (hasAnyField(rows, ['destroyed_display'])) columns.push(['Destroyed', ['destroyed_display']]);
+  if (hasAnyField(rows, ['casualties_display'])) columns.push(['Casualties', ['casualties_display']]);
+  if (hasAnyField(rows, ['self_destruct_countdown'])) columns.push(['SD', ['self_destruct_countdown']]);
+  if (hasAnyField(rows, ['hull_damage'])) columns.push(['Hull', ['hull_damage']]);
+  return columns;
+}
+
+function personnelCasualtyRows(entries: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return flattenTickRecords(entries, 'personnel_casualties').map((row) => ({
+    ...row,
+    casualties_display: formatYesNo(row.casualties_occurred),
+    incapacitated_display: formatYesBlank(row.incapacitated),
+    triage_display: formatYesFlags([
+      ['applied', row.triage_applied],
+      ['converted', row.triage_converted],
+    ]),
+    provider_display: formatJoinedIds(row.triage_provider_id, row.triage_provider_ship_id),
+  }));
+}
+
+function personnelCasualtyColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Tick', ['tick']],
+    ['Target', ['target_id', 'target']],
+  ];
+  if (hasAnyField(rows, ['casualties_display'])) columns.push(['Casualties', ['casualties_display']]);
+  if (hasAnyField(rows, ['incapacitated_display'])) columns.push(['Incapacitated', ['incapacitated_display']]);
+  if (hasAnyField(rows, ['triage_display'])) columns.push(['Triage', ['triage_display']]);
+  if (hasAnyField(rows, ['provider_display', 'triage_provider_id', 'triage_provider_ship_id'])) {
+    columns.push(['Provider', ['provider_display', 'triage_provider_id', 'triage_provider_ship_id']]);
+  }
+  return columns;
+}
+
+function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): void {
+  const boardingRows = boardingLogRows(entries);
+  if (boardingRows.length) {
+    printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows));
+  }
+  const captureRows = captureIdentityRows(flattenTickRecords(entries, 'captures'));
+  if (captureRows.length) {
+    printCompactTable('Captures', captureRows, captureTableColumns(true));
+  }
+  const casualtyRows = personnelCasualtyRows(entries);
+  if (casualtyRows.length) {
+    printCompactTable('Personnel casualties', casualtyRows, personnelCasualtyColumns(casualtyRows));
+  }
+}
+
 function formatPercentValue(value: unknown): string | undefined {
   const number = formatNumber(value);
   return number === undefined ? undefined : `${number}%`;
@@ -1228,7 +1391,7 @@ export const socialFormatters = [
   // Battle Status
   namedFormatter(
     'battle_status',
-    ['battle', 'battle_id', 'combat_state', 'participants'],
+    ['battle', 'battle_id', 'combat_state', 'participants', 'boarding'],
     (r, command) => {
       if (command?.replace(/^v2_/, '') !== 'get_battle_status') return false;
       const battle = isRecord(r.battle) ? r.battle : r;
@@ -1257,6 +1420,7 @@ export const socialFormatters = [
         const rows = battleParticipantRows(participants);
         printCompactTable('Participants', rows, battleParticipantColumns(rows));
       }
+      emitBoardingStatusTable(battle, r);
       return true;
     },
     { commands: ['get_battle_status'] },
@@ -1292,6 +1456,11 @@ export const socialFormatters = [
       emitOptionalLine('Participants', r.participant_count);
       emitOptionalLine('Total Damage', r.total_damage);
       emitOptionalLine('Ships Destroyed', r.ships_destroyed);
+      emitOptionalLine('Ships Captured', r.ships_captured);
+      const captures = firstNonEmptyRecords(r.captures);
+      if (captures) {
+        printCompactTable('Captures', captureIdentityRows(captures), captureTableColumns(false));
+      }
       if (Array.isArray(r.player_names) && r.player_names.length) {
         emitLine(`Players: ${r.player_names.join(', ')}`);
       }
@@ -1353,6 +1522,9 @@ export const socialFormatters = [
             burns: burns || undefined,
             flee: flees || undefined,
             kills: kills || undefined,
+            boarding: eventCount(entry.boarding),
+            captures: eventCount(entry.captures),
+            casualties: eventCount(entry.personnel_casualties),
             ended: formatBattleEndedCell(entry.battle_ended),
           };
         });
@@ -1364,7 +1536,11 @@ export const socialFormatters = [
         ];
         if (hasAnyField(rows, ['shield'])) tickColumns.push(['Shield', ['shield']]);
         if (hasAnyField(rows, ['hull'])) tickColumns.push(['Hull', ['hull']]);
-        tickColumns.push(['Burns', ['burns']], ['Flee', ['flee']], ['Kills', ['kills']], ['Ended', ['ended']]);
+        tickColumns.push(['Burns', ['burns']], ['Flee', ['flee']], ['Kills', ['kills']]);
+        if (hasAnyField(rows, ['boarding'])) tickColumns.push(['Board', ['boarding']]);
+        if (hasAnyField(rows, ['captures'])) tickColumns.push(['Captures', ['captures']]);
+        if (hasAnyField(rows, ['casualties'])) tickColumns.push(['Casualties', ['casualties']]);
+        tickColumns.push(['Ended', ['ended']]);
         printCompactTable('Ticks', rows, tickColumns);
 
         const hasAttacks = entries.some((entry) => Array.isArray(entry.attacks) && entry.attacks.length > 0);
@@ -1387,6 +1563,7 @@ export const socialFormatters = [
             { maxCellWidth: 96 },
           );
         }
+        emitBattleLogDetailTables(entries);
       }
       return true;
     },

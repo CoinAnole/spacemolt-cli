@@ -1,0 +1,49 @@
+{
+  "battle_id": "battle-42",
+  "status": "completed",
+  "total_ticks": 1,
+  "has_more": false,
+  "entries": [
+    {
+      "tick": 3,
+      "boarding": [
+        {
+          "operation_id": "board-1",
+          "event": "progress",
+          "phase": "breach",
+          "actor_id": "player-1",
+          "target_id": "pirate-1",
+          "reason": "marines_committed",
+          "destroyed": true,
+          "casualties_occurred": true,
+          "attacker_casualties": true,
+          "defender_casualties": true,
+          "self_destruct_countdown": 2,
+          "hull_damage": 12
+        }
+      ],
+      "captures": [
+        {
+          "ship_id": "ship-skiff-1",
+          "ship_class": "skiff",
+          "captor_username": "Marlowe",
+          "captor_id": "player-1",
+          "former_owner_username": "Corsair-7",
+          "former_owner_id": "pirate-1",
+          "boarding_operation_id": "board-1"
+        }
+      ],
+      "personnel_casualties": [
+        {
+          "target_id": "pirate-1",
+          "casualties_occurred": true,
+          "incapacitated": true,
+          "triage_applied": true,
+          "triage_converted": false,
+          "triage_provider_id": "player-1",
+          "triage_provider_ship_id": "ship-marlowe-1"
+        }
+      ]
+    }
+  ]
+}

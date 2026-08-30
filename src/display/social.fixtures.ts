@@ -446,6 +446,87 @@ export const battleSummaryFixture = {
       participants: ['Corsair-7'],
     },
   ],
+  ships_captured: 0,
+};
+
+export const battleStatusBoardingFixture = {
+  ...battleStatusFixture,
+  boarding: [
+    {
+      operation_id: 'board-1',
+      phase: 'breach',
+      progress: '40%',
+      attacker_id: 'player-1',
+      target_id: 'pirate-1',
+      self_destruct_countdown: 3,
+    },
+  ],
+};
+
+export const battleSummaryCapturesFixture = {
+  ...battleSummaryFixture,
+  ships_captured: 1,
+  captures: [
+    {
+      ship_id: 'ship-skiff-1',
+      ship_class: 'skiff',
+      captor_username: 'Marlowe',
+      captor_id: 'player-1',
+      former_owner_username: 'Corsair-7',
+      former_owner_id: 'pirate-1',
+      boarding_operation_id: 'board-1',
+    },
+  ],
+};
+
+export const battleLogBoardingFixture = {
+  battle_id: 'battle-42',
+  status: 'completed',
+  total_ticks: 1,
+  has_more: false,
+  entries: [
+    {
+      tick: 3,
+      boarding: [
+        {
+          operation_id: 'board-1',
+          event: 'progress',
+          phase: 'breach',
+          actor_id: 'player-1',
+          target_id: 'pirate-1',
+          reason: 'marines_committed',
+          destroyed: true,
+          casualties_occurred: true,
+          attacker_casualties: true,
+          defender_casualties: true,
+          self_destruct_countdown: 2,
+          hull_damage: 12,
+        },
+      ],
+      captures: [
+        {
+          ship_id: 'ship-skiff-1',
+          ship_class: 'skiff',
+          captor_username: 'Marlowe',
+          captor_id: 'player-1',
+          former_owner_username: 'Corsair-7',
+          former_owner_id: 'pirate-1',
+          boarding_operation_id: 'board-1',
+        },
+      ],
+      personnel_casualties: [
+        {
+          target_id: 'pirate-1',
+          casualties_occurred: true,
+          incapacitated: true,
+          triage_applied: true,
+          triage_converted: false,
+          triage_provider_id: 'player-1',
+          triage_provider_ship_id: 'ship-marlowe-1',
+        },
+      ],
+    },
+  ],
 };
 
 export const battleLogFixture = {
@@ -987,8 +1068,11 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
+  get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
+  get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
+  get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
   captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },
