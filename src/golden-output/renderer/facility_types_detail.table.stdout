@@ -1,0 +1,13 @@
+
+=== Facility type: Crew Office ===
+ID: crew_office
+Category: service
+Level: 1
+Buildable: yes
+Build cost: 12000
+Build time: 40
+Labor: 80
+Rent/cycle: 200
+Description: Recruits fit crew from the station pool.
+
+Service pool: 20 cap, +4/cycle, 1x crew_rations

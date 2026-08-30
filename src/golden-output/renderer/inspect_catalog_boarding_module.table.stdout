@@ -1,0 +1,35 @@
+
+=== Inspect: boarding_claws_ii ===
+Kind: catalog
+Source: catalog
+
+Catalog (items)
+Items: showing 1 of 1
+
+=== Entry ===
+
+  Name              | ID                | Category | Size | Value | Slot   
+  ------------------+-------------------+----------+------+-------+--------
+  Boarding Claws II | boarding_claws_ii | utility  | 12   | 18500 | utility
+
+Details
+Latch onto a hostile hull and hold a corridor for marine teams.
+Size: 12
+Base value: 18500
+Slot: utility
+Type: utility
+CPU: 8
+Power: 14
+Crew capacity: 2
+Marine capacity: 4
+Latch: 3
+Latch resistance: 1
+Boarding defense: 15%
+Crew combat: 5%
+Marine combat: 10%
+Medical: 2
+Fleet triage: 8%
+Boarding: yes
+Boarding contact defense: yes
+Remote medical: yes
+Page 1/1 (1 total)

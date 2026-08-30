@@ -1110,6 +1110,15 @@ export const statusFormatters = [
       if (r.hull !== undefined) emitLine(`Hull: ${r.hull}`);
       if (r.shield !== undefined) emitLine(`Shield: ${r.shield}`);
       if (r.cloaked !== undefined) emitLine(`Cloaked: ${r.cloaked}`);
+      const description = typeof r.description === 'string' && r.description ? r.description : undefined;
+      const descriptionAlreadyRevealed = description
+        ? Array.isArray(r.revealed_info)
+          ? r.revealed_info.some((value) => value === description)
+          : isRecord(r.revealed_info)
+            ? Object.values(r.revealed_info).some((value) => value === description)
+            : false
+        : false;
+      if (description && !descriptionAlreadyRevealed) emitLine(`Description: ${description}`);
       if (Array.isArray(r.revealed_info)) {
         const revealed = r.revealed_info
           .filter((value) => value !== undefined && value !== null && !isRecord(value) && !Array.isArray(value))

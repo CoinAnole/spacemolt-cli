@@ -14,6 +14,18 @@ const DEDICATED_MODULE_BONUS_KEYS = [
   'armor_repair_rate',
   'remote_repair_power',
   'tow_speed_penalty',
+  'crew_capacity_bonus',
+  'marine_capacity_bonus',
+  'latch_strength',
+  'latch_resistance',
+  'boarding_defense_bonus_pct',
+  'crew_combat_bonus_pct',
+  'marine_combat_bonus_pct',
+  'medical_treatment_rate',
+  'fleet_triage_pct',
+  'boarding_capability',
+  'boarding_contact_defense',
+  'remote_medical_treatment',
 ] as const;
 
 export function packageOperationLabel(...values: unknown[]): string | undefined {
@@ -80,6 +92,12 @@ export function emitCatalogBonus(label: string, value: unknown): void {
   const number = finiteNumber(value);
   if (number === undefined || number === 0) return;
   emitLine(`${label}: ${number}`);
+}
+
+export function emitCatalogPercent(label: string, value: unknown): void {
+  const number = finiteNumber(value);
+  if (number === undefined || number === 0) return;
+  emitLine(`${label}: ${number}%`);
 }
 
 function emitDetailsHeader(): void {
@@ -173,6 +191,18 @@ export function emitCatalogModuleDetail(entry: Record<string, unknown>, catalog:
   emitCatalogBonus('Repair', entry.armor_repair_rate);
   emitCatalogBonus('Remote repair', entry.remote_repair_power);
   emitCatalogBonus('Tow penalty', entry.tow_speed_penalty);
+  emitCatalogBonus('Crew capacity', entry.crew_capacity_bonus);
+  emitCatalogBonus('Marine capacity', entry.marine_capacity_bonus);
+  emitCatalogBonus('Latch', entry.latch_strength);
+  emitCatalogBonus('Latch resistance', entry.latch_resistance);
+  emitCatalogPercent('Boarding defense', entry.boarding_defense_bonus_pct);
+  emitCatalogPercent('Crew combat', entry.crew_combat_bonus_pct);
+  emitCatalogPercent('Marine combat', entry.marine_combat_bonus_pct);
+  emitCatalogBonus('Medical', entry.medical_treatment_rate);
+  emitCatalogPercent('Fleet triage', entry.fleet_triage_pct);
+  emitCatalogFlag('Boarding', entry.boarding_capability);
+  emitCatalogFlag('Boarding contact defense', entry.boarding_contact_defense);
+  emitCatalogFlag('Remote medical', entry.remote_medical_treatment);
   emitCatalogNumber('Damage', entry.damage);
   emitCatalogOptional('Damage type', entry.damage_type);
   emitCatalogNumber('Cooldown', entry.cooldown);
@@ -228,6 +258,12 @@ export function emitCatalogShipDetail(entry: Record<string, unknown>, _catalog: 
   if (weapon !== undefined || defense !== undefined || utility !== undefined) {
     emitLine(`Slots: ${weapon ?? 0} weapon, ${defense ?? 0} defense, ${utility ?? 0} utility`);
   }
+
+  emitCatalogNumber('Crew capacity', entry.crew_capacity);
+  emitCatalogNumber('Minimum crew', entry.minimum_crew);
+  emitCatalogNumber('Marine capacity', entry.marine_capacity);
+  emitCatalogNumber('Latch resistance', entry.latch_resistance);
+  emitCatalogPercent('Boarding defense', entry.boarding_defense_bonus_pct);
 
   emitCatalogNumber('Shipyard tier', entry.shipyard_tier);
   emitCatalogNumber('Build time', entry.build_time);

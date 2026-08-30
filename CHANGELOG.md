@@ -17,6 +17,20 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Human `get_battle_summary` prints **Ships Captured:** (including `0`) and a **Captures** table (ship, class, captor, former owner, boarding id) when `captures` is a non-empty array.
 - Human `get_battle_log` adds optional tick columns **Board** / **Captures** / **Casualties** and follow-on **Boarding** / **Captures** / **Personnel casualties** tables. Casualty cells are yes/no flags only.
 
+### scan table
+
+- Human `scan` prints `Description:` after hull/shield/cloak when the server sends lore that is not already an identical `revealed_info` string. Prize/creature scans still omit personnel.
+
+### facility_list / facility_types table (gameserver 0.572.0)
+
+- Human `facility_list` prints a station `Service pools:` section from top-level `service_pools` (`Personnel` / `Medical` / `Marine training` remaining stock). This is not a per-row facility column.
+- Human `facility_types` detail (`kind: detail`) prints identity fields and a `Service pool:` definition line (`20 cap, +4/cycle, 1x crew_rations`). Discovery listing is unchanged. JSON/YAML/jq field names are unchanged.
+
+### catalog / inspect ships and modules (gameserver 0.572.0)
+
+- Ship-class inspect prints `Crew capacity`, `Minimum crew`, `Marine capacity`, `Latch resistance`, and `Boarding defense: N%` (the percent line is omitted when missing or `0`).
+- Module inspect and bonus summaries print boarding/medical/personnel bonuses and flags (`boarding`, `boarding contact defense`, `remote medical`; `_pct` keys as `N%`).
+
 ### battle_stance board (gameserver 0.572.0)
 
 - Second bare token is now `target` (including on fire/evade/brace/flee); `board <enemy> marines=N` no longer drops the enemy. Leftover tokens after `target` are still ignored; use `marines=N`.

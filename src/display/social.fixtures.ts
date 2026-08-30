@@ -160,6 +160,25 @@ export const facilityListFixture = {
       labor_per_cycle: 80,
     },
   ],
+  service_pools: {
+    personnel: {
+      remaining: 12,
+      capacity: 20,
+      refill_per_cycle: 4,
+      supply_item: 'crew_rations',
+    },
+    medical: {
+      remaining: 3,
+      capacity: 10,
+      refill_per_cycle: 1,
+    },
+    marine_training: {
+      remaining: 8,
+      capacity: 8,
+      refill_per_cycle: 2,
+      supply_item: 'marine_rations',
+    },
+  },
   player_facilities: [
     {
       facility_id: 'player-refinery',
@@ -248,6 +267,25 @@ export const facilityTypesFixture = {
   },
   hint: 'Use filters to browse.',
   total: 1753,
+};
+
+export const facilityTypesDetailFixture = {
+  action: 'types',
+  kind: 'detail',
+  type_id: 'crew_office',
+  name: 'Crew Office',
+  description: 'Recruits fit crew from the station pool.',
+  category: 'service',
+  level: 1,
+  build_cost: 12000,
+  build_time: 40,
+  labor_cost: 80,
+  rent_per_cycle: 200,
+  buildable: true,
+  service_pool_capacity: 20,
+  service_pool_refill_per_cycle: 4,
+  service_pool_supply_item: 'crew_rations',
+  service_pool_units_per_item: 1,
 };
 
 export const factionFacilityOwnedFixture = {
@@ -1074,6 +1112,11 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
+  facility_types_detail: {
+    command: 'facility_types',
+    fixture: facilityTypesDetailFixture,
+    apiRoute: 'POST /api/v2/spacemolt_facility/types',
+  },
   facility_upgrades: { command: 'facility_upgrades', fixture: facilityUpgradesFixture },
   captains_log_get: { command: 'captains_log_get', fixture: captainLogGetFixture },
   captains_log_list: { command: 'captains_log_list', fixture: captainsLogListFixture },

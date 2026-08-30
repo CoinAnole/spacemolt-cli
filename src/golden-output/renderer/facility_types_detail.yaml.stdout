@@ -1,0 +1,17 @@
+
+action: types
+kind: detail
+type_id: crew_office
+name: "Crew Office"
+description: "Recruits fit crew from the station pool."
+category: service
+level: 1
+build_cost: 12000
+build_time: 40
+labor_cost: 80
+rent_per_cycle: 200
+buildable: true
+service_pool_capacity: 20
+service_pool_refill_per_cycle: 4
+service_pool_supply_item: crew_rations
+service_pool_units_per_item: 1

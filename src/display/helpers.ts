@@ -397,6 +397,46 @@ export function emitStationLifeSupport(lifeSupport: unknown): boolean {
   return true;
 }
 
+const STATION_SERVICE_POOL_KEYS: ReadonlyArray<[string, string]> = [
+  ['personnel', 'Personnel'],
+  ['medical', 'Medical'],
+  ['marine_training', 'Marine training'],
+];
+
+function formatStationServicePoolLine(label: string, pool: Record<string, unknown>): string {
+  const remaining = finiteNumber(pool.remaining);
+  const capacity = finiteNumber(pool.capacity);
+  const remainingText = remaining === undefined ? '?' : String(remaining);
+  const capacityText = capacity === undefined ? '?' : String(capacity);
+  let line = `  ${label}: ${remainingText}/${capacityText} remaining`;
+  const refill = finiteNumber(pool.refill_per_cycle);
+  const supply = typeof pool.supply_item === 'string' && pool.supply_item ? pool.supply_item : undefined;
+  if (refill !== undefined) {
+    line += ` (+${refill}/cycle`;
+    if (supply) line += `, ${supply}`;
+    line += ')';
+  }
+  const need = finiteNumber(pool.next_cycle_supply_required);
+  if (need !== undefined && need > 0) line += ` (need ${need} next cycle)`;
+  return line;
+}
+
+export function emitStationServicePools(pools: unknown): boolean {
+  if (!isRecord(pools)) return false;
+  const lines: string[] = [];
+  for (const [key, label] of STATION_SERVICE_POOL_KEYS) {
+    const pool = pools[key];
+    if (!isRecord(pool)) continue;
+    lines.push(formatStationServicePoolLine(label, pool));
+  }
+  if (!lines.length) return false;
+
+  emitLine('');
+  emitLine(`${c.bright}Service pools:${c.reset}`);
+  for (const line of lines) emitLine(line);
+  return true;
+}
+
 export function emitStationFuelPricing(result: Record<string, unknown>, indent = ''): boolean {
   const fuelPrice = result.fuel_price;
   const fuelTax = result.fuel_tax_per_unit;

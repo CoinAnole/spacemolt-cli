@@ -5,6 +5,7 @@ import { renderStructuredResult } from './index.ts';
 import {
   inspectBaseFixture,
   inspectBaseRepairsFixture,
+  inspectCatalogBoardingModuleFixture,
   inspectCatalogModuleFixture,
   inspectCatalogShipFixture,
 } from './inspect.fixtures.ts';
@@ -535,6 +536,11 @@ test('ship-class inspect prints full loadout, Achievement, and Lock verbatim', (
   expect(stdout).toContain('Hull: 700');
   expect(stdout).toContain('Shield: 700 (+12/tick)');
   expect(stdout).toContain('Slots: 0 weapon, 4 defense, 5 utility');
+  expect(stdout).toContain('Crew capacity: 60');
+  expect(stdout).toContain('Minimum crew: 18');
+  expect(stdout).toContain('Marine capacity: 4');
+  expect(stdout).toContain('Latch resistance: 1');
+  expect(stdout).toContain('Boarding defense: 10%');
   expect(stdout).toContain('Default loadout: shield_booster_iii, shield_booster_iii, ship_scanner_ii');
   expect(stdout).toContain('Achievement: galactic_concierge');
   expect(stdout).toContain(
@@ -604,6 +610,51 @@ test('ship-class inspect keeps an untruncated default loadout and gated acquisit
   expect(stdout).toContain('Price: 0');
   expect(stdout).toContain('Required items: 3x Steel Plate');
   expect(stdout).toContain('Passive recipes: refine_steel, smelt_lead_ingot');
+});
+
+test('boarding module inspect prints dedicated personnel and boarding lines without leftover Bonuses', () => {
+  const stdout = renderStructuredResult('inspect', inspectCatalogBoardingModuleFixture, options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toContain('Crew capacity: 2');
+  expect(stdout).toContain('Marine capacity: 4');
+  expect(stdout).toContain('Latch: 3');
+  expect(stdout).toContain('Latch resistance: 1');
+  expect(stdout).toContain('Boarding defense: 15%');
+  expect(stdout).toContain('Crew combat: 5%');
+  expect(stdout).toContain('Marine combat: 10%');
+  expect(stdout).toContain('Medical: 2');
+  expect(stdout).toContain('Fleet triage: 8%');
+  expect(stdout).toContain('Boarding: yes');
+  expect(stdout).toContain('Boarding contact defense: yes');
+  expect(stdout).toContain('Remote medical: yes');
+  expect(stdout).not.toContain('Bonuses:');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('ship-class inspect prints marine capacity 0 and omits zero boarding defense', () => {
+  const stdout = renderCatalogInspect({
+    type: 'ships',
+    items: [
+      {
+        id: 'bare_hull',
+        name: 'Bare Hull',
+        class: 'Shuttle',
+        crew_capacity: 0,
+        minimum_crew: 0,
+        marine_capacity: 0,
+        latch_resistance: 0,
+        boarding_defense_bonus_pct: 0,
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Crew capacity: 0');
+  expect(stdout).toContain('Minimum crew: 0');
+  expect(stdout).toContain('Marine capacity: 0');
+  expect(stdout).toContain('Latch resistance: 0');
+  expect(stdout).not.toContain('Boarding defense:');
 });
 
 test('ship-class inspect still emits details when default_modules is missing', () => {

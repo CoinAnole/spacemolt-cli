@@ -48,7 +48,14 @@ test('renders creature scan identity, hull, and revealed wildlife details in ord
   expect(stdout).toContain('=== Scan Result ===');
   expect(stdout).toContain('Target: creature-ember-grazer-1');
   expect(stdout).toContain('Hull: 80');
+  expect(stdout).toContain(
+    'Description: Heat-tolerant grazers that drift between vent plumes, skittish unless the herd is boxed in.',
+  );
   expect(stdout).toContain('Revealed:');
+  expect(stdout.indexOf('Hull:')).toBeLessThan(stdout.indexOf('Description:'));
+  expect(stdout.indexOf('Description:')).toBeLessThan(stdout.indexOf('Revealed:'));
+  expect(stdout).not.toContain('fit_crew');
+  expect(stdout).not.toContain('fit_marines');
 
   const revealLines = ['Species: Ember Grazer', 'Role: grazer', 'Danger: low', 'Ranchable: yes'];
   const revealIndexes = revealLines.map((line) => stdout.indexOf(line));
@@ -58,6 +65,17 @@ test('renders creature scan identity, hull, and revealed wildlife details in ord
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('[object Object]');
+});
+
+test('scan omits Description when the lore string is already in revealed_info', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  const description = fixture.description;
+  fixture.revealed_info = [...(fixture.revealed_info as string[]), description];
+  const stdout = renderStructuredResult('scan', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain(`Description: ${description}`);
+  expect(stdout).toContain(String(description));
+  expect(stdout.split(String(description)).length - 1).toBe(1);
 });
 
 test('scan formatter declines a malformed shape without a target identity', () => {
