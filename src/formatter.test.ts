@@ -6328,6 +6328,10 @@ describe('structuredContent formatters', () => {
         Cargo: 12/60
         CPU: 8/20
         Power: 10/25
+        Crew: 4/6 fit (min 3)
+        Marines: 2/4 fit
+        Efficiency: 67%
+        Operational speed: 8
 
       Nearby Players: 1
         - Ibis (hauler)
@@ -6338,7 +6342,13 @@ describe('structuredContent formatters', () => {
 
         Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
         -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
-        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       "
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       
+
+      === Prize recoveries ===
+
+        Prize ID        | Ship                    | Status     | Destination   | Crew     | Hull  | Fuel  | Location                  | Arrival | Wait         
+        ----------------+-------------------------+------------+---------------+----------+-------+-------+---------------------------+---------+--------------
+        prize-recover-1 | Captured Lark (frigate) | in_transit | earth_station | 3 aboard | 40/80 | 20/50 | jump sol → alpha_centauri | 12500   | jump_cooldown"
     `);
   });
 
@@ -6771,6 +6781,10 @@ describe('structuredContent formatters', () => {
       Power: 23/75
       Slots: 1 weapon, 1 defense, 5 utility
       Berths: Economy: 3/4 free | Business: 1/1 free | First: 0/0 free
+      Crew: 4/6 fit (min 3)
+      Marines: 2/4 fit
+      Efficiency: 67%
+      Operational speed: 8
 
       === Modules ===
 

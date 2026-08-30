@@ -20,6 +20,7 @@ import {
   printCompactTable,
   printItemTable,
 } from './helpers.ts';
+import { emitShipPersonnel } from './personnel.ts';
 import { formatCompactTable } from './tables.ts';
 
 function summarizeItemQuantities(value: unknown): string {
@@ -346,6 +347,7 @@ export const shipFormatters = [
       );
       const berths = formatBerthSummary(ship.berths);
       if (berths) emitLine(`Berths: ${berths}`);
+      emitShipPersonnel(ship);
       emitShipCombatEffects(ship);
       if (ship.last_process_tick !== undefined) emitLine(`Passive Processing: last tick ${ship.last_process_tick}`);
       const passiveRecipes = summarizePassiveRecipes(ship.passive_recipes ?? r.passive_recipes);

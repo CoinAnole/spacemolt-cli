@@ -13,10 +13,12 @@ CPU: 16/34
 Power: 23/75
 Slots: 1 weapon, 1 defense, 5 utility
 Berths: Economy: 3/4 free | Business: 1/1 free | First: 0/0 free
-Crew: 4/6 fit (min 3)
-Marines: 2/4 fit
-Efficiency: 67%
-Operational speed: 8
+Crew: 0/6 fit, 2 injured (min 3)
+Marines: 0/4 fit, 1 injured
+Efficiency: 0%
+Operational speed: 0 (base 12)
+INCAPACITATED: no fit crew — ship operations unavailable
+Survivor recovery: 5 ticks (tick 12600)
 
 === Modules ===
 

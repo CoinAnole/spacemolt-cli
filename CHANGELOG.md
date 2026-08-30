@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Ship personnel and prize recoveries (gameserver 0.572.0)
+
+- `get_ship` and `get_status`/`get_state` print **Crew**, **Marines**, **Efficiency**, **Operational speed**,
+  and **Survivor recovery** from V2Ship personnel fields. **INCAPACITATED** appears only when that flag is true.
+- `get_status --summary` prints a `Crew:` occupancy line (`fit_crew`/`effective_crew_capacity`) after Ship.
+  The line is omitted when personnel is absent or the player is riding.
+- `get_status`/`get_state` print a **Prize recoveries** table from non-empty `prize_recoveries`.
+- JSON/YAML/jq field names are unchanged.
+
 ### Intact prizes in nearby / status / location tables (gameserver 0.572.0)
 
 - `get_nearby` and `subscribe_observation` print a **Prizes** table with copyable Prize ID and Actor columns

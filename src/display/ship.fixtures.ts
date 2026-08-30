@@ -81,6 +81,38 @@ export const shipFixture = {
     shield_recharge: 4,
     utility_slots: 5,
     weapon_slots: 1,
+    personnel: {
+      fit_crew: 4,
+      injured_crew: 0,
+      fit_marines: 2,
+      injured_marines: 0,
+    },
+    effective_crew_capacity: 6,
+    effective_marine_capacity: 4,
+    minimum_crew: 3,
+    crew_efficiency: 0.67,
+    operational_speed: 8,
+    incapacitated: false,
+  },
+};
+
+export const shipIncapacitatedFixture = {
+  ...shipFixture,
+  ship: {
+    ...shipFixture.ship,
+    personnel: {
+      fit_crew: 0,
+      injured_crew: 2,
+      fit_marines: 0,
+      injured_marines: 1,
+      version: 7,
+    },
+    crew_efficiency: 0,
+    operational_speed: 0,
+    speed: 12,
+    incapacitated: true,
+    personnel_recovery_ticks_remaining: 5,
+    personnel_recovery_tick: 12600,
   },
 };
 
@@ -549,6 +581,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
+  get_ship_incapacitated: { command: 'get_ship', fixture: shipIncapacitatedFixture },
   get_ship_drone_bay: { command: 'get_ship', fixture: shipDroneBayFixture },
   get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
