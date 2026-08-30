@@ -457,6 +457,7 @@ export const scanCreatureFixture = {
   success: true,
   target_id: 'creature-ember-grazer-1',
   hull: 80,
+  description: 'Heat-tolerant grazers that drift between vent plumes, skittish unless the herd is boxed in.',
   revealed_info: ['Species: Ember Grazer', 'Role: grazer', 'Danger: low', 'Ranchable: yes'],
 };
 

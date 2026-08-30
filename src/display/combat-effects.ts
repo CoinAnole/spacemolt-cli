@@ -254,7 +254,7 @@ export function summarizeCombatSpecialEffects(effects: unknown): string {
   return parts.join(', ');
 }
 
-type BonusSign = 'unsigned' | 'bonus' | 'penalty';
+type BonusSign = 'unsigned' | 'bonus' | 'penalty' | 'flag' | 'percent';
 
 const MODULE_BONUS_LABELS: ReadonlyArray<{ key: string; label: string; sign: BonusSign }> = [
   { key: 'reach', label: 'reach', sign: 'unsigned' },
@@ -296,6 +296,18 @@ const MODULE_BONUS_LABELS: ReadonlyArray<{ key: string; label: string; sign: Bon
   { key: 'precision_factor', label: 'precision', sign: 'unsigned' },
   { key: 'drone_capacity', label: 'drone capacity', sign: 'unsigned' },
   { key: 'drone_bandwidth', label: 'drone bandwidth', sign: 'unsigned' },
+  { key: 'crew_capacity_bonus', label: 'crew capacity', sign: 'bonus' },
+  { key: 'marine_capacity_bonus', label: 'marine capacity', sign: 'bonus' },
+  { key: 'latch_strength', label: 'latch', sign: 'unsigned' },
+  { key: 'latch_resistance', label: 'latch resist', sign: 'unsigned' },
+  { key: 'boarding_defense_bonus_pct', label: 'boarding defense', sign: 'percent' },
+  { key: 'crew_combat_bonus_pct', label: 'crew combat', sign: 'percent' },
+  { key: 'marine_combat_bonus_pct', label: 'marine combat', sign: 'percent' },
+  { key: 'medical_treatment_rate', label: 'medical', sign: 'unsigned' },
+  { key: 'fleet_triage_pct', label: 'fleet triage', sign: 'percent' },
+  { key: 'boarding_capability', label: 'boarding', sign: 'flag' },
+  { key: 'boarding_contact_defense', label: 'boarding contact defense', sign: 'flag' },
+  { key: 'remote_medical_treatment', label: 'remote medical', sign: 'flag' },
 ];
 
 const MODULE_BONUS_KEYS = new Set(MODULE_BONUS_LABELS.map((entry) => entry.key));
@@ -339,9 +351,14 @@ function isOmittedBonusValue(value: unknown): boolean {
 }
 
 function formatBonusToken(label: string, sign: BonusSign, value: unknown): string | undefined {
+  if (sign === 'flag') return value === true ? label : undefined;
   if (isOmittedBonusValue(value) || typeof value === 'boolean') return undefined;
   const amount = finiteNumber(value);
   if (amount === undefined || amount === 0) return undefined;
+  if (sign === 'percent') {
+    const signed = amount > 0 ? `+${amount}` : `${amount}`;
+    return `${label} ${signed}%`;
+  }
   if (sign === 'penalty') return `${label} -${Math.abs(amount)}`;
   if (sign === 'bonus') return `${label} ${amount > 0 ? `+${amount}` : `${amount}`}`;
   return `${label} ${amount}`;

@@ -10,6 +10,8 @@ import {
   battleSummaryCapturesFixture,
   battleSummaryFixture,
   facilityListFixture,
+  facilityListSimpleFixture,
+  facilityTypesDetailFixture,
   factionFacilityListFixture,
   factionFacilityOwnedFixture,
   forumThreadFixture,
@@ -174,6 +176,108 @@ test('renders faction-owned facility rent summary and delinquency fields', () =>
   expect(rendered.stdout.join('\n')).toContain('Missed');
   expect(rendered.stdout.join('\n')).toContain('Arrears');
   expect(rendered.stdout.join('\n')).toContain('2,400cr');
+});
+
+test('renders station service pools after construction and before facility tables', () => {
+  const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Service pools:');
+  expect(stdout).toContain('Personnel: 12/20 remaining (+4/cycle, crew_rations)');
+  expect(stdout).toContain('Medical: 3/10 remaining (+1/cycle)');
+  expect(stdout).toContain('Marine training: 8/8 remaining (+2/cycle, marine_rations)');
+  expect(stdout.indexOf('=== Construction ===')).toBeLessThan(stdout.indexOf('Service pools:'));
+  expect(stdout.indexOf('Service pools:')).toBeLessThan(stdout.indexOf('=== Station Facilities ==='));
+  expect(stdout).not.toContain('service_pool_capacity');
+  const stationHeader = stdout
+    .split('=== Player Facilities ===')[0]
+    ?.split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
+  expect(stationHeader).toBeDefined();
+  expect(stationHeader).not.toContain('Service pool');
+});
+
+test('omits station service pools when the list response has none', () => {
+  const simple = renderStructuredResult(
+    'facility_list',
+    structuredClone(facilityListSimpleFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(simple).not.toContain('Service pools:');
+
+  const detailed = structuredClone(facilityListFixture) as Record<string, unknown>;
+  delete detailed.service_pools;
+  const omitted = renderStructuredResult('facility_list', detailed, options, context).stdout.join('\n');
+  expect(omitted).not.toContain('Service pools:');
+});
+
+test('prints remaining 0 and next-cycle supply need for station service pools', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.service_pools = {
+    personnel: { remaining: 0, capacity: 20, refill_per_cycle: 4, supply_item: 'crew_rations' },
+    medical: { remaining: 3, capacity: 10, refill_per_cycle: 1, next_cycle_supply_required: 2 },
+  };
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Personnel: 0/20 remaining (+4/cycle, crew_rations)');
+  expect(stdout).toContain('Medical: 3/10 remaining (+1/cycle) (need 2 next cycle)');
+  expect(stdout).not.toContain('Marine training:');
+});
+
+test('facility_types detail prints identity and service pool without generic dump', () => {
+  const stdout = renderStructuredResult(
+    'facility_types',
+    structuredClone(facilityTypesDetailFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Facility type: Crew Office ===');
+  expect(stdout).toContain('ID: crew_office');
+  expect(stdout).toContain('Category: service');
+  expect(stdout).toContain('Level: 1');
+  expect(stdout).toContain('Buildable: yes');
+  expect(stdout).toContain('Build cost: 12000');
+  expect(stdout).toContain('Build time: 40');
+  expect(stdout).toContain('Labor: 80');
+  expect(stdout).toContain('Rent/cycle: 200');
+  expect(stdout).toContain('Description: Recruits fit crew from the station pool.');
+  expect(stdout).toContain('Service pool: 20 cap, +4/cycle, 1x crew_rations');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Categories ===');
+});
+
+test('facility_types omits Service pool when definition pool fields are absent', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete fixture.service_pool_capacity;
+  delete fixture.service_pool_refill_per_cycle;
+  delete fixture.service_pool_supply_item;
+  delete fixture.service_pool_units_per_item;
+  const stdout = renderStructuredResult('facility_types', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Facility type: Crew Office ===');
+  expect(stdout).not.toContain('Service pool:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('facility_types shapeFallback does not claim catalog-shaped type_id objects', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    { type_id: 'crew_office', name: 'Crew Office' },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toContain('=== Facility type:');
+  expect(stdout).not.toContain('Service pool:');
+});
+
+test('facility_types declines detail payloads with a non-types action', () => {
+  const stdout = renderStructuredResult(
+    'facility_types',
+    { ...facilityTypesDetailFixture, action: 'list' },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toContain('=== Facility type:');
+  expect(stdout).not.toContain('Service pool: 20 cap');
 });
 
 test('renders facility list item req. stock and labor per cycle', () => {

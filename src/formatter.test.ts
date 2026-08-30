@@ -6577,6 +6577,11 @@ describe('structuredContent formatters', () => {
         ------------------+------------------+----------------+----------+---------+----------
         Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |
 
+      Service pools:
+        Personnel: 12/20 remaining (+4/cycle, crew_rations)
+        Medical: 3/10 remaining (+1/cycle)
+        Marine training: 8/8 remaining (+2/cycle, marine_rations)
+
       === Station Facilities ===
 
         Name                    | ID            | Level | Category       | Maint | Req. stock                       | Labor/cycle | Dining | Tourism Upkeep | Recycler | Owner

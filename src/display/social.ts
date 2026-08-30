@@ -6,6 +6,8 @@ import {
   emitStationConstruction,
   emitStationLifeSupport,
   emitStationPower,
+  emitStationServicePools,
+  finiteNumber,
   firstArray,
   formatFacilityMaintenanceUpkeep,
   formatter,
@@ -86,6 +88,52 @@ function formatCycles(value: unknown): string | undefined {
 function formatYesNo(value: unknown): string | undefined {
   if (typeof value !== 'boolean') return undefined;
   return value ? 'yes' : 'no';
+}
+
+function emitDefinedLine(label: string, value: unknown): void {
+  if (value === undefined || value === null || value === '') return;
+  if (isRecord(value) || Array.isArray(value)) return;
+  emitLine(`${label}: ${value}`);
+}
+
+function formatFacilityTypeServicePool(r: Record<string, unknown>): string | undefined {
+  const parts: string[] = [];
+  const capacity = finiteNumber(r.service_pool_capacity);
+  if (capacity !== undefined) parts.push(`${capacity} cap`);
+  const refill = finiteNumber(r.service_pool_refill_per_cycle);
+  if (refill !== undefined) parts.push(`+${refill}/cycle`);
+  const item =
+    typeof r.service_pool_supply_item === 'string' && r.service_pool_supply_item
+      ? r.service_pool_supply_item
+      : undefined;
+  const units = finiteNumber(r.service_pool_units_per_item);
+  if (item && units !== undefined) parts.push(`${units}x ${item}`);
+  else if (item) parts.push(item);
+  else if (units !== undefined) parts.push(`${units}x`);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
+  const typeId = typeof r.type_id === 'string' ? r.type_id.trim() : '';
+  if (!typeId) return false;
+  const name = typeof r.name === 'string' && r.name.trim() ? r.name.trim() : typeId;
+  emitLine(`\n${c.bright}=== Facility type: ${name} ===${c.reset}`);
+  emitLine(`ID: ${typeId}`);
+  emitDefinedLine('Category', r.category);
+  emitDefinedLine('Level', r.level);
+  const buildable = formatYesNo(r.buildable);
+  if (buildable) emitLine(`Buildable: ${buildable}`);
+  emitDefinedLine('Build cost', r.build_cost);
+  emitDefinedLine('Build time', r.build_time);
+  emitDefinedLine('Labor', r.labor_cost);
+  emitDefinedLine('Rent/cycle', r.rent_per_cycle);
+  emitDefinedLine('Description', r.description);
+  const pool = formatFacilityTypeServicePool(r);
+  if (pool) {
+    emitLine('');
+    emitLine(`Service pool: ${pool}`);
+  }
+  return true;
 }
 
 /** Omit the no-winner sentinel so this side-id label is not printed as -1. */
@@ -1246,6 +1294,7 @@ export const socialFormatters = [
       emitStationPower(r.power);
       emitStationLifeSupport(r.life_support);
       emitStationConstruction(r.construction);
+      emitStationServicePools(r.service_pools);
       for (const [title, rows] of groups) {
         if (!rows?.length) continue;
         const displayRows = facilityRows(rows);
@@ -1296,7 +1345,14 @@ export const socialFormatters = [
     'facility_types',
     ['categories', 'total'],
     (r) => {
-      if (!r.categories || !isRecord(r.categories)) return false;
+      if (r.kind === 'detail') {
+        const action = r.action;
+        if (typeof action === 'string' && action && action !== 'types') return false;
+        return emitFacilityTypeDetail(r);
+      }
+
+      if (r.kind !== undefined && r.kind !== 'discovery') return false;
+      if (!isRecord(r.categories)) return false;
       const categories = Object.entries(r.categories).map(([category, raw]) => ({
         category,
         ...(isRecord(raw) ? raw : { description: String(raw) }),

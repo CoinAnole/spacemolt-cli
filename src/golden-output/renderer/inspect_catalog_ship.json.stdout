@@ -26,6 +26,11 @@
         "weapon_slots": 0,
         "defense_slots": 4,
         "utility_slots": 5,
+        "crew_capacity": 60,
+        "minimum_crew": 18,
+        "marine_capacity": 4,
+        "latch_resistance": 1,
+        "boarding_defense_bonus_pct": 10,
         "default_modules": [
           "shield_booster_iii",
           "shield_booster_iii",

@@ -27,6 +27,11 @@ Cargo: 200
 CPU: 55
 Power: 150
 Slots: 0 weapon, 4 defense, 5 utility
+Crew capacity: 60
+Minimum crew: 18
+Marine capacity: 4
+Latch resistance: 1
+Boarding defense: 10%
 Shipyard tier: 3
 Build time: 16000
 Default loadout: shield_booster_iii, shield_booster_iii, ship_scanner_ii

@@ -288,6 +288,21 @@ test('summarizeModuleBonuses omits inspect-only weapon fields and zero bonuses',
   expect(summarizeModuleBonuses({ reach: 3, shield_bonus: 0, speed_penalty: 0, cpu_usage: 9 })).toBe('reach 3');
 });
 
+test('summarizeModuleBonuses prints boarding flags and percent bonuses', () => {
+  expect(
+    summarizeModuleBonuses({
+      crew_capacity_bonus: 2,
+      boarding_defense_bonus_pct: 15,
+      crew_combat_bonus_pct: 0,
+      marine_combat_bonus_pct: -5,
+      fleet_triage_pct: 8,
+      boarding_capability: true,
+      boarding_contact_defense: false,
+      remote_medical_treatment: true,
+    }),
+  ).toBe('crew capacity +2, boarding defense +15%, marine combat -5%, fleet triage +8%, boarding, remote medical');
+});
+
 test('summarizeModuleBonuses signs penalties, resistance maps, and bypass fractions', () => {
   expect(summarizeModuleBonuses(expandedFuelTank)).toBe('hull -20, max fuel +100');
   expect(summarizeModuleBonuses(advancedTowRig)).toBe('tow -30');

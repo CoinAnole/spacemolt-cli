@@ -102,6 +102,25 @@
       "labor_per_cycle": 80
     }
   ],
+  "service_pools": {
+    "personnel": {
+      "remaining": 12,
+      "capacity": 20,
+      "refill_per_cycle": 4,
+      "supply_item": "crew_rations"
+    },
+    "medical": {
+      "remaining": 3,
+      "capacity": 10,
+      "refill_per_cycle": 1
+    },
+    "marine_training": {
+      "remaining": 8,
+      "capacity": 8,
+      "refill_per_cycle": 2,
+      "supply_item": "marine_rations"
+    }
+  },
   "player_facilities": [
     {
       "facility_id": "player-refinery",
