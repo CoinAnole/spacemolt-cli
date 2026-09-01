@@ -244,12 +244,14 @@ spacemolt storage jettison ore_iron 5
 | Nested form | Category | Notes |
 | --- | --- | --- |
 | `storage view` | Station storage | Client-side filters: `--search`, `--item` / `item_id`, `items` |
-| `storage deposit` | Station storage | Cargo → storage; gifts; faction buckets; bulk `items=JSON` |
+| `storage deposit` | Station storage | Cargo → storage; player/empire/faction gifts; station material gifts (`target=station:<base-or-POI-ID>`, docked-only); faction buckets; bulk `items=JSON`. Docs/v1 `send_gift` to a station is this command; there is no `send_gift` CLI command. |
 | `storage withdraw` | Station storage | Storage → cargo; faction compartments; bulk `items=JSON` |
 | `storage loot` | Wrecks | Distinct from top-level `loot_wreck` |
 | `storage jettison` | Cargo | Distinct from top-level `jettison` (prefer `jettison` for ordinary dumps) |
 
 Related top-level helpers (unchanged): `jettison`, `loot_wreck`, `faction_deposit_credits`, `faction_withdraw_credits`.
+
+**Station donations (gameserver 0.574):** `spacemolt storage deposit steel_plate 20 target=station:grand_exchange_station` while docked at that NPC empire station. Cargo is the default source and works if storage service is offline. Do not send credits, ships, packages, or quest items. Gameserver/docs `send_gift recipient=station:…` maps here.
 
 #### Migration from multi-action `storage`
 

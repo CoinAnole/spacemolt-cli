@@ -143,7 +143,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   storage: 'Run station and faction storage actions.',
   storage_view: 'View personal or faction station storage.',
   storage_deposit:
-    'Deposit cargo into station/faction storage, gift items/credits/ships to players, or move between faction compartments.',
+    'Deposit cargo into station/faction storage, gift items/credits/ships to players, donate materials to a docked NPC station (target=station:<id>), or move between faction compartments.',
   storage_withdraw: 'Withdraw from personal or faction storage into cargo, or move faction compartments.',
   storage_loot: 'Loot wreck cargo into your hold, or fit a module onto your ship, via spacemolt_storage/loot.',
   storage_jettison: 'Jettison items via spacemolt_storage/jettison.',

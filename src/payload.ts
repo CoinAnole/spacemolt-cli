@@ -255,7 +255,14 @@ function reservedIdValue(command: string, field: string, value: string, kind: st
 function isReservedStorageTarget(command: string, field: string, value: string, kind: string | undefined): boolean {
   if (command !== 'storage_deposit' || field !== 'target' || kind !== 'player') return false;
   const normalized = value.trim().toLowerCase();
-  if (normalized === 'self' || normalized === 'faction' || normalized.startsWith('faction:')) return true;
+  if (
+    normalized === 'self' ||
+    normalized === 'faction' ||
+    normalized.startsWith('faction:') ||
+    normalized.startsWith('station:')
+  ) {
+    return true;
+  }
   return isEmpireRecipientAlias(value);
 }
 

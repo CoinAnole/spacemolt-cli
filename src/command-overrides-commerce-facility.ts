@@ -212,11 +212,11 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   storage_deposit: {
     usage:
-      '[item_id] [quantity] [target=self|faction|player] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON; ship tow: <ship_id> target=self)',
+      '[item_id] [quantity] [target=self|faction|player|station:<base-or-POI-ID>] [source=cargo|storage|faction] [bucket=…] [dest_bucket=…] [message=…] [items=JSON] [credits=…]  (item_id/quantity required unless items=JSON; ship tow: <ship_id> target=self)',
     description:
-      "Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own ships of equal or smaller class scale. Plain deposit moves cargo→personal storage when source/target are omitted. Local personal/faction paths (omitted target, target=self, or target=faction) auto-dock at the current POI's base; a fleet leader docks the fleet as well. Docking happens before deposit validation, so a failed deposit may still leave you docked. Player gifts, empire donations, and faction:TAG donations retain their own docking rules. With a tow rig fitted, pass a ship instance UUID and target=self to tow it; the ship must be at the same station, and this local path can auto-dock first (class scale must not be larger than your active ship; same scale is allowed). You can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.",
+      "Deposit cargo into station/faction storage, gift items/credits/ships to players, move between faction compartments, or attach a tow line to one of your own ships of equal or smaller class scale. Plain deposit moves cargo→personal storage when source/target are omitted. Local personal/faction paths (omitted target, target=self, or target=faction) auto-dock at the current POI's base; a fleet leader docks the fleet as well. Docking happens before deposit validation, so a failed deposit may still leave you docked. Player gifts, empire donations, and faction:TAG donations retain their own docking rules. Station material gifts (docs/v1 send_gift) use target=station:<base-or-POI-ID> and require you to already be docked at that managed NPC empire station; they do not auto-dock. Cargo is the default source and works while storage service is offline; source=storage draws personal storage and requires storage service. No credits, ships, packages, or quest items. With a tow rig fitted, pass a ship instance UUID and target=self to tow it; the ship must be at the same station, and this local path can auto-dock first (class scale must not be larger than your active ship; same scale is allowed). You can tow only one wreck or ship at a time. Gift a ship to a player with target=<player_name> instead.",
     example:
-      'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self',
+      'spacemolt storage_deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self; station gift: storage deposit steel_plate 20 target=station:grand_exchange_station',
     discoverWith: ['get_status', 'get_cargo', 'list_ships'],
     seeAlso: ['storage_view', 'storage_withdraw', 'get_cargo', 'list_ships', 'tow_wreck', 'get_status'],
     category: 'Station storage',
@@ -234,7 +234,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       },
       credits: {
         type: 'integer',
-        description: 'Credits to gift to another player.',
+        description: 'Credits to gift to another player. Not valid for station: targets.',
       },
     },
   },
