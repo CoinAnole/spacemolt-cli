@@ -4,6 +4,22 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Diplomacy notification previews (gameserver 0.573.2)
+
+- Human `get_notifications` / `notifications` prefer the server `message` as the
+  headline for war, peace, and alliance frames. When `message` is absent, copy is
+  synthesized from OpenAPI faction names (alliance names include `[TAG]` when present).
+- `faction_war_declared` reads `aggressor_faction_name` / `defender_faction_name`.
+  `Reason:` prints only when `reason` is present.
+- Peace offers use `faction_peace_proposal` (`from_faction_id` / `from_faction_name`).
+  `Terms:` prints only when `terms` is present. `faction_peace_proposed` no longer has
+  a typed handler.
+- Typed previews for `faction_peace_accepted` (`PEACE`) and `faction_alliance_proposal` /
+  `faction_alliance_formed` / `faction_alliance_broken` (`FACTION`). Alliance proposals
+  include `Use: faction accept_ally target_faction_id=…`; peace proposals still include
+  `Use: faction accept_peace target_faction_id=…`.
+- JSON/YAML/jq field names are unchanged.
+
 ### Station material gifts (gameserver 0.574.0)
 
 - `help storage deposit` documents `target=station:<base-or-POI-ID>` (docked-only, cargo vs `source=storage`, no credits/ships/packages/quest items).

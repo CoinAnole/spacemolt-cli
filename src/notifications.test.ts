@@ -245,19 +245,75 @@ describe('notification formatting', () => {
       snippets: ['[DRONE]', 'combat drone dealt 6 damage'],
     },
     {
+      msgType: 'faction_alliance_broken',
+      data: {
+        by_faction_id: 'fac_1',
+        by_faction_name: 'Wardens',
+        by_faction_tag: 'WRD',
+        message: 'Wardens broke the alliance.',
+      },
+      snippets: ['[FACTION]', 'Wardens broke the alliance.'],
+    },
+    {
+      msgType: 'faction_alliance_formed',
+      data: {
+        with_faction_id: 'fac_1',
+        with_faction_name: 'Wardens',
+        with_faction_tag: 'WRD',
+        message: 'Alliance formed with Wardens.',
+      },
+      snippets: ['[FACTION]', 'Alliance formed with Wardens.'],
+    },
+    {
+      msgType: 'faction_alliance_proposal',
+      data: {
+        from_faction_id: 'fac_1',
+        from_faction_name: 'Wardens',
+        from_faction_tag: 'WRD',
+        message: 'Wardens have proposed an alliance.',
+      },
+      snippets: ['[FACTION]', 'Wardens have proposed an alliance.', 'faction accept_ally target_faction_id=fac_1'],
+    },
+    {
       msgType: 'faction_invite',
       data: { faction_name: 'Wardens', faction_id: 'fac_1' },
       snippets: ['[FACTION]', 'Wardens', 'join_faction faction_id=fac_1', 'faction decline_invite faction_id=fac_1'],
     },
     {
-      msgType: 'faction_peace_proposed',
-      data: { proposer_name: 'Wardens', terms: 'truce', faction_id: 'fac_1' },
-      snippets: ['[PEACE]', 'Wardens', 'Terms: truce', 'faction accept_peace target_faction_id=fac_1'],
+      msgType: 'faction_peace_accepted',
+      data: {
+        faction_id: 'fac_1',
+        faction_name: 'Wardens',
+        message: 'Wardens accepted peace.',
+      },
+      snippets: ['[PEACE]', 'Wardens accepted peace.'],
+    },
+    {
+      msgType: 'faction_peace_proposal',
+      data: {
+        from_faction_id: 'fac_1',
+        from_faction_name: 'Wardens',
+        terms: 'truce',
+        message: 'Wardens have proposed peace.',
+      },
+      snippets: [
+        '[PEACE]',
+        'Wardens have proposed peace.',
+        'Terms: truce',
+        'faction accept_peace target_faction_id=fac_1',
+      ],
     },
     {
       msgType: 'faction_war_declared',
-      data: { attacker_name: 'Raiders', reason: 'territory' },
-      snippets: ['[WAR]', 'Raiders', 'Reason: territory'],
+      data: {
+        aggressor_faction_id: 'fac_raiders',
+        aggressor_faction_name: 'Raiders',
+        defender_faction_id: 'fac_wardens',
+        defender_faction_name: 'Wardens',
+        message: 'Raiders declared war on Wardens.',
+        reason: 'territory',
+      },
+      snippets: ['[WAR]', 'Raiders declared war on Wardens.', 'Reason: territory'],
     },
     { msgType: 'friend_offline', data: { username: 'Marlowe' }, snippets: ['[FRIEND]', 'Marlowe went offline'] },
     { msgType: 'friend_online', data: { username: 'Marlowe' }, snippets: ['[FRIEND]', 'Marlowe is now online'] },
@@ -752,6 +808,24 @@ describe('notification formatting', () => {
         data: {},
       },
     ],
+    [
+      'faction_war_declared empty bag',
+      {
+        type: 'combat',
+        msg_type: 'faction_war_declared',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {},
+      },
+    ],
+    [
+      'faction_peace_proposal empty bag',
+      {
+        type: 'system',
+        msg_type: 'faction_peace_proposal',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {},
+      },
+    ],
   ])('formatNotification handles malformed known handler data: %s', (_name, notification) => {
     const output = stripAnsi(formatNotification(notification).join('\n'));
 
@@ -775,9 +849,15 @@ describe('notification formatting', () => {
       }).join('\n'),
       formatNotification({
         type: 'faction',
-        msg_type: 'faction_peace_proposed',
+        msg_type: 'faction_peace_proposal',
         timestamp: '2026-05-18T12:00:00.000Z',
-        data: { proposer_name: 'Wardens', faction_id: 'fac_1' },
+        data: { from_faction_name: 'Wardens', from_faction_id: 'fac_1' },
+      }).join('\n'),
+      formatNotification({
+        type: 'faction',
+        msg_type: 'faction_alliance_proposal',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: { from_faction_name: 'Wardens', from_faction_id: 'fac_1', from_faction_tag: 'WRD' },
       }).join('\n'),
     ]
       .map(stripAnsi)
@@ -787,10 +867,12 @@ describe('notification formatting', () => {
     expect(prompts).toContain('trade decline trade_id=trade_1');
     expect(prompts).toContain('faction decline_invite faction_id=fac_1');
     expect(prompts).toContain('faction accept_peace target_faction_id=fac_1');
+    expect(prompts).toContain('faction accept_ally target_faction_id=fac_1');
     expect(prompts).not.toContain('trade_accept');
     expect(prompts).not.toContain('trade_decline');
     expect(prompts).not.toContain('faction_decline_invite');
     expect(prompts).not.toContain('faction_accept_peace');
+    expect(prompts).not.toContain('faction_accept_ally');
   });
 
   test('displayNotifications writes formatted lines through the provided writer', () => {
@@ -1495,7 +1577,11 @@ describe('notification formatting', () => {
       'friend_offline',
       'faction_invite',
       'faction_war_declared',
-      'faction_peace_proposed',
+      'faction_peace_proposal',
+      'faction_peace_accepted',
+      'faction_alliance_proposal',
+      'faction_alliance_formed',
+      'faction_alliance_broken',
       'base_raid_update',
       'base_destroyed',
       'scan_result',
@@ -1599,6 +1685,205 @@ describe('notification formatting', () => {
       });
       expect(preview.tag).toBe('RAID');
       expect(preview.headline).toBe('Outpost: 80/100 HP (-5/tick)');
+    });
+  });
+
+  describe('0.573.2 diplomacy previews', () => {
+    test('war OpenAPI names without message synthesize aggressor and defender', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'faction_war_declared',
+        data: {
+          aggressor_faction_id: 'fac_raiders',
+          aggressor_faction_name: 'Raiders',
+          defender_faction_id: 'fac_wardens',
+          defender_faction_name: 'Wardens',
+        },
+      });
+      expect(preview.tag).toBe('WAR');
+      expect(preview.headline).toBe('Raiders declared war on Wardens!');
+      expect(preview.headline).not.toContain('a faction');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('war message without reason omits the Reason line', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'faction_war_declared',
+        data: {
+          aggressor_faction_id: 'fac_raiders',
+          aggressor_faction_name: 'Raiders',
+          defender_faction_id: 'fac_wardens',
+          defender_faction_name: 'Wardens',
+          message: 'Raiders declared war on Wardens.',
+        },
+      });
+      expect(preview.tag).toBe('WAR');
+      expect(preview.headline).toBe('Raiders declared war on Wardens.');
+      expect(preview.details.join('\n')).not.toContain('Reason:');
+    });
+
+    test('war synthesis does not append undocumented faction tags', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'faction_war_declared',
+        data: {
+          aggressor_faction_name: 'Raiders',
+          defender_faction_name: 'Wardens',
+          aggressor_faction_tag: 'RAID',
+        },
+      });
+      expect(preview.headline).toBe('Raiders declared war on Wardens!');
+      expect(preview.headline).not.toContain('[RAID]');
+    });
+
+    test('war empty bag uses last-resort headline and keeps the WAR tag', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'faction_war_declared',
+        data: {},
+      });
+      expect(preview.tag).toBe('WAR');
+      expect(preview.headline).toBe('A faction declared war');
+      expect(preview.details).toEqual([]);
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('legacy attacker_name bag does not feed the war headline', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'faction_war_declared',
+        data: { attacker_name: 'Raiders', reason: 'territory' },
+      });
+      expect(preview.tag).toBe('WAR');
+      expect(preview.headline).toBe('A faction declared war');
+      expect(preview.headline).not.toContain('Raiders');
+      expect(preview.details).toEqual(['Reason: territory']);
+    });
+
+    test('peace proposal message without terms omits Terms: and uses from_faction_id', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_peace_proposal',
+        data: {
+          from_faction_id: 'fac_1',
+          from_faction_name: 'Wardens',
+          message: 'Wardens have proposed peace.',
+        },
+      });
+      expect(preview.tag).toBe('PEACE');
+      expect(preview.headline).toBe('Wardens have proposed peace.');
+      expect(preview.details.join('\n')).not.toContain('Terms:');
+      expect(preview.details.join('\n')).not.toContain('unconditional');
+      expect(preview.details).toEqual(['Use: faction accept_peace target_faction_id=fac_1']);
+    });
+
+    test('peace proposal empty bag last-resort still emits target_faction_id=', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_peace_proposal',
+        data: {},
+      });
+      expect(preview.tag).toBe('PEACE');
+      expect(preview.headline).toBe('Peace proposed');
+      expect(preview.details).toEqual(['Use: faction accept_peace target_faction_id=']);
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+    });
+
+    test('stale faction_peace_proposed type falls through to Policy 5', () => {
+      expect(hasPreviewHandler('faction_peace_proposed')).toBe(false);
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_peace_proposed',
+        data: { message: 'Wardens have proposed peace.', proposer_name: 'Wardens' },
+      });
+      expect(preview.tag).toBe('FACTION_PEACE_PROPOSED');
+      expect(preview.headline).toBe('Wardens have proposed peace.');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('peace accepted empty bag uses last-resort headline', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_peace_accepted',
+        data: {},
+      });
+      expect(preview.tag).toBe('PEACE');
+      expect(preview.headline).toBe('Peace accepted');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('alliance proposal without message synthesizes name and tag', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_alliance_proposal',
+        data: {
+          from_faction_id: 'fac_1',
+          from_faction_name: 'Wardens',
+          from_faction_tag: 'WRD',
+        },
+      });
+      expect(preview.tag).toBe('FACTION');
+      expect(preview.headline).toBe('Wardens [WRD] proposed an alliance');
+      expect(preview.details).toEqual(['Use: faction accept_ally target_faction_id=fac_1']);
+    });
+
+    test('alliance proposal with message does not force-append the faction tag', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_alliance_proposal',
+        data: {
+          from_faction_id: 'fac_1',
+          from_faction_name: 'Wardens',
+          from_faction_tag: 'WRD',
+          message: 'Wardens have proposed an alliance.',
+        },
+      });
+      expect(preview.headline).toBe('Wardens have proposed an alliance.');
+      expect(preview.headline).not.toContain('[WRD]');
+    });
+
+    test('alliance formed and broken synthesize tagged names when message is absent', () => {
+      const formed = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_alliance_formed',
+        data: {
+          with_faction_id: 'fac_1',
+          with_faction_name: 'Wardens',
+          with_faction_tag: 'WRD',
+        },
+      });
+      expect(formed.tag).toBe('FACTION');
+      expect(formed.headline).toBe('Alliance formed with Wardens [WRD]');
+
+      const broken = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_alliance_broken',
+        data: {
+          by_faction_id: 'fac_1',
+          by_faction_name: 'Wardens',
+          by_faction_tag: 'WRD',
+        },
+      });
+      expect(broken.tag).toBe('FACTION');
+      expect(broken.headline).toBe('Wardens [WRD] broke the alliance');
+    });
+
+    test('tableMessageFromPreview folds alliance Use: into Message', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'faction_alliance_proposal',
+        data: {
+          from_faction_id: 'fac_1',
+          from_faction_name: 'Wardens',
+          from_faction_tag: 'WRD',
+          message: 'Wardens have proposed an alliance.',
+        },
+      });
+      const useLine = 'Use: faction accept_ally target_faction_id=fac_1';
+      expect(preview.details).toEqual([useLine]);
+      expect(useLine.length).toBeLessThanOrEqual(80);
+      expect(tableMessageFromPreview(preview)).toBe(`${preview.headline}; ${useLine}`);
     });
   });
 
