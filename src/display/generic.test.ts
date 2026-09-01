@@ -49,6 +49,23 @@ test('renders dock facility_note and your_facilities with paused vs billable ren
   expect(stdout).not.toContain('1,200cr (paused)');
   expect(stdout).not.toContain('100cr (paused)');
   expect(stdout.indexOf('Station condition:')).toBeLessThan(stdout.indexOf('=== Your facilities ==='));
+  const facilitiesTable = stdout.split('=== Your facilities ===')[1] ?? '';
+  expect(facilitiesTable).not.toMatch(/\bETA\b/);
+});
+
+test('dock your_facilities grows an ETA column when ticks_until_complete is present', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  const facilities = fixture.your_facilities as Array<Record<string, unknown>>;
+  const hangar = facilities.find((row) => row.facility_id === 'player-hangar');
+  if (!hangar) throw new Error('Dock fixture hangar row is missing.');
+  hangar.ticks_until_complete = 12;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  const facilitiesTable = stdout.split('=== Your facilities ===')[1] ?? '';
+  const header = facilitiesTable.split('\n').find((line) => line.includes('Name') && line.includes('Rent/cycle'));
+  expect(header).toBeDefined();
+  expect(header).toContain('ETA');
+  expect(facilitiesTable).toContain('12 ticks');
+  expect(stdout).toContain('800cr (paused)');
 });
 
 test('omits dock your_facilities table and (None) when the list is empty', () => {
