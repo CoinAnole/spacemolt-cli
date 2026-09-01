@@ -587,7 +587,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with dismantle_outpost.',
+      'Dismantle a facility you own, returning 100% of build and upgrade materials as labeled packages — one package per upgrade tier so you can rebuild in stages. Requires one cargo_container in storage per package produced (rejected up front if short). Use facility build package_ids=… to consume those packages on rebuild. Damaged facilities can be dismantled without repairing first; this cancels any in-progress repair without refunding resources already spent. Personal Quarters can be dismantled only after your other personal facilities at that station are gone, including ones still dismantling; home base is unchanged. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with dismantle_outpost.',
     example: 'spacemolt facility_dismantle facility-1',
     discoverWith: ['facility_owned'],
     seeAlso: ['facility_owned', 'facility_build', 'facility_repair', 'dismantle_outpost'],
@@ -807,7 +807,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_facility_list: {
     category: 'Facilities',
     description:
-      'List faction facilities at the current station, including status (active, damaged, under construction).',
+      'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling).',
     example: 'spacemolt faction facility_list',
     discoverWith: ['faction_facility_owned', 'facility_repair', 'facility_list'],
     seeAlso: ['faction_facility_owned', 'facility_repair', 'faction_build', 'facility_list'],
@@ -844,7 +844,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_dismantle: {
     usage: '<facility_id>',
     description:
-      'Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with dismantle_outpost.',
+      "Dismantle a faction facility, returning 100% of build and upgrade materials to faction storage as labeled packages — one package per upgrade tier so the faction can rebuild in stages. Requires one cargo_container in faction storage per package produced (rejected up front if short). Use faction build package_ids=… to consume those packages on rebuild. Damaged facilities can be dismantled without repairing first; this cancels any in-progress repair without refunding resources already spent. Faction Storage can be dismantled only after your faction's other facilities at that station are gone, including ones still dismantling. Remaining items and packages stay withdrawable with normal permissions; new deposits stop once storage dismantling starts unless your faction owns the station. Outpost built-in fuel bunkers cannot be dismantled alone; dismantle the whole outpost with dismantle_outpost.",
     example: 'spacemolt faction_dismantle facility-1',
     discoverWith: ['faction_facility_owned'],
     seeAlso: ['faction_facility_owned', 'faction_build', 'facility_repair', 'dismantle_outpost'],

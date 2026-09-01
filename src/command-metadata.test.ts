@@ -1039,11 +1039,24 @@ describe('command metadata', () => {
       expect(config?.description).toContain('cargo_container');
       expect(config?.description).toContain('dismantle_outpost');
       expect(config?.description).toContain('fuel bunkers cannot be dismantled alone');
+      expect(config?.description).toContain('without repairing');
+      expect(config?.description).toContain('cancels');
+      expect(config?.description).toContain('still dismantling');
       expect(config?.seeAlso).toContain('dismantle_outpost');
       const help = captureHelp(`${group} ${action}`);
       expect(help).toContain('cargo_container');
       expect(help).toContain('package');
       expect(help).toContain('dismantle_outpost');
+      expect(help).toContain('without repairing');
+      expect(help).toContain('cancels');
+      expect(help).toContain('still dismantling');
+      if (group === 'facility') {
+        expect(config?.description).toContain('other personal facilities');
+        expect(help).toContain('other personal facilities');
+      } else {
+        expect(config?.description).toContain('Faction Storage');
+        expect(help).toContain('Faction Storage');
+      }
     }
   });
 
