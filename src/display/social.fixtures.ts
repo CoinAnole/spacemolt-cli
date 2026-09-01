@@ -714,10 +714,7 @@ function participantSnapshot(overrides: Record<string, unknown> = {}): Record<st
   };
 }
 
-/** AttackLogEntry.required (OpenAPI): attacker_id, target_id, zone_distance, weapons,
- *  raw_damage, weapon_skill_pct, pre_hit_damage, hit_chance, hit_roll, hit_success,
- *  final_damage, shield_damage, hull_damage, damage_type.
- *  weapons: [] is enough at reporter default maxDepth 4 (WeaponFireDetail items are not sampled). */
+// empty weapons satisfies required AttackLogEntry.weapons
 function attackLogEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     attacker_id: 'pirate-boss-1',

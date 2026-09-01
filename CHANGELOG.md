@@ -4,7 +4,7 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
-### Battle identity on get_battle_status (gameserver 0.575.0)
+### Battle identity columns (gameserver 0.575.0)
 
 - Human `get_battle_status` Participants tables print NPC as yes/no when `is_npc` is
   present. There is no Boss column on status (schema has no `is_boss`).
