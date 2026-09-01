@@ -327,6 +327,27 @@ export const nearbyFixture = {
   poi_id: 'sol_cloudbank',
 };
 
+export const nearbyBossFixture = {
+  ...nearbyFixture,
+  pirate_count: 2,
+  pirates: [
+    ...nearbyFixture.pirates,
+    {
+      pirate_id: 'pirate-dread-1',
+      name: 'Dreadnought',
+      tier: 'battleship',
+      is_boss: true,
+      status: 'hostile',
+      hull: 200,
+      max_hull: 200,
+      shield: 80,
+      max_shield: 80,
+      faction: 'pirate_kael',
+      faction_name: 'Admiral Kael',
+    },
+  ],
+};
+
 /** Full observation baseline; pirate_count is intentionally absent in the v0.554 response schema. */
 export const subscribeObservationFixture = {
   action: 'subscribe_observation',
@@ -719,6 +740,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_poi_station: { command: 'get_poi', fixture: stationPoiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
+  get_nearby_boss: { command: 'get_nearby', fixture: nearbyBossFixture },
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },

@@ -27,6 +27,7 @@ import {
   listStationPassengersWithLoungeFixture,
   loadPassengerConnectingFixture,
   missionsFixture,
+  nearbyBossFixture,
   nearbyFixture,
   poiInfoFixture,
   shipDroneBayFixture,
@@ -4553,7 +4554,48 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+    expect(stdout).not.toContain('Boss ');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_nearby prefixes Boss only when is_boss is true', () => {
+    const prefixed = captureStructuredOutput('get_nearby', nearbyBossFixture);
+    const explicitFalse = captureStructuredOutput('get_nearby', nearbyFixture);
+    const omitted = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      count: 0,
+      pirates: [{ name: 'Raider', tier: 'skiff', status: 'hostile' }],
+      pirate_count: 1,
+    });
+    const roleOnly = captureStructuredOutput('get_nearby', {
+      nearby: [],
+      count: 0,
+      pirates: [{ name: 'Dreadnought', pirate_role: 'boss', tier: 'battleship', status: 'hostile' }],
+      pirate_count: 1,
+    });
+
+    expect(prefixed.stderr).toBe('');
+    expect(prefixed.stdout).toContain('Pirates (2):');
+    expect(prefixed.stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+    expect(prefixed.stdout).toContain('Boss Dreadnought (battleship) - Admiral Kael - hostile');
+    expect(explicitFalse.stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+    expect(explicitFalse.stdout).not.toContain('Boss ');
+    expect(omitted.stdout).toContain('Raider (skiff) - hostile');
+    expect(omitted.stdout).not.toContain('Boss ');
+    expect(roleOnly.stdout).toContain('Dreadnought (battleship) - hostile');
+    expect(roleOnly.stdout).not.toContain('Boss ');
+  });
+
+  test('subscribe_observation prefixes Boss when a cloned pirate is_boss is true', () => {
+    const fixture = structuredClone(subscribeObservationFixture) as {
+      pirates: Array<Record<string, unknown>>;
+    };
+    fixture.pirates[0] = { ...fixture.pirates[0], is_boss: true };
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Boss Corsair (skiff) - Admiral Kael - hostile');
+    expect(stdout).not.toContain('\n  Corsair (skiff)');
   });
 
   test('get_nearby pirate crew falls back to faction id and omits when absent', () => {

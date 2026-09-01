@@ -5,6 +5,7 @@ import {
   getLocationFixture,
   getStatusDetainedFixture,
   getStatusFixture,
+  nearbyBossFixture,
   nearbyFixture,
   payBountyFixture,
   playerProfileFixture,
@@ -611,6 +612,36 @@ test('get_nearby prints copyable Prize ID and Actor and omits personnel', () => 
   expect(stdout).toContain('=== Nearby ===');
   assertCopyablePrizeIds(stdout, 'Prizes');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_nearby pirate lines stay unprefixed when is_boss is false', () => {
+  const stdout = renderStructuredResult('get_nearby', structuredClone(nearbyFixture), options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+  expect(stdout).not.toContain('Boss ');
+});
+
+test('get_nearby prefixes Boss only on pirates with is_boss true', () => {
+  const stdout = renderStructuredResult('get_nearby', structuredClone(nearbyBossFixture), options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toContain('Pirates (2):');
+  expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+  expect(stdout).toContain('Boss Dreadnought (battleship) - Admiral Kael - hostile');
+});
+
+test('subscribe_observation prefixes Boss when a pirate is_boss is true', () => {
+  const fixture = structuredClone(subscribeObservationFixture) as {
+    pirates: Array<Record<string, unknown>>;
+  };
+  fixture.pirates[0] = { ...fixture.pirates[0], is_boss: true };
+  const stdout = renderStructuredResult('subscribe_observation', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Boss Corsair (skiff) - Admiral Kael - hostile');
+  expect(stdout).not.toContain('\n  Corsair (skiff)');
 });
 
 test('subscribe_observation prints prizes without prize_count', () => {

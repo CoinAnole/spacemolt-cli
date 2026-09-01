@@ -323,6 +323,16 @@ function pirateCrewLabel(p: Record<string, unknown>): string {
   return id;
 }
 
+function formatNearbyPirateLine(p: Record<string, unknown>): string {
+  const name = String(p.name || p.pirate_id || 'Unknown');
+  const boss = p.is_boss === true ? 'Boss ' : '';
+  const ship = p.ship_class || p.tier ? ` (${p.ship_class || p.tier})` : '';
+  const crewLabel = pirateCrewLabel(p);
+  const crew = crewLabel ? ` - ${crewLabel}` : '';
+  const status = p.status ? ` - ${p.status}` : '';
+  return `${boss}${name}${ship}${crew}${status}`;
+}
+
 function summarizeObjectiveForDisplay(objective: unknown): string {
   if (!isRecord(objective)) return String(objective);
   const description = objective.description ?? objective.title ?? objective.type;
@@ -960,12 +970,7 @@ export const statusFormatters = [
       if (pirateCount > 0) {
         emitLine(`\n${c.red}Pirates (${pirateCount}):${c.reset}`);
         for (const p of pirates.slice(0, NEARBY_TABLE_LIMIT)) {
-          const name = p.name || p.pirate_id || 'Unknown';
-          const ship = p.ship_class || p.tier ? ` (${p.ship_class || p.tier})` : '';
-          const crewLabel = pirateCrewLabel(p);
-          const crew = crewLabel ? ` - ${crewLabel}` : '';
-          const status = p.status ? ` - ${p.status}` : '';
-          emitLine(`  ${name}${ship}${crew}${status}`);
+          emitLine(`  ${formatNearbyPirateLine(p)}`);
         }
         if (pirateCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${pirateCount - NEARBY_TABLE_LIMIT} more`);
       }
