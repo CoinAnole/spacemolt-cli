@@ -604,6 +604,122 @@ function craftJobRows(
   }));
 }
 
+function isStationTarget(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().toLowerCase().startsWith('station:');
+}
+
+function presentCount(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  return formatCount(value) ?? String(value);
+}
+
+function stationGiftStation(result: Record<string, unknown>): string | undefined {
+  for (const value of [result.recipient, result.target]) {
+    const text = scalarText(value);
+    if (text && isStationTarget(text)) return text.trim();
+  }
+  return undefined;
+}
+
+function isStationSendGift(result: Record<string, unknown>): boolean {
+  return result.action === 'send_gift' && isStationTarget(result.recipient);
+}
+
+function bulkStationGiftResults(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  if (result.action !== 'bulk_deposit' || !Array.isArray(result.results)) return undefined;
+  if (!result.results.every(isRecord)) return undefined;
+  return result.results;
+}
+
+function isStationGiftBulk(result: Record<string, unknown>): boolean {
+  const results = bulkStationGiftResults(result);
+  if (!results) return false;
+  if (isStationTarget(result.target)) return true;
+  return results.some((entry) => isRecord(entry.result) && isStationSendGift(entry.result));
+}
+
+function emitStationGiftRemaining(value: Record<string, unknown>): void {
+  emitOptionalValue('Cargo remaining', presentCount(value.cargo_remaining));
+  emitOptionalValue('Storage remaining', presentCount(value.storage_remaining));
+}
+
+function stationGiftRemainingDisplay(value: Record<string, unknown>): string | undefined {
+  const parts: string[] = [];
+  const cargo = presentCount(value.cargo_remaining);
+  if (cargo !== undefined) parts.push(`cargo ${cargo}`);
+  const storage = presentCount(value.storage_remaining);
+  if (storage !== undefined) parts.push(`storage ${storage}`);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+function stationGiftBulkDetail(entry: Record<string, unknown>): string | undefined {
+  const nested = isRecord(entry.result) ? entry.result : undefined;
+  if (entry.success === true) {
+    return scalarText(entry.message) ?? (nested ? scalarText(nested.message) : undefined);
+  }
+  return scalarText(entry.error) ?? scalarText(entry.message) ?? (nested ? scalarText(nested.message) : undefined);
+}
+
+function renderStationGift(result: Record<string, unknown>): boolean {
+  if (isStationSendGift(result)) {
+    emitLine(`\n${c.bright}=== Station Gift ===${c.reset}`);
+    emitOptionalValue('Station', stationGiftStation(result));
+    emitOptionalValue('Item', result.item_id);
+    emitOptionalValue('Quantity', presentCount(result.quantity) ?? result.quantity);
+    emitOptionalValue('Source', result.source);
+    emitStationGiftRemaining(result);
+    if (typeof result.message === 'string' && result.message) emitLine(result.message);
+    return true;
+  }
+
+  if (!isStationGiftBulk(result)) return false;
+  const results = bulkStationGiftResults(result);
+  if (!results) return false;
+
+  const nestedStation = results
+    .map((entry) => (isRecord(entry.result) ? stationGiftStation(entry.result) : undefined))
+    .find((station) => station !== undefined);
+  emitLine(`\n${c.bright}=== Station Gift ===${c.reset}`);
+  emitOptionalValue('Station', stationGiftStation(result) ?? nestedStation);
+
+  const requested = presentCount(result.requested);
+  const succeeded = presentCount(result.succeeded);
+  const failed = presentCount(result.failed);
+  if (requested !== undefined || succeeded !== undefined || failed !== undefined) {
+    emitLine(`${requested ?? '?'} requested | ${succeeded ?? '?'} succeeded | ${failed ?? '?'} failed`);
+  }
+
+  if (results.length === 0) {
+    emitLine('No results.');
+    return true;
+  }
+
+  const rows = results.map((entry) => {
+    const nested = isRecord(entry.result) ? entry.result : undefined;
+    return {
+      ...entry,
+      status_display: entry.success === true ? 'yes' : entry.success === false ? 'no' : undefined,
+      remaining_display: stationGiftRemainingDisplay(nested ?? {}),
+      detail_display: stationGiftBulkDetail(entry),
+    };
+  });
+  const columns: Array<[string, string[]]> = [
+    ['Item', ['item_id']],
+    ['Qty', ['quantity']],
+    ['OK', ['status_display']],
+  ];
+  insertOptionalColumn(columns, rows, 'Remaining', ['remaining_display'], 'OK');
+  insertOptionalColumn(
+    columns,
+    rows,
+    'Detail',
+    ['detail_display'],
+    rows.some((row) => row.remaining_display !== undefined) ? 'Remaining' : 'OK',
+  );
+  printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
+  return true;
+}
+
 function insertOptionalColumn(
   columns: Array<[string, string[]]>,
   rows: Array<Record<string, unknown>>,
@@ -1182,6 +1298,9 @@ export const genericFormatters = [
     },
     { shapeFallback: true },
   ),
+
+  // Before the scalar dump so bulk results expand.
+  formatter((r) => renderStationGift(r), { commands: ['storage_deposit'] }),
 
   // Conservative fallback for scalar-only action responses.
   formatter(
