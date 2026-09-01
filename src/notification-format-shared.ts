@@ -658,6 +658,23 @@ function attachWreckSite(
   return { headline: `${kill}${sep}${site}`, details: withSite };
 }
 
+function combatLogLocationDuplicatesWreck(log: Record<string, unknown>, data: Record<string, unknown>): boolean {
+  const wreckPoi = safeScalar(data.wreck_poi_name) ?? safeScalar(data.wreck_poi_id);
+  // Keep Location: when the wreck site does not name a POI
+  // (no wreck, wreck_suppressed, id-only, or system-only / hidden POI).
+  if (wreckPoi === undefined) return false;
+
+  const deathPoi = safeScalar(log.death_location);
+  if (deathPoi === undefined) return false;
+  if (String(deathPoi) !== String(wreckPoi)) return false;
+
+  const deathSys = safeScalar(log.death_system);
+  if (deathSys === undefined) return true; // POI matches; log has no system to disagree
+
+  const wreckSys = safeScalar(data.wreck_system_name) ?? safeScalar(data.wreck_system_id);
+  return wreckSys !== undefined && String(deathSys) === String(wreckSys);
+}
+
 function previewCombatUpdate(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -731,7 +748,7 @@ function previewPlayerDied(
     }
 
     const deathLocation = safeScalar(log.death_location);
-    if (deathLocation !== undefined) {
+    if (deathLocation !== undefined && !combatLogLocationDuplicatesWreck(log, data)) {
       details.push(truncate(`Location: ${deathLocation} in ${safeScalar(log.death_system) ?? 'unknown'}`, options));
     }
   }
@@ -744,6 +761,11 @@ function previewPlayerDied(
     details.push(truncate(`Clone cost: ${cloneCost} credits`, options));
   }
 
+  const selfDestructFee = finiteNumber(data.self_destruct_fee);
+  if (selfDestructFee !== undefined && selfDestructFee > 0) {
+    details.push(truncate(`Self-destruct fee: ${selfDestructFee} credits`, options));
+  }
+
   const insurance = finiteNumber(data.insurance_payout);
   if (insurance !== undefined && insurance > 0) {
     details.push(truncate(`Insurance payout: ${insurance} credits`, options));
@@ -751,10 +773,11 @@ function previewPlayerDied(
 
   details.push(truncate(`Respawned at: ${safeScalar(data.respawn_base) ?? 'home'} with ship fully repaired`, options));
 
+  const attached = attachWreckSite(headline, details, data, options);
   return {
     tag: 'DEATH',
-    headline: truncate(headline, options),
-    details,
+    headline: attached.headline,
+    details: attached.details,
   };
 }
 
@@ -852,21 +875,74 @@ function previewPirateCombat(
   return headlinePreview('PIRATES', `Pirate dealt ${damageLabel(data.damage, 0)} damage${destroyed}`, options);
 }
 
+const PRIVATE_PIRATE_KEYS = [
+  'wreck_id',
+  'credits_earned',
+  'combat_xp',
+  'operator_id',
+  'wreck_has_cargo',
+  'wreck_has_modules',
+] as const;
+
+function isPirateDestroyedBroadcast(data: Record<string, unknown>): boolean {
+  const hasPrivate = PRIVATE_PIRATE_KEYS.some((key) => data[key] !== undefined && data[key] !== null);
+  if (hasPrivate) return false;
+  return safeScalar(data.killer) !== undefined || safeScalar(data.message) !== undefined;
+}
+
 /** pirate_destroyed uses formatInventoryPreview for loot (PR6 / K15) — never JSON.stringify. */
 function previewPirateDestroyed(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
+  if (isPirateDestroyedBroadcast(data)) {
+    const name = scalarOr(data.pirate_name, 'Pirate');
+    const boss = data.is_boss === true ? 'Boss ' : '';
+    const killer = safeScalar(data.killer);
+    const system = safeScalar(data.system_name) ?? safeScalar(data.system_id);
+    let synthesized: string;
+    if (killer !== undefined && system !== undefined) {
+      synthesized = `${boss}${name} destroyed by ${killer} in ${system}!`;
+    } else if (killer !== undefined) {
+      synthesized = `${boss}${name} destroyed by ${killer}!`;
+    } else {
+      synthesized = `${boss}${name} destroyed!`;
+    }
+    const headline = preferDiplomacyMessage(data, synthesized);
+    const attached = attachWreckSite(headline, [], data, options);
+    return { tag: 'PIRATES', headline: attached.headline, details: attached.details };
+  }
+
+  const boss = data.is_boss === true ? 'Boss ' : '';
+  const name = scalarOr(data.pirate_name, 'Pirate');
   const details: string[] = [];
+
+  const credits = positiveNumber(data.credits_earned);
+  if (credits !== undefined) details.push(truncate(`Credits: ${credits} credits`, options));
+
+  const xp = positiveNumber(data.combat_xp);
+  if (xp !== undefined) details.push(truncate(`Weapons XP: ${xp}`, options));
+
+  const role = safeScalar(data.pirate_role);
+  if (role !== undefined) details.push(truncate(`Role: ${role}`, options));
+
+  const contents = wreckContentsLabel(data);
+  if (contents !== undefined) details.push(truncate(contents, options));
+
+  const operator = safeScalar(data.operator_id);
+  if (operator !== undefined) details.push(truncate(`Drone operator: ${operator}`, options));
+
   if (data.loot !== undefined && data.loot !== null) {
     const lootPreview = formatInventoryPreview(data.loot);
     if (lootPreview) details.push(truncate(`Loot: ${lootPreview}`, options));
   }
+
+  const attached = attachWreckSite(`${boss}${name} destroyed!`, details, data, options);
   return {
     tag: 'PIRATES',
-    headline: 'Pirate destroyed!',
-    details,
+    headline: attached.headline,
+    details: attached.details,
   };
 }
 
