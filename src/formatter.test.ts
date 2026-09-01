@@ -6399,11 +6399,13 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('3');
     expect(stdout).toContain('Sides');
     expect(stdout).toContain('SMC');
-    // Kind column cells are pipe-delimited enums; avoid bare "player"/"pirate"
+    // Kind/NPC column cells are pipe-delimited; avoid bare "player"/"pirate"
     // which also appear inside participant IDs (player-1 / pirate-1).
     expect(stdout).toContain('Kind');
-    expect(stdout).toMatch(/\|\s*player\s*\|/);
-    expect(stdout).toMatch(/\|\s*pirate\s*\|/);
+    expect(stdout).toContain('NPC');
+    expect(stdout).not.toContain('Boss');
+    expect(stdout).toMatch(/\|\s*player\s*\|\s*no\s*\|/);
+    expect(stdout).toMatch(/\|\s*pirate\s*\|\s*yes\s*\|/);
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -6615,12 +6617,12 @@ describe('structuredContent formatters', () => {
 
       === Participants ===
 
-        Name          | ID            | Side | Kind     | Ship                    | Zone    | Distance | Stance | Target   | Hull | Shield
-        --------------+---------------+------+----------+-------------------------+---------+----------+--------+----------+------+-------
-        Marlowe       | player-1      | 1    | player   | Prospector (prospector) | outer   | 0        | fire   | pirate-1 | 82%  | 40%
-        Pirate Skiff  | pirate-1      | 2    | pirate   | skiff                   | inner   | 3        |        |          |      |
-        Pilot Whale   | creature-1    | 2    | creature |                         |         |          |        |          |      |
-        Earth Station | station-earth | 1    | station  |                         | engaged |          |        |          | 97%  | 80%"
+        Name          | ID            | Side | Kind     | NPC | Ship                    | Zone    | Distance | Stance | Target   | Hull | Shield
+        --------------+---------------+------+----------+-----+-------------------------+---------+----------+--------+----------+------+-------
+        Marlowe       | player-1      | 1    | player   | no  | Prospector (prospector) | outer   | 0        | fire   | pirate-1 | 82%  | 40%
+        Pirate Skiff  | pirate-1      | 2    | pirate   | yes | skiff                   | inner   | 3        |        |          |      |
+        Pilot Whale   | creature-1    | 2    | creature | yes |                         |         |          |        |          |      |
+        Earth Station | station-earth | 1    | station  | yes |                         | engaged |          |        |          | 97%  | 80%"
       ,
         "cargo": 
       "

@@ -4,6 +4,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Battle identity on get_battle_status (gameserver 0.575.0)
+
+- Human `get_battle_status` Participants tables print NPC as yes/no when `is_npc` is
+  present. There is no Boss column on status (schema has no `is_boss`).
+
 ### Combat kill notification previews (gameserver 0.574.9)
 
 - Human `player_kill` previews name schema `victim` and the wreck POI/system when the

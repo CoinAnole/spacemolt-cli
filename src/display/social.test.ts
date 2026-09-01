@@ -1162,6 +1162,108 @@ test('get_battle_status omits optional boarding columns when those fields are ab
   expect(boarding).not.toContain('Self-destruct');
 });
 
+function battleParticipants(fixture: Record<string, unknown>): Array<Record<string, unknown>> {
+  const participants = fixture.participants as Array<Record<string, unknown>> | undefined;
+  if (!participants) throw new Error('Battle status fixture is missing participants.');
+  return participants;
+}
+
+function participantsHeader(stdout: string): string | undefined {
+  return sectionAfter(stdout, 'Participants')
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Name') && line.includes('ID'));
+}
+
+test('get_battle_status prints NPC yes/no after Kind and never a Boss column', () => {
+  const stdout = renderBattleStatus(structuredClone(battleStatusFixture) as Record<string, unknown>);
+  const section = sectionAfter(stdout, 'Participants');
+  const header = participantsHeader(stdout);
+
+  expect(header).toBeDefined();
+  expect(header).toContain('Kind');
+  expect(header).toContain('NPC');
+  expect(header).not.toContain('Boss');
+  expect(header?.indexOf('Kind') ?? -1).toBeLessThan(header?.indexOf('NPC') ?? -1);
+  expect(tableCell(section, 'Marlowe', 'Kind')).toBe('player');
+  expect(tableCell(section, 'Marlowe', 'NPC')).toBe('no');
+  expect(tableCell(section, 'Pirate Skiff', 'NPC')).toBe('yes');
+  expect(tableCell(section, 'Pilot Whale', 'NPC')).toBe('yes');
+  expect(tableCell(section, 'Earth Station', 'NPC')).toBe('yes');
+  expect(stdout).not.toMatch(/\bfalse\b/);
+});
+
+test('get_battle_status ignores rogue is_boss on a participant', () => {
+  const fixture = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  const pirate = battleParticipants(fixture).find((row) => row.player_id === 'pirate-1');
+  if (!pirate) throw new Error('Pirate participant is missing.');
+  pirate.is_boss = true;
+  const stdout = renderBattleStatus(fixture);
+  const section = sectionAfter(stdout, 'Participants');
+  const header = participantsHeader(stdout);
+
+  expect(header).toContain('NPC');
+  expect(header).not.toContain('Boss');
+  expect(tableCell(section, 'Pirate Skiff', 'NPC')).toBe('yes');
+  expect(tableCell(section, 'Marlowe', 'NPC')).toBe('no');
+});
+
+test('get_battle_status omits NPC when every participant lacks is_npc', () => {
+  const fixture = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  for (const row of battleParticipants(fixture)) delete row.is_npc;
+  const header = participantsHeader(renderBattleStatus(fixture));
+
+  expect(header).toContain('Kind');
+  expect(header).not.toContain('NPC');
+  expect(header).not.toContain('Boss');
+});
+
+test('get_battle_status mixed is_npc page blanks omitted rows instead of no', () => {
+  const fixture = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  for (const row of battleParticipants(fixture)) {
+    if (row.player_id === 'pirate-1') row.is_npc = true;
+    else delete row.is_npc;
+  }
+  const stdout = renderBattleStatus(fixture);
+  const section = sectionAfter(stdout, 'Participants');
+  const header = participantsHeader(stdout);
+
+  expect(header).toContain('NPC');
+  expect(tableCell(section, 'Pirate Skiff', 'NPC')).toBe('yes');
+  expect(tableCell(section, 'Marlowe', 'NPC')).toBe('');
+  expect(tableCell(section, 'Pilot Whale', 'NPC')).toBe('');
+  expect(tableCell(section, 'Earth Station', 'NPC')).toBe('');
+});
+
+test('get_battle_status prize row shows Kind prize and NPC yes', () => {
+  const fixture = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  battleParticipants(fixture).push({
+    player_id: 'prize-1',
+    username: 'Abandoned Skiff',
+    side_id: 2,
+    kind: 'prize',
+    is_npc: true,
+    auto_pilot: true,
+  });
+  const section = sectionAfter(renderBattleStatus(fixture), 'Participants');
+
+  expect(tableCell(section, 'prize-1', 'Kind')).toBe('prize');
+  expect(tableCell(section, 'prize-1', 'NPC')).toBe('yes');
+});
+
+test('get_battle_status JSON passthrough keeps is_npc false', () => {
+  const rendered = renderStructuredResult(
+    'get_battle_status',
+    structuredClone(battleStatusFixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as Record<string, unknown>;
+  const participants = parsed.participants as Array<Record<string, unknown>>;
+
+  expect(participants[0]?.is_npc).toBe(false);
+  expect(participants[1]?.is_npc).toBe(true);
+});
+
 test('get_battle_summary shows Has Station yes when has_station is true', () => {
   const rendered = renderStructuredResult(
     'get_battle_summary',
