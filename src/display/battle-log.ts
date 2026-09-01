@@ -40,8 +40,8 @@ export function resolveCombatantLabel(id: unknown, snapshots: unknown): string {
   for (const snapshot of snapshots) {
     if (!isRecord(snapshot) || snapshot.player_id !== id) continue;
     const username = snapshot.username;
-    if (typeof username === 'string' && username) return username;
-    return fallback;
+    const base = typeof username === 'string' && username ? username : fallback;
+    return snapshot.is_boss === true ? `Boss ${base}` : base;
   }
   return fallback;
 }
@@ -82,6 +82,19 @@ export function battleLogAttackRows(entries: unknown): BattleLogAttackRow[] {
     }
   }
   return rows;
+}
+
+export function battleLogCombatantRows(entries: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(entries)) return [];
+  const roster = new Map<unknown, Record<string, unknown>>();
+  for (const entry of entries) {
+    if (!isRecord(entry) || !Array.isArray(entry.snapshots)) continue;
+    for (const snapshot of entry.snapshots) {
+      if (!isRecord(snapshot) || snapshot.player_id === undefined || snapshot.player_id === null) continue;
+      roster.set(snapshot.player_id, snapshot);
+    }
+  }
+  return [...roster.values()];
 }
 
 function appendAttackRows(

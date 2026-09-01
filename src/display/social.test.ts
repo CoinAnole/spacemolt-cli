@@ -6,6 +6,7 @@ import {
   actionLogCursorFixture,
   battleLogBoardingFixture,
   battleLogFixture,
+  battleLogSnapshotsFixture,
   battleStatusBoardingFixture,
   battleStatusFixture,
   battleSummaryCapturesFixture,
@@ -1649,9 +1650,11 @@ test('get_battle_log maps snapshot usernames and falls back to id when username 
     ],
   });
 
-  expect(stdout).toContain('Ace');
-  expect(stdout).toContain('pirate-1');
-  expect(stdout).not.toContain('player-1');
+  const attacks = sectionAfter(stdout, 'Attacks', 'Combatants');
+
+  expect(attacks).toContain('Ace');
+  expect(attacks).toContain('pirate-1');
+  expect(attacks).not.toContain('player-1');
 });
 
 test('get_battle_log blanks Hit when hit_success is missing', () => {
@@ -1950,6 +1953,122 @@ test('get_battle_log omits Attacks and legend when no attack objects exist', () 
   expect(stdout).toContain('=== Ticks ===');
   expect(stdout).not.toContain('=== Attacks ===');
   expect(stdout).not.toContain('incoming→shield skill');
+});
+
+test('get_battle_log omits Combatants when snapshots are omitted or empty', () => {
+  const omitted = renderBattleLog(structuredClone(battleLogFixture) as Record<string, unknown>);
+  expect(omitted).not.toContain('=== Combatants ===');
+
+  const empty = renderBattleLog({
+    battle_id: 'battle-empty-snapshots',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 0,
+        snapshots: [],
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 10,
+            shield_damage: 7,
+            hull_damage: 3,
+          },
+        ],
+      },
+    ],
+  });
+  expect(empty).toContain('=== Attacks ===');
+  expect(empty).not.toContain('=== Combatants ===');
+});
+
+test('get_battle_log prints Combatants Kind/NPC/Boss and Boss prefix on Attacks', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogSnapshotsFixture) as Record<string, unknown>);
+  const combatants = sectionAfter(stdout, 'Combatants');
+  const attacks = sectionAfter(stdout, 'Attacks', 'Combatants');
+  const header = combatants
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Name') && line.includes('ID'));
+
+  expect(stdout).toContain('=== Combatants ===');
+  expect(stdout).not.toContain('=== Recovered Summary ===');
+  expect(stdout.indexOf('=== Attacks ===')).toBeLessThan(stdout.indexOf('=== Combatants ==='));
+  expect(header).toContain('Kind');
+  expect(header).toContain('NPC');
+  expect(header).toContain('Boss');
+  expect(header?.indexOf('Kind') ?? -1).toBeLessThan(header?.indexOf('NPC') ?? -1);
+  expect(header?.indexOf('NPC') ?? -1).toBeLessThan(header?.indexOf('Boss') ?? -1);
+  expect(tableCell(combatants, 'Marlowe', 'Kind')).toBe('player');
+  expect(tableCell(combatants, 'Marlowe', 'NPC')).toBe('no');
+  expect(tableCell(combatants, 'Marlowe', 'Boss')).toBe('no');
+  expect(tableCell(combatants, 'Corsair', 'Kind')).toBe('pirate');
+  expect(tableCell(combatants, 'Corsair', 'NPC')).toBe('yes');
+  expect(tableCell(combatants, 'Corsair', 'Boss')).toBe('no');
+  expect(tableCell(combatants, 'Dreadnought', 'Kind')).toBe('pirate');
+  expect(tableCell(combatants, 'Dreadnought', 'NPC')).toBe('yes');
+  expect(tableCell(combatants, 'Dreadnought', 'Boss')).toBe('yes');
+  expect(tableCell(combatants, 'Legacy Raider', 'Kind')).toBe('pirate');
+  expect(tableCell(combatants, 'Legacy Raider', 'NPC')).toBe('');
+  expect(tableCell(combatants, 'Legacy Raider', 'Boss')).toBe('');
+  expect(attacks).toContain('Boss Dreadnought');
+  expect(attacks).toContain('Marlowe');
+  expect(attacks).not.toContain('pirate-boss-1');
+  expect(attacks).not.toContain('player-1');
+});
+
+test('get_battle_log Combatants last-write identity while Attacks stay per-tick', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-last-write',
+    status: 'active',
+    total_ticks: 2,
+    has_more: false,
+    entries: [
+      {
+        tick: 0,
+        snapshots: [
+          { player_id: 'player-1', username: 'Ace', kind: 'player', is_npc: false, is_boss: false },
+          { player_id: 'pirate-1', username: 'Raider', kind: 'pirate', is_npc: true, is_boss: false },
+        ],
+        attacks: [
+          {
+            attacker_id: 'pirate-1',
+            target_id: 'player-1',
+            hit_success: true,
+            final_damage: 1,
+            shield_damage: 1,
+            hull_damage: 0,
+          },
+        ],
+      },
+      {
+        tick: 1,
+        snapshots: [{ player_id: 'pirate-1', username: 'Dreadnought', kind: 'pirate', is_npc: true, is_boss: true }],
+        attacks: [
+          {
+            attacker_id: 'pirate-1',
+            target_id: 'player-1',
+            hit_success: true,
+            final_damage: 2,
+            shield_damage: 1,
+            hull_damage: 1,
+          },
+        ],
+      },
+    ],
+  });
+  const combatants = sectionAfter(stdout, 'Combatants');
+  const attacks = sectionAfter(stdout, 'Attacks', 'Combatants');
+
+  expect(tableCell(combatants, 'Ace', 'NPC')).toBe('no');
+  expect(tableCell(combatants, 'Ace', 'Boss')).toBe('no');
+  expect(tableCell(combatants, 'Dreadnought', 'NPC')).toBe('yes');
+  expect(tableCell(combatants, 'Dreadnought', 'Boss')).toBe('yes');
+  expect(combatants).not.toContain('Raider');
+  expect(attacks).toContain('Raider');
+  expect(attacks).toContain('Boss Dreadnought');
 });
 
 test('faction_facility_list renders status, damaged yes/no, and custom names', () => {

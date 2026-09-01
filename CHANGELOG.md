@@ -10,6 +10,8 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   present. There is no Boss column on status (schema has no `is_boss`).
 - Human `get_nearby` / `subscribe_observation` pirate lines prefix `Boss ` when
   `is_boss` is true. Regular pirates are unchanged.
+- Human `get_battle_log` prints a Combatants table from tick snapshots when present
+  (Kind/NPC/Boss) and prefixes `Boss ` on attack From/To when snapshot `is_boss` is true.
 
 ### Combat kill notification previews (gameserver 0.574.9)
 

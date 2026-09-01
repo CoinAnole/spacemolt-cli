@@ -1,0 +1,29 @@
+
+=== Battle Log ===
+ID: battle-42
+Status: active
+Total Ticks: 1
+Has More: no
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Shield | Hull | Burns | Flee | Kills | Ended
+  -----+---------+------+--------+--------+------+-------+------+-------+------
+  0    | 1       | 1    | 10     | 7      | 3    |       |      |       |      
+
+Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H = shield/hull. Trailing flags may truncate.
+
+=== Attacks ===
+
+  Tick | From             | To      | Hit | S/H | Defense
+  -----+------------------+---------+-----+-----+--------
+  0    | Boss Dreadnought | Marlowe | hit | 7/3 | kinetic
+
+=== Combatants ===
+
+  Name          | ID            | Side | Kind   | NPC | Boss
+  --------------+---------------+------+--------+-----+-----
+  Marlowe       | player-1      | 1    | player | no  | no  
+  Corsair       | pirate-1      | 2    | pirate | yes | no  
+  Dreadnought   | pirate-boss-1 | 2    | pirate | yes | yes 
+  Legacy Raider | pirate-old-1  | 2    | pirate |     |     

@@ -689,6 +689,111 @@ export const battleLogFixture = {
   ],
 };
 
+function participantSnapshot(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    player_id: 'player-1',
+    username: 'Marlowe',
+    side_id: 1,
+    zone: 'outer',
+    stance: 'fire',
+    auto_pilot: false,
+    flee_counter: 0,
+    ship_class: 'prospector',
+    hull: 80,
+    max_hull: 100,
+    shield: 40,
+    max_shield: 50,
+    fuel: 20,
+    max_fuel: 30,
+    damage_dealt: 0,
+    damage_taken: 0,
+    kill_count: 0,
+    x: 0,
+    y: 0,
+    ...overrides,
+  };
+}
+
+/** AttackLogEntry.required (OpenAPI): attacker_id, target_id, zone_distance, weapons,
+ *  raw_damage, weapon_skill_pct, pre_hit_damage, hit_chance, hit_roll, hit_success,
+ *  final_damage, shield_damage, hull_damage, damage_type.
+ *  weapons: [] is enough at reporter default maxDepth 4 (WeaponFireDetail items are not sampled). */
+function attackLogEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    attacker_id: 'pirate-boss-1',
+    target_id: 'player-1',
+    zone_distance: 3,
+    weapons: [],
+    raw_damage: 12,
+    weapon_skill_pct: 0,
+    pre_hit_damage: 12,
+    hit_chance: 0.65,
+    hit_roll: 0.2,
+    hit_success: true,
+    final_damage: 10,
+    shield_damage: 7,
+    hull_damage: 3,
+    damage_type: 'kinetic',
+    ...overrides,
+  };
+}
+
+export const battleLogSnapshotsFixture = {
+  battle_id: 'battle-42',
+  status: 'active',
+  total_ticks: 1,
+  has_more: false,
+  entries: [
+    {
+      battle_id: 'battle-42',
+      system_id: 'sol',
+      tick: 0,
+      snapshots: [
+        participantSnapshot({
+          player_id: 'player-1',
+          username: 'Marlowe',
+          kind: 'player',
+          is_npc: false,
+          is_boss: false,
+        }),
+        participantSnapshot({
+          player_id: 'pirate-1',
+          username: 'Corsair',
+          side_id: 2,
+          kind: 'pirate',
+          is_npc: true,
+          is_boss: false,
+          ship_class: 'skiff',
+        }),
+        participantSnapshot({
+          player_id: 'pirate-boss-1',
+          username: 'Dreadnought',
+          side_id: 2,
+          kind: 'pirate',
+          is_npc: true,
+          is_boss: true,
+          ship_class: 'dreadnought',
+        }),
+        participantSnapshot({
+          player_id: 'pirate-old-1',
+          username: 'Legacy Raider',
+          side_id: 2,
+          kind: 'pirate',
+          ship_class: 'skiff',
+          // is_npc / is_boss omitted (historical)
+        }),
+      ],
+      attacks: [
+        attackLogEntry({
+          attacker_id: 'pirate-boss-1',
+          target_id: 'player-1',
+          hit_success: true,
+        }),
+      ],
+    },
+  ],
+};
+
 export const captainLogGetFixture = {
   index: 0,
   created_at: '2026-05-29T14:45:00Z',
@@ -1121,6 +1226,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
+  get_battle_log_snapshots: { command: 'get_battle_log', fixture: battleLogSnapshotsFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_types_detail: {
     command: 'facility_types',
