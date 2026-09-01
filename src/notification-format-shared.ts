@@ -1049,31 +1049,88 @@ function previewFactionInvite(
   );
 }
 
+function preferDiplomacyMessage(data: Record<string, unknown>, synthesized: string): string {
+  const message = safeScalar(data.message);
+  return message !== undefined ? firstLine(String(message)) : synthesized;
+}
+
+function factionName(data: Record<string, unknown>, nameKey: string, tagKey?: string, fallback = 'a faction'): string {
+  const name = scalarOr(data[nameKey], fallback);
+  const tag = tagKey !== undefined ? safeScalar(data[tagKey]) : undefined;
+  return tag !== undefined ? `${name} [${tag}]` : name;
+}
+
 function previewFactionWarDeclared(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  return detailPreview(
-    'WAR',
-    `${scalarOr(data.attacker_name, 'a faction')} has declared war on your faction!`,
-    [`Reason: ${scalarOr(data.reason, 'no reason given')}`],
-    options,
-  );
+  const aggressor = safeScalar(data.aggressor_faction_name);
+  const defender = safeScalar(data.defender_faction_name);
+  const synthesized =
+    aggressor !== undefined || defender !== undefined
+      ? `${factionName(data, 'aggressor_faction_name')} declared war on ${factionName(data, 'defender_faction_name', undefined, 'your faction')}!`
+      : 'A faction declared war';
+  const details: string[] = [];
+  const reason = safeScalar(data.reason);
+  if (reason !== undefined) details.push(`Reason: ${reason}`);
+  return detailPreview('WAR', preferDiplomacyMessage(data, synthesized), details, options);
 }
 
-function previewFactionPeaceProposed(
+function previewFactionPeaceProposal(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  const factionId = scalarOr(data.faction_id, '');
+  const from = safeScalar(data.from_faction_name);
+  const synthesized = from !== undefined ? `${from} proposed peace!` : 'Peace proposed';
+  const details: string[] = [];
+  const terms = safeScalar(data.terms);
+  if (terms !== undefined) details.push(`Terms: ${terms}`);
+  details.push(`Use: faction accept_peace target_faction_id=${scalarOr(data.from_faction_id, '')}`);
+  return detailPreview('PEACE', preferDiplomacyMessage(data, synthesized), details, options);
+}
+
+function previewFactionPeaceAccepted(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const name = safeScalar(data.faction_name);
+  const synthesized = name !== undefined ? `${name} accepted peace` : 'Peace accepted';
+  return headlinePreview('PEACE', preferDiplomacyMessage(data, synthesized), options);
+}
+
+function previewFactionAllianceProposal(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const from = factionName(data, 'from_faction_name', 'from_faction_tag');
   return detailPreview(
-    'PEACE',
-    `${scalarOr(data.proposer_name, 'a faction')} has proposed peace!`,
-    [`Terms: ${scalarOr(data.terms, 'unconditional')}`, `Use: faction accept_peace target_faction_id=${factionId}`],
+    'FACTION',
+    preferDiplomacyMessage(data, `${from} proposed an alliance`),
+    [`Use: faction accept_ally target_faction_id=${scalarOr(data.from_faction_id, '')}`],
     options,
   );
+}
+
+function previewFactionAllianceFormed(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const withFaction = factionName(data, 'with_faction_name', 'with_faction_tag');
+  return headlinePreview('FACTION', preferDiplomacyMessage(data, `Alliance formed with ${withFaction}`), options);
+}
+
+function previewFactionAllianceBroken(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const by = factionName(data, 'by_faction_name', 'by_faction_tag');
+  return headlinePreview('FACTION', preferDiplomacyMessage(data, `${by} broke the alliance`), options);
 }
 
 function previewBaseRaidUpdate(
@@ -1556,8 +1613,13 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   friend_online: previewFriendOnline,
   friend_offline: previewFriendOffline,
   faction_invite: previewFactionInvite,
+  // 0.573.2 diplomacy
   faction_war_declared: previewFactionWarDeclared,
-  faction_peace_proposed: previewFactionPeaceProposed,
+  faction_peace_proposal: previewFactionPeaceProposal,
+  faction_peace_accepted: previewFactionPeaceAccepted,
+  faction_alliance_proposal: previewFactionAllianceProposal,
+  faction_alliance_formed: previewFactionAllianceFormed,
+  faction_alliance_broken: previewFactionAllianceBroken,
   base_raid_update: previewBaseRaidUpdate,
   base_destroyed: previewBaseDestroyed,
   scan_result: previewScanResult,
