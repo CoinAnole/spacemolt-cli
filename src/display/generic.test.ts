@@ -163,6 +163,33 @@ test('renders a station material gift receipt instead of the scalar send-gift du
   expect(stdout).not.toContain('Auto Docked');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
   expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Donated 20 steel plates without payment.');
+});
+
+test('prints a single-item station gift note when message is present', () => {
+  const withMessage = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'station:grand_exchange_station',
+        base_id: 'grand_exchange_station',
+        source: 'cargo',
+        item_id: 'steel_plate',
+        quantity: 20,
+        cargo_remaining: 80,
+        message: 'Donated 20 steel plates without payment.',
+      },
+    },
+    options,
+    context,
+  );
+  const withMessageOut = withMessage.stdout.join('\n');
+  expect(withMessage.success).toBe(true);
+  expect(withMessageOut).toContain('=== Station Gift ===');
+  expect(withMessageOut).toContain('\nDonated 20 steel plates without payment.');
+  expect(withMessageOut).not.toContain('Message:');
+  expect(withMessageOut).not.toContain('=== Response ===');
 });
 
 test('renders a storage-source station gift remaining count and omits cargo remaining', () => {
@@ -267,6 +294,13 @@ test('formats bulk station gifts when only nested results carry station: recipie
           },
         ],
       },
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        poi_id: 'earth_station',
+        poi_name: 'Earth Station',
+        docked_at: 'earth_station',
+      },
     },
     options,
     context,
@@ -276,7 +310,12 @@ test('formats bulk station gifts when only nested results carry station: recipie
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('=== Station Gift ===');
   expect(stdout).toContain('Station: station:grand_exchange_station');
+  expect(stdout).not.toContain('station:earth_station');
   expect(stdout).toContain('steel_plate');
+  expect(stdout).not.toContain('Station Name:');
+  expect(stdout).not.toContain('Poi:');
+  expect(stdout).not.toContain('Poi Name:');
+  expect(stdout).not.toContain('Docked At:');
   expect(stdout).not.toContain('Results: 1 item(s)');
   expect(stdout).not.toContain('=== Response ===');
 });

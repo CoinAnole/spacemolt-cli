@@ -618,8 +618,7 @@ function stationGiftStation(result: Record<string, unknown>): string | undefined
     const text = scalarText(value);
     if (text && isStationTarget(text)) return text.trim();
   }
-  const baseId = scalarText(result.base_id);
-  return baseId ? `station:${baseId}` : undefined;
+  return undefined;
 }
 
 function isStationSendGift(result: Record<string, unknown>): boolean {
@@ -1300,7 +1299,7 @@ export const genericFormatters = [
     { shapeFallback: true },
   ),
 
-  // Station donations reuse send_gift / bulk_deposit; scalar dump would hide per-entry results.
+  // Before the scalar dump so bulk results expand.
   formatter((r) => renderStationGift(r), { commands: ['storage_deposit'] }),
 
   // Conservative fallback for scalar-only action responses.
