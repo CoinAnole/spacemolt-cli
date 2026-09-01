@@ -508,9 +508,31 @@ function emitBattleCombatState(value: unknown): void {
   }
 }
 
+function withIdentityDisplays(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...row,
+    npc_display: formatYesNo(row.is_npc),
+    boss_display: formatYesNo(row.is_boss),
+  };
+}
+
+function appendIdentityColumns(
+  columns: Array<[string, string[]]>,
+  rows: Array<Record<string, unknown>>,
+  options: { includeKind?: boolean; includeBoss?: boolean } = {},
+): void {
+  if (options.includeKind !== false && hasAnyField(rows, ['kind'])) {
+    columns.push(['Kind', ['kind']]);
+  }
+  if (hasAnyField(rows, ['npc_display'])) columns.push(['NPC', ['npc_display']]);
+  if (options.includeBoss !== false && hasAnyField(rows, ['boss_display'])) {
+    columns.push(['Boss', ['boss_display']]);
+  }
+}
+
 function battleParticipantRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return rows.map((row) => ({
-    ...row,
+    ...withIdentityDisplays(row),
     ship_display:
       row.ship_name && row.ship_class ? `${row.ship_name} (${row.ship_class})` : (row.ship_name ?? row.ship_class),
     hull_display: formatPercentValue(row.hull_pct),
@@ -524,9 +546,7 @@ function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[
     ['ID', ['player_id', 'id']],
     ['Side', ['side_id', 'side']],
   ];
-  if (hasAnyField(rows, ['kind'])) {
-    columns.push(['Kind', ['kind']]);
-  }
+  appendIdentityColumns(columns, rows, { includeBoss: false });
   if (hasAnyField(rows, ['ship_display', 'ship_name', 'ship_class'])) {
     columns.push(['Ship', ['ship_display', 'ship_name', 'ship_class']]);
   }
