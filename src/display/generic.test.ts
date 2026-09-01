@@ -4,6 +4,8 @@ import {
   catalogItemsModulesFixture,
   catalogShipsFixture,
   storageDepositAutoDockedFixture,
+  storageDepositBulkStationGiftFixture,
+  storageDepositStationGiftFixture,
   storageWithdrawAutoDockedFixture,
 } from './generic.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
@@ -138,6 +140,362 @@ test.each([
   expect(stdout).toContain('Station Name: Earth Station');
   expect(stdout).toContain('Station Id: earth_station');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a station material gift receipt instead of the scalar send-gift dump', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    structuredClone(storageDepositStationGiftFixture),
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Station: station:grand_exchange_station');
+  expect(stdout).toContain('Item: steel_plate');
+  expect(stdout).toContain('Quantity: 20');
+  expect(stdout).toContain('Source: cargo');
+  expect(stdout).toContain('Cargo remaining: 80');
+  expect(stdout).not.toContain('Storage remaining');
+  expect(stdout).not.toContain('=== Send Gift ===');
+  expect(stdout).not.toContain('Auto Docked');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a storage-source station gift remaining count and omits cargo remaining', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'station:grand_exchange_station',
+        base_id: 'grand_exchange_station',
+        source: 'storage',
+        item_id: 'steel_plate',
+        quantity: 20,
+        storage_remaining: 5,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Source: storage');
+  expect(stdout).toContain('Storage remaining: 5');
+  expect(stdout).not.toContain('Cargo remaining');
+  expect(stdout).not.toContain('Storage remaining: 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('does not invent zero remaining counts when the server omitted them', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'station:grand_exchange_station',
+        base_id: 'grand_exchange_station',
+        item_id: 'steel_plate',
+        quantity: 20,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Item: steel_plate');
+  expect(stdout).not.toContain('Cargo remaining');
+  expect(stdout).not.toContain('Storage remaining');
+  expect(stdout).not.toContain(': 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('matches mixed-case station: recipients', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'Station:Grand_Exchange_Station',
+        base_id: 'grand_exchange_station',
+        item_id: 'steel_plate',
+        quantity: 20,
+        cargo_remaining: 80,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Station: Station:Grand_Exchange_Station');
+  expect(stdout).not.toContain('=== Send Gift ===');
+});
+
+test('formats bulk station gifts when only nested results carry station: recipients', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'bulk_deposit',
+        requested: 1,
+        succeeded: 1,
+        failed: 0,
+        results: [
+          {
+            item_id: 'steel_plate',
+            quantity: 20,
+            success: true,
+            result: {
+              action: 'send_gift',
+              recipient: 'station:grand_exchange_station',
+              base_id: 'grand_exchange_station',
+              item_id: 'steel_plate',
+              quantity: 20,
+              cargo_remaining: 80,
+            },
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Station: station:grand_exchange_station');
+  expect(stdout).toContain('steel_plate');
+  expect(stdout).not.toContain('Results: 1 item(s)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('does not print auto-dock fields or location aliases on a station gift receipt', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'station:grand_exchange_station',
+        base_id: 'grand_exchange_station',
+        item_id: 'steel_plate',
+        quantity: 20,
+        cargo_remaining: 80,
+        auto_docked: true,
+      },
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        poi_id: 'grand_exchange_station',
+        poi_name: 'Grand Exchange',
+        docked_at: 'grand_exchange_station',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Station: station:grand_exchange_station');
+  expect(stdout).not.toContain('Auto Docked');
+  expect(stdout).not.toContain('Auto-docked');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+  expect(stdout).not.toContain('Station Name: Grand Exchange');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('keeps player send_gift on the scalar dump', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'PlayerName',
+        base_id: 'earth_station',
+        source: 'cargo',
+        item_id: 'steel_plate',
+        quantity: 5,
+        cargo_remaining: 10,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Send Gift ===');
+  expect(stdout).toContain('Recipient: PlayerName');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('expands bulk station-gift success and failure instead of a results count', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    structuredClone(storageDepositBulkStationGiftFixture),
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Station: station:grand_exchange_station');
+  expect(stdout).toContain('2 requested | 1 succeeded | 1 failed');
+  expect(stdout).toContain('=== Results ===');
+  expect(stdout).toContain('steel_plate');
+  expect(stdout).toContain('quest_token');
+  expect(stdout).toContain('yes');
+  expect(stdout).toContain('no');
+  expect(stdout).toContain('cargo 80');
+  expect(stdout).toContain('Donated 20 steel plates without payment.');
+  expect(stdout).toContain('Quest items cannot be donated to a station.');
+  expect(stdout).not.toContain('Results: 2 item(s)');
+  expect(stdout).not.toContain('=== Bulk Deposit ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders bulk station-gift remaining zero when the server includes it', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'bulk_deposit',
+        requested: 1,
+        succeeded: 1,
+        failed: 0,
+        target: 'station:grand_exchange_station',
+        results: [
+          {
+            item_id: 'steel_plate',
+            quantity: 20,
+            success: true,
+            result: {
+              action: 'send_gift',
+              recipient: 'station:grand_exchange_station',
+              base_id: 'grand_exchange_station',
+              item_id: 'steel_plate',
+              quantity: 20,
+              cargo_remaining: 0,
+            },
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('cargo 0');
+  expect(stdout).not.toContain('Results: 1 item(s)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders bulk station-gift all-failure without remaining counts', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'bulk_deposit',
+        requested: 1,
+        succeeded: 0,
+        failed: 1,
+        target: 'station:grand_exchange_station',
+        results: [
+          {
+            item_id: 'credits',
+            quantity: 100,
+            success: false,
+            error: 'Credits cannot be donated to a station.',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('1 requested | 0 succeeded | 1 failed');
+  expect(stdout).toContain('credits');
+  expect(stdout).toContain('Credits cannot be donated to a station.');
+  expect(stdout).not.toContain('Remaining');
+  expect(stdout).not.toContain('cargo ');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('does not treat personal bulk deposits as station gifts', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'bulk_deposit',
+        requested: 1,
+        succeeded: 1,
+        failed: 0,
+        target: 'self',
+        results: [
+          {
+            item_id: 'ore_iron',
+            quantity: 12,
+            success: true,
+            result: {
+              action: 'deposit_items',
+              item_id: 'ore_iron',
+              quantity: 12,
+              storage_total: 42,
+              cargo_remaining: 8,
+            },
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Bulk Deposit ===');
+  expect(stdout).toContain('Results: 1 item(s)');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('station gift JSON keeps SendGiftResponse field names', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    structuredClone(storageDepositStationGiftFixture),
+    { ...options, format: 'json' },
+    { ...context, output: { ...context.output, format: 'json' } },
+  );
+
+  expect(rendered.success).toBe(true);
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    details: Record<string, unknown>;
+  };
+  expect(parsed.details).toEqual(storageDepositStationGiftFixture.details);
+  expect(parsed.details).toHaveProperty('cargo_remaining', 80);
+  expect(parsed.details).toHaveProperty('recipient', 'station:grand_exchange_station');
 });
 
 test('renders catalog ships with prestige lock notes when present', () => {

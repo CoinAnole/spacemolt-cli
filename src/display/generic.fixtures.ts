@@ -831,6 +831,53 @@ export const storageWithdrawAutoDockedFixture = {
   location: storageAutoDockedLocation,
 };
 
+/** Live-shaped nested SC: details = SendGiftResponse for a docked station material gift. */
+export const storageDepositStationGiftFixture = {
+  details: {
+    action: 'send_gift',
+    recipient: 'station:grand_exchange_station',
+    base_id: 'grand_exchange_station',
+    source: 'cargo',
+    item_id: 'steel_plate',
+    quantity: 20,
+    cargo_remaining: 80,
+  },
+};
+
+/** Live-shaped nested SC: details = BulkStorageResponse mixed station-gift success/failure. */
+export const storageDepositBulkStationGiftFixture = {
+  details: {
+    action: 'bulk_deposit',
+    requested: 2,
+    succeeded: 1,
+    failed: 1,
+    target: 'station:grand_exchange_station',
+    results: [
+      {
+        item_id: 'steel_plate',
+        quantity: 20,
+        success: true,
+        result: {
+          action: 'send_gift',
+          recipient: 'station:grand_exchange_station',
+          base_id: 'grand_exchange_station',
+          source: 'cargo',
+          item_id: 'steel_plate',
+          quantity: 20,
+          cargo_remaining: 80,
+        },
+        message: 'Donated 20 steel plates without payment.',
+      },
+      {
+        item_id: 'quest_token',
+        quantity: 1,
+        success: false,
+        error: 'Quest items cannot be donated to a station.',
+      },
+    ],
+  },
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
@@ -869,6 +916,16 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   storage_withdraw_auto_docked: {
     command: 'storage_withdraw',
     fixture: storageWithdrawAutoDockedFixture,
+    schemaTarget: 'details',
+  },
+  storage_deposit_station_gift: {
+    command: 'storage_deposit',
+    fixture: storageDepositStationGiftFixture,
+    schemaTarget: 'details',
+  },
+  storage_deposit_bulk_station_gift: {
+    command: 'storage_deposit',
+    fixture: storageDepositBulkStationGiftFixture,
     schemaTarget: 'details',
   },
 };

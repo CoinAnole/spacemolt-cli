@@ -1,0 +1,11 @@
+
+=== Station Gift ===
+Station: station:grand_exchange_station
+2 requested | 1 succeeded | 1 failed
+
+=== Results ===
+
+  Item        | Qty | OK  | Remaining | Detail                                     
+  ------------+-----+-----+-----------+--------------------------------------------
+  steel_plate | 20  | yes | cargo 80  | Donated 20 steel plates without payment.   
+  quest_token | 1   | no  |           | Quest items cannot be donated to a station.
