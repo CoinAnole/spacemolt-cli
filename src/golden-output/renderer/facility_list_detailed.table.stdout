@@ -39,9 +39,9 @@ Service pools:
 
 === Player Facilities ===
 
-  Name         | ID              | Level | Category   | Maint | Price/unit | Recycler | Recipe           | Owner
-  -------------+-----------------+-------+------------+-------+------------+----------+------------------+------
-  Ore Refinery | player-refinery | 2     | production | true  | 0.25cr     | true     | iron_ore_reverse |      
+  Name         | ID              | Level | Category   | Maint | Damaged | Price/unit | Recycler | Recipe           | Owner
+  -------------+-----------------+-------+------------+-------+---------+------------+----------+------------------+------
+  Ore Refinery | player-refinery | 2     | production | true  | yes     | 0.25cr     | true     | iron_ore_reverse |      
 
 === Faction Facilities ===
 

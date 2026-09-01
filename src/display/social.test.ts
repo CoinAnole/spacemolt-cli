@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { facilityBillingPaused, withPausedRentSuffix } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   actionLogCursorFixture,
@@ -11,6 +12,7 @@ import {
   battleSummaryFixture,
   facilityListFixture,
   facilityListSimpleFixture,
+  facilityOwnedFixture,
   facilityTypesDetailFixture,
   factionFacilityListFixture,
   factionFacilityOwnedFixture,
@@ -44,6 +46,22 @@ const context = {
     compact: false,
   },
 };
+
+function sectionAfter(stdout: string, title: string, nextTitle?: string): string {
+  const start = stdout.split(`=== ${title} ===`)[1] ?? '';
+  return nextTitle ? (start.split(`=== ${nextTitle} ===`)[0] ?? start) : start;
+}
+
+function tableCell(section: string, rowNeedle: string, column: string): string | undefined {
+  const lines = section.split('\n');
+  const header = lines.find((line) => line.includes('|') && line.includes(column) && line.includes('Name'));
+  const row = lines.find((line) => line.includes('|') && line.includes(rowNeedle) && !line.includes('---'));
+  if (!header || !row) return undefined;
+  const headers = header.split('|').map((part) => part.trim());
+  const cells = row.split('|').map((part) => part.trim());
+  const index = headers.indexOf(column);
+  return index >= 0 ? cells[index] : undefined;
+}
 
 test('renders cursor action-log entries in server order with the next polling cursor', () => {
   const rendered = renderStructuredResult('get_action_log', structuredClone(actionLogCursorFixture), options, context);
@@ -445,6 +463,80 @@ test('renders facility dining and leisure scores when present', () => {
   expect(stdout).toContain('2');
 });
 
+test('facilityBillingPaused is an allowlist, not status != active', () => {
+  expect(facilityBillingPaused({ status: 'repairing' })).toBe(true);
+  expect(facilityBillingPaused({ status: 'damaged' })).toBe(true);
+  expect(facilityBillingPaused({ status: 'under_construction' })).toBe(true);
+  expect(facilityBillingPaused({ status: 'dismantling' })).toBe(true);
+  expect(facilityBillingPaused({ damaged: true })).toBe(true);
+  expect(facilityBillingPaused({ under_construction: true })).toBe(true);
+  expect(facilityBillingPaused({ dismantling: true })).toBe(true);
+  expect(facilityBillingPaused({ status: 'enabled' })).toBe(false);
+  expect(facilityBillingPaused({ status: 'disabled' })).toBe(false);
+  expect(facilityBillingPaused({ status: 'active' })).toBe(false);
+  expect(facilityBillingPaused({})).toBe(false);
+  expect(withPausedRentSuffix('1200', { status: 'enabled' })).toBe('1200');
+  expect(withPausedRentSuffix('1,200cr', { status: 'damaged' })).toBe('1,200cr (paused)');
+});
+
+test('grouped facility_list restyles Damaged to yes/no on the player-refinery row', () => {
+  const stdout = renderStructuredResult(
+    'facility_list',
+    structuredClone(facilityListFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  const station = sectionAfter(stdout, 'Station Facilities', 'Player Facilities');
+  const faction = sectionAfter(stdout, 'Faction Facilities');
+
+  expect(player).toContain('Damaged');
+  expect(tableCell(player, 'player-refinery', 'Damaged')).toBe('yes');
+  const stationHeader = station.split('\n').find((line) => line.includes('Name') && line.includes('ID'));
+  const factionHeader = faction.split('\n').find((line) => line.includes('Name') && line.includes('ID'));
+  expect(stationHeader).toBeDefined();
+  expect(factionHeader).toBeDefined();
+  expect(stationHeader).not.toContain('Damaged');
+  expect(factionHeader).not.toContain('Damaged');
+  expect(stdout).not.toContain('Dismantling');
+});
+
+test('simple facility_list omits Damaged and Dismantling columns', () => {
+  const stdout = renderStructuredResult(
+    'facility_list',
+    structuredClone(facilityListSimpleFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toMatch(/\|\s*Damaged\s*\|/);
+  expect(stdout).not.toContain('Dismantling');
+});
+
+test('grouped facility_list grows a Dismantling yes column when the flag is present', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const playerFacilities = fixture.player_facilities as Array<Record<string, unknown>>;
+  if (!playerFacilities[0]) throw new Error('Player facility fixture is incomplete.');
+  playerFacilities[0].dismantling = true;
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  expect(player).toContain('Dismantling');
+  expect(tableCell(player, 'player-refinery', 'Dismantling')).toBe('yes');
+});
+
+test('grouped facility_list suffixes paused rent without switching to 1,200cr', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const playerFacilities = fixture.player_facilities as Array<Record<string, unknown>>;
+  if (!playerFacilities[0]) throw new Error('Player facility fixture is incomplete.');
+  playerFacilities[0].rent_per_cycle = 1200;
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  const faction = sectionAfter(stdout, 'Faction Facilities');
+  expect(tableCell(player, 'player-refinery', 'Damaged')).toBe('yes');
+  expect(tableCell(player, 'player-refinery', 'Rent/cycle')).toBe('1200 (paused)');
+  expect(tableCell(faction, 'faction-smelter', 'Rent/cycle')).toBe('1200');
+  expect(stdout).not.toContain('1,200cr (paused)');
+});
+
 test('renders facility list faction rent summary', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   facilityList.faction_rent = {
@@ -465,6 +557,56 @@ test('renders facility list faction rent summary', () => {
   expect(stdout).toContain('Grace remaining: 1 cycle');
   expect(stdout).toContain('Estimated rent/day: 7,200cr');
   expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+});
+
+test('facility_list prints personal and faction rent bills from separate sources', () => {
+  const both = structuredClone(facilityListFixture) as Record<string, unknown>;
+  both.player_rent = {
+    facilities: 1,
+    total_rent_per_cycle: 400,
+    arrears_owed: 100,
+    grace_cycles: 2,
+    est_rent_per_day: 2400,
+    note: 'Personal facilities pay rent from your wallet each cycle.',
+  };
+  const bothStdout = renderStructuredResult('facility_list', both, options, context).stdout.join('\n');
+  const personalIdx = bothStdout.indexOf('Personal rent bill:');
+  const factionIdx = bothStdout.indexOf('Faction rent bill:');
+  const factionArrearsIdx = bothStdout.indexOf('Faction arrears:');
+  expect(personalIdx).toBeGreaterThan(-1);
+  expect(factionIdx).toBeGreaterThan(personalIdx);
+  expect(factionArrearsIdx).toBeGreaterThan(factionIdx);
+  expect(bothStdout.slice(personalIdx, factionIdx)).toContain('Arrears: 100cr');
+  expect(bothStdout.slice(personalIdx, factionIdx)).not.toContain('Faction arrears');
+  expect(bothStdout).toContain('Personal rent bill: 400cr/cycle');
+  expect(bothStdout).toContain('Faction rent bill: 1,200cr/cycle');
+
+  const personalOnly = structuredClone(facilityListFixture) as Record<string, unknown>;
+  delete personalOnly.faction_rent;
+  personalOnly.player_rent = {
+    facilities: 1,
+    total_rent_per_cycle: 400,
+    arrears_owed: 100,
+    note: 'Personal facilities pay rent from your wallet each cycle.',
+  };
+  const personalStdout = renderStructuredResult('facility_list', personalOnly, options, context).stdout.join('\n');
+  expect(personalStdout).toContain('Personal rent bill: 400cr/cycle');
+  expect(personalStdout).toContain('Arrears: 100cr');
+  expect(personalStdout).not.toContain('Faction rent bill');
+  expect(personalStdout).not.toContain('Faction arrears');
+});
+
+test('facility_owned does not print a rent bill', () => {
+  const stdout = renderStructuredResult(
+    'facility_owned',
+    structuredClone(facilityOwnedFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Ore Refinery');
+  expect(stdout).not.toContain('Faction rent bill');
+  expect(stdout).not.toContain('Personal rent bill');
+  expect(stdout).not.toContain('Faction arrears');
 });
 
 test('renders facility metadata when all required facility groups are empty', () => {
@@ -698,6 +840,23 @@ test('omits facility state and maintenance columns when the API omits those fiel
   expect(rendered.success).toBe(true);
   expect(stdout).not.toContain('Active');
   expect(stdout).not.toContain('Maint');
+});
+
+test('faction_facility_owned clone shows Damaged, Building, and Dismantling as yes', () => {
+  const fixture = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
+  const facilities = fixture.facilities as Array<Record<string, unknown>>;
+  if (!facilities[0]) throw new Error('Faction facility fixture is incomplete.');
+  facilities[0].damaged = true;
+  facilities[0].under_construction = true;
+  facilities[0].dismantling = true;
+  const stdout = renderStructuredResult('faction_facility_owned', fixture, options, context).stdout.join('\n');
+  const section = sectionAfter(stdout, 'Faction Facilities');
+  expect(tableCell(section, 'faction-yard-1', 'Damaged')).toBe('yes');
+  expect(tableCell(section, 'faction-yard-1', 'Building')).toBe('yes');
+  expect(tableCell(section, 'faction-yard-1', 'Dismantling')).toBe('yes');
+  expect(tableCell(section, 'faction-yard-1', 'Rent')).toBe('1,200cr (paused)');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).toContain('Faction arrears: 2,400cr');
 });
 
 test('omits faction facility state column when the API omits that field', () => {
@@ -1710,9 +1869,19 @@ test('faction_facility_list renders status, damaged yes/no, and custom names', (
   expect(stdout).toContain('active');
   expect(stdout).toContain('damaged');
   expect(stdout).toContain('under_construction');
+  expect(stdout).toContain('dismantling');
   expect(stdout).toContain('yes');
   expect(stdout).toContain('no');
+  expect(stdout).toContain('800cr (paused)');
+  expect(stdout).toContain('1,200cr (paused)');
+  expect(stdout).toContain('600cr (paused)');
   expect(stdout).toContain('Alloy One (Alloy Smelter)');
+  const section = sectionAfter(stdout, 'Faction Facilities at earth_station');
+  expect(tableCell(section, 'faction-smelter', 'Rent')).toBe('1,200cr');
+  expect(tableCell(section, 'faction-bunker', 'Rent')).toBe('800cr (paused)');
+  expect(tableCell(section, 'faction-yard', 'Rent')).toBe('1,200cr (paused)');
+  expect(tableCell(section, 'faction-hangar', 'Status')).toBe('dismantling');
+  expect(tableCell(section, 'faction-hangar', 'Rent')).toBe('600cr (paused)');
   expect(stdout).toContain('Faction storage:');
   expect(stdout).toContain('Damaged facilities produce nothing.');
   expect(stdout).toContain('rebuilds its own faction');

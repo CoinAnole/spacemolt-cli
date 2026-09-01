@@ -17,6 +17,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - `facility dismantle` and `faction dismantle` document that damaged facilities can be dismantled without repairing first (cancels in-progress repair with no refund), plus Personal Quarters / Faction Storage ordering after other facilities at that station are gone, including ones still dismantling.
 - `faction facility_list` help lists status values including repairing and dismantling.
 
+### Facility tables, paused rent, and dock briefing (gameserver 0.572.5)
+
+- Human facility tables keep the stored rent rate and append `(paused)` while damaged, repairing, under construction, or dismantling. Grouped `facility list` restyles Damaged to yes/no and adds a Dismantling column when that flag is present.
+- `faction facility_list` marks paused rent on non-active statuses (including dismantling). `faction facility_owned` can show Damaged / Building / Dismantling as yes/no.
+- Grouped `facility list` prints `Personal rent bill` from `player_rent` next to the existing `Faction rent bill`. `facility owned` still has no rent bill.
+- Human `dock` prints `facility_note` and a **Your facilities** table (`1,200cr` or `1,200cr (paused)`). Empty `your_facilities` is omitted.
+- JSON/YAML/jq field names are unchanged.
+
 ### Diplomacy and ops notification previews (gameserver 0.573.2)
 
 - Human `get_notifications` / `notifications` prefer the server `message` as the

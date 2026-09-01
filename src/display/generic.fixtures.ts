@@ -732,6 +732,53 @@ export const undockFixture = {
   action: 'undock',
 };
 
+/** Top-level DockResponse — formatter reads action/story on structuredContent. */
+export const dockFixture = {
+  action: 'dock',
+  base: 'Earth Station',
+  story: 'You dock at Earth Station.\n\nThe berth clamps engage and the station traffic board scrolls your name.',
+  station_condition: {
+    condition: 'operational',
+    condition_text: 'Most systems operational.',
+    satisfaction_pct: 82,
+  },
+  facility_note: 'Rent is paused on damaged and dismantling facilities until they return to service.',
+  your_facilities: [
+    {
+      facility_id: 'player-refinery',
+      type: 'ore_refinery',
+      name: 'Ore Refinery',
+      status: 'enabled',
+      maintenance_satisfied: true,
+      rent_per_cycle: 1200,
+    },
+    {
+      facility_id: 'player-quarters',
+      type: 'personal_quarters',
+      name: 'Personal Quarters',
+      status: 'disabled',
+      maintenance_satisfied: true,
+      rent_per_cycle: 100,
+    },
+    {
+      facility_id: 'player-hangar',
+      type: 'personal_hangar',
+      name: 'Personal Hangar',
+      status: 'dismantling',
+      maintenance_satisfied: true,
+      rent_per_cycle: 800,
+    },
+    {
+      facility_id: 'player-workshop',
+      type: 'workshop',
+      name: 'Workshop',
+      status: 'damaged',
+      maintenance_satisfied: false,
+      rent_per_cycle: 400,
+    },
+  ],
+};
+
 export const mobileBaseFixture = {
   system: 'frontier_outpost',
 };
@@ -905,6 +952,12 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   set_colors: { command: 'set_colors', fixture: setColorsFixture, schemaTarget: 'details' },
   set_status: { command: 'set_status', fixture: setStatusFixture, schemaTarget: 'details' },
   undock: { command: 'undock', fixture: undockFixture, schemaTarget: 'details' },
+  dock: {
+    command: 'dock',
+    fixture: dockFixture,
+    apiRoute: 'POST /api/v2/spacemolt/dock',
+    schemaTarget: 'structuredContent',
+  },
   facility_dismantle: { command: 'facility_dismantle', fixture: facilityDismantleFixture },
   faction_dismantle: { command: 'faction_dismantle', fixture: factionDismantleFixture },
   dismantle_outpost: { command: 'dismantle_outpost', fixture: dismantleOutpostFixture },

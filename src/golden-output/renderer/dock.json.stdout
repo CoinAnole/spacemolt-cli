@@ -1,0 +1,45 @@
+{
+  "action": "dock",
+  "base": "Earth Station",
+  "story": "You dock at Earth Station.\n\nThe berth clamps engage and the station traffic board scrolls your name.",
+  "station_condition": {
+    "condition": "operational",
+    "condition_text": "Most systems operational.",
+    "satisfaction_pct": 82
+  },
+  "facility_note": "Rent is paused on damaged and dismantling facilities until they return to service.",
+  "your_facilities": [
+    {
+      "facility_id": "player-refinery",
+      "type": "ore_refinery",
+      "name": "Ore Refinery",
+      "status": "enabled",
+      "maintenance_satisfied": true,
+      "rent_per_cycle": 1200
+    },
+    {
+      "facility_id": "player-quarters",
+      "type": "personal_quarters",
+      "name": "Personal Quarters",
+      "status": "disabled",
+      "maintenance_satisfied": true,
+      "rent_per_cycle": 100
+    },
+    {
+      "facility_id": "player-hangar",
+      "type": "personal_hangar",
+      "name": "Personal Hangar",
+      "status": "dismantling",
+      "maintenance_satisfied": true,
+      "rent_per_cycle": 800
+    },
+    {
+      "facility_id": "player-workshop",
+      "type": "workshop",
+      "name": "Workshop",
+      "status": "damaged",
+      "maintenance_satisfied": false,
+      "rent_per_cycle": 400
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import {
   formatter,
   isRecord,
   printCompactTable,
+  withPausedRentSuffix,
 } from './helpers.ts';
 
 function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
@@ -976,6 +977,31 @@ export const genericFormatters = [
         }
       }
 
+      if (typeof r.facility_note === 'string' && r.facility_note) emitLine(r.facility_note);
+
+      const yourFacilities = Array.isArray(r.your_facilities) ? r.your_facilities.filter(isRecord) : [];
+      if (yourFacilities.length) {
+        const rows = yourFacilities.map((facility) => {
+          const formattedRent = formatCreditsAmount(facility.rent_per_cycle);
+          return {
+            ...facility,
+            rent_display: formattedRent === undefined ? undefined : withPausedRentSuffix(formattedRent, facility),
+            eta_display: formatEtaTicks(facility.ticks_until_complete),
+          };
+        });
+        const columns: Array<[string, string[]]> = [
+          ['Name', ['name']],
+          ['ID', ['facility_id']],
+          ['Type', ['type']],
+          ['Status', ['status']],
+          ['Rent/cycle', ['rent_display', 'rent_per_cycle']],
+        ];
+        if (rows.some((row) => row.eta_display)) {
+          columns.push(['ETA', ['eta_display', 'ticks_until_complete']]);
+        }
+        printCompactTable('Your facilities', rows, columns);
+      }
+
       emitDockSummaryLine('Storage items', formatCount(r.storage_items));
       emitDockSummaryLine('Open orders', countFromFieldOrArray(r, 'open_orders_count', 'open_orders'));
       const tradeFillSuffix = r.trade_fills_truncated === true ? ' (showing recent, truncated)' : '';
@@ -986,7 +1012,7 @@ export const genericFormatters = [
       if (typeof r.unread_chat_note === 'string') emitLine(`${c.dim}${r.unread_chat_note}${c.reset}`);
       return true;
     },
-    { shapeFallback: true },
+    { commands: ['dock'], shapeFallback: true },
   ),
 
   formatter(

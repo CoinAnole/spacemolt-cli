@@ -87,6 +87,7 @@ player_facilities:
     maintenance_satisfied: true
     is_recycler: true
     recipe_id: iron_ore_reverse
+    damaged: true
     production: {queued_runs: 0, queued_items: 0, backlog_ticks: 0, output_price_per_unit: 0.25}
 faction_facilities:
   - facility_id: "faction-smelter"

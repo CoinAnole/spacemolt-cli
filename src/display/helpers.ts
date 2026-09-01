@@ -128,6 +128,17 @@ export function formatFacilityMaintenanceUpkeep(row: Record<string, unknown>): s
   return parts.length ? parts.join(', ') : undefined;
 }
 
+/** True when this facility is not accruing new rent. Allowlist — not `status != 'active'`. */
+export function facilityBillingPaused(row: Record<string, unknown>): boolean {
+  if (row.damaged === true || row.under_construction === true || row.dismantling === true) return true;
+  const status = typeof row.status === 'string' ? row.status : '';
+  return status === 'damaged' || status === 'repairing' || status === 'under_construction' || status === 'dismantling';
+}
+
+export function withPausedRentSuffix(formattedRate: string, row: Record<string, unknown>): string {
+  return facilityBillingPaused(row) ? `${formattedRate} (paused)` : formattedRate;
+}
+
 /**
  * Format API `depletion_percent` for human output.
  * Server semantics: 0 = full, 100 = empty (percent depleted).

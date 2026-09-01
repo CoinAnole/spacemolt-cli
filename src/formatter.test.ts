@@ -6711,9 +6711,9 @@ describe('structuredContent formatters', () => {
 
       === Player Facilities ===
 
-        Name         | ID              | Level | Category   | Maint | Price/unit | Recycler | Recipe           | Owner
-        -------------+-----------------+-------+------------+-------+------------+----------+------------------+------
-        Ore Refinery | player-refinery | 2     | production | true  | 0.25cr     | true     | iron_ore_reverse |
+        Name         | ID              | Level | Category   | Maint | Damaged | Price/unit | Recycler | Recipe           | Owner
+        -------------+-----------------+-------+------------+-------+---------+------------+----------+------------------+------
+        Ore Refinery | player-refinery | 2     | production | true  | yes     | 0.25cr     | true     | iron_ore_reverse |
 
       === Faction Facilities ===
 
@@ -6757,10 +6757,11 @@ describe('structuredContent formatters', () => {
       === Faction Facilities at earth_station ===
 
         Name                      | Type                   | ID              | Level | Status             | Damaged | Building | Repair Tick | Service    | Rent
-        --------------------------+------------------------+-----------------+-------+--------------------+---------+----------+-------------+------------+--------
+        --------------------------+------------------------+-----------------+-------+--------------------+---------+----------+-------------+------------+-----------------
         Alloy One (Alloy Smelter) | alloy_smelter          | faction-smelter | 1     | active             | no      |          |             | production | 1,200cr
-        Faction Fuel Bunker       | fuel_bunker            | faction-bunker  | 2     | damaged            | yes     |          | 901412      | fuel       | 800cr
-        Shipyard Berth            | faction_shipyard_berth | faction-yard    | 1     | under_construction |         | 12       |             | shipyard   | 1,200cr
+        Faction Fuel Bunker       | fuel_bunker            | faction-bunker  | 2     | damaged            | yes     |          | 901412      | fuel       | 800cr (paused)
+        Shipyard Berth            | faction_shipyard_berth | faction-yard    | 1     | under_construction |         | 12       |             | shipyard   | 1,200cr (paused)
+        Faction Hangar            | faction_hangar         | faction-hangar  | 1     | dismantling        |         |          |             | hangar     | 600cr (paused)
 
       Faction storage: 50,000cr, 14 types, 3 rooms
 
