@@ -12,6 +12,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   it is not read as a shortage row.
 - JSON/YAML field names are unchanged.
 
+### Facility dismantle help (gameserver 0.572.5)
+
+- `facility dismantle` and `faction dismantle` document that damaged facilities can be dismantled without repairing first (cancels in-progress repair with no refund), plus Personal Quarters / Faction Storage ordering after other facilities at that station are gone, including ones still dismantling.
+- `faction facility_list` help lists status values including repairing and dismantling.
+
 ### Diplomacy and ops notification previews (gameserver 0.573.2)
 
 - Human `get_notifications` / `notifications` prefer the server `message` as the
