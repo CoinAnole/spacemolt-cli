@@ -3,6 +3,7 @@ import type { GlobalOptions } from '../types.ts';
 import {
   catalogItemsModulesFixture,
   catalogShipsFixture,
+  dockFixture,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
   storageDepositStationGiftFixture,
@@ -35,6 +36,31 @@ const context = {
     compact: false,
   },
 };
+
+test('renders dock facility_note and your_facilities with paused vs billable rent', () => {
+  const stdout = renderStructuredResult('dock', structuredClone(dockFixture), options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Docked: Earth Station ===');
+  expect(stdout).toContain('Rent is paused on damaged and dismantling facilities until they return to service.');
+  expect(stdout).toContain('=== Your facilities ===');
+  expect(stdout).toContain('1,200cr');
+  expect(stdout).toContain('100cr');
+  expect(stdout).toContain('800cr (paused)');
+  expect(stdout).toContain('400cr (paused)');
+  expect(stdout).not.toContain('1,200cr (paused)');
+  expect(stdout).not.toContain('100cr (paused)');
+  expect(stdout.indexOf('Station condition:')).toBeLessThan(stdout.indexOf('=== Your facilities ==='));
+});
+
+test('omits dock your_facilities table and (None) when the list is empty', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.your_facilities = [];
+  delete fixture.facility_note;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Docked: Earth Station ===');
+  expect(stdout).not.toContain('=== Your facilities ===');
+  expect(stdout).not.toContain('(None)');
+  expect(stdout).not.toContain('Rent is paused on damaged and dismantling facilities');
+});
 
 test('renders faction espionage narrative results', () => {
   const rendered = renderStructuredResult(

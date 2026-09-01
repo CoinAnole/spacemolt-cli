@@ -190,6 +190,7 @@ export const facilityListFixture = {
       maintenance_satisfied: true,
       is_recycler: true,
       recipe_id: 'iron_ore_reverse',
+      damaged: true,
       production: {
         queued_runs: 0,
         queued_items: 0,
@@ -312,7 +313,7 @@ export const factionFacilityOwnedFixture = {
   hint: "Use action 'faction_list' while docked for full per-facility detail at that station.",
 };
 
-/** FacilityFactionListResponse — covers active, damaged, and under_construction statuses. */
+/** FacilityFactionListResponse — covers active, damaged, under_construction, and dismantling statuses. */
 export const factionFacilityListFixture = {
   action: 'faction_list',
   base_id: 'earth_station',
@@ -349,6 +350,15 @@ export const factionFacilityListFixture = {
       rent_per_cycle: 1200,
       status: 'under_construction',
       ticks_until_complete: 12,
+    },
+    {
+      facility_id: 'faction-hangar',
+      type: 'faction_hangar',
+      name: 'Faction Hangar',
+      level: 1,
+      faction_service: 'hangar',
+      rent_per_cycle: 600,
+      status: 'dismantling',
     },
   ],
   faction_storage: {

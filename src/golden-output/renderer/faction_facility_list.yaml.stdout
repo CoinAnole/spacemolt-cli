@@ -29,6 +29,13 @@ faction_facilities:
     rent_per_cycle: 1200
     status: under_construction
     ticks_until_complete: 12
+  - facility_id: "faction-hangar"
+    type: faction_hangar
+    name: "Faction Hangar"
+    level: 1
+    faction_service: hangar
+    rent_per_cycle: 600
+    status: dismantling
 faction_storage:
   credits: 50000
   item_types: 14

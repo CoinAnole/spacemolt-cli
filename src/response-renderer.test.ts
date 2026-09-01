@@ -1378,6 +1378,7 @@ describe('response renderer', () => {
             trade_fills_truncated: true,
             unread_chat: { system: 42, local: 79, faction: 0, private: 1 },
             unread_chat_note: 'You have 122 unread chat message(s).',
+            your_facilities: [],
           },
         },
       },
@@ -1394,6 +1395,8 @@ describe('response renderer', () => {
     expect(output).toContain('Open orders: 2');
     expect(output).toContain('Trade fills: 242 (showing recent, truncated)');
     expect(output).toContain('Unread chat: 122');
+    expect(output).not.toContain('=== Your facilities ===');
+    expect(output).not.toContain('(None)');
     expect(output).not.toContain('=== Response ===');
   });
 

@@ -15,6 +15,7 @@ import {
   namedFormatter,
   printCompactTable,
   sumNumericField,
+  withPausedRentSuffix,
 } from './helpers.ts';
 
 function formatTimestampPreview(value: unknown): string {
@@ -384,6 +385,12 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
       output_price_per_unit: outputPricePerUnit,
       output_price_per_unit_display: formatCredits(outputPricePerUnit),
       recipe_id: recipeId,
+      damaged_display: formatYesNo(row.damaged),
+      dismantling_display: formatYesNo(row.dismantling),
+      rent_cycle_display:
+        row.rent_per_cycle === undefined || row.rent_per_cycle === null || row.rent_per_cycle === ''
+          ? undefined
+          : withPausedRentSuffix(String(row.rent_per_cycle), row),
     };
   });
 }
@@ -407,10 +414,13 @@ function facilityColumns(
     columns.push(['Maint', ['maintenance_level_display', 'maintenance_satisfied_display']]);
   }
   if (hasAnyField(rows, ['damaged'])) {
-    columns.push(['Damaged', ['damaged']]);
+    columns.push(['Damaged', ['damaged_display', 'damaged']]);
   }
   if (hasAnyField(rows, ['under_construction'])) {
     columns.push(['Building', ['under_construction']]);
+  }
+  if (hasAnyField(rows, ['dismantling'])) {
+    columns.push(['Dismantling', ['dismantling_display', 'dismantling']]);
   }
   if (hasAnyField(rows, ['repair_complete_tick'])) {
     columns.push(['Repair Tick', ['repair_complete_tick']]);
@@ -450,7 +460,7 @@ function facilityColumns(
   }
   if (hasAnyField(rows, ['public'])) columns.push(['Public', ['public']]);
   if (hasAnyField(rows, ['rent_per_cycle'])) {
-    columns.push(['Rent/cycle', ['rent_per_cycle']]);
+    columns.push(['Rent/cycle', ['rent_cycle_display', 'rent_per_cycle']]);
   }
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
@@ -532,29 +542,31 @@ function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[
   return columns;
 }
 
-function rentSummaryValue(result: Record<string, unknown>, key: string): unknown {
-  if (result[key] !== undefined) return result[key];
-  const factionRent = isRecord(result.faction_rent) ? result.faction_rent : undefined;
-  if (factionRent?.[key] !== undefined) return factionRent[key];
-  const rent = isRecord(result.rent) ? result.rent : undefined;
-  return rent?.[key];
-}
-
-function emitFactionRentSummary(result: Record<string, unknown>): void {
-  const totalRent = formatCredits(rentSummaryValue(result, 'total_rent_per_cycle'));
-  const arrears = formatCredits(rentSummaryValue(result, 'arrears_owed'));
-  const grace = formatCycles(rentSummaryValue(result, 'grace_cycles'));
-  const estRentPerDay = formatCredits(rentSummaryValue(result, 'est_rent_per_day'));
-  const factionRent = isRecord(result.faction_rent) ? result.faction_rent : undefined;
-  const note = factionRent?.note ?? result.note;
-  const hint = factionRent?.hint ?? result.hint;
-
-  if (totalRent !== undefined) emitLine(`\nFaction rent bill: ${totalRent}/cycle`);
-  if (arrears !== undefined) emitLine(`Faction arrears: ${arrears}`);
+function emitRentSummary(title: string, arrearsLabel: string, source: unknown): void {
+  if (!isRecord(source)) return;
+  const totalRent = formatCredits(source.total_rent_per_cycle);
+  const arrears = formatCredits(source.arrears_owed);
+  const grace = formatCycles(source.grace_cycles);
+  const estRentPerDay = formatCredits(source.est_rent_per_day);
+  if (totalRent !== undefined) emitLine(`\n${title}: ${totalRent}/cycle`);
+  if (arrears !== undefined) emitLine(`${arrearsLabel}: ${arrears}`);
   if (grace !== undefined) emitLine(`Grace remaining: ${grace}`);
   if (estRentPerDay !== undefined) emitLine(`Estimated rent/day: ${estRentPerDay}`);
-  if (note) emitLine(String(note));
-  if (hint) emitLine(String(hint));
+  if (source.note) emitLine(String(source.note));
+  if (source.hint) emitLine(String(source.hint));
+}
+
+function emitFacilityRentSummaries(result: Record<string, unknown>): void {
+  if (isRecord(result.player_rent)) {
+    emitRentSummary('Personal rent bill', 'Arrears', result.player_rent);
+  }
+  if (isRecord(result.faction_rent)) {
+    emitRentSummary('Faction rent bill', 'Faction arrears', result.faction_rent);
+  } else if (isRecord(result.rent)) {
+    emitRentSummary('Faction rent bill', 'Faction arrears', result.rent);
+  } else if (!isRecord(result.player_rent)) {
+    emitRentSummary('Faction rent bill', 'Faction arrears', result);
+  }
 }
 
 function formatChatSender(message: Record<string, unknown>): string | undefined {
@@ -1145,36 +1157,53 @@ export const socialFormatters = [
       const facilities = firstArray(r, ['facilities']);
       if (!facilities) return false;
 
-      const rows = facilities.map((facility) => ({
-        ...facility,
-        name_display: facilityDisplayName(facility),
-        type_display: facilityTypeKey(facility),
-        rent_display: formatCredits(facility.rent_per_cycle),
-        arrears_display: formatCredits(facility.arrears_owed),
-        labor_display: formatCredits(facility.labor_per_run),
-      }));
+      const rows = facilities.map((facility) => {
+        const formattedRent = formatCredits(facility.rent_per_cycle);
+        return {
+          ...facility,
+          name_display: facilityDisplayName(facility),
+          type_display: facilityTypeKey(facility),
+          rent_display: formattedRent === undefined ? undefined : withPausedRentSuffix(formattedRent, facility),
+          arrears_display: formatCredits(facility.arrears_owed),
+          labor_display: formatCredits(facility.labor_per_run),
+          damaged_display: formatYesNo(facility.damaged),
+          building_display: formatYesNo(facility.under_construction),
+          dismantling_display: formatYesNo(facility.dismantling),
+        };
+      });
       const columns: Array<[string, string[]]> = [
         ['Name', ['name_display']],
         ['Type', ['type_display']],
         ['ID', ['facility_id', 'id']],
         ['Station', ['base_name', 'base_id']],
-        ['System', ['system_id']],
-        ['Rent', ['rent_display', 'rent_per_cycle']],
-        ['Missed', ['missed_rent_cycles']],
-        ['Arrears', ['arrears_display', 'arrears_owed']],
-        ['Labor/run', ['labor_display', 'labor_per_run']],
       ];
       // Schema FacilityResponse.2 facilities do not declare active/idle_reason;
       // still render them when a live payload includes them.
       if (hasAnyField(rows, ['active', 'status'])) {
-        columns.splice(4, 0, ['Active', ['active', 'status']]);
+        columns.push(['Active', ['active', 'status']]);
       }
+      columns.push(['System', ['system_id']]);
+      if (hasAnyField(rows, ['damaged', 'damaged_display'])) {
+        columns.push(['Damaged', ['damaged_display', 'damaged']]);
+      }
+      if (hasAnyField(rows, ['under_construction', 'building_display'])) {
+        columns.push(['Building', ['building_display', 'under_construction']]);
+      }
+      if (hasAnyField(rows, ['dismantling', 'dismantling_display'])) {
+        columns.push(['Dismantling', ['dismantling_display', 'dismantling']]);
+      }
+      columns.push(
+        ['Rent', ['rent_display', 'rent_per_cycle']],
+        ['Missed', ['missed_rent_cycles']],
+        ['Arrears', ['arrears_display', 'arrears_owed']],
+        ['Labor/run', ['labor_display', 'labor_per_run']],
+      );
       if (hasAnyField(rows, ['idle_reason'])) {
         columns.push(['Idle', ['idle_reason']]);
       }
       printCompactTable('Faction Facilities', rows, columns);
 
-      emitFactionRentSummary(r);
+      emitFacilityRentSummaries(r);
       return true;
     },
     { commands: ['faction_facility_owned'], shapeFallback: true },
@@ -1196,14 +1225,17 @@ export const socialFormatters = [
       emitOptionalLine('Faction', r.faction_id);
       const tableTitle = r.base_id ? `Faction Facilities at ${r.base_id}` : 'Faction Facilities';
 
-      const rows = facilities.map((facility) => ({
-        ...facility,
-        name_display: facilityDisplayName(facility),
-        type_display: facilityTypeKey(facility),
-        rent_display: formatCredits(facility.rent_per_cycle),
-        damaged_display: formatYesNo(facility.damaged),
-        fee_display: formatCredits(facility.rental_fee_per_run),
-      }));
+      const rows = facilities.map((facility) => {
+        const formattedRent = formatCredits(facility.rent_per_cycle);
+        return {
+          ...facility,
+          name_display: facilityDisplayName(facility),
+          type_display: facilityTypeKey(facility),
+          rent_display: formattedRent === undefined ? undefined : withPausedRentSuffix(formattedRent, facility),
+          damaged_display: formatYesNo(facility.damaged),
+          fee_display: formatCredits(facility.rental_fee_per_run),
+        };
+      });
 
       const columns: Array<[string, string[]]> = [
         ['Name', ['name_display']],
@@ -1300,7 +1332,7 @@ export const socialFormatters = [
         const displayRows = facilityRows(rows);
         printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true }));
       }
-      emitFactionRentSummary(r);
+      emitFacilityRentSummaries(r);
       return true;
     },
     { commands: ['facility_list'], shapeFallback: true },
