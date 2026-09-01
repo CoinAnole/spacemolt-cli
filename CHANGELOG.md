@@ -8,6 +8,8 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 - Human `player_kill` previews name schema `victim` and the wreck POI/system when the
   server sent them, so `get_notifications` shows where to fly.
+- Human `pirate_destroyed` previews name the pirate and wreck site; `player_died` names
+  the wreck left behind (or that it was suppressed).
 - JSON/YAML/jq field names are unchanged.
 
 ### Missing-materials error table (gameserver 0.569.1)
