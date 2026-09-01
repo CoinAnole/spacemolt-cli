@@ -547,6 +547,9 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('storage view [station_id] [target=self|faction]');
     expect(output).toContain(
+      'storage deposit [item_id] [qty] [items=JSON] [target=self|faction|player|station:…] [source=cargo|storage|faction]',
+    );
+    expect(output).toContain(
       'storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
     );
     expect(output).toContain('storage withdraw <item_id> <qty>  Personal storage -> cargo (omit source and target)');
@@ -650,7 +653,7 @@ describe('help output branches', () => {
     expect(showCommandHelp('storage deposit', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('credits - Credits to gift to another player.');
+    expect(output).toContain('credits - Credits to gift to another player. Not valid for station: targets.');
     expect(output).not.toContain('donate to an empire treasury');
   });
 
@@ -661,7 +664,32 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('gift items/credits/ships to players');
+    expect(output).toContain('target=self|faction|player|station:<base-or-POI-ID>');
+    expect(output).toContain('send_gift');
+    expect(output).toContain('already be docked');
+    expect(output).toContain('source=storage');
+    expect(output).toContain('No credits, ships, packages, or quest items');
+    expect(output).toContain(
+      'target - Target: self, faction, faction:TAG, empire alias, player name/ID, or station:<base-or-POI-ID>',
+    );
     expect(output).toContain('spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"');
+    expect(output).toContain('target=station:grand_exchange_station');
+    expect(output).toContain(
+      'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self; station gift: storage deposit steel_plate 20 target=station:grand_exchange_station',
+    );
+  });
+
+  test('command search maps send_gift to storage deposit without a send_gift command', () => {
+    const capture = captureWriter();
+    showCommandSearch('send_gift', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^\s*storage deposit /m);
+    expect(output).not.toMatch(/^\s*send_gift\b/m);
+    expect(suggestCommands('send_gift')).toEqual([]);
+    expect(suggestCommands('send_gift')).not.toContain('storage deposit');
+    expect(suggestCommands('send_gift')).not.toContain('storage_deposit');
+    expect(suggestCommands('send_gift')).not.toContain('send_gift');
   });
 
   test('showCommandGroup omits duplicate command-name descriptions', () => {

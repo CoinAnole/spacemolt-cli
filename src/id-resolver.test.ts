@@ -816,16 +816,148 @@ describe('cached ID payload resolver', () => {
             sourceCommand: 'get_nearby',
             seenAt: '2026-05-18T00:01:00.000Z',
           },
+          {
+            kind: 'player',
+            id: 'player-station-earth',
+            name: 'Station:Earth_Station',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:02:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-station-exchange',
+            name: 'station:grand_exchange_station',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:03:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-station-explorer',
+            name: 'Station:Explorer',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:04:00.000Z',
+          },
         ],
       })}\n`,
     );
 
-    for (const target of ['self', 'faction', 'faction:smc']) {
+    for (const target of [
+      'self',
+      'faction',
+      'faction:smc',
+      'station:earth_station',
+      'station:grand_exchange_station',
+      'Station:Earth_Station',
+      'Station:Explorer',
+    ]) {
       expect(prepareInternalPayload('storage_deposit', { target, credits: '200' }, options(), sessionPath)).toEqual({
         type: 'payload',
         payload: { target, credits: 200 },
       });
     }
+  });
+
+  test('does not rewrite station: deposit targets from cached player names', () => {
+    const sessionPath = useTempSession();
+
+    function writePlayerHint(id: string, name: string) {
+      fs.writeFileSync(
+        getIdCachePath(sessionPath),
+        `${JSON.stringify({
+          version: 1,
+          hints: [
+            {
+              kind: 'player',
+              id,
+              name,
+              sourceCommand: 'get_nearby',
+              seenAt: '2026-05-18T00:00:00.000Z',
+            },
+          ],
+        })}\n`,
+      );
+    }
+
+    writePlayerHint('player-station-earth', 'Station:Earth_Station');
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'station:earth_station', item_id: 'steel_plate', quantity: '20' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'station:earth_station', item_id: 'steel_plate', quantity: 20 },
+    });
+
+    writePlayerHint('player-station-explorer', 'Station:Explorer');
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'station:e', item_id: 'steel_plate', quantity: '20' },
+        options({ fuzzyIds: true }),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'station:e', item_id: 'steel_plate', quantity: 20 },
+    });
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'Station:Explorer', item_id: 'steel_plate', quantity: '20' },
+        options({ fuzzyIds: true }),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'Station:Explorer', item_id: 'steel_plate', quantity: 20 },
+    });
+
+    writePlayerHint('player-station-earth-fan', 'Station:Earth_Station_Fan');
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'station:earth_station', item_id: 'steel_plate', quantity: '20' },
+        options({ fuzzyIds: true }),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'station:earth_station', item_id: 'steel_plate', quantity: 20 },
+    });
+  });
+
+  test('still resolves unprefixed station-like player names for storage deposit', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-earth-station',
+            name: 'Earth Station',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'earth_station', item_id: 'steel_plate', quantity: '20' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'player-earth-station', item_id: 'steel_plate', quantity: 20 },
+    });
   });
 
   test('resolves faction diplomacy targets from cached faction tags after alias normalization', () => {

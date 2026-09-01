@@ -1091,6 +1091,10 @@ describe('command metadata', () => {
     expect(deposit?.description).toContain('before deposit validation');
     expect(deposit?.description).toContain('failed deposit may still leave you docked');
     expect(deposit?.description).toContain('Player gifts, empire donations, and faction:TAG donations');
+    expect(deposit?.description).toContain('station:');
+    expect(deposit?.description).toContain('send_gift');
+    expect(deposit?.description).toContain('already be docked');
+    expect(deposit?.description).toContain('they do not auto-dock');
     expect(deposit?.description).toContain('tow');
     expect(deposit?.description).toContain('tow rig');
     expect(deposit?.description).toContain('equal or smaller class scale');
@@ -1112,6 +1116,9 @@ describe('command metadata', () => {
     expect(depositHelp).toContain('same scale is allowed');
     expect(depositHelp).toContain('before deposit validation');
     expect(depositHelp).toContain('faction:TAG donations');
+    expect(depositHelp).toContain('send_gift');
+    expect(depositHelp).toContain('they do not auto-dock');
+    expect(depositHelp).toContain('station:<base-or-POI-ID>');
 
     const withdrawHelp = captureHelp('storage withdraw');
     expect(withdrawHelp).toContain("auto-dock at the current POI's base");

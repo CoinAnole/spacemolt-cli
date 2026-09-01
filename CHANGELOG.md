@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Station material gifts (gameserver 0.574.0)
+
+- `help storage deposit` documents `target=station:<base-or-POI-ID>` (docked-only, cargo vs `source=storage`, no credits/ships/packages/quest items).
+- Docs/v1 `send_gift` to a station is `storage deposit`; the CLI command `send_gift` stays removed.
+- `station:` deposit targets are reserved and are not rewritten from the player ID cache (strict exact match and `--fuzzy-ids`).
+
 ### Ship personnel and prize recoveries (gameserver 0.572.0)
 
 - `get_ship` and `get_status`/`get_state` print **Crew**, **Marines**, **Efficiency**, **Operational speed**,
