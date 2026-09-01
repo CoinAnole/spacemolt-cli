@@ -1,0 +1,8 @@
+Error [missing_materials]: need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo
+
+=== Missing materials ===
+
+  Item                 | ID                   | Need | Have
+  ---------------------+----------------------+------+-----
+  Optical Fiber Bundle | optical_fiber_bundle | 300  | 0   
+
