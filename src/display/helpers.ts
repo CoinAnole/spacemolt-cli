@@ -660,7 +660,7 @@ export function emitStationRepairs(repairs: unknown, options: { skipWrecked?: bo
   const remediation = nonEmptyString(repairs.remediation);
   if (remediation) {
     if (combined.length) emitLine('');
-    emitLine(remediation); // unindented so it is not read as a shortage row
+    emitLine(remediation);
   }
   return true;
 }
