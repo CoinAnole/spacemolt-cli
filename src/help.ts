@@ -7,6 +7,11 @@ import {
   CURATED_COMMAND_REGISTRY,
 } from './command-registry.ts';
 import { type CommandConfig, type LocalCommandConfig, routeToPath } from './commands.ts';
+import {
+  formatMissingMaterialsErrorLines,
+  isMissingMaterialErrorCode,
+  parseMissingMaterialRows,
+} from './error-details.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { schemaAllowsType } from './openapi-metadata.ts';
@@ -1315,6 +1320,7 @@ export function displayError(
     code?: unknown;
     message?: unknown;
     detail?: unknown;
+    details?: unknown;
     error?: unknown;
     wait_seconds?: unknown;
     retry_after?: unknown;
@@ -1350,6 +1356,14 @@ export function displayError(
   err(`${colors.red}Error [${code}]:${colors.reset} ${message}`);
   if (retryAfter !== undefined) {
     err(`${colors.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${colors.reset}`);
+  }
+  if (isMissingMaterialErrorCode(code)) {
+    const rows = parseMissingMaterialRows(error.details);
+    if (rows.length > 0) {
+      for (const line of formatMissingMaterialsErrorLines(rows, colors)) {
+        err(line);
+      }
+    }
   }
   if (!quiet) {
     const help = hasServerCode ? getContextualErrorSuggestion(code, message) : undefined;

@@ -21,6 +21,7 @@ import {
   suggestCommands,
 } from './help';
 import { runInvocation } from './main';
+import { colorsForPlain } from './output-style';
 import { setDefaultProfile } from './session';
 
 function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWriter } {
@@ -37,6 +38,45 @@ function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWrite
         stderr.push(message);
       },
     },
+  };
+}
+
+const missingMaterialsDetails = {
+  missing: [
+    {
+      item_id: 'optical_fiber_bundle',
+      item_name: 'Optical Fiber Bundle',
+      need: 300,
+      have: 0,
+    },
+    {
+      item_id: 'circuit_board',
+      item_name: 'Circuit Board',
+      need: 20,
+      have: 5,
+    },
+  ],
+};
+
+function missingMaterialsError(overrides: Record<string, unknown> = {}) {
+  return {
+    code: 'missing_materials',
+    message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+    details: missingMaterialsDetails,
+    ...overrides,
+  };
+}
+
+function missingMaterialsContext(
+  writer: CliWriter,
+  output: { quiet?: boolean; plain?: boolean } = { quiet: false, plain: true },
+): CliRuntimeContext {
+  return {
+    env: {},
+    writer,
+    clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+    sleep: () => Promise.resolve(),
+    output: { quiet: output.quiet ?? false, plain: output.plain ?? true },
   };
 }
 
@@ -1755,6 +1795,246 @@ describe('help output branches', () => {
     expect(output).toContain('Storage Extension bucket name "Reserve" is ambiguous');
     expect(output).toContain('pass the bucket id');
     expect(output).not.toContain('Target not found');
+  });
+
+  test('displayError prints a missing-materials table on stderr for facility upgrade', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError('facility upgrade', missingMaterialsError(), { context });
+
+    expect(capture.stdout).toEqual(['[2026-05-20T00:00:00.000Z]']);
+    expect(capture.stdout.join('\n')).not.toContain('=== Missing materials ===');
+    expect(capture.stderr[0]).toBe(
+      'Error [missing_materials]: need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+    );
+    expect(capture.stderr.join('\n')).toContain('=== Missing materials ===');
+    expect(capture.stderr.join('\n')).toContain('Optical Fiber Bundle');
+    expect(capture.stderr.join('\n')).toContain('optical_fiber_bundle');
+    expect(capture.stderr.join('\n')).toContain('This error may be retryable.');
+    expect(capture.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError prints the same table for missing_faction_materials without Next', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError('facility upgrade', missingMaterialsError({ code: 'missing_faction_materials' }), { context });
+
+    expect(capture.stdout).toEqual(['[2026-05-20T00:00:00.000Z]']);
+    expect(capture.stderr[0]).toBe(
+      'Error [missing_faction_materials]: need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+    );
+    expect(capture.stderr.join('\n')).toContain('=== Missing materials ===');
+    expect(capture.stderr.join('\n')).toContain('Circuit Board');
+    expect(capture.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError still prints the missing-materials table in quiet mode', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer, { quiet: true, plain: true });
+
+    displayError('facility upgrade', missingMaterialsError(), { context });
+
+    expect(capture.stdout).toEqual([]);
+    expect(capture.stderr[0]).toBe(
+      'Error [missing_materials]: need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+    );
+    expect(capture.stderr.join('\n')).toContain('=== Missing materials ===');
+    expect(capture.stderr.join('\n')).toContain('Optical Fiber Bundle');
+    expect(capture.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(capture.stderr.join('\n')).not.toContain('This error may be retryable.');
+    expect(capture.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError prints Wait then the missing-materials table and skips retryable', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError('facility upgrade', missingMaterialsError({ retry_after: 2 }), { context });
+
+    expect(capture.stdout).toEqual(['[2026-05-20T00:00:00.000Z]']);
+    expect(capture.stderr[0]).toBe(
+      'Error [missing_materials]: need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+    );
+    expect(capture.stderr[1]).toBe('Wait 2.0 seconds before retrying.');
+    expect(capture.stderr[2]).toBe('');
+    expect(capture.stderr[3]).toBe('=== Missing materials ===');
+    expect(capture.stderr.join('\n')).toContain('Optical Fiber Bundle');
+    expect(capture.stderr.join('\n')).not.toContain('This error may be retryable.');
+    expect(capture.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError wraps only the missing-materials title when not plain', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer, { quiet: false, plain: false });
+    const colors = colorsForPlain(false);
+
+    displayError('facility upgrade', missingMaterialsError(), { context });
+
+    const titleLine = capture.stderr.find((line) => line.includes('=== Missing materials ==='));
+    expect(titleLine).toBe(`${colors.bright}=== Missing materials ===${colors.reset}`);
+    const dataRows = capture.stderr.filter(
+      (line) => line.includes('Optical Fiber Bundle') || line.includes('Circuit Board'),
+    );
+    expect(dataRows.length).toBe(2);
+    for (const row of dataRows) expect(row).not.toContain('\x1b[');
+  });
+
+  test('displayError leaves a blank line between the last shortage row and retryable', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError('facility upgrade', missingMaterialsError(), { context });
+
+    const retryableIndex = capture.stderr.indexOf('This error may be retryable.');
+    expect(retryableIndex).toBeGreaterThan(1);
+    expect(capture.stderr[retryableIndex - 1]).toBe('');
+    expect(capture.stderr[retryableIndex - 2]).toContain('Circuit Board');
+  });
+
+  test('displayError still uses detail as the message fallback and does not parse it as details', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError('get_status', { detail: 'temporarily unavailable' }, { context });
+
+    expect(capture.stderr.join('\n')).toContain('Error [api_error]: temporarily unavailable');
+    expect(capture.stderr.join('\n')).not.toContain('=== Missing materials ===');
+  });
+
+  test('displayError tables from details without using the detail message fallback', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+    const message = 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo';
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'missing_materials',
+        message,
+        details: missingMaterialsDetails,
+      },
+      { context },
+    );
+
+    expect(capture.stderr[0]).toBe(`Error [missing_materials]: ${message}`);
+    expect(capture.stderr.join('\n')).toContain('=== Missing materials ===');
+    expect(capture.stderr.join('\n')).toContain('Optical Fiber Bundle');
+  });
+
+  test('displayError omits the table when details is absent', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+      },
+      { context },
+    );
+
+    expect(capture.stderr.join('\n')).toContain('Error [missing_materials]:');
+    expect(capture.stderr.join('\n')).not.toContain('=== Missing materials ===');
+  });
+
+  test('displayError omits the table for a legacy details array', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+        details: missingMaterialsDetails.missing,
+      },
+      { context },
+    );
+
+    expect(capture.stderr.join('\n')).not.toContain('=== Missing materials ===');
+  });
+
+  test('displayError omits the table when missing is an object', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+        details: { missing: { item_id: 'optical_fiber_bundle', need: 300, have: 0 } },
+      },
+      { context },
+    );
+
+    expect(capture.stderr.join('\n')).not.toContain('=== Missing materials ===');
+  });
+
+  test('displayError omits the table when missing is empty even with extra keys', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+        details: { missing: [], extra: 1 },
+      },
+      { context },
+    );
+
+    expect(capture.stderr.join('\n')).not.toContain('=== Missing materials ===');
+  });
+
+  test('displayError ignores details.missing on unrelated error codes', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer);
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'no_credits',
+        message: 'not enough credits',
+        details: missingMaterialsDetails,
+      },
+      { context },
+    );
+
+    expect(capture.stderr.join('\n')).toContain('Error [no_credits]: not enough credits');
+    expect(capture.stderr.join('\n')).not.toContain('=== Missing materials ===');
+  });
+
+  test('displayError prints only the Error line when shortage rows are malformed', () => {
+    const capture = captureWriter();
+    const context = missingMaterialsContext(capture.writer, { quiet: true, plain: true });
+
+    displayError(
+      'facility upgrade',
+      {
+        code: 'missing_materials',
+        message: 'need materials',
+        details: {
+          missing: [
+            { item_name: { nested: true }, need: 1, have: 0 },
+            { item_id: 'bad_need', need: [], have: 0 },
+            { item_id: 'optical_fiber_bundle', need: Number.NaN, have: 0 },
+          ],
+        },
+      },
+      { context },
+    );
+
+    expect(capture.stderr).toEqual(['Error [missing_materials]: need materials']);
+    const joined = capture.stderr.join('\n');
+    expect(joined).not.toContain('=== Missing materials ===');
+    expect(joined).not.toContain('undefined');
+    expect(joined).not.toContain('NaN');
+    expect(joined).not.toContain('[object Object]');
   });
 
   test('generated ship_faction_personnel is not a dispatchable command after faction personnel curation', () => {
