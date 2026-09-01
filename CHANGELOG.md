@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Missing-materials error table (gameserver 0.569.1)
+
+- Human errors with code `missing_materials` or `missing_faction_materials` print
+  `details.missing` as a compact Item / ID / Need / Have table on stderr.
+- The table is omitted when `details` is absent or not that shape. `--quiet`
+  still prints it; suggestions stay quiet-gated.
+- `--json` / `--structured` / `--format json` field names are unchanged. `--format yaml`
+  errors stay on the human path (now with this table when `details.missing` parses).
+
 ### Combined repair shortages (gameserver 0.573.1)
 
 - Human `get_base` and `inspect` of a docked base print combined supply shortages after

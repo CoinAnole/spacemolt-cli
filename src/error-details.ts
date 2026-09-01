@@ -1,3 +1,5 @@
+import { formatCompactTable } from './display/tables.ts';
+import type { DirectColors } from './output-style.ts';
 import { isRecord } from './response.ts';
 
 export const MISSING_MATERIAL_ERROR_CODES = ['missing_materials', 'missing_faction_materials'] as const;
@@ -32,6 +34,36 @@ export function parseMissingMaterialRows(details: unknown): MissingMaterialRow[]
     rows.push({ item_id, item_name, need, have });
   }
   return rows;
+}
+
+export function formatMissingMaterialsErrorLines(rows: MissingMaterialRow[], colors: DirectColors): string[] {
+  if (rows.length === 0) return [];
+
+  const TITLE = 'Missing materials';
+  const raw = formatCompactTable(
+    TITLE,
+    rows.map((row) => ({
+      item_name: row.item_name,
+      item_id: row.item_id,
+      need: String(row.need),
+      have: String(row.have),
+    })),
+    [
+      ['Item', ['item_name', 'item_id']],
+      ['ID', ['item_id']],
+      ['Need', ['need']],
+      ['Have', ['have']],
+    ],
+    { maxCellWidth: 48 },
+  );
+  const visual = raw.flatMap((line) => line.split('\n'));
+  const titleIndex = visual.findIndex((line) => line.includes(`=== ${TITLE} ===`));
+  const titleLine = titleIndex >= 0 ? visual[titleIndex] : undefined;
+  if (titleIndex >= 0 && titleLine !== undefined) {
+    visual[titleIndex] = titleLine.replace(`=== ${TITLE} ===`, `${colors.bright}=== ${TITLE} ===${colors.reset}`);
+  }
+  visual.push('');
+  return visual;
 }
 
 function usableString(value: unknown): string | undefined {

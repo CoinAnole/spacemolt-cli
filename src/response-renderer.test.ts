@@ -876,6 +876,40 @@ describe('response renderer', () => {
     });
   });
 
+  test('renderResponse round-trips structured error details without wrapping fields', async () => {
+    const capture = fakeContext();
+    const response = {
+      error: {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+        details: {
+          missing: [
+            {
+              item_id: 'optical_fiber_bundle',
+              item_name: 'Optical Fiber Bundle',
+              need: 300,
+              have: 0,
+            },
+          ],
+        },
+      },
+    };
+    const exitCode = await renderResponse(
+      {
+        command: 'facility_upgrade',
+        displayCommand: 'facility_upgrade',
+        response,
+      },
+      { ...baseOptions, dryRun: true, structured: true },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(capture.stdout).toEqual([]);
+    expect(JSON.parse(capture.stderr.join('\n'))).toEqual(response);
+  });
+
   test('renderResponse prints cached ID suggestions for ID-like errors', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-renderer-'));
     try {

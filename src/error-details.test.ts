@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { isMissingMaterialErrorCode, type MissingMaterialRow, parseMissingMaterialRows } from './error-details.ts';
+import {
+  formatMissingMaterialsErrorLines,
+  isMissingMaterialErrorCode,
+  type MissingMaterialRow,
+  parseMissingMaterialRows,
+} from './error-details.ts';
+import { colorsForPlain } from './output-style.ts';
 
 const opticalFiber: MissingMaterialRow = {
   item_id: 'optical_fiber_bundle',
@@ -165,5 +171,57 @@ describe('parseMissingMaterialRows', () => {
         ),
       ),
     ).toEqual([opticalFiber, circuitBoard]);
+  });
+});
+
+describe('formatMissingMaterialsErrorLines', () => {
+  const accidentalTokens = ['undefined', 'NaN', '[object Object]'];
+
+  test('formats two valid rows as visual lines without ANSI when plain', () => {
+    const lines = formatMissingMaterialsErrorLines([opticalFiber, circuitBoard], colorsForPlain(true));
+    expect(lines[0]).toBe('');
+    expect(lines[1]).toBe('=== Missing materials ===');
+    expect(lines[2]).toBe('');
+    expect(lines[3]).toContain('Item');
+    expect(lines[3]).toContain('ID');
+    expect(lines[3]).toContain('Need');
+    expect(lines[3]).toContain('Have');
+    expect(lines[4]).toMatch(/-/);
+    expect(lines[5]).toContain('Optical Fiber Bundle');
+    expect(lines[5]).toContain('optical_fiber_bundle');
+    expect(lines[5]).toContain('300');
+    expect(lines[5]).toContain('0');
+    expect(lines[6]).toContain('Circuit Board');
+    expect(lines[6]).toContain('circuit_board');
+    expect(lines[6]).toContain('20');
+    expect(lines[6]).toContain('5');
+    expect(lines[7]).toBe('');
+    expect(lines).toHaveLength(8);
+    const joined = lines.join('\n');
+    expect(joined).not.toContain('\x1b[');
+    for (const token of accidentalTokens) expect(joined).not.toContain(token);
+  });
+
+  test('wraps only the title line after split when colors are enabled', () => {
+    const colors = colorsForPlain(false);
+    const lines = formatMissingMaterialsErrorLines([opticalFiber, circuitBoard], colors);
+    expect(lines[0]).toBe('');
+    expect(lines[0]).not.toContain('\x1b[');
+    expect(lines[1]).toBe(`${colors.bright}=== Missing materials ===${colors.reset}`);
+    expect(lines[1]).toContain(colors.bright);
+    expect(lines[1]).toContain(colors.reset);
+    expect(lines[5]).toContain('Optical Fiber Bundle');
+    expect(lines[5]).not.toContain('\x1b[');
+    expect(lines[6]).toContain('Circuit Board');
+    expect(lines[6]).not.toContain('\x1b[');
+    const joined = lines.join('\n');
+    for (const token of accidentalTokens) expect(joined).not.toContain(token);
+  });
+
+  test('returns no (None) table when there are no rows', () => {
+    const lines = formatMissingMaterialsErrorLines([], colorsForPlain(true));
+    expect(lines).toEqual([]);
+    expect(lines.join('\n')).not.toContain('(None)');
+    expect(lines.join('\n')).not.toContain('=== Missing materials ===');
   });
 });
