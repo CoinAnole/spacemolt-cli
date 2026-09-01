@@ -4,7 +4,7 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
-### Diplomacy notification previews (gameserver 0.573.2)
+### Diplomacy and ops notification previews (gameserver 0.573.2)
 
 - Human `get_notifications` / `notifications` prefer the server `message` as the
   headline for war, peace, and alliance frames. When `message` is absent, copy is
@@ -18,6 +18,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `faction_alliance_formed` / `faction_alliance_broken` (`FACTION`). Alliance proposals
   include `Use: faction accept_ally target_faction_id=…`; peace proposals still include
   `Use: faction accept_peace target_faction_id=…`.
+- `server_restart_warning` (`SYSTEM`) prints `Server restart in Ns` in the headline,
+  with `(target_version)` when present, and the server `message` as a detail when it is
+  not already the headline.
+- `drone_adrift` (`DRONE`) names type, POI, and system so the drone can be recovered at
+  its last fuel-in-transit location. Drone ID is shown only when present; empty payloads
+  print `A drone is adrift`. Recovery hints: `get_drone`, then `recall_drone`.
 - JSON/YAML/jq field names are unchanged.
 
 ### Station material gifts (gameserver 0.574.0)
