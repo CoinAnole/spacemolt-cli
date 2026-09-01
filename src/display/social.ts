@@ -316,6 +316,74 @@ function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): voi
   }
 }
 
+function emitRecoveredBattleSummary(entry: Record<string, unknown>): void {
+  const summary = entry.recovered_summary;
+  if (!isRecord(summary)) return;
+
+  emitLine(`\n${c.bright}=== Recovered Summary ===${c.reset}`);
+  if (typeof entry.tick === 'number' && Number.isFinite(entry.tick)) {
+    emitLine(`Tick: ${entry.tick}`);
+  }
+  emitDefinedLine('Category', summary.category);
+  emitDefinedLine('Start Tick', summary.start_tick);
+  if (
+    summary.duration !== undefined &&
+    summary.duration !== null &&
+    summary.duration !== '' &&
+    !isRecord(summary.duration) &&
+    !Array.isArray(summary.duration)
+  ) {
+    emitLine(`Duration: ${summary.duration} ticks`);
+  }
+  emitDefinedLine('Total Damage', summary.total_damage);
+  emitDefinedLine('Ships Destroyed', summary.ships_destroyed);
+  emitDefinedLine('Ships Captured', summary.ships_captured);
+
+  const participants = Array.isArray(summary.participants) ? summary.participants.filter(isRecord) : [];
+  if (
+    participants.length === 0 &&
+    Array.isArray(summary.participant_names) &&
+    summary.participant_names.length > 0 &&
+    summary.participant_names.every((name) => typeof name === 'string')
+  ) {
+    emitLine(`Players: ${summary.participant_names.join(', ')}`);
+  }
+
+  if (isRecord(summary.side_factions)) {
+    const factionRows = Object.entries(summary.side_factions).map(([side_id, faction]) => ({
+      side_id,
+      faction: isRecord(faction) || Array.isArray(faction) ? undefined : faction,
+    }));
+    if (factionRows.length) {
+      printCompactTable('Recovered Side Factions', factionRows, [
+        ['Side', ['side_id']],
+        ['Faction', ['faction']],
+      ]);
+    }
+  }
+
+  if (participants.length) {
+    const rows = participants.map((row) => ({
+      ...withIdentityDisplays(row),
+      survived_display: formatYesNo(row.survived),
+    }));
+    const columns: Array<[string, string[]]> = [
+      ['Name', ['username']],
+      ['ID', ['player_id']],
+      ['Side', ['side_id']],
+    ];
+    appendIdentityColumns(columns, rows);
+    if (hasAnyField(rows, ['survived_display'])) columns.push(['Survived', ['survived_display']]);
+    columns.push(['Dealt', ['damage_dealt']], ['Taken', ['damage_taken']], ['Kills', ['kill_count']]);
+    printCompactTable('Recovered Participants', rows, columns);
+  }
+
+  const captures = firstNonEmptyRecords(summary.captures);
+  if (captures) {
+    printCompactTable('Recovered Captures', captureIdentityRows(captures), captureTableColumns(false));
+  }
+}
+
 function formatPercentValue(value: unknown): string | undefined {
   const number = formatNumber(value);
   return number === undefined ? undefined : `${number}%`;
@@ -1681,6 +1749,9 @@ export const socialFormatters = [
           ];
           appendIdentityColumns(columns, combatantRows);
           printCompactTable('Combatants', combatantRows, columns);
+        }
+        for (const logEntry of entries) {
+          emitRecoveredBattleSummary(logEntry);
         }
       }
       return true;
