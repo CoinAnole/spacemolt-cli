@@ -1247,11 +1247,15 @@ describe('command metadata', () => {
     expect(COMMANDS.get_base?.description).toContain('Get docked station details');
     expect(COMMANDS.get_base?.description).toContain('repair queue');
     expect(COMMANDS.get_base?.description).toContain('hull recovery');
+    expect(COMMANDS.get_base?.description).toContain('combined');
+    expect(COMMANDS.get_base?.description).toContain('shared stock');
     expect(COMMANDS.get_base?.description).toContain('missing supplies');
     expect(COMMANDS.get_base?.seeAlso).toEqual(['facility_repair', 'facility_list', 'view_market', 'storage']);
 
     const help = captureHelp('get_base');
     expect(help).toContain('repair queue');
+    expect(help).toContain('combined');
+    expect(help).toContain('shared stock');
     expect(help).toContain('facility repair');
     expect(help).toContain('facility list');
     expect(help).toContain('view_market');

@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Combined repair shortages (gameserver 0.573.1)
+
+- Human `get_base` and `inspect` of a docked base print combined supply shortages after
+  the repair queue. Shared stock is counted once, so two waiting repairs that each need
+  10 steel with 5 in storage show 15 missing, not 10. The delivery hint is unindented so
+  it is not read as a shortage row.
+- JSON/YAML field names are unchanged.
+
 ### Diplomacy and ops notification previews (gameserver 0.573.2)
 
 - Human `get_notifications` / `notifications` prefer the server `message` as the

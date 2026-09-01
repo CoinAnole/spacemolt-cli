@@ -545,6 +545,12 @@ function hasStationRepairWork(repairs: Record<string, unknown>): boolean {
   const hullCurrent = finiteNumber(repairs.hull_current);
   const hullRequired = finiteNumber(repairs.hull_required);
   if (hullCurrent !== undefined && hullRequired !== undefined && hullCurrent !== hullRequired) return true;
+  if (
+    Array.isArray(repairs.materials) &&
+    repairs.materials.filter(isRecord).some((material) => Boolean(formatStationMaterial(material)))
+  ) {
+    return true;
+  }
   return Boolean(nonEmptyString(repairs.remediation));
 }
 
@@ -638,8 +644,24 @@ export function emitStationRepairs(repairs: unknown, options: { skipWrecked?: bo
     );
   }
 
+  const combined: string[] = [];
+  if (Array.isArray(repairs.materials)) {
+    for (const material of repairs.materials) {
+      if (!isRecord(material)) continue;
+      const formatted = formatStationMaterial(material);
+      if (formatted) combined.push(formatted);
+    }
+  }
+  if (combined.length) {
+    emitLine('Combined shortages:');
+    for (const line of combined) emitLine(`  ${line}`);
+  }
+
   const remediation = nonEmptyString(repairs.remediation);
-  if (remediation) emitLine(`  ${remediation}`);
+  if (remediation) {
+    if (combined.length) emitLine('');
+    emitLine(remediation);
+  }
   return true;
 }
 
