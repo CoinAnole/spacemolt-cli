@@ -1,0 +1,11 @@
+count 5
+
+=== Notifications ===
+
+  Timestamp           | Type             | Message                                                     
+  --------------------+------------------+-------------------------------------------------------------
+  2026-05-23 19:10:00 | player_kill      | You destroyed Marlowe!; wreck wreck-1 at Asteroid Belt (Sol)
+  2026-05-23 19:10:05 | player_died      | Destroyed by Raider!; wreck wreck-2 at Gate Alpha (Alfirk)  
+  2026-05-23 19:10:10 | pirate_destroyed | Corsair destroyed!; wreck wreck-3 at Cloudbank (Sol)        
+  2026-05-23 19:10:15 | pirate_destroyed | Marlowe destroyed the Dreadnought in Sol!                   
+  2026-05-23 19:10:20 | player_kill      | You destroyed Wisp!; wreck wreck-hidden-1 in Sol            

@@ -200,6 +200,110 @@ export const getNotificationsObservationFixture = {
   timestamp: 1779563102,
 };
 
+/** Combat kill poll: player_kill, player_died, pirate private, pirate broadcast, hidden POI. */
+export const getNotificationsCombatKillsFixture = {
+  count: 5,
+  current_tick: 901780,
+  remaining: 0,
+  timestamp: 1779564000,
+  notifications: [
+    {
+      id: 'notif-player-kill-1',
+      type: 'combat',
+      msg_type: 'player_kill',
+      timestamp: '2026-05-23T19:10:00.000Z',
+      data: {
+        victim: 'Marlowe',
+        wreck_id: 'wreck-1',
+        wreck_has_cargo: true,
+        wreck_has_modules: false,
+        wreck_poi_id: 'sol_asteroid_belt',
+        wreck_poi_name: 'Asteroid Belt',
+        wreck_system_id: 'sol',
+        wreck_system_name: 'Sol',
+      },
+    },
+    {
+      id: 'notif-player-died-1',
+      type: 'combat',
+      msg_type: 'player_died',
+      timestamp: '2026-05-23T19:10:05.000Z',
+      data: {
+        killer_id: 'player-raider',
+        killer_name: 'Raider',
+        cause: 'combat',
+        respawn_base: 'earth_station',
+        clone_cost: 500,
+        insurance_payout: 1200,
+        ship_lost: 'Dust Devil',
+        wreck_id: 'wreck-2',
+        wreck_poi_id: 'alfirk_gate',
+        wreck_poi_name: 'Gate Alpha',
+        wreck_system_id: 'alfirk',
+        wreck_system_name: 'Alfirk',
+        combat_log: {
+          message: 'Last stand at the gate',
+          attacker_ship: 'raider_frigate',
+          weapons_used: { laser: 3, missile: 1 },
+          total_damage: 120,
+          shield_damage: 40,
+          hull_damage: 80,
+          combat_rounds: 4,
+          death_location: 'Gate Alpha',
+          death_system: 'Alfirk',
+        },
+      },
+    },
+    {
+      id: 'notif-pirate-destroyed-1',
+      type: 'combat',
+      msg_type: 'pirate_destroyed',
+      timestamp: '2026-05-23T19:10:10.000Z',
+      data: {
+        pirate_id: 'pirate-corsair-7',
+        pirate_name: 'Corsair',
+        pirate_role: 'raider',
+        is_boss: false,
+        credits_earned: 150,
+        combat_xp: 25,
+        wreck_id: 'wreck-3',
+        wreck_has_cargo: true,
+        wreck_has_modules: true,
+        wreck_poi_id: 'sol_cloudbank',
+        wreck_poi_name: 'Cloudbank',
+        wreck_system_id: 'sol',
+        wreck_system_name: 'Sol',
+      },
+    },
+    {
+      id: 'notif-pirate-broadcast-1',
+      type: 'combat',
+      msg_type: 'pirate_destroyed',
+      timestamp: '2026-05-23T19:10:15.000Z',
+      data: {
+        pirate_name: 'Dreadnought',
+        pirate_role: 'boss',
+        killer: 'Marlowe',
+        system_id: 'sol',
+        system_name: 'Sol',
+        message: 'Marlowe destroyed the Dreadnought in Sol!',
+      },
+    },
+    {
+      id: 'notif-player-kill-hidden-1',
+      type: 'combat',
+      msg_type: 'player_kill',
+      timestamp: '2026-05-23T19:10:20.000Z',
+      data: {
+        victim: 'Wisp',
+        wreck_id: 'wreck-hidden-1',
+        wreck_system_id: 'sol',
+        wreck_system_name: 'Sol',
+      },
+    },
+  ],
+};
+
 export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_notifications: {
     command: 'get_notifications',
@@ -208,6 +312,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_observation: {
     command: 'get_notifications',
     fixture: getNotificationsObservationFixture,
+  },
+  get_notifications_combat_kills: {
+    command: 'get_notifications',
+    fixture: getNotificationsCombatKillsFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {
