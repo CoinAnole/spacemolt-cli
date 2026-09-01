@@ -17,7 +17,13 @@ export interface APIResponse {
   structuredContent?: Record<string, unknown>;
   notifications?: Array<{ type: string; msg_type?: string; data: unknown; timestamp: string }>;
   session?: { id: string; player_id?: string; created_at: string; expires_at: string };
-  error?: { code: string; message: string; wait_seconds?: number; retry_after?: number };
+  error?: {
+    code: string;
+    message: string;
+    wait_seconds?: number;
+    retry_after?: number;
+    details?: { [key: string]: JsonValue };
+  };
 }
 
 export interface GlobalOptions {
