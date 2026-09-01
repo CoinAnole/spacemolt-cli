@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Combat kill notification previews (gameserver 0.574.9)
+
+- Human `player_kill` previews name schema `victim` and the wreck POI/system when the
+  server sent them, so `get_notifications` shows where to fly.
+- JSON/YAML/jq field names are unchanged.
+
 ### Missing-materials error table (gameserver 0.569.1)
 
 - Human errors with code `missing_materials` or `missing_faction_materials` print
