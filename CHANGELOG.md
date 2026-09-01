@@ -4,14 +4,18 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
-### Battle identity columns (gameserver 0.575.0)
+### Battle identity columns and interrupted logs (gameserver 0.575.0 / 0.574.8)
 
 - Human `get_battle_status` Participants tables print NPC as yes/no when `is_npc` is
   present. There is no Boss column on status (schema has no `is_boss`).
 - Human `get_nearby` / `subscribe_observation` pirate lines prefix `Boss ` when
   `is_boss` is true. Regular pirates are unchanged.
 - Human `get_battle_log` prints a Combatants table from tick snapshots when present
-  (Kind/NPC/Boss) and prefixes `Boss ` on attack From/To when snapshot `is_boss` is true.
+  (Kind/NPC/Boss), prefixes `Boss ` on attack From/To when snapshot `is_boss` is true,
+  and prints Recovered Summary when `recovered_summary` is present. Interrupted ticks
+  without that object still only show `interrupted` in Ticks Ended.
+- Interrupted summaries print `Outcome: interrupted` and still omit `Winning Side: -1`.
+- JSON/YAML/jq field names are unchanged.
 
 ### Combat kill notification previews (gameserver 0.574.9)
 

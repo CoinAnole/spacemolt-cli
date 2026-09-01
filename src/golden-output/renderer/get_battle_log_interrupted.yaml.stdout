@@ -1,0 +1,12 @@
+
+battle_id: "battle-42"
+status: completed
+total_ticks: 8
+has_more: false
+entries:
+  - battle_id: "battle-42"
+    system_id: sol
+    tick: 8
+    snapshots: []
+    battle_ended: {outcome: interrupted, winning_side: -1, duration: 8, total_damage: 1200, ships_destroyed: 0, category: pvp, participants: [{player_id: "player-1", username: Marlowe, side_id: 1, damage_dealt: 0, damage_taken: 0, kill_count: 0, survived: true, kind: player, is_npc: false}]}
+    recovered_summary: {start_tick: 900100, duration: 8, total_damage: 1200, ships_destroyed: 0, ships_captured: 1, category: pvp, side_factions: {1: SMC, 2: pirate_kael}, captures: [{ship_id: "ship-skiff-1", ship_class: skiff, captor_id: "player-1", captor_username: Marlowe, former_owner_id: "pirate-1", former_owner_username: Corsair, boarding_operation_id: "board-1"}], participants: [{player_id: "player-1", username: Marlowe, side_id: 1, damage_dealt: 800, damage_taken: 0, kill_count: 0, survived: true, kind: player, is_npc: false, is_boss: false}, {player_id: "pirate-boss-1", username: Dreadnought, side_id: 2, damage_dealt: 400, damage_taken: 0, kill_count: 0, survived: true, kind: pirate, is_npc: true, is_boss: true}]}

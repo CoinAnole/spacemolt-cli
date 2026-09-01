@@ -735,6 +735,32 @@ function attackLogEntry(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
+function participantSummary(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    player_id: 'player-1',
+    username: 'Marlowe',
+    side_id: 1,
+    damage_dealt: 0,
+    damage_taken: 0,
+    kill_count: 0,
+    survived: true,
+    ...overrides,
+  };
+}
+
+function captureLogEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    ship_id: 'ship-skiff-1',
+    ship_class: 'skiff',
+    captor_id: 'player-1',
+    captor_username: 'Marlowe',
+    former_owner_id: 'pirate-1',
+    former_owner_username: 'Corsair',
+    boarding_operation_id: 'board-1',
+    ...overrides,
+  };
+}
+
 export const battleLogSnapshotsFixture = {
   battle_id: 'battle-42',
   status: 'active',
@@ -790,6 +816,78 @@ export const battleLogSnapshotsFixture = {
     },
   ],
 };
+
+export const battleLogInterruptedFixture = {
+  battle_id: 'battle-42',
+  status: 'completed',
+  total_ticks: 8,
+  has_more: false,
+  entries: [
+    {
+      battle_id: 'battle-42',
+      system_id: 'sol',
+      tick: 8,
+      snapshots: [],
+      battle_ended: {
+        outcome: 'interrupted',
+        winning_side: -1,
+        duration: 8,
+        total_damage: 1200,
+        ships_destroyed: 0,
+        category: 'pvp',
+        participants: [
+          participantSummary({
+            player_id: 'player-1',
+            username: 'Marlowe',
+            kind: 'player',
+            is_npc: false,
+            survived: true,
+          }),
+        ],
+      },
+      recovered_summary: {
+        start_tick: 900100,
+        duration: 8,
+        total_damage: 1200,
+        ships_destroyed: 0,
+        ships_captured: 1,
+        category: 'pvp',
+        side_factions: { '1': 'SMC', '2': 'pirate_kael' },
+        captures: [captureLogEntry()],
+        participants: [
+          participantSummary({
+            player_id: 'player-1',
+            username: 'Marlowe',
+            kind: 'player',
+            is_npc: false,
+            is_boss: false,
+            survived: true,
+            damage_dealt: 800,
+          }),
+          participantSummary({
+            player_id: 'pirate-boss-1',
+            username: 'Dreadnought',
+            side_id: 2,
+            kind: 'pirate',
+            is_npc: true,
+            is_boss: true,
+            survived: true,
+            damage_dealt: 400,
+          }),
+        ],
+      },
+    },
+  ],
+};
+
+export const battleSummaryInterruptedFixture: Record<string, unknown> = {
+  ...battleSummaryFixture,
+  outcome: 'interrupted',
+  winning_side: -1,
+  ships_destroyed: 0,
+  ships_captured: 0,
+};
+delete battleSummaryInterruptedFixture.destroyed_names;
 
 export const captainLogGetFixture = {
   index: 0,
@@ -1221,9 +1319,11 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
+  get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
   get_battle_log_snapshots: { command: 'get_battle_log', fixture: battleLogSnapshotsFixture },
+  get_battle_log_interrupted: { command: 'get_battle_log', fixture: battleLogInterruptedFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },
   facility_types_detail: {
     command: 'facility_types',

@@ -1,0 +1,41 @@
+
+=== Battle Log ===
+ID: battle-42
+Status: completed
+Total Ticks: 8
+Has More: no
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Ended      
+  -----+---------+------+--------+-------+------+-------+------------
+  8    | 0       | 0    |        |       |      |       | interrupted
+
+=== Recovered Summary ===
+Tick: 8
+Category: pvp
+Start Tick: 900100
+Duration: 8 ticks
+Total Damage: 1200
+Ships Destroyed: 0
+Ships Captured: 1
+
+=== Recovered Side Factions ===
+
+  Side | Faction    
+  -----+------------
+  1    | SMC        
+  2    | pirate_kael
+
+=== Recovered Participants ===
+
+  Name        | ID            | Side | Kind   | NPC | Boss | Survived | Dealt | Taken | Kills
+  ------------+---------------+------+--------+-----+------+----------+-------+-------+------
+  Marlowe     | player-1      | 1    | player | no  | no   | yes      | 800   | 0     | 0    
+  Dreadnought | pirate-boss-1 | 2    | pirate | yes | yes  | yes      | 400   | 0     | 0    
+
+=== Recovered Captures ===
+
+  Ship         | Class | Captor             | Former owner       | Boarding
+  -------------+-------+--------------------+--------------------+---------
+  ship-skiff-1 | skiff | Marlowe (player-1) | Corsair (pirate-1) | board-1 

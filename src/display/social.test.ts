@@ -6,11 +6,13 @@ import {
   actionLogCursorFixture,
   battleLogBoardingFixture,
   battleLogFixture,
+  battleLogInterruptedFixture,
   battleLogSnapshotsFixture,
   battleStatusBoardingFixture,
   battleStatusFixture,
   battleSummaryCapturesFixture,
   battleSummaryFixture,
+  battleSummaryInterruptedFixture,
   facilityListFixture,
   facilityListSimpleFixture,
   facilityOwnedFixture,
@@ -1295,6 +1297,36 @@ test('get_battle_summary omits Has Station when has_station is absent', () => {
   expect(stdout).not.toContain('Has Station:');
 });
 
+test('get_battle_summary interrupted fixture prints Outcome and omits Winning Side and Destroyed', () => {
+  const stdout = renderStructuredResult(
+    'get_battle_summary',
+    structuredClone(battleSummaryInterruptedFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Outcome: interrupted');
+  expect(stdout).not.toContain('Winning Side:');
+  expect(stdout).not.toContain('\nDestroyed:');
+  expect(stdout).not.toContain('-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_battle_summary interrupted JSON passthrough keeps winning_side -1', () => {
+  const rendered = renderStructuredResult(
+    'get_battle_summary',
+    structuredClone(battleSummaryInterruptedFixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as Record<string, unknown>;
+
+  expect(parsed.winning_side).toBe(-1);
+  expect(parsed.outcome).toBe('interrupted');
+  expect(parsed.ships_destroyed).toBe(0);
+  expect(parsed).not.toHaveProperty('destroyed_names');
+});
+
 test('get_battle_summary omits Winning Side on stalemate winning_side -1', () => {
   const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
   fixture.outcome = 'stalemate';
@@ -2017,6 +2049,212 @@ test('get_battle_log prints Combatants Kind/NPC/Boss and Boss prefix on Attacks'
   expect(attacks).toContain('Marlowe');
   expect(attacks).not.toContain('pirate-boss-1');
   expect(attacks).not.toContain('player-1');
+});
+
+function battleLogTicksOnly(stdout: string): string {
+  return (stdout.split('=== Ticks ===')[1] ?? '').split('===')[0] ?? '';
+}
+
+function recoveredSummaryOf(fixture: Record<string, unknown>): Record<string, unknown> {
+  const entries = fixture.entries as Array<Record<string, unknown>>;
+  const recovered = entries[0]?.recovered_summary;
+  if (!recovered || typeof recovered !== 'object' || Array.isArray(recovered)) {
+    throw new Error('expected recovered_summary record');
+  }
+  return recovered as Record<string, unknown>;
+}
+
+test('get_battle_log interrupted without recovered_summary only prints Ended interrupted', () => {
+  const fixture = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const entries = fixture.entries as Array<Record<string, unknown>>;
+  delete entries[0]?.recovered_summary;
+  const stdout = renderBattleLog(fixture);
+  const ticks = battleLogTicksOnly(stdout);
+
+  expect(ticks).toContain('interrupted');
+  expect(ticks).not.toContain('-1');
+  expect(stdout).not.toContain('=== Recovered Summary ===');
+  expect(stdout).not.toContain('=== Recovered Participants ===');
+  expect(stdout).not.toContain('=== Recovered Side Factions ===');
+  expect(stdout).not.toContain('=== Recovered Captures ===');
+  expect(stdout).not.toContain('=== Combatants ===');
+  expect(stdout).not.toContain('Duration: 8 ticks');
+  expect(stdout).not.toContain('Total Damage:');
+  expect(stdout).not.toContain('Start Tick:');
+  expect(stdout).not.toContain('Ships Destroyed:');
+  expect(stdout).not.toContain('Winning Side:');
+});
+
+test('get_battle_log interrupted with recovered_summary prints recovered block and Ended interrupted', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogInterruptedFixture) as Record<string, unknown>);
+  const ticks = battleLogTicksOnly(stdout);
+  const recovered = sectionAfter(stdout, 'Recovered Summary', 'Recovered Side Factions');
+  const participants = sectionAfter(stdout, 'Recovered Participants', 'Recovered Captures');
+
+  expect(ticks).toContain('interrupted');
+  expect(ticks).not.toContain('-1');
+  expect(stdout).toContain('=== Recovered Summary ===');
+  expect(recovered).toContain('Tick: 8');
+  expect(recovered).toContain('Category: pvp');
+  expect(recovered).toContain('Start Tick: 900100');
+  expect(recovered).toContain('Duration: 8 ticks');
+  expect(recovered).toContain('Total Damage: 1200');
+  expect(recovered).toContain('Ships Destroyed: 0');
+  expect(recovered).toContain('Ships Captured: 1');
+  expect(recovered).not.toContain('Outcome:');
+  expect(recovered).not.toContain('Winning Side:');
+  expect(stdout).toContain('=== Recovered Side Factions ===');
+  expect(stdout).toContain('SMC');
+  expect(stdout).toContain('pirate_kael');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout).toContain('=== Recovered Participants ===');
+  expect(tableCell(participants, 'Marlowe', 'Kind')).toBe('player');
+  expect(tableCell(participants, 'Marlowe', 'NPC')).toBe('no');
+  expect(tableCell(participants, 'Marlowe', 'Boss')).toBe('no');
+  expect(tableCell(participants, 'Dreadnought', 'Kind')).toBe('pirate');
+  expect(tableCell(participants, 'Dreadnought', 'NPC')).toBe('yes');
+  expect(tableCell(participants, 'Dreadnought', 'Boss')).toBe('yes');
+  expect(stdout).toContain('=== Recovered Captures ===');
+  expect(stdout).toContain('ship-skiff-1');
+  expect(stdout).toContain('Marlowe (player-1)');
+  expect(stdout).toContain('Corsair (pirate-1)');
+  expect(stdout).not.toContain('=== Combatants ===');
+  expect(stdout).not.toContain('Players:');
+});
+
+test('get_battle_log omits recovered block when recovered_summary is absent', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogFixture) as Record<string, unknown>);
+  expect(stdout).not.toContain('=== Recovered Summary ===');
+  expect(stdout).not.toContain('=== Recovered Participants ===');
+  expect(stdout).not.toContain('=== Recovered Captures ===');
+});
+
+test('get_battle_log empty recovered captures and side_factions omit those tables', () => {
+  const fixture = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const recovered = recoveredSummaryOf(fixture);
+  recovered.captures = [];
+  recovered.side_factions = {};
+  const stdout = renderBattleLog(fixture);
+
+  expect(stdout).toContain('=== Recovered Summary ===');
+  expect(stdout).toContain('=== Recovered Participants ===');
+  expect(stdout).not.toContain('=== Recovered Captures ===');
+  expect(stdout).not.toContain('=== Recovered Side Factions ===');
+  expect(stdout).not.toContain('(None)');
+});
+
+test('get_battle_log prints recovered Players names only when participants are empty', () => {
+  const named = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const namedSummary = recoveredSummaryOf(named);
+  namedSummary.participants = [];
+  namedSummary.participant_names = ['Marlowe', 'Corsair'];
+  namedSummary.captures = [];
+  namedSummary.side_factions = {};
+  const namedStdout = renderBattleLog(named);
+
+  expect(namedStdout).toContain('Players: Marlowe, Corsair');
+  expect(namedStdout).not.toContain('=== Recovered Participants ===');
+
+  const rostered = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  recoveredSummaryOf(rostered).participant_names = ['Marlowe', 'Corsair'];
+  const rosteredStdout = renderBattleLog(rostered);
+
+  expect(rosteredStdout).toContain('=== Recovered Participants ===');
+  expect(rosteredStdout).not.toContain('Players:');
+});
+
+test('get_battle_log recovered summary keeps zero scalars and omits absent ships_captured', () => {
+  const zeros = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const zeroSummary = recoveredSummaryOf(zeros);
+  zeroSummary.start_tick = 0;
+  zeroSummary.duration = 0;
+  zeroSummary.total_damage = 0;
+  zeroSummary.ships_destroyed = 0;
+  zeroSummary.ships_captured = 0;
+  const zeroStdout = renderBattleLog(zeros);
+  const zeroBlock = sectionAfter(zeroStdout, 'Recovered Summary', 'Recovered Side Factions');
+
+  expect(zeroBlock).toContain('Start Tick: 0');
+  expect(zeroBlock).toContain('Duration: 0 ticks');
+  expect(zeroBlock).toContain('Total Damage: 0');
+  expect(zeroBlock).toContain('Ships Destroyed: 0');
+  expect(zeroBlock).toContain('Ships Captured: 0');
+
+  const omitted = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  delete recoveredSummaryOf(omitted).ships_captured;
+  const omittedStdout = renderBattleLog(omitted);
+
+  expect(omittedStdout).toContain('Ships Destroyed: 0');
+  expect(omittedStdout).not.toContain('Ships Captured:');
+});
+
+test('get_battle_log emits one recovered block per entry that has recovered_summary', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-42',
+    status: 'completed',
+    total_ticks: 2,
+    has_more: false,
+    entries: [
+      {
+        battle_id: 'battle-42',
+        system_id: 'sol',
+        tick: 7,
+        snapshots: [],
+        recovered_summary: {
+          start_tick: 1,
+          duration: 1,
+          total_damage: 10,
+          ships_destroyed: 0,
+          category: 'pvp',
+          participants: [],
+        },
+      },
+      {
+        battle_id: 'battle-42',
+        system_id: 'sol',
+        tick: 8,
+        snapshots: [],
+        recovered_summary: {
+          start_tick: 1,
+          duration: 2,
+          total_damage: 20,
+          ships_destroyed: 0,
+          category: 'pvp',
+          participants: [],
+        },
+      },
+    ],
+  });
+
+  expect(stdout.split('=== Recovered Summary ===').length - 1).toBe(2);
+  expect(stdout).toContain('Tick: 7');
+  expect(stdout).toContain('Tick: 8');
+  expect(stdout).toContain('Duration: 1 ticks');
+  expect(stdout).toContain('Duration: 2 ticks');
+});
+
+test('get_battle_log interrupted JSON passthrough keeps winning_side -1 and recovered_summary', () => {
+  const rendered = renderStructuredResult(
+    'get_battle_log',
+    structuredClone(battleLogInterruptedFixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    entries: Array<{
+      battle_ended?: { winning_side?: unknown; outcome?: unknown };
+      recovered_summary?: Record<string, unknown>;
+    }>;
+  };
+  const entry = parsed.entries[0];
+
+  expect(entry?.battle_ended?.winning_side).toBe(-1);
+  expect(entry?.battle_ended?.outcome).toBe('interrupted');
+  expect(entry?.recovered_summary).toMatchObject({
+    category: 'pvp',
+    duration: 8,
+    ships_captured: 1,
+  });
 });
 
 test('get_battle_log Combatants last-write identity while Attacks stay per-tick', () => {
