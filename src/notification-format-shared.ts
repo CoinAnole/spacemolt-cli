@@ -594,6 +594,70 @@ function damageLabel(value: unknown, fallback: string | number = 0): string | nu
   return fallback;
 }
 
+/** Compact wreck site for table Message. Undefined when the server sent no wreck. */
+function wreckSiteLabel(data: Record<string, unknown>): string | undefined {
+  if (data.wreck_suppressed === true) return 'wreck suppressed';
+  const wreckId = safeScalar(data.wreck_id);
+  if (wreckId === undefined) return undefined;
+  const poi = safeScalar(data.wreck_poi_name) ?? safeScalar(data.wreck_poi_id);
+  const system = safeScalar(data.wreck_system_name) ?? safeScalar(data.wreck_system_id);
+  if (poi !== undefined && system !== undefined) return `wreck ${wreckId} at ${poi} (${system})`;
+  if (poi !== undefined) return `wreck ${wreckId} at ${poi}`;
+  if (system !== undefined) return `wreck ${wreckId} in ${system}`;
+  return `wreck ${wreckId}`;
+}
+
+function wreckContentsLabel(data: Record<string, unknown>): string | undefined {
+  const bits: string[] = [];
+  if (data.wreck_has_cargo === true) bits.push('cargo');
+  if (data.wreck_has_modules === true) bits.push('modules');
+  return bits.length ? bits.join('+') : undefined;
+}
+
+/** Ellipsize from the end. Same glyph as truncate() (`…`), but with an explicit budget. */
+function truncateToBudget(value: string, max: number): string {
+  if (max <= 0) return '';
+  if (value.length <= max) return value;
+  if (max <= 1) return '…';
+  return `${value.slice(0, max - 1)}…`;
+}
+
+/**
+ * Always prepend site to details when present. Foldable path: table reconstitutes
+ * `${headline}; ${site}`. Non-fold path: site is already in the headline so the
+ * first-detail fold no-ops. Truncate the incoming headline so `${headline}; ${site}`
+ * fits maxLineLength; never truncate the combined string after attaching.
+ * If site.length >= budget, the headline becomes the truncated site (full site
+ * stays first in details).
+ */
+function attachWreckSite(
+  headline: string,
+  details: string[],
+  data: Record<string, unknown>,
+  options: ResolvedPreviewOptions,
+): { headline: string; details: string[] } {
+  const site = wreckSiteLabel(data);
+  if (!site) return { headline: truncate(headline, options), details };
+
+  const budget = options.maxLineLength;
+  const sep = '; ';
+  const withSite = [site, ...details];
+  const canFold = site.length <= TABLE_DETAIL_FOLD_LIMIT && !headline.includes(site);
+
+  if (site.length >= budget) {
+    return { headline: truncateToBudget(site, budget), details: withSite };
+  }
+
+  const maxKill = budget - sep.length - site.length;
+  if (maxKill <= 0) {
+    return { headline: truncateToBudget(site, budget), details: withSite };
+  }
+  const kill = headline.length > maxKill ? truncateToBudget(headline, maxKill) : headline;
+
+  if (canFold) return { headline: kill, details: withSite };
+  return { headline: `${kill}${sep}${site}`, details: withSite };
+}
+
 function previewCombatUpdate(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -699,7 +763,8 @@ function previewPlayerKill(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  const victim = safeScalar(data.victim_name) ?? safeScalar(data.target_name) ?? 'unknown';
+  const rawVictim = firstSafeScalar(data, ['victim', 'victim_name', 'target_name']);
+  const victim = rawVictim !== undefined ? String(rawVictim) : 'unknown';
   const details: string[] = [];
   // Match legacy writeLine: truthy bounty only (0 / empty omitted).
   const bountyN = finiteNumber(data.bounty);
@@ -711,12 +776,13 @@ function previewPlayerKill(
       details.push(truncate(`Bounty: ${bountyScalar} credits`, options));
     }
   }
-  const wreckId = safeScalar(data.wreck_id);
-  if (wreckId !== undefined) details.push(truncate(`Wreck: ${wreckId}`, options));
+  const attached = attachWreckSite(`You destroyed ${victim}!`, details, data, options);
+  const contents = wreckContentsLabel(data);
+  if (contents !== undefined) attached.details.push(truncate(contents, options));
   return {
     tag: 'KILL',
-    headline: truncate(`You destroyed ${victim}!`, options),
-    details,
+    headline: attached.headline,
+    details: attached.details,
   };
 }
 
@@ -1982,6 +2048,9 @@ export function formatNotificationPreview(
   }
 }
 
+/** First-detail fold threshold for table Message. Used by tableMessageFromPreview and attachWreckSite. */
+const TABLE_DETAIL_FOLD_LIMIT = 80;
+
 /**
  * Table Message = pure function of preview (normative). Type column is independent.
  * Prefer headline alone; fold first detail only when short and additive.
@@ -1991,7 +2060,7 @@ export function tableMessageFromPreview(preview: NotificationPreview): string {
   const details = preview.details;
   if (!details.length) return preview.headline;
   const first = details[0];
-  if (first && first.length <= 80 && !preview.headline.includes(first)) {
+  if (first && first.length <= TABLE_DETAIL_FOLD_LIMIT && !preview.headline.includes(first)) {
     return `${preview.headline}; ${first}`;
   }
   return preview.headline;

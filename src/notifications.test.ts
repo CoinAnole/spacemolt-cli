@@ -440,8 +440,8 @@ describe('notification formatting', () => {
     },
     {
       msgType: 'player_kill',
-      data: { victim_name: 'Raider', bounty: 50, wreck_id: 'wreck_1' },
-      snippets: ['[KILL]', 'Raider', 'Bounty: 50 credits', 'Wreck: wreck_1'],
+      data: { victim: 'Raider', bounty: 50, wreck_id: 'wreck_1' },
+      snippets: ['[KILL]', 'You destroyed Raider!', 'wreck wreck_1', 'Bounty: 50 credits'],
     },
     {
       msgType: 'poi_arrival',
@@ -1174,15 +1174,311 @@ describe('notification formatting', () => {
       expect(selfDestruct.headline).toBe('Self-destructed!');
     });
 
-    test('player_kill pure preview keeps bounty/wreck as details', () => {
-      const preview = formatNotificationPreview({
+    test('player_kill schema victim puts wreck site as first detail', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', wreck_id: 'wreck_1' },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('KILL');
+      expect(preview.headline).toBe('You destroyed Raider!');
+      expect(preview.details[0]?.startsWith('wreck ')).toBe(true);
+      expect(preview.details[0]).toBe('wreck wreck_1');
+      expect(preview.details.join('\n')).not.toContain('Wreck:');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Raider!; wreck wreck_1');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill legacy victim_name still renders bounty after wreck site', () => {
+      const notification = {
         type: 'combat',
         msg_type: 'player_kill',
         data: { victim_name: 'Raider', bounty: 50, wreck_id: 'wreck_1' },
-      });
+      };
+      const preview = formatNotificationPreview(notification);
       expect(preview.tag).toBe('KILL');
-      expect(preview.headline).toContain('You destroyed Raider!');
-      expect(preview.details).toEqual(expect.arrayContaining(['Bounty: 50 credits', 'Wreck: wreck_1']));
+      expect(preview.headline).toBe('You destroyed Raider!');
+      expect(preview.details).toContain('Bounty: 50 credits');
+      expect(preview.details[0]).not.toBe('Bounty: 50 credits');
+      expect(preview.details[0]?.startsWith('wreck ')).toBe(true);
+      expect(preview.details.join('\n')).not.toContain('Wreck:');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Raider!; wreck wreck_1');
+      expect(fromPreview).not.toContain('Bounty:');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill prefers victim over victim_name', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Marlowe', victim_name: 'Raider', target_name: 'Wisp', wreck_id: 'wreck_1' },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('You destroyed Marlowe!');
+      expect(preview.headline).not.toContain('Raider');
+      expect(preview.headline).not.toContain('Wisp');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toContain('You destroyed Marlowe!');
+      expectNoDiagnosticTokens(`${preview.headline}\n${fromPreview}`);
+    });
+
+    test('player_kill falls back to target_name when victim fields are absent', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { target_name: 'Wisp' },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('You destroyed Wisp!');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Wisp!');
+      expectNoDiagnosticTokens(fromPreview);
+    });
+
+    test('player_kill wreck site folds into table Message', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: {
+          victim: 'Marlowe',
+          wreck_id: 'wreck-1',
+          wreck_has_cargo: true,
+          wreck_has_modules: false,
+          wreck_poi_id: 'sol_asteroid_belt',
+          wreck_poi_name: 'Asteroid Belt',
+          wreck_system_id: 'sol',
+          wreck_system_name: 'Sol',
+        },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('You destroyed Marlowe!');
+      expect(preview.details[0]).toBe('wreck wreck-1 at Asteroid Belt (Sol)');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Marlowe!; wreck wreck-1 at Asteroid Belt (Sol)');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill hidden POI prints system only', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: {
+          victim: 'Wisp',
+          wreck_id: 'wreck-hidden-1',
+          wreck_system_id: 'sol',
+          wreck_system_name: 'Sol',
+        },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toBe('wreck wreck-hidden-1 in Sol');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Wisp!; wreck wreck-hidden-1 in Sol');
+      expect(fromPreview).toContain('in Sol');
+      expect(fromPreview).not.toContain(' at ');
+      expect(fromPreview.toLowerCase()).not.toContain('hidden poi');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill POI-only wreck site omits system', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: {
+          victim: 'Marlowe',
+          wreck_id: 'wreck-1',
+          wreck_poi_id: 'sol_asteroid_belt',
+          wreck_poi_name: 'Asteroid Belt',
+        },
+      };
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Marlowe!; wreck wreck-1 at Asteroid Belt');
+      expect(fromPreview).not.toContain('(');
+      expectNoDiagnosticTokens(fromPreview);
+    });
+
+    test('player_kill id-only wreck site folds the wreck id', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Marlowe', wreck_id: 'wreck-1' },
+      };
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Marlowe!; wreck wreck-1');
+      expectNoDiagnosticTokens(fromPreview);
+    });
+
+    test('player_kill with no wreck and no bounty is headline only', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider' },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('You destroyed Raider!');
+      expect(preview.details).toEqual([]);
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Raider!');
+      expectNoDiagnosticTokens(fromPreview);
+    });
+
+    test('player_kill omits bounty 0 and false contents flags', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: {
+          victim: 'Raider',
+          bounty: 0,
+          wreck_id: 'wreck_1',
+          wreck_has_cargo: false,
+          wreck_has_modules: false,
+        },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details).toEqual(['wreck wreck_1']);
+      expect(preview.details.join('\n')).not.toContain('Bounty:');
+      expect(preview.details.join('\n')).not.toContain('cargo');
+      expect(preview.details.join('\n')).not.toContain('modules');
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('You destroyed Raider!; wreck wreck_1');
+      expectNoDiagnosticTokens(`${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill contents flags are later inline details', () => {
+      const cargo = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', wreck_id: 'wreck_1', wreck_has_cargo: true },
+      };
+      const cargoPreview = formatNotificationPreview(cargo);
+      expect(cargoPreview.details[0]?.startsWith('wreck ')).toBe(true);
+      expect(cargoPreview.details).toContain('cargo');
+      expect(cargoPreview.details[0]).not.toBe('cargo');
+      const cargoMessage = formatNotificationMessage(cargo);
+      expect(cargoMessage).toBe(tableMessageFromPreview(formatNotificationPreview(cargo, { maxLineLength: 120 })));
+      expect(cargoMessage).not.toContain('cargo');
+
+      const modules = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', wreck_id: 'wreck_1', wreck_has_modules: true },
+      });
+      expect(modules.details).toContain('modules');
+      expect(modules.details[0]).not.toBe('modules');
+
+      const both = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', wreck_id: 'wreck_1', wreck_has_cargo: true, wreck_has_modules: true },
+      });
+      expect(both.details).toContain('cargo+modules');
+      expect(both.details[0]).not.toBe('cargo+modules');
+      expectNoDiagnosticTokens(
+        `${cargoPreview.details.join('\n')}\n${modules.details.join('\n')}\n${both.details.join('\n')}`,
+      );
+    });
+
+    test('player_kill long victim still keeps foldable wreck site in table Message', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: {
+          victim: 'V'.repeat(80),
+          wreck_id: 'wreck-overflow-1',
+          wreck_poi_name: 'Asteroid Belt',
+          wreck_system_name: 'Sol',
+        },
+      };
+      const fromPreview = tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toContain('wreck-overflow-1');
+      expect(fromPreview).toContain('Asteroid Belt');
+      expect(fromPreview).toContain('Sol');
+      expect(fromPreview).toContain('…');
+      expect(fromPreview.length).toBeLessThanOrEqual(120);
+      expectNoDiagnosticTokens(fromPreview);
+    });
+
+    test('player_kill site longer than 80 goes on the headline', () => {
+      const wreckId = `wreck-${'x'.repeat(80)}`;
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', wreck_id: wreckId },
+      };
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.details[0]).toBe(`wreck ${wreckId}`);
+      expect(preview.details[0]?.length).toBeGreaterThan(80);
+      expect(preview.headline).toContain(wreckId);
+      const fromPreview = tableMessageFromPreview(preview);
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe(preview.headline);
+      expect(fromPreview).toContain('wreck-');
+      expect(fromPreview).not.toContain('Bounty:');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill site longer than 80 plus bounty does not fold Bounty into Message', () => {
+      const wreckId = `wreck-${'x'.repeat(80)}`;
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', bounty: 50, wreck_id: wreckId },
+      };
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.details[0]).toBe(`wreck ${wreckId}`);
+      expect(preview.details).toContain('Bounty: 50 credits');
+      const fromPreview = tableMessageFromPreview(preview);
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toContain(wreckId);
+      expect(fromPreview).not.toContain('Bounty:');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('player_kill site at least maxLineLength clips the headline but keeps full site in details', () => {
+      const wreckId = `wreck-${'x'.repeat(120)}`;
+      const notification = {
+        type: 'combat',
+        msg_type: 'player_kill',
+        data: { victim: 'Raider', wreck_id: wreckId },
+      };
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.details[0]).toBe(`wreck ${wreckId}`);
+      expect(preview.headline.length).toBeLessThanOrEqual(120);
+      expect(preview.headline).toContain('wreck-');
+      expect(preview.headline).toContain('…');
+      const fromPreview = tableMessageFromPreview(preview);
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe(preview.headline);
+      expect(fromPreview).toContain('wreck-');
+      expect(fromPreview.length).toBeLessThanOrEqual(120);
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
     });
 
     test('police / pirate / battle pure previews stay compact', () => {
