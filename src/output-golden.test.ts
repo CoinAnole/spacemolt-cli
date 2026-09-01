@@ -386,6 +386,37 @@ const cliCases: CliGoldenCase[] = [
     stderrFormat: 'json',
   },
   {
+    name: 'missing-materials-error.table',
+    argv: [
+      '--quiet',
+      '--plain',
+      '--no-timestamp',
+      'facility',
+      'upgrade',
+      '--facility-id',
+      '3f67',
+      '--facility-type',
+      'intel_center',
+    ],
+    response: {
+      error: {
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle, have 0 in faction storage + 0 in cargo',
+        details: {
+          missing: [
+            {
+              item_id: 'optical_fiber_bundle',
+              item_name: 'Optical Fiber Bundle',
+              need: 300,
+              have: 0,
+            },
+          ],
+        },
+      },
+    },
+    expectedExitCode: 1,
+  },
+  {
     name: 'dynamic-generated-command.table',
     argv: ['--plain', 'experimental_ping', 'alpha'],
     generatedRoutes: {
