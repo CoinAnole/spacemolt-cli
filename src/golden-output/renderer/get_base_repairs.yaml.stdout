@@ -54,15 +54,26 @@ repairs:
       - item_id: steel_plate
         name: "Steel Plate"
         quantity_required: 10
-        quantity_in_storage: 0
-        quantity_missing: 10
+        quantity_in_storage: 5
+        quantity_missing: 5
+  materials:
+    - item_id: circuit_board
+      name: "Circuit Board"
+      quantity_required: 40
+      quantity_in_storage: 12
+      quantity_missing: 28
+    - item_id: steel_plate
+      name: "Steel Plate"
+      quantity_required: 20
+      quantity_in_storage: 5
+      quantity_missing: 15
   facilities:
     - instance_id: "fac-ls-1"
       definition_id: life_support_mk1
       name: "Life Support Mk I"
       category: infrastructure
       status: waiting
-      materials: [{item_id: circuit_board, name: "Circuit Board", quantity_required: 40, quantity_in_storage: 12, quantity_missing: 28}, {item_id: steel_plate, name: "Steel Plate", quantity_required: 10, quantity_in_storage: 0, quantity_missing: 10}]
+      materials: [{item_id: circuit_board, name: "Circuit Board", quantity_required: 40, quantity_in_storage: 12, quantity_missing: 28}, {item_id: steel_plate, name: "Steel Plate", quantity_required: 10, quantity_in_storage: 5, quantity_missing: 5}]
     - instance_id: "fac-fg-2"
       definition_id: fuel_grid
       name: "Fuel Grid"
@@ -73,4 +84,5 @@ repairs:
       definition_id: storage_bay
       name: "Storage Bay"
       category: infrastructure
-      status: damaged
+      status: waiting
+      materials: [{item_id: steel_plate, name: "Steel Plate", quantity_required: 10, quantity_in_storage: 5, quantity_missing: 5}]

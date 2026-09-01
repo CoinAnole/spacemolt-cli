@@ -212,8 +212,8 @@ const baseRepairsNextBlocked = {
       item_id: 'steel_plate',
       name: 'Steel Plate',
       quantity_required: 10,
-      quantity_in_storage: 0,
-      quantity_missing: 10,
+      quantity_in_storage: 5,
+      quantity_missing: 5,
     },
   ],
 };
@@ -249,6 +249,9 @@ export const baseRepairsFixture = {
   services: ['market', 'storage'],
   repairs: {
     wrecked: true,
+    // damaged_count is the automatic-repair set size (3 facilities), not the number of
+    // status === 'damaged' rows. After this teaching case there is no damaged-status row:
+    // 2 waiting + 1 repairing = 3. Do not "fix" damaged_count to 0.
     damaged_count: 3,
     repairing_count: 1,
     waiting_count: 2,
@@ -258,6 +261,22 @@ export const baseRepairsFixture = {
     hull_missing: 5800,
     remediation: 'Sell Steel Plate into this station market to unblock the next repair.',
     next_blocked: baseRepairsNextBlocked,
+    materials: [
+      {
+        item_id: 'circuit_board',
+        name: 'Circuit Board',
+        quantity_required: 40,
+        quantity_in_storage: 12,
+        quantity_missing: 28,
+      },
+      {
+        item_id: 'steel_plate',
+        name: 'Steel Plate',
+        quantity_required: 20,
+        quantity_in_storage: 5,
+        quantity_missing: 15,
+      },
+    ],
     facilities: [
       baseRepairsNextBlocked,
       {
@@ -273,7 +292,16 @@ export const baseRepairsFixture = {
         definition_id: 'storage_bay',
         name: 'Storage Bay',
         category: 'infrastructure',
-        status: 'damaged',
+        status: 'waiting',
+        materials: [
+          {
+            item_id: 'steel_plate',
+            name: 'Steel Plate',
+            quantity_required: 10,
+            quantity_in_storage: 5,
+            quantity_missing: 5,
+          },
+        ],
       },
     ],
   },

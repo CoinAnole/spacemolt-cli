@@ -857,6 +857,12 @@ test('renders nested base repairs without a second wrecked line', () => {
   expect(stdout).toContain('Facility ID: fac-ls-1');
   expect(stdout).toContain('=== Repair Queue ===');
   expect(stdout).toContain('fac-fg-2');
+  expect(stdout).toContain('Steel Plate: 5/10, 5 missing');
+  expect(stdout.indexOf('Combined shortages:')).toBeGreaterThan(stdout.indexOf('=== Repair Queue ==='));
+  expect(stdout).toContain('Combined shortages:');
+  expect(stdout).toContain('Steel Plate: 5/20, 15 missing');
+  expect(stdout).toContain('Sell Steel Plate into this station market to unblock the next repair.');
+  expect(stdout).not.toContain('  Sell Steel Plate into this station market to unblock the next repair.');
   expect(stdout).not.toContain('=== Response ===');
 });
 

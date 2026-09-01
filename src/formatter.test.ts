@@ -5552,14 +5552,123 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Category: infrastructure');
     expect(stdout).toContain('Status: waiting');
     expect(stdout).toContain('Circuit Board: 12/40, 28 missing');
-    expect(stdout).toContain('Steel Plate: 0/10, 10 missing');
+    expect(stdout).toContain('Steel Plate: 5/10, 5 missing');
     expect(stdout).toContain('=== Repair Queue ===');
     expect(stdout).toContain('Facility ID');
     expect(stdout).toContain('fac-ls-1');
     expect(stdout).toContain('fac-fg-2');
     expect(stdout).toContain('4 ticks');
-    expect(stdout).toContain('  Sell Steel Plate into this station market to unblock the next repair.');
+    expect(stdout.indexOf('Combined shortages:')).toBeGreaterThan(stdout.indexOf('=== Repair Queue ==='));
+    expect(stdout).toContain('Combined shortages:');
+    expect(stdout).toContain('Steel Plate: 5/20, 15 missing');
+    expect(stdout).toContain(
+      '\n  Steel Plate: 5/20, 15 missing\n\nSell Steel Plate into this station market to unblock the next repair.',
+    );
+    expect(stdout).toContain('Sell Steel Plate into this station market to unblock the next repair.');
+    expect(stdout).not.toContain('  Sell Steel Plate into this station market to unblock the next repair.');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base omits Combined shortages when materials are empty or omitted', () => {
+    const omitted = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        remediation: 'Sell Steel Plate into this station market to unblock the next repair.',
+      },
+    });
+    const empty = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        materials: [],
+      },
+    });
+    const unformattable = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        materials: [{ quantity_required: 10, quantity_in_storage: 0, quantity_missing: 10 }],
+      },
+    });
+
+    expect(omitted.stdout).toContain('=== Repairs ===');
+    expect(omitted.stdout).not.toContain('Combined shortages:');
+    expect(omitted.stdout).toContain('Sell Steel Plate into this station market to unblock the next repair.');
+    expect(omitted.stdout).not.toContain('  Sell Steel Plate into this station market to unblock the next repair.');
+    expect(empty.stdout).toContain('=== Repairs ===');
+    expect(empty.stdout).not.toContain('Combined shortages:');
+    expect(empty.stdout).not.toContain('(None)');
+    expect(unformattable.stdout).toContain('=== Repairs ===');
+    expect(unformattable.stdout).not.toContain('Combined shortages:');
+  });
+
+  test('get_base still prints a combined shortage row with quantity_missing 0', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 1,
+        repairing_count: 0,
+        waiting_count: 0,
+        supply_method: 'example',
+        materials: [
+          {
+            item_id: 'steel_plate',
+            name: 'Steel Plate',
+            quantity_required: 10,
+            quantity_in_storage: 10,
+            quantity_missing: 0,
+          },
+        ],
+      },
+    });
+
+    expect(stdout).toContain('Combined shortages:');
+    expect(stdout).toContain('Steel Plate: 10/10, 0 missing');
+  });
+
+  test('get_base prints Combined shortages when only materials are present', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'earth_station', name: 'Earth Station', empire: 'solarian' },
+      services: ['market'],
+      repairs: {
+        wrecked: false,
+        damaged_count: 0,
+        repairing_count: 0,
+        waiting_count: 0,
+        materials: [
+          {
+            item_id: 'steel_plate',
+            name: 'Steel Plate',
+            quantity_required: 20,
+            quantity_in_storage: 5,
+            quantity_missing: 15,
+          },
+        ],
+      },
+    });
+
+    expect(stdout).toContain('=== Repairs ===');
+    expect(stdout).toContain('Combined shortages:');
+    expect(stdout).toContain('Steel Plate: 5/20, 15 missing');
+    expect(stdout).not.toContain('=== Repair Queue ===');
   });
 
   test('get_base omits repairs when the payload has no repairs object', () => {

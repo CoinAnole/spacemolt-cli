@@ -28,15 +28,19 @@ Next blocked: Life Support Mk I
   Category: infrastructure
   Status: waiting
   Circuit Board: 12/40, 28 missing
-  Steel Plate: 0/10, 10 missing
+  Steel Plate: 5/10, 5 missing
 
 === Repair Queue ===
 
-  Name              | Facility ID | Type             | Category       | Status    | ETA     | Materials                                                      
-  ------------------+-------------+------------------+----------------+-----------+---------+----------------------------------------------------------------
-  Life Support Mk I | fac-ls-1    | life_support_mk1 | infrastructure | waiting   |         | Circuit Board: 12/40, 28 missing; Steel Plate: 0/10, 10 missing
-  Fuel Grid         | fac-fg-2    | fuel_grid        | infrastructure | repairing | 4 ticks |                                                                
-  Storage Bay       | fac-st-3    | storage_bay      | infrastructure | damaged   |         |                                                                
-  Sell Steel Plate into this station market to unblock the next repair.
+  Name              | Facility ID | Type             | Category       | Status    | ETA     | Materials                                                     
+  ------------------+-------------+------------------+----------------+-----------+---------+---------------------------------------------------------------
+  Life Support Mk I | fac-ls-1    | life_support_mk1 | infrastructure | waiting   |         | Circuit Board: 12/40, 28 missing; Steel Plate: 5/10, 5 missing
+  Fuel Grid         | fac-fg-2    | fuel_grid        | infrastructure | repairing | 4 ticks |                                                               
+  Storage Bay       | fac-st-3    | storage_bay      | infrastructure | waiting   |         | Steel Plate: 5/10, 5 missing                                  
+Combined shortages:
+  Circuit Board: 12/40, 28 missing
+  Steel Plate: 5/20, 15 missing
+
+Sell Steel Plate into this station market to unblock the next repair.
 
 A raided frontier cache.
