@@ -22,7 +22,7 @@ export interface APIResponse {
     message: string;
     wait_seconds?: number;
     retry_after?: number;
-    details?: { [key: string]: JsonValue }; // object; not the legacy string `detail` fallback
+    details?: { [key: string]: JsonValue };
   };
 }
 
