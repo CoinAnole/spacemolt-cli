@@ -38,6 +38,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   faction_create_sell_order_bulk: 'faction_create_sell_order',
   get_action_log_cursor: 'get_action_log',
   get_battle_log_boarding: 'get_battle_log',
+  get_battle_log_snapshots: 'get_battle_log',
   get_battle_status_boarding: 'get_battle_status',
   get_battle_summary_captures: 'get_battle_summary',
   get_nearby_boss: 'get_nearby',

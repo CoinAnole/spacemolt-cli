@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   type BattleLogAttackRow,
   battleLogAttackRows,
+  battleLogCombatantRows,
   formatBattleDefenseLine,
   formatBattleHitChance,
   formatBattleHitScale,
@@ -240,6 +241,67 @@ describe('resolveCombatantLabel', () => {
     expect(resolveCombatantLabel('pirate-1', snapshots)).toBe('pirate-1');
     expect(resolveCombatantLabel('player-1', undefined)).toBe('player-1');
     expect(resolveCombatantLabel(undefined, snapshots)).toBe('');
+  });
+
+  test('prefixes Boss only when is_boss is true', () => {
+    expect(resolveCombatantLabel('player-1', [{ player_id: 'player-1', username: 'PilotOne', is_boss: true }])).toBe(
+      'Boss PilotOne',
+    );
+    expect(resolveCombatantLabel('player-1', [{ player_id: 'player-1', username: 'PilotOne', is_boss: false }])).toBe(
+      'PilotOne',
+    );
+    expect(resolveCombatantLabel('player-1', [{ player_id: 'player-1', username: 'PilotOne' }])).toBe('PilotOne');
+    expect(resolveCombatantLabel('player-1', [{ player_id: 'player-1', username: '' }])).toBe('player-1');
+    expect(
+      resolveCombatantLabel('player-1', [
+        { player_id: 'player-1', username: 'PilotOne', kind: 'pirate', pirate_role: 'boss' },
+      ]),
+    ).toBe('PilotOne');
+    expect(resolveCombatantLabel('player-1', [{ player_id: 'player-1', username: '', is_boss: true }])).toBe(
+      'Boss player-1',
+    );
+  });
+});
+
+describe('battleLogCombatantRows', () => {
+  test('keeps first-seen order and last-write identity fields', () => {
+    const rows = battleLogCombatantRows([
+      {
+        tick: 0,
+        snapshots: [
+          { player_id: 'player-1', username: 'Ace', is_npc: false, is_boss: false },
+          { player_id: 'pirate-1', username: 'Raider', kind: 'pirate', is_npc: true, is_boss: false },
+          'skip',
+          { username: 'Nameless' },
+        ],
+      },
+      {
+        tick: 1,
+        snapshots: [
+          { player_id: 'pirate-1', username: 'Corsair', kind: 'pirate', is_npc: true, is_boss: true },
+          { player_id: 'player-2', username: 'Nova' },
+        ],
+      },
+    ]);
+
+    expect(rows.map((row) => row.player_id)).toEqual(['player-1', 'pirate-1', 'player-2']);
+    expect(rows[0]).toEqual({ player_id: 'player-1', username: 'Ace', is_npc: false, is_boss: false });
+    expect(rows[1]).toEqual({
+      player_id: 'pirate-1',
+      username: 'Corsair',
+      kind: 'pirate',
+      is_npc: true,
+      is_boss: true,
+    });
+    expect(rows[2]).toEqual({ player_id: 'player-2', username: 'Nova' });
+  });
+
+  test('is empty when snapshots are omitted or empty', () => {
+    expect(battleLogCombatantRows(undefined)).toEqual([]);
+    expect(battleLogCombatantRows([])).toEqual([]);
+    expect(battleLogCombatantRows([{ tick: 0 }])).toEqual([]);
+    expect(battleLogCombatantRows([{ tick: 0, snapshots: [] }])).toEqual([]);
+    expect(battleLogCombatantRows(['nope', { tick: 1, snapshots: [null, { username: 'X' }] }])).toEqual([]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { battleLogAttackRows } from './battle-log.ts';
+import { battleLogAttackRows, battleLogCombatantRows } from './battle-log.ts';
 import {
   c,
   commandNameEquals,
@@ -1672,6 +1672,16 @@ export const socialFormatters = [
           );
         }
         emitBattleLogDetailTables(entries);
+        const combatantRows = battleLogCombatantRows(entries).map(withIdentityDisplays);
+        if (combatantRows.length) {
+          const columns: Array<[string, string[]]> = [
+            ['Name', ['username']],
+            ['ID', ['player_id']],
+            ['Side', ['side_id']],
+          ];
+          appendIdentityColumns(columns, combatantRows);
+          printCompactTable('Combatants', combatantRows, columns);
+        }
       }
       return true;
     },
