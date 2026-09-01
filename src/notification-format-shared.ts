@@ -1049,6 +1049,7 @@ function previewFactionInvite(
   );
 }
 
+/** Diplomacy frames only. Restart/drone headlines are owned by countdown/location templates. */
 function preferDiplomacyMessage(data: Record<string, unknown>, synthesized: string): string {
   const message = safeScalar(data.message);
   return message !== undefined ? firstLine(String(message)) : synthesized;
@@ -1131,6 +1132,69 @@ function previewFactionAllianceBroken(
 ): NotificationPreview {
   const by = factionName(data, 'by_faction_name', 'by_faction_tag');
   return headlinePreview('FACTION', preferDiplomacyMessage(data, `${by} broke the alliance`), options);
+}
+
+function previewServerRestartWarning(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const seconds = finiteNumber(data.seconds_until_restart);
+  const targetVersion = safeScalar(data.target_version);
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : undefined;
+
+  let headline: string;
+  if (seconds !== undefined) {
+    headline = `Server restart in ${seconds}s`;
+    if (targetVersion !== undefined) headline += ` (${targetVersion})`;
+  } else if (messageLine) {
+    headline = messageLine;
+  } else {
+    headline = 'Server restart warning';
+  }
+
+  const details: string[] = [];
+  if (messageLine && messageLine !== headline && !headline.includes(messageLine)) {
+    details.push(messageLine);
+  }
+
+  return {
+    ...detailPreview('SYSTEM', headline, details, options),
+    severity: 'warning',
+  };
+}
+
+function previewDroneAdrift(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const droneType = safeScalar(data.drone_type);
+  const poiId = safeScalar(data.poi_id);
+  const systemId = safeScalar(data.system_id);
+  const droneId = safeScalar(data.drone_id);
+  const hasLocation = droneType !== undefined || poiId !== undefined || systemId !== undefined || droneId !== undefined;
+
+  let headline: string;
+  if (!hasLocation) {
+    headline = 'A drone is adrift';
+  } else {
+    headline = `Your ${droneType !== undefined ? droneType : 'drone'} drone is adrift at ${poiId !== undefined ? poiId : 'unknown POI'} in ${systemId !== undefined ? systemId : 'unknown system'}`;
+    // Omit empty (ID: ) — previewDroneDestroyed interpolates scalarOr(drone_id, '') and can print it.
+    if (droneId !== undefined) headline += ` (ID: ${droneId})`;
+  }
+
+  const details: string[] = [];
+  if (droneId !== undefined) {
+    details.push(`Use: get_drone drone_id=${droneId}`);
+    details.push(`Use: recall_drone drone_id=${droneId}`);
+  }
+
+  return {
+    ...detailPreview('DRONE', headline, details, options),
+    severity: 'warning',
+  };
 }
 
 function previewBaseRaidUpdate(
@@ -1613,13 +1677,15 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   friend_online: previewFriendOnline,
   friend_offline: previewFriendOffline,
   faction_invite: previewFactionInvite,
-  // 0.573.2 diplomacy
+  // 0.573.2 ops + diplomacy
   faction_war_declared: previewFactionWarDeclared,
   faction_peace_proposal: previewFactionPeaceProposal,
   faction_peace_accepted: previewFactionPeaceAccepted,
   faction_alliance_proposal: previewFactionAllianceProposal,
   faction_alliance_formed: previewFactionAllianceFormed,
   faction_alliance_broken: previewFactionAllianceBroken,
+  server_restart_warning: previewServerRestartWarning,
+  drone_adrift: previewDroneAdrift,
   base_raid_update: previewBaseRaidUpdate,
   base_destroyed: previewBaseDestroyed,
   scan_result: previewScanResult,

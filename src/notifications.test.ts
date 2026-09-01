@@ -235,6 +235,23 @@ describe('notification formatting', () => {
       snippets: ['[COMBAT]', 'raider hit ship for 4 laser damage'],
     },
     {
+      msgType: 'drone_adrift',
+      data: {
+        drone_id: 'drone_1',
+        owner_id: 'player_1',
+        drone_type: 'survey',
+        system_id: 'sol',
+        poi_id: 'earth',
+      },
+      snippets: [
+        '[DRONE]',
+        'survey drone is adrift at earth in sol',
+        'ID: drone_1',
+        'get_drone drone_id=drone_1',
+        'recall_drone drone_id=drone_1',
+      ],
+    },
+    {
       msgType: 'drone_destroyed',
       data: { drone_type: 'combat', drone_id: 'drone_1' },
       snippets: ['[DRONE]', 'combat drone was destroyed', 'drone_1'],
@@ -462,6 +479,19 @@ describe('notification formatting', () => {
       msgType: 'scan_result',
       data: { username: 'Raider', success: true, revealed_info: ['hull'], ship_class: 'fighter' },
       snippets: ['[SCAN]', 'Scan of Raider revealed: hull', 'Ship: fighter'],
+    },
+    {
+      msgType: 'server_restart_warning',
+      data: {
+        message: 'Server restart in 60 seconds. Finish or park in-flight actions.',
+        seconds_until_restart: 60,
+        target_version: '0.574.0',
+      },
+      snippets: [
+        '[SYSTEM]',
+        'Server restart in 60s (0.574.0)',
+        'Server restart in 60 seconds. Finish or park in-flight actions.',
+      ],
     },
     {
       msgType: 'ship_commission_complete',
@@ -822,6 +852,24 @@ describe('notification formatting', () => {
       {
         type: 'system',
         msg_type: 'faction_peace_proposal',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {},
+      },
+    ],
+    [
+      'server_restart_warning empty bag',
+      {
+        type: 'system',
+        msg_type: 'server_restart_warning',
+        timestamp: '2026-06-29T00:00:00.000Z',
+        data: {},
+      },
+    ],
+    [
+      'drone_adrift empty bag',
+      {
+        type: 'system',
+        msg_type: 'drone_adrift',
         timestamp: '2026-06-29T00:00:00.000Z',
         data: {},
       },
@@ -1884,6 +1932,131 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([useLine]);
       expect(useLine.length).toBeLessThanOrEqual(80);
       expect(tableMessageFromPreview(preview)).toBe(`${preview.headline}; ${useLine}`);
+    });
+  });
+
+  describe('0.573.2 ops previews', () => {
+    const opsTypes = ['server_restart_warning', 'drone_adrift'] as const;
+
+    test('registers pure PREVIEW_HANDLERS for restart and drone adrift', () => {
+      for (const msgType of opsTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+      }
+    });
+
+    test('restart empty bag uses last-resort headline and warning severity', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'server_restart_warning',
+        data: {},
+      });
+      expect(preview.tag).toBe('SYSTEM');
+      expect(preview.headline).toBe('Server restart warning');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('warning');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('restart without countdown uses message as headline and does not duplicate it', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'server_restart_warning',
+        data: { message: 'The server will restart shortly.' },
+      });
+      expect(preview.tag).toBe('SYSTEM');
+      expect(preview.headline).toBe('The server will restart shortly.');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('warning');
+    });
+
+    test('restart countdown omits empty target_version', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'server_restart_warning',
+        data: {
+          seconds_until_restart: 60,
+          target_version: '',
+          message: 'Finish or park in-flight actions.',
+        },
+      });
+      expect(preview.headline).toBe('Server restart in 60s');
+      expect(preview.headline).not.toContain('()');
+      expect(preview.details).toEqual(['Finish or park in-flight actions.']);
+    });
+
+    test('tableMessageFromPreview keeps countdown when the server message is longer than 80 characters', () => {
+      const message =
+        'Server restart in 60 seconds. Finish or park in-flight actions now so you are not mid-jump when the world closes.';
+      expect(message.length).toBeGreaterThan(80);
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'server_restart_warning',
+        data: { seconds_until_restart: 60, message },
+      });
+      expect(preview.headline.startsWith('Server restart in 60s')).toBe(true);
+      expect(preview.details[0]).toBe(message);
+      const tableMessage = tableMessageFromPreview(preview);
+      expect(tableMessage).toBe(preview.headline);
+      expect(tableMessage).toContain('60s');
+    });
+
+    test('drone empty bag uses last-resort headline without (ID: )', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'drone_adrift',
+        data: {},
+      });
+      expect(preview.tag).toBe('DRONE');
+      expect(preview.headline).toBe('A drone is adrift');
+      expect(preview.headline).not.toContain('(ID:');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('warning');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('drone_id-only bag uses location fallbacks and still appends (ID: )', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'drone_adrift',
+        data: { drone_id: 'drone_1' },
+      });
+      expect(preview.headline).toBe('Your drone drone is adrift at unknown POI in unknown system (ID: drone_1)');
+      expect(preview.details).toEqual(['Use: get_drone drone_id=drone_1', 'Use: recall_drone drone_id=drone_1']);
+    });
+
+    test('drone location sentence omits (ID: ) when drone_id is missing', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'drone_adrift',
+        data: { drone_type: 'survey', poi_id: 'earth', system_id: 'sol' },
+      });
+      expect(preview.tag).toBe('DRONE');
+      expect(preview.headline).toBe('Your survey drone is adrift at earth in sol');
+      expect(preview.headline).not.toContain('(ID:');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('warning');
+    });
+
+    test('drone recovery hints list get_drone first and recall_drone second', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'drone_adrift',
+        data: {
+          drone_id: 'drone_1',
+          owner_id: 'player_1',
+          drone_type: 'survey',
+          system_id: 'sol',
+          poi_id: 'earth',
+        },
+      });
+      expect(preview.headline).toBe('Your survey drone is adrift at earth in sol (ID: drone_1)');
+      expect(preview.headline).not.toContain('player_1');
+      expect(preview.details).toEqual(['Use: get_drone drone_id=drone_1', 'Use: recall_drone drone_id=drone_1']);
+      expect(preview.severity).toBe('warning');
+      const tableMessage = tableMessageFromPreview(preview);
+      expect(tableMessage).toContain('get_drone drone_id=drone_1');
+      expect(tableMessage).not.toContain('recall_drone');
     });
   });
 
