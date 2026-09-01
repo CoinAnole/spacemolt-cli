@@ -1049,7 +1049,6 @@ function previewFactionInvite(
   );
 }
 
-/** Diplomacy frames only. Restart/drone headlines are owned by countdown/location templates. */
 function preferDiplomacyMessage(data: Record<string, unknown>, synthesized: string): string {
   const message = safeScalar(data.message);
   return message !== undefined ? firstLine(String(message)) : synthesized;
@@ -1134,6 +1133,7 @@ function previewFactionAllianceBroken(
   return headlinePreview('FACTION', preferDiplomacyMessage(data, `${by} broke the alliance`), options);
 }
 
+// Countdown owns the headline so table Message still shows Ns when message is long.
 function previewServerRestartWarning(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -1181,7 +1181,7 @@ function previewDroneAdrift(
     headline = 'A drone is adrift';
   } else {
     headline = `Your ${droneType !== undefined ? droneType : 'drone'} drone is adrift at ${poiId !== undefined ? poiId : 'unknown POI'} in ${systemId !== undefined ? systemId : 'unknown system'}`;
-    // Omit empty (ID: ) — previewDroneDestroyed interpolates scalarOr(drone_id, '') and can print it.
+    // Skip (ID: ) when drone_id is missing.
     if (droneId !== undefined) headline += ` (ID: ${droneId})`;
   }
 
