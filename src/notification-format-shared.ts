@@ -659,9 +659,11 @@ function attachWreckSite(
 }
 
 function combatLogLocationDuplicatesWreck(log: Record<string, unknown>, data: Record<string, unknown>): boolean {
+  // Keep Location: unless a non-suppressed wreck site actually names that POI.
+  if (data.wreck_suppressed === true) return false;
+  if (safeScalar(data.wreck_id) === undefined) return false;
+
   const wreckPoi = safeScalar(data.wreck_poi_name) ?? safeScalar(data.wreck_poi_id);
-  // Keep Location: when the wreck site does not name a POI
-  // (no wreck, wreck_suppressed, id-only, or system-only / hidden POI).
   if (wreckPoi === undefined) return false;
 
   const deathPoi = safeScalar(log.death_location);
@@ -924,9 +926,6 @@ function previewPirateDestroyed(
   const xp = positiveNumber(data.combat_xp);
   if (xp !== undefined) details.push(truncate(`Weapons XP: ${xp}`, options));
 
-  const role = safeScalar(data.pirate_role);
-  if (role !== undefined) details.push(truncate(`Role: ${role}`, options));
-
   const contents = wreckContentsLabel(data);
   if (contents !== undefined) details.push(truncate(contents, options));
 
@@ -939,6 +938,9 @@ function previewPirateDestroyed(
   }
 
   const attached = attachWreckSite(`${boss}${name} destroyed!`, details, data, options);
+  const role = safeScalar(data.pirate_role);
+  // Role is inline-only; append after wreck/credits/XP/loot so it never occupies the fold slot.
+  if (role !== undefined) attached.details.push(truncate(`Role: ${role}`, options));
   return {
     tag: 'PIRATES',
     headline: attached.headline,
@@ -2136,6 +2138,8 @@ export function tableMessageFromPreview(preview: NotificationPreview): string {
   const details = preview.details;
   if (!details.length) return preview.headline;
   const first = details[0];
+  // Role: is inline-only; never occupy the table Message fold slot.
+  if (first?.startsWith('Role:')) return preview.headline;
   if (first && first.length <= TABLE_DETAIL_FOLD_LIMIT && !preview.headline.includes(first)) {
     return `${preview.headline}; ${first}`;
   }

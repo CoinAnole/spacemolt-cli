@@ -1283,6 +1283,20 @@ describe('notification formatting', () => {
         },
       });
       expect(systemMismatch.details.some((line) => line.includes('Location: Gate Alpha in Sol'))).toBe(true);
+
+      const poiWithoutWreckId = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: {
+          killer_name: 'Raider',
+          wreck_poi_name: 'Gate Alpha',
+          wreck_system_name: 'Alfirk',
+          combat_log: { death_location: 'Gate Alpha', death_system: 'Alfirk' },
+          respawn_base: 'home',
+        },
+      });
+      expect(poiWithoutWreckId.details.some((line) => line.startsWith('wreck '))).toBe(false);
+      expect(poiWithoutWreckId.details.some((line) => line.includes('Location: Gate Alpha in Alfirk'))).toBe(true);
     });
 
     test('player_died keeps Location when wreck is system-only', () => {
@@ -1343,6 +1357,25 @@ describe('notification formatting', () => {
       expect(fromPreview).toContain('wreck suppressed');
       expect(fromPreview).not.toContain('wreck undefined');
       expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+
+      const suppressedWithPoi = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: {
+          cause: 'self_destruct',
+          respawn_base: 'home',
+          wreck_suppressed: true,
+          wreck_poi_name: 'Gate Alpha',
+          wreck_system_name: 'Alfirk',
+          combat_log: {
+            death_location: 'Gate Alpha',
+            death_system: 'Alfirk',
+          },
+        },
+      });
+      expect(suppressedWithPoi.details[0]).toBe('wreck suppressed');
+      expect(suppressedWithPoi.details.some((line) => line.includes('Location: Gate Alpha in Alfirk'))).toBe(true);
+      expect(tableMessageFromPreview(suppressedWithPoi)).not.toContain('Location:');
     });
 
     test('player_died self_destruct_fee > 0 is next to clone cost', () => {
@@ -1681,6 +1714,52 @@ describe('notification formatting', () => {
       expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
     });
 
+    test('pirate_destroyed loot snippet folds Loot not Role into table Message', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'pirate_destroyed',
+        data: { pirate_name: 'Corsair', pirate_role: 'raider', loot: { credits: 10 } },
+      };
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.headline).toBe('Corsair destroyed!');
+      expect(preview.details[0]).toBe('Loot: 1 item: credits×10');
+      expect(preview.details).toContain('Role: raider');
+      expect(preview.details[0]).not.toBe('Role: raider');
+      const fromPreview = tableMessageFromPreview(preview);
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('Corsair destroyed!; Loot: 1 item: credits×10');
+      expect(fromPreview).not.toContain('Role:');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('pirate_destroyed required fields only keeps Role inline and out of table Message', () => {
+      const notification = {
+        type: 'combat',
+        msg_type: 'pirate_destroyed',
+        data: { pirate_name: 'Corsair', pirate_role: 'raider' },
+      };
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.headline).toBe('Corsair destroyed!');
+      expect(preview.details).toEqual(['Role: raider']);
+      const fromPreview = tableMessageFromPreview(preview);
+      const fromFormatter = formatNotificationMessage(notification);
+      expect(fromPreview).toBe(fromFormatter);
+      expect(fromPreview).toBe('Corsair destroyed!');
+      expect(fromPreview).not.toContain('Role:');
+      const output = stripAnsi(
+        formatNotification({
+          type: 'combat',
+          msg_type: 'pirate_destroyed',
+          timestamp: '2026-05-18T12:00:00.000Z',
+          data: { pirate_name: 'Corsair', pirate_role: 'raider' },
+        }).join('\n'),
+      );
+      expect(output).toContain('Corsair destroyed!');
+      expect(output).toContain('Role: raider');
+      expectNoDiagnosticTokens(`${preview.details.join('\n')}\n${fromPreview}\n${output}`);
+    });
+
     test('pirate_destroyed names pirate, credits, and wreck; Role stays inline-only', () => {
       const notification = {
         type: 'combat',
@@ -1971,6 +2050,8 @@ describe('notification formatting', () => {
       expect(zeroCredits.details).toEqual(['Role: raider']);
       expect(zeroCredits.details.join('\n')).not.toContain('Credits:');
       expect(zeroCredits.details.join('\n')).not.toContain('Weapons XP:');
+      expect(tableMessageFromPreview(zeroCredits)).toBe('Corsair destroyed!');
+      expect(tableMessageFromPreview(zeroCredits)).not.toContain('Role:');
     });
 
     test('police / pirate / battle pure previews stay compact', () => {
