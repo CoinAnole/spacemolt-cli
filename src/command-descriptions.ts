@@ -97,7 +97,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages.',
   get_drone: 'Get full details for a specific drone, including script and memory.',
   get_insurance_quote: 'Get a risk-based insurance quote for your current ship',
-  get_map: 'View all star systems in the galaxy',
+  get_map:
+    "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
   get_missions: 'Get available missions at your current station',
   get_nearby: 'Show visible nearby players, NPCs, creatures, and intact prizes',
   get_notes: 'List all your note documents',

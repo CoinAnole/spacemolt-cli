@@ -1458,6 +1458,28 @@ describe('help output branches', () => {
     expect(output).toContain('Current or remote owned/faction-garage ship fit');
   });
 
+  test('help get_map documents optional system_id with a copy-safe sol example', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('get_map', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt get_map [system_id]');
+    expect(output).toContain('omit for all systems');
+    expect(output).not.toContain('<args...>');
+    expect(output).toContain('spacemolt get_map sol');
+    expect(output).not.toContain('`');
+  });
+
+  test('full help get_map line names all systems or one system', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Galaxy map (all systems, or one system)');
+  });
+
   test('Generated API Commands excludes bundled nested command actions', () => {
     const capture = captureWriter();
 

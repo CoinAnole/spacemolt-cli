@@ -161,6 +161,11 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_faction_achievements',
   },
   get_map: {
+    usage: '[system_id]  (omit for all systems)',
+    description:
+      "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
+    example: 'spacemolt get_map; spacemolt get_map sol',
+    seeAlso: ['get_system', 'search_systems', 'find_route', 'get_location'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_map',
     positionals: ['system_id'],

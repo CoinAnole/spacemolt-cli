@@ -3,6 +3,8 @@ import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   getLocationFixture,
+  getMapFixture,
+  getMapSystemFixture,
   getStatusDetainedFixture,
   getStatusFixture,
   nearbyBossFixture,
@@ -1086,4 +1088,94 @@ test('get_status_summary still prints Crew 0/6 when incapacitated', () => {
   expect(stdout).toContain('Crew:');
   expect(stdout).toContain('0/6');
   expect(stdout).not.toContain('INCAPACITATED');
+});
+
+test('get_map system detail prints labeled chart fields including Description', () => {
+  const rendered = renderStructuredResult('get_map', structuredClone(getMapSystemFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  expect(stdout).toContain('=== System: Veiled Reach ===');
+  expect(stdout).toContain('ID: veiled_reach');
+  expect(stdout).toContain('Empire: None');
+  expect(stdout).toContain('Online: 0');
+  expect(stdout).toContain('POIs: 1');
+  expect(stdout).toContain('Position: (120.5, -44)');
+  expect(stdout).toContain('Visited: false');
+  expect(stdout).toContain('Visited at: 2026-01-01T00:00:00Z');
+  expect(stdout).toContain(
+    'Description: No star lights this waypoint, but the dust lane still feeds three jump beacons, so navigators keep it on the chart.',
+  );
+  expect(stdout).toContain('Connections:');
+  expect(stdout).toContain('  - sol');
+  expect(stdout).toContain('  - barnards_star');
+  expect(stdout).not.toContain('Stronghold');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('get_map system detail omits Description when missing or whitespace-only', () => {
+  const withoutDescription = structuredClone(getMapSystemFixture) as { description?: string };
+  delete withoutDescription.description;
+  const whitespaceOnly = { ...getMapSystemFixture, description: '   \n\t  ' };
+
+  for (const fixture of [withoutDescription, whitespaceOnly]) {
+    const stdout = renderStructuredResult('get_map', fixture, options, context).stdout.join('\n');
+    expect(stdout).toContain('=== System: Veiled Reach ===');
+    expect(stdout).not.toContain('Description:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('get_map system detail prints Stronghold only when is_stronghold is true', () => {
+  const stronghold = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, is_stronghold: true },
+    options,
+    context,
+  ).stdout.join('\n');
+  const notStronghold = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, is_stronghold: false },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stronghold).toContain('Stronghold: yes');
+  expect(notStronghold).not.toContain('Stronghold');
+});
+
+test('get_map system detail omits Connections when the array is empty', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, connections: [] },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== System: Veiled Reach ===');
+  expect(stdout).not.toContain('Connections:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map unknown shape falls back to raw response', () => {
+  const stdout = renderStructuredResult('get_map', { name: 'Sol' }, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== System:');
+});
+
+test('get_map list without descriptions stays a Name/System ID table', () => {
+  const stdout = renderStructuredResult('get_map', structuredClone(getMapFixture), options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Systems ===');
+  expect(stdout).toContain('Sol');
+  expect(stdout).toContain('alpha_centauri');
+  expect(stdout).toContain('total 2');
+  expect(stdout).not.toContain('Chart descriptions');
+  expect(stdout).not.toContain('Description:');
+  expect(stdout).not.toContain('=== Response ===');
 });

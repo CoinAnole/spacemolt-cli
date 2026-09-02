@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Single-system map chart (gameserver 0.576.0)
+
+- Human `get_map <system_id>` prints a labeled system block including Description
+  when present, instead of `=== Response ===`. JSON/YAML field names are unchanged.
+  The galaxy list table is unchanged.
+
 ### Prize status enums (gameserver 0.577.2)
 
 - Human `prize_update` previews treat `expired` and `recaptured` as terminal

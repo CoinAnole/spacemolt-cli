@@ -1,0 +1,19 @@
+{
+  "system_id": "veiled_reach",
+  "name": "Veiled Reach",
+  "empire": "",
+  "is_stronghold": false,
+  "online": 0,
+  "poi_count": 1,
+  "position": {
+    "x": 120.5,
+    "y": -44
+  },
+  "visited": false,
+  "visited_at": "2026-01-01T00:00:00Z",
+  "connections": [
+    "sol",
+    "barnards_star"
+  ],
+  "description": "No star lights this waypoint, but the dust lane still feeds three jump beacons, so navigators keep it on the chart."
+}
