@@ -14,3 +14,4 @@ Rent is paused on damaged and dismantling facilities until they return to servic
   Personal Quarters | player-quarters | personal_quarters | disabled    | 100cr         
   Personal Hangar   | player-hangar   | personal_hangar   | dismantling | 800cr (paused)
   Workshop          | player-workshop | workshop          | damaged     | 400cr (paused)
+Docked at: Earth Station (earth_station)

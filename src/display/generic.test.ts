@@ -8,8 +8,11 @@ import {
   storageDepositBulkStationGiftFixture,
   storageDepositStationGiftFixture,
   storageWithdrawAutoDockedFixture,
+  undockFixture,
 } from './generic.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
+import { towWreckFixture } from './ship.fixtures.ts';
+import { getLocationFixture, getStatusFixture } from './status.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -36,6 +39,13 @@ const context = {
     compact: false,
   },
 };
+
+function earthStationLocation(dockedAt: string | null): Record<string, unknown> {
+  return structuredClone({
+    ...(storageDepositAutoDockedFixture.location as Record<string, unknown>),
+    docked_at: dockedAt,
+  });
+}
 
 test('renders dock facility_note and your_facilities with paused vs billable rent', () => {
   const stdout = renderStructuredResult('dock', structuredClone(dockFixture), options, context).stdout.join('\n');
@@ -77,6 +87,120 @@ test('omits dock your_facilities table and (None) when the list is empty', () =>
   expect(stdout).not.toContain('=== Your facilities ===');
   expect(stdout).not.toContain('(None)');
   expect(stdout).not.toContain('Rent is paused on damaged and dismantling facilities');
+});
+
+test('prints compact dock state after a nested dock briefing', () => {
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: structuredClone(dockFixture), location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Docked: Earth Station ===');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout.indexOf('=== Your facilities ===')).toBeLessThan(
+    stdout.indexOf('Docked at: Earth Station (earth_station)'),
+  );
+  expect(stdout).not.toContain('Station Name:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints compact undock state without the scalar Action dump', () => {
+  const stdout = renderStructuredResult(
+    'undock',
+    { details: structuredClone(undockFixture), location: earthStationLocation(null) },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Undock ===');
+  expect(stdout).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+  expect(stdout).not.toContain('Action: undock');
+  expect(stdout).not.toContain('null');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each([
+  [
+    'dock',
+    { details: structuredClone(dockFixture), location: earthStationLocation('earth_station') },
+    'Docked at: Earth Station (earth_station)',
+  ],
+  [
+    'undock',
+    { details: structuredClone(undockFixture), location: earthStationLocation(null) },
+    'Undocked at: Earth Station (earth_station), Sol (sol)',
+  ],
+  ['storage_deposit', structuredClone(storageDepositAutoDockedFixture), 'Docked at: Earth Station (earth_station)'],
+] as const)('--quiet %s still prints compact dock state and omits auto-dock banners', (command, fixture, line) => {
+  const stdout = renderStructuredResult(command, fixture, { ...options, quiet: true }, context).stdout.join('\n');
+  expect(stdout).toContain(line);
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+  expect(stdout).not.toContain('[AUTO-UNDOCKED]');
+});
+
+test('--quiet still prints compact dock state when auto_docked is top-level', () => {
+  const fixture = { ...structuredClone(storageDepositAutoDockedFixture), auto_docked: true };
+  const stdout = renderStructuredResult('storage_deposit', fixture, { ...options, quiet: true }, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('=== Deposit Items ===');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+test('get_location with injected details still uses query dock copy', () => {
+  const fixture = structuredClone(getLocationFixture) as Record<string, unknown>;
+  fixture.details = {};
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Docked at: earth_station');
+  expect(stdout).not.toContain('Docked at: Earth (earth_station)');
+  expect(stdout).not.toContain('Undocked at:');
+});
+
+test('get_status with injected details still uses query dock copy', () => {
+  const fixture = structuredClone(getStatusFixture) as Record<string, unknown>;
+  fixture.details = {};
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Docked: Yes (earth_station)');
+  expect(stdout).not.toContain('Docked at:');
+  expect(stdout).not.toContain('Undocked at:');
+});
+
+test('unmatched auto-dock mutation prints compact dock state then JSON dump', () => {
+  const stdout = renderStructuredResult(
+    'mystery_mutation',
+    {
+      details: {
+        action: 'mystery_op',
+        auto_docked: true,
+        extra: { nested: true },
+      },
+      location: {
+        docked_at: 'earth_station',
+        poi_name: 'Earth Station',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout.indexOf('Docked at: Earth Station (earth_station)')).toBeLessThan(stdout.indexOf('=== Response ==='));
+  expect(stdout).not.toContain('Arrived at');
+});
+
+test('scalar dump skips aliased location keys on tow_wreck', () => {
+  const stdout = renderStructuredResult('tow_wreck', structuredClone(towWreckFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('=== Tow Wreck ===');
+  expect(stdout).toContain('Wreck Id: wreck-1');
+  expect(stdout).toContain('Fuel Now: 92');
+  expect(stdout).not.toContain('System Id:');
+  expect(stdout).not.toContain('Poi:');
+  expect(stdout).not.toContain('Poi Name:');
+  expect(stdout).not.toContain('Docked at:');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('renders faction espionage narrative results', () => {
@@ -169,6 +293,34 @@ test('renders dismantle_outpost kit refund and details-only auto-undocked field 
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
 });
 
+test('prints compact undock state after a details auto-undock receipt', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'outpost_forward_cache',
+        name: 'Forward Cache',
+        kit_item: 'outpost_kit',
+        kit_refunded: true,
+        fee_refunded: 0,
+        hint: 'You are adrift at the former outpost point of interest.',
+        auto_undocked: true,
+      },
+      location: earthStationLocation(null),
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+  expect(stdout.indexOf('=== Outpost Dismantled ===')).toBeLessThan(
+    stdout.indexOf('Undocked at: Earth Station (earth_station), Sol (sol)'),
+  );
+  expect(stdout).not.toContain('[AUTO-UNDOCKED]');
+  expect(stdout).not.toContain('null');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test.each([
   ['storage_deposit', storageDepositAutoDockedFixture, 'Deposit Items', 'Storage Total: 42'],
   ['storage_withdraw', storageWithdrawAutoDockedFixture, 'Withdraw Items', 'Storage Remaining: 35'],
@@ -180,8 +332,13 @@ test.each([
   expect(stdout).toContain(`=== ${title} ===`);
   expect(stdout).toContain(totalLine);
   expect(stdout).toContain('Auto Docked: true');
-  expect(stdout).toContain('Station Name: Earth Station');
-  expect(stdout).toContain('Station Id: earth_station');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).not.toContain('Station Name:');
+  expect(stdout).not.toContain('Station Id:');
+  expect(stdout).not.toContain('Poi:');
+  expect(stdout).not.toContain('Docked At:');
+  expect(stdout).not.toContain('Online Players:');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -359,11 +516,12 @@ test('formats bulk station gifts when only nested results carry station: recipie
   expect(stdout).not.toContain('Poi:');
   expect(stdout).not.toContain('Poi Name:');
   expect(stdout).not.toContain('Docked At:');
+  expect(stdout).not.toContain('Docked at:');
   expect(stdout).not.toContain('Results: 1 item(s)');
   expect(stdout).not.toContain('=== Response ===');
 });
 
-test('does not print auto-dock fields or location aliases on a station gift receipt', () => {
+test('prints compact dock state on a station gift that auto-docked, without alias dumps', () => {
   const rendered = renderStructuredResult(
     'storage_deposit',
     {
@@ -392,10 +550,13 @@ test('does not print auto-dock fields or location aliases on a station gift rece
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('=== Station Gift ===');
   expect(stdout).toContain('Station: station:grand_exchange_station');
+  expect(stdout).toContain('Docked at: Grand Exchange (grand_exchange_station)');
   expect(stdout).not.toContain('Auto Docked');
   expect(stdout).not.toContain('Auto-docked');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
   expect(stdout).not.toContain('Station Name: Grand Exchange');
+  expect(stdout).not.toContain('Poi:');
+  expect(stdout).not.toContain('Docked At:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -421,6 +582,7 @@ test('keeps player send_gift on the scalar dump', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('=== Send Gift ===');
   expect(stdout).toContain('Recipient: PlayerName');
+  expect(stdout).toContain('Base Id: earth_station');
   expect(stdout).not.toContain('=== Station Gift ===');
   expect(stdout).not.toContain('=== Response ===');
 });
@@ -1668,6 +1830,7 @@ test('renders craft queue with station context and a single table heading', () =
   expect(stdout).toContain('=== Craft Queue @ Iron Reach Station (iron_reach_station) ===');
   expect(stdout).toContain('steel-job-1');
   expect(stdout).toContain('Iron Refinery');
+  expect(stdout).not.toContain('Docked at:');
   expect(stdout).not.toContain('=== Jobs ===');
   expect(stdout).not.toContain('=== Response ===');
 });

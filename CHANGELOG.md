@@ -4,6 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Dock state on mutation table output (gameserver 0.577.3)
+
+- Human `dock` / `undock` table output prints a compact `Docked at:` / `Undocked at:`
+  line after the command receipt so you do not need a follow-up `get_status` /
+  `get_location`. Storage deposit/withdraw that auto-dock print the same line
+  instead of dumping aliased location keys.
+- `--quiet` still shows the compact line. Cyan `[AUTO-DOCKED]` / `[AUTO-UNDOCKED]`
+  banners stay quiet-gated.
+- JSON/YAML/jq field names are unchanged.
+
 ### Help copy (gameserver 0.574.5 / 0.575.0)
 
 - `facility repair` help now states that a repair finishes on the next station

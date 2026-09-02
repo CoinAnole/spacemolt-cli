@@ -6,6 +6,7 @@ import {
   summarizeNamedItemQuantities as summarizeShipRequiredItems,
 } from './catalog-detail.ts';
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
+import { isAliasCopiedDumpKey } from './dock-state.ts';
 import {
   c,
   commandNameEquals,
@@ -1016,6 +1017,16 @@ export const genericFormatters = [
   ),
 
   formatter(
+    (r, command) => {
+      if (!commandNameEquals(command, 'undock')) return false;
+      if (r.action !== 'undock' && r.action !== undefined) return false;
+      emitLine(`\n${c.bright}=== Undock ===${c.reset}`);
+      return true;
+    },
+    { commands: ['undock'] },
+  ),
+
+  formatter(
     (r) => {
       const missions = activeMissionRows(r);
       if (!missions) return false;
@@ -1331,7 +1342,10 @@ export const genericFormatters = [
   // Conservative fallback for scalar-only action responses.
   formatter(
     (r, command) => {
-      const entries = Object.entries(r).filter(([, value]) => value !== undefined && value !== null && value !== '');
+      // Skip dest keys flattened from sibling location; keep native details fields.
+      const entries = Object.entries(r).filter(
+        ([key, value]) => value !== undefined && value !== null && value !== '' && !isAliasCopiedDumpKey(r, key),
+      );
       const isStorageTransfer =
         commandNameEquals(command, 'storage_deposit') || commandNameEquals(command, 'storage_withdraw');
       const maxEntries = isStorageTransfer ? 24 : 16;

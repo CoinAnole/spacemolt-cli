@@ -72,3 +72,20 @@ export const LOCATION_ALIAS_COPIES: ReadonlyArray<{ dest: string; source: string
 
 /** Dest-key set for skipping aliased location fields in scalar dumps. */
 export const LOCATION_ALIAS_DUMP_KEYS = new Set(LOCATION_ALIAS_COPIES.map((row) => row.dest));
+
+const ORIGINAL_DETAIL_KEYS = Symbol('originalDetailKeys');
+
+export function rememberOriginalDetailKeys(details: Record<string, unknown>): void {
+  Object.defineProperty(details, ORIGINAL_DETAIL_KEYS, {
+    value: new Set(Object.keys(details)),
+    enumerable: false,
+  });
+}
+
+/** True when `key` is a location-alias dest that was flattened onto details, not a native details field. */
+export function isAliasCopiedDumpKey(record: Record<string, unknown>, key: string): boolean {
+  if (!LOCATION_ALIAS_DUMP_KEYS.has(key)) return false;
+  const original = Object.getOwnPropertyDescriptor(record, ORIGINAL_DETAIL_KEYS)?.value;
+  if (!(original instanceof Set)) return false;
+  return !original.has(key);
+}
