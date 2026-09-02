@@ -858,6 +858,43 @@ describe('notification formatting', () => {
     expect(tableMessageFromPreview(preview)).toBe('mine completed (tick 42); Mining complete.');
   });
 
+  test('action_result jump with location.docked_at includes compact line without auto flags', () => {
+    const notification = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 99,
+        result: {
+          message: 'Arrived in Alfirk.',
+          location: {
+            system_id: 'alfirk',
+            system_name: 'Alfirk',
+            poi_id: 'alfirk_gate',
+            poi_name: 'Alfirk Gate',
+            docked_at: null,
+          },
+        },
+      },
+    };
+    const output = stripAnsi(formatNotification(notification).join('\n'));
+
+    expect(output).toContain('[ACTION RESULT]');
+    expect(output).toContain('jump completed');
+    expect(output).toContain('Undocked at: Alfirk Gate (alfirk_gate), Alfirk (alfirk)');
+    expect(output).not.toContain('auto-docked');
+    expect(output).not.toContain('auto-undocked');
+    expect(output).not.toContain('null');
+
+    const preview = formatNotificationPreview(notification);
+    expect(preview.details[0]).toBe('Arrived in Alfirk.');
+    expect(preview.details.slice(1)).toContain('Undocked at: Alfirk Gate (alfirk_gate), Alfirk (alfirk)');
+    expect(preview.details).not.toContain('auto-docked');
+    expect(preview.details).not.toContain('auto-undocked');
+    expect(tableMessageFromPreview(preview)).toBe('jump completed (tick 99); Arrived in Alfirk.');
+  });
+
   test('system jump progress formats a compact one-liner', () => {
     const notification = {
       type: 'system',
