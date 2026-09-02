@@ -8,7 +8,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 - Human `get_map <system_id>` prints a labeled system block including Description
   when present, instead of `=== Response ===`. JSON/YAML field names are unchanged.
-  The galaxy list table is unchanged.
+- Galaxy `get_map` prints a Chart descriptions table when any listed system has
+  chart text. Systems table columns stay Name / System ID. JSON/YAML field names
+  are unchanged.
 
 ### Prize status enums (gameserver 0.577.2)
 

@@ -809,11 +809,28 @@ export const statusFormatters = [
   formatter(
     (r) => {
       if (Array.isArray(r.systems)) {
-        printCompactTable('Systems', r.systems.filter(isRecord), [
+        const rows = r.systems.filter(isRecord);
+        printCompactTable('Systems', rows, [
           ['Name', ['name']],
           ['System ID', ['system_id']],
         ]);
         if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
+        const chartRows = rows.flatMap((row) => {
+          const description = chartDescription(row.description);
+          return description ? [{ ...row, description }] : [];
+        });
+        if (chartRows.length) {
+          printCompactTable(
+            'Chart descriptions',
+            chartRows,
+            [
+              ['Name', ['name']],
+              ['System ID', ['system_id']],
+              ['Description', ['description']],
+            ],
+            { maxCellWidth: 72 },
+          );
+        }
         return true;
       }
       if (!isMapSystemInfo(r)) return false;
