@@ -2645,6 +2645,110 @@ describe('notification formatting', () => {
       expect(tableMessage(notification)).toBe(preview.headline);
       expect(tableMessage(notification)).not.toContain('Prize hull destroyed');
     });
+
+    test('last-resort prize_update with message still omits the server sentence', () => {
+      const notification = prizeNotification({
+        ship_id: 'ship-recover-1',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize update');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('neutral');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe('Prize update');
+      expect(fromPreview).not.toContain('Prize recovery stopped: fuel empty');
+    });
+
+    test('non-in_transit stall-like prints raw status, wait, and location and folds Use:', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'warp_jammed',
+        wait_reason: 'dry',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) (warp_jammed) (dry) at sol_cloudbank (sol)');
+      expect(preview.headline).not.toContain('stalled');
+      expect(preview.headline).not.toContain('waiting');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
+      expect(preview.severity).toBe('warning');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe(
+        'Prize prize-1 (Captured Lark) (warp_jammed) (dry) at sol_cloudbank (sol); Use: service_prize prize_id=prize-1',
+      );
+      expect(fromPreview).toContain('Use: service_prize prize_id=prize-1');
+      expect(fromPreview).not.toContain('Prize recovery stopped: fuel empty');
+    });
+
+    test('wreck and location optional parts omit missing poi, system, and destination', () => {
+      const wreckOnly = prizeNotification({
+        ...prizeIdentity,
+        status: 'destroyed',
+        wreck_id: 'wreck-9',
+        message: 'Prize hull destroyed',
+      });
+      expect(formatNotificationPreview(wreckOnly).details[0]).toBe('wreck wreck-9');
+      expect(tableMessage(wreckOnly)).toBe('Prize prize-1 (Captured Lark) destroyed; wreck wreck-9');
+      expect(tableMessage(wreckOnly)).not.toContain('wreck undefined');
+
+      const wreckPoi = prizeNotification({
+        ...prizeIdentity,
+        status: 'destroyed',
+        wreck_id: 'wreck-9',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize hull destroyed',
+      });
+      expect(formatNotificationPreview(wreckPoi).details[0]).toBe('wreck wreck-9 at sol_cloudbank');
+      expect(tableMessage(wreckPoi)).toBe('Prize prize-1 (Captured Lark) destroyed; wreck wreck-9 at sol_cloudbank');
+
+      const wreckSystem = prizeNotification({
+        ...prizeIdentity,
+        status: 'destroyed',
+        wreck_id: 'wreck-9',
+        system_id: 'sol',
+        message: 'Prize hull destroyed',
+      });
+      expect(formatNotificationPreview(wreckSystem).details[0]).toBe('wreck wreck-9 in sol');
+      expect(tableMessage(wreckSystem)).toBe('Prize prize-1 (Captured Lark) destroyed; wreck wreck-9 in sol');
+
+      const stallPoi = prizeNotification({
+        ...prizeIdentity,
+        status: 'in_transit',
+        wait_reason: 'dry',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      expect(formatNotificationPreview(stallPoi).headline).toBe(
+        'Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank',
+      );
+
+      const stallSystem = prizeNotification({
+        ...prizeIdentity,
+        status: 'in_transit',
+        wait_reason: 'dry',
+        system_id: 'sol',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      expect(formatNotificationPreview(stallSystem).headline).toBe(
+        'Prize prize-1 (Captured Lark) in transit (dry) at sol',
+      );
+
+      const deliveredNoDest = prizeNotification({
+        ...prizeIdentity,
+        status: 'delivered',
+        message: 'Prize delivered to storage',
+      });
+      const deliveredPreview = formatNotificationPreview(deliveredNoDest);
+      expect(deliveredPreview.headline).toBe('Prize prize-1 (Captured Lark) delivered');
+      expect(deliveredPreview.headline).not.toContain('to ');
+      expect(deliveredPreview.details).toEqual([]);
+      expect(tableMessage(deliveredNoDest)).toBe(deliveredPreview.headline);
+    });
   });
 
   describe('Policy 5 pure preview ladder (formatNotificationPreview)', () => {
