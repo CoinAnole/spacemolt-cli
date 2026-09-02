@@ -83,7 +83,7 @@
       "transit_from_system_id": "sol",
       "transit_to_system_id": "alpha_centauri",
       "transit_arrival_tick": 12500,
-      "wait_reason": "jump_cooldown",
+      "wait_reason": "no_fuel",
       "return_crew_faction_id": "other_faction"
     }
   ],
@@ -106,8 +106,7 @@
         "ship_id": "ship-prize-1",
         "ship_class": "frigate",
         "ship_name": "Dust Devil",
-        "status": "intact",
-        "wait_reason": "awaiting_claim",
+        "status": "available",
         "hull": 40,
         "max_hull": 80,
         "shield": 10,

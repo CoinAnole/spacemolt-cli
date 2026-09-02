@@ -80,9 +80,7 @@ function formatPrizeTransit(prize: Record<string, unknown>): string | undefined 
   const toPoi = scalarText(prize.transit_to_poi_id);
   const preferPoi = kind === 'travel';
   const preferSystem =
-    kind === 'jump' ||
-    kind === 'pathfinder' ||
-    (!preferPoi && (kind !== undefined || fromSystem !== undefined || toSystem !== undefined));
+    kind === 'jump' || (!preferPoi && (kind !== undefined || fromSystem !== undefined || toSystem !== undefined));
 
   const from = preferPoi ? (fromPoi ?? fromSystem) : preferSystem ? (fromSystem ?? fromPoi) : (fromPoi ?? fromSystem);
   const to = preferPoi ? (toPoi ?? toSystem) : preferSystem ? (toSystem ?? toPoi) : (toPoi ?? toSystem);

@@ -596,7 +596,7 @@ function assertCopyablePrizeIds(stdout: string, header: string): void {
   expect(stdout).toContain('actor-prize-1');
   expect(stdout).toContain('Dust Devil');
   expect(stdout).toContain('frigate');
-  expect(stdout).toContain('intact');
+  expect(stdout).toContain('available');
   expect(stdout).toContain('40/80');
   for (const field of personnelLeak) {
     expect(stdout).not.toContain(field);
@@ -696,7 +696,7 @@ test('get_status falls back to top-level nearby_prizes when location omits them'
       prize_id: 'prize-hoisted-1',
       actor_id: 'actor-hoisted-1',
       ship_class: 'hauler',
-      status: 'intact',
+      status: 'available',
       hull: 12,
       max_hull: 20,
     },
@@ -758,7 +758,7 @@ test('nearby prizes omit gated columns and never print personnel even when prese
           prize_id: 'prize-bare-1',
           actor_id: 'actor-bare-1',
           ship_class: 'scout',
-          status: 'intact',
+          status: 'available',
           hull: 8,
           max_hull: 10,
           fit_crew: 4,
@@ -787,6 +787,34 @@ test('nearby prizes omit gated columns and never print personnel even when prese
   }
 });
 
+test('nearby prizes print Wait when wait_reason is present', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    {
+      nearby: [],
+      prizes: [
+        {
+          prize_id: 'prize-stall-1',
+          actor_id: 'actor-stall-1',
+          ship_class: 'frigate',
+          status: 'in_transit',
+          wait_reason: 'no_fuel',
+        },
+      ],
+      prize_count: 1,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Prizes (1):');
+  expect(stdout).toContain('Wait');
+  expect(stdout).toContain('no_fuel');
+  expect(stdout).toContain('prize-stall-1');
+  expect(stdout).toContain('in_transit');
+  expect(stdout).not.toContain('Prize recoveries');
+});
+
 test('nearby prize Combat is yes when in_combat is true and blank when false', () => {
   const stdout = renderStructuredResult(
     'get_nearby',
@@ -797,14 +825,14 @@ test('nearby prize Combat is yes when in_combat is true and blank when false', (
           prize_id: 'prize-fight-1',
           actor_id: 'actor-fight-1',
           ship_class: 'frigate',
-          status: 'intact',
+          status: 'available',
           in_combat: true,
         },
         {
           prize_id: 'prize-idle-1',
           actor_id: 'actor-idle-1',
           ship_class: 'frigate',
-          status: 'intact',
+          status: 'available',
           in_combat: false,
         },
       ],
@@ -825,7 +853,7 @@ test('nearby prizes cap rows at 10 and print a remainder footer', () => {
     prize_id: `prize-${index + 1}`,
     actor_id: `actor-${index + 1}`,
     ship_class: 'frigate',
-    status: 'intact',
+    status: 'available',
   }));
   const stdout = renderStructuredResult(
     'get_nearby',
@@ -950,7 +978,7 @@ test('prize recovery transit prefers POI ids for travel and systems when kind is
     {
       prize_id: 'prize-kindless-1',
       ship_class: 'scout',
-      status: 'docked',
+      status: 'in_transit',
       destination_base_id: 'earth_station',
       crew_disposition: 'aboard',
       transit_from_system_id: 'sol',
@@ -964,13 +992,14 @@ test('prize recovery transit prefers POI ids for travel and systems when kind is
     {
       prize_id: 'prize-parked-1',
       ship_class: 'frigate',
-      status: 'docked',
+      status: 'claimed',
       destination_base_id: 'earth_station',
       prize_crew_fit: 3,
       system_id: 'sol',
       poi_id: 'earth_station',
     },
   ];
+  // pathfinder is not in the OpenAPI transit_kind enum; keep as unknown-kind fail-open.
   const pathfinder = structuredClone(getStatusFixture) as { prize_recoveries: Array<Record<string, unknown>> };
   pathfinder.prize_recoveries = [
     {
@@ -1006,10 +1035,12 @@ test('prize recovery transit prefers POI ids for travel and systems when kind is
   const omittedOut = renderStructuredResult('get_status', omittedKind, options, context).stdout.join('\n');
   expect(omittedOut).toContain('sol → alpha_centauri');
   expect(omittedOut).toContain('aboard');
+  expect(omittedOut).toContain('in_transit');
   expect(omittedOut).not.toContain('undefined');
 
   const parkedOut = renderStructuredResult('get_status', parked, options, context).stdout.join('\n');
   expect(parkedOut).toContain('sol / earth_station');
+  expect(parkedOut).toContain('claimed');
   expect(parkedOut).toContain('3');
 
   const pathfinderOut = renderStructuredResult('get_status', pathfinder, options, context).stdout.join('\n');

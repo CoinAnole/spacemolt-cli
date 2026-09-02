@@ -60,8 +60,7 @@ prizes:
     ship_id: "ship-prize-1"
     ship_class: frigate
     ship_name: "Dust Devil"
-    status: intact
-    wait_reason: awaiting_claim
+    status: available
     hull: 40
     max_hull: 80
     shield: 10
