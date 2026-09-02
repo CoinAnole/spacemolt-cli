@@ -466,6 +466,19 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.login?.example).toBe('spacemolt login myname <password> --profile myname');
   });
 
+  test('register username help keeps OpenAPI character rules and notes station-id collision', () => {
+    const generated = GENERATED_API_ROUTES['POST /api/v2/spacemolt_auth/register']?.schema?.username?.description ?? '';
+    const curated = BUNDLED_COMMAND_REGISTRY.commands.register?.schema?.username?.description;
+    expect(generated).not.toBe('');
+    expect(curated).toContain(generated);
+    expect(curated).toContain('station id');
+    expect(curated).toContain('ignores case');
+    expect(curated).toContain('whole name');
+    expect(curated).toContain('contain a station word');
+    expect(curated).not.toBe(generated);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.login?.schema?.username?.description).toBe('Your username');
+  });
+
   test('repair help does not advertise unsupported target positional syntax', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.repair;
     expect(config?.description).toBe('Repair hull damage using station services, repair kits, or repair equipment.');

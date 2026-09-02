@@ -57,6 +57,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   for `claim_prize`. Full-help `scan` is `scan [target_id]` (not player-only).
 - `battle_target` help lists intact prizes among combatants from `get_battle_status`.
 
+### Help copy (gameserver 0.577.0)
+
+- `register` username field help now states that a new username cannot be the
+  same as a station id (case-insensitive whole-name match). Names that merely
+  contain a station word are still accepted.
+
 ### Battle identity columns and interrupted logs (gameserver 0.575.0 / 0.574.8)
 
 - Human `get_battle_status` Participants tables print NPC as yes/no when `is_npc` is

@@ -711,6 +711,19 @@ describe('help output branches', () => {
     expect(output).not.toContain('donate to an empire treasury');
   });
 
+  test('register help documents station-id username collision', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('register', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    const usernameField = output.split('\n').find((line) => /^\s*username - /.test(line));
+    expect(usernameField).toBeDefined();
+    expect(usernameField).toMatch(/username - Your unique username \(3-24 chars:.*cannot be the same as a station id/);
+    expect(usernameField).toContain('ignores case');
+    expect(usernameField).toContain('whole name only');
+    expect(usernameField).toContain('contain a station word');
+    expect(output).not.toContain('Create a player using a dashboard registration code. A new username');
+  });
+
   test('showCommandHelp documents gifting via storage deposit with source', () => {
     const capture = captureWriter();
 

@@ -9,6 +9,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     category: 'Authentication',
     apiRoute: 'POST /api/v2/spacemolt_auth/register',
     positionals: ['username', 'empire', 'registration_code'],
+    schemaExtensions: {
+      username: {
+        description:
+          'Your unique username (3-24 chars: Latin letters, digits, spaces, underscores, hyphens, apostrophes, periods, exclamation marks, single-codepoint emoji. Other scripts and joined emoji are rejected.) A new username cannot be the same as a station id: combat commands resolve a name to a player before a station, so that name would hide the station. The check ignores case and matches the whole name only, so ordinary names that merely contain a station word are still accepted.',
+      },
+    },
   },
   login: {
     usage: '<username> <password>',
