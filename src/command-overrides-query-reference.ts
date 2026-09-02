@@ -249,7 +249,6 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     arrayFields: ['types'],
     schemaExtensions: {
       types: {
-        // description only — generated POST already has type: 'array' and the seven-value enum
         description: NOTIFICATION_TYPES_FIELD_DESCRIPTION,
       },
     },
@@ -274,7 +273,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       },
       types: {
         type: 'array',
-        enum: [...NOTIFICATION_TYPE_ENUM], // GET generated schema has no enum
+        enum: [...NOTIFICATION_TYPE_ENUM],
         description: NOTIFICATION_TYPES_FIELD_DESCRIPTION,
       },
     },
