@@ -14,6 +14,7 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   (same-POI intercept during recovery). `get_nearby` and `scan` help mention
   intact prizes; prize rows expose `actor_id` for attack or scan and `prize_id`
   for `claim_prize`. Full-help `scan` is `scan [target_id]` (not player-only).
+- `battle_target` help lists intact prizes among combatants from `get_battle_status`.
 
 ### Battle identity columns and interrupted logs (gameserver 0.575.0 / 0.574.8)
 

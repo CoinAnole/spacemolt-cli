@@ -47,7 +47,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_target: {
     usage: '<target_id_or_name>',
     description:
-      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, or stations. Does not cost a tick — only reload does.',
+      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, stations, or intact prizes. Does not cost a tick — only reload does.',
     example: 'spacemolt battle_target "Pirate Skiff"',
     discoverWith: ['get_battle_status'],
     seeAlso: ['get_battle_status', 'battle_stance', 'reload'],
@@ -56,6 +56,12 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['target_id'],
     aliases: {
       target_id: 'id',
+    },
+    schemaExtensions: {
+      id: {
+        description:
+          'ID or name of any battle combatant from get_battle_status (players, pirates, police, drones, creatures, stations, or intact prizes). Required when focusing a target and when entering the board stance.',
+      },
     },
   },
   get_battle_status: {
