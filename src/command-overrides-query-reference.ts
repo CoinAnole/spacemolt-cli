@@ -11,7 +11,7 @@ export const NOTIFICATION_TYPE_ENUM = [
 ] as const;
 
 export const NOTIFICATION_TYPES_FIELD_DESCRIPTION =
-  'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, drone_adrift, server_restart_warning, battle_damage, drone_scan, and drone_survey fall back to system, not combat; types=combat does not include them.';
+  'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, and pirate_radio fall back to system, not combat; types=combat does not include them.';
 
 export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_status: {

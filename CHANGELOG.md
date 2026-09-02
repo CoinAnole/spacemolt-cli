@@ -4,6 +4,11 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Help copy (OpenAPI v0.578.1)
+
+- `get_notifications` / `notifications` field help now also lists `pirate_radio`
+  among frames that fall back to `system` (not `combat`). Filter enum unchanged.
+
 ### Single-system map chart (gameserver 0.576.0)
 
 - Human `get_map <system_id>` prints a labeled system block including Description
