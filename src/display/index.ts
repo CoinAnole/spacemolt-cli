@@ -19,7 +19,12 @@ import {
 } from '../response.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
-import { formatDockStateLine, LOCATION_ALIAS_COPIES, locationFromAliasedDetails } from './dock-state.ts';
+import {
+  formatDockStateLine,
+  LOCATION_ALIAS_COPIES,
+  locationFromAliasedDetails,
+  rememberOriginalDetailKeys,
+} from './dock-state.ts';
 import { commandNameEquals, commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
 import { c, type DisplayRenderBuffer, emitError, emitLine, withDisplayRenderBuffer } from './helpers.ts';
 
@@ -532,12 +537,13 @@ function postActionDetailsViewModel(viewModel: Record<string, unknown>): Record<
   if (!isRecord(details)) return undefined;
 
   const actionViewModel = structuredClone(details);
+  rememberOriginalDetailKeys(actionViewModel);
   addLocationAliases(actionViewModel, viewModel.location);
   addShipAliases(actionViewModel, viewModel.ship);
   return actionViewModel;
 }
 
-/** Dump skip is LOCATION_ALIAS_DUMP_KEYS (dest set of this table). connections is intentionally not aliased. */
+/** Null `docked_at` is still copied; `connections` is not a dest. */
 function addLocationAliases(actionViewModel: Record<string, unknown>, location: unknown): void {
   if (!isRecord(location)) return;
 

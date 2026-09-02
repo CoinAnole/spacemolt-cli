@@ -138,6 +138,16 @@ test.each([
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
 });
 
+test('--quiet still prints compact dock state when auto_docked is top-level', () => {
+  const fixture = { ...structuredClone(storageDepositAutoDockedFixture), auto_docked: true };
+  const stdout = renderStructuredResult('storage_deposit', fixture, { ...options, quiet: true }, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('=== Deposit Items ===');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
 test('get_location with injected details still uses query dock copy', () => {
   const fixture = structuredClone(getLocationFixture) as Record<string, unknown>;
   fixture.details = {};
@@ -281,6 +291,34 @@ test('renders dismantle_outpost kit refund and details-only auto-undocked field 
   expect(stdout).not.toContain('=== Response ===');
   // Formatter must not re-emit the cyan envelope banner from details-only flag
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
+});
+
+test('prints compact undock state after a details auto-undock receipt', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'outpost_forward_cache',
+        name: 'Forward Cache',
+        kit_item: 'outpost_kit',
+        kit_refunded: true,
+        fee_refunded: 0,
+        hint: 'You are adrift at the former outpost point of interest.',
+        auto_undocked: true,
+      },
+      location: earthStationLocation(null),
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+  expect(stdout.indexOf('=== Outpost Dismantled ===')).toBeLessThan(
+    stdout.indexOf('Undocked at: Earth Station (earth_station), Sol (sol)'),
+  );
+  expect(stdout).not.toContain('[AUTO-UNDOCKED]');
+  expect(stdout).not.toContain('null');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test.each([
@@ -544,6 +582,7 @@ test('keeps player send_gift on the scalar dump', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('=== Send Gift ===');
   expect(stdout).toContain('Recipient: PlayerName');
+  expect(stdout).toContain('Base Id: earth_station');
   expect(stdout).not.toContain('=== Station Gift ===');
   expect(stdout).not.toContain('=== Response ===');
 });

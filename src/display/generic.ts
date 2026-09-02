@@ -6,7 +6,7 @@ import {
   summarizeNamedItemQuantities as summarizeShipRequiredItems,
 } from './catalog-detail.ts';
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
-import { LOCATION_ALIAS_DUMP_KEYS } from './dock-state.ts';
+import { isAliasCopiedDumpKey } from './dock-state.ts';
 import {
   c,
   commandNameEquals,
@@ -1342,8 +1342,9 @@ export const genericFormatters = [
   // Conservative fallback for scalar-only action responses.
   formatter(
     (r, command) => {
+      // Skip dest keys flattened from sibling location; keep native details fields.
       const entries = Object.entries(r).filter(
-        ([key, value]) => value !== undefined && value !== null && value !== '' && !LOCATION_ALIAS_DUMP_KEYS.has(key),
+        ([key, value]) => value !== undefined && value !== null && value !== '' && !isAliasCopiedDumpKey(r, key),
       );
       const isStorageTransfer =
         commandNameEquals(command, 'storage_deposit') || commandNameEquals(command, 'storage_withdraw');

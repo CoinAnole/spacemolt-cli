@@ -4,9 +4,11 @@ import { join } from 'node:path';
 import {
   formatDockStateLine,
   formatNameId,
+  isAliasCopiedDumpKey,
   LOCATION_ALIAS_COPIES,
   LOCATION_ALIAS_DUMP_KEYS,
   locationFromAliasedDetails,
+  rememberOriginalDetailKeys,
 } from './dock-state.ts';
 
 const storageAutoDockedLocation = {
@@ -240,5 +242,17 @@ describe('dock-state module contract', () => {
 
   test('LOCATION_ALIAS_DUMP_KEYS equals dest keys of LOCATION_ALIAS_COPIES', () => {
     expect(LOCATION_ALIAS_DUMP_KEYS).toEqual(new Set(LOCATION_ALIAS_COPIES.map((row) => row.dest)));
+  });
+
+  test('isAliasCopiedDumpKey keeps native dest keys and skips flattened aliases', () => {
+    const details: Record<string, unknown> = { action: 'send_gift', base_id: 'earth_station' };
+    rememberOriginalDetailKeys(details);
+    details.system_id = 'sol';
+    details.poi_name = 'Earth Station';
+    expect(isAliasCopiedDumpKey(details, 'base_id')).toBe(false);
+    expect(isAliasCopiedDumpKey(details, 'system_id')).toBe(true);
+    expect(isAliasCopiedDumpKey(details, 'poi_name')).toBe(true);
+    expect(isAliasCopiedDumpKey(details, 'action')).toBe(false);
+    expect(isAliasCopiedDumpKey({ base_id: 'earth_station' }, 'base_id')).toBe(false);
   });
 });
