@@ -1,4 +1,9 @@
 import { formatDockStateLine } from './display/dock-state.ts';
+import {
+  formatMissingMaterialsPreview,
+  isMissingMaterialErrorCode,
+  parseMissingMaterialRows,
+} from './error-details.ts';
 import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 
 /** Local isRecord — same style as ship-commission-receipt.ts; no import from response.ts. */
@@ -1679,12 +1684,39 @@ function previewActionError(
   const command = scalarOr(data.command, 'action');
   const tick = safeScalar(data.tick);
   const tickLabel = tick !== undefined ? String(tick) : '?';
-  const error = safeScalar(data.message) ?? safeScalar(data.code) ?? 'unknown error';
-  return headlinePreview(
-    'ACTION FAILED',
-    `${command} failed (tick ${tickLabel}): ${firstLine(String(error))}`,
-    options,
-  );
+  const code = safeScalar(data.code);
+  const error = safeScalar(data.message) ?? code ?? 'unknown error';
+  const headline = truncate(`${command} failed (tick ${tickLabel}): ${firstLine(String(error))}`, options);
+
+  const details: string[] = [];
+  const codeText = code !== undefined ? String(code) : undefined;
+  const willAppendCode = Boolean(codeText && String(error) !== codeText);
+
+  if (codeText && isMissingMaterialErrorCode(codeText)) {
+    const rows = parseMissingMaterialRows(data.details);
+    const missingLine = formatMissingMaterialsPreview(rows, {
+      limit: options.maxDetails,
+      maxChars: Math.min(options.maxLineLength, TABLE_DETAIL_FOLD_LIMIT),
+    });
+    if (missingLine && details.length < options.maxDetails) details.push(missingLine);
+  }
+
+  if (isRecord(data.details)) {
+    const codeReserve = willAppendCode && details.length < options.maxDetails ? 1 : 0;
+    const maxKeys = Math.max(0, options.maxDetails - details.length - codeReserve);
+    for (const bit of collectScalarBits(data.details, {
+      preferredKeys: GENERIC_SCALAR_KEYS,
+      maxKeys,
+    })) {
+      details.push(truncate(bit, options));
+    }
+  }
+
+  if (willAppendCode && details.length < options.maxDetails) {
+    details.push(`code=${codeText}`);
+  }
+
+  return { tag: 'ACTION FAILED', headline, details };
 }
 
 function previewPoiArrival(

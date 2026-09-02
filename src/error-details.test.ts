@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   formatMissingMaterialsErrorLines,
+  formatMissingMaterialsPreview,
   isMissingMaterialErrorCode,
   type MissingMaterialRow,
   parseMissingMaterialRows,
@@ -223,5 +224,103 @@ describe('formatMissingMaterialsErrorLines', () => {
     expect(lines).toEqual([]);
     expect(lines.join('\n')).not.toContain('(None)');
     expect(lines.join('\n')).not.toContain('=== Missing materials ===');
+  });
+});
+
+describe('formatMissingMaterialsPreview', () => {
+  const accidentalTokens = ['undefined', 'NaN', '[object Object]'];
+  const twoRows = [opticalFiber, circuitBoard];
+  const fiveRows: MissingMaterialRow[] = [
+    opticalFiber,
+    circuitBoard,
+    { item_id: 'power_cell', item_name: 'Power Cell', need: 10, have: 2 },
+    { item_id: 'alloy_plate', item_name: 'Alloy Plate', need: 8, have: 0 },
+    { item_id: 'coolant', item_name: 'Coolant', need: 4, have: 1 },
+  ];
+
+  function expectNoDiagnosticTokens(value: string | undefined): void {
+    expect(value).toBeDefined();
+    for (const token of accidentalTokens) expect(value).not.toContain(token);
+  }
+
+  test('returns undefined for an empty row list', () => {
+    expect(formatMissingMaterialsPreview([])).toBeUndefined();
+  });
+
+  test('joins two rows without maxChars using only limit', () => {
+    const line = formatMissingMaterialsPreview(twoRows);
+    expect(line).toBe('missing: Optical Fiber Bundle 0/300, Circuit Board 5/20');
+    expect(line).not.toContain('optical_fiber_bundle');
+    expect(line).not.toContain('circuit_board');
+    expect(line?.length).toBe(55);
+    expectNoDiagnosticTokens(line);
+  });
+
+  test('limit 1 on two rows reports +1 more from the full input', () => {
+    const line = formatMissingMaterialsPreview(twoRows, { limit: 1 });
+    expect(line).toBe('missing: Optical Fiber Bundle 0/300, +1 more');
+    expectNoDiagnosticTokens(line);
+  });
+
+  test('maxChars smaller than two full items keeps the first whole item plus +1 more', () => {
+    const full = formatMissingMaterialsPreview(twoRows);
+    expect(full).toBeDefined();
+    expect(full?.length).toBeGreaterThan(50);
+    const line = formatMissingMaterialsPreview(twoRows, { maxChars: 50 });
+    expect(line).toBe('missing: Optical Fiber Bundle 0/300, +1 more');
+    expect(line?.length).toBeLessThanOrEqual(50);
+    expect(line).not.toContain('Circuit Board');
+    expectNoDiagnosticTokens(line);
+  });
+
+  test('a single item longer than maxChars is ellipsized with no suffix', () => {
+    const line = formatMissingMaterialsPreview([opticalFiber], { maxChars: 20 });
+    expect(line).toBeDefined();
+    expect(line?.length).toBeLessThanOrEqual(20);
+    expect(line?.endsWith('…')).toBe(true);
+    expect(line).not.toContain('more');
+    expect(line).toBe(`${'missing: Optical Fiber Bundle 0/300'.slice(0, 19)}…`);
+    expectNoDiagnosticTokens(line);
+  });
+
+  test('keeps +N more and ellipsizes the body when the first item fits but the suffix does not', () => {
+    const first = 'missing: Optical Fiber Bundle 0/300';
+    const withSuffix = `${first}, +1 more`;
+    const maxChars = first.length + 5;
+    expect(first.length).toBeLessThanOrEqual(maxChars);
+    expect(withSuffix.length).toBeGreaterThan(maxChars);
+
+    const line = formatMissingMaterialsPreview(twoRows, { maxChars });
+    expect(line).toBeDefined();
+    expect(line?.length).toBeLessThanOrEqual(maxChars);
+    expect(line?.endsWith('…, +1 more')).toBe(true);
+    expectNoDiagnosticTokens(line);
+  });
+
+  test('both caps bind: hidden count uses full input, not the limit window', () => {
+    const firstPlusSuffix = 'missing: Optical Fiber Bundle 0/300, +4 more';
+    const twoPlusSuffix = 'missing: Optical Fiber Bundle 0/300, Circuit Board 5/20, +3 more';
+    const maxChars = 50;
+    expect(firstPlusSuffix.length).toBeLessThanOrEqual(maxChars);
+    expect(twoPlusSuffix.length).toBeGreaterThan(maxChars);
+
+    const line = formatMissingMaterialsPreview(fiveRows, { limit: 3, maxChars });
+    expect(line).toBe(firstPlusSuffix);
+    expect(line).toContain('+4 more');
+    expect(line).not.toContain('+2 more');
+    expect(line?.length).toBeLessThanOrEqual(maxChars);
+    expectNoDiagnosticTokens(line);
+  });
+
+  test('never emits diagnostic tokens', () => {
+    const outputs = [
+      formatMissingMaterialsPreview(twoRows),
+      formatMissingMaterialsPreview(twoRows, { limit: 1 }),
+      formatMissingMaterialsPreview(twoRows, { maxChars: 50 }),
+      formatMissingMaterialsPreview([opticalFiber], { maxChars: 20 }),
+      formatMissingMaterialsPreview(twoRows, { maxChars: 40 }),
+      formatMissingMaterialsPreview(fiveRows, { limit: 3, maxChars: 50 }),
+    ];
+    for (const line of outputs) expectNoDiagnosticTokens(line);
   });
 });

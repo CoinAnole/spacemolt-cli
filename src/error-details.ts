@@ -36,6 +36,41 @@ export function parseMissingMaterialRows(details: unknown): MissingMaterialRow[]
   return rows;
 }
 
+export function formatMissingMaterialsPreview(
+  rows: MissingMaterialRow[],
+  options?: { limit?: number; maxChars?: number },
+): string | undefined {
+  const first = rows[0];
+  if (!first) return undefined;
+
+  const limit = options?.limit ?? 6;
+  const maxChars = options?.maxChars;
+  const itemText = (row: MissingMaterialRow): string => `${row.item_name} ${row.have}/${row.need}`;
+
+  const join = (k: number): string => {
+    const shown = rows.slice(0, k).map(itemText);
+    const hidden = rows.length - k;
+    const suffix = hidden > 0 ? `, +${hidden} more` : '';
+    return `missing: ${shown.join(', ')}${suffix}`;
+  };
+
+  const maxK = Math.min(limit, rows.length);
+  if (maxChars === undefined) return join(maxK);
+
+  for (let k = maxK; k >= 1; k--) {
+    const line = join(k);
+    if (line.length <= maxChars) return line;
+  }
+
+  const hidden = rows.length - 1;
+  const suffix = hidden > 0 ? `, +${hidden} more` : '';
+  const body = `missing: ${itemText(first)}`;
+  if (maxChars <= suffix.length + 1) {
+    return maxChars <= 1 ? '…' : `${(body + suffix).slice(0, maxChars - 1)}…`;
+  }
+  return `${body.slice(0, maxChars - suffix.length - 1)}…${suffix}`;
+}
+
 export function formatMissingMaterialsErrorLines(rows: MissingMaterialRow[], colors: DirectColors): string[] {
   if (rows.length === 0) return [];
 
