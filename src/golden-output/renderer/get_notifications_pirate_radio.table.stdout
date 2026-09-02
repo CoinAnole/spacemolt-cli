@@ -1,0 +1,10 @@
+count 4
+
+=== Notifications ===
+
+  Timestamp           | Type         | Message                                                                                                                
+  --------------------+--------------+------------------------------------------------------------------------------------------------------------------------
+  2026-05-23 19:20:00 | pirate_radio | Admiral Kael (raid_commit) — "Cut the hauler out."; Crew: Corsair (actor) at sol_belt (sol)                            
+  2026-05-23 19:20:05 | pirate_radio | Stronghold Control (idle_chatter) — "Keep the belt quiet."; Crew: Corsair (stronghold_control) at sol                  
+  2026-05-23 19:20:10 | pirate_radio | Dreadnought (raid_resolved) — "Hull is ours."; Crew: Corsair (boss) at sol_belt (sol)                                  
+  2026-05-23 19:20:15 | pirate_radio | Admiral Kael (board_commit) — "Take the prize intact."; Crew: Corsair (operation_leader) via Reaver-7 at sol_belt (sol)

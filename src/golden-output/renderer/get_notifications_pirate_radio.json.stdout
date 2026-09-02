@@ -1,0 +1,106 @@
+{
+  "count": 4,
+  "current_tick": 902100,
+  "remaining": 0,
+  "timestamp": 1779565000,
+  "notifications": [
+    {
+      "id": "notif-pirate-radio-tactical-1",
+      "type": "system",
+      "msg_type": "pirate_radio",
+      "timestamp": "2026-05-23T19:20:00.000Z",
+      "data": {
+        "pirate_name": "Admiral Kael",
+        "source_system": "sol",
+        "source_poi": "sol_belt",
+        "faction_key": "corsair",
+        "faction_name": "Corsair",
+        "primary_color": "#c45a2a",
+        "secondary_color": "#1a1a1a",
+        "flagship_ship_class": "raider_frigate",
+        "event_key": "raid_commit",
+        "message": "Cut the hauler out.",
+        "category": "tactical",
+        "editorial_class": "tactical",
+        "discord_policy": "batched",
+        "speaker_category": "actor",
+        "speaker_id": "pirate-kael-1",
+        "reason_code": "premium_cargo"
+      }
+    },
+    {
+      "id": "notif-pirate-radio-ambient-1",
+      "type": "system",
+      "msg_type": "pirate_radio",
+      "timestamp": "2026-05-23T19:20:05.000Z",
+      "data": {
+        "pirate_name": "Stronghold Control",
+        "source_system": "sol",
+        "source_poi": "",
+        "faction_key": "corsair",
+        "faction_name": "Corsair",
+        "primary_color": "#c45a2a",
+        "secondary_color": "#1a1a1a",
+        "flagship_ship_class": "raider_frigate",
+        "event_key": "idle_chatter",
+        "message": "Keep the belt quiet.",
+        "category": "ambient",
+        "editorial_class": "ambient",
+        "discord_policy": "never",
+        "speaker_category": "stronghold_control",
+        "speaker_id": "stronghold-corsair"
+      }
+    },
+    {
+      "id": "notif-pirate-radio-outcome-1",
+      "type": "system",
+      "msg_type": "pirate_radio",
+      "timestamp": "2026-05-23T19:20:10.000Z",
+      "data": {
+        "pirate_name": "Dreadnought",
+        "source_system": "sol",
+        "source_poi": "sol_belt",
+        "faction_key": "corsair",
+        "faction_name": "Corsair",
+        "primary_color": "#c45a2a",
+        "secondary_color": "#1a1a1a",
+        "flagship_ship_class": "raider_frigate",
+        "event_key": "raid_resolved",
+        "message": "Hull is ours.",
+        "category": "outcome",
+        "editorial_class": "outcome",
+        "discord_policy": "immediate",
+        "speaker_category": "boss",
+        "speaker_id": "pirate-dreadnought-1",
+        "battle_id": "battle-99"
+      }
+    },
+    {
+      "id": "notif-pirate-radio-leader-1",
+      "type": "system",
+      "msg_type": "pirate_radio",
+      "timestamp": "2026-05-23T19:20:15.000Z",
+      "data": {
+        "pirate_name": "Admiral Kael",
+        "source_system": "sol",
+        "source_poi": "sol_belt",
+        "faction_key": "corsair",
+        "faction_name": "Corsair",
+        "primary_color": "#c45a2a",
+        "secondary_color": "#1a1a1a",
+        "flagship_ship_class": "raider_frigate",
+        "event_key": "board_commit",
+        "message": "Take the prize intact.",
+        "category": "strategic",
+        "editorial_class": "strategic",
+        "discord_policy": "batched",
+        "speaker_category": "operation_leader",
+        "speaker_id": "pirate-kael-1",
+        "actor_id": "pirate-reaver-7",
+        "actor_name": "Reaver-7",
+        "operation_id": "op-board-1",
+        "reason_code": "premium_cargo"
+      }
+    }
+  ]
+}
