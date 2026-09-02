@@ -949,7 +949,7 @@ function previewPirateDestroyed(
   };
 }
 
-// 0.578.1 pirate radio intercept — identity lives on the headline so table truncation keeps speaker + event.
+// 0.578.1 pirate radio intercept
 
 function quotedTransmission(message: string): string {
   const trimmed = firstLine(message);
@@ -996,7 +996,7 @@ function radioClassLine(data: Record<string, unknown>): string | undefined {
   return bits.length ? bits.join('  ') : undefined;
 }
 
-/** Radio intercept (not combat). Always typed; empty bags still headline as Pirate radio. */
+// Must not return null.
 function previewPirateRadio(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
