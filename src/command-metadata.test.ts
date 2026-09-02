@@ -1233,7 +1233,10 @@ describe('command metadata', () => {
     expect(repair?.description).toContain(
       'automatic rebuild spends and manual spends are recorded in the faction action log',
     );
-    expect(repair?.description).toContain('Facility listings expose when an in-progress repair completes');
+    expect(repair?.description).toContain('next station maintenance cycle');
+    expect(repair?.description).toContain('rounded up');
+    expect(repair?.description).toContain('paid Faction Storage already under repair');
+    expect(repair?.description).not.toContain('Facility listings expose when an in-progress repair completes');
     expect(repair?.description).toContain('get_action_log');
     expect(repair?.description).toContain('Damaged-station facility IDs also appear on get_base');
     expect(repair?.seeAlso).toContain('get_action_log');
@@ -1243,6 +1246,8 @@ describe('command metadata', () => {
     expect(repair?.schema?.facility_id?.description).toContain('facility_list or facility_owned');
     expect(repair?.schema?.facility_id?.description).toContain('faction_facility_list');
     expect(repair?.schema?.facility_id?.description).toContain('repair completion timing');
+    expect(repair?.schema?.facility_id?.description).toContain('repair_complete_tick');
+    expect(repair?.schema?.facility_id?.description).toContain('next station maintenance cycle');
     expect(repair?.schema?.facility_id?.description).toContain('get_base');
     expect(repair?.schema?.facility_id?.description).toContain('Facility ID in the repair queue');
 
@@ -1254,6 +1259,9 @@ describe('command metadata', () => {
     expect(help).toContain('get_action_log');
     expect(help).toContain('repair completion timing');
     expect(help).toContain('get_base');
+    expect(help).toContain('next station maintenance cycle');
+    expect(help).toContain('paid Faction Storage already under repair');
+    expect(help).toContain('repair_complete_tick');
   });
 
   test('get_base help documents the repair queue and related commands', () => {

@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Help copy (gameserver 0.574.5)
+
+- `facility repair` help now states that a repair finishes on the next station
+  maintenance cycle, that listings report that rounded completion tick, and that
+  a paid Faction Storage already under repair keeps reporting as repairing for
+  the whole job.
+
 ### Battle identity columns and interrupted logs (gameserver 0.575.0 / 0.574.8)
 
 - Human `get_battle_status` Participants tables print NPC as yes/no when `is_npc` is
