@@ -73,6 +73,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   same as a station id (case-insensitive whole-name match). Names that merely
   contain a station word are still accepted.
 
+### Help copy (gameserver 0.577.2)
+
+- `get_notifications` / `notifications` field help now states that
+  `action_result`, `action_error`, `drone_adrift`, `server_restart_warning`,
+  `battle_damage`, `drone_scan`, and `drone_survey` fall back to `system`
+  (not `combat`). Filter enum unchanged.
+
 ### Battle identity columns and interrupted logs (gameserver 0.575.0 / 0.574.8)
 
 - Human `get_battle_status` Participants tables print NPC as yes/no when `is_npc` is

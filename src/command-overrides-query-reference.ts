@@ -10,6 +10,9 @@ export const NOTIFICATION_TYPE_ENUM = [
   'system',
 ] as const;
 
+export const NOTIFICATION_TYPES_FIELD_DESCRIPTION =
+  'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, drone_adrift, server_restart_warning, battle_damage, drone_scan, and drone_survey fall back to system, not combat; types=combat does not include them.';
+
 export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_status: {
     usage: '[--summary]',
@@ -244,6 +247,12 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_notifications',
     positionals: ['clear', 'limit', 'types'],
     arrayFields: ['types'],
+    schemaExtensions: {
+      types: {
+        // description only — generated POST already has type: 'array' and the seven-value enum
+        description: NOTIFICATION_TYPES_FIELD_DESCRIPTION,
+      },
+    },
   },
   notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market,observation]',
@@ -265,8 +274,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       },
       types: {
         type: 'array',
-        enum: [...NOTIFICATION_TYPE_ENUM],
-        description: `Filter by notification types (${NOTIFICATION_TYPE_ENUM.join(', ')}). Omit for all types.`,
+        enum: [...NOTIFICATION_TYPE_ENUM], // GET generated schema has no enum
+        description: NOTIFICATION_TYPES_FIELD_DESCRIPTION,
       },
     },
   },

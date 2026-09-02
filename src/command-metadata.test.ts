@@ -12,7 +12,11 @@ import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-sh
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
 import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
-import { NOTIFICATION_TYPE_ENUM, QUERY_REFERENCE_COMMAND_OVERRIDES } from './command-overrides-query-reference';
+import {
+  NOTIFICATION_TYPE_ENUM,
+  NOTIFICATION_TYPES_FIELD_DESCRIPTION,
+  QUERY_REFERENCE_COMMAND_OVERRIDES,
+} from './command-overrides-query-reference';
 import {
   BUNDLED_COMMAND_REGISTRY,
   buildCommandRegistrySnapshot,
@@ -2054,6 +2058,8 @@ describe('command metadata', () => {
     const emittedTypes = [...NOTIFICATION_TYPE_ENUM];
     expect(COMMANDS.notifications?.schema?.types?.enum).toEqual(emittedTypes);
     expect(COMMANDS.get_notifications?.schema?.types?.enum).toEqual(emittedTypes);
+    expect(COMMANDS.get_notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
+    expect(COMMANDS.notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
     for (const command of ['get_notifications', 'notifications']) {
       const config = COMMANDS[command];
       expect(config?.schema?.types?.enum).toEqual(emittedTypes);
@@ -2062,6 +2068,9 @@ describe('command metadata', () => {
       const help = captureHelp(command);
       expect(help).toContain(`types (${NOTIFICATION_TYPE_ENUM.join('|')})`);
       expect(help).toContain('types=chat,combat,market,observation');
+      expect(help).toContain('fall back to system');
+      expect(help).toContain('types=combat does not include them');
+      expect(help).not.toContain('types=action_result');
       expect(help).not.toContain('types (chat|combat|trade|faction|friend|forum');
     }
     expect(COMMANDS.get_notifications?.example).toContain('types=chat,market,observation');
