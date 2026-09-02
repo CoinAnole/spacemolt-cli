@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Prize status enums (gameserver 0.577.2)
+
+- Human `prize_update` previews treat `expired` and `recaptured` as terminal
+  (no `service_prize` hint). `available` points at `claim_prize prize_id=…`.
+  `claimed` prints as `claimed` (not `(claimed)`) and still hints `service_prize`.
+
 ### Dock state on mutation table output (gameserver 0.577.3)
 
 - Human `dock` / `undock` table output prints a compact `Docked at:` / `Undocked at:`

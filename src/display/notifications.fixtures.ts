@@ -304,9 +304,9 @@ export const getNotificationsCombatKillsFixture = {
   ],
 };
 
-/** Boarding capture + prize recovery poll: ship_captured plus stall/delivered/destroyed prize_update. */
+/** Boarding capture + prize recovery poll: ship_captured plus prize_update rows. */
 export const getNotificationsPrizesFixture = {
-  count: 4,
+  count: 7,
   current_tick: 901810,
   remaining: 0,
   timestamp: 1779564100,
@@ -339,7 +339,7 @@ export const getNotificationsPrizesFixture = {
         ship_class: 'frigate',
         ship_name: 'Captured Lark',
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         destination_base_id: 'earth_station',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
@@ -376,6 +376,51 @@ export const getNotificationsPrizesFixture = {
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
         message: 'Prize hull destroyed',
+      },
+    },
+    {
+      id: 'notif-prize-available-1',
+      type: 'prize',
+      msg_type: 'prize_update',
+      timestamp: '2026-05-23T19:12:20.000Z',
+      data: {
+        prize_id: 'prize-2',
+        ship_id: 'ship-claim-1',
+        ship_class: 'skiff',
+        ship_name: 'Open Prize',
+        status: 'available',
+        message: 'Prize is available to claim',
+      },
+    },
+    {
+      id: 'notif-prize-expired-1',
+      type: 'prize',
+      msg_type: 'prize_update',
+      timestamp: '2026-05-23T19:12:25.000Z',
+      data: {
+        prize_id: 'prize-3',
+        ship_id: 'ship-expired-1',
+        ship_class: 'frigate',
+        ship_name: 'Timed Out',
+        status: 'expired',
+        wreck_id: 'wreck-expired-1',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize claim window expired',
+      },
+    },
+    {
+      id: 'notif-prize-recaptured-1',
+      type: 'prize',
+      msg_type: 'prize_update',
+      timestamp: '2026-05-23T19:12:30.000Z',
+      data: {
+        prize_id: 'prize-4',
+        ship_id: 'ship-recap-1',
+        ship_class: 'frigate',
+        ship_name: 'Lost Lark',
+        status: 'recaptured',
+        message: 'Prize was recaptured',
       },
     },
   ],
