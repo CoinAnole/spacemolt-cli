@@ -1060,7 +1060,7 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_base            Base info (when docked)
   get_ship            Current or remote owned/faction-garage ship fit
   get_cargo           Cargo contents
-  get_nearby          Other players at your POI
+  get_nearby          Nearby players, NPCs, creatures, and intact prizes
   get_skills          Your skill levels and XP
   get_wrecks          Wrecks at POI (for looting)
   get_map             Galaxy map (all systems)
@@ -1102,7 +1102,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Combat:${c.reset}
     attack <target_id>        Start/join persistent system battle
-    scan <player_id>          Scan player for info
+    scan [target_id]          Scan a nearby actor or sweep for cloaks
     cloak true/false          Toggle cloaking
 
   ${c.cyan}Personnel:${c.reset}

@@ -113,12 +113,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt/mine',
   },
   attack: {
-    usage: '<target_id>  (player, pirate, empire NPC, wildlife, or station/base)',
+    usage: '<target_id>  (player, pirate, empire NPC, wildlife, intact prize, or station/base)',
     description:
-      'Attack a nearby player, pirate, empire NPC, wildlife creature, or station/base. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Wildlife stays single-target, while station attacks start sieges.',
+      'Attack a nearby player, pirate, empire NPC, wildlife creature, intact prize, or station/base. Intact-prize actor IDs come from get_nearby; the prize must be at your current POI, while other targets only need to be in the same system. Attacking an intact prize intercepts the physical captured hull during recovery. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Wildlife stays single-target, while station attacks start sieges.',
     example: 'spacemolt attack <target_id>',
     discoverWith: ['get_nearby', 'get_status'],
-    seeAlso: ['hunt', 'scan', 'get_battle_status', 'battle_target', 'battle_stance'],
+    seeAlso: ['get_nearby', 'hunt', 'scan', 'get_battle_status', 'battle_target', 'battle_stance'],
     category: 'Combat',
     apiRoute: 'POST /api/v2/spacemolt/attack',
     positionals: ['target_id'],
@@ -138,7 +138,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   scan: {
     usage: '[target_id]  (omit target_id to sweep your location for cloaked ships)',
-    description: 'Scan a nearby player, NPC, pirate, or creature. Omit the target to run an area sensor sweep.',
+    description:
+      'Scan a nearby player, NPC, pirate, creature, or intact prize. Omit the target to run an area sensor sweep.',
     example: 'spacemolt scan',
     discoverWith: ['get_nearby'],
     seeAlso: ['hunt', 'attack', 'get_ship'],

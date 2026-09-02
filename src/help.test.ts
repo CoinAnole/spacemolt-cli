@@ -483,6 +483,20 @@ describe('help output branches', () => {
     expect(output).not.toContain('Join or start a battle');
   });
 
+  test('full help names intact prizes on get_nearby and scan', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('get_nearby          Nearby players, NPCs, creatures, and intact prizes');
+    expect(output).not.toContain('get_nearby          Other players at your POI');
+    expect(output).toContain('scan [target_id]          Scan a nearby actor or sweep for cloaks');
+    expect(output).not.toContain('scan <player_id>          Scan player for info');
+    expect(output).toContain('attack <target_id>        Start/join persistent system battle');
+    expect(output).toContain('facility repair <id>      Repair a damaged facility');
+  });
+
   test('showFullHelp lists personnel after Combat, prizes under Salvage & Tow, and faction personnel', () => {
     const capture = captureWriter();
 
@@ -717,6 +731,16 @@ describe('help output branches', () => {
     expect(output).toContain(
       'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self; station gift: storage deposit steel_plate 20 target=station:grand_exchange_station',
     );
+  });
+
+  test('command search for prize finds attack, get_nearby, and scan', () => {
+    const capture = captureWriter();
+    showCommandSearch('prize', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}attack /m);
+    expect(output).toMatch(/^ {2}get_nearby -/m);
+    expect(output).toMatch(/^ {2}scan /m);
+    expect(output).toMatch(/^ {2}claim_prize /m);
   });
 
   test('command search maps send_gift to storage deposit without a send_gift command', () => {

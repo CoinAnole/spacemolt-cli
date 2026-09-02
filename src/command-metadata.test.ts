@@ -494,17 +494,19 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('[target_id]');
     expect(config?.description).toContain('Omit the target to run an area sensor sweep');
     expect(config?.description).toContain('creature');
+    expect(config?.description).toContain('intact prize');
 
     const help = captureHelp('scan');
     expect(help).toContain('spacemolt scan');
     expect(help).toContain('[target_id]');
     expect(help).toContain('area sensor sweep');
     expect(help).toContain('creature');
+    expect(help).toContain('intact prize');
   });
 
   test('attack help documents persistent battle semantics and repeat-attack risks', () => {
-    const config = BUNDLED_COMMAND_REGISTRY.allCommands.attack;
-    expect(config?.usage).toMatch(/player.*pirate.*empire NPC.*wildlife.*station/i);
+    const config = BUNDLED_COMMAND_REGISTRY.commands.attack;
+    expect(config?.usage).toMatch(/player.*pirate.*empire NPC.*wildlife.*intact prize.*station/i);
     expect(config?.description).toContain('persistent system battle');
     expect(config?.description).toContain('resolves automatically each tick');
     expect(config?.description).toContain('never fires an extra volley');
@@ -513,7 +515,16 @@ describe('command metadata', () => {
     expect(config?.description).toContain('Wildlife stays single-target');
     expect(config?.description).toContain('station attacks start sieges');
     expect(config?.description).toContain('get_battle_status');
-    expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_battle_status', 'battle_target', 'battle_stance']));
+    expect(config?.description).toContain('intact prize');
+    expect(config?.description).toContain('get_nearby');
+    expect(config?.description).toContain('current POI');
+    expect(config?.description).toContain('intercepts the physical captured hull');
+    expect(config?.seeAlso).toEqual(
+      expect.arrayContaining(['get_nearby', 'get_battle_status', 'battle_target', 'battle_stance']),
+    );
+
+    expect(config?.schema?.id?.description).toContain('intact-prize actor');
+    expect(config?.schema?.id?.description).toContain('Prize actor IDs come from get_nearby');
 
     const help = captureHelp('attack');
     expect(help).toContain('persistent system battle');
@@ -521,6 +532,10 @@ describe('command metadata', () => {
     expect(help).toContain('resummons available pirate combatants');
     expect(help).toContain('station attacks start sieges');
     expect(help).toContain('get_battle_status');
+    expect(help).toContain('intact prize');
+    expect(help).toContain('Prize actor IDs come from get_nearby');
+    expect(help).toContain('shelling an empire station is a serious crime');
+    expect(help).toContain('get_nearby');
   });
 
   test('battle_engage help only offers joining an existing battle', () => {
@@ -582,6 +597,19 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt hunt <creature_id>');
     expect(help).toContain('wildlife creature');
     expect(help).toContain('get_nearby');
+  });
+
+  test('get_nearby help lists intact prizes and prize id fields', () => {
+    const nearby = BUNDLED_COMMAND_REGISTRY.allCommands.get_nearby;
+    expect(nearby?.description).toContain('intact prizes');
+    expect(nearby?.description).toContain('actor_id');
+    expect(nearby?.description).toContain('prize_id');
+    expect(nearby?.description).toContain('claim_prize');
+    expect(nearby?.seeAlso).toEqual(expect.arrayContaining(['scan', 'hunt', 'attack', 'claim_prize']));
+    expect(captureHelp('get_nearby')).toContain('intact prizes');
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).toContain('intact prizes');
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).not.toContain('Get other players');
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).not.toBe(nearby?.description);
   });
 
   test('battle_stance documents board, optional target, and server-required marines', () => {
