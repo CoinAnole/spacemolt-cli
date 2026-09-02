@@ -6991,12 +6991,12 @@ describe('structuredContent formatters', () => {
       Description: Birthplace system
 
       Points of Interest:
-        - Earth (planet) [station] (2 online)  sol_earth
+        - Earth (planet) [garden] [station] (2 online)  sol_earth
 
       Connected Systems:
         - Alpha Centauri (4.3 ly)  alpha_centauri
 
-      Current POI: Earth (planet)  sol_earth"
+      Current POI: Earth (planet) [garden]  sol_earth"
       ,
         "view_market": 
       "

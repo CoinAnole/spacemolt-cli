@@ -15,6 +15,7 @@ import {
   scanCreatureFixture,
   stationPoiInfoFixture,
   subscribeObservationFixture,
+  systemInfoFixture,
 } from './status.fixtures.ts';
 
 const options: GlobalOptions = {
@@ -1256,4 +1257,141 @@ test('get_map list ignores empty-string and whitespace descriptions when filteri
   expect(chartSection).not.toContain('sol');
   expect(chartSection).not.toContain('Blank Lane');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+function withPoiClass(fixture: typeof systemInfoFixture, value: unknown | undefined) {
+  const next = structuredClone(fixture);
+  const poi = next.system.pois[0] as Record<string, unknown>;
+  if (value === undefined) {
+    delete poi.class;
+    delete (next.poi as Record<string, unknown>).class;
+  } else {
+    poi.class = value;
+    (next.poi as Record<string, unknown>).class = value;
+  }
+  return next;
+}
+
+test('get_system prints class on list and Current POI', () => {
+  const stdout = renderStructuredResult('get_system', structuredClone(systemInfoFixture), options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toContain('Earth (planet) [garden] [station] (2 online)');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system omits class when missing', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiClass(systemInfoFixture, undefined),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [station] (2 online)');
+  expect(stdout).not.toContain('[garden]');
+  expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system omits class when empty or whitespace-only', () => {
+  for (const value of ['', '  \n\t']) {
+    const stdout = renderStructuredResult(
+      'get_system',
+      withPoiClass(systemInfoFixture, value),
+      options,
+      context,
+    ).stdout.join('\n');
+
+    expect(stdout).toContain('Earth (planet) [station] (2 online)');
+    expect(stdout).not.toContain('[]');
+    expect(stdout).not.toContain('[garden]');
+    expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('get_system prints unknown class tokens', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiClass(systemInfoFixture, 'black_hole_v2'),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [black_hole_v2] [station] (2 online)');
+  expect(stdout).toContain('Current POI: Earth (planet) [black_hole_v2]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system omits non-string class', () => {
+  const stdout = renderStructuredResult('get_system', withPoiClass(systemInfoFixture, 1), options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).toContain('Earth (planet) [station] (2 online)');
+  expect(stdout).not.toContain('[1]');
+  expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
+  expect(stdout).not.toContain('[1]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system prints class on the list when Current POI omits it', () => {
+  const fixture = structuredClone(systemInfoFixture);
+  delete (fixture.poi as Record<string, unknown>).class;
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [garden] [station] (2 online)');
+  expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
+  expect(stdout).not.toMatch(/Current POI:.*\[garden\]/);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system prints class on Current POI when the list omits it', () => {
+  const fixture = structuredClone(systemInfoFixture);
+  delete (fixture.system.pois[0] as Record<string, unknown>).class;
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [station] (2 online)');
+  expect(stdout).not.toMatch(/- Earth \(planet\) \[garden\]/);
+  expect(stdout).toContain('Current POI: Earth (planet) [garden]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system string-only pois stay unchanged', () => {
+  const fixture = structuredClone(systemInfoFixture);
+  (fixture.system as { pois: unknown }).pois = ['sol_earth'];
+  const rendered = renderStructuredResult('get_system', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('  - sol_earth');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system prints class without station when has_base is false', () => {
+  const star = { id: 'sol', name: 'Sol', type: 'star', class: 'G2V', has_base: false, online: 0 };
+  const fixture = structuredClone(systemInfoFixture);
+  (fixture.system as { pois: unknown }).pois = [star];
+  (fixture as { poi: unknown }).poi = star;
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Sol (star) [G2V]  sol');
+  expect(stdout).not.toContain('[station]');
+  expect(stdout).toContain('Current POI: Sol (star) [G2V]  sol');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system classified fixture does not fall back', () => {
+  const stdout = renderStructuredResult('get_system', structuredClone(systemInfoFixture), options, context).stdout.join(
+    '\n',
+  );
+
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('undefined');
+  expect(stdout).not.toContain('[object Object]');
 });

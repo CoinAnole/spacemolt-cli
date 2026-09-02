@@ -12,6 +12,7 @@
         "id": "sol_earth",
         "name": "Earth",
         "type": "planet",
+        "class": "garden",
         "has_base": true,
         "online": 2
       }
@@ -28,6 +29,7 @@
   "poi": {
     "id": "sol_earth",
     "name": "Earth",
-    "type": "planet"
+    "type": "planet",
+    "class": "garden"
   }
 }
