@@ -51,6 +51,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   maintenance cycle, that listings report that rounded completion tick, and that
   a paid Faction Storage already under repair keeps reporting as repairing for
   the whole job.
+
+### Help copy (gameserver 0.577.0)
+
+- `register` username field help now states that a new username cannot be the
+  same as a station id (case-insensitive whole-name match). Names that merely
+  contain a station word are still accepted.
 - `attack` usage and description accept intact-prize actor IDs from `get_nearby`
   (same-POI intercept during recovery). `get_nearby` and `scan` help mention
   intact prizes; prize rows expose `actor_id` for attack or scan and `prize_id`
