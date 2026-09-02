@@ -718,6 +718,144 @@ describe('notification formatting', () => {
     expectNoNestedJsonDump(preview.headline);
     expectNoNestedJsonDump(preview.details.join('\n'));
     expect(preview.omittedHint).toBeDefined();
+    expect(stripAnsi(formatNotification(notification, { verbose: true, plain: true }).join('\n'))).toContain(
+      'omitted: ship, location',
+    );
+  });
+
+  test('action_result auto_docked preview includes compact Docked at line without nested dumps', () => {
+    const notification = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:05.000Z',
+      data: {
+        command: 'storage_deposit',
+        tick: 1433948,
+        auto_docked: true,
+        result: {
+          message: 'Deposited 12 Iron Ore into personal storage.',
+          ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+          location: {
+            system_id: 'sol',
+            system_name: 'Sol',
+            poi_id: 'earth_station',
+            poi_name: 'Earth Station',
+            docked_at: 'earth_station',
+            nearby_players: [{ username: 'ILC Knurl' }, { username: 'Cody' }],
+            nearby_player_count: 88,
+          },
+        },
+      },
+    };
+    const output = stripAnsi(formatNotification(notification).join('\n'));
+
+    expect(output).toContain('[ACTION RESULT]');
+    expect(output).toContain('storage_deposit completed');
+    expect(output).toContain('auto-docked');
+    expect(output).toContain('Docked at: Earth Station (earth_station)');
+    expect(output).not.toContain('auto-undocked');
+    expect(output).not.toContain('nearby_players');
+    expect(output).not.toContain('ILC Knurl');
+    expect(output).not.toContain('Dust Devil');
+    expect(output).not.toMatch(/"hull"\s*:/);
+    expectNoNestedJsonDump(output);
+
+    const preview = formatNotificationPreview(notification);
+    expect(preview.tag).toBe('ACTION RESULT');
+    expect(preview.details[0]).toBe('Deposited 12 Iron Ore into personal storage.');
+    expect(preview.details.slice(1)).toContain('auto-docked');
+    expect(preview.details.slice(1)).toContain('Docked at: Earth Station (earth_station)');
+    expect(preview.details.join('\n')).not.toContain('nearby_players');
+    expectNoNestedJsonDump(preview.headline);
+    expectNoNestedJsonDump(preview.details.join('\n'));
+    expect(tableMessageFromPreview(preview)).toBe(
+      'storage_deposit completed (tick 1433948); Deposited 12 Iron Ore into personal storage.',
+    );
+    expect(preview.omittedHint).toBe('omitted: ship, location');
+    expect(stripAnsi(formatNotification(notification, { verbose: true, plain: true }).join('\n'))).toContain(
+      'omitted: ship, location',
+    );
+  });
+
+  test('action_result undock with null docked_at includes Undocked at without auto flags', () => {
+    const notification = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:05.000Z',
+      data: {
+        command: 'undock',
+        tick: 1433948,
+        auto_docked: false,
+        auto_undocked: false,
+        result: {
+          message: 'Left berth 3.',
+          ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+          location: {
+            system_id: 'sol',
+            system_name: 'Sol',
+            poi_id: 'earth_station',
+            poi_name: 'Earth Station',
+            docked_at: null,
+            nearby_players: [{ username: 'ILC Knurl' }],
+            nearby_player_count: 88,
+          },
+        },
+      },
+    };
+    const output = stripAnsi(formatNotification(notification).join('\n'));
+
+    expect(output).toContain('[ACTION RESULT]');
+    expect(output).toContain('undock completed');
+    expect(output).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+    expect(output).not.toContain('auto-docked');
+    expect(output).not.toContain('auto-undocked');
+    expect(output).not.toContain('null');
+    expect(output).not.toContain('nearby_players');
+    expect(output).not.toContain('Dust Devil');
+    expectNoNestedJsonDump(output);
+
+    const preview = formatNotificationPreview(notification);
+    expect(preview.details[0]).toBe('Left berth 3.');
+    expect(preview.details.slice(1)).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+    expect(preview.details.join('\n')).not.toContain('null');
+    expect(preview.details).not.toContain('auto-docked');
+    expect(preview.details).not.toContain('auto-undocked');
+    expect(tableMessageFromPreview(preview)).toBe('undock completed (tick 1433948); Left berth 3.');
+  });
+
+  test('action_result auto_undocked preview includes compact Undocked at line', () => {
+    const notification = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:05.000Z',
+      data: {
+        command: 'mine',
+        tick: 42,
+        auto_undocked: true,
+        result: {
+          message: 'Mining complete.',
+          location: {
+            system_id: 'sol',
+            system_name: 'Sol',
+            poi_id: 'earth_station',
+            poi_name: 'Earth Station',
+            docked_at: null,
+          },
+        },
+      },
+    };
+    const output = stripAnsi(formatNotification(notification).join('\n'));
+
+    expect(output).toContain('auto-undocked');
+    expect(output).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+    expect(output).not.toContain('auto-docked');
+    expect(output).not.toContain('null');
+
+    const preview = formatNotificationPreview(notification);
+    expect(preview.details[0]).toBe('Mining complete.');
+    expect(preview.details.slice(1)).toContain('auto-undocked');
+    expect(preview.details.slice(1)).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+    expect(tableMessageFromPreview(preview)).toBe('mine completed (tick 42); Mining complete.');
   });
 
   test('system jump progress formats a compact one-liner', () => {
@@ -807,6 +945,7 @@ describe('notification formatting', () => {
       formatActionResultDetails({
         action: 'undock',
         ship: { hull: 130 },
+        location: { docked_at: 'earth_station', poi_name: 'Earth Station' },
       } as Record<string, unknown>),
     ).toBe('undock');
     const leftoverWear = formatActionResultDetails({
@@ -4174,6 +4313,9 @@ describe('notification formatting', () => {
               system_name: 'Nova Terra',
               nearby_players: [{ username: 'ILC Knurl' }, { username: 'Cody' }],
               nearby_player_count: 88,
+              docked_at: null,
+              poi_name: 'Earth Station',
+              poi_id: 'earth_station',
             },
             details: { action: 'undock' },
           },
@@ -4181,15 +4323,18 @@ describe('notification formatting', () => {
       };
 
       const message = formatNotificationMessage(notification);
-      expect(message).toContain('undock completed');
-      expect(message).toContain('1433948');
-      // Short result.message folds into the table cell via tableMessageFromPreview.
-      expect(message).toContain('Left berth 3.');
+      expect(message).toBe('undock completed (tick 1433948); Left berth 3.');
+      expect(message).not.toContain('Undocked at:');
       expect(message).not.toContain('Dust Devil');
       expect(message).not.toContain('ILC Knurl');
       expect(message).not.toContain('"hull"');
       expect(message).not.toContain('nearby_players');
+      expect(message).not.toContain('null');
       expectNoNestedJsonDump(message);
+
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.details[0]).toBe('Left berth 3.');
+      expect(preview.details.slice(1).some((line) => line.startsWith('Undocked at:'))).toBe(true);
 
       // Without result.message, compact details scalar still lands in Message.
       const detailsOnly = {

@@ -14,6 +14,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   banners stay quiet-gated.
 - JSON/YAML/jq field names are unchanged.
 
+### Action-result dock state (gameserver 0.577.3)
+
+- Human `get_notifications` inline `action_result` previews print `auto-docked` /
+  `auto-undocked` when those payload flags are true, and a compact `Docked at:` /
+  `Undocked at:` line when `result.location.docked_at` is present (including null).
+- Table Message still folds only the result message or summary. Nested ship and
+  nearby-player payloads stay omitted.
+- JSON/YAML/jq field names are unchanged.
+
 ### Help copy (gameserver 0.574.5 / 0.575.0)
 
 - `facility repair` help now states that a repair finishes on the next station

@@ -58,6 +58,7 @@ import {
 } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
+import { formatNotificationPreview, tableMessageFromPreview } from './notification-format-shared';
 import type { GlobalOptions } from './types';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
@@ -2026,27 +2027,31 @@ describe('structuredContent formatters', () => {
   });
 
   test('formats residual action_result notifications without nested ship JSON', () => {
-    const fixture = {
-      count: 1,
-      notifications: [
-        {
-          type: 'action_result',
-          msg_type: 'action_result',
-          timestamp: '2026-07-24T19:05:05.000Z',
-          data: {
-            command: 'undock',
-            tick: 1433948,
-            result: {
-              message: 'Left berth 3.',
-              ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
-              location: {
-                nearby_players: [{ username: 'ILC Knurl' }],
-                nearby_player_count: 88,
-              },
-            },
+    const notification = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:05.000Z',
+      data: {
+        command: 'undock',
+        tick: 1433948,
+        result: {
+          message: 'Left berth 3.',
+          ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+          location: {
+            system_id: 'sol',
+            system_name: 'Sol',
+            poi_id: 'earth_station',
+            poi_name: 'Earth Station',
+            docked_at: null,
+            nearby_players: [{ username: 'ILC Knurl' }],
+            nearby_player_count: 88,
           },
         },
-      ],
+      },
+    };
+    const fixture = {
+      count: 1,
+      notifications: [notification],
     };
 
     const { stdout, stderr } = captureStructuredOutput('get_notifications', fixture);
@@ -2055,14 +2060,20 @@ describe('structuredContent formatters', () => {
     // Type stays raw msg_type (K13) — not the display tag ACTION RESULT.
     expect(stdout).toContain('action_result');
     expect(stdout).not.toMatch(/\|\s*ACTION RESULT\s*\|/);
-    expect(stdout).toContain('undock completed');
-    expect(stdout).toContain('1433948');
-    expect(stdout).toContain('Left berth 3.');
+    expect(stdout).toContain('undock completed (tick 1433948); Left berth 3.');
+    expect(stdout).not.toContain('Undocked at:');
+    expect(stdout).not.toContain('Docked at:');
     expect(stdout).not.toContain('Dust Devil');
     expect(stdout).not.toContain('ILC Knurl');
     expect(stdout).not.toContain('"hull"');
     expect(stdout).not.toContain('nearby_players');
+    expect(stdout).not.toContain('null');
     expect(stdout).not.toContain('=== Response ===');
+
+    const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+    expect(preview.details[0]).toBe('Left berth 3.');
+    expect(preview.details.slice(1)).toContain('Undocked at: Earth Station (earth_station), Sol (sol)');
+    expect(tableMessageFromPreview(preview)).toBe('undock completed (tick 1433948); Left berth 3.');
   });
 
   test('formats crafting progress notifications as a summary row', () => {

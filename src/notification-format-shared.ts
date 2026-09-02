@@ -1,3 +1,4 @@
+import { formatDockStateLine } from './display/dock-state.ts';
 import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 
 /** Local isRecord — same style as ship-commission-receipt.ts; no import from response.ts. */
@@ -484,9 +485,7 @@ function previewActionResult(
 ): NotificationPreview {
   const command = safeScalar(data.command);
   const tick = safeScalar(data.tick);
-  const commandLabel = command !== undefined ? String(command) : 'action';
-  const tickLabel = tick !== undefined ? String(tick) : '?';
-  const headline = truncate(`${commandLabel} completed (tick ${tickLabel})`, options);
+  const headline = truncate(`${command ?? 'action'} completed (tick ${tick ?? '?'})`, options);
 
   const details: string[] = [];
   const result = isRecord(data.result) ? data.result : undefined;
@@ -496,23 +495,20 @@ function previewActionResult(
       details.push(truncate(firstLine(String(resultMessage)), options));
     } else {
       const nested = isRecord(result.details) ? result.details : undefined;
-      if (nested) {
-        const summary = formatActionResultDetails(nested);
-        if (summary) details.push(truncate(summary, options));
-      }
+      const summary = nested ? formatActionResultDetails(nested) : undefined;
+      if (summary) details.push(truncate(summary, options));
     }
   }
 
-  // Label bulky nested result fields for optional verbose (PR 8); never expand them.
-  const bulkySource = result ?? data;
-  const omittedHint = omittedBulkyHint(bulkySource);
+  if (data.auto_docked === true) details.push('auto-docked');
+  if (data.auto_undocked === true) details.push('auto-undocked');
 
-  return {
-    tag: 'ACTION RESULT',
-    headline,
-    details,
-    ...(omittedHint ? { omittedHint } : {}),
-  };
+  const loc = result && isRecord(result.location) ? result.location : undefined;
+  const dockLine = formatDockStateLine(loc);
+  if (dockLine) details.push(truncate(dockLine, options));
+
+  const omittedHint = omittedBulkyHint(result ?? data);
+  return { tag: 'ACTION RESULT', headline, details, ...(omittedHint ? { omittedHint } : {}) };
 }
 
 /**
