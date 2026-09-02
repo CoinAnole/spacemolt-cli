@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
 import { getNotificationsFixture, getNotificationsObservationFixture } from './display/notifications.fixtures';
+import { truncateCell } from './display/tables';
 import {
   formatActionResultDetails,
   formatInventoryPreview,
@@ -430,6 +431,30 @@ describe('notification formatting', () => {
       msgType: 'pirate_destroyed',
       data: { pirate_name: 'Corsair', pirate_role: 'raider', loot: { credits: 10 } },
       snippets: ['[PIRATES]', 'Corsair destroyed!', 'Loot: 1 item: credits×10', 'Role: raider'],
+    },
+    {
+      msgType: 'pirate_radio',
+      data: {
+        pirate_name: 'Admiral Kael',
+        source_system: 'sol',
+        source_poi: 'sol_belt',
+        faction_name: 'Corsair',
+        event_key: 'raid_commit',
+        message: 'Cut the hauler out.',
+        category: 'tactical',
+        editorial_class: 'tactical',
+        speaker_category: 'actor',
+        reason_code: 'premium_cargo',
+      },
+      snippets: [
+        '[PIRATE RADIO]',
+        'Admiral Kael',
+        'raid_commit',
+        'Cut the hauler out.',
+        'Crew: Corsair (actor) at sol_belt (sol)',
+        'Class: tactical',
+        'reason=premium_cargo',
+      ],
     },
     { msgType: 'pirate_spawn', data: { num_pirates: 2 }, snippets: ['[PIRATES]', '2 pirate(s) appeared'] },
     { msgType: 'pirate_warning', data: { message: 'Incoming' }, snippets: ['[PIRATES]', 'Incoming'] },
@@ -4126,6 +4151,293 @@ describe('notification formatting', () => {
       const tableMessage = tableMessageFromPreview(preview);
       expect(tableMessage).toContain('get_drone drone_id=drone_1');
       expect(tableMessage).not.toContain('recall_drone');
+    });
+  });
+
+  describe('0.578.1 pirate_radio preview', () => {
+    const tacticalData = {
+      pirate_name: 'Admiral Kael',
+      source_system: 'sol',
+      source_poi: 'sol_belt',
+      faction_name: 'Corsair',
+      event_key: 'raid_commit',
+      message: 'Cut the hauler out.',
+      category: 'tactical',
+      editorial_class: 'tactical',
+      speaker_category: 'actor',
+      reason_code: 'premium_cargo',
+    } as const;
+
+    const leaderData = {
+      pirate_name: 'Admiral Kael',
+      source_system: 'sol',
+      source_poi: 'sol_belt',
+      faction_key: 'corsair',
+      faction_name: 'Corsair',
+      primary_color: '#c45a2a',
+      secondary_color: '#1a1a1a',
+      flagship_ship_class: 'raider_frigate',
+      event_key: 'board_commit',
+      message: 'Take the prize intact.',
+      category: 'strategic',
+      editorial_class: 'strategic',
+      discord_policy: 'batched',
+      speaker_category: 'operation_leader',
+      speaker_id: 'pirate-kael-1',
+      actor_id: 'pirate-reaver-7',
+      actor_name: 'Reaver-7',
+      operation_id: 'op-board-1',
+      battle_id: 'battle-99',
+      reason_code: 'premium_cargo',
+    } as const;
+
+    function radioNotification(data: Record<string, unknown>) {
+      return {
+        type: 'system',
+        msg_type: 'pirate_radio',
+        timestamp: '2026-05-23T19:20:00.000Z',
+        data,
+      };
+    }
+
+    function tableMessage(notification: Record<string, unknown>): string {
+      return tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+    }
+
+    function previewText(preview: { tag: string; headline: string; details: string[] }): string {
+      return [preview.tag, preview.headline, ...preview.details].join('\n');
+    }
+
+    test('registers handler', () => {
+      expect(hasPreviewHandler('pirate_radio')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('pirate_radio');
+    });
+
+    test('full tactical names speaker, event, quote, crew, class, reason', () => {
+      const notification = radioNotification({ ...tacticalData });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('PIRATE RADIO');
+      expect(preview.severity).toBeUndefined();
+      expect(preview.headline).toBe('Admiral Kael (raid_commit) — "Cut the hauler out."');
+      expect(preview.details[0]).toBe('Crew: Corsair (actor) at sol_belt (sol)');
+      expect(preview.details[1]).toBe('Class: tactical  reason=premium_cargo');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toContain('Crew: Corsair (actor) at sol_belt (sol)');
+      expect(fromPreview).not.toContain('Class:');
+      expect(formatNotificationMessage(notification)).not.toBe('PIRATE RADIO');
+      const inline = stripAnsi(formatNotification(notification).join('\n'));
+      expect(inline).toContain('[PIRATE RADIO]');
+      expect(inline).not.toContain('[PIRATE_RADIO]');
+      expect(inline).toContain('Admiral Kael (raid_commit) — "Cut the hauler out."');
+      expectNoDiagnosticTokens(previewText(preview));
+      expectNoNestedJsonDump(previewText(preview));
+    });
+
+    test('empty bag last-resort', () => {
+      const notification = radioNotification({});
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('PIRATE RADIO');
+      expect(preview.headline).toBe('Pirate radio');
+      expect(preview.headline).not.toContain('Someone');
+      expect(preview.headline).not.toContain('()');
+      expect(preview.headline).not.toContain('—');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBeUndefined();
+      expect(tableMessage(notification)).toBe('Pirate radio');
+      expectNoDiagnosticTokens(preview.headline);
+      expectNoNestedJsonDump(preview.headline);
+    });
+
+    test('empty source_poi is omitted from Crew', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        faction_name: 'Corsair',
+        speaker_category: 'actor',
+        source_poi: '',
+        source_system: 'sol',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toContain('at sol');
+      expect(preview.details[0]).not.toContain('()');
+      expect(tableMessage(notification)).toContain('at sol');
+      expect(tableMessage(notification)).not.toContain('()');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('unknown reason_code prints as-is and stays off table Message when Crew exists', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        faction_name: 'Corsair',
+        speaker_category: 'actor',
+        source_system: 'sol',
+        source_poi: 'sol_belt',
+        editorial_class: 'tactical',
+        reason_code: 'dry',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[1]).toContain('reason=dry');
+      expect(preview.details[1]).toContain('Class:');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).not.toContain('reason=dry');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('class without Crew folds into table Message', () => {
+      const notification = radioNotification({
+        editorial_class: 'tactical',
+        reason_code: 'dry',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toBe('Class: tactical  reason=dry');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview.startsWith('Pirate radio; Class:')).toBe(true);
+      expect(fromPreview).toContain('Class: tactical  reason=dry');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('unknown speaker_category prints as-is', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        faction_name: 'Corsair',
+        speaker_category: 'herald',
+        source_system: 'sol',
+        source_poi: 'sol_belt',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toContain('(herald)');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('prefers editorial_class over category', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        faction_name: 'Corsair',
+        editorial_class: 'strategic',
+        category: 'tactical',
+      });
+      const preview = formatNotificationPreview(notification);
+      const classLines = preview.details.filter((line) => line.includes('Class:'));
+      expect(classLines).toHaveLength(1);
+      expect(classLines[0]).toContain('Class: strategic');
+      expect(classLines[0]).not.toContain('tactical');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('category fallback when editorial_class is omitted', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        faction_name: 'Corsair',
+        category: 'tactical',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details.some((line) => line.includes('Class: tactical'))).toBe(true);
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('actor_name equal to pirate_name omits via', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        actor_name: 'Admiral Kael',
+        faction_name: 'Corsair',
+        speaker_category: 'actor',
+        source_system: 'sol',
+        source_poi: 'sol_belt',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).not.toContain('via');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('actor_name differs joins via on Crew', () => {
+      const notification = radioNotification({ ...leaderData });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toContain('via Reaver-7');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toContain('Admiral Kael');
+      expect(fromPreview).toContain('board_commit');
+      expect(fromPreview).toContain('via Reaver-7');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('already-quoted message is not double-quoted', () => {
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        message: '"Hold the gate."',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toContain('"Hold the gate."');
+      expect(preview.headline).not.toContain('""Hold');
+      expect((preview.headline.match(/"Hold the gate\."/g) ?? []).length).toBe(1);
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('long message truncation keeps speaker and event on the headline', () => {
+      const message =
+        'Cut the hauler out of the belt and hold the prize until the stronghold can take the hull without scattering cargo across the rocks.';
+      expect(message.length).toBeGreaterThan(120);
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        event_key: 'raid_commit',
+        message,
+        faction_name: 'Corsair',
+        speaker_category: 'actor',
+        source_system: 'sol',
+        source_poi: 'sol_belt',
+      });
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.headline.length).toBeLessThanOrEqual(120);
+      expect(preview.headline.endsWith('…')).toBe(true);
+      expect(preview.headline).toContain('Admiral Kael');
+      expect(preview.headline).toContain('raid_commit');
+      const folded = formatNotificationMessage(notification);
+      expect(folded.startsWith('Admiral Kael')).toBe(true);
+      expect(folded).toContain('raid_commit');
+      expect(truncateCell(folded, 120).startsWith('Admiral Kael (raid_commit)')).toBe(true);
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('Crew line longer than 80 does not fold into table Message', () => {
+      const faction_name = 'Corsair of the Outer Rim Freebooters Combined Fleet';
+      const notification = radioNotification({
+        pirate_name: 'Admiral Kael',
+        event_key: 'raid_commit',
+        message: 'Cut the hauler out.',
+        faction_name,
+        speaker_category: 'actor',
+        source_system: 'sol',
+        source_poi: 'sol_belt',
+      });
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const crewLine = preview.details[0] ?? '';
+      expect(crewLine.startsWith('Crew:')).toBe(true);
+      expect(crewLine.length).toBeGreaterThan(80);
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe(preview.headline);
+      expect(fromPreview).not.toContain('Crew:');
+      expect(fromPreview).toContain('Admiral Kael');
+      expect(fromPreview).toContain('raid_commit');
+      expectNoDiagnosticTokens(previewText(preview));
+    });
+
+    test('omits discord, livery, and ids from the default preview', () => {
+      const notification = radioNotification({ ...leaderData });
+      const preview = formatNotificationPreview(notification);
+      const joined = previewText(preview);
+      expect(joined).not.toContain('discord_policy');
+      expect(joined).not.toContain('#c45a2a');
+      expect(joined).not.toContain('speaker_id');
+      expect(joined).not.toContain('flagship_ship_class');
+      expect(joined).not.toContain('faction_key');
+      expect(joined).not.toContain('operation_id');
+      expect(joined).not.toContain('battle_id');
+      expect(joined).not.toContain('actor_id');
+      expectNoDiagnosticTokens(joined);
+      expectNoNestedJsonDump(joined);
     });
   });
 

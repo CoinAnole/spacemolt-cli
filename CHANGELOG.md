@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Pirate radio notification preview (gameserver 0.578.0 / OpenAPI v0.578.1)
+
+- Human `pirate_radio` previews match `Notification_pirate_radio` as bundled in
+  OpenAPI v0.578.1 (quieter, role-correct radio shipped in gameserver 0.578.0):
+  speaker, quoted transmission, crew, location, editorial class, event key, and
+  optional reason code. Table Type stays `pirate_radio`. Empty POIs are omitted.
+- JSON/YAML/jq field names are unchanged. Unknown live `event_key` /
+  `reason_code` / `speaker_category` tokens still print.
+
 ### Help copy (OpenAPI v0.578.1)
 
 - `get_notifications` / `notifications` field help now also lists `pirate_radio`
