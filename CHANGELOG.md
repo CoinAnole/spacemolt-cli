@@ -4,12 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
-### Help copy (gameserver 0.574.5)
+### Help copy (gameserver 0.574.5 / 0.575.0)
 
 - `facility repair` help now states that a repair finishes on the next station
   maintenance cycle, that listings report that rounded completion tick, and that
   a paid Faction Storage already under repair keeps reporting as repairing for
   the whole job.
+- `attack` usage and description accept intact-prize actor IDs from `get_nearby`
+  (same-POI intercept during recovery). `get_nearby` and `scan` help mention
+  intact prizes; prize rows expose `actor_id` for attack or scan and `prize_id`
+  for `claim_prize`. Full-help `scan` is `scan [target_id]` (not player-only).
 
 ### Battle identity columns and interrupted logs (gameserver 0.575.0 / 0.574.8)
 

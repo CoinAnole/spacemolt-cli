@@ -99,7 +99,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_insurance_quote: 'Get a risk-based insurance quote for your current ship',
   get_map: 'View all star systems in the galaxy',
   get_missions: 'Get available missions at your current station',
-  get_nearby: 'Get other players at your current POI',
+  get_nearby: 'Show visible nearby players, NPCs, creatures, and intact prizes',
   get_notes: 'List all your note documents',
   get_poi: 'Get your current POI details',
   get_skills: 'Get your skill progress.',

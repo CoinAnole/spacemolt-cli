@@ -106,9 +106,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     clientOnlyFields: ['top', 'show_empty', 'items'],
   },
   get_nearby: {
-    description: 'Show visible nearby players, pirates, empire NPCs, and wildlife creatures at your current POI.',
+    description:
+      'Show visible nearby players, pirates, empire NPCs, wildlife creatures, and intact prizes at your current POI. Prize rows provide actor_id for attack or scan and prize_id for claim_prize.',
     example: 'spacemolt get_nearby',
-    seeAlso: ['scan', 'hunt', 'survey_system'],
+    seeAlso: ['scan', 'hunt', 'survey_system', 'attack', 'claim_prize'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_nearby',
   },
