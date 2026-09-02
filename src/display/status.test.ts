@@ -4,6 +4,7 @@ import { renderStructuredResult } from './index.ts';
 import {
   getLocationFixture,
   getMapFixture,
+  getMapStarlessFixture,
   getMapSystemFixture,
   getStatusDetainedFixture,
   getStatusFixture,
@@ -1177,5 +1178,82 @@ test('get_map list without descriptions stays a Name/System ID table', () => {
   expect(stdout).toContain('total 2');
   expect(stdout).not.toContain('Chart descriptions');
   expect(stdout).not.toContain('Description:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map list with mixed descriptions prints a Chart descriptions table', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    structuredClone(getMapStarlessFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const systemsSection = stdout.slice(0, stdout.indexOf('=== Chart descriptions ==='));
+  const chartSection = stdout.slice(stdout.indexOf('=== Chart descriptions ==='));
+
+  expect(stdout).toContain('=== Systems ===');
+  expect(systemsSection).toContain('Sol');
+  expect(systemsSection).toContain('Veiled Reach');
+  expect(systemsSection).toContain('veiled_reach');
+  expect(systemsSection).toContain('total 2');
+  expect(systemsSection).not.toContain('Description');
+  expect(stdout).toContain('=== Chart descriptions ===');
+  expect(chartSection).toContain('Veiled Reach');
+  expect(chartSection).toContain('veiled_reach');
+  expect(chartSection).toContain('Description');
+  expect(chartSection).toContain('No star lights this waypoint');
+  expect(chartSection).not.toContain('sol');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map list with all-blank descriptions omits the Chart descriptions table', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    {
+      systems: [
+        { system_id: 'sol', name: 'Sol', description: '' },
+        { system_id: 'alpha_centauri', name: 'Alpha Centauri', description: '   \n\t  ' },
+      ],
+      total_count: 2,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Systems ===');
+  expect(stdout).toContain('total 2');
+  expect(stdout).not.toContain('Chart descriptions');
+  expect(stdout).not.toContain('Description');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map list ignores empty-string and whitespace descriptions when filtering chart rows', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    {
+      systems: [
+        { system_id: 'sol', name: 'Sol', description: '' },
+        { system_id: 'blank_lane', name: 'Blank Lane', description: '   ' },
+        {
+          system_id: 'veiled_reach',
+          name: 'Veiled Reach',
+          description:
+            'No star lights this waypoint, but the dust lane still feeds three jump beacons, so navigators keep it on the chart.',
+        },
+      ],
+      total_count: 3,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const chartSection = stdout.slice(stdout.indexOf('=== Chart descriptions ==='));
+
+  expect(stdout).toContain('=== Systems ===');
+  expect(stdout).toContain('Blank Lane');
+  expect(stdout).toContain('total 3');
+  expect(stdout).toContain('=== Chart descriptions ===');
+  expect(chartSection).toContain('Veiled Reach');
+  expect(chartSection).not.toContain('sol');
+  expect(chartSection).not.toContain('Blank Lane');
   expect(stdout).not.toContain('=== Response ===');
 });

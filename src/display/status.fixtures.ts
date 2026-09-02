@@ -629,6 +629,19 @@ export const getMapFixture = {
   total_count: 2,
 };
 
+export const getMapStarlessFixture = {
+  systems: [
+    { system_id: 'sol', name: 'Sol' },
+    {
+      system_id: 'veiled_reach',
+      name: 'Veiled Reach',
+      description:
+        'No star lights this waypoint, but the dust lane still feeds three jump beacons, so navigators keep it on the chart.',
+    },
+  ],
+  total_count: 2,
+};
+
 export const getMapSystemFixture = {
   system_id: 'veiled_reach',
   name: 'Veiled Reach',
@@ -758,6 +771,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },
+  get_map_starless: { command: 'get_map', fixture: getMapStarlessFixture },
   get_map_system: { command: 'get_map', fixture: getMapSystemFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
