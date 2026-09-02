@@ -304,6 +304,83 @@ export const getNotificationsCombatKillsFixture = {
   ],
 };
 
+/** Boarding capture + prize recovery poll: ship_captured plus stall/delivered/destroyed prize_update. */
+export const getNotificationsPrizesFixture = {
+  count: 4,
+  current_tick: 901810,
+  remaining: 0,
+  timestamp: 1779564100,
+  notifications: [
+    {
+      id: 'notif-ship-captured-1',
+      type: 'combat',
+      msg_type: 'ship_captured',
+      timestamp: '2026-05-23T19:12:00.000Z',
+      data: {
+        battle_id: 'battle-42',
+        tick: 901800,
+        boarding_operation_id: 'board-1',
+        captor_id: 'player-1',
+        captor_username: 'Marlowe',
+        former_owner_id: 'pirate-1',
+        former_owner_username: 'Corsair-7',
+        ship_id: 'ship-skiff-1',
+        ship_class: 'skiff',
+      },
+    },
+    {
+      id: 'notif-prize-stall-1',
+      type: 'prize',
+      msg_type: 'prize_update',
+      timestamp: '2026-05-23T19:12:05.000Z',
+      data: {
+        prize_id: 'prize-1',
+        ship_id: 'ship-recover-1',
+        ship_class: 'frigate',
+        ship_name: 'Captured Lark',
+        status: 'in_transit',
+        wait_reason: 'dry',
+        destination_base_id: 'earth_station',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      },
+    },
+    {
+      id: 'notif-prize-delivered-1',
+      type: 'prize',
+      msg_type: 'prize_update',
+      timestamp: '2026-05-23T19:12:10.000Z',
+      data: {
+        prize_id: 'prize-1',
+        ship_id: 'ship-recover-1',
+        ship_class: 'frigate',
+        ship_name: 'Captured Lark',
+        status: 'delivered',
+        destination_base_id: 'earth_station',
+        message: 'Prize delivered to storage',
+      },
+    },
+    {
+      id: 'notif-prize-destroyed-1',
+      type: 'prize',
+      msg_type: 'prize_update',
+      timestamp: '2026-05-23T19:12:15.000Z',
+      data: {
+        prize_id: 'prize-1',
+        ship_id: 'ship-recover-1',
+        ship_class: 'frigate',
+        ship_name: 'Captured Lark',
+        status: 'destroyed',
+        wreck_id: 'wreck-9',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize hull destroyed',
+      },
+    },
+  ],
+};
+
 export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_notifications: {
     command: 'get_notifications',
@@ -316,6 +393,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_combat_kills: {
     command: 'get_notifications',
     fixture: getNotificationsCombatKillsFixture,
+  },
+  get_notifications_prizes: {
+    command: 'get_notifications',
+    fixture: getNotificationsPrizesFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {

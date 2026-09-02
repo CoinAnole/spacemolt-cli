@@ -1043,6 +1043,138 @@ function previewBattleEnded(
     : headlinePreview('BATTLE', headline, options);
 }
 
+function prizeShipLabel(data: Record<string, unknown>): string | undefined {
+  const name = safeScalar(data.ship_name);
+  const shipClass = safeScalar(data.ship_class);
+  const nameText = name !== undefined ? String(name) : undefined;
+  const classText = shipClass !== undefined ? String(shipClass) : undefined;
+  return nameText ?? classText;
+}
+
+function prizeLocationLabel(data: Record<string, unknown>): string | undefined {
+  const poi = safeScalar(data.poi_id);
+  const system = safeScalar(data.system_id);
+  if (poi !== undefined && system !== undefined) return `${poi} (${system})`;
+  return poi !== undefined ? String(poi) : system !== undefined ? String(system) : undefined;
+}
+
+function prizeWreckLine(data: Record<string, unknown>): string | undefined {
+  const wreckId = safeScalar(data.wreck_id);
+  if (wreckId === undefined) return undefined;
+  const poi = safeScalar(data.poi_id);
+  const system = safeScalar(data.system_id);
+  if (poi !== undefined && system !== undefined) return `wreck ${wreckId} at ${poi} (${system})`;
+  if (poi !== undefined) return `wreck ${wreckId} at ${poi}`;
+  if (system !== undefined) return `wreck ${wreckId} in ${system}`;
+  return `wreck ${wreckId}`;
+}
+
+function previewShipCaptured(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const captor = safeScalar(data.captor_username);
+  const formerOwner = safeScalar(data.former_owner_username);
+  const shipClass = safeScalar(data.ship_class);
+  if (captor === undefined && formerOwner === undefined && shipClass === undefined) {
+    return { ...headlinePreview('CAPTURE', 'Ship captured', options), severity: 'success' };
+  }
+
+  const captorText = captor !== undefined ? String(captor) : 'Someone';
+  const classText = shipClass !== undefined ? String(shipClass) : 'ship';
+  const formerText = formerOwner !== undefined ? String(formerOwner) : 'Someone';
+  return {
+    ...detailPreview(
+      'CAPTURE',
+      `${captorText} captured ${classText} from ${formerText}`,
+      ['Use: get_nearby then claim_prize'],
+      options,
+    ),
+    severity: 'success',
+  };
+}
+
+function previewPrizeUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const prizeId = safeScalar(data.prize_id);
+  const statusScalar = safeScalar(data.status);
+  const status = typeof statusScalar === 'string' ? statusScalar.trim() : undefined;
+  const nameText = safeScalar(data.ship_name);
+  const classText = safeScalar(data.ship_class);
+  const hasIdentity =
+    prizeId !== undefined || nameText !== undefined || classText !== undefined || statusScalar !== undefined;
+
+  if (!hasIdentity) {
+    return { ...headlinePreview('PRIZE', 'Prize update', options), severity: 'neutral' };
+  }
+
+  const waitReason = safeScalar(data.wait_reason);
+  const isTerminal = status === 'delivered' || status === 'destroyed';
+  const isInTransit = status === 'in_transit';
+  const isStallLike = status !== undefined && !isTerminal && waitReason !== undefined;
+
+  let clause: string;
+  let severity: NotificationSeverity;
+  const details: string[] = [];
+
+  if (status === 'delivered') {
+    clause = 'delivered';
+    severity = 'success';
+  } else if (status === 'destroyed') {
+    clause = 'destroyed';
+    severity = 'danger';
+    const wreckLine = prizeWreckLine(data);
+    if (wreckLine !== undefined) details.push(wreckLine);
+  } else if (isStallLike) {
+    clause = isInTransit ? 'in transit' : `(${status})`;
+    severity = 'warning';
+    if (prizeId !== undefined) details.push(`Use: service_prize prize_id=${prizeId}`);
+  } else if (isInTransit) {
+    clause = 'in transit';
+    severity = 'info';
+  } else if (status) {
+    clause = `(${status})`;
+    severity = 'warning';
+    if (prizeId !== undefined) details.push(`Use: service_prize prize_id=${prizeId}`);
+  } else {
+    clause = 'updated';
+    severity = 'neutral';
+    if (prizeId !== undefined) details.push(`Use: service_prize prize_id=${prizeId}`);
+  }
+
+  const shipLabel = prizeShipLabel(data);
+  let headline = 'Prize';
+  if (prizeId !== undefined) headline += ` ${prizeId}`;
+  if (shipLabel !== undefined) headline += ` (${shipLabel})`;
+  headline += ` ${clause}`;
+  if (isStallLike && waitReason !== undefined) headline += ` (${waitReason})`;
+  if (isStallLike || isInTransit) {
+    const location = prizeLocationLabel(data);
+    if (location !== undefined) headline += ` at ${location}`;
+  }
+  if (status === 'delivered') {
+    const destination = safeScalar(data.destination_base_id);
+    if (destination !== undefined) headline += ` to ${destination}`;
+  }
+
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  if (details.length > 0 && messageLine && messageLine !== headline && !headline.includes(messageLine)) {
+    details.push(messageLine);
+  }
+
+  return {
+    ...(details.length > 0
+      ? detailPreview('PRIZE', headline, details, options)
+      : headlinePreview('PRIZE', headline, options)),
+    severity,
+  };
+}
+
 /**
  * Typed pure preview handlers. Grown over later PRs.
  * null → fall through to Policy 5 generic path.
@@ -1809,6 +1941,8 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   battle_joined: previewBattleJoined,
   battle_left: previewBattleLeft,
   battle_ended: previewBattleEnded,
+  ship_captured: previewShipCaptured,
+  prize_update: previewPrizeUpdate,
   // Social domain (PR7b)
   chat_message: previewChatMessage,
   trade_offer_received: previewTradeOfferReceived,

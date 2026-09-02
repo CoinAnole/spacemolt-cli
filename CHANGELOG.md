@@ -17,6 +17,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - Interrupted summaries print `Outcome: interrupted` and still omit `Winning Side: -1`.
 - JSON/YAML/jq field names are unchanged.
 
+### Prize and capture notification previews (gameserver 0.575.0)
+
+- Human `ship_captured` previews name captor, ship class, and former owner, and point at
+  `get_nearby` then `claim_prize` (the capture frame has no `prize_id`).
+- Human `prize_update` previews name `prize_id`, transit/wait, location, destination or wreck,
+  and `service_prize prize_id=…` on stall-like updates.
+- JSON/YAML/jq field names are unchanged.
+
 ### Combat kill notification previews (gameserver 0.574.9)
 
 - Human `player_kill` previews name schema `victim` and the wreck POI/system when the

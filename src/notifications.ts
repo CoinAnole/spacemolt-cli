@@ -77,6 +77,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
       return c.green;
     case 'SHIP READY':
     case 'KILL':
+    case 'CAPTURE':
     case 'LEVEL UP':
       return `${c.green}${c.bright}`;
     case 'BASE DESTROYED':
@@ -98,6 +99,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'PILOTLESS':
     case 'QUEUE':
     case 'DEPARTURE':
+    case 'PRIZE':
       return c.yellow;
     case 'SCAN':
     case 'VERSION':
