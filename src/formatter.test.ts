@@ -1575,9 +1575,9 @@ describe('structuredContent formatters', () => {
 
       === Nearby Prizes ===
 
-        Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
-        -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
-        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       
+        Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+        -------------+---------------+------------+---------+-----------+-------+--------+-------
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
 
       Nearby Pirates: 2
 
@@ -6504,15 +6504,15 @@ describe('structuredContent formatters', () => {
 
       === Nearby Prizes ===
 
-        Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
-        -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
-        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |       
+        Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+        -------------+---------------+------------+---------+-----------+-------+--------+-------
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
 
       === Prize recoveries ===
 
-        Prize ID        | Ship                    | Status     | Destination   | Crew     | Hull  | Fuel  | Location                  | Arrival | Wait         
-        ----------------+-------------------------+------------+---------------+----------+-------+-------+---------------------------+---------+--------------
-        prize-recover-1 | Captured Lark (frigate) | in_transit | earth_station | 3 aboard | 40/80 | 20/50 | jump sol → alpha_centauri | 12500   | jump_cooldown"
+        Prize ID        | Ship                    | Status     | Destination   | Crew     | Hull  | Fuel  | Location                  | Arrival | Wait   
+        ----------------+-------------------------+------------+---------------+----------+-------+-------+---------------------------+---------+--------
+        prize-recover-1 | Captured Lark (frigate) | in_transit | earth_station | 3 aboard | 40/80 | 20/50 | jump sol → alpha_centauri | 12500   | no_fuel"
     `);
   });
 
@@ -6914,9 +6914,9 @@ describe('structuredContent formatters', () => {
 
       === Prizes ===
 
-        Prize ID     | Actor         | Name       | Class   | Status | Wait           | Hull  | Shield | Combat
-        -------------+---------------+------------+---------+--------+----------------+-------+--------+-------
-        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | intact | awaiting_claim | 40/80 | 10/20  |"
+        Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+        -------------+---------------+------------+---------+-----------+-------+--------+-------
+        prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |"
       ,
         "poi_info": 
       "

@@ -29,6 +29,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   nearby-player payloads stay omitted.
 - JSON/YAML/jq field names are unchanged.
 
+### Prize status enums (gameserver 0.577.2)
+
+- Nearby prize tables print `available` for unclaimed hulls and omit Wait
+  unless the server sent `wait_reason`. Recovery Wait uses documented stall
+  reasons (`no_fuel`, `no_route`, `destination_missing`, `incapacitated`,
+  `manual_stop`).
+- JSON/YAML/jq field names are unchanged. Unknown live tokens still print.
+
 ### Help copy (gameserver 0.574.5 / 0.575.0)
 
 - `facility repair` help now states that a repair finishes on the next station
