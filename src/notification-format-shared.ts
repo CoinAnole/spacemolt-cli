@@ -949,6 +949,89 @@ function previewPirateDestroyed(
   };
 }
 
+// 0.578.1 pirate radio intercept
+
+function quotedTransmission(message: string): string {
+  const trimmed = firstLine(message);
+  if (!trimmed) return '';
+  const doubleQuoted = trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2;
+  if (doubleQuoted) return trimmed;
+  return `"${trimmed}"`;
+}
+
+function radioLocationLabel(data: Record<string, unknown>): string | undefined {
+  const poi = safeScalar(data.source_poi);
+  const system = safeScalar(data.source_system);
+  if (poi !== undefined && system !== undefined) return `${poi} (${system})`;
+  return poi !== undefined ? String(poi) : system !== undefined ? String(system) : undefined;
+}
+
+function radioCrewLine(data: Record<string, unknown>): string | undefined {
+  const crew = safeScalar(data.faction_name);
+  const category = safeScalar(data.speaker_category);
+  const actor = safeScalar(data.actor_name);
+  const speaker = safeScalar(data.pirate_name);
+  const location = radioLocationLabel(data);
+
+  const headBits: string[] = [];
+  if (crew !== undefined) {
+    headBits.push(category !== undefined ? `${crew} (${category})` : String(crew));
+  } else if (category !== undefined) {
+    headBits.push(String(category));
+  }
+  if (actor !== undefined && String(actor) !== String(speaker ?? '')) {
+    headBits.push(`via ${actor}`);
+  }
+  if (location !== undefined) headBits.push(`at ${location}`);
+  if (!headBits.length) return undefined;
+  return `Crew: ${headBits.join(' ')}`;
+}
+
+function radioClassLine(data: Record<string, unknown>): string | undefined {
+  const editorial = safeScalar(data.editorial_class) ?? safeScalar(data.category);
+  const reason = safeScalar(data.reason_code);
+  const bits: string[] = [];
+  if (editorial !== undefined) bits.push(`Class: ${editorial}`);
+  if (reason !== undefined) bits.push(`reason=${reason}`);
+  return bits.length ? bits.join('  ') : undefined;
+}
+
+// Must not return null.
+function previewPirateRadio(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const speaker = safeScalar(data.pirate_name);
+  const eventKey = safeScalar(data.event_key);
+  const message = safeScalar(data.message);
+  const quoted = message !== undefined ? quotedTransmission(String(message)) : '';
+
+  const head: string[] = [];
+  if (speaker !== undefined) head.push(String(speaker));
+  if (eventKey !== undefined) head.push(`(${eventKey})`);
+  let headline: string;
+  if (head.length && quoted) {
+    headline = `${head.join(' ')} — ${quoted}`;
+  } else if (head.length) {
+    headline = head.join(' ');
+  } else if (quoted) {
+    headline = quoted;
+  } else {
+    headline = 'Pirate radio';
+  }
+
+  const details: string[] = [];
+  const crew = radioCrewLine(data);
+  if (crew !== undefined) details.push(crew);
+  const klass = radioClassLine(data);
+  if (klass !== undefined) details.push(klass);
+
+  return details.length > 0
+    ? detailPreview('PIRATE RADIO', headline, details, options)
+    : headlinePreview('PIRATE RADIO', headline, options);
+}
+
 function previewBattleStarted(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -1989,6 +2072,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   pirate_spawn: previewPirateSpawn,
   pirate_combat: previewPirateCombat,
   pirate_destroyed: previewPirateDestroyed,
+  pirate_radio: previewPirateRadio, // 0.578.1 intercept; coarse type is system, not combat
   battle_started: previewBattleStarted,
   battle_update: previewBattleUpdate,
   battle_damage: previewBattleDamage,
