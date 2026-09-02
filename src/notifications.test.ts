@@ -461,7 +461,7 @@ describe('notification formatting', () => {
         ship_class: 'frigate',
         ship_name: 'Captured Lark',
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         destination_base_id: 'earth_station',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
@@ -472,7 +472,7 @@ describe('notification formatting', () => {
         'Prize prize-1',
         'Captured Lark',
         'in transit',
-        '(dry)',
+        '(no_fuel)',
         'sol_cloudbank (sol)',
         'service_prize prize_id=prize-1',
       ],
@@ -2558,11 +2558,11 @@ describe('notification formatting', () => {
       expect(tableMessage(notification)).toBe('Someone captured skiff from Someone; Use: get_nearby then claim_prize');
     });
 
-    test('stall in_transit + dry keeps site in the headline and folds Use: not the server message', () => {
+    test('stall in_transit + no_fuel keeps site in the headline and folds Use: not the server message', () => {
       const notification = prizeNotification({
         ...prizeIdentity,
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         destination_base_id: 'earth_station',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
@@ -2571,23 +2571,38 @@ describe('notification formatting', () => {
       const preview = formatNotificationPreview(notification);
       expect(preview.tag).toBe('PRIZE');
       expect(preview.severity).toBe('warning');
-      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank (sol)');
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) in transit (no_fuel) at sol_cloudbank (sol)');
       expect(preview.headline).toContain('prize-1');
       expect(preview.headline).toContain('Captured Lark');
       expect(preview.headline).toContain('in transit');
-      expect(preview.headline).toContain('(dry)');
+      expect(preview.headline).toContain('(no_fuel)');
       expect(preview.headline).toContain('sol_cloudbank (sol)');
       expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
       expect(preview.details[1]).toBe('Prize recovery stopped: fuel empty');
       const fromPreview = tableMessage(notification);
       expect(fromPreview).toBe(formatNotificationMessage(notification));
       expect(fromPreview).toBe(
-        'Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank (sol); Use: service_prize prize_id=prize-1',
+        'Prize prize-1 (Captured Lark) in transit (no_fuel) at sol_cloudbank (sol); Use: service_prize prize_id=prize-1',
       );
       expect(fromPreview).toContain('sol_cloudbank (sol)');
       expect(fromPreview).toContain('Use: service_prize prize_id=prize-1');
       expect(fromPreview).not.toContain('Prize recovery stopped: fuel empty');
       expect(preview.details[0]?.length).toBeLessThanOrEqual(80);
+    });
+
+    test('in_transit with unknown wait_reason still prints the raw token', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'in_transit',
+        wait_reason: 'dry',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank (sol)');
+      expect(preview.severity).toBe('warning');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
     });
 
     test('in_transit with no wait is headline-only and does not fold the server message', () => {
@@ -2602,7 +2617,7 @@ describe('notification formatting', () => {
       expect(preview.headline).toBe('Prize prize-1 (Captured Lark) in transit at sol_cloudbank (sol)');
       expect(preview.headline).toContain('in transit');
       expect(preview.headline).toContain('sol_cloudbank (sol)');
-      expect(preview.headline).not.toContain('(dry)');
+      expect(preview.headline).not.toContain('(no_fuel)');
       expect(preview.details).toEqual([]);
       expect(preview.severity).toBe('info');
       const fromPreview = tableMessage(notification);
@@ -2633,20 +2648,20 @@ describe('notification formatting', () => {
         ...prizeIdentity,
         status: 'delivered',
         destination_base_id: 'earth_station',
-        wait_reason: 'jump_cooldown',
+        wait_reason: 'no_fuel',
         message: 'Prize delivered to storage',
       });
       const preview = formatNotificationPreview(notification);
-      expect(preview.headline).not.toContain('jump_cooldown');
+      expect(preview.headline).not.toContain('no_fuel');
       expect(preview.details).toEqual([]);
-      expect(tableMessage(notification)).not.toContain('jump_cooldown');
+      expect(tableMessage(notification)).not.toContain('no_fuel');
     });
 
     test('destroyed leftover wait_reason is omitted while wreck still folds', () => {
       const notification = prizeNotification({
         ...prizeIdentity,
         status: 'destroyed',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         wreck_id: 'wreck-9',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
@@ -2654,11 +2669,176 @@ describe('notification formatting', () => {
       });
       const preview = formatNotificationPreview(notification);
       expect(preview.headline).toBe('Prize prize-1 (Captured Lark) destroyed');
-      expect(preview.headline).not.toContain('(dry)');
+      expect(preview.headline).not.toContain('(no_fuel)');
       expect(preview.details[0]).toBe('wreck wreck-9 at sol_cloudbank (sol)');
       const fromPreview = tableMessage(notification);
       expect(fromPreview).toBe('Prize prize-1 (Captured Lark) destroyed; wreck wreck-9 at sol_cloudbank (sol)');
-      expect(fromPreview).not.toContain('(dry)');
+      expect(fromPreview).not.toContain('(no_fuel)');
+    });
+
+    test('available points at claim_prize prize_id and never hints service_prize', () => {
+      const notification = prizeNotification({
+        prize_id: 'prize-2',
+        ship_id: 'ship-claim-1',
+        ship_class: 'skiff',
+        ship_name: 'Open Prize',
+        status: 'available',
+        message: 'Prize is available to claim',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-2 (Open Prize) available');
+      expect(preview.headline).not.toContain('(available)');
+      expect(preview.severity).toBe('info');
+      expect(preview.details[0]).toBe('Use: claim_prize prize_id=prize-2');
+      expect(preview.details.join('\n')).not.toContain('service_prize');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe('Prize prize-2 (Open Prize) available; Use: claim_prize prize_id=prize-2');
+      expect(fromPreview).not.toContain('service_prize');
+      expect(fromPreview).not.toContain('Prize is available to claim');
+    });
+
+    test('available leftover wait_reason is omitted and still hints claim_prize', () => {
+      const notification = prizeNotification({
+        prize_id: 'prize-2',
+        ship_id: 'ship-claim-1',
+        ship_class: 'skiff',
+        ship_name: 'Open Prize',
+        status: 'available',
+        wait_reason: 'no_fuel',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize is available to claim',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-2 (Open Prize) available');
+      expect(preview.headline).not.toContain('(no_fuel)');
+      expect(preview.headline).not.toContain('at sol_cloudbank');
+      expect(preview.details[0]).toBe('Use: claim_prize prize_id=prize-2');
+      expect(preview.details.join('\n')).not.toContain('service_prize');
+      expect(tableMessage(notification)).not.toContain('no_fuel');
+      expect(tableMessage(notification)).not.toContain('sol_cloudbank');
+    });
+
+    test('available without prize_id falls back to get_nearby then claim_prize', () => {
+      const notification = prizeNotification({
+        ship_id: 'ship-claim-1',
+        ship_class: 'skiff',
+        ship_name: 'Open Prize',
+        status: 'available',
+        message: 'Prize is available to claim',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize (Open Prize) available');
+      expect(preview.details[0]).toBe('Use: get_nearby then claim_prize');
+      expect(preview.details.join('\n')).not.toContain('service_prize');
+      expect(tableMessage(notification)).toBe('Prize (Open Prize) available; Use: get_nearby then claim_prize');
+    });
+
+    test('claimed prints unparenthesized claimed and hints service_prize', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'claimed',
+        message: 'Prize claimed intact',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) claimed');
+      expect(preview.headline).not.toContain('(claimed)');
+      expect(preview.severity).toBe('info');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
+      expect(tableMessage(notification)).toBe(
+        'Prize prize-1 (Captured Lark) claimed; Use: service_prize prize_id=prize-1',
+      );
+      expect(tableMessage(notification)).not.toContain('Prize claimed intact');
+    });
+
+    test('claimed leftover wait_reason is omitted while service_prize still folds', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'claimed',
+        wait_reason: 'no_fuel',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize claimed intact',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) claimed');
+      expect(preview.headline).not.toContain('(claimed)');
+      expect(preview.headline).not.toContain('(no_fuel)');
+      expect(preview.headline).not.toContain('at sol_cloudbank');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
+      expect(tableMessage(notification)).not.toContain('no_fuel');
+      expect(tableMessage(notification)).not.toContain('sol_cloudbank');
+    });
+
+    test('expired plus wreck folds the site and never hints service_prize', () => {
+      const notification = prizeNotification({
+        prize_id: 'prize-3',
+        ship_id: 'ship-expired-1',
+        ship_class: 'frigate',
+        ship_name: 'Timed Out',
+        status: 'expired',
+        wreck_id: 'wreck-expired-1',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize claim window expired',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-3 (Timed Out) expired');
+      expect(preview.headline).not.toContain('(expired)');
+      expect(preview.severity).toBe('warning');
+      expect(preview.details[0]).toBe('wreck wreck-expired-1 at sol_cloudbank (sol)');
+      expect(preview.details.join('\n')).not.toContain('service_prize');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe('Prize prize-3 (Timed Out) expired; wreck wreck-expired-1 at sol_cloudbank (sol)');
+      expect(fromPreview).not.toContain('service_prize');
+      expect(fromPreview).not.toContain('Prize claim window expired');
+    });
+
+    test('expired leftover wait_reason is omitted while wreck still folds', () => {
+      const notification = prizeNotification({
+        prize_id: 'prize-3',
+        ship_id: 'ship-expired-1',
+        ship_class: 'frigate',
+        ship_name: 'Timed Out',
+        status: 'expired',
+        wait_reason: 'no_fuel',
+        wreck_id: 'wreck-expired-1',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize claim window expired',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-3 (Timed Out) expired');
+      expect(preview.headline).not.toContain('(no_fuel)');
+      expect(preview.details[0]).toBe('wreck wreck-expired-1 at sol_cloudbank (sol)');
+      expect(preview.details.join('\n')).not.toContain('service_prize');
+      expect(tableMessage(notification)).not.toContain('no_fuel');
+    });
+
+    test('recaptured is danger, omits leftover wait and location, and never hints service_prize', () => {
+      const notification = prizeNotification({
+        prize_id: 'prize-4',
+        ship_id: 'ship-recap-1',
+        ship_class: 'frigate',
+        ship_name: 'Lost Lark',
+        status: 'recaptured',
+        wait_reason: 'no_fuel',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize was recaptured',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-4 (Lost Lark) recaptured');
+      expect(preview.headline).not.toContain('(recaptured)');
+      expect(preview.headline).not.toContain('(no_fuel)');
+      expect(preview.headline).not.toContain('at sol_cloudbank');
+      expect(preview.severity).toBe('danger');
+      expect(preview.details).toEqual([]);
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe('Prize prize-4 (Lost Lark) recaptured');
+      expect(fromPreview).not.toContain('service_prize');
+      expect(fromPreview).not.toContain('sol_cloudbank');
+      expect(fromPreview).not.toContain('Prize was recaptured');
     });
 
     test('destroyed plus wreck folds the site and never prints wreck undefined', () => {
@@ -2700,7 +2880,7 @@ describe('notification formatting', () => {
         ship_id: 'ship-recover-1',
         ship_class: 'frigate',
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
         message: 'Prize recovery stopped: fuel empty',
@@ -2708,7 +2888,7 @@ describe('notification formatting', () => {
       const preview = formatNotificationPreview(notification);
       expect(preview.headline.startsWith('Prize ')).toBe(true);
       expect(preview.headline.startsWith('Prize  ')).toBe(false);
-      expect(preview.headline).toBe('Prize (frigate) in transit (dry) at sol_cloudbank (sol)');
+      expect(preview.headline).toBe('Prize (frigate) in transit (no_fuel) at sol_cloudbank (sol)');
       expect(preview.details).toEqual([]);
       expect(tableMessage(notification)).not.toContain('Use:');
       expect(tableMessage(notification)).not.toContain('Prize recovery stopped: fuel empty');
@@ -2725,7 +2905,7 @@ describe('notification formatting', () => {
       const prize = prizeNotification({
         ...prizeIdentity,
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
         message: 'Prize recovery stopped: fuel empty',
@@ -2752,7 +2932,7 @@ describe('notification formatting', () => {
         ...prizeIdentity,
         prize_id: prizeId,
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         system_id: 'sol',
         poi_id: 'sol_cloudbank',
         message: 'Prize recovery stopped: fuel empty',
@@ -2895,23 +3075,23 @@ describe('notification formatting', () => {
       const stallPoi = prizeNotification({
         ...prizeIdentity,
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         poi_id: 'sol_cloudbank',
         message: 'Prize recovery stopped: fuel empty',
       });
       expect(formatNotificationPreview(stallPoi).headline).toBe(
-        'Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank',
+        'Prize prize-1 (Captured Lark) in transit (no_fuel) at sol_cloudbank',
       );
 
       const stallSystem = prizeNotification({
         ...prizeIdentity,
         status: 'in_transit',
-        wait_reason: 'dry',
+        wait_reason: 'no_fuel',
         system_id: 'sol',
         message: 'Prize recovery stopped: fuel empty',
       });
       expect(formatNotificationPreview(stallSystem).headline).toBe(
-        'Prize prize-1 (Captured Lark) in transit (dry) at sol',
+        'Prize prize-1 (Captured Lark) in transit (no_fuel) at sol',
       );
 
       const deliveredNoDest = prizeNotification({

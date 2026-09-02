@@ -1109,9 +1109,19 @@ function previewPrizeUpdate(
   }
 
   const waitReason = safeScalar(data.wait_reason);
-  const isTerminal = status === 'delivered' || status === 'destroyed';
+  const knownPrizeStatuses = new Set([
+    'available',
+    'claimed',
+    'in_transit',
+    'delivered',
+    'destroyed',
+    'expired',
+    'recaptured',
+  ]);
+  const isUnknown = status !== undefined && !knownPrizeStatuses.has(status);
   const isInTransit = status === 'in_transit';
-  const isStallLike = status !== undefined && !isTerminal && waitReason !== undefined;
+  const showWait = (isInTransit || isUnknown) && waitReason !== undefined;
+  const showLocation = isInTransit || (isUnknown && waitReason !== undefined);
 
   let clause: string;
   let severity: NotificationSeverity;
@@ -1125,8 +1135,24 @@ function previewPrizeUpdate(
     severity = 'danger';
     const wreckLine = prizeWreckLine(data);
     if (wreckLine !== undefined) details.push(wreckLine);
-  } else if (isStallLike) {
-    clause = isInTransit ? 'in transit' : `(${status})`;
+  } else if (status === 'expired') {
+    clause = 'expired';
+    severity = 'warning';
+    const wreckLine = prizeWreckLine(data);
+    if (wreckLine !== undefined) details.push(wreckLine);
+  } else if (status === 'recaptured') {
+    clause = 'recaptured';
+    severity = 'danger';
+  } else if (status === 'available') {
+    clause = 'available';
+    severity = 'info';
+    details.push(prizeId !== undefined ? `Use: claim_prize prize_id=${prizeId}` : 'Use: get_nearby then claim_prize');
+  } else if (status === 'claimed') {
+    clause = 'claimed';
+    severity = 'info';
+    if (prizeId !== undefined) details.push(`Use: service_prize prize_id=${prizeId}`);
+  } else if (isInTransit && waitReason !== undefined) {
+    clause = 'in transit';
     severity = 'warning';
     if (prizeId !== undefined) details.push(`Use: service_prize prize_id=${prizeId}`);
   } else if (isInTransit) {
@@ -1147,8 +1173,8 @@ function previewPrizeUpdate(
   if (prizeId !== undefined) headline += ` ${prizeId}`;
   if (shipLabel !== undefined) headline += ` (${shipLabel})`;
   headline += ` ${clause}`;
-  if (isStallLike && waitReason !== undefined) headline += ` (${waitReason})`;
-  if (isStallLike || isInTransit) {
+  if (showWait) headline += ` (${waitReason})`;
+  if (showLocation) {
     const location = prizeLocationLabel(data);
     if (location !== undefined) headline += ` at ${location}`;
   }
