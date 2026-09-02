@@ -454,6 +454,30 @@ describe('notification formatting', () => {
       snippets: ['[DEPARTURE]', '[SOL] Marlowe has departed from Earth'],
     },
     {
+      msgType: 'prize_update',
+      data: {
+        prize_id: 'prize-1',
+        ship_id: 'ship-recover-1',
+        ship_class: 'frigate',
+        ship_name: 'Captured Lark',
+        status: 'in_transit',
+        wait_reason: 'dry',
+        destination_base_id: 'earth_station',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      },
+      snippets: [
+        '[PRIZE]',
+        'Prize prize-1',
+        'Captured Lark',
+        'in transit',
+        '(dry)',
+        'sol_cloudbank (sol)',
+        'service_prize prize_id=prize-1',
+      ],
+    },
+    {
       msgType: 'police_combat',
       data: { damage: 12, destroyed: true },
       snippets: ['[POLICE]', 'Police drone dealt 12 damage', 'YOU WERE DESTROYED'],
@@ -511,6 +535,21 @@ describe('notification formatting', () => {
         'ship ship-42',
         'Earth Station (earth_station)',
       ],
+    },
+    {
+      msgType: 'ship_captured',
+      data: {
+        battle_id: 'battle-42',
+        tick: 901800,
+        boarding_operation_id: 'board-1',
+        captor_id: 'player-1',
+        captor_username: 'Marlowe',
+        former_owner_id: 'pirate-1',
+        former_owner_username: 'Corsair-7',
+        ship_id: 'ship-skiff-1',
+        ship_class: 'skiff',
+      },
+      snippets: ['[CAPTURE]', 'Marlowe captured skiff from Corsair-7', 'get_nearby then claim_prize'],
     },
     {
       // Assumed keys (aligned with ShippingActiveContract / InspectPackageShipment —
@@ -1051,6 +1090,7 @@ describe('notification formatting', () => {
       'battle_joined',
       'battle_left',
       'battle_ended',
+      'ship_captured',
     ] as const;
 
     test('registers pure PREVIEW_HANDLERS for every combat-domain type', () => {
@@ -2242,6 +2282,368 @@ describe('notification formatting', () => {
       expect(formatNotificationMessage(notification)).toBe(
         tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })),
       );
+    });
+  });
+
+  describe('boarding / prize recovery previews', () => {
+    const boardingPrizeTypes = ['ship_captured', 'prize_update'] as const;
+    const captureUse = 'Use: get_nearby then claim_prize';
+    const prizeIdentity = {
+      prize_id: 'prize-1',
+      ship_id: 'ship-recover-1',
+      ship_class: 'frigate',
+      ship_name: 'Captured Lark',
+    } as const;
+
+    function captureNotification(data: Record<string, unknown>) {
+      return {
+        type: 'combat',
+        msg_type: 'ship_captured',
+        timestamp: '2026-05-23T19:12:00.000Z',
+        data,
+      };
+    }
+
+    function prizeNotification(data: Record<string, unknown>) {
+      return {
+        type: 'prize',
+        msg_type: 'prize_update',
+        timestamp: '2026-05-23T19:12:05.000Z',
+        data,
+      };
+    }
+
+    function tableMessage(notification: Record<string, unknown>): string {
+      return tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
+    }
+
+    test('registers ship_captured and prize_update; personnel_update stays unhandled', () => {
+      for (const msgType of boardingPrizeTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+      }
+      expect(hasPreviewHandler('personnel_update')).toBe(false);
+    });
+
+    test('full ship_captured names captor, class, and former owner and folds Use:', () => {
+      const notification = captureNotification({
+        battle_id: 'battle-42',
+        tick: 901800,
+        boarding_operation_id: 'board-1',
+        captor_id: 'player-1',
+        captor_username: 'Marlowe',
+        former_owner_id: 'pirate-1',
+        former_owner_username: 'Corsair-7',
+        ship_id: 'ship-skiff-1',
+        ship_class: 'skiff',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('CAPTURE');
+      expect(preview.severity).toBe('success');
+      expect(preview.headline).toBe('Marlowe captured skiff from Corsair-7');
+      expect(preview.details[0]).toBe(captureUse);
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe('Marlowe captured skiff from Corsair-7; Use: get_nearby then claim_prize');
+      expect(fromPreview).not.toContain('captor_id');
+      expect(fromPreview).not.toContain('boarding_operation_id');
+      expect(fromPreview).not.toContain('player-1');
+      expect(fromPreview).not.toContain('You captured');
+      expect(captureUse.length).toBeLessThanOrEqual(80);
+    });
+
+    test('NPC former owner username is printed as-is', () => {
+      const preview = formatNotificationPreview(
+        captureNotification({
+          captor_username: 'Marlowe',
+          former_owner_username: 'Corsair-7',
+          ship_class: 'skiff',
+        }),
+      );
+      expect(preview.headline).toBe('Marlowe captured skiff from Corsair-7');
+      expect(preview.headline).toContain('Corsair-7');
+    });
+
+    test('empty ship_captured bag uses last-resort headline without Use: or Someone', () => {
+      const preview = formatNotificationPreview(captureNotification({}));
+      expect(preview.tag).toBe('CAPTURE');
+      expect(preview.headline).toBe('Ship captured');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('Someone');
+      expectNoDiagnosticTokens(preview.headline);
+      expect(tableMessage(captureNotification({}))).toBe('Ship captured');
+    });
+
+    test('class-only capture synthesizes Someone fallbacks and still folds Use:', () => {
+      const notification = captureNotification({ ship_class: 'skiff' });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Someone captured skiff from Someone');
+      expect(preview.details).toEqual([captureUse]);
+      expect(tableMessage(notification)).toBe('Someone captured skiff from Someone; Use: get_nearby then claim_prize');
+    });
+
+    test('stall in_transit + dry keeps site in the headline and folds Use: not the server message', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'in_transit',
+        wait_reason: 'dry',
+        destination_base_id: 'earth_station',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('PRIZE');
+      expect(preview.severity).toBe('warning');
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank (sol)');
+      expect(preview.headline).toContain('prize-1');
+      expect(preview.headline).toContain('Captured Lark');
+      expect(preview.headline).toContain('in transit');
+      expect(preview.headline).toContain('(dry)');
+      expect(preview.headline).toContain('sol_cloudbank (sol)');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
+      expect(preview.details[1]).toBe('Prize recovery stopped: fuel empty');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe(
+        'Prize prize-1 (Captured Lark) in transit (dry) at sol_cloudbank (sol); Use: service_prize prize_id=prize-1',
+      );
+      expect(fromPreview).toContain('sol_cloudbank (sol)');
+      expect(fromPreview).toContain('Use: service_prize prize_id=prize-1');
+      expect(fromPreview).not.toContain('Prize recovery stopped: fuel empty');
+      expect(preview.details[0]?.length).toBeLessThanOrEqual(80);
+    });
+
+    test('in_transit with no wait is headline-only and does not fold the server message', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'in_transit',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Recovery underway on schedule',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) in transit at sol_cloudbank (sol)');
+      expect(preview.headline).toContain('in transit');
+      expect(preview.headline).toContain('sol_cloudbank (sol)');
+      expect(preview.headline).not.toContain('(dry)');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('info');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe(preview.headline);
+      expect(fromPreview).not.toContain('Recovery underway on schedule');
+    });
+
+    test('delivered plus destination omits the server message from details and table Message', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'delivered',
+        destination_base_id: 'earth_station',
+        message: 'Prize delivered to storage',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) delivered to earth_station');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('success');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe(preview.headline);
+      expect(fromPreview).not.toContain('Prize delivered to storage');
+    });
+
+    test('delivered leftover wait_reason is omitted', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'delivered',
+        destination_base_id: 'earth_station',
+        wait_reason: 'jump_cooldown',
+        message: 'Prize delivered to storage',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).not.toContain('jump_cooldown');
+      expect(preview.details).toEqual([]);
+      expect(tableMessage(notification)).not.toContain('jump_cooldown');
+    });
+
+    test('destroyed leftover wait_reason is omitted while wreck still folds', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'destroyed',
+        wait_reason: 'dry',
+        wreck_id: 'wreck-9',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize hull destroyed',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) destroyed');
+      expect(preview.headline).not.toContain('(dry)');
+      expect(preview.details[0]).toBe('wreck wreck-9 at sol_cloudbank (sol)');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe('Prize prize-1 (Captured Lark) destroyed; wreck wreck-9 at sol_cloudbank (sol)');
+      expect(fromPreview).not.toContain('(dry)');
+    });
+
+    test('destroyed plus wreck folds the site and never prints wreck undefined', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'destroyed',
+        wreck_id: 'wreck-9',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize hull destroyed',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('PRIZE');
+      expect(preview.severity).toBe('danger');
+      expect(preview.details[0]).toBe('wreck wreck-9 at sol_cloudbank (sol)');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe('Prize prize-1 (Captured Lark) destroyed; wreck wreck-9 at sol_cloudbank (sol)');
+      expect(fromPreview).not.toContain('wreck undefined');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${fromPreview}`);
+    });
+
+    test('unknown status prints the raw token without a fabricated verb', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'warp_jammed',
+        message: 'Cannot plot a recovery route',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) (warp_jammed)');
+      expect(preview.headline).not.toContain('stalled');
+      expect(preview.headline).not.toContain('waiting');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
+      expect(preview.severity).toBe('warning');
+    });
+
+    test('status without prize_id drops the id segment and has no Use:', () => {
+      const notification = prizeNotification({
+        ship_id: 'ship-recover-1',
+        ship_class: 'frigate',
+        status: 'in_transit',
+        wait_reason: 'dry',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline.startsWith('Prize ')).toBe(true);
+      expect(preview.headline.startsWith('Prize  ')).toBe(false);
+      expect(preview.headline).toBe('Prize (frigate) in transit (dry) at sol_cloudbank (sol)');
+      expect(preview.details).toEqual([]);
+      expect(tableMessage(notification)).not.toContain('Use:');
+      expect(tableMessage(notification)).not.toContain('Prize recovery stopped: fuel empty');
+    });
+
+    test('nested personnel and ship junk never dumps JSON or complement fields', () => {
+      const capture = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        personnel: { fit_crew: 4 },
+        ship: { hull: 1 },
+      });
+      const prize = prizeNotification({
+        ...prizeIdentity,
+        status: 'in_transit',
+        wait_reason: 'dry',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+        personnel: { fit_crew: 4 },
+        ship: { hull: 1 },
+      });
+      for (const notification of [capture, prize]) {
+        const preview = formatNotificationPreview(notification);
+        const output = `${preview.headline}\n${preview.details.join('\n')}\n${tableMessage(notification)}`;
+        expectNoNestedJsonDump(output);
+        expect(output).not.toContain('fit_crew');
+        expect(output).not.toContain('"hull"');
+        expect(formatNotificationMessage(notification)).toBe(tableMessage(notification));
+      }
+    });
+
+    test('54-character prize_id drops Use: from the table cell but keeps the full site', () => {
+      const prizeId = `p${'x'.repeat(53)}`;
+      expect(prizeId.length).toBe(54);
+      const useLine = `Use: service_prize prize_id=${prizeId}`;
+      expect(useLine.length).toBeGreaterThan(80);
+
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        prize_id: prizeId,
+        status: 'in_transit',
+        wait_reason: 'dry',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        message: 'Prize recovery stopped: fuel empty',
+      });
+      const untruncated = formatNotificationPreview(notification, { maxLineLength: 1000 });
+      expect(untruncated.headline.length).toBeLessThanOrEqual(120);
+      expect(untruncated.details[0]).toBe(useLine);
+      expect(untruncated.details[0]).not.toContain('…');
+
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe(formatNotificationMessage(notification));
+      expect(fromPreview).toBe(untruncated.headline);
+      expect(fromPreview).toContain('sol_cloudbank (sol)');
+      expect(fromPreview).not.toContain('s…');
+      expect(fromPreview).not.toContain(useLine);
+    });
+
+    test('empty prize_update bag uses fixed Prize update headline', () => {
+      const preview = formatNotificationPreview(prizeNotification({}));
+      expect(preview.tag).toBe('PRIZE');
+      expect(preview.headline).toBe('Prize update');
+      expect(preview.details).toEqual([]);
+      expect(preview.severity).toBe('neutral');
+      expect(preview.headline).not.toBe('Prize ');
+      expectNoDiagnosticTokens(preview.headline);
+    });
+
+    test('capture IDs without display-identity scalars do not synthesize Someone', () => {
+      const notification = captureNotification({
+        battle_id: 'battle-42',
+        tick: 901800,
+        boarding_operation_id: 'board-1',
+        captor_id: 'player-1',
+        former_owner_id: 'pirate-1',
+        ship_id: 'ship-skiff-1',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Ship captured');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('Someone');
+      expect(tableMessage(notification)).not.toContain('player-1');
+    });
+
+    test('prize_id without status uses updated and folds Use:', () => {
+      const notification = prizeNotification({
+        prize_id: 'prize-1',
+        ship_id: 'ship-recover-1',
+        message: 'Claimant still owns this hull',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 updated');
+      expect(preview.details[0]).toBe('Use: service_prize prize_id=prize-1');
+      expect(preview.severity).toBe('neutral');
+      expect(tableMessage(notification)).toBe('Prize prize-1 updated; Use: service_prize prize_id=prize-1');
+    });
+
+    test('destroyed without wreck_id omits the server message', () => {
+      const notification = prizeNotification({
+        ...prizeIdentity,
+        status: 'destroyed',
+        message: 'Prize hull destroyed',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Prize prize-1 (Captured Lark) destroyed');
+      expect(preview.details).toEqual([]);
+      expect(tableMessage(notification)).toBe(preview.headline);
+      expect(tableMessage(notification)).not.toContain('Prize hull destroyed');
     });
   });
 
