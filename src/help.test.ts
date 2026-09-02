@@ -741,6 +741,7 @@ describe('help output branches', () => {
     expect(output).toMatch(/^ {2}get_nearby -/m);
     expect(output).toMatch(/^ {2}scan /m);
     expect(output).toMatch(/^ {2}claim_prize /m);
+    expect(output).toMatch(/^ {2}battle_target /m);
   });
 
   test('command search maps send_gift to storage deposit without a send_gift command', () => {
