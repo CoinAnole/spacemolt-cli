@@ -37,6 +37,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   nearby-player payloads stay omitted.
 - JSON/YAML/jq field names are unchanged.
 
+### Action-error details (gameserver 0.577.2)
+
+- Human `get_notifications` inline `action_error` previews print a compact
+  `missing: Name have/need` line when `code` is `missing_materials` or
+  `missing_faction_materials`, leftover top-level `details` scalars, and
+  `code=` when it differs from the headline. Table Message folds the first
+  short detail (shortage line is budgeted to 80 characters). Nested
+  `details.missing` payloads stay omitted.
+- JSON/YAML/jq field names are unchanged.
+
 ### Prize status enums (gameserver 0.577.2)
 
 - Nearby prize tables print `available` for unclaimed hulls and omit Wait

@@ -895,6 +895,344 @@ describe('notification formatting', () => {
     expect(tableMessageFromPreview(preview)).toBe('jump completed (tick 99); Arrived in Alfirk.');
   });
 
+  describe('action_error details preview', () => {
+    const opticalFiber = {
+      item_id: 'optical_fiber_bundle',
+      item_name: 'Optical Fiber Bundle',
+      need: 300,
+      have: 0,
+    };
+    const circuitBoard = {
+      item_id: 'circuit_board',
+      item_name: 'Circuit Board',
+      need: 20,
+      have: 5,
+    };
+    const compactTwo = 'missing: Optical Fiber Bundle 0/300, Circuit Board 5/20';
+
+    function actionErrorNotification(
+      data: Record<string, unknown>,
+      extras?: { timestamp?: string },
+    ): {
+      type: 'system';
+      msg_type: 'action_error';
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: 'action_error',
+        timestamp: extras?.timestamp ?? '2026-05-18T12:00:00.000Z',
+        data,
+      };
+    }
+
+    test('missing_materials with two rows keeps the headline and folds the compact line', () => {
+      const notification = actionErrorNotification({
+        command: 'craft',
+        tick: 77,
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle',
+        details: { missing: [opticalFiber, circuitBoard] },
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('ACTION FAILED');
+      expect(preview.headline).toBe('craft failed (tick 77): need 300 x optical_fiber_bundle');
+      expect(preview.details[0]).toBe(compactTwo);
+      expect(preview.details[0]?.length).toBeLessThanOrEqual(80);
+      expect(preview.details).toContain('code=missing_materials');
+      expect(tableMessageFromPreview(preview)).toBe(`${preview.headline}; ${preview.details[0]}`);
+      expectNoNestedJsonDump(preview.headline);
+      expectNoNestedJsonDump(preview.details.join('\n'));
+
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).toContain('[ACTION FAILED]');
+      expect(output).toContain('craft failed (tick 77): need 300 x optical_fiber_bundle');
+      expect(output).toContain(compactTwo);
+      expect(output).toContain('code=missing_materials');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('missing_materials with four long names stays within 80 chars and still folds', () => {
+      const notification = actionErrorNotification({
+        command: 'facility_upgrade',
+        tick: 88,
+        code: 'missing_materials',
+        message: 'need more components',
+        details: {
+          missing: [
+            {
+              item_id: 'optical_fiber_bundle',
+              item_name: 'Reinforced Optical Fiber Bundle Array',
+              need: 300,
+              have: 0,
+            },
+            {
+              item_id: 'circuit_board',
+              item_name: 'High-Density Circuit Board Assembly',
+              need: 20,
+              have: 5,
+            },
+            {
+              item_id: 'power_cell',
+              item_name: 'Industrial Power Cell Cluster Pack',
+              need: 12,
+              have: 1,
+            },
+            {
+              item_id: 'alloy_plate',
+              item_name: 'Titanium Alloy Hull Plate Section',
+              need: 8,
+              have: 0,
+            },
+          ],
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toBeDefined();
+      expect(preview.details[0]?.length).toBeLessThanOrEqual(80);
+      expect(preview.details[0]).toMatch(/\+\d+ more/);
+      expect(tableMessageFromPreview(preview)).toBe(`${preview.headline}; ${preview.details[0]}`);
+      expectNoNestedJsonDump(preview.headline);
+      expectNoNestedJsonDump(preview.details.join('\n'));
+      expectNoNestedJsonDump(JSON.stringify(preview));
+      expect(JSON.stringify(preview)).not.toContain('"item_id"');
+    });
+
+    test('missing_faction_materials uses the same compact path', () => {
+      const notification = actionErrorNotification({
+        command: 'commission_ship',
+        tick: 90,
+        code: 'missing_faction_materials',
+        message: 'faction storage is short',
+        details: { missing: [opticalFiber, circuitBoard] },
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('commission_ship failed (tick 90): faction storage is short');
+      expect(preview.details[0]).toBe(compactTwo);
+      expect(preview.details).toContain('code=missing_faction_materials');
+      expect(tableMessageFromPreview(preview)).toBe(`${preview.headline}; ${preview.details[0]}`);
+    });
+
+    test('leftover details.hint sits between the compact line and code=', () => {
+      const notification = actionErrorNotification({
+        command: 'craft',
+        tick: 77,
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle',
+        details: { missing: [opticalFiber, circuitBoard], hint: 'check faction storage' },
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details).toEqual([compactTwo, 'hint=check faction storage', 'code=missing_materials']);
+    });
+
+    test('empty or unparseable missing[] still surfaces leftover hint= then code=', () => {
+      for (const missing of [[], null, { item_id: 'optical_fiber_bundle' }]) {
+        const preview = formatNotificationPreview(
+          actionErrorNotification({
+            command: 'craft',
+            tick: 77,
+            code: 'missing_materials',
+            message: 'need materials',
+            details: { missing, hint: 'check faction storage' },
+          }),
+        );
+        expect(preview.details[0]).not.toMatch(/^missing:/);
+        expect(preview.details).toEqual(['hint=check faction storage', 'code=missing_materials']);
+      }
+    });
+
+    test('details.missing with a non-materials code is not decoded as a shortage line', () => {
+      const withOnlyMissing = actionErrorNotification({
+        command: 'jump',
+        tick: 1523,
+        code: 'invalid_target',
+        message: 'Target system is not reachable.',
+        details: { missing: [opticalFiber, circuitBoard] },
+      });
+      const missingOnly = formatNotificationPreview(withOnlyMissing);
+      expect(missingOnly.details.some((bit) => bit.startsWith('missing:'))).toBe(false);
+      expect(missingOnly.details).toEqual(['code=invalid_target']);
+      expectNoNestedJsonDump(missingOnly.headline);
+      expectNoNestedJsonDump(missingOnly.details.join('\n'));
+      expect(JSON.stringify(missingOnly)).not.toContain('Optical Fiber Bundle');
+
+      const withHint = formatNotificationPreview(
+        actionErrorNotification({
+          command: 'jump',
+          tick: 1523,
+          code: 'invalid_target',
+          message: 'Target system is not reachable.',
+          details: { missing: [opticalFiber, circuitBoard], hint: 'pick a linked gate' },
+        }),
+      );
+      expect(withHint.details.some((bit) => bit.startsWith('missing:'))).toBe(false);
+      expect(withHint.details).toEqual(['hint=pick a linked gate', 'code=invalid_target']);
+      expectNoNestedJsonDump(JSON.stringify(withHint));
+    });
+
+    test('generic invalid_target with no details folds code= into table Message', () => {
+      const notification = actionErrorNotification({
+        command: 'jump',
+        tick: 1523,
+        code: 'invalid_target',
+        message: 'Target system is not reachable.',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details).toEqual(['code=invalid_target']);
+      expect(tableMessageFromPreview(preview)).toBe(
+        'jump failed (tick 1523): Target system is not reachable.; code=invalid_target',
+      );
+      expectNoNestedJsonDump(preview.headline);
+      expectNoNestedJsonDump(preview.details.join('\n'));
+    });
+
+    test('omits code= when code equals the headline error text', () => {
+      const sameMessage = formatNotificationPreview(
+        actionErrorNotification({
+          command: 'travel',
+          tick: 77,
+          code: 'drive_offline',
+          message: 'drive_offline',
+        }),
+      );
+      expect(sameMessage.headline).toBe('travel failed (tick 77): drive_offline');
+      expect(sameMessage.details).toEqual([]);
+
+      const codeOnly = formatNotificationPreview(
+        actionErrorNotification({
+          command: 'travel',
+          tick: 77,
+          code: 'drive_offline',
+        }),
+      );
+      expect(codeOnly.headline).toBe('travel failed (tick 77): drive_offline');
+      expect(codeOnly.details).toEqual([]);
+    });
+
+    test('omitted code leaves details empty', () => {
+      const preview = formatNotificationPreview(
+        actionErrorNotification({
+          command: 'travel',
+          tick: 77,
+          message: 'drive offline',
+        }),
+      );
+      expect(preview.headline).toBe('travel failed (tick 77): drive offline');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('unparseable details are ignored without throwing or diagnostic tokens', () => {
+      for (const details of [null, [opticalFiber, circuitBoard], 'need more fiber']) {
+        const preview = formatNotificationPreview(
+          actionErrorNotification({
+            command: 'craft',
+            tick: 77,
+            code: 'missing_materials',
+            message: 'need materials',
+            details,
+          }),
+        );
+        expect(preview.headline).toBe('craft failed (tick 77): need materials');
+        expect(preview.details).toEqual(['code=missing_materials']);
+        expect(preview.details.some((bit) => bit.startsWith('missing:'))).toBe(false);
+        expectNoNestedJsonDump(preview.headline);
+        expectNoNestedJsonDump(preview.details.join('\n'));
+        expectNoNestedJsonDump(JSON.stringify(preview));
+      }
+    });
+
+    test('maxDetails 1 keeps the compact line and drops code=', () => {
+      const preview = formatNotificationPreview(
+        actionErrorNotification({
+          command: 'craft',
+          tick: 77,
+          code: 'missing_materials',
+          message: 'need 300 x optical_fiber_bundle',
+          details: { missing: [opticalFiber, circuitBoard] },
+        }),
+        { maxDetails: 1 },
+      );
+      expect(preview.details).toEqual(['missing: Optical Fiber Bundle 0/300, +1 more']);
+      expect(preview.details).toHaveLength(1);
+      expect(preview.details.join('\n')).not.toContain('code=');
+    });
+
+    test('maxDetails 2 reserves the last slot for code= and drops hint', () => {
+      const preview = formatNotificationPreview(
+        actionErrorNotification({
+          command: 'craft',
+          tick: 77,
+          code: 'missing_materials',
+          message: 'need 300 x optical_fiber_bundle',
+          details: { missing: [opticalFiber, circuitBoard], hint: 'check faction storage' },
+        }),
+        { maxDetails: 2 },
+      );
+      expect(preview.details).toEqual([compactTwo, 'code=missing_materials']);
+      expect(preview.details).not.toContain('hint=check faction storage');
+    });
+
+    test('verbose extras add omitted: details plus command= and tick= without nested dumps', () => {
+      const notification = actionErrorNotification({
+        command: 'craft',
+        tick: 77,
+        code: 'missing_materials',
+        message: 'need 300 x optical_fiber_bundle',
+        details: { missing: [opticalFiber, circuitBoard] },
+      });
+
+      const standard = formatNotificationPreview(notification);
+      expect(standard.omittedHint).toBeUndefined();
+      expect(standard.details.some((bit) => bit.startsWith('command='))).toBe(false);
+      expect(standard.details.some((bit) => bit.startsWith('tick='))).toBe(false);
+
+      const verbose = formatNotificationPreview(notification, { verbose: true });
+      expect(verbose.omittedHint).toBe('omitted: details');
+      expect(verbose.details[0]).toBe(compactTwo);
+      expect(verbose.details).toContain('code=missing_materials');
+      expect(verbose.details).toContain('command=craft');
+      expect(verbose.details).toContain('tick=77');
+      expectNoNestedJsonDump(JSON.stringify(verbose));
+      expect(JSON.stringify(verbose)).not.toContain('"item_id"');
+      expect(JSON.stringify(verbose)).not.toMatch(/"need"\s*:/);
+      expect(JSON.stringify(verbose)).not.toMatch(/"have"\s*:/);
+
+      const verboseInline = stripAnsi(formatNotification(notification, { verbose: true, plain: true }).join('\n'));
+      expect(verboseInline).toContain('omitted: details');
+      expect(verboseInline).toContain('command=craft');
+      expect(verboseInline).toContain('tick=77');
+      expect(verboseInline).toContain(compactTwo);
+      expectNoNestedJsonDump(verboseInline);
+    });
+
+    test('verbose without a details object leaves omittedHint unset and still appends command= and tick=', () => {
+      const notification = actionErrorNotification({
+        command: 'jump',
+        tick: 1523,
+        code: 'invalid_target',
+        message: 'Target system is not reachable.',
+      });
+
+      const standard = formatNotificationPreview(notification);
+      expect(standard.omittedHint).toBeUndefined();
+      expect(standard.details).toEqual(['code=invalid_target']);
+      expect(standard.details.some((bit) => bit.startsWith('command='))).toBe(false);
+      expect(standard.details.some((bit) => bit.startsWith('tick='))).toBe(false);
+
+      const verbose = formatNotificationPreview(notification, { verbose: true });
+      expect(verbose.omittedHint).toBeUndefined();
+      expect(verbose.details).toContain('code=invalid_target');
+      expect(verbose.details).toContain('command=jump');
+      expect(verbose.details).toContain('tick=1523');
+
+      const verboseInline = stripAnsi(formatNotification(notification, { verbose: true, plain: true }).join('\n'));
+      expect(verboseInline).toContain('command=jump');
+      expect(verboseInline).toContain('tick=1523');
+      expect(verboseInline).not.toContain('omitted:');
+    });
+  });
+
   test('system jump progress formats a compact one-liner', () => {
     const notification = {
       type: 'system',
