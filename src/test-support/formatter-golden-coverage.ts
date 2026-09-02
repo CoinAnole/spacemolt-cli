@@ -43,6 +43,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   get_battle_status_boarding: 'get_battle_status',
   get_battle_summary_captures: 'get_battle_summary',
   get_battle_summary_interrupted: 'get_battle_summary',
+  get_map_system: 'get_map',
   get_nearby_boss: 'get_nearby',
   scan_creature: 'scan',
 };

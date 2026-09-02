@@ -1956,6 +1956,28 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
 
+  test('get_map documents optional system_id and chart description', () => {
+    const config = COMMANDS.get_map;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_map command is missing from COMMANDS');
+    expect(config.usage).toBe('[system_id]  (omit for all systems)');
+    expect(config.usage).not.toContain(config.description);
+    expect(config.description).toBe(
+      "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
+    );
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_map).toBe(config.description);
+    expect(config.example).toBe('spacemolt get_map; spacemolt get_map sol');
+    expect(config.seeAlso).toEqual(['get_system', 'search_systems', 'find_route', 'get_location']);
+    expect(config.args).toEqual(['system_id']);
+
+    const help = captureHelp('get_map');
+    expect(help).toContain('spacemolt get_map [system_id]');
+    expect(help).toContain('omit for all systems');
+    expect(help).not.toContain('<args...>');
+    expect(help).toContain('spacemolt get_map sol');
+    expect(help).not.toContain('`');
+  });
+
   test('get_ship accepts optional ship_id and documents remote fleet reads', () => {
     const config = COMMANDS.get_ship;
     expect(config).toBeDefined();

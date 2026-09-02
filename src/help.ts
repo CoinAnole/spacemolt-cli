@@ -1063,7 +1063,7 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_nearby          Nearby players, NPCs, creatures, and intact prizes
   get_skills          Your skill levels and XP
   get_wrecks          Wrecks at POI (for looting)
-  get_map             Galaxy map (all systems)
+  get_map             Galaxy map (all systems, or one system)
   get_empire_info     Empire policy snapshots
   get_tax_estimate    Preview taxes owed
   get_notifications   Poll queued game events

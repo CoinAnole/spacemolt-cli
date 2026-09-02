@@ -460,6 +460,50 @@ function summarizeCompletionRewards(r: Record<string, unknown>): {
   return result;
 }
 
+function isMapSystemInfo(result: Record<string, unknown>): boolean {
+  return (
+    typeof result.system_id === 'string' &&
+    result.system_id.length > 0 &&
+    typeof result.name === 'string' &&
+    !Array.isArray(result.systems)
+  );
+}
+
+function chartDescription(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  return text === '' ? undefined : text;
+}
+
+function formatGalacticPosition(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  if (value.x === undefined || value.y === undefined) return undefined;
+  return `(${value.x}, ${value.y})`;
+}
+
+function emitMapSystemInfo(result: Record<string, unknown>): void {
+  emitLine(`\n${c.bright}=== System: ${result.name} ===${c.reset}`);
+  emitLine(`ID: ${result.system_id}`);
+  if (result.empire !== undefined) emitLine(`Empire: ${result.empire || 'None'}`);
+  if (result.is_stronghold === true) emitLine('Stronghold: yes');
+  if (result.online !== undefined) emitLine(`Online: ${result.online}`);
+  if (result.poi_count !== undefined) emitLine(`POIs: ${result.poi_count}`);
+  const position = formatGalacticPosition(result.position);
+  if (position) emitLine(`Position: ${position}`);
+  if (result.visited !== undefined) emitLine(`Visited: ${result.visited}`);
+  if (typeof result.visited_at === 'string' && result.visited_at) {
+    emitLine(`Visited at: ${result.visited_at}`);
+  }
+  const description = chartDescription(result.description);
+  if (description) emitLine(`Description: ${description}`);
+
+  const connections = Array.isArray(result.connections) ? result.connections : [];
+  if (connections.length) {
+    emitLine(`\n${c.bright}Connections:${c.reset}`);
+    for (const connection of connections) emitLine(`  - ${connection}`);
+  }
+}
+
 export const statusFormatters = [
   // Queue state
   formatter(
@@ -764,12 +808,16 @@ export const statusFormatters = [
 
   formatter(
     (r) => {
-      if (!Array.isArray(r.systems)) return false;
-      printCompactTable('Systems', r.systems.filter(isRecord), [
-        ['Name', ['name']],
-        ['System ID', ['system_id']],
-      ]);
-      if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
+      if (Array.isArray(r.systems)) {
+        printCompactTable('Systems', r.systems.filter(isRecord), [
+          ['Name', ['name']],
+          ['System ID', ['system_id']],
+        ]);
+        if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
+        return true;
+      }
+      if (!isMapSystemInfo(r)) return false;
+      emitMapSystemInfo(r);
       return true;
     },
     { commands: ['get_map'] },

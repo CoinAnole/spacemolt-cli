@@ -629,6 +629,21 @@ export const getMapFixture = {
   total_count: 2,
 };
 
+export const getMapSystemFixture = {
+  system_id: 'veiled_reach',
+  name: 'Veiled Reach',
+  empire: '',
+  is_stronghold: false,
+  online: 0,
+  poi_count: 1,
+  position: { x: 120.5, y: -44 },
+  visited: false,
+  visited_at: '2026-01-01T00:00:00Z',
+  connections: ['sol', 'barnards_star'],
+  description:
+    'No star lights this waypoint, but the dust lane still feeds three jump beacons, so navigators keep it on the chart.',
+};
+
 export const getSystemAgentsFixture = {
   system_id: 'sol',
   count: 2,
@@ -743,6 +758,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },
+  get_map_system: { command: 'get_map', fixture: getMapSystemFixture },
   get_system_agents: { command: 'get_system_agents', fixture: getSystemAgentsFixture },
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
   get_queue: { command: 'get_queue', fixture: getQueueFixture },
