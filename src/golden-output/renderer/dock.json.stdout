@@ -1,45 +1,67 @@
 {
-  "action": "dock",
-  "base": "Earth Station",
-  "story": "You dock at Earth Station.\n\nThe berth clamps engage and the station traffic board scrolls your name.",
-  "station_condition": {
-    "condition": "operational",
-    "condition_text": "Most systems operational.",
-    "satisfaction_pct": 82
+  "details": {
+    "action": "dock",
+    "base": "Earth Station",
+    "story": "You dock at Earth Station.\n\nThe berth clamps engage and the station traffic board scrolls your name.",
+    "station_condition": {
+      "condition": "operational",
+      "condition_text": "Most systems operational.",
+      "satisfaction_pct": 82
+    },
+    "facility_note": "Rent is paused on damaged and dismantling facilities until they return to service.",
+    "your_facilities": [
+      {
+        "facility_id": "player-refinery",
+        "type": "ore_refinery",
+        "name": "Ore Refinery",
+        "status": "enabled",
+        "maintenance_satisfied": true,
+        "rent_per_cycle": 1200
+      },
+      {
+        "facility_id": "player-quarters",
+        "type": "personal_quarters",
+        "name": "Personal Quarters",
+        "status": "disabled",
+        "maintenance_satisfied": true,
+        "rent_per_cycle": 100
+      },
+      {
+        "facility_id": "player-hangar",
+        "type": "personal_hangar",
+        "name": "Personal Hangar",
+        "status": "dismantling",
+        "maintenance_satisfied": true,
+        "rent_per_cycle": 800
+      },
+      {
+        "facility_id": "player-workshop",
+        "type": "workshop",
+        "name": "Workshop",
+        "status": "damaged",
+        "maintenance_satisfied": false,
+        "rent_per_cycle": 400
+      }
+    ]
   },
-  "facility_note": "Rent is paused on damaged and dismantling facilities until they return to service.",
-  "your_facilities": [
-    {
-      "facility_id": "player-refinery",
-      "type": "ore_refinery",
-      "name": "Ore Refinery",
-      "status": "enabled",
-      "maintenance_satisfied": true,
-      "rent_per_cycle": 1200
-    },
-    {
-      "facility_id": "player-quarters",
-      "type": "personal_quarters",
-      "name": "Personal Quarters",
-      "status": "disabled",
-      "maintenance_satisfied": true,
-      "rent_per_cycle": 100
-    },
-    {
-      "facility_id": "player-hangar",
-      "type": "personal_hangar",
-      "name": "Personal Hangar",
-      "status": "dismantling",
-      "maintenance_satisfied": true,
-      "rent_per_cycle": 800
-    },
-    {
-      "facility_id": "player-workshop",
-      "type": "workshop",
-      "name": "Workshop",
-      "status": "damaged",
-      "maintenance_satisfied": false,
-      "rent_per_cycle": 400
-    }
-  ]
+  "location": {
+    "system_id": "sol",
+    "system_name": "Sol",
+    "empire": "solarian",
+    "security_status": "high",
+    "connections": [
+      "alpha_centauri"
+    ],
+    "poi_id": "earth_station",
+    "poi_name": "Earth Station",
+    "poi_type": "station",
+    "docked_at": "earth_station",
+    "resources": [],
+    "nearby_players": [],
+    "nearby_player_count": 0,
+    "nearby_pirates": [],
+    "nearby_pirate_count": 0,
+    "nearby_empire_npcs": [],
+    "nearby_empire_npc_count": 0
+  }
 }

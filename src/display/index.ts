@@ -19,7 +19,8 @@ import {
 } from '../response.ts';
 import type { APIResponse, GlobalOptions, OutputFormat } from '../types.ts';
 import { toYaml } from '../yaml.ts';
-import { commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
+import { formatDockStateLine, LOCATION_ALIAS_COPIES, locationFromAliasedDetails } from './dock-state.ts';
+import { commandNameEquals, commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
 import { c, type DisplayRenderBuffer, emitError, emitLine, withDisplayRenderBuffer } from './helpers.ts';
 
 export interface RenderedDisplay {
@@ -442,20 +443,32 @@ function displayStructuredResultInternal(
 
   const scopedFormatters = commandScopedFormatters(resultFormatters, command);
   const commandFormatterInputs = detailsViewModel ? [detailsViewModel, viewModel] : [viewModel];
-  for (const input of commandFormatterInputs) {
-    for (const formatter of scopedFormatters) {
-      if (formatter(input, command, options)) return true;
-    }
-  }
+  let formatted = false;
 
-  if (!scopedFormatters.some((formatter) => formatter.suppressShapeFallbackOnDecline)) {
-    const fallbackFormatterInputs = detailsViewModel ? [detailsViewModel] : [viewModel];
-    for (const input of fallbackFormatterInputs) {
-      for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
-        if (formatter(input, command, options)) return true;
+  scoped: for (const input of commandFormatterInputs) {
+    for (const formatter of scopedFormatters) {
+      if (formatter(input, command, options)) {
+        formatted = true;
+        break scoped;
       }
     }
   }
+
+  if (!formatted && !scopedFormatters.some((formatter) => formatter.suppressShapeFallbackOnDecline)) {
+    const fallbackFormatterInputs = detailsViewModel ? [detailsViewModel] : [viewModel];
+    fallback: for (const input of fallbackFormatterInputs) {
+      for (const formatter of shapeFallbackFormatters(resultFormatters, command)) {
+        if (formatter(input, command, options)) {
+          formatted = true;
+          break fallback;
+        }
+      }
+    }
+  }
+
+  emitMutationDockState(viewModel, detailsViewModel, command);
+
+  if (formatted) return true;
 
   const resultKeys = Object.keys(detailsViewModel ?? viewModel);
   const nearMisses = resultFormatters.filter(
@@ -476,6 +489,44 @@ function displayStructuredResultInternal(
   return true;
 }
 
+const MUTATION_DOCK_STATE_QUERY_COMMANDS = [
+  'get_status',
+  'get_state',
+  'get_location',
+  'get_map',
+  'get_system',
+  'get_poi',
+  'get_nearby',
+  'get_base',
+  'inspect',
+  'get_cargo',
+  'scan',
+  'get_skills',
+  'player_profile',
+] as const;
+
+function emitMutationDockState(
+  viewModel: Record<string, unknown>,
+  detailsViewModel: Record<string, unknown> | undefined,
+  command: string,
+): void {
+  if (MUTATION_DOCK_STATE_QUERY_COMMANDS.some((name) => commandNameEquals(command, name))) return;
+
+  const isDockCommand = commandNameEquals(command, 'dock') || commandNameEquals(command, 'undock');
+  const autoFlag =
+    viewModel.auto_docked === true ||
+    viewModel.auto_undocked === true ||
+    detailsViewModel?.auto_docked === true ||
+    detailsViewModel?.auto_undocked === true;
+  if (!isDockCommand && !autoFlag) return;
+
+  const resolved = isRecord(viewModel.location)
+    ? viewModel.location
+    : locationFromAliasedDetails(detailsViewModel ?? {});
+  const line = formatDockStateLine(resolved);
+  if (line) emitLine(line);
+}
+
 function postActionDetailsViewModel(viewModel: Record<string, unknown>): Record<string, unknown> | undefined {
   const details = viewModel.details;
   if (!isRecord(details)) return undefined;
@@ -486,23 +537,14 @@ function postActionDetailsViewModel(viewModel: Record<string, unknown>): Record<
   return actionViewModel;
 }
 
+/** Dump skip is LOCATION_ALIAS_DUMP_KEYS (dest set of this table). connections is intentionally not aliased. */
 function addLocationAliases(actionViewModel: Record<string, unknown>, location: unknown): void {
   if (!isRecord(location)) return;
 
-  copyIfMissing(actionViewModel, 'system_id', location.system_id);
-  copyIfMissing(actionViewModel, 'system_name', location.system_name);
-  copyIfMissing(actionViewModel, 'poi_id', location.poi_id);
-  copyIfMissing(actionViewModel, 'poi', location.poi_name);
-  copyIfMissing(actionViewModel, 'poi_name', location.poi_name);
-  if (location.docked_at !== undefined) {
-    copyIfMissing(actionViewModel, 'docked_at', location.docked_at);
-    copyIfMissing(actionViewModel, 'station_id', location.docked_at);
-    copyIfMissing(actionViewModel, 'station_name', location.poi_name);
-    copyIfMissing(actionViewModel, 'base_id', location.docked_at);
-    copyIfMissing(actionViewModel, 'base_name', location.poi_name);
+  for (const { dest, source, requiresDockedAt } of LOCATION_ALIAS_COPIES) {
+    if (requiresDockedAt && location.docked_at === undefined) continue;
+    copyIfMissing(actionViewModel, dest, location[source]);
   }
-  copyIfMissing(actionViewModel, 'online_players', location.nearby_players);
-  copyIfMissing(actionViewModel, 'online_players_count', location.nearby_player_count);
 }
 
 function addShipAliases(actionViewModel: Record<string, unknown>, ship: unknown): void {

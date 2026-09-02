@@ -1,2 +1,21 @@
 
-action: undock
+details:
+  action: undock
+location:
+  system_id: sol
+  system_name: Sol
+  empire: solarian
+  security_status: high
+  connections:
+    - alpha_centauri
+  poi_id: earth_station
+  poi_name: "Earth Station"
+  poi_type: station
+  docked_at: null
+  resources: []
+  nearby_players: []
+  nearby_player_count: 0
+  nearby_pirates: []
+  nearby_pirate_count: 0
+  nearby_empire_npcs: []
+  nearby_empire_npc_count: 0

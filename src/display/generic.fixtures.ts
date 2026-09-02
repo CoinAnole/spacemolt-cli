@@ -829,7 +829,7 @@ export const dismantleOutpostFixture = {
   },
 };
 
-const storageAutoDockedLocation = {
+const earthStationLocationDocked = {
   system_id: 'sol',
   system_name: 'Sol',
   empire: 'solarian',
@@ -848,6 +848,11 @@ const storageAutoDockedLocation = {
   nearby_empire_npc_count: 0,
 };
 
+const earthStationLocationUndocked = {
+  ...earthStationLocationDocked,
+  docked_at: null,
+};
+
 /** Live-shaped nested SC: details = DepositItemsResponse after storage auto-docks at the POI base. */
 export const storageDepositAutoDockedFixture = {
   details: {
@@ -860,7 +865,7 @@ export const storageDepositAutoDockedFixture = {
     auto_docked: true,
     message: 'Deposited 12 Iron Ore into personal storage.',
   },
-  location: storageAutoDockedLocation,
+  location: earthStationLocationDocked,
 };
 
 /** Live-shaped nested SC: details = WithdrawItemsResponse after storage auto-docks at the POI base. */
@@ -875,7 +880,7 @@ export const storageWithdrawAutoDockedFixture = {
     auto_docked: true,
     message: 'Withdrew 7 Iron Ore from personal storage.',
   },
-  location: storageAutoDockedLocation,
+  location: earthStationLocationDocked,
 };
 
 /** Live-shaped nested SC: details = SendGiftResponse for a docked station material gift. */
@@ -951,12 +956,16 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   create_faction: { command: 'create_faction', fixture: createFactionFixture, schemaTarget: 'details' },
   set_colors: { command: 'set_colors', fixture: setColorsFixture, schemaTarget: 'details' },
   set_status: { command: 'set_status', fixture: setStatusFixture, schemaTarget: 'details' },
-  undock: { command: 'undock', fixture: undockFixture, schemaTarget: 'details' },
+  undock: {
+    command: 'undock',
+    fixture: { details: undockFixture, location: earthStationLocationUndocked },
+    schemaTarget: 'details',
+  },
   dock: {
     command: 'dock',
-    fixture: dockFixture,
+    fixture: { details: dockFixture, location: earthStationLocationDocked },
     apiRoute: 'POST /api/v2/spacemolt/dock',
-    schemaTarget: 'structuredContent',
+    schemaTarget: 'details',
   },
   facility_dismantle: { command: 'facility_dismantle', fixture: facilityDismantleFixture },
   faction_dismantle: { command: 'faction_dismantle', fixture: factionDismantleFixture },

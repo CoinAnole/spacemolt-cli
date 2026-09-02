@@ -27,6 +27,8 @@
     "accept_mission|accept_mission|required-missing|player.status_message",
     "accept_mission|accept_mission|required-missing|player.username",
     "create_faction|create_faction|required-missing|message",
+    "dock|dock|required-missing|station_condition.satisfied_count",
+    "dock|dock|required-missing|station_condition.total_service_infra",
     "facility_upgrades|facility_upgrades|required-missing|action",
     "facility_upgrades|facility_upgrades|required-missing|base_id",
     "facility_upgrades|facility_upgrades|required-missing|upgrades[0].upgrade_to.category",
