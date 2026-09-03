@@ -11,6 +11,10 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   has `captor_kind`. The Kind column is omitted when every row lacks the field;
   mixed tables blank the historical cell. JSON/YAML/jq field names are
   unchanged. Unknown live tokens still print.
+- Human `ship_captured` previews name pirate/NPC captors (`Pirate Corsair-7
+  captured skiff from Marlowe`, `A pirate captured …` when username is missing).
+  Player + username copy is unchanged. JSON/YAML/jq field names are unchanged.
+  Unknown live tokens still print.
 
 ### POI class on get_system (gameserver 0.577.4)
 

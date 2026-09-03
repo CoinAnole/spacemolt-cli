@@ -426,6 +426,87 @@ export const getNotificationsPrizesFixture = {
   ],
 };
 
+/** Kind-aware ship_captured poll: player, pirate, npc, and historical omitted-kind rows. */
+export const getNotificationsShipCapturedFixture = {
+  count: 4,
+  current_tick: 901810,
+  remaining: 0,
+  timestamp: 1779564100,
+  notifications: [
+    {
+      id: 'notif-ship-captured-player-1',
+      type: 'combat',
+      msg_type: 'ship_captured',
+      timestamp: '2026-05-23T19:12:00.000Z',
+      data: {
+        battle_id: 'battle-42',
+        tick: 901800,
+        boarding_operation_id: 'board-1',
+        captor_id: 'player-1',
+        captor_username: 'Marlowe',
+        former_owner_id: 'pirate-1',
+        former_owner_username: 'Corsair-7',
+        ship_id: 'ship-skiff-1',
+        ship_class: 'skiff',
+        captor_kind: 'player',
+      },
+    },
+    {
+      id: 'notif-ship-captured-pirate-1',
+      type: 'combat',
+      msg_type: 'ship_captured',
+      timestamp: '2026-05-23T19:12:05.000Z',
+      data: {
+        battle_id: 'battle-42',
+        tick: 901801,
+        boarding_operation_id: 'board-2',
+        captor_id: 'pirate-1',
+        captor_username: 'Corsair-7',
+        former_owner_id: 'player-1',
+        former_owner_username: 'Marlowe',
+        ship_id: 'ship-skiff-2',
+        ship_class: 'skiff',
+        captor_kind: 'pirate',
+      },
+    },
+    {
+      id: 'notif-ship-captured-npc-1',
+      type: 'combat',
+      msg_type: 'ship_captured',
+      timestamp: '2026-05-23T19:12:10.000Z',
+      data: {
+        battle_id: 'battle-43',
+        tick: 901802,
+        boarding_operation_id: 'board-3',
+        captor_id: 'npc-1',
+        captor_username: 'Sentinel',
+        former_owner_id: 'player-1',
+        former_owner_username: 'Marlowe',
+        ship_id: 'ship-barge-1',
+        ship_class: 'barge',
+        captor_kind: 'npc',
+      },
+    },
+    {
+      id: 'notif-ship-captured-historical-1',
+      type: 'combat',
+      msg_type: 'ship_captured',
+      timestamp: '2026-05-23T19:12:15.000Z',
+      data: {
+        battle_id: 'battle-44',
+        tick: 901803,
+        boarding_operation_id: 'board-4',
+        captor_id: 'player-1',
+        captor_username: 'Marlowe',
+        former_owner_id: 'pirate-1',
+        former_owner_username: 'Corsair-7',
+        ship_id: 'ship-skiff-4',
+        ship_class: 'skiff',
+      },
+    },
+  ],
+};
+
 /** Pirate-radio intercept poll (v0.578.1 Notification_pirate_radio). Coarse type is system. */
 export const getNotificationsPirateRadioFixture = {
   count: 4,
@@ -550,6 +631,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_prizes: {
     command: 'get_notifications',
     fixture: getNotificationsPrizesFixture,
+  },
+  get_notifications_ship_captured: {
+    command: 'get_notifications',
+    fixture: getNotificationsShipCapturedFixture,
   },
   get_notifications_pirate_radio: {
     command: 'get_notifications',
