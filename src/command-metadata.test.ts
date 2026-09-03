@@ -623,10 +623,27 @@ describe('command metadata', () => {
     expect(nearby?.description).toContain('prize_id');
     expect(nearby?.description).toContain('claim_prize');
     expect(nearby?.seeAlso).toEqual(expect.arrayContaining(['scan', 'hunt', 'attack', 'claim_prize']));
-    expect(captureHelp('get_nearby')).toContain('intact prizes');
+    const help = captureHelp('get_nearby');
+    expect(help).toContain('intact prizes');
+    expect(help).toContain('primary_color');
+    expect(help).toContain('secondary_color');
+    expect(help).not.toContain('captor_kind');
     expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).toContain('intact prizes');
     expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).not.toContain('Get other players');
     expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).not.toBe(nearby?.description);
+  });
+
+  test('observation and battle help document livery, captor_kind, and plundered', () => {
+    const observationHelp = captureHelp('subscribe_observation');
+    expect(observationHelp).toContain('livery');
+    expect(observationHelp).not.toContain('captor_kind');
+
+    expect(captureHelp('get_battle_summary')).toContain('captor_kind');
+    expect(captureHelp('get_battle_log')).toContain('plundered (cargo taken, hull left)');
+
+    const statusHelp = captureHelp('get_battle_status');
+    expect(statusHelp).not.toContain('plundered (cargo taken, hull left)');
+    expect(statusHelp).not.toContain('Boarding Event');
   });
 
   test('battle_stance documents board, optional target, and server-required marines', () => {
