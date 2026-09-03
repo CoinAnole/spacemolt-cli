@@ -1,5 +1,5 @@
 import type { GlobalOptions } from '../types.ts';
-import { colorize, formatPlayer as formatPlayerValue, rawColors } from './ansi.ts';
+import { colorize, formatPlayer as formatPlayerValue, hexColor, rawColors } from './ansi.ts';
 import { type CompactTableOptions, firstArray, formatCompactTable, formatItemTable, rowValue } from './tables.ts';
 
 export type ResultFormatter = ((
@@ -268,6 +268,12 @@ export const printCompactTable = emitCompactTable;
 
 export function formatPlayer(player: Record<string, unknown>): string {
   return formatPlayerValue(player, c, activePlain);
+}
+
+export function formatLiveryName(name: string, record: Record<string, unknown>): string {
+  const fg = typeof record.primary_color === 'string' ? record.primary_color : undefined;
+  const bg = typeof record.secondary_color === 'string' ? record.secondary_color : undefined;
+  return hexColor(name, fg, bg, activePlain);
 }
 
 function formatDisplayNumber(value: unknown): string {
