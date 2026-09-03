@@ -55,6 +55,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 - JSON/YAML/jq field names are unchanged. Unknown live `event_key` /
   `reason_code` / `speaker_category` tokens still print.
 
+### Help copy (gameserver 0.579.2)
+
+- `help battle_stance` notes that a faster effective speed lets the boarder
+  intercept the target's retreat and flee, and that an equal or faster target
+  can kite. Board still requires `target` and `marines=N`. Creatures, drones,
+  and stations remain non-capturable on the `target` field. JSON/YAML/jq field
+  names are unchanged.
+
 ### Help copy (OpenAPI v0.578.1)
 
 - `get_notifications` / `notifications` field help now also lists `pirate_radio`

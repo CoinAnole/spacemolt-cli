@@ -25,7 +25,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_stance: {
     usage: '<stance> [target] [marines=N]',
     description:
-      'Set your battle stance (fire, evade, brace, flee, or board). For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does.',
+      "Set your battle stance (fire, evade, brace, flee, or board). For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. A faster effective speed lets the boarder intercept the target's retreat and flee; an equal or faster target can kite. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does.",
     example: 'spacemolt battle_stance board pirate-1 marines=8',
     discoverWith: ['get_battle_status'],
     seeAlso: ['get_battle_status', 'battle_target'],
@@ -37,9 +37,10 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       target_id: 'target',
     },
     schemaExtensions: {
+      // Keep this description. Dropping it restores generated `target_id` wording, which help forbids.
       id: {
         description:
-          'Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). Changing away from board begins non-instant withdrawal.',
+          "Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). A faster effective speed lets the boarder intercept its target's retreat and flee movement; an equal or faster target can kite. Changing away from board begins non-instant withdrawal.",
       },
       marines: { minimum: 1 },
     },
