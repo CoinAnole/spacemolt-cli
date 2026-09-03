@@ -14,6 +14,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   (fuel, contraband, and Company Store excluded). Read your Company Store with
   `view_market company_store=true`. JSON/YAML/jq field names are unchanged.
 
+### Help copy (hyphenated target aliases, gameserver 0.579.2)
+
+- `help battle_stance` / `help battle_target` field help notes that underscore
+  aliases resolve hyphenated IDs (`pirate_1` matches `pirate-1`).
+  JSON/YAML/jq field names are unchanged.
+
 ### Boarding Event plundered (gameserver 0.578.0 / OpenAPI v0.578.1)
 
 - Human `get_battle_log` Boarding Event prints `plundered (cargo taken, hull left)`.

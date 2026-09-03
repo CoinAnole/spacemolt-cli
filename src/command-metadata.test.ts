@@ -678,6 +678,15 @@ describe('command metadata', () => {
     expect(config?.description).toContain('kite');
     expect(config?.schema?.target?.description).toContain('not capturable');
 
+    const generatedTarget = GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/stance']?.schema?.target?.description;
+    expect(generatedTarget).toBeDefined();
+    expect(config?.schema?.target?.description).toBe(
+      `${generatedTarget} Underscore aliases resolve hyphenated IDs on the server (pirate_1 matches pirate-1).`,
+    );
+    expect(config?.schema?.target?.description).toContain('pirate_1');
+    expect(config?.schema?.target?.description).toContain('pirate-1');
+    expect(config?.schema?.target?.description?.startsWith(generatedTarget ?? '')).toBe(true);
+
     const help = captureHelp('battle_stance');
     expect(help).toContain('[target]');
     expect(help).toContain('[marines=N]');
@@ -687,6 +696,8 @@ describe('command metadata', () => {
     expect(help).toContain('intercept');
     expect(help).toContain('kite');
     expect(help).toContain('not capturable');
+    expect(help).toContain('pirate_1');
+    expect(help).toContain('pirate-1');
 
     expect(captureFullHelp()).toContain('Set stance (fire/evade/brace/flee/board; no tick)');
 
@@ -708,10 +719,13 @@ describe('command metadata', () => {
     expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_target?.positionals).toEqual(['target_id']);
     expect(config?.schema?.id?.description).toContain('intact prizes');
     expect(config?.schema?.id?.description).toBe(
-      'ID or name of any battle combatant from get_battle_status (players, pirates, police, drones, creatures, stations, or intact prizes). Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable.',
+      'ID or name of any battle combatant from get_battle_status (players, pirates, police, drones, creatures, stations, or intact prizes). Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable. Underscore aliases resolve hyphenated IDs on the server (pirate_1 matches pirate-1).',
     );
     expect(config?.schema?.id?.description).not.toBe(
       GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/target']?.schema?.id?.description,
+    );
+    expect(config?.schema?.id?.description).toContain(
+      'Underscore aliases resolve hyphenated IDs on the server (pirate_1 matches pirate-1).',
     );
 
     const help = captureHelp('battle_target');
@@ -720,6 +734,7 @@ describe('command metadata', () => {
     expect(help).toContain(
       'Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable.',
     );
+    expect(help).toContain('Underscore aliases resolve hyphenated IDs on the server (pirate_1 matches pirate-1).');
     expect(help).not.toContain('Board attempts against');
     expect(help).not.toContain('entering the board stance');
     for (const kind of ['creatures', 'drones', 'stations'] as const) {
