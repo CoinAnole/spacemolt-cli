@@ -667,11 +667,26 @@ describe('command metadata', () => {
     expect(config?.schema?.id?.description).not.toContain('target_id');
     expect(config?.schema?.marines?.minimum).toBe(1);
 
+    const generatedId = GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/stance']?.schema?.id?.description;
+    expect(generatedId).toBeDefined();
+    const adaptedId = generatedId?.replace('requires target_id and marines', 'the server requires target and marines');
+    expect(config?.schema?.id?.description).toBe(adaptedId);
+    expect(config?.schema?.id?.description).not.toContain('target_id');
+
+    expect(config?.description).toContain('effective speed');
+    expect(config?.description).toContain('intercept');
+    expect(config?.description).toContain('kite');
+    expect(config?.schema?.target?.description).toContain('not capturable');
+
     const help = captureHelp('battle_stance');
     expect(help).toContain('[target]');
     expect(help).toContain('[marines=N]');
     expect(help).toContain('server requires');
     expect(help).toContain('Does not cost a tick');
+    expect(help).toContain('effective speed');
+    expect(help).toContain('intercept');
+    expect(help).toContain('kite');
+    expect(help).toContain('not capturable');
 
     expect(captureFullHelp()).toContain('Set stance (fire/evade/brace/flee/board; no tick)');
 
