@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### POI class on get_system (gameserver 0.577.4)
+
+- Human `get_system` POI lines print type-specific classification in brackets
+  when the server sends `class` (star spectral class, planet type, belt
+  composition, black holes). The marker is omitted when `class` is missing,
+  empty, or whitespace-only. Current POI uses the same marker. JSON/YAML/jq
+  field names are unchanged. Unknown live tokens still print.
+
 ### Pirate radio notification preview (gameserver 0.578.0 / OpenAPI v0.578.1)
 
 - Human `pirate_radio` previews match `Notification_pirate_radio` as bundled in

@@ -475,6 +475,18 @@ function chartDescription(value: unknown): string | undefined {
   return text === '' ? undefined : text;
 }
 
+function displayClass(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  return text === '' ? undefined : text;
+}
+
+function formatSystemPoiName(poi: Record<string, unknown>): string {
+  const poiClass = displayClass(poi.class);
+  const classMark = poiClass ? ` [${poiClass}]` : '';
+  return `${poi.name} (${poi.type})${classMark}`;
+}
+
 function formatGalacticPosition(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   if (value.x === undefined || value.y === undefined) return undefined;
@@ -907,7 +919,7 @@ export const statusFormatters = [
         }
         const online = (poi.online as number) > 0 ? ` ${c.cyan}(${poi.online} online)${c.reset}` : '';
         const base = poi.has_base ? ` ${c.green}[station]${c.reset}` : '';
-        emitLine(`  - ${poi.name} (${poi.type})${base}${online}  ${c.dim}${poi.id}${c.reset}`);
+        emitLine(`  - ${formatSystemPoiName(poi)}${base}${online}  ${c.dim}${poi.id}${c.reset}`);
       }
 
       const connections = sys.connections as Array<Record<string, unknown> | string>;
@@ -921,10 +933,10 @@ export const statusFormatters = [
         emitLine(`  - ${conn.name}${distance}  ${c.dim}${conn.system_id}${c.reset}`);
       }
 
-      const currentPoi = r.poi as Record<string, unknown> | undefined;
+      const currentPoi = isRecord(r.poi) ? r.poi : undefined;
       if (currentPoi) {
         emitLine(
-          `\n${c.bright}Current POI:${c.reset} ${currentPoi.name} (${currentPoi.type})  ${c.dim}${currentPoi.id}${c.reset}`,
+          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiName(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
         );
       }
       return true;

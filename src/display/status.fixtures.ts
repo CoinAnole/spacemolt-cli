@@ -196,6 +196,7 @@ export const systemInfoFixture = {
         id: 'sol_earth',
         name: 'Earth',
         type: 'planet',
+        class: 'garden',
         has_base: true,
         online: 2,
       },
@@ -203,7 +204,7 @@ export const systemInfoFixture = {
     connections: [{ system_id: 'alpha_centauri', name: 'Alpha Centauri', distance: 4.3 }],
   },
   security_status: 'high security',
-  poi: { id: 'sol_earth', name: 'Earth', type: 'planet' },
+  poi: { id: 'sol_earth', name: 'Earth', type: 'planet', class: 'garden' },
 };
 
 export const poiInfoFixture = {
