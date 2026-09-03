@@ -1,0 +1,10 @@
+count 4
+
+=== Notifications ===
+
+  Timestamp           | Type          | Message                                                                       
+  --------------------+---------------+-------------------------------------------------------------------------------
+  2026-05-23 19:12:00 | ship_captured | Marlowe captured skiff from Corsair-7; Use: get_nearby then claim_prize       
+  2026-05-23 19:12:05 | ship_captured | Pirate Corsair-7 captured skiff from Marlowe; Use: get_nearby then claim_prize
+  2026-05-23 19:12:10 | ship_captured | NPC Sentinel captured barge from Marlowe; Use: get_nearby then claim_prize    
+  2026-05-23 19:12:15 | ship_captured | Marlowe captured skiff from Corsair-7; Use: get_nearby then claim_prize       

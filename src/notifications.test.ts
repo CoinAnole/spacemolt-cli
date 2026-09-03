@@ -2921,6 +2921,129 @@ describe('notification formatting', () => {
       expect(tableMessage(notification)).toBe('Someone captured skiff from Someone; Use: get_nearby then claim_prize');
     });
 
+    test('player captor_kind with username is a noop vs omitted kind', () => {
+      const base = {
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+      };
+      const omitted = formatNotificationPreview(captureNotification(base));
+      const player = formatNotificationPreview(captureNotification({ ...base, captor_kind: 'player' }));
+      const playerUpper = formatNotificationPreview(captureNotification({ ...base, captor_kind: 'PLAYER' }));
+      expect(omitted.headline).toBe('Marlowe captured skiff from Corsair-7');
+      expect(player.headline).toBe(omitted.headline);
+      expect(playerUpper.headline).toBe(omitted.headline);
+      expect(player.headline).not.toContain('Player Marlowe');
+      expect(player.headline).not.toContain('You captured');
+    });
+
+    test('kind-aware ship_captured subjects cover pirate, npc, unknown, and omitted fallbacks', () => {
+      const cases: Array<{ data: Record<string, unknown>; headline: string }> = [
+        {
+          data: {
+            captor_kind: 'pirate',
+            captor_username: 'Corsair-7',
+            former_owner_username: 'Marlowe',
+            ship_class: 'skiff',
+          },
+          headline: 'Pirate Corsair-7 captured skiff from Marlowe',
+        },
+        {
+          data: {
+            captor_kind: ' Pirate ',
+            captor_username: 'Corsair-7',
+            former_owner_username: 'Marlowe',
+            ship_class: 'skiff',
+          },
+          headline: 'Pirate Corsair-7 captured skiff from Marlowe',
+        },
+        {
+          data: {
+            captor_kind: ' Pirate ',
+            former_owner_username: 'Marlowe',
+            ship_class: 'frigate',
+          },
+          headline: 'A pirate captured frigate from Marlowe',
+        },
+        {
+          data: { captor_kind: 'pirate', ship_class: 'frigate' },
+          headline: 'A pirate captured frigate from Someone',
+        },
+        {
+          data: {
+            captor_kind: 'npc',
+            captor_username: 'Sentinel',
+            former_owner_username: 'Marlowe',
+            ship_class: 'barge',
+          },
+          headline: 'NPC Sentinel captured barge from Marlowe',
+        },
+        {
+          data: { captor_kind: 'npc', ship_class: 'barge' },
+          headline: 'An NPC captured barge from Someone',
+        },
+        {
+          data: { captor_kind: 'player', ship_class: 'skiff' },
+          headline: 'A player captured skiff from Someone',
+        },
+        {
+          data: {
+            captor_kind: 'herald',
+            captor_username: 'Marlowe',
+            former_owner_username: 'Corsair-7',
+            ship_class: 'skiff',
+          },
+          headline: 'Marlowe (herald) captured skiff from Corsair-7',
+        },
+        {
+          data: { captor_kind: 'herald', ship_class: 'skiff' },
+          headline: 'herald captured skiff from Someone',
+        },
+        {
+          data: { captor_kind: '   ', ship_class: 'skiff' },
+          headline: 'Someone captured skiff from Someone',
+        },
+        {
+          data: { captor_kind: 1, ship_class: 'skiff' },
+          headline: 'Someone captured skiff from Someone',
+        },
+        {
+          data: { captor_kind: { kind: 'pirate' }, ship_class: 'skiff' },
+          headline: 'Someone captured skiff from Someone',
+        },
+      ];
+      for (const { data, headline } of cases) {
+        const notification = captureNotification({
+          battle_id: 'battle-42',
+          tick: 901800,
+          boarding_operation_id: 'board-1',
+          captor_id: 'player-1',
+          former_owner_id: 'pirate-1',
+          ship_id: 'ship-skiff-1',
+          ...data,
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('CAPTURE');
+        expect(preview.severity).toBe('success');
+        expect(preview.headline).toBe(headline);
+        expect(preview.details).toEqual([captureUse]);
+        const fromPreview = tableMessage(notification);
+        expect(fromPreview).toBe(`${headline}; ${captureUse}`);
+        expect(fromPreview).not.toContain('captor_id');
+        expect(fromPreview).not.toContain('boarding_operation_id');
+        expect(fromPreview).not.toContain('You captured');
+        expect(fromPreview).not.toMatch(/\byour\b/i);
+      }
+    });
+
+    test('kind-only ship_captured bag still uses last-resort headline', () => {
+      const preview = formatNotificationPreview(captureNotification({ captor_kind: 'pirate' }));
+      expect(preview.headline).toBe('Ship captured');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('Someone');
+      expect(preview.headline).not.toContain('A pirate');
+    });
+
     test('stall in_transit + no_fuel keeps site in the headline and folds Use: not the server message', () => {
       const notification = prizeNotification({
         ...prizeIdentity,

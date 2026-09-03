@@ -1,3 +1,4 @@
+import { normalizeCaptorKind } from './display/captor-kind.ts';
 import { formatDockStateLine } from './display/dock-state.ts';
 import {
   formatMissingMaterialsPreview,
@@ -1153,6 +1154,15 @@ function prizeWreckLine(data: Record<string, unknown>): string | undefined {
   return `wreck ${wreckId}`;
 }
 
+function formatCaptorSubject(username: string | undefined, captorKind: unknown): string {
+  const kind = normalizeCaptorKind(captorKind);
+  if (kind === undefined) return username ?? 'Someone';
+  if (kind === 'player') return username ?? 'A player';
+  if (kind === 'pirate') return username !== undefined ? `Pirate ${username}` : 'A pirate';
+  if (kind === 'npc') return username !== undefined ? `NPC ${username}` : 'An NPC';
+  return username !== undefined ? `${username} (${kind})` : kind;
+}
+
 function previewShipCaptured(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -1165,13 +1175,14 @@ function previewShipCaptured(
     return { ...headlinePreview('CAPTURE', 'Ship captured', options), severity: 'success' };
   }
 
-  const captorText = captor !== undefined ? String(captor) : 'Someone';
+  const username = captor !== undefined ? String(captor) : undefined;
+  const subject = formatCaptorSubject(username, data.captor_kind);
   const classText = shipClass !== undefined ? String(shipClass) : 'ship';
   const formerText = formerOwner !== undefined ? String(formerOwner) : 'Someone';
   return {
     ...detailPreview(
       'CAPTURE',
-      `${captorText} captured ${classText} from ${formerText}`,
+      `${subject} captured ${classText} from ${formerText}`,
       ['Use: get_nearby then claim_prize'],
       options,
     ),
