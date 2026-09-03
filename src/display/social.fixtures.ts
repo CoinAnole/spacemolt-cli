@@ -573,6 +573,25 @@ export const battleSummaryCapturesKindFixture = {
   ],
 };
 
+export const battleLogPlunderedFixture = {
+  battle_id: 'battle-42',
+  status: 'completed',
+  total_ticks: 1,
+  has_more: false,
+  entries: [
+    {
+      tick: 3,
+      boarding: [
+        {
+          operation_id: 'board-1',
+          event: 'plundered',
+          phase: 'hold',
+        },
+      ],
+    },
+  ],
+};
+
 export const battleLogBoardingFixture = {
   battle_id: 'battle-42',
   status: 'completed',
@@ -1460,6 +1479,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
+  get_battle_log_plundered: { command: 'get_battle_log', fixture: battleLogPlunderedFixture },
   get_battle_log_snapshots: { command: 'get_battle_log', fixture: battleLogSnapshotsFixture },
   get_battle_log_interrupted: { command: 'get_battle_log', fixture: battleLogInterruptedFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },

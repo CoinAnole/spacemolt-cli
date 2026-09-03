@@ -40,6 +40,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   faction_scan_poi_partial: 'faction_scan_poi',
   get_action_log_cursor: 'get_action_log',
   get_battle_log_boarding: 'get_battle_log',
+  get_battle_log_plundered: 'get_battle_log',
   get_battle_log_interrupted: 'get_battle_log',
   get_battle_log_snapshots: 'get_battle_log',
   get_battle_status_boarding: 'get_battle_status',

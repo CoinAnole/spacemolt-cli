@@ -1,0 +1,8 @@
+
+battle_id: "battle-42"
+status: completed
+total_ticks: 1
+has_more: false
+entries:
+  - tick: 3
+    boarding: [{operation_id: "board-1", event: plundered, phase: hold}]

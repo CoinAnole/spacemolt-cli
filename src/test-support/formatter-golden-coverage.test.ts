@@ -36,6 +36,8 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('get_battle_summary_captures_kind');
     expect(report.requiredCoverageKeys).toContain('get_battle_log_boarding');
     expect(report.highValueFixtureLabels).toContain('get_battle_log_boarding');
+    expect(report.requiredCoverageKeys).toContain('get_battle_log_plundered');
+    expect(report.highValueFixtureLabels).toContain('get_battle_log_plundered');
     expect(report.requiredCoverageKeys).toContain('get_nearby_boss');
     expect(report.highValueFixtureLabels).toContain('get_nearby_boss');
     expect(report.requiredCoverageKeys).toContain('get_battle_log_snapshots');

@@ -1,4 +1,5 @@
 import { battleLogAttackRows, battleLogCombatantRows } from './battle-log.ts';
+import { formatBoardingEvent } from './boarding-event.ts';
 import { normalizeCaptorKind } from './captor-kind.ts';
 import { isAliasCopiedDumpKey } from './dock-state.ts';
 import {
@@ -213,6 +214,7 @@ function captureTableColumns(includeTick: boolean, rows: Array<Record<string, un
 }
 
 function boardingStatusColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  // Live boarding is BoardingPublicStatus (no event).
   const columns: Array<[string, string[]]> = [
     ['ID', ['operation_id']],
     ['Phase', ['phase']],
@@ -251,6 +253,7 @@ function flattenTickRecords(entries: Array<Record<string, unknown>>, field: stri
 function boardingLogRows(entries: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return flattenTickRecords(entries, 'boarding').map((row) => ({
     ...row,
+    event_display: formatBoardingEvent(row.event ?? row.event_type),
     destroyed_display: formatYesBlank(row.destroyed),
     casualties_display: formatYesFlags([
       ['yes', row.casualties_occurred],
@@ -265,7 +268,9 @@ function boardingLogColumns(rows: Array<Record<string, unknown>>): Array<[string
     ['Tick', ['tick']],
     ['ID', ['operation_id']],
   ];
-  if (hasAnyField(rows, ['event', 'event_type'])) columns.push(['Event', ['event', 'event_type']]);
+  if (hasAnyField(rows, ['event_display', 'event', 'event_type'])) {
+    columns.push(['Event', ['event_display', 'event', 'event_type']]);
+  }
   if (hasAnyField(rows, ['phase'])) columns.push(['Phase', ['phase']]);
   if (hasAnyField(rows, ['actor_id', 'attacker_id'])) columns.push(['Attacker', ['actor_id', 'attacker_id']]);
   if (hasAnyField(rows, ['target_id', 'target'])) columns.push(['Target', ['target_id', 'target']]);
@@ -307,7 +312,7 @@ function personnelCasualtyColumns(rows: Array<Record<string, unknown>>): Array<[
 function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): void {
   const boardingRows = boardingLogRows(entries);
   if (boardingRows.length) {
-    printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows));
+    printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows), { maxCellWidth: 40 });
   }
   const captureRows = captureIdentityRows(flattenTickRecords(entries, 'captures'));
   if (captureRows.length) {
