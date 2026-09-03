@@ -42,6 +42,10 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
         description:
           "Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). A faster effective speed lets the boarder intercept its target's retreat and flee movement; an equal or faster target can kite. Changing away from board begins non-instant withdrawal.",
       },
+      target: {
+        description:
+          'ID or name of the enemy — required when focusing a target and when entering the board stance. Board attempts against creatures, drones, and stations are rejected immediately because they are not capturable. Underscore aliases resolve hyphenated IDs on the server (pirate_1 matches pirate-1).',
+      },
       marines: { minimum: 1 },
     },
   },
@@ -61,7 +65,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     schemaExtensions: {
       id: {
         description:
-          'ID or name of any battle combatant from get_battle_status (players, pirates, police, drones, creatures, stations, or intact prizes). Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable.',
+          'ID or name of any battle combatant from get_battle_status (players, pirates, police, drones, creatures, stations, or intact prizes). Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable. Underscore aliases resolve hyphenated IDs on the server (pirate_1 matches pirate-1).',
       },
     },
   },

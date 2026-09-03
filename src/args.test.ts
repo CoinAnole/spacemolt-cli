@@ -1935,6 +1935,14 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
       target: 'pirate-1',
       marines: '8',
     });
+    expect(parseOk(['battle_stance', 'board', 'pirate_1']).payload).toEqual({
+      stance: 'board',
+      target: 'pirate_1',
+    });
+    expect(parseOk(['battle_stance', 'board', 'target=pirate_1']).payload).toEqual({
+      stance: 'board',
+      target: 'pirate_1',
+    });
     expect(parseOk(['battle_stance', 'board']).payload).toEqual({ stance: 'board' });
     expect(parseOk(['battle_stance', 'board', 'pirate-1', '8']).payload).toEqual({
       stance: 'board',
