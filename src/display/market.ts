@@ -604,6 +604,30 @@ function formatCommissionShip(r: Record<string, unknown>): boolean {
   return true;
 }
 
+function formatAnalyzeMarket(r: Record<string, unknown>): boolean {
+  if (!Array.isArray(r.insights) || !r.insights.every(isRecord)) return false;
+
+  const station = typeof r.station === 'string' ? r.station : '';
+  const title = station ? `Market Analysis: ${station}` : 'Market Analysis';
+  emitLine(`\n${c.bright}=== ${title} ===${c.reset}`);
+  const skill = finiteNumber(r.skill_level);
+  if (skill !== undefined) emitLine(`Trading skill: ${skill}`);
+  if (typeof r.message === 'string' && r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+  printCompactTable(
+    'Insights',
+    r.insights,
+    [
+      ['Pri', ['priority']],
+      ['Category', ['category']],
+      ['Item', ['item', 'item_id']],
+      ['ID', ['item_id']],
+      ['Insight', ['message']],
+    ],
+    { maxCellWidth: 72 },
+  );
+  return true;
+}
+
 function formatCommissionQuote(r: Record<string, unknown>): boolean {
   if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
     return false;
@@ -845,6 +869,11 @@ export const marketFormatters = [
     },
     { commands: ['view_market', 'subscribe_market'], shapeFallback: true },
   ),
+
+  namedFormatter('analyze_market', ['insights', 'station', 'skill_level'], formatAnalyzeMarket, {
+    commands: ['analyze_market'],
+    suppressShapeFallbackOnDecline: true,
+  }),
 
   // Market order creation
   namedFormatter('faction_bulk_orders', ['kind', 'results', 'summary'], renderFactionBulkOrders, {

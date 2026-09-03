@@ -689,7 +689,37 @@ export const tradeOffersFixture = {
   ],
 };
 
+export const analyzeMarketFixture = {
+  insights: [
+    {
+      category: 'arbitrage',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      message: 'Buy here, sell at Mars',
+      priority: 5,
+    },
+    {
+      category: 'demand',
+      item: 'Fuel Cell',
+      item_id: 'fuel_cell',
+      message: 'Station is buying fuel above regional average',
+      priority: 1,
+    },
+  ],
+  skill_level: 4,
+  station: 'Earth Station',
+  message: 'Top insights at Earth Station',
+};
+
+export const emptyAnalyzeMarketFixture = {
+  insights: [],
+  skill_level: 4,
+  station: 'Earth Station',
+  message: 'No insights at Earth Station',
+};
+
 export const marketFixtureCases = {
+  analyze_market: { command: 'analyze_market', fixture: analyzeMarketFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   storage: { command: 'storage_view', fixture: storageFixture },
@@ -699,6 +729,8 @@ export const marketFixtureCases = {
 };
 
 export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
+  analyze_market: { command: 'analyze_market', fixture: analyzeMarketFixture },
+  analyze_market_empty: { command: 'analyze_market', fixture: emptyAnalyzeMarketFixture },
   browse_ships: { command: 'browse_ships', fixture: browseShipsFixture },
   view_ship_buy_orders: { command: 'view_ship_buy_orders', fixture: viewShipBuyOrdersFixture },
   buy: { command: 'buy', fixture: buyFixture },
