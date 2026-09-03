@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Nearby pirate livery (gameserver 0.578.0)
+
+- Human `get_nearby` and `subscribe_observation` pirate lines color the pirate
+  name with crew `primary_color` / `secondary_color` (`#RRGGBB`) the same way
+  nearby player names already use those fields. Boss prefix, ship class, crew
+  label, and status stay uncolored. Missing or invalid hex leaves the name
+  plain. `--plain` emits no ANSI. JSON/YAML/jq field names are unchanged.
+
 ### Captor kind on captures (gameserver 0.578.0 / OpenAPI v0.578.1)
 
 - Human capture tables on `get_battle_summary`, `get_battle_log`, and recovered

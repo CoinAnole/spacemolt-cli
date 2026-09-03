@@ -47,6 +47,11 @@ describe('ANSI display helpers', () => {
     expect(hexColor('pilot', '#112233', undefined, true)).toBe('pilot');
   });
 
+  test('hexColor applies only the valid channel when mixed with invalid hex', () => {
+    expect(hexColor('pilot', '#112233', 'red')).toBe('\x1b[38;2;17;34;51mpilot\x1b[0m');
+    expect(hexColor('pilot', 'red', '#445566')).toBe('\x1b[48;2;68;85;102mpilot\x1b[0m');
+  });
+
   test('formatPlayer includes identity, faction, ship, status, and combat markers in plain output', () => {
     expect(
       formatPlayer(

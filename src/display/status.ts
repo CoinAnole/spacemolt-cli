@@ -8,6 +8,7 @@ import {
   emitStationFuelPricing,
   emitStationIds,
   formatDepletionRemainingSuffix,
+  formatLiveryName,
   formatPlayer,
   formatReputationChangesSummary,
   formatter,
@@ -324,7 +325,7 @@ function pirateCrewLabel(p: Record<string, unknown>): string {
 }
 
 function formatNearbyPirateLine(p: Record<string, unknown>): string {
-  const name = String(p.name || p.pirate_id || 'Unknown');
+  const name = formatLiveryName(String(p.name || p.pirate_id || 'Unknown'), p);
   const boss = p.is_boss === true ? 'Boss ' : '';
   const ship = p.ship_class || p.tier ? ` (${p.ship_class || p.tier})` : '';
   const crewLabel = pirateCrewLabel(p);

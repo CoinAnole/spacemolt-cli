@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { hexColor } from './ansi.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   getLocationFixture,
@@ -625,6 +626,133 @@ test('get_nearby pirate lines stay unprefixed when is_boss is false', () => {
 
   expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
   expect(stdout).not.toContain('Boss ');
+});
+
+const colorOptions: GlobalOptions = { ...options, plain: false };
+const pirateFg = '#112233';
+const pirateBg = '#445566';
+
+function nearbyPirateLine(stdout: string, token: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes(token));
+}
+
+function nearbyWithPirateColors(
+  colors: Record<string, unknown>,
+  source: typeof nearbyFixture = nearbyFixture,
+  pirateIndex = 0,
+): { pirates: Array<Record<string, unknown>> } {
+  const fixture = structuredClone(source) as { pirates: Array<Record<string, unknown>> };
+  fixture.pirates[pirateIndex] = { ...fixture.pirates[pirateIndex], ...colors };
+  return fixture;
+}
+
+test('get_nearby colors pirate names with both crew hex colors', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ primary_color: pirateFg, secondary_color: pirateBg }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe(`  ${hexColor('Raider', pirateFg, pirateBg)} (skiff) - Admiral Kael - hostile`);
+  expect(line).toContain('\x1b[38;2');
+  expect(line).toContain('\x1b[48;2');
+  expect(line?.endsWith('\x1b[0m (skiff) - Admiral Kael - hostile')).toBe(true);
+});
+
+test('get_nearby colors pirate names with primary color only', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ primary_color: pirateFg }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe(`  ${hexColor('Raider', pirateFg)} (skiff) - Admiral Kael - hostile`);
+  expect(nearbyPirateLine(stdout, 'Raider')).toContain('\x1b[38;2');
+  expect(nearbyPirateLine(stdout, 'Raider')).not.toContain('\x1b[48;2');
+});
+
+test('get_nearby colors pirate names with secondary color only', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ secondary_color: pirateBg }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', undefined, pirateBg)} (skiff) - Admiral Kael - hostile`,
+  );
+  expect(nearbyPirateLine(stdout, 'Raider')).toContain('\x1b[48;2');
+  expect(nearbyPirateLine(stdout, 'Raider')).not.toContain('\x1b[38;2');
+});
+
+test('get_nearby leaves pirate names uncolored for invalid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ primary_color: 'red', secondary_color: '#fff' }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - Admiral Kael - hostile');
+  expect(line).not.toContain('\x1b');
+});
+
+test('get_nearby colors only the valid pirate livery channel when mixed with invalid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ primary_color: pirateFg, secondary_color: 'red' }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', pirateFg, 'red')} (skiff) - Admiral Kael - hostile`,
+  );
+});
+
+test('get_nearby leaves pirate names uncolored when livery colors are missing', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(nearbyFixture),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - Admiral Kael - hostile');
+  expect(line).not.toContain('\x1b');
+});
+
+test('get_nearby --plain leaves pirate names uncolored even with valid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ primary_color: pirateFg, secondary_color: pirateBg }),
+    { ...options, plain: true },
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - Admiral Kael - hostile');
+  expect(line).not.toContain('\x1b');
+});
+
+test('get_nearby colors boss pirate names after an uncolored Boss prefix', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    nearbyWithPirateColors({ primary_color: pirateFg, secondary_color: pirateBg }, nearbyBossFixture, 1),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const bossLine = nearbyPirateLine(stdout, 'Dreadnought');
+
+  expect(bossLine).toBe(`  Boss ${hexColor('Dreadnought', pirateFg, pirateBg)} (battleship) - Admiral Kael - hostile`);
+  expect(bossLine?.startsWith('  Boss \x1b')).toBe(true);
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe('  Raider (skiff) - Admiral Kael - hostile');
 });
 
 test('get_nearby prefixes Boss only on pirates with is_boss true', () => {
