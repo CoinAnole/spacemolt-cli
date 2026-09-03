@@ -3,7 +3,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { loadPassengerFixture } from '../display/passenger.fixtures';
+import { GENERATED_API_GAMESERVER_VERSION } from '../generated/api-commands';
 import {
+  assertFixtureSchemaBaseline,
+  assertFixtureSchemaBaselineGameserverVersion,
   compareFixtureAgainstResponseCandidates,
   compareFixtureToSchema,
   compareHighValueFixturesToSpec,
@@ -211,6 +214,55 @@ describe('output golden test support', () => {
 
   test('fixture schema baseline path is exported for report tooling', () => {
     expect(path.basename(DEFAULT_SCHEMA_BASELINE_PATH)).toBe('fixture-schema-baseline.json');
+  });
+
+  test('fixture schema baseline gameserver stamp matches bundled metadata', () => {
+    expect(() => assertFixtureSchemaBaselineGameserverVersion()).not.toThrow();
+  });
+
+  test('fixture schema baseline gameserver stamp rejects a mismatched version', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-schema-baseline-'));
+    try {
+      const baselinePath = path.join(dir, 'fixture-schema-baseline.json');
+      fs.writeFileSync(
+        baselinePath,
+        `${JSON.stringify({ generatedAtGameserver: 'v0.0.0', blockingDivergenceSignatures: [] }, null, 2)}\n`,
+      );
+      expect(() => assertFixtureSchemaBaselineGameserverVersion({ baselinePath })).toThrow(
+        `Fixture-schema baseline gameserver v0.0.0 does not match bundled metadata ${GENERATED_API_GAMESERVER_VERSION}.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('fixture schema baseline gameserver stamp treats a missing version as a mismatch', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-schema-baseline-'));
+    try {
+      const baselinePath = path.join(dir, 'fixture-schema-baseline.json');
+      fs.writeFileSync(baselinePath, `${JSON.stringify({ blockingDivergenceSignatures: [] }, null, 2)}\n`);
+      expect(() => assertFixtureSchemaBaselineGameserverVersion({ baselinePath })).toThrow(
+        `Fixture-schema baseline gameserver (missing) does not match bundled metadata ${GENERATED_API_GAMESERVER_VERSION}.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('assertFixtureSchemaBaseline rejects a stale gameserver stamp before comparing signatures', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-schema-baseline-'));
+    try {
+      const baselinePath = path.join(dir, 'fixture-schema-baseline.json');
+      fs.writeFileSync(
+        baselinePath,
+        `${JSON.stringify({ generatedAtGameserver: 'v0.0.0', blockingDivergenceSignatures: [] }, null, 2)}\n`,
+      );
+      expect(() => assertFixtureSchemaBaseline({ baselinePath })).toThrow(
+        `Fixture-schema baseline gameserver v0.0.0 does not match bundled metadata ${GENERATED_API_GAMESERVER_VERSION}.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test('storage inventory fixtures compare against the storage view response schema', () => {

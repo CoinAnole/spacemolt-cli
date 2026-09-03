@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { COMMAND_OVERRIDES } from '../command-overrides.ts';
 import { type HighValueFixtureEntry, highValueCommandFixtures } from '../display/formatter-fixtures.ts';
+import { GENERATED_API_GAMESERVER_VERSION } from '../generated/api-commands.ts';
 import {
   buildResponseSchemaCandidates,
   getEffectiveSchema,
@@ -698,7 +699,21 @@ export function formatBlockingDivergenceDiff(actual: string[], expected: string[
   return lines.length > 0 ? lines.join('\n') : 'No blocking fixture/schema divergence signature changes.';
 }
 
+export function assertFixtureSchemaBaselineGameserverVersion(options: { baselinePath?: string } = {}): void {
+  const baseline = loadFixtureSchemaBaseline(options.baselinePath);
+  if (baseline.generatedAtGameserver !== GENERATED_API_GAMESERVER_VERSION) {
+    throw new Error(
+      [
+        `Fixture-schema baseline gameserver ${baseline.generatedAtGameserver ?? '(missing)'} does not match bundled metadata ${GENERATED_API_GAMESERVER_VERSION}.`,
+        'If OpenAPI/fixtures were intentionally updated, review drift then run:',
+        '  bun run report:fixture-schemas --update-baseline',
+      ].join('\n'),
+    );
+  }
+}
+
 export function assertFixtureSchemaBaseline(options: { baselinePath?: string } = {}): void {
+  assertFixtureSchemaBaselineGameserverVersion(options);
   const actual = filterBlockingDivergences(compareHighValueFixturesToSpec())
     .map((divergence) => divergenceSignature(divergence))
     .sort();
