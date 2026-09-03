@@ -1,0 +1,18 @@
+
+=== Battle Log ===
+ID: battle-42
+Status: completed
+Total Ticks: 1
+Has More: no
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Board | Ended
+  -----+---------+------+--------+-------+------+-------+-------+------
+  3    | 0       | 0    |        |       |      |       | 1     |      
+
+=== Boarding ===
+
+  Tick | ID      | Event                              | Phase
+  -----+---------+------------------------------------+------
+  3    | board-1 | plundered (cargo taken, hull left) | hold 

@@ -8,6 +8,7 @@ import {
   battleLogBoardingFixture,
   battleLogFixture,
   battleLogInterruptedFixture,
+  battleLogPlunderedFixture,
   battleLogSnapshotsFixture,
   battleStatusBoardingFixture,
   battleStatusFixture,
@@ -1170,7 +1171,24 @@ test('get_battle_status prints qualitative boarding after participants', () => {
   expect(boarding).toContain('3');
   expect(boarding).toContain('Progress');
   expect(boarding).toContain('Self-destruct');
+  expect(boarding).not.toContain('Event');
   expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_status ignores a synthetic boarding event and still has no Event column', () => {
+  const fixture = structuredClone(battleStatusBoardingFixture) as Record<string, unknown>;
+  fixture.boarding = [
+    {
+      ...(battleStatusBoardingFixture.boarding[0] as Record<string, unknown>),
+      event: 'plundered',
+    },
+  ];
+  const boarding = renderBattleStatus(fixture).split('=== Boarding ===')[1] ?? '';
+
+  expect(boarding).toContain('board-1');
+  expect(boarding).toContain('breach');
+  expect(boarding).not.toContain('Event');
+  expect(boarding).not.toContain('plundered');
 });
 
 test('get_battle_status reads boarding nested on battle and ignores personnel counts', () => {
@@ -1938,6 +1956,7 @@ test('get_battle_log prints boarding detail tables after ticks when there are no
   expect(stdout.indexOf('=== Captures ===')).toBeLessThan(stdout.indexOf('=== Personnel casualties ==='));
   expect(stdout).toContain('board-1');
   expect(stdout).toContain('progress');
+  expect(stdout).not.toContain('plundered (cargo taken, hull left)');
   expect(stdout).toContain('breach');
   expect(stdout).toContain('marines_committed');
   expect(stdout).toContain('yes attacker defender');
@@ -1948,6 +1967,70 @@ test('get_battle_log prints boarding detail tables after ticks when there are no
   expect(stdout).toContain('player-1 / ship-marlowe-1');
   expect(stdout).not.toContain('Kind');
   expectNoPersonnelCounts(stdout);
+});
+
+function boardingLogFixture(event: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    battle_id: 'battle-42',
+    status: 'completed',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 3,
+        boarding: [{ operation_id: 'board-1', event, phase: 'hold', ...extra }],
+      },
+    ],
+  };
+}
+
+test('get_battle_log Event glosses plundered without truncating', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogPlunderedFixture) as Record<string, unknown>);
+  const boarding = sectionAfter(stdout, 'Boarding');
+
+  expect(boarding).toContain('plundered (cargo taken, hull left)');
+  expect(boarding).not.toContain('hul...');
+  expect(stdout).not.toContain('=== Captures ===');
+  expect(stdout).not.toContain('=== Personnel casualties ===');
+});
+
+test('get_battle_log Event uses event_type when event is absent', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-42',
+    status: 'completed',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 3,
+        boarding: [{ operation_id: 'board-1', event_type: 'plundered', phase: 'hold' }],
+      },
+    ],
+  });
+
+  expect(sectionAfter(stdout, 'Boarding')).toContain('plundered (cargo taken, hull left)');
+});
+
+test('get_battle_log Event prints target_self_destructed without a gloss', () => {
+  const boarding = sectionAfter(renderBattleLog(boardingLogFixture('target_self_destructed')), 'Boarding');
+
+  expect(boarding).toContain('target_self_destructed');
+  expect(boarding).not.toContain('(');
+});
+
+test('get_battle_log Event prints unknown live tokens as-is', () => {
+  const boarding = sectionAfter(renderBattleLog(boardingLogFixture('weird_live_token')), 'Boarding');
+
+  expect(boarding).toContain('weird_live_token');
+});
+
+test('get_battle_log boarding reason of 40 characters is not clipped', () => {
+  const reason = 'x'.repeat(40);
+  expect(reason.length).toBe(40);
+  const boarding = sectionAfter(renderBattleLog(boardingLogFixture('progress', { reason })), 'Boarding');
+
+  expect(boarding).toContain(reason);
+  expect(boarding).not.toContain('...');
 });
 
 test('get_battle_log Captures prints Tick and Kind when a capture has captor_kind', () => {

@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Boarding Event plundered (gameserver 0.578.0 / OpenAPI v0.578.1)
+
+- Human `get_battle_log` Boarding Event prints `plundered (cargo taken, hull left)`.
+  Other terminal boarding events print the lowercase token only. Live
+  `get_battle_status` boarding stays qualitative (phase/progress, no Event
+  column). JSON/YAML/jq field names are unchanged.
+
 ### Faction scan_poi table output (gameserver 0.578.0 / OpenAPI v0.578.1)
 
 - Human `faction_scan_poi` prints a scan header plus Players / Empire NPCs
