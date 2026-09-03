@@ -70,7 +70,8 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_battle_summary: {
     usage: '<battle_id>',
-    description: 'View the aggregate result of a battle by ID (active or completed).',
+    description:
+      'View the aggregate result of a battle by ID (active or completed). Public captures print Kind (player, pirate, or npc) when captor_kind is present; historical rows may omit it.',
     example: 'spacemolt get_battle_summary <battle_id>',
     discoverWith: ['get_battle_status', 'get_battle_log'],
     seeAlso: ['get_battle_log', 'get_battle_status'],
@@ -84,7 +85,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_battle_log: {
     usage: '<battle_id> [tick_start] [limit] [tick_end]',
     description:
-      'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages.',
+      'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages. Boarding Event plundered (cargo taken, hull left).',
     example: 'spacemolt get_battle_log <battle_id>',
     discoverWith: ['get_battle_summary', 'get_battle_status'],
     seeAlso: ['get_battle_summary', 'get_battle_status'],

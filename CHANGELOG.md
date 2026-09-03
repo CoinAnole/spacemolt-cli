@@ -59,6 +59,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 - `get_notifications` / `notifications` field help now also lists `pirate_radio`
   among frames that fall back to `system` (not `combat`). Filter enum unchanged.
+- `help get_nearby` notes pirate names use crew `primary_color` /
+  `secondary_color` (`#RRGGBB`) when the server sends them.
+- `help subscribe_observation` notes pirate names in the snapshot use crew
+  livery (`#RRGGBB`) the same way `get_nearby` does.
+- `help get_battle_summary` notes public captures print Kind (`player`,
+  `pirate`, or `npc`) when `captor_kind` is present; historical rows may omit
+  it.
+- `help get_battle_log` notes boarding Event `plundered (cargo taken, hull
+  left)`.
+- JSON/YAML/jq field names are unchanged.
 
 ### Single-system map chart (gameserver 0.576.0)
 

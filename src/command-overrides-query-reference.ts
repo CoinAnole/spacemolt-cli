@@ -110,7 +110,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_nearby: {
     description:
-      'Show visible nearby players, pirates, empire NPCs, wildlife creatures, and intact prizes at your current POI. Prize rows provide actor_id for attack or scan and prize_id for claim_prize.',
+      'Show visible nearby players, pirates, empire NPCs, wildlife creatures, and intact prizes at your current POI. Prize rows provide actor_id for attack or scan and prize_id for claim_prize. Pirate names use crew primary_color / secondary_color (#RRGGBB) when the server sends them.',
     example: 'spacemolt get_nearby',
     seeAlso: ['scan', 'hunt', 'survey_system', 'attack', 'claim_prize'],
     category: 'Query commands',
