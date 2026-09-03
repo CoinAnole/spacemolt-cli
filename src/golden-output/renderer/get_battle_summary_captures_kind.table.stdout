@@ -1,0 +1,34 @@
+
+=== Battle Summary ===
+ID: battle-42
+System: Sol (sol)
+Status: completed
+Category: pvp
+Has Station: yes
+Outcome: side_1_victory
+Winning Side: 1
+Start Tick: 900100
+Duration: 14 ticks
+Participants: 3
+Total Damage: 8420
+Ships Destroyed: 1
+Ships Captured: 4
+
+=== Captures ===
+
+  Ship         | Class | Captor             | Kind   | Former owner         | Boarding
+  -------------+-------+--------------------+--------+----------------------+---------
+  ship-skiff-1 | skiff | Marlowe (player-1) | player | Corsair-7 (pirate-1) | board-1 
+  ship-skiff-2 | skiff | Corsair (pirate-1) | pirate | Marlowe (player-1)   | board-2 
+  ship-skiff-3 | skiff | Sentinel (npc-1)   | npc    | Marlowe (player-1)   | board-3 
+  ship-skiff-4 | skiff | Marlowe (player-1) |        | Corsair-7 (pirate-1) | board-4 
+Players: Marlowe, Ibis
+Destroyed: Rust Bucket
+Top Damage: Marlowe (5100)
+
+=== Sides ===
+
+  Side | Faction | Participants 
+  -----+---------+--------------
+  1    | SMC     | Marlowe, Ibis
+  2    |         | Corsair-7    

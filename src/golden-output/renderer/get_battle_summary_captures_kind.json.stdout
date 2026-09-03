@@ -1,0 +1,85 @@
+{
+  "battle_id": "battle-42",
+  "system_id": "sol",
+  "system_name": "Sol",
+  "status": "completed",
+  "category": "pvp",
+  "has_station": true,
+  "start_tick": 900100,
+  "duration_ticks": 14,
+  "participant_count": 3,
+  "total_damage": 8420,
+  "ships_destroyed": 1,
+  "outcome": "side_1_victory",
+  "winning_side": 1,
+  "player_names": [
+    "Marlowe",
+    "Ibis"
+  ],
+  "destroyed_names": [
+    "Rust Bucket"
+  ],
+  "top_damage": {
+    "username": "Marlowe",
+    "damage": 5100
+  },
+  "sides": [
+    {
+      "side_id": 1,
+      "faction_id": "faction-smc",
+      "faction_tag": "SMC",
+      "participants": [
+        "Marlowe",
+        "Ibis"
+      ]
+    },
+    {
+      "side_id": 2,
+      "participants": [
+        "Corsair-7"
+      ]
+    }
+  ],
+  "ships_captured": 4,
+  "captures": [
+    {
+      "ship_id": "ship-skiff-1",
+      "ship_class": "skiff",
+      "captor_username": "Marlowe",
+      "captor_id": "player-1",
+      "former_owner_username": "Corsair-7",
+      "former_owner_id": "pirate-1",
+      "boarding_operation_id": "board-1",
+      "captor_kind": "player"
+    },
+    {
+      "ship_id": "ship-skiff-2",
+      "ship_class": "skiff",
+      "captor_username": "Corsair",
+      "captor_id": "pirate-1",
+      "former_owner_username": "Marlowe",
+      "former_owner_id": "player-1",
+      "boarding_operation_id": "board-2",
+      "captor_kind": "pirate"
+    },
+    {
+      "ship_id": "ship-skiff-3",
+      "ship_class": "skiff",
+      "captor_username": "Sentinel",
+      "captor_id": "npc-1",
+      "former_owner_username": "Marlowe",
+      "former_owner_id": "player-1",
+      "boarding_operation_id": "board-3",
+      "captor_kind": "npc"
+    },
+    {
+      "ship_id": "ship-skiff-4",
+      "ship_class": "skiff",
+      "captor_username": "Marlowe",
+      "captor_id": "player-1",
+      "former_owner_username": "Corsair-7",
+      "former_owner_id": "pirate-1",
+      "boarding_operation_id": "board-4"
+    }
+  ]
+}
