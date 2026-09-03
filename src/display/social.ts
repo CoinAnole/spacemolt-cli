@@ -1,4 +1,5 @@
 import { battleLogAttackRows, battleLogCombatantRows } from './battle-log.ts';
+import { normalizeCaptorKind } from './captor-kind.ts';
 import {
   c,
   commandNameEquals,
@@ -193,19 +194,18 @@ function captureIdentityRows(rows: Array<Record<string, unknown>>, tick?: unknow
     tick: tick ?? row.tick,
     captor_display: formatActorIdentity(row.captor_username, row.captor_id),
     former_owner_display: formatActorIdentity(row.former_owner_username, row.former_owner_id),
+    captor_kind_display: normalizeCaptorKind(row.captor_kind),
   }));
 }
 
-function captureTableColumns(includeTick: boolean): Array<[string, string[]]> {
+function captureTableColumns(includeTick: boolean, rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
   const columns: Array<[string, string[]]> = [];
   if (includeTick) columns.push(['Tick', ['tick']]);
-  columns.push(
-    ['Ship', ['ship_id']],
-    ['Class', ['ship_class']],
-    ['Captor', ['captor_display']],
-    ['Former owner', ['former_owner_display']],
-    ['Boarding', ['boarding_operation_id']],
-  );
+  columns.push(['Ship', ['ship_id']], ['Class', ['ship_class']], ['Captor', ['captor_display']]);
+  if (hasAnyField(rows, ['captor_kind_display'])) {
+    columns.push(['Kind', ['captor_kind_display']]);
+  }
+  columns.push(['Former owner', ['former_owner_display']], ['Boarding', ['boarding_operation_id']]);
   return columns;
 }
 
@@ -308,7 +308,7 @@ function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): voi
   }
   const captureRows = captureIdentityRows(flattenTickRecords(entries, 'captures'));
   if (captureRows.length) {
-    printCompactTable('Captures', captureRows, captureTableColumns(true));
+    printCompactTable('Captures', captureRows, captureTableColumns(true, captureRows));
   }
   const casualtyRows = personnelCasualtyRows(entries);
   if (casualtyRows.length) {
@@ -380,7 +380,8 @@ function emitRecoveredBattleSummary(entry: Record<string, unknown>): void {
 
   const captures = firstNonEmptyRecords(summary.captures);
   if (captures) {
-    printCompactTable('Recovered Captures', captureIdentityRows(captures), captureTableColumns(false));
+    const captureRows = captureIdentityRows(captures);
+    printCompactTable('Recovered Captures', captureRows, captureTableColumns(false, captureRows));
   }
 }
 
@@ -1635,7 +1636,8 @@ export const socialFormatters = [
       emitOptionalLine('Ships Captured', r.ships_captured);
       const captures = firstNonEmptyRecords(r.captures);
       if (captures) {
-        printCompactTable('Captures', captureIdentityRows(captures), captureTableColumns(false));
+        const captureRows = captureIdentityRows(captures);
+        printCompactTable('Captures', captureRows, captureTableColumns(false, captureRows));
       }
       if (Array.isArray(r.player_names) && r.player_names.length) {
         emitLine(`Players: ${r.player_names.join(', ')}`);

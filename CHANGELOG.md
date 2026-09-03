@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Captor kind on captures (gameserver 0.578.0 / OpenAPI v0.578.1)
+
+- Human capture tables on `get_battle_summary`, `get_battle_log`, and recovered
+  summaries print Kind (`player`, `pirate`, or `npc`) after Captor when any row
+  has `captor_kind`. The Kind column is omitted when every row lacks the field;
+  mixed tables blank the historical cell. JSON/YAML/jq field names are
+  unchanged. Unknown live tokens still print.
+
 ### POI class on get_system (gameserver 0.577.4)
 
 - Human `get_system` POI lines print type-specific classification in brackets

@@ -527,6 +527,52 @@ export const battleSummaryCapturesFixture = {
   ],
 };
 
+export const battleSummaryCapturesKindFixture = {
+  ...battleSummaryCapturesFixture,
+  ships_captured: 4,
+  captures: [
+    {
+      ship_id: 'ship-skiff-1',
+      ship_class: 'skiff',
+      captor_username: 'Marlowe',
+      captor_id: 'player-1',
+      former_owner_username: 'Corsair-7',
+      former_owner_id: 'pirate-1',
+      boarding_operation_id: 'board-1',
+      captor_kind: 'player',
+    },
+    {
+      ship_id: 'ship-skiff-2',
+      ship_class: 'skiff',
+      captor_username: 'Corsair',
+      captor_id: 'pirate-1',
+      former_owner_username: 'Marlowe',
+      former_owner_id: 'player-1',
+      boarding_operation_id: 'board-2',
+      captor_kind: 'pirate',
+    },
+    {
+      ship_id: 'ship-skiff-3',
+      ship_class: 'skiff',
+      captor_username: 'Sentinel',
+      captor_id: 'npc-1',
+      former_owner_username: 'Marlowe',
+      former_owner_id: 'player-1',
+      boarding_operation_id: 'board-3',
+      captor_kind: 'npc',
+    },
+    {
+      ship_id: 'ship-skiff-4',
+      ship_class: 'skiff',
+      captor_username: 'Marlowe',
+      captor_id: 'player-1',
+      former_owner_username: 'Corsair-7',
+      former_owner_id: 'pirate-1',
+      boarding_operation_id: 'board-4',
+    },
+  ],
+};
+
 export const battleLogBoardingFixture = {
   battle_id: 'battle-42',
   status: 'completed',
@@ -1319,6 +1365,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
+  get_battle_summary_captures_kind: { command: 'get_battle_summary', fixture: battleSummaryCapturesKindFixture },
   get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
