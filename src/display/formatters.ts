@@ -5,6 +5,7 @@ import { inspectFormatters } from './inspect.ts';
 import { marketFormatters } from './market.ts';
 import { notificationFormatters } from './notifications.ts';
 import { passengerFormatters } from './passenger.ts';
+import { prizeFormatters } from './prizes.ts';
 import { shipFormatters } from './ship.ts';
 import { shippingFormatters } from './shipping.ts';
 import { socialFormatters } from './social.ts';
@@ -18,6 +19,7 @@ export const resultFormatters: ResultFormatter[] = [
   ...notificationFormatters,
   ...passengerFormatters,
   ...shipFormatters,
+  ...prizeFormatters,
   ...inspectFormatters,
   ...socialFormatters,
   ...empireFormatters,

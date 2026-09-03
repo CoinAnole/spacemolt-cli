@@ -1,0 +1,14 @@
+{
+  "details": {
+    "prize_id": "prize-1",
+    "ship_id": "ship-99",
+    "ship_class": "skiff",
+    "ship_name": "Captured Lark",
+    "destination_base_id": "earth_station",
+    "destination_name": "Earth Station",
+    "status": "claimed",
+    "crew_assigned": 1,
+    "crew_disposition": "aboard",
+    "idempotent": false
+  }
+}
