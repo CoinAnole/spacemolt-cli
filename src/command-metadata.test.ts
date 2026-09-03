@@ -1052,6 +1052,33 @@ describe('command metadata', () => {
     expect(jettisonHelp).toContain('Bulk mode');
   });
 
+  test('view_market help teaches Company Store narrowing', () => {
+    const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
+    expect(viewMarket?.description).toContain('public plus your faction');
+    expect(viewMarket?.description).toContain('best price');
+    expect(viewMarket?.description).toContain('narrows');
+    expect(viewMarket?.description).toContain('Company Store');
+    expect(viewMarket?.description).not.toContain('or pass company_store=true to show');
+    expect(viewMarket?.description).not.toContain('station book');
+    expect(viewMarket?.usage).toContain('narrows to only your faction');
+
+    const viewMarketHelp = captureHelp('view_market');
+    expect(viewMarketHelp).toContain('[company_store=true]');
+    expect(viewMarketHelp).toContain('public plus your faction');
+    expect(viewMarketHelp).toContain('narrows to only those private listings');
+  });
+
+  test('subscribe_market help teaches public liquidity', () => {
+    const subscribe = BUNDLED_COMMAND_REGISTRY.commands.subscribe_market;
+    expect(subscribe?.description).toContain('public liquidity');
+    expect(subscribe?.description).not.toContain('public-liquidity');
+
+    const subscribeHelp = captureHelp('subscribe_market');
+    expect(subscribeHelp).toContain('public liquidity');
+    expect(subscribeHelp).toContain('Company Store');
+    expect(subscribeHelp).toContain('view_market company_store=true');
+  });
+
   test('faction order help advertises private Company Store listings', () => {
     const buy = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.create_buy_order?.config;
     expect(buy?.args).toEqual(['item_id', 'quantity', 'price_each', 'bucket', 'private']);

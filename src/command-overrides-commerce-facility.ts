@@ -327,8 +327,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   view_market: {
     usage:
-      '[item_id] [category] [company_store=true] [since=...] [--item item_id] [--search text]  (company_store shows only faction private listings; since=<tick> polls changes)',
-    description: 'Inspect the public market, or pass company_store=true to show faction Company Store listings.',
+      "[item_id] [category] [company_store=true] [since=...] [--item item_id] [--search text]  (company_store=true narrows to only your faction's Company Store; since=<tick> polls changes)",
+    description:
+      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings.",
     example: 'spacemolt view_market --item ore_iron',
     discoverWith: ['get_status'],
     seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
@@ -351,7 +352,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/subscribe_market',
     description:
-      'Subscribe once and return the current market snapshot. Add --follow to keep polling market notifications every 10 seconds until stopped.',
+      'Subscribe once and return the current public liquidity snapshot (fuel, contraband, and Company Store excluded). Add --follow to keep polling market notifications every 10 seconds until stopped. Use view_market company_store=true for your Company Store.',
     example: 'spacemolt subscribe_market --follow',
     discoverWith: ['view_market'],
     seeAlso: ['view_market', 'unsubscribe_market'],

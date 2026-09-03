@@ -552,6 +552,8 @@ describe('help output branches', () => {
     expect(output).toContain('faction build company_store');
     expect(output).toContain('Company Store -> Company Outlet -> Company Exchange');
     expect(output).toContain('view_market [item_id] [category] [company_store=true]');
+    expect(output).toContain("company_store=true narrows to only your faction's Company Store");
+    expect(output).not.toContain('company_store shows private faction listings');
     expect(output).toContain('faction create_sell_order <item> <qty> <price> [private=true]');
     expect(output).toContain('faction create_buy_order <item> <qty> <price> [private=true]');
     expect(output).toContain('Members fill private orders with normal buy/create_buy_order/create_sell_order');
@@ -1545,6 +1547,7 @@ describe('help output branches', () => {
     expect(output).toContain('subscribe_market');
     expect(output).toContain('unsubscribe_market');
     expect(output).toContain('market_update');
+    expect(output).toContain('public liquidity');
   });
 
   test('full help Ship Exchange lists buy-order commands', () => {

@@ -4,6 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Help copy (gameserver 0.581.0)
+
+- `help view_market` now states that the normal order book is public plus
+  your faction's Company Store (either can set the best price).
+  `company_store=true` narrows to only those private listings.
+  JSON/YAML/jq field names are unchanged.
+- `help subscribe_market` notes that the live feed is public liquidity only
+  (fuel, contraband, and Company Store excluded). Read your Company Store with
+  `view_market company_store=true`. JSON/YAML/jq field names are unchanged.
+
 ### Boarding Event plundered (gameserver 0.578.0 / OpenAPI v0.578.1)
 
 - Human `get_battle_log` Boarding Event prints `plundered (cargo taken, hull left)`.
