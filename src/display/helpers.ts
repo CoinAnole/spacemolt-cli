@@ -276,6 +276,14 @@ export function formatLiveryName(name: string, record: Record<string, unknown>):
   return hexColor(name, fg, bg, activePlain);
 }
 
+/** Prefer human crew name, fall back to standing key (0.548.0 per-crew pirates). */
+export function pirateCrewLabel(p: Record<string, unknown>): string {
+  const name = typeof p.faction_name === 'string' ? p.faction_name.trim() : '';
+  if (name) return name;
+  const id = typeof p.faction === 'string' ? p.faction.trim() : '';
+  return id;
+}
+
 function formatDisplayNumber(value: unknown): string {
   const number = finiteNumber(value);
   return number === undefined ? String(value) : number.toLocaleString();
