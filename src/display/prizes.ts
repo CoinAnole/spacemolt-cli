@@ -1,4 +1,4 @@
-import { c, emitLine, isRecord, printCompactTable } from './helpers.ts';
+import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 const PRIZE_TABLE_LIMIT = 10;
 
@@ -100,6 +100,22 @@ function shipDisplay(prize: Record<string, unknown>): string | undefined {
   return name ?? shipClass;
 }
 
+function destinationDisplay(prize: Record<string, unknown>): string | undefined {
+  const name = scalarText(prize.destination_name);
+  const id = scalarText(prize.destination_base_id);
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name ?? id;
+}
+
+// Claim responses use crew_assigned; recovery crewDisplay reads prize_crew_fit.
+function claimCrewDisplay(prize: Record<string, unknown>): string | undefined {
+  const assigned = scalarText(prize.crew_assigned);
+  const disposition =
+    typeof prize.crew_disposition === 'string' && prize.crew_disposition ? prize.crew_disposition : undefined;
+  const parts = [assigned, disposition].filter((part): part is string => Boolean(part));
+  return parts.length ? parts.join(' ') : undefined;
+}
+
 function crewDisplay(prize: Record<string, unknown>): string | undefined {
   const fit = scalarText(prize.prize_crew_fit);
   const disposition =
@@ -150,3 +166,20 @@ export function emitPrizeRecoveries(recoveries: unknown): boolean {
   printCompactTable('Prize recoveries', rows, recoveryColumns(rows));
   return true;
 }
+
+function formatClaimPrize(r: Record<string, unknown>): boolean {
+  const ship = shipDisplay(r);
+  const destination = destinationDisplay(r);
+  if (typeof r.prize_id !== 'string' || !r.prize_id || !ship || !destination) return false;
+
+  emitLine(`\n${c.bright}=== Claim Prize ===${c.reset}`);
+  emitLine(`${ship} → ${destination}`);
+  emitLine(`Prize ID: ${r.prize_id}`);
+  if (typeof r.status === 'string' && r.status) emitLine(`Status: ${r.status}`);
+  const crew = claimCrewDisplay(r);
+  if (crew) emitLine(`Crew: ${crew}`);
+  if (r.idempotent === true) emitLine('Idempotent: yes');
+  return true;
+}
+
+export const prizeFormatters = [formatter(formatClaimPrize, { commands: ['claim_prize'] })];

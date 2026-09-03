@@ -63,6 +63,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   and stations remain non-capturable on the `target` field. JSON/YAML/jq field
   names are unchanged.
 
+### claim_prize confirmation (gameserver 0.579.2)
+
+- Human `claim_prize` prints a named recovery receipt: captured ship
+  (`name (class)` when they differ) → destination station
+  (`name (id)` when they differ), plus Prize ID, status, and crew.
+  Idempotent retries add `Idempotent: yes`. JSON/YAML/jq field names
+  are unchanged.
+
 ### Help copy (OpenAPI v0.578.1)
 
 - `get_notifications` / `notifications` field help now also lists `pirate_radio`
