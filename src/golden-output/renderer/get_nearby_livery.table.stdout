@@ -1,0 +1,23 @@
+
+=== Nearby ===
+
+Players (2):
+  Marlowe [SMC] (prospector)
+  Ibis [SMC] (hauler) - "refitting" [DOCKED]
+
+Pirates (1):
+  Raider (skiff) - Admiral Kael - hostile
+
+Empire NPCs (1):
+  Patrol (interceptor)
+
+Creatures (1):
+  Pilot-Whale Pod [creature_pilot_whale_1] (pilot_whale) - grazer - hull 80/120
+
+Prizes (1):
+
+=== Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+-----------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       

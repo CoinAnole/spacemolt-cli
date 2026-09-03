@@ -348,6 +348,17 @@ export const nearbyBossFixture = {
   ],
 };
 
+export const nearbyLiveryFixture = {
+  ...nearbyFixture,
+  pirates: [
+    {
+      ...nearbyFixture.pirates[0],
+      primary_color: '#c45a2a',
+      secondary_color: '#1a1a1a',
+    },
+  ],
+};
+
 /** Full observation baseline; pirate_count is intentionally absent in the v0.554 response schema. */
 export const subscribeObservationFixture = {
   action: 'subscribe_observation',
@@ -423,6 +434,8 @@ export const subscribeObservationFixture = {
       max_hull: 50,
       shield: 10,
       max_shield: 20,
+      primary_color: '#c45a2a',
+      secondary_color: '#1a1a1a',
     },
   ],
   poi_id: 'sol_cloudbank',
@@ -769,6 +782,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_poi_station: { command: 'get_poi', fixture: stationPoiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   get_nearby_boss: { command: 'get_nearby', fixture: nearbyBossFixture },
+  get_nearby_livery: { command: 'get_nearby', fixture: nearbyLiveryFixture },
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },

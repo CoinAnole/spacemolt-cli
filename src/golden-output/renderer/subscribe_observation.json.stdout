@@ -91,7 +91,9 @@
       "hull": 40,
       "max_hull": 50,
       "shield": 10,
-      "max_shield": 20
+      "max_shield": 20,
+      "primary_color": "#c45a2a",
+      "secondary_color": "#1a1a1a"
     }
   ],
   "poi_id": "sol_cloudbank",
