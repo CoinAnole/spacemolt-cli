@@ -48,11 +48,40 @@ jobs:
       - name: Test generated API metadata
         run: bun test src/api-sync.test.ts
 
+      - name: Restamp fixture-schema baseline
+        run: |
+          set -euo pipefail
+          snapshot="$(mktemp)"
+          python3 -c 'import json,sys; json.dump(json.load(open(sys.argv[1]))["blockingDivergenceSignatures"], sys.stdout)' \
+            src/test-support/fixture-schema-baseline.json > "$snapshot"
+          bun run report:fixture-schemas --update-baseline
+          SNAPSHOT_PATH="$snapshot" bun -e '
+            import * as fs from "node:fs";
+            import {
+              formatBlockingDivergenceDiff,
+              loadFixtureSchemaBaseline,
+            } from "./src/test-support/fixture-schema-compare.ts";
+
+            const previous = [...(JSON.parse(fs.readFileSync(process.env.SNAPSHOT_PATH!, "utf8")) as string[])].sort();
+            const next = loadFixtureSchemaBaseline().blockingDivergenceSignatures;
+            if (JSON.stringify(previous) === JSON.stringify(next)) {
+              process.exit(0);
+            }
+
+            console.error("Fixture-schema blockingDivergenceSignatures changed after restamp.");
+            console.error("This is reviewed drift, not a version stamp. Do not commit.");
+            console.error(formatBlockingDivergenceDiff(next, previous));
+            process.exit(1);
+          '
+
+      - name: Test fixture-schema baseline stamp
+        run: bun test src/test-support/output-golden.test.ts
+
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add spacemolt-docs src/generated/api-commands.ts
+          git add spacemolt-docs src/generated/api-commands.ts src/test-support/fixture-schema-baseline.json
           if git diff --cached --quiet; then
             echo "No API metadata changes to commit."
             exit 0

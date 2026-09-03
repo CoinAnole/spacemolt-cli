@@ -63,9 +63,13 @@ Golden maintenance helpers:
 - `UPDATE_GOLDENS=1 GOLDEN_ONLY=renderer/get_status.table bun test src/output-golden.test.ts`
   updates only matching golden cases.
 - `STRICT_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts`
-  verifies the current fixture/schema drift matches the reviewed baseline.
+  verifies the current fixture/schema drift matches the reviewed baseline (gameserver stamp first, then signatures).
+- `bun test src/test-support/output-golden.test.ts`
+  asserts `generatedAtGameserver` against `GENERATED_API_GAMESERVER_VERSION` without running the full signature comparison.
 - `bun run report:fixture-schemas --update-baseline`
-  refreshes the reviewed fixture/schema drift baseline after intentional fixture or OpenAPI changes.
+  restamps `generatedAtGameserver` from bundled metadata and refreshes reviewed signatures.
+  Run this after `generate:api` even when signatures are unchanged; the default suite asserts the stamp.
+  `.github/workflows/update-api-metadata.yml` restamps and commits the baseline when signatures are unchanged, and fails the job (no push) when they change.
 
 To see structural differences between the curated fixtures and the actual response schemas in the OpenAPI spec (informational only — never fails tests):
 
@@ -104,7 +108,7 @@ The reporter compares each curated command's `apiRoute` against its generated co
 - Single-endpoint tools use `POST /api/v2/{tool}`; see `SINGLE_ENDPOINT_TOOLS` in `src/commands.ts`.
 - Update `src/commands.ts` for command names, positional arguments, aliases, examples, and route overrides.
 - Regenerate bundled mechanical route/schema metadata with `bun run generate:api` after OpenAPI spec changes. This updates committed metadata only.
-- When the task is only to update the `spacemolt-docs` submodule pointer and regenerate API metadata, use the gameserver version number as the entire commit message, for example `v0.327.2`.
+- When the task is only to update the `spacemolt-docs` submodule pointer and regenerate API metadata, use the gameserver version number as the entire commit message, for example `v0.327.2`. Version-named commits may include `src/test-support/fixture-schema-baseline.json`.
 - Runtime dynamic commands come from the user's cached OpenAPI metadata. Refresh that cache with `spacemolt sync-api`.
 - **Storage is a grouped multi-command**, not multi-action: `GROUPED_COMMANDS` includes `storage`; curated flats are `storage_view`, `storage_deposit`, `storage_withdraw`, `storage_loot`, `storage_jettison` (user typing remains `storage <action> …`). There is no `action=` grammar, no omit-action / implicit deposit, and no request-body `action` field. `SUPPRESSED_GENERATED_ROUTE_SIGNATURES` in `src/dynamic-commands.ts` is intentionally empty for storage (routes are claimed by the five curated configs); keep the empty `Set` as an extension point. Related top-level commands (`jettison`, `loot_wreck`, `faction_deposit_credits`, `faction_withdraw_credits`) stay separate. User migration notes live in `README.md` and `CHANGELOG.md`.
 
