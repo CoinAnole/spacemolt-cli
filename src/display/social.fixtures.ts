@@ -1330,6 +1330,97 @@ export const ranchSetCullFixture = {
   cargo: [],
 };
 
+export const factionScanPoiDetails = {
+  poi_id: 'sol_central',
+  poi_name: 'Sol Central',
+  system_id: 'sol',
+  facility_level: 2,
+  facility_station: 'earth_station',
+  scan_power: 36,
+  hops: 1,
+  signature_detected: true,
+  message: 'Projected scan contested 2 cloaks.',
+  contacts: [
+    {
+      target_id: 'player-1',
+      username: 'Wisp',
+      faction_id: 'smc',
+      ship_class: 'scout',
+      ship_name: 'Quiet Current',
+      hull: 72,
+      shield: 18,
+      cloaked: true,
+      revealed_info: ['username', 'ship_class', 'hull', 'cloaked'],
+    },
+    {
+      target_id: 'player-2',
+      cloaked: true,
+      revealed_info: ['cloaked'],
+    },
+  ],
+  npcs: [
+    {
+      id: 'npc-1',
+      name: 'Patrol',
+      empire: 'solarian',
+      role: 'patrol',
+      ship_class: 'interceptor',
+    },
+  ],
+  pirates: [
+    {
+      id: 'pirate-1',
+      name: 'Raider',
+      role: 'raider',
+      ship_class: 'skiff',
+      faction: 'pirate_kael',
+      faction_name: 'Admiral Kael',
+      primary_color: '#112233',
+      secondary_color: '#445566',
+    },
+  ],
+};
+
+export const factionScanPoiFixture = {
+  details: factionScanPoiDetails,
+};
+
+export const factionScanPoiEmptyFixture = {
+  details: {
+    poi_id: 'sol_central',
+    facility_level: 2,
+    scan_power: 36,
+    hops: 0,
+    message: 'Scan complete.',
+  },
+};
+
+export const factionScanPoiPartialFixture = {
+  details: {
+    poi_id: 'sol_central',
+    facility_level: 1,
+    scan_power: 12,
+    hops: 2,
+    message: 'Partial scan.',
+    contacts: [
+      {
+        target_id: 'player-cloaked-1',
+        cloaked: true,
+        revealed_info: ['cloaked', 'ship_class'],
+        ship_class: 'scout',
+      },
+    ],
+    pirates: [
+      {
+        id: 'pirate-2',
+        name: 'Corsair',
+        role: 'raider',
+        ship_class: 'skiff',
+      },
+    ],
+  },
+};
+
 export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   chat: { command: 'chat', fixture: chatSentFixture },
   facility_owned: { command: 'facility_owned', fixture: facilityOwnedFixture },
@@ -1389,6 +1480,21 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   faction_profile: { command: 'faction_profile', fixture: publicFactionProfileFixture },
   faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
   faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },
+  faction_scan_poi: {
+    command: 'faction_scan_poi',
+    fixture: factionScanPoiFixture,
+    schemaTarget: 'details',
+  },
+  faction_scan_poi_empty: {
+    command: 'faction_scan_poi',
+    fixture: factionScanPoiEmptyFixture,
+    schemaTarget: 'details',
+  },
+  faction_scan_poi_partial: {
+    command: 'faction_scan_poi',
+    fixture: factionScanPoiPartialFixture,
+    schemaTarget: 'details',
+  },
   faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },
   faction_espionage: {
     command: 'faction_espionage',

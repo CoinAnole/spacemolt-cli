@@ -1,0 +1,25 @@
+
+=== Faction Scan ===
+POI: Sol Central (sol_central)
+System: sol
+Facility: L2 at earth_station
+Scan power: 36
+Hops: 1
+Signature detected.
+Projected scan contested 2 cloaks.
+
+=== Players ===
+
+  Name     | ID       | Ship  | Ship name     | Hull | Shield | Cloaked | Faction | Revealed                           
+  ---------+----------+-------+---------------+------+--------+---------+---------+------------------------------------
+  Wisp     | player-1 | scout | Quiet Current | 72   | 18     | yes     | smc     | username, ship_class, hull, cloaked
+  player-2 | player-2 |       |               |      |        | yes     |         | cloaked                            
+
+=== Empire NPCs ===
+
+  Name   | ID    | Empire   | Role   | Class      
+  -------+-------+----------+--------+------------
+  Patrol | npc-1 | solarian | patrol | interceptor
+
+Pirates (1):
+  Raider (skiff) - raider - Admiral Kael

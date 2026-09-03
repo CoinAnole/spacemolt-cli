@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { hexColor } from './ansi.ts';
 import { facilityBillingPaused, withPausedRentSuffix } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import {
@@ -20,6 +21,10 @@ import {
   facilityTypesDetailFixture,
   factionFacilityListFixture,
   factionFacilityOwnedFixture,
+  factionScanPoiDetails,
+  factionScanPoiEmptyFixture,
+  factionScanPoiFixture,
+  factionScanPoiPartialFixture,
   forumThreadFixture,
   ranchSetCullFixture,
   ranchStatusFixture,
@@ -2587,4 +2592,357 @@ test('faction_facility_list omits Building column without ticks_until_complete',
   expect(stdout).not.toMatch(/\|\s*Building\b/);
   expect(stdout).not.toContain('Repair Tick');
   expect(stdout).toContain('no');
+});
+
+const scanColorOptions: GlobalOptions = { ...options, plain: false };
+const scanPirateFg = '#112233';
+const scanPirateBg = '#445566';
+
+function renderFactionScan(fixture: Record<string, unknown>, renderOptions: GlobalOptions = options): string {
+  const rendered = renderStructuredResult('faction_scan_poi', fixture, renderOptions, context);
+  expect(rendered.success).toBe(true);
+  return rendered.stdout.join('\n');
+}
+
+function scanPirateLine(stdout: string, token: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes(token) && line.trimStart() !== line);
+}
+
+function scanWithPirateColors(colors: Record<string, unknown>): Record<string, unknown> {
+  const fixture = structuredClone(factionScanPoiFixture) as {
+    details: { pirates: Array<Record<string, unknown>> };
+  };
+  const pirate = { ...fixture.details.pirates[0] };
+  delete pirate.primary_color;
+  delete pirate.secondary_color;
+  fixture.details.pirates[0] = { ...pirate, ...colors };
+  return fixture;
+}
+
+test('faction_scan_poi nested details prints header and all three sections', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiFixture));
+
+  expect(stdout).toContain('=== Faction Scan ===');
+  expect(stdout).toContain('POI: Sol Central (sol_central)');
+  expect(stdout).toContain('System: sol');
+  expect(stdout).toContain('Facility: L2 at earth_station');
+  expect(stdout).toContain('Scan power: 36');
+  expect(stdout).toContain('Hops: 1');
+  expect(stdout).toContain('Signature detected.');
+  expect(stdout).toContain('Projected scan contested 2 cloaks.');
+  expect(stdout).toContain('=== Players ===');
+  expect(stdout).toContain('=== Empire NPCs ===');
+  expect(stdout).toContain('Pirates (1):');
+  expect(stdout).toContain('  Raider (skiff) - raider - Admiral Kael');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+});
+
+test('faction_scan_poi live envelope ignores aliased location and ship', () => {
+  const stdout = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 2,
+      scan_power: 36,
+      hops: 1,
+      message: 'Scan complete.',
+    },
+    location: {
+      system_id: 'elsewhere',
+      poi_name: 'Home Dock',
+      nearby_players: [{ username: 'LocalOp' }],
+    },
+    ship: { fuel: 9, max_fuel: 100 },
+  });
+
+  expect(stdout).toContain('POI: sol_central');
+  expect(stdout).not.toContain('Home Dock');
+  expect(stdout).not.toContain('elsewhere');
+  expect(stdout).not.toContain('LocalOp');
+  expect(stdout).not.toContain('Fuel Now');
+  expect(stdout).not.toContain('Fuel Max');
+  expect(stdout).not.toContain('fuel_max');
+  expect(stdout).not.toContain('fuel');
+  expect(stdout).not.toContain('=== Online Players ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_scan_poi omits empty contact sections', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiEmptyFixture));
+
+  expect(stdout).toContain('=== Faction Scan ===');
+  expect(stdout).toContain('POI: sol_central');
+  expect(stdout).toContain('Hops: 0');
+  expect(stdout).toContain('Scan complete.');
+  expect(stdout).not.toContain('=== Players ===');
+  expect(stdout).not.toContain('=== Empire NPCs ===');
+  expect(stdout).not.toContain('Pirates (');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_scan_poi omits signature line when signature_detected is false', () => {
+  const fixture = structuredClone(factionScanPoiEmptyFixture) as { details: Record<string, unknown> };
+  fixture.details.signature_detected = false;
+  const stdout = renderFactionScan(fixture);
+
+  expect(stdout).not.toContain('Signature detected.');
+});
+
+test('faction_scan_poi omits signature line when signature_detected is omitted', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiEmptyFixture));
+  expect(stdout).not.toContain('Signature detected.');
+});
+
+test('faction_scan_poi prints yellow Signature detected. when true', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiFixture), scanColorOptions);
+
+  expect(stdout).toContain('Signature detected.');
+  expect(stdout).toContain('\x1b[33m');
+  expect(stdout.split('\n').some((line) => line.includes('Signature detected.') && line.includes('\x1b[33m'))).toBe(
+    true,
+  );
+});
+
+test('faction_scan_poi --plain Signature detected. has no ANSI', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiFixture), { ...options, plain: true });
+  const line = stdout.split('\n').find((entry) => entry.includes('Signature detected.'));
+
+  expect(line).toBe('Signature detected.');
+  expect(stdout).not.toContain('\x1b');
+});
+
+test('faction_scan_poi omits Hull column when no contact has hull', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiPartialFixture));
+  const section = sectionAfter(stdout, 'Players');
+
+  expect(section).toContain('Cloaked');
+  expect(section).not.toMatch(/\|\s*Hull\s*\|/);
+  expect(section).not.toMatch(/\|\s*Hull\s*$/);
+});
+
+test('faction_scan_poi cloaked partial falls back to target_id', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiPartialFixture));
+  const section = sectionAfter(stdout, 'Players');
+
+  expect(tableCell(section, 'player-cloaked-1', 'Name')).toBe('player-cloaked-1');
+  expect(tableCell(section, 'player-cloaked-1', 'Cloaked')).toBe('yes');
+  expect(tableCell(section, 'player-cloaked-1', 'Revealed')).toBe('cloaked, ship_class');
+});
+
+test('faction_scan_poi pirate crew prefers faction_name then faction', () => {
+  const stdout = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 1,
+      scan_power: 8,
+      hops: 0,
+      message: 'Crew labels.',
+      pirates: [
+        { id: 'p-named', name: 'Named', faction: 'pirate_kael', faction_name: 'Admiral Kael' },
+        { id: 'p-id', name: 'Keyed', faction: 'pirate_voss' },
+        { id: 'p-plain', name: 'Plain' },
+      ],
+    },
+  });
+
+  expect(scanPirateLine(stdout, 'Named')).toBe('  Named - Admiral Kael');
+  expect(scanPirateLine(stdout, 'Keyed')).toBe('  Keyed - pirate_voss');
+  expect(scanPirateLine(stdout, 'Plain')).toBe('  Plain');
+  expect(stdout).not.toContain('Plain - ');
+});
+
+test('faction_scan_poi pirate lines start with two spaces then the name', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiFixture));
+  const line = scanPirateLine(stdout, 'Raider');
+
+  expect(line?.startsWith('  Raider')).toBe(true);
+});
+
+test('faction_scan_poi named pirate line omits id while JSON keeps it', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiFixture));
+  expect(scanPirateLine(stdout, 'Raider')).toBe('  Raider (skiff) - raider - Admiral Kael');
+  expect(scanPirateLine(stdout, 'Raider')).not.toContain('pirate-1');
+
+  const rendered = renderStructuredResult(
+    'faction_scan_poi',
+    structuredClone(factionScanPoiFixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    details: { pirates: Array<Record<string, unknown>> };
+  };
+  expect(parsed.details.pirates[0]?.id).toBe('pirate-1');
+});
+
+test('faction_scan_poi colors pirate names with both crew hex colors', () => {
+  const stdout = renderFactionScan(
+    scanWithPirateColors({ primary_color: scanPirateFg, secondary_color: scanPirateBg }),
+    scanColorOptions,
+  );
+  const line = scanPirateLine(stdout, 'Raider');
+
+  expect(line).toBe(`  ${hexColor('Raider', scanPirateFg, scanPirateBg)} (skiff) - raider - Admiral Kael`);
+  expect(line).toContain('\x1b[38;2');
+  expect(line).toContain('\x1b[48;2');
+  expect(line?.endsWith('\x1b[0m (skiff) - raider - Admiral Kael')).toBe(true);
+});
+
+test('faction_scan_poi colors pirate names with primary color only', () => {
+  const stdout = renderFactionScan(scanWithPirateColors({ primary_color: scanPirateFg }), scanColorOptions);
+  expect(scanPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', scanPirateFg)} (skiff) - raider - Admiral Kael`,
+  );
+  expect(scanPirateLine(stdout, 'Raider')).toContain('\x1b[38;2');
+  expect(scanPirateLine(stdout, 'Raider')).not.toContain('\x1b[48;2');
+});
+
+test('faction_scan_poi colors pirate names with secondary color only', () => {
+  const stdout = renderFactionScan(
+    scanWithPirateColors({ primary_color: undefined, secondary_color: scanPirateBg }),
+    scanColorOptions,
+  );
+  expect(scanPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', undefined, scanPirateBg)} (skiff) - raider - Admiral Kael`,
+  );
+  expect(scanPirateLine(stdout, 'Raider')).toContain('\x1b[48;2');
+  expect(scanPirateLine(stdout, 'Raider')).not.toContain('\x1b[38;2');
+});
+
+test('faction_scan_poi leaves pirate names uncolored for invalid hex', () => {
+  const stdout = renderFactionScan(
+    scanWithPirateColors({ primary_color: 'red', secondary_color: '#fff' }),
+    scanColorOptions,
+  );
+  const line = scanPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - raider - Admiral Kael');
+  expect(line).not.toContain('\x1b');
+});
+
+test('faction_scan_poi colors only the valid pirate livery channel when mixed with invalid hex', () => {
+  const stdout = renderFactionScan(
+    scanWithPirateColors({ primary_color: scanPirateFg, secondary_color: 'red' }),
+    scanColorOptions,
+  );
+  expect(scanPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', scanPirateFg, 'red')} (skiff) - raider - Admiral Kael`,
+  );
+});
+
+test('faction_scan_poi leaves pirate names uncolored when livery colors are missing', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiPartialFixture), scanColorOptions);
+  const line = scanPirateLine(stdout, 'Corsair');
+
+  expect(line).toBe('  Corsair (skiff) - raider');
+  expect(line).not.toContain('\x1b');
+});
+
+test('faction_scan_poi --plain leaves pirate names uncolored even with valid hex', () => {
+  const stdout = renderFactionScan(
+    scanWithPirateColors({ primary_color: scanPirateFg, secondary_color: scanPirateBg }),
+    { ...options, plain: true },
+  );
+  const line = scanPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - raider - Admiral Kael');
+  expect(line).not.toContain('\x1b');
+});
+
+test('faction_scan_poi leftover native scalar uses title case', () => {
+  const fixture = structuredClone(factionScanPoiEmptyFixture) as { details: Record<string, unknown> };
+  fixture.details.foo_bar = 1;
+  const stdout = renderFactionScan(fixture);
+
+  expect(stdout).toContain('Foo Bar: 1');
+});
+
+test('faction_scan_poi leftover object is not printed', () => {
+  const fixture = structuredClone(factionScanPoiEmptyFixture) as { details: Record<string, unknown> };
+  fixture.details.meta = { nested: true };
+  const stdout = renderFactionScan(fixture);
+
+  expect(stdout).not.toContain('Meta');
+  expect(stdout).not.toContain('nested');
+  expect(stdout).not.toContain('{');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_scan_poi malformed revealed_info object is not dumped', () => {
+  const stdout = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 1,
+      scan_power: 8,
+      hops: 0,
+      message: 'Malformed revealed.',
+      contacts: [{ target_id: 'player-bad', revealed_info: { nested: { token: true } } }],
+    },
+  });
+
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout).toContain('player-bad');
+});
+
+test('faction_scan_poi without details prints the title only', () => {
+  const stdout = renderFactionScan({
+    message: 'ok',
+    credits: 12,
+    location: { system_id: 'sol', poi_name: 'Earth' },
+    ship: { fuel: 9, max_fuel: 100 },
+    player: { username: 'Marlowe' },
+  });
+
+  expect(stdout.trim()).toBe('=== Faction Scan ===');
+  expect(stdout).not.toContain('Credits:');
+  expect(stdout).not.toContain('Marlowe');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_scan_poi JSON keeps primary_color and faction_name', () => {
+  const rendered = renderStructuredResult(
+    'faction_scan_poi',
+    structuredClone(factionScanPoiFixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    details: { pirates: Array<Record<string, unknown>> };
+  };
+
+  expect(parsed.details.pirates[0]?.primary_color).toBe('#112233');
+  expect(parsed.details.pirates[0]?.faction_name).toBe('Admiral Kael');
+});
+
+test('faction_scan_poi flattened scan object matches nested details header', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiDetails));
+  expect(stdout).toContain('POI: Sol Central (sol_central)');
+  expect(stdout).toContain('=== Players ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_scan_poi facility line uses station-only and level-only forms', () => {
+  const stationOnly = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_station: 'earth_station',
+      scan_power: 4,
+      hops: 0,
+      message: 'Station only.',
+    },
+  });
+  expect(stationOnly).toContain('Facility: earth_station');
+  expect(stationOnly).not.toContain('Facility: L');
+
+  const levelOnly = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 3,
+      scan_power: 4,
+      hops: 0,
+      message: 'Level only.',
+    },
+  });
+  expect(levelOnly).toContain('Facility: L3');
+  expect(levelOnly).not.toContain(' at ');
 });

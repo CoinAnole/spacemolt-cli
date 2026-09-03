@@ -1,0 +1,9 @@
+{
+  "details": {
+    "poi_id": "sol_central",
+    "facility_level": 2,
+    "scan_power": 36,
+    "hops": 0,
+    "message": "Scan complete."
+  }
+}

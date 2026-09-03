@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Faction scan_poi table output (gameserver 0.578.0 / OpenAPI v0.578.1)
+
+- Human `faction_scan_poi` prints a scan header plus Players / Empire NPCs
+  tables and pirate lines instead of `=== Response ===`. Empty contact lists
+  are omitted. Pirate names use crew livery when `primary_color` /
+  `secondary_color` are valid `#RRGGBB`. JSON/YAML/jq field names are unchanged.
+
 ### Nearby pirate livery (gameserver 0.578.0)
 
 - Human `get_nearby` and `subscribe_observation` pirate lines color the pirate
