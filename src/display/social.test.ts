@@ -2660,6 +2660,8 @@ test('faction_scan_poi live envelope ignores aliased location and ship', () => {
   expect(stdout).not.toContain('elsewhere');
   expect(stdout).not.toContain('LocalOp');
   expect(stdout).not.toContain('Fuel Now');
+  expect(stdout).not.toContain('Fuel Max');
+  expect(stdout).not.toContain('fuel_max');
   expect(stdout).not.toContain('fuel');
   expect(stdout).not.toContain('=== Online Players ===');
   expect(stdout).not.toContain('=== Response ===');
