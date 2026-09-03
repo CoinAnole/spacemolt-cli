@@ -47,6 +47,7 @@ import {
 } from './display/formatter-fixtures';
 import { resultFormatters } from './display/formatters';
 import {
+  analyzeMarketFixture,
   commissionQuoteCreditsOnlyFixture,
   commissionQuoteFixture,
   commissionShipCreditsOnlyFixture,
@@ -54,6 +55,7 @@ import {
   commissionShipFixture,
   commissionStatusFixture,
   commissionStatusSourcingFixture,
+  emptyAnalyzeMarketFixture,
   emptyCommissionStatusFixture,
 } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture, factionScanPoiFixture } from './display/social.fixtures';
@@ -2863,6 +2865,102 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Response ===');
     expect(stdout).not.toContain('=== Faction Buy Orders ===');
     expect(stdout).not.toContain('=== Buy Order Created ===');
+  });
+
+  test('formats analyze_market insights as a table instead of a scalar dump', () => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', analyzeMarketFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Market Analysis: Earth Station ===');
+    expect(stdout).toContain('Trading skill: 4');
+    expect(stdout).toContain('Top insights at Earth Station');
+    expect(stdout).toContain('Buy here, sell at Mars');
+    expect(stdout).toContain('Station is buying fuel above regional average');
+    expect(stdout).toContain('arbitrage');
+    expect(stdout).toContain('iron_ore');
+    expect(stdout).not.toContain('Insights: 2 item(s)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats empty analyze_market insights as (None)', () => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', emptyAnalyzeMarketFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Market Analysis: Earth Station ===');
+    expect(stdout).toContain('=== Insights ===');
+    expect(stdout).toContain('(None)');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('Insights: 0 item(s)');
+  });
+
+  test.each([
+    ['string insights', { ...analyzeMarketFixture, insights: 'not-an-array' }],
+    ['numeric insight rows', { ...analyzeMarketFixture, insights: [1, 2] }],
+  ])('declines malformed analyze_market %s to raw fallback', (_label, fixture) => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Market Analysis');
+  });
+
+  test('analyze_market --json equals the fixture object', () => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', analyzeMarketFixture, { json: true });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual(analyzeMarketFixture);
+  });
+
+  test('analyze_market keeps server insight order when priorities are unsorted', () => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', {
+      ...analyzeMarketFixture,
+      insights: [
+        {
+          category: 'demand',
+          item: 'Fuel Cell',
+          item_id: 'fuel_cell',
+          message: 'Later priority first',
+          priority: 5,
+        },
+        {
+          category: 'arbitrage',
+          item: 'Iron Ore',
+          item_id: 'iron_ore',
+          message: 'Earlier priority second',
+          priority: 1,
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout.indexOf('Later priority first')).toBeLessThan(stdout.indexOf('Earlier priority second'));
+    expect(stdout).not.toContain('Insights: 2 item(s)');
+  });
+
+  test('analyze_market auto_docked uses the envelope banner, not a table field', () => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', {
+      ...analyzeMarketFixture,
+      auto_docked: true,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('[AUTO-DOCKED]');
+    expect(stdout).toContain('=== Market Analysis: Earth Station ===');
+    expect(stdout).not.toContain('Auto Docked:');
+    expect(stdout).not.toContain('Auto-docked:');
+  });
+
+  test('analyze_market omits skill and uses a generic title when header fields are absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('analyze_market', {
+      insights: analyzeMarketFixture.insights,
+      message: '',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Market Analysis ===');
+    expect(stdout).not.toContain('=== Market Analysis:');
+    expect(stdout).not.toContain('Trading skill:');
+    expect(stdout).toContain('Buy here, sell at Mars');
   });
 
   test.each([
@@ -6605,6 +6703,19 @@ describe('structuredContent formatters', () => {
 
     expect(outputs).toMatchInlineSnapshot(`
       {
+        "analyze_market": 
+      "
+      === Market Analysis: Earth Station ===
+      Trading skill: 4
+      Top insights at Earth Station
+
+      === Insights ===
+
+        Pri | Category  | Item      | ID        | Insight
+        ----+-----------+-----------+-----------+----------------------------------------------
+        5   | arbitrage | Iron Ore  | iron_ore  | Buy here, sell at Mars
+        1   | demand    | Fuel Cell | fuel_cell | Station is buying fuel above regional average"
+      ,
         "arrival": 
       "
       Arrived at Earth

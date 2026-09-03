@@ -1,0 +1,21 @@
+{
+  "insights": [
+    {
+      "category": "arbitrage",
+      "item": "Iron Ore",
+      "item_id": "iron_ore",
+      "message": "Buy here, sell at Mars",
+      "priority": 5
+    },
+    {
+      "category": "demand",
+      "item": "Fuel Cell",
+      "item_id": "fuel_cell",
+      "message": "Station is buying fuel above regional average",
+      "priority": 1
+    }
+  ],
+  "skill_level": 4,
+  "station": "Earth Station",
+  "message": "Top insights at Earth Station"
+}

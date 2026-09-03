@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### analyze_market table output
+
+- Human `analyze_market` prints a station/skill header plus an Insights table
+  instead of the generic scalar dump (`Insights: N item(s)`). Empty insights
+  print `(None)`. JSON/YAML/jq field names are unchanged.
+
 ### Help copy (gameserver 0.581.0)
 
 - `help view_market` now states that the normal order book is public plus
