@@ -1,0 +1,28 @@
+{
+  "details": {
+    "poi_id": "sol_central",
+    "facility_level": 1,
+    "scan_power": 12,
+    "hops": 2,
+    "message": "Partial scan.",
+    "contacts": [
+      {
+        "target_id": "player-cloaked-1",
+        "cloaked": true,
+        "revealed_info": [
+          "cloaked",
+          "ship_class"
+        ],
+        "ship_class": "scout"
+      }
+    ],
+    "pirates": [
+      {
+        "id": "pirate-2",
+        "name": "Corsair",
+        "role": "raider",
+        "ship_class": "skiff"
+      }
+    ]
+  }
+}

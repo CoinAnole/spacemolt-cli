@@ -36,6 +36,8 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   facility_list_detailed: 'facility_list',
   faction_create_buy_order_bulk: 'faction_create_buy_order',
   faction_create_sell_order_bulk: 'faction_create_sell_order',
+  faction_scan_poi_empty: 'faction_scan_poi',
+  faction_scan_poi_partial: 'faction_scan_poi',
   get_action_log_cursor: 'get_action_log',
   get_battle_log_boarding: 'get_battle_log',
   get_battle_log_interrupted: 'get_battle_log',

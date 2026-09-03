@@ -56,7 +56,7 @@ import {
   commissionStatusSourcingFixture,
   emptyCommissionStatusFixture,
 } from './display/market.fixtures';
-import { facilityListFixture, factionInfoFixture } from './display/social.fixtures';
+import { facilityListFixture, factionInfoFixture, factionScanPoiFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
 import { formatNotificationPreview, tableMessageFromPreview } from './notification-format-shared';
 import type { GlobalOptions } from './types';
@@ -127,6 +127,10 @@ const namedFormatterFixtureCases = {
   faction_bulk_orders: {
     command: 'faction_create_buy_order',
     fixture: factionCreateBuyOrderBulkFixture,
+  },
+  faction_scan_poi: {
+    command: 'faction_scan_poi',
+    fixture: factionScanPoiFixture,
   },
   direct_buy: {
     command: 'buy',
@@ -6849,6 +6853,33 @@ describe('structuredContent formatters', () => {
         Sol Gas Cloud (gas_cloud) sol_gas_cloud
           - hydrogen_gas: richness 4, 500/1000 (50.00% remaining)
           - argon_gas: richness 2, 200/500 (40.00% remaining)"
+      ,
+        "faction_scan_poi": 
+      "
+      === Faction Scan ===
+      POI: Sol Central (sol_central)
+      System: sol
+      Facility: L2 at earth_station
+      Scan power: 36
+      Hops: 1
+      Signature detected.
+      Projected scan contested 2 cloaks.
+
+      === Players ===
+
+        Name     | ID       | Ship  | Ship name     | Hull | Shield | Cloaked | Faction | Revealed
+        ---------+----------+-------+---------------+------+--------+---------+---------+------------------------------------
+        Wisp     | player-1 | scout | Quiet Current | 72   | 18     | yes     | smc     | username, ship_class, hull, cloaked
+        player-2 | player-2 |       |               |      |        | yes     |         | cloaked
+
+      === Empire NPCs ===
+
+        Name   | ID    | Empire   | Role   | Class
+        -------+-------+----------+--------+------------
+        Patrol | npc-1 | solarian | patrol | interceptor
+
+      Pirates (1):
+        Raider (skiff) - raider - Admiral Kael"
       ,
         "fleet": 
       "

@@ -1,0 +1,16 @@
+
+=== Faction Scan ===
+POI: sol_central
+Facility: L1
+Scan power: 12
+Hops: 2
+Partial scan.
+
+=== Players ===
+
+  Name             | ID               | Ship  | Cloaked | Revealed           
+  -----------------+------------------+-------+---------+--------------------
+  player-cloaked-1 | player-cloaked-1 | scout | yes     | cloaked, ship_class
+
+Pirates (1):
+  Corsair (skiff) - raider
