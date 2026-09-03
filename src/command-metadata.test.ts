@@ -707,10 +707,25 @@ describe('command metadata', () => {
     // Positional stays target_id (wire alias → id); not exposed on assembled CommandConfig
     expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_target?.positionals).toEqual(['target_id']);
     expect(config?.schema?.id?.description).toContain('intact prizes');
+    expect(config?.schema?.id?.description).toBe(
+      'ID or name of any battle combatant from get_battle_status (players, pirates, police, drones, creatures, stations, or intact prizes). Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable.',
+    );
+    expect(config?.schema?.id?.description).not.toBe(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/target']?.schema?.id?.description,
+    );
 
     const help = captureHelp('battle_target');
     expect(help).toContain('target_id_or_name');
     expect(help).toContain('intact prizes');
+    expect(help).toContain(
+      'Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable.',
+    );
+    expect(help).not.toContain('Board attempts against');
+    expect(help).not.toContain('entering the board stance');
+    for (const kind of ['creatures', 'drones', 'stations'] as const) {
+      expect(config?.description).toContain(kind);
+      expect(help).toContain(kind);
+    }
 
     // KD-9: Battle cheatsheet in full help stays aligned with command help
     expect(captureFullHelp()).toContain('Focus by ID or name (any combatant; no tick)');

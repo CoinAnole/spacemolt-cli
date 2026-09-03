@@ -62,6 +62,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   can kite. Board still requires `target` and `marines=N`. Creatures, drones,
   and stations remain non-capturable on the `target` field. JSON/YAML/jq field
   names are unchanged.
+- `help battle_target` notes that creatures, drones, and stations remain valid
+  focus-fire targets; board stance (not focus fire) rejects those kinds because
+  they are not capturable. JSON/YAML/jq field names are unchanged.
 
 ### claim_prize confirmation (gameserver 0.579.2)
 
