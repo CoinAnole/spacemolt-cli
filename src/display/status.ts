@@ -14,6 +14,7 @@ import {
   formatter,
   isRecord,
   namedFormatter,
+  pirateCrewLabel,
   printCompactTable,
 } from './helpers.ts';
 import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
@@ -314,14 +315,6 @@ function formatCitizenships(value: unknown): string | undefined {
 
   const unique = [...new Set(citizenships.filter((citizenship): citizenship is string => Boolean(citizenship)))];
   return unique.length ? unique.join(', ') : undefined;
-}
-
-/** Prefer human crew name, fall back to standing key (0.548.0 per-crew pirates). */
-function pirateCrewLabel(p: Record<string, unknown>): string {
-  const name = typeof p.faction_name === 'string' ? p.faction_name.trim() : '';
-  if (name) return name;
-  const id = typeof p.faction === 'string' ? p.faction.trim() : '';
-  return id;
 }
 
 function formatNearbyPirateLine(p: Record<string, unknown>): string {
