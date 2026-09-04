@@ -20,6 +20,7 @@ const command = (action: string): CommandConfig => ({
 describe('nested command groups', () => {
   test('recognizes only exact configured flat prefixes', () => {
     expect(GROUPED_COMMANDS).toEqual([
+      'arena',
       'citizenship',
       'facility',
       'faction',
@@ -31,6 +32,8 @@ describe('nested command groups', () => {
     ]);
     expect(groupedCommandParts('faction_info')).toEqual({ group: 'faction', action: 'info' });
     expect(groupedCommandParts('storage_view')).toEqual({ group: 'storage', action: 'view' });
+    expect(groupedCommandParts('arena_status')).toEqual({ group: 'arena', action: 'status' });
+    expect(groupedCommandParts('arena_challenge')).toEqual({ group: 'arena', action: 'challenge' });
     expect(groupedCommandParts('get_faction_achievements')).toBeUndefined();
     expect(groupedCommandParts('faction')).toBeUndefined();
     expect(groupedCommandParts('faction_')).toBeUndefined();
@@ -76,10 +79,17 @@ describe('nested command groups', () => {
     expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'storage')?.actions.deposit?.command).toBe(
       'storage_deposit',
     );
+    expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'arena')?.actions.status?.command).toBe('arena_status');
+    expect(commandGroup(BUNDLED_COMMAND_REGISTRY.commandGroups, 'arena')?.actions.challenge?.command).toBe(
+      'arena_challenge',
+    );
     expect(BUNDLED_COMMAND_REGISTRY.commands.storage).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.storage_view).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.arena).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.arena_challenge).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.allCommands.faction).toBeDefined();
     expect(BUNDLED_COMMAND_REGISTRY.allCommands.storage).toBeDefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.arena).toBeDefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.get_faction_achievements).toBeDefined();
   });
 

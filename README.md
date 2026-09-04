@@ -226,6 +226,31 @@ spacemolt sync-api
 
 Generated commands use predictable names derived from the route, such as `shipyard_repair` for `POST /api/v2/spacemolt_shipyard/repair`. A later CLI release may promote generated commands to curated commands with better aliases and examples.
 
+### Arena command group
+
+Consequence-free PvP at an arena POI. Fight on the normal battle engine; ships, crew, and drones are restored afterwards.
+
+```bash
+spacemolt arena status                          # lobby: record, pending challenges, XP cap
+spacemolt arena challenge <player> [max_side_size=N]
+spacemolt arena accept                          # answer the incoming challenge
+spacemolt arena decline
+spacemolt arena cancel                          # withdraw your outgoing challenge
+spacemolt help arena                            # actions and argument details
+```
+
+Once a challenge is accepted, the match is an ordinary battle:
+
+```bash
+spacemolt get_battle_status
+spacemolt battle_target <pilot>
+spacemolt battle_stance <stance>
+```
+
+`max_side_size=0` lets every eligible fleet member at the arena join. `max_side_size=1` is a solo duel. Pass the size as `key=value`, not a second positional.
+
+**Breaking for early adopters:** the generated flat names (`arena_challenge`, `arena_status`, …) are replaced by the group. `arena_challenge Bob` becomes `arena challenge Bob`. There is no compatibility shim. Flat internal names remain registry keys only.
+
 ### Storage command group
 
 Station storage is a **grouped multi-command**, like `facility` and `faction` — not a single multi-action command with an `action=` field. Nested forms with an explicit action word are the supported UX:

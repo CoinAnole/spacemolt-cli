@@ -4,6 +4,31 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Arena command group (breaking)
+
+Consequence-free PvP at an arena POI is a **grouped multi-command** (same pattern as `storage` / `faction`). The generated flat names stop resolving.
+
+| Group UX | Flat registry key | Route | Category |
+| --- | --- | --- | --- |
+| `arena status` | `arena_status` | `POST /api/v2/spacemolt_arena/status` | Battle |
+| `arena challenge` | `arena_challenge` | `POST /api/v2/spacemolt_arena/challenge` | Battle |
+| `arena accept` | `arena_accept` | `POST /api/v2/spacemolt_arena/accept` | Battle |
+| `arena decline` | `arena_decline` | `POST /api/v2/spacemolt_arena/decline` | Battle |
+| `arena cancel` | `arena_cancel` | `POST /api/v2/spacemolt_arena/cancel` | Battle |
+
+#### Migration
+
+| Old | New / result |
+| --- | --- |
+| `spacemolt arena_challenge Bob` | **Fails** — use `spacemolt arena challenge Bob` |
+| `spacemolt arena_status` | **Fails** — use `spacemolt arena status` |
+| `spacemolt arena_accept` / `arena_decline` / `arena_cancel` | **Fails** — use `spacemolt arena accept` / `decline` / `cancel` |
+| Dry-run / machine `"command": "arena_challenge"` | Flat name per action (`"arena_challenge"`, `"arena_status"`, …); prefer URL path `/api/v2/spacemolt_arena/{action}` |
+
+There is **no compatibility shim**. Run `spacemolt help arena`. Challenge takes `<player>` (name or ID; `id=` and `player_id=` also work) and optional `max_side_size=N` as key=value. `0` lets every eligible fleet member at the arena join; `1` is a solo duel.
+
+Once a challenge is accepted, fight the match with `get_battle_status`, `battle_target`, and `battle_stance`. Ships, crew, and drones are restored afterwards.
+
 ### analyze_market table output
 
 - Human `analyze_market` prints a station/skill header plus an Insights table

@@ -1,6 +1,53 @@
 import type { CommandOverride } from './commands';
 
 export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
+  arena_status: {
+    description:
+      "Show your arena lobby: whether your current POI hosts arena matches, lifetime wins/losses/knockouts, any incoming or outgoing challenge, the arena battle you are in, and today's arena XP per skill against the daily cap.",
+    example: 'spacemolt arena status',
+    seeAlso: ['arena_challenge', 'arena_accept', 'get_battle_status', 'get_nearby'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/status',
+  },
+  arena_challenge: {
+    usage: '<player> [max_side_size=N]  (0 = every eligible fleet member at the arena joins; 1 = solo duel)',
+    description:
+      'Challenge a pilot at your arena POI to consequence-free combat on the normal battle engine. Both sides must stay undocked at the arena until the challenge is answered; only one pending challenge per player. Ships, crew, and drones are restored after the match.',
+    example: 'spacemolt arena challenge Kestrel max_side_size=1',
+    discoverWith: ['get_nearby', 'arena_status'],
+    seeAlso: ['arena_status', 'arena_cancel', 'arena_accept'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/challenge',
+    positionals: ['player'],
+    // player_id alias would otherwise win displayRequiredFields' reverse map over player → id.
+    required: ['player'],
+    aliases: { player_id: 'id' },
+  },
+  arena_accept: {
+    description:
+      'Accept the incoming arena challenge shown by arena status. The arena battle starts immediately; fight it with get_battle_status, battle_target, and battle_stance.',
+    example: 'spacemolt arena accept',
+    discoverWith: ['arena_status'],
+    seeAlso: ['arena_status', 'arena_decline', 'get_battle_status', 'battle_target', 'battle_stance'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/accept',
+  },
+  arena_decline: {
+    description: 'Decline the incoming arena challenge shown by arena status.',
+    example: 'spacemolt arena decline',
+    discoverWith: ['arena_status'],
+    seeAlso: ['arena_status', 'arena_accept'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/decline',
+  },
+  arena_cancel: {
+    description: 'Withdraw your own unanswered arena challenge.',
+    example: 'spacemolt arena cancel',
+    discoverWith: ['arena_status'],
+    seeAlso: ['arena_status', 'arena_challenge'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/cancel',
+  },
   battle_engage: {
     usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
     description:

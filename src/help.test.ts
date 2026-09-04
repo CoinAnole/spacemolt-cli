@@ -527,6 +527,10 @@ describe('help output branches', () => {
     expect(output).toContain('claim_prize <prize_id> <station>  Assign crew and recover an intact prize');
     expect(output).toContain('service_prize <prize_id> <action> Stop/resume/redirect/refuel/repair a prize');
     expect(output).toContain('faction personnel [status|recruit|deposit|withdraw]  Local crew/marine reserve');
+    expect(output).toContain('arena status              Arena lobby: record, pending challenges, XP cap');
+    expect(output).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
+    expect(output).toContain('arena accept | decline    Answer an incoming arena challenge');
+    expect(output).toContain('arena cancel              Withdraw your outgoing challenge');
 
     const combatSection = output.slice(combatIndex, personnelIndex);
     expect(combatSection).not.toContain('claim_prize');
@@ -573,6 +577,37 @@ describe('help output branches', () => {
     expect(output).not.toContain('facility_job_add <facility>');
     expect(output).not.toContain('citizenship_apply <empire>');
     expect(output).not.toContain('faction_create_buy_order <item>');
+  });
+
+  test('arena group lists curated actions and stays out of Generated API', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('arena', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('arena Commands');
+    expect(output).toContain('arena status');
+    expect(output).toContain('arena challenge');
+    expect(output).toContain('arena accept');
+    expect(output).toContain('arena decline');
+    expect(output).toContain('arena cancel');
+    expect(output).toContain('max_side_size');
+    expect(output).not.toContain('arena_status');
+    expect(output).not.toContain('arena_challenge');
+  });
+
+  test('help combat lists arena actions under Battle', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('combat', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('arena status');
+    expect(output).toContain('arena challenge <player>');
+    expect(output).toContain('arena accept');
+    expect(output).toContain('arena decline');
+    expect(output).toContain('arena cancel');
+    expect(output).not.toContain('arena_challenge');
   });
 
   test('storage group includes nested actions and standalone storage workflows', () => {
@@ -1504,6 +1539,9 @@ describe('help output branches', () => {
     const generatedIndex = output.indexOf('Generated API Commands');
     const generatedSection = generatedIndex === -1 ? '' : output.slice(generatedIndex);
     expect(generatedSection).not.toContain('shipping_quote');
+    expect(generatedSection).not.toContain('arena_status');
+    expect(generatedSection).not.toContain('arena_challenge');
+    expect(generatedSection).not.toContain('arena status');
     expect(generatedSection).toContain('shipping_accept');
     expect(generatedSection).toContain('battle_self_destruct');
     expect(generatedSection).not.toContain('ship_recruit_personnel');
