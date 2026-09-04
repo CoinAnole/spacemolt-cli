@@ -1,0 +1,18 @@
+{
+  "action": "status",
+  "at_arena": false,
+  "arena_wins": 3,
+  "arena_losses": 1,
+  "arena_knockouts": 7,
+  "battle_id": "btl-5c3",
+  "outgoing": {
+    "challenge_id": "chal-a02",
+    "opponent_id": "player-77",
+    "opponent_name": "Kestrel",
+    "poi_id": "36_ophiuchi_belt",
+    "max_side_size": 0,
+    "expires_tick": 41260
+  },
+  "xp_used_today": {},
+  "xp_cap_per_skill": 500
+}

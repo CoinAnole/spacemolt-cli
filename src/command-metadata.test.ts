@@ -746,6 +746,59 @@ describe('command metadata', () => {
     expect(captureFullHelp()).toContain('Focus by ID or name (any combatant; no tick)');
   });
 
+  test('arena group claims curated flats with distinct Battle copy and challenge player alias', () => {
+    const arena = BUNDLED_COMMAND_REGISTRY.commandGroups.arena;
+    expect(arena).toBeDefined();
+    expect(Object.keys(arena?.actions ?? {}).sort()).toEqual(['accept', 'cancel', 'challenge', 'decline', 'status']);
+
+    const status = arena?.actions.status?.config;
+    const challenge = arena?.actions.challenge?.config;
+    const accept = arena?.actions.accept?.config;
+    const decline = arena?.actions.decline?.config;
+    const cancel = arena?.actions.cancel?.config;
+
+    expect(status?.category).toBe('Battle');
+    expect(challenge?.category).toBe('Battle');
+    expect(accept?.category).toBe('Battle');
+    expect(decline?.category).toBe('Battle');
+    expect(cancel?.category).toBe('Battle');
+
+    expect(status?.description).toContain('arena lobby');
+    expect(challenge?.description).toContain('Challenge a pilot');
+    expect(accept?.description).toContain('Accept the incoming arena challenge');
+    expect(decline?.description).toContain('Decline the incoming arena challenge');
+    expect(cancel?.description).toContain('Withdraw your own unanswered arena challenge');
+
+    const descriptions = [status, challenge, accept, decline, cancel].map((config) => config?.description);
+    expect(new Set(descriptions).size).toBe(5);
+    const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_arena/status']?.summary ?? '';
+    expect(generatedSummary).toBeTruthy();
+    for (const description of descriptions) {
+      expect(description).not.toBe(generatedSummary);
+    }
+
+    expect(challenge?.usage).toContain('<player>');
+    expect(challenge?.usage).toContain('[max_side_size=N]');
+    expect(challenge?.args).toEqual(['player']);
+    expect(challenge?.required).toEqual(['player']);
+    expect(challenge?.aliases).toEqual({ player: 'id', player_id: 'id' });
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenge?.positionals).toEqual(['player']);
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenge?.aliases).toEqual({ player_id: 'id' });
+
+    expect(BUNDLED_COMMAND_REGISTRY.commands.arena_status).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.arena_challenge).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.arena_challenge).toBeUndefined();
+
+    const challengeHelp = captureHelp('arena challenge');
+    expect(challengeHelp).toContain('<player>');
+    expect(challengeHelp).toContain('max_side_size');
+    expect(challengeHelp).toContain('solo duel');
+    expect(challengeHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+
+    expect(captureFullHelp()).toContain('arena status              Arena lobby: record, pending challenges, XP cap');
+    expect(captureFullHelp()).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
+  });
+
   test('unload_passenger help documents all-passenger bulk unload', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.unload_passenger;
     expect(config?.usage).toContain('all');
@@ -2513,9 +2566,11 @@ describe('command metadata', () => {
             ? zshTopLevelCommandWords(completion)
             : fishTopLevelCommandWords(completion);
 
+      expect(topLevel, shell).toContain('arena');
       expect(topLevel, shell).toContain('faction');
       expect(topLevel, shell).toContain('facility');
       expect(topLevel, shell).toContain('trade');
+      expect(topLevel, shell).not.toContain('arena_challenge');
       expect(topLevel, shell).not.toContain('faction_info');
       expect(topLevel, shell).not.toContain('facility_job_add');
       expect(topLevel, shell).not.toContain('trade_offer');

@@ -1,6 +1,7 @@
 import type { CommandConfig, LocalCommandConfig } from './commands.ts';
 
 export const GROUPED_COMMANDS = [
+  'arena',
   'citizenship',
   'facility',
   'faction',
@@ -32,6 +33,7 @@ export interface CommandGroupEntryConfig extends LocalCommandConfig {
 export type CommandGroups = Partial<Record<GroupedCommandName, NestedCommandGroup>>;
 
 const GROUP_DESCRIPTIONS: Record<GroupedCommandName, string> = {
+  arena: 'Run arena challenge and lobby actions.',
   citizenship: 'Run citizenship actions.',
   facility: 'Run facility actions.',
   faction: 'Run faction actions.',

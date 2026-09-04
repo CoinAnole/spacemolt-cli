@@ -6722,6 +6722,51 @@ describe('structuredContent formatters', () => {
         5   | arbitrage | Iron Ore  | iron_ore  | Buy here, sell at Mars
         1   | demand    | Fuel Cell | fuel_cell | Station is buying fuel above regional average"
       ,
+        "arena_accept": 
+      "
+      Arena match started — battle btl-5c3
+      Your side: 2   Opponent side: 1
+
+      === Participants ===
+
+        Side | Team     | Pilot         | Player ID
+        -----+----------+---------------+----------
+        1    | opponent | Coin          | player-12
+        1    | opponent | Rook          | player-13
+        2    | yours    | Kestrel (you) | player-77
+
+      Next: get_battle_status · battle_target <pilot> · battle_stance <stance>"
+      ,
+        "arena_action": 
+      "
+      Challenge chal-9f1 declined."
+      ,
+        "arena_challenge": 
+      "
+      Challenge sent to Kestrel (player-77)
+        Arena: 36_ophiuchi_belt   Side size: full fleet (every eligible member)   Expires: tick 41260
+        Challenge ID: chal-a02
+        Next: arena status (wait for an answer) · arena cancel (withdraw)
+        Kestrel has until tick 41260 to answer."
+      ,
+        "arena_status": 
+      "
+      === Arena ===
+      At arena POI: yes
+      Record: 3 wins / 1 loss / 7 knockouts
+
+      Incoming challenge from Kestrel (player-77)
+        Arena: 36_ophiuchi_belt   Side size: solo duel   Expires: tick 41200
+        Challenge ID: chal-9f1
+        Answer with: arena accept | arena decline
+
+      === Arena XP today (cap 500 per skill) ===
+
+        Skill   | Used | Remaining
+        --------+------+----------
+        gunnery | 120  | 380
+        shields | 40   | 460"
+      ,
         "arrival": 
       "
       Arrived at Earth

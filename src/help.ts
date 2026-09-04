@@ -1119,6 +1119,10 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     get_battle_summary <id>   Aggregate battle result by ID
     get_battle_log <id>       Tick-by-tick battle replay by ID
     reload <weapon> <ammo>    Reload weapon with ammo (costs a tick)
+    arena status              Arena lobby: record, pending challenges, XP cap
+    arena challenge <player>  Consequence-free duel at an arena POI
+    arena accept | decline    Answer an incoming arena challenge
+    arena cancel              Withdraw your outgoing challenge
 
   ${c.cyan}Drones:${c.reset}
     load_drone <item_id>      Load a drone from cargo

@@ -294,7 +294,14 @@ function displayRequiredFields(
   aliases: Record<string, string>,
 ): string[] | undefined {
   if (!required) return undefined;
-  const friendlyByCanonical = new Map(Object.entries(aliases).map(([friendly, canonical]) => [canonical, friendly]));
+  const positionalNames = new Set((positionals ?? []).map((arg) => commandArgName(arg)));
+  const friendlyByCanonical = new Map<string, string>();
+  for (const [friendly, canonical] of Object.entries(aliases)) {
+    const existing = friendlyByCanonical.get(canonical);
+    if (existing === undefined || (!positionalNames.has(existing) && positionalNames.has(friendly))) {
+      friendlyByCanonical.set(canonical, friendly);
+    }
+  }
   const display = required.map((field) => friendlyByCanonical.get(field) ?? field);
   if (!positionals) return display;
 

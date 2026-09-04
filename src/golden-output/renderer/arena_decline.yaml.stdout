@@ -1,0 +1,13 @@
+
+details:
+  action: decline
+  challenge_id: "chal-9f1"
+  message: "Challenge chal-9f1 declined."
+ship:
+  id: "ship-wayfarer"
+  name: Wayfarer
+  cargo_used: 0
+  cargo_capacity: 500
+location:
+  poi_id: 36_ophiuchi_belt
+  system_id: 36_ophiuchi

@@ -1,3 +1,4 @@
+import { arenaFormatters } from './arena.ts';
 import { empireFormatters } from './empire.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
@@ -24,5 +25,6 @@ export const resultFormatters: ResultFormatter[] = [
   ...socialFormatters,
   ...empireFormatters,
   ...shippingFormatters,
+  ...arenaFormatters,
   ...genericFormatters,
 ];
