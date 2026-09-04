@@ -19,8 +19,6 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_arena/challenge',
     positionals: ['player'],
-    // player_id alias would otherwise win displayRequiredFields' reverse map over player → id.
-    required: ['player'],
     aliases: { player_id: 'id' },
   },
   arena_accept: {
