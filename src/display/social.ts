@@ -551,6 +551,9 @@ function emitBattleCombatState(value: unknown): void {
   const effectiveSpeed = formatNumber(value.effective_speed);
   const weaponReach = formatZoneCount(value.max_weapon_reach);
   const warpDisrupted = formatYesNo(value.warp_disrupted);
+  const intercepted = formatYesNo(value.intercepted);
+  const incapacitated = formatYesNo(value.incapacitated);
+  const intercepting = formatYesNo(value.intercepting);
   const webbed = formatYesNo(value.webbed);
   const emDisrupted = formatYesNo(value.em_disrupted);
   if (
@@ -559,6 +562,9 @@ function emitBattleCombatState(value: unknown): void {
     effectiveSpeed === undefined &&
     weaponReach === undefined &&
     warpDisrupted === undefined &&
+    intercepted === undefined &&
+    incapacitated === undefined &&
+    intercepting === undefined &&
     webbed === undefined &&
     emDisrupted === undefined
   ) {
@@ -573,6 +579,15 @@ function emitBattleCombatState(value: unknown): void {
   if (effectiveSpeed !== undefined) emitLine(`Effective Speed: ${effectiveSpeed}`);
   if (weaponReach !== undefined) emitLine(`Weapon Reach: ${weaponReach}`);
   if (warpDisrupted !== undefined) emitLine(`Warp Disrupted: ${warpDisrupted}`);
+  if (intercepted !== undefined) {
+    const interceptorId = identifierText(value.interceptor_id);
+    emitLine(`Intercepted: ${intercepted}${interceptorId ? ` (${interceptorId})` : ''}`);
+  }
+  if (incapacitated !== undefined) emitLine(`Incapacitated: ${incapacitated}`);
+  if (intercepting !== undefined) {
+    const targetId = identifierText(value.intercepting_target_id);
+    emitLine(`Intercepting: ${intercepting}${targetId ? ` (${targetId})` : ''}`);
+  }
   if (webbed !== undefined) emitLine(`Webbed: ${webbed}`);
   if (emDisrupted !== undefined) {
     const details = [

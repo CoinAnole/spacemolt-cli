@@ -1,0 +1,34 @@
+
+=== Battle ===
+ID: battle-1
+System: sol
+Participant: yes
+Tick Duration: 30
+
+Combat State:
+Can Escape: no
+Flee Progress: 2
+Effective Speed: 40
+Weapon Reach: 1 zone
+Warp Disrupted: no
+Intercepted: yes (pirate-1)
+Incapacitated: no
+Intercepting: no
+Webbed: no
+EM Disrupted: no
+
+=== Sides ===
+
+  Side | Faction | Players
+  -----+---------+--------
+  1    | SMC     | 1      
+  2    |         | 0      
+
+=== Participants ===
+
+  Name          | ID            | Side | Kind     | NPC | Ship                    | Zone    | Distance | Stance | Target   | Hull | Shield
+  --------------+---------------+------+----------+-----+-------------------------+---------+----------+--------+----------+------+-------
+  Marlowe       | player-1      | 1    | player   | no  | Prospector (prospector) | outer   | 0        | fire   | pirate-1 | 82%  | 40%   
+  Pirate Skiff  | pirate-1      | 2    | pirate   | yes | skiff                   | inner   | 3        |        |          |      |       
+  Pilot Whale   | creature-1    | 2    | creature | yes |                         |         |          |        |          |      |       
+  Earth Station | station-earth | 1    | station  | yes |                         | engaged |          |        |          | 97%  | 80%   

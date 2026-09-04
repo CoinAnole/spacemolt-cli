@@ -511,6 +511,24 @@ export const battleStatusBoardingFixture = {
   ],
 };
 
+/** Participant combat_state with boarding intercept blocking escape (v0.582.0). */
+export const battleStatusCombatStateFixture = {
+  ...battleStatusFixture,
+  combat_state: {
+    flee_counter: 2,
+    can_escape: false,
+    warp_disrupted: false,
+    intercepted: true,
+    interceptor_id: 'pirate-1',
+    intercepting: false,
+    incapacitated: false,
+    webbed: false,
+    em_disrupted: false,
+    effective_speed: 40,
+    max_weapon_reach: 1,
+  },
+};
+
 export const battleSummaryCapturesFixture = {
   ...battleSummaryFixture,
   ships_captured: 1,
@@ -1473,6 +1491,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
+  get_battle_status_combat_state: { command: 'get_battle_status', fixture: battleStatusCombatStateFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
   get_battle_summary_captures_kind: { command: 'get_battle_summary', fixture: battleSummaryCapturesKindFixture },

@@ -6494,6 +6494,9 @@ describe('structuredContent formatters', () => {
         flee_required: 3,
         can_escape: true,
         warp_disrupted: false,
+        intercepted: false,
+        intercepting: false,
+        incapacitated: false,
         webbed: true,
         em_disrupted: true,
         disruption_ticks: 2,
@@ -6547,6 +6550,9 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Effective Speed: 85');
     expect(stdout).toContain('Weapon Reach: 2 zones');
     expect(stdout).toContain('Warp Disrupted: no');
+    expect(stdout).toContain('Intercepted: no');
+    expect(stdout).toContain('Incapacitated: no');
+    expect(stdout).toContain('Intercepting: no');
     expect(stdout).toContain('Webbed: yes');
     expect(stdout).toContain('EM Disrupted: yes (25%, 2 ticks)');
     expect(stdout).toContain('Pirate Skiff');

@@ -11,6 +11,7 @@ import {
   battleLogPlunderedFixture,
   battleLogSnapshotsFixture,
   battleStatusBoardingFixture,
+  battleStatusCombatStateFixture,
   battleStatusFixture,
   battleSummaryCapturesFixture,
   battleSummaryCapturesKindFixture,
@@ -1173,6 +1174,19 @@ test('get_battle_status prints qualitative boarding after participants', () => {
   expect(boarding).toContain('Self-destruct');
   expect(boarding).not.toContain('Event');
   expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_status prints intercept combat state that blocks escape', () => {
+  const stdout = renderBattleStatus(structuredClone(battleStatusCombatStateFixture) as Record<string, unknown>);
+
+  expect(stdout).toContain('Combat State:');
+  expect(stdout).toContain('Can Escape: no');
+  expect(stdout).toContain('Flee Progress: 2');
+  expect(stdout).not.toContain('Flee Progress: 2/');
+  expect(stdout).toContain('Intercepted: yes (pirate-1)');
+  expect(stdout).toContain('Incapacitated: no');
+  expect(stdout).toContain('Intercepting: no');
+  expect(stdout).toContain('Warp Disrupted: no');
 });
 
 test('get_battle_status ignores a synthetic boarding event and still has no Event column', () => {
