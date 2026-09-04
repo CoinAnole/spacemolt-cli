@@ -12,9 +12,10 @@ const KNOWN_TERMINAL_BOARDING_EVENTS = new Set([
 
 const BOARDING_EVENT_GLOSS: Record<string, string> = {
   plundered: 'cargo taken, hull left',
+  boarding_rejected: 'attempt refused; see Reason',
 };
 
-/** Non-empty strings only. Terminal tokens lowercase; plundered appends a short gloss. Non-terminals print trimmed as-is. */
+/** Non-empty strings only. Terminal tokens lowercase; known events append a short gloss. Non-terminals print trimmed as-is. */
 export function formatBoardingEvent(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const text = value.trim();
@@ -22,5 +23,22 @@ export function formatBoardingEvent(value: unknown): string | undefined {
   const canonical = text.toLowerCase();
   const token = KNOWN_TERMINAL_BOARDING_EVENTS.has(canonical) ? canonical : text;
   const gloss = BOARDING_EVENT_GLOSS[canonical];
+  return gloss ? `${token} (${gloss})` : token;
+}
+
+const KNOWN_BOARDING_REASONS = new Set(['closing_stalled', 'boarding_locked']);
+
+const BOARDING_REASON_GLOSS: Record<string, string> = {
+  closing_stalled: 'latch made no progress; withdrawn so the battle can end',
+  boarding_locked: 'marines attached; flee, emergency warp/jump and cloak wait',
+};
+
+export function formatBoardingReason(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  if (!text) return undefined;
+  const canonical = text.toLowerCase();
+  const token = KNOWN_BOARDING_REASONS.has(canonical) ? canonical : text;
+  const gloss = BOARDING_REASON_GLOSS[canonical];
   return gloss ? `${token} (${gloss})` : token;
 }

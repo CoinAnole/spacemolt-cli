@@ -465,6 +465,34 @@ export const battleStatusFixture = {
   ],
 };
 
+export const battleSummaryArenaFixture = {
+  battle_id: 'battle-77',
+  system_id: 'krynn',
+  system_name: 'Krynn',
+  status: 'completed',
+  category: 'arena',
+  start_tick: 900200,
+  duration_ticks: 9,
+  participant_count: 2,
+  total_damage: 2100,
+  ships_destroyed: 1,
+  outcome: 'victory',
+  winning_side: 1,
+  player_names: ['Marlowe', 'Kestrel'],
+  destroyed_names: ['Kestrel'],
+  sides: [
+    {
+      side_id: 1,
+      participants: ['Marlowe'],
+    },
+    {
+      side_id: 2,
+      participants: ['Kestrel'],
+    },
+  ],
+  ships_captured: 0,
+};
+
 export const battleSummaryFixture = {
   battle_id: 'battle-42',
   system_id: 'sol',
@@ -587,6 +615,44 @@ export const battleSummaryCapturesKindFixture = {
       former_owner_username: 'Corsair-7',
       former_owner_id: 'pirate-1',
       boarding_operation_id: 'board-4',
+    },
+  ],
+};
+
+export const battleLogArenaFixture = {
+  battle_id: 'battle-77',
+  status: 'completed',
+  total_ticks: 9,
+  has_more: false,
+  entries: [
+    {
+      tick: 4,
+      arena: true,
+      kills: [{ victim_id: 'player-77', killer_id: 'player-1' }],
+      boarding: [
+        {
+          operation_id: 'board-1',
+          event: 'withdrawn',
+          phase: 'withdrawing',
+          actor_id: 'player-1',
+          target_id: 'pirate-1',
+          reason: 'closing_stalled',
+        },
+      ],
+    },
+    {
+      tick: 6,
+      arena: true,
+      boarding: [
+        {
+          operation_id: 'board-2',
+          event: 'boarding_rejected',
+          phase: 'latching',
+          actor_id: 'player-1',
+          target_id: 'drone-3',
+          reason: 'target_not_boardable',
+        },
+      ],
     },
   ],
 };
@@ -1594,10 +1660,12 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
   get_battle_status_combat_state: { command: 'get_battle_status', fixture: battleStatusCombatStateFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
+  get_battle_summary_arena: { command: 'get_battle_summary', fixture: battleSummaryArenaFixture },
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
   get_battle_summary_captures_kind: { command: 'get_battle_summary', fixture: battleSummaryCapturesKindFixture },
   get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
+  get_battle_log_arena: { command: 'get_battle_log', fixture: battleLogArenaFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
   get_battle_log_plundered: { command: 'get_battle_log', fixture: battleLogPlunderedFixture },
   get_battle_log_zone_moves: { command: 'get_battle_log', fixture: battleLogZoneMovesFixture },

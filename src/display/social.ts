@@ -1,5 +1,6 @@
+import { battleLabels, battleRulesetFromCategory, battleRulesetFromLogEntries } from './arena.ts';
 import { battleLogAttackRows, battleLogCombatantRows } from './battle-log.ts';
-import { formatBoardingEvent } from './boarding-event.ts';
+import { formatBoardingEvent, formatBoardingReason } from './boarding-event.ts';
 import { normalizeCaptorKind } from './captor-kind.ts';
 import { isAliasCopiedDumpKey } from './dock-state.ts';
 import {
@@ -255,6 +256,7 @@ function boardingLogRows(entries: Array<Record<string, unknown>>): Array<Record<
   return flattenTickRecords(entries, 'boarding').map((row) => ({
     ...row,
     event_display: formatBoardingEvent(row.event ?? row.event_type),
+    reason_display: formatBoardingReason(row.reason),
     destroyed_display: formatYesBlank(row.destroyed),
     casualties_display: formatYesFlags([
       ['yes', row.casualties_occurred],
@@ -275,7 +277,7 @@ function boardingLogColumns(rows: Array<Record<string, unknown>>): Array<[string
   if (hasAnyField(rows, ['phase'])) columns.push(['Phase', ['phase']]);
   if (hasAnyField(rows, ['actor_id', 'attacker_id'])) columns.push(['Attacker', ['actor_id', 'attacker_id']]);
   if (hasAnyField(rows, ['target_id', 'target'])) columns.push(['Target', ['target_id', 'target']]);
-  if (hasAnyField(rows, ['reason'])) columns.push(['Reason', ['reason']]);
+  if (hasAnyField(rows, ['reason_display', 'reason'])) columns.push(['Reason', ['reason_display', 'reason']]);
   if (hasAnyField(rows, ['destroyed_display'])) columns.push(['Destroyed', ['destroyed_display']]);
   if (hasAnyField(rows, ['casualties_display'])) columns.push(['Casualties', ['casualties_display']]);
   if (hasAnyField(rows, ['self_destruct_countdown'])) columns.push(['SD', ['self_destruct_countdown']]);
@@ -333,7 +335,7 @@ function zoneMoveLogColumns(rows: Array<Record<string, unknown>>): Array<[string
 function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): void {
   const boardingRows = boardingLogRows(entries);
   if (boardingRows.length) {
-    printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows), { maxCellWidth: 40 });
+    printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows), { maxCellWidth: 80 });
   }
   const zoneMoveRows = zoneMoveLogRows(entries);
   if (zoneMoveRows.length) {
@@ -357,7 +359,9 @@ function emitRecoveredBattleSummary(entry: Record<string, unknown>): void {
   if (typeof entry.tick === 'number' && Number.isFinite(entry.tick)) {
     emitLine(`Tick: ${entry.tick}`);
   }
+  const labels = battleLabels(battleRulesetFromCategory(summary.category));
   emitDefinedLine('Category', summary.category);
+  if (labels.note) emitLine(labels.note);
   emitDefinedLine('Start Tick', summary.start_tick);
   if (
     summary.duration !== undefined &&
@@ -369,8 +373,11 @@ function emitRecoveredBattleSummary(entry: Record<string, unknown>): void {
     emitLine(`Duration: ${summary.duration} ticks`);
   }
   emitDefinedLine('Total Damage', summary.total_damage);
-  emitDefinedLine('Ships Destroyed', summary.ships_destroyed);
+  emitDefinedLine(labels.shipsDestroyed, summary.ships_destroyed);
   emitDefinedLine('Ships Captured', summary.ships_captured);
+  if (Array.isArray(summary.destroyed_names) && summary.destroyed_names.length) {
+    emitLine(`${labels.destroyedNames}: ${summary.destroyed_names.join(', ')}`);
+  }
 
   const participants = Array.isArray(summary.participants) ? summary.participants.filter(isRecord) : [];
   if (
@@ -1893,6 +1900,8 @@ export const socialFormatters = [
       }
       emitOptionalLine('Status', r.status);
       emitOptionalLine('Category', r.category);
+      const labels = battleLabels(battleRulesetFromCategory(r.category));
+      if (labels.note) emitLine(labels.note);
       if (r.has_station !== undefined) {
         emitLine(`Has Station: ${formatYesNo(r.has_station) ?? r.has_station}`);
       }
@@ -1902,7 +1911,7 @@ export const socialFormatters = [
       emitOptionalLine('Duration', r.duration_ticks === undefined ? undefined : `${r.duration_ticks} ticks`);
       emitOptionalLine('Participants', r.participant_count);
       emitOptionalLine('Total Damage', r.total_damage);
-      emitOptionalLine('Ships Destroyed', r.ships_destroyed);
+      emitOptionalLine(labels.shipsDestroyed, r.ships_destroyed);
       emitOptionalLine('Ships Captured', r.ships_captured);
       const captures = firstNonEmptyRecords(r.captures);
       if (captures) {
@@ -1913,7 +1922,7 @@ export const socialFormatters = [
         emitLine(`Players: ${r.player_names.join(', ')}`);
       }
       if (Array.isArray(r.destroyed_names) && r.destroyed_names.length) {
-        emitLine(`Destroyed: ${r.destroyed_names.join(', ')}`);
+        emitLine(`${labels.destroyedNames}: ${r.destroyed_names.join(', ')}`);
       }
       if (isRecord(r.top_damage)) {
         emitLine(`Top Damage: ${r.top_damage.username ?? '?'} (${r.top_damage.damage ?? '?'})`);
@@ -1947,6 +1956,8 @@ export const socialFormatters = [
       emitOptionalLine('Status', r.status);
       emitOptionalLine('Total Ticks', r.total_ticks);
       if (r.has_more !== undefined) emitLine(`Has More: ${formatYesNo(r.has_more) ?? r.has_more}`);
+      const labels = battleLabels(battleRulesetFromLogEntries(entries ?? []));
+      if (labels.note) emitLine(labels.note);
 
       if (entries) {
         const rows = entries.map((entry, index) => {
@@ -1985,7 +1996,7 @@ export const socialFormatters = [
         ];
         if (hasAnyField(rows, ['shield'])) tickColumns.push(['Shield', ['shield']]);
         if (hasAnyField(rows, ['hull'])) tickColumns.push(['Hull', ['hull']]);
-        tickColumns.push(['Burns', ['burns']], ['Flee', ['flee']], ['Kills', ['kills']]);
+        tickColumns.push(['Burns', ['burns']], ['Flee', ['flee']], [labels.killsColumn, ['kills']]);
         if (hasAnyField(rows, ['boarding'])) tickColumns.push(['Board', ['boarding']]);
         if (hasAnyField(rows, ['zone_moves'])) tickColumns.push(['Moves', ['zone_moves']]);
         if (hasAnyField(rows, ['captures'])) tickColumns.push(['Captures', ['captures']]);

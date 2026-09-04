@@ -1,0 +1,9 @@
+
+kind: normal
+poi:
+  id: krynn_blood_arena
+  name: "Blood Arena"
+  type: station
+  system_id: krynn
+  class: common
+  arena: true

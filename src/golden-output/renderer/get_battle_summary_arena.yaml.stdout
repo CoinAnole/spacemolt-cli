@@ -1,0 +1,24 @@
+
+battle_id: "battle-77"
+system_id: krynn
+system_name: Krynn
+status: completed
+category: arena
+start_tick: 900200
+duration_ticks: 9
+participant_count: 2
+total_damage: 2100
+ships_destroyed: 1
+outcome: victory
+winning_side: 1
+player_names:
+  - Marlowe
+  - Kestrel
+destroyed_names:
+  - Kestrel
+sides:
+  - side_id: 1
+    participants: [Marlowe]
+  - side_id: 2
+    participants: [Kestrel]
+ships_captured: 0

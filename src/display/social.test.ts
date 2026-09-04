@@ -7,6 +7,7 @@ import {
   actionLogCursorFixture,
   actionLogFixture,
   actionLogPersonnelCaptureFixture,
+  battleLogArenaFixture,
   battleLogBoardingFixture,
   battleLogFixture,
   battleLogInterruptedFixture,
@@ -16,6 +17,7 @@ import {
   battleStatusBoardingFixture,
   battleStatusCombatStateFixture,
   battleStatusFixture,
+  battleSummaryArenaFixture,
   battleSummaryCapturesFixture,
   battleSummaryCapturesKindFixture,
   battleSummaryFixture,
@@ -1661,6 +1663,17 @@ test('get_battle_summary omits empty captures table', () => {
   expect(stdout).not.toContain('=== Captures ===');
 });
 
+test('get_battle_summary arena uses knockout labels and does not claim ammo restore', () => {
+  const stdout = renderBattleSummary(structuredClone(battleSummaryArenaFixture) as Record<string, unknown>);
+  expect(stdout).toContain('Category: arena');
+  expect(stdout).toContain('Arena match: knockouts restore ships, drones, and personnel');
+  expect(stdout).toContain('Ammo, fuel, and consumables stay spent');
+  expect(stdout).toContain('Ships Knocked Out: 1');
+  expect(stdout).toContain('Knocked out: Kestrel');
+  expect(stdout).not.toContain('Ships Destroyed');
+  expect(stdout).not.toContain('Destroyed:');
+});
+
 function renderBattleLog(fixture: Record<string, unknown>): string {
   const rendered = renderStructuredResult('get_battle_log', fixture, options, context);
   const stdout = rendered.stdout.join('\n');
@@ -2118,6 +2131,33 @@ function boardingLogFixture(event: string, extra: Record<string, unknown> = {}):
     ],
   };
 }
+
+test('get_battle_log arena uses KOs and glosses boarding reasons', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogArenaFixture) as Record<string, unknown>);
+  expect(stdout).toContain('Arena match: knockouts restore ships, drones, and personnel');
+  expect(stdout).toContain('Ammo, fuel, and consumables stay spent');
+  expect(stdout).toContain('| KOs |');
+  expect(stdout).not.toContain('| Kills |');
+  const boarding = sectionAfter(stdout, 'Boarding');
+  expect(boarding).toContain('closing_stalled (latch made no progress; withdrawn so the battle can end)');
+  expect(boarding).toContain('boarding_rejected (attempt refused; see Reason)');
+  expect(boarding).not.toContain('...');
+});
+
+test('get_battle_log recovered arena summary uses knockout labels', () => {
+  const fixture = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const summary = recoveredSummaryOf(fixture);
+  summary.category = 'arena';
+  summary.ships_destroyed = 1;
+  summary.destroyed_names = ['Kestrel'];
+  const stdout = renderBattleLog(fixture);
+  const recovered = sectionAfter(stdout, 'Recovered Summary');
+  expect(recovered).toContain('Category: arena');
+  expect(recovered).toContain('Arena match: knockouts restore ships, drones, and personnel');
+  expect(recovered).toContain('Ships Knocked Out: 1');
+  expect(recovered).toContain('Knocked out: Kestrel');
+  expect(recovered).not.toContain('Ships Destroyed');
+});
 
 test('get_battle_log Event glosses plundered without truncating', () => {
   const stdout = renderBattleLog(structuredClone(battleLogPlunderedFixture) as Record<string, unknown>);

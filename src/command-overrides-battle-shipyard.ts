@@ -14,7 +14,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'Challenge a pilot at your arena POI to consequence-free combat on the normal battle engine. Both sides must stay undocked at the arena until the challenge is answered; only one pending challenge per player. Ships, crew, and drones are restored after the match.',
     example: 'spacemolt arena challenge Kestrel max_side_size=1',
-    discoverWith: ['get_nearby', 'arena_status'],
+    discoverWith: ['get_poi', 'get_nearby', 'arena_status'],
     seeAlso: ['arena_status', 'arena_cancel', 'arena_accept'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_arena/challenge',

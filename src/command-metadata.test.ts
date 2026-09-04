@@ -784,6 +784,12 @@ describe('command metadata', () => {
     expect(challenge?.aliases).toEqual({ player: 'id', player_id: 'id' });
     expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenge?.positionals).toEqual(['player']);
     expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenge?.aliases).toEqual({ player_id: 'id' });
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenge?.discoverWith).toEqual([
+      'get_poi',
+      'get_nearby',
+      'arena_status',
+    ]);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.get_poi?.seeAlso).toEqual(['arena_status']);
 
     expect(BUNDLED_COMMAND_REGISTRY.commands.arena_status).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.arena_challenge).toBeUndefined();

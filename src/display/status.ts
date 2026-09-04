@@ -1,3 +1,4 @@
+import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
@@ -588,6 +589,7 @@ export const statusFormatters = [
         const skillLines = [
           formatSkillSummary(stats, 'piloting', 'Piloting'),
           formatSkillSummary(stats, 'crafting', 'Crafting'),
+          ...arenaStatLines(stats, player.arena_xp),
         ].filter((line): line is string => Boolean(line));
         if (skillLines.length) {
           emitLine(`\n${c.bright}Stats:${c.reset}`);
@@ -951,6 +953,8 @@ export const statusFormatters = [
       emitLine(`System: ${poi.system_id}`);
       if (poi.description) emitLine(`Description: ${poi.description}`);
       if (poi.class) emitLine(`Class: ${poi.class}`);
+      const arenaLine = formatArenaPoiLine(poi.arena);
+      if (arenaLine) emitLine(arenaLine);
       const factionFuelReserve = poi.faction_fuel_reserve ?? r.faction_fuel_reserve;
       const factionFuelCapacity = poi.faction_fuel_capacity ?? r.faction_fuel_capacity;
       if (factionFuelReserve !== undefined || factionFuelCapacity !== undefined) {
