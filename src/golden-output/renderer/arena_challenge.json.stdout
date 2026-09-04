@@ -1,0 +1,22 @@
+{
+  "details": {
+    "action": "challenge",
+    "challenge_id": "chal-a02",
+    "target_id": "player-77",
+    "target_name": "Kestrel",
+    "poi_id": "36_ophiuchi_belt",
+    "max_side_size": 0,
+    "expires_tick": 41260,
+    "message": "Kestrel has until tick 41260 to answer."
+  },
+  "ship": {
+    "id": "ship-wayfarer",
+    "name": "Wayfarer",
+    "cargo_used": 0,
+    "cargo_capacity": 500
+  },
+  "location": {
+    "poi_id": "36_ophiuchi_belt",
+    "system_id": "36_ophiuchi"
+  }
+}

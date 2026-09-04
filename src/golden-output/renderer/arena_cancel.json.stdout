@@ -1,0 +1,17 @@
+{
+  "details": {
+    "action": "cancel",
+    "challenge_id": "chal-a02",
+    "message": "You withdrew challenge chal-a02."
+  },
+  "ship": {
+    "id": "ship-wayfarer",
+    "name": "Wayfarer",
+    "cargo_used": 0,
+    "cargo_capacity": 500
+  },
+  "location": {
+    "poi_id": "36_ophiuchi_belt",
+    "system_id": "36_ophiuchi"
+  }
+}

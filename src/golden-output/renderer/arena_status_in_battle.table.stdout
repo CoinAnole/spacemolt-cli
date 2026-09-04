@@ -1,0 +1,15 @@
+
+=== Arena ===
+At arena POI: no
+Record: 3 wins / 1 loss / 7 knockouts
+
+In battle: btl-5c3
+  Next: get_battle_status
+
+Outgoing challenge to Kestrel (player-77)
+  Arena: 36_ophiuchi_belt   Side size: full fleet (every eligible member)   Expires: tick 41260
+  Challenge ID: chal-a02
+  Withdraw with: arena cancel
+
+Arena XP today (cap 500 per skill)
+  none today

@@ -1,0 +1,13 @@
+
+Arena match started — battle btl-5c3
+Your side: 2   Opponent side: 1
+
+=== Participants ===
+
+  Side | Team     | Pilot         | Player ID
+  -----+----------+---------------+----------
+  1    | opponent | Coin          | player-12
+  1    | opponent | Rook          | player-13
+  2    | yours    | Kestrel (you) | player-77
+
+Next: get_battle_status · battle_target <pilot> · battle_stance <stance>

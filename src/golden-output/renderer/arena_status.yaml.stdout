@@ -1,0 +1,8 @@
+
+action: status
+at_arena: true
+arena_wins: 3
+arena_losses: 1
+arena_knockouts: 7
+xp_used_today: {}
+xp_cap_per_skill: 500

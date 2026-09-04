@@ -29,6 +29,8 @@ There is **no compatibility shim**. Run `spacemolt help arena`. Challenge takes 
 
 Once a challenge is accepted, fight the match with `get_battle_status`, `battle_target`, and `battle_stance`. Ships, crew, and drones are restored afterwards.
 
+Human table output prints the lobby (`=== Arena ===`), challenge blocks, accept participants with Team (`yours` / `opponent`) from `your_side`, and today's XP with Remaining. JSON/YAML/jq field names are unchanged.
+
 ### analyze_market table output
 
 - Human `analyze_market` prints a station/skill header plus an Insights table
