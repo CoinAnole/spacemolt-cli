@@ -231,6 +231,34 @@ export const poiInfoFixture = {
   ],
 };
 
+export const poiArenaFixture = {
+  kind: 'normal',
+  poi: {
+    id: 'krynn_blood_arena',
+    name: 'Blood Arena',
+    type: 'station',
+    system_id: 'krynn',
+    class: 'common',
+    arena: true,
+  },
+};
+
+export const playerArenaFixture = {
+  player: {
+    ...playerProfileFixture.player,
+    stats: {
+      ...playerProfileFixture.player.stats,
+      arena_wins: 3,
+      arena_losses: 1,
+      arena_knockouts: 7,
+    },
+    arena_xp: {
+      by_skill: { shields: 40, gunnery: 120 },
+      day: '2026-09-04',
+    },
+  },
+};
+
 /** Station POI with nested TrimmedBase (canonical Base ID + station POI ID, 0.562+ combat stats). */
 export const stationPoiInfoFixture = {
   kind: 'normal',
@@ -770,6 +798,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   },
   get_status_detained: { command: 'get_status', fixture: getStatusDetainedFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
+  get_player_arena: { command: 'get_player', fixture: playerArenaFixture },
   pay_bounty: {
     command: 'pay_bounty',
     fixture: payBountyFixture,
@@ -779,6 +808,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
+  get_poi_arena: { command: 'get_poi', fixture: poiArenaFixture },
   get_poi_station: { command: 'get_poi', fixture: stationPoiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   get_nearby_boss: { command: 'get_nearby', fixture: nearbyBossFixture },

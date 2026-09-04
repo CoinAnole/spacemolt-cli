@@ -55,6 +55,83 @@ export function formatArenaSideSize(maxSideSize: unknown): string {
   return `up to ${size} ships per side`;
 }
 
+export type BattleRuleset = 'standard' | 'arena';
+
+export type BattleLabels = {
+  note?: string;
+  shipsDestroyed: string;
+  destroyedNames: string;
+  killsColumn: string;
+};
+
+export type ArenaRecord = { wins: number; losses: number; knockouts: number };
+
+const BATTLE_LABELS: Record<BattleRuleset, BattleLabels> = {
+  standard: {
+    shipsDestroyed: 'Ships Destroyed',
+    destroyedNames: 'Destroyed',
+    killsColumn: 'Kills',
+  },
+  arena: {
+    note: 'Arena match: knockouts restore ships, drones, and personnel on the spot; no kill, loss, capture or casualty stats. Ammo, fuel, and consumables stay spent.',
+    shipsDestroyed: 'Ships Knocked Out',
+    destroyedNames: 'Knocked out',
+    killsColumn: 'KOs',
+  },
+};
+
+export function formatArenaPoiLine(arena: unknown): string | undefined {
+  if (arena !== true) return undefined;
+  return 'Arena: yes (consequence-free matches; see: arena status)';
+}
+
+export function readArenaRecord(source: Record<string, unknown>): ArenaRecord | undefined {
+  const wins = finiteNumber(source.arena_wins);
+  const losses = finiteNumber(source.arena_losses);
+  const knockouts = finiteNumber(source.arena_knockouts);
+  if (wins === undefined || losses === undefined || knockouts === undefined) return undefined;
+  return { wins, losses, knockouts };
+}
+
+export function formatArenaRecord(record: ArenaRecord): string {
+  return `${record.wins} wins / ${record.losses} loss${record.losses === 1 ? '' : 'es'} / ${record.knockouts} knockouts`;
+}
+
+function formatArenaXpLine(arenaXp: unknown): string | undefined {
+  if (!isRecord(arenaXp) || !isRecord(arenaXp.by_skill)) return undefined;
+  const usedToday = arenaXp.by_skill;
+  const skills = Object.keys(usedToday)
+    .filter((skill) => finiteNumber(usedToday[skill]) !== undefined)
+    .sort((left, right) => left.localeCompare(right));
+  if (skills.length === 0) return undefined;
+  const parts = skills.map((skill) => `${skill} ${finiteNumber(usedToday[skill])}`);
+  const day = typeof arenaXp.day === 'string' && arenaXp.day ? arenaXp.day : undefined;
+  return day ? `Arena XP today (${day}): ${parts.join(', ')}` : `Arena XP today: ${parts.join(', ')}`;
+}
+
+export function arenaStatLines(stats: Record<string, unknown>, arenaXp: unknown): string[] {
+  const lines: string[] = [];
+  const record = readArenaRecord(stats);
+  if (record && (record.wins > 0 || record.losses > 0 || record.knockouts > 0)) {
+    lines.push(`Arena: ${formatArenaRecord(record)}`);
+  }
+  const xpLine = formatArenaXpLine(arenaXp);
+  if (xpLine) lines.push(xpLine);
+  return lines;
+}
+
+export function battleRulesetFromCategory(category: unknown): BattleRuleset {
+  return typeof category === 'string' && category.trim().toLowerCase() === 'arena' ? 'arena' : 'standard';
+}
+
+export function battleRulesetFromLogEntries(entries: Array<Record<string, unknown>>): BattleRuleset {
+  return entries.some((entry) => entry.arena === true) ? 'arena' : 'standard';
+}
+
+export function battleLabels(ruleset: BattleRuleset): BattleLabels {
+  return BATTLE_LABELS[ruleset];
+}
+
 function emitChallengeBlock(
   heading: string,
   info: { poi_id: unknown; max_side_size: unknown; expires_tick: unknown; challenge_id: unknown },
@@ -98,15 +175,12 @@ function emitXpTable(result: Record<string, unknown>): void {
 function renderArenaStatus(result: Record<string, unknown>, command?: string): boolean {
   if (!commandNameEquals(command, 'arena_status')) return false;
   if (typeof result.at_arena !== 'boolean') return false;
-  if (finiteNumber(result.arena_wins) === undefined) return false;
-
-  const wins = finiteNumber(result.arena_wins);
-  const losses = finiteNumber(result.arena_losses);
-  const knockouts = finiteNumber(result.arena_knockouts);
+  const record = readArenaRecord(result);
+  if (!record) return false;
 
   emitLine(`\n${c.bright}=== Arena ===${c.reset}`);
   emitLine(`At arena POI: ${result.at_arena ? 'yes' : 'no'}`);
-  emitLine(`Record: ${wins} wins / ${losses} loss${losses === 1 ? '' : 'es'} / ${knockouts} knockouts`);
+  emitLine(`Record: ${formatArenaRecord(record)}`);
 
   if (isNonEmptyString(result.battle_id)) {
     emitLine('');

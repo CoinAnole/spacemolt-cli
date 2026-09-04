@@ -1,0 +1,7 @@
+
+=== POI: Blood Arena ===
+ID: krynn_blood_arena
+Type: station
+System: krynn
+Class: common
+Arena: yes (consequence-free matches; see: arena status)

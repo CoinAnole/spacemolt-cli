@@ -10,7 +10,16 @@ import {
   arenaStatusInBattleFixture,
   arenaStatusIncomingFixture,
 } from './arena.fixtures.ts';
-import { formatArenaSideSize } from './arena.ts';
+import {
+  arenaStatLines,
+  battleLabels,
+  battleRulesetFromCategory,
+  battleRulesetFromLogEntries,
+  formatArenaPoiLine,
+  formatArenaRecord,
+  formatArenaSideSize,
+  readArenaRecord,
+} from './arena.ts';
 import { renderStructuredResult } from './index.ts';
 
 const options: GlobalOptions = {
@@ -48,6 +57,91 @@ test('formatArenaSideSize uses the shared lobby vocabulary', () => {
   expect(formatArenaSideSize(1)).toBe('solo duel');
   expect(formatArenaSideSize(3)).toBe('up to 3 ships per side');
   expect(formatArenaSideSize(Number.NaN)).toBe('');
+});
+
+test('formatArenaPoiLine only tags a true arena flag', () => {
+  expect(formatArenaPoiLine(true)).toBe('Arena: yes (consequence-free matches; see: arena status)');
+  expect(formatArenaPoiLine(false)).toBeUndefined();
+  expect(formatArenaPoiLine(undefined)).toBeUndefined();
+  expect(formatArenaPoiLine('true')).toBeUndefined();
+});
+
+test('readArenaRecord requires all three counters to be finite', () => {
+  expect(readArenaRecord({ arena_wins: 3, arena_losses: 1, arena_knockouts: 7 })).toEqual({
+    wins: 3,
+    losses: 1,
+    knockouts: 7,
+  });
+  expect(readArenaRecord({ arena_wins: 3, arena_losses: 1 })).toBeUndefined();
+  expect(readArenaRecord({ arena_wins: 3, arena_losses: Number.NaN, arena_knockouts: 7 })).toBeUndefined();
+});
+
+test('formatArenaRecord keeps the arena_status Record pluralization', () => {
+  expect(formatArenaRecord({ wins: 3, losses: 1, knockouts: 7 })).toBe('3 wins / 1 loss / 7 knockouts');
+  expect(formatArenaRecord({ wins: 0, losses: 0, knockouts: 0 })).toBe('0 wins / 0 losses / 0 knockouts');
+  expect(formatArenaRecord({ wins: 2, losses: 2, knockouts: 1 })).toBe('2 wins / 2 losses / 1 knockouts');
+});
+
+test('arenaStatLines suppresses a 0/0/0 record with no XP', () => {
+  expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, undefined)).toEqual([]);
+});
+
+test('arenaStatLines prints a record and a sorted XP ledger', () => {
+  expect(
+    arenaStatLines(
+      { arena_wins: 3, arena_losses: 1, arena_knockouts: 7 },
+      {
+        by_skill: { shields: 40, gunnery: 120 },
+        day: '2026-09-04',
+      },
+    ),
+  ).toEqual(['Arena: 3 wins / 1 loss / 7 knockouts', 'Arena XP today (2026-09-04): gunnery 120, shields 40']);
+});
+
+test('arenaStatLines keeps XP when the record is all zeros', () => {
+  expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, { by_skill: { gunnery: 10 } })).toEqual(
+    ['Arena XP today: gunnery 10'],
+  );
+});
+
+test('arenaStatLines ignores malformed arena_xp', () => {
+  expect(arenaStatLines({ arena_wins: 1, arena_losses: 0, arena_knockouts: 0 }, 'today')).toEqual([
+    'Arena: 1 wins / 0 losses / 0 knockouts',
+  ]);
+  expect(arenaStatLines({ arena_wins: 1, arena_losses: 0, arena_knockouts: 0 }, { by_skill: {} })).toEqual([
+    'Arena: 1 wins / 0 losses / 0 knockouts',
+  ]);
+  expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, { day: '2026-09-04' })).toEqual([]);
+});
+
+test('battleRulesetFromCategory treats only arena as the arena ruleset', () => {
+  expect(battleRulesetFromCategory('arena')).toBe('arena');
+  expect(battleRulesetFromCategory(' ARENA ')).toBe('arena');
+  expect(battleRulesetFromCategory('pvp')).toBe('standard');
+  expect(battleRulesetFromCategory(undefined)).toBe('standard');
+  expect(battleRulesetFromCategory(true)).toBe('standard');
+});
+
+test('battleRulesetFromLogEntries is arena when any tick is flagged', () => {
+  expect(battleRulesetFromLogEntries([{ tick: 1 }, { tick: 2, arena: true }])).toBe('arena');
+  expect(battleRulesetFromLogEntries([{ tick: 1, arena: false }])).toBe('standard');
+  expect(battleRulesetFromLogEntries([])).toBe('standard');
+});
+
+test('battleLabels substitutes knockout wording only for arena', () => {
+  const standard = battleLabels('standard');
+  expect(standard.note).toBeUndefined();
+  expect(standard.shipsDestroyed).toBe('Ships Destroyed');
+  expect(standard.destroyedNames).toBe('Destroyed');
+  expect(standard.killsColumn).toBe('Kills');
+
+  const arena = battleLabels('arena');
+  expect(arena.note).toContain('ships, drones, and personnel');
+  expect(arena.note).toContain('Ammo, fuel, and consumables stay spent');
+  expect(arena.note).not.toContain('ammo, fuel, and consumables are restored');
+  expect(arena.shipsDestroyed).toBe('Ships Knocked Out');
+  expect(arena.destroyedNames).toBe('Knocked out');
+  expect(arena.killsColumn).toBe('KOs');
 });
 
 test('renders an idle arena lobby without the raw response fallback', () => {

@@ -39,6 +39,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_poi: {
     description:
       'Current POI details, resources, station services/fuel (when docked), wormhole prediction, hidden deposit reveal difficulty. Use get_system / get_location / get_base for consolidated views.',
+    seeAlso: ['arena_status'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_poi',
   },

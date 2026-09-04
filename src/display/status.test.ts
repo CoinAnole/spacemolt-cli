@@ -12,7 +12,9 @@ import {
   nearbyBossFixture,
   nearbyFixture,
   payBountyFixture,
+  playerArenaFixture,
   playerProfileFixture,
+  poiArenaFixture,
   scanCreatureFixture,
   stationPoiInfoFixture,
   subscribeObservationFixture,
@@ -374,6 +376,50 @@ test('get_status prints a fully populated detention line before standings', () =
   expect(detainedIdx).toBeGreaterThan(tradingIdx);
   expect(standingsIdx).toBeGreaterThan(detainedIdx);
   expect(locationIdx).toBeGreaterThan(standingsIdx);
+});
+
+test('get_poi prints an arena line after Class', () => {
+  const stdout = renderStructuredResult('get_poi', structuredClone(poiArenaFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('Class: common');
+  expect(stdout).toContain('Arena: yes (consequence-free matches; see: arena status)');
+  expect(stdout.indexOf('Class: common')).toBeLessThan(stdout.indexOf('Arena: yes'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_player prints arena record and XP after skill stats', () => {
+  const stdout = renderStructuredResult(
+    'get_player',
+    structuredClone(playerArenaFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Crafting: Level 2 (175 XP)');
+  expect(stdout).toContain('Arena: 3 wins / 1 loss / 7 knockouts');
+  expect(stdout).toContain('Arena XP today (2026-09-04): gunnery 120, shields 40');
+  expect(stdout.indexOf('Crafting:')).toBeLessThan(stdout.indexOf('Arena: 3 wins'));
+});
+
+test('get_player omits arena stats at 0/0/0 with no XP', () => {
+  const fixture = structuredClone(playerProfileFixture) as {
+    player: { stats: Record<string, unknown> };
+  };
+  fixture.player.stats.arena_wins = 0;
+  fixture.player.stats.arena_losses = 0;
+  fixture.player.stats.arena_knockouts = 0;
+  const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Crafting: Level 2 (175 XP)');
+  expect(stdout).not.toContain('Arena:');
+});
+
+test('get_status does not print arena stats', () => {
+  const fixture = structuredClone(getStatusFixture) as { player: Record<string, unknown> };
+  fixture.player.stats = { arena_wins: 3, arena_losses: 1, arena_knockouts: 7 };
+  fixture.player.arena_xp = { by_skill: { gunnery: 120 }, day: '2026-09-04' };
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).not.toContain('Arena: 3 wins');
+  expect(stdout).not.toContain('Arena XP today');
 });
 
 test('get_player prints detention after trading restriction and before stats', () => {

@@ -1,0 +1,21 @@
+
+=== Battle Log ===
+ID: battle-77
+Status: completed
+Total Ticks: 9
+Has More: no
+Arena match: knockouts restore ships, drones, and personnel on the spot; no kill, loss, capture or casualty stats. Ammo, fuel, and consumables stay spent.
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | KOs | Board | Ended
+  -----+---------+------+--------+-------+------+-----+-------+------
+  4    | 0       | 0    |        |       |      | 1   | 1     |      
+  6    | 0       | 0    |        |       |      |     | 1     |      
+
+=== Boarding ===
+
+  Tick | ID      | Event                                           | Phase       | Attacker | Target   | Reason                                                                   
+  -----+---------+-------------------------------------------------+-------------+----------+----------+--------------------------------------------------------------------------
+  4    | board-1 | withdrawn                                       | withdrawing | player-1 | pirate-1 | closing_stalled (latch made no progress; withdrawn so the battle can end)
+  6    | board-2 | boarding_rejected (attempt refused; see Reason) | latching    | player-1 | drone-3  | target_not_boardable                                                     
