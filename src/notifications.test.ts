@@ -181,6 +181,24 @@ describe('notification formatting', () => {
       ],
     },
     {
+      msgType: 'arena_challenge',
+      data: {
+        event: 'received',
+        challenger_name: 'Kestrel',
+        challenged_name: 'Marlowe',
+        challenge_id: 'c1',
+        poi_id: 'arena',
+        max_side_size: 1,
+        expires_tick: 9,
+      },
+      snippets: [
+        '[ARENA]',
+        'Kestrel challenged you to an arena match',
+        'solo at arena · expires tick 9',
+        'Use: arena accept | arena decline',
+      ],
+    },
+    {
       msgType: 'system_progress_summary',
       data: {
         count: 10,
@@ -1629,6 +1647,7 @@ describe('notification formatting', () => {
       'battle_joined',
       'battle_left',
       'battle_ended',
+      'arena_challenge',
       'ship_captured',
     ] as const;
 
@@ -2764,6 +2783,18 @@ describe('notification formatting', () => {
           data: { username: 'Marlowe', reason: 'emergency_warp' },
         }).headline,
       ).toBe('Marlowe emergency-warped out of the battle');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe', reason: 'knocked_out' },
+        }).headline,
+      ).toBe('Marlowe was knocked out of the arena — ship restored');
+      expect(
+        formatNotificationPreview({
+          msg_type: 'battle_left',
+          data: { username: 'Marlowe', reason: 'emergency_cloak' },
+        }).headline,
+      ).toBe('Marlowe emergency-cloaked out of the battle');
 
       const disconnected = formatNotificationPreview({
         msg_type: 'battle_left',
@@ -2793,12 +2824,129 @@ describe('notification formatting', () => {
       expect(booleanReason).toContain('Marlowe left the battle');
       expect(booleanReason).not.toContain('true');
 
+      const prototypeReason = formatNotificationPreview({
+        msg_type: 'battle_left',
+        data: { username: 'Marlowe', reason: 'constructor' },
+      }).headline;
+      expect(prototypeReason).toContain('Marlowe left the battle');
+      expect(prototypeReason).not.toContain('constructor');
+
       expect(
         formatNotificationPreview({
           msg_type: 'battle_left',
           data: { reason: 'destroyed' },
         }).headline,
       ).toContain('Someone was destroyed — combat over');
+    });
+
+    test('arena_challenge headlines, details, and unknown events stay token-silent', () => {
+      const received = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: {
+          event: 'received',
+          challenger_name: 'Kestrel',
+          challenged_name: 'Marlowe',
+          challenge_id: 'c1',
+          poi_id: 'arena',
+          max_side_size: 1,
+          expires_tick: 9,
+        },
+      });
+      expect(hasPreviewHandler('arena_challenge')).toBe(true);
+      expect(received.tag).toBe('ARENA');
+      expect(received.headline).toBe('Kestrel challenged you to an arena match');
+      expect(received.details).toEqual(['solo at arena · expires tick 9', 'Use: arena accept | arena decline']);
+
+      const fullFleet = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'received', challenger_name: 'Kestrel', max_side_size: 0 },
+      });
+      expect(fullFleet.details[0]).toBe('full fleet');
+      expect(fullFleet.details[1]).toBe('Use: arena accept | arena decline');
+
+      const capped = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'received', challenger_name: 'Kestrel', max_side_size: 3, poi_id: 'ring' },
+      });
+      expect(capped.details[0]).toBe('up to 3 ships per side at ring');
+
+      const receivedBare = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'received', challenger_name: 'Kestrel' },
+      });
+      expect(receivedBare.details).toEqual(['Use: arena accept | arena decline']);
+      expectNoDiagnosticTokens([receivedBare.headline, ...receivedBare.details].join('\n'));
+
+      const accepted = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'accepted', challenged_name: 'Marlowe', battle_id: 'battle-42' },
+      });
+      expect(accepted.tag).toBe('ARENA');
+      expect(accepted.headline).toBe('Marlowe accepted your arena challenge — battle battle-42');
+      expect(accepted.details).toEqual(['Battle started (ID: battle-42)', 'Next: get_battle_status']);
+
+      const acceptedNoBattle = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'accepted', challenged_name: 'Marlowe' },
+      });
+      expect(acceptedNoBattle.headline).toBe('Marlowe accepted your arena challenge');
+      expect(acceptedNoBattle.details).toEqual(['Next: get_battle_status']);
+      expect(acceptedNoBattle.headline).not.toContain('undefined');
+      expect(acceptedNoBattle.details.join('\n')).not.toContain('undefined');
+
+      const declined = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'declined', challenged_name: 'Marlowe' },
+      });
+      expect(declined.headline).toBe('Marlowe declined your arena challenge');
+      expect(declined.details).toEqual([]);
+
+      const cancelled = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'cancelled', challenger_name: 'Kestrel' },
+      });
+      expect(cancelled.headline).toBe('Kestrel cancelled the arena challenge');
+      expect(cancelled.details).toEqual([]);
+
+      expect(
+        formatNotificationPreview({
+          msg_type: 'arena_challenge',
+          data: { event: 'accepted' },
+        }).headline,
+      ).toBe('Someone accepted your arena challenge');
+
+      const unknownEvent = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: {
+          event: 'totally_new',
+          challenger_name: 'Kestrel',
+          challenged_name: 'Marlowe',
+          challenge_id: 'c1',
+          poi_id: 'arena',
+        },
+      });
+      expect(unknownEvent.tag).toBe('ARENA');
+      expect(unknownEvent.headline).toBe('Arena challenge updated');
+      expect(unknownEvent.details).toEqual([]);
+      expect(unknownEvent.headline).not.toContain('totally_new');
+      expect(unknownEvent.headline).not.toContain('event=');
+      expect(unknownEvent.details.join('\n')).not.toContain('totally_new');
+      expect(unknownEvent.details.join('\n')).not.toContain('event=');
+      expect(unknownEvent.details.join('\n')).not.toContain('challenge_id=');
+
+      const booleanEvent = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: true, challenger_name: 'Kestrel' },
+      });
+      expect(booleanEvent.headline).toBe('Arena challenge updated');
+      expect(booleanEvent.headline).not.toContain('true');
+
+      const prototypeEvent = formatNotificationPreview({
+        msg_type: 'arena_challenge',
+        data: { event: 'constructor' },
+      });
+      expect(prototypeEvent.headline).toBe('Arena challenge updated');
+      expect(prototypeEvent.headline).not.toContain('constructor');
     });
 
     test('K13: table Type stays raw msg_type; Message uses pure preview headline', () => {

@@ -1076,23 +1076,110 @@ function previewBattleJoined(
   return headlinePreview('BATTLE', `${safeScalar(data.username) ?? 'Someone'} joined the battle`, options);
 }
 
+function previewToken(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const token = value.trim().toLowerCase();
+  return token || undefined;
+}
+
+const BATTLE_LEFT_REASON_HEADLINES: Readonly<Record<string, (name: string) => string>> = {
+  fled: (name) => `${name} fled the battle`,
+  destroyed: (name) => `${name} was destroyed — combat over`,
+  knocked_out: (name) => `${name} was knocked out of the arena — ship restored`,
+  emergency_warp: (name) => `${name} emergency-warped out of the battle`,
+  emergency_cloak: (name) => `${name} emergency-cloaked out of the battle`,
+};
+
+type ArenaChallengeRenderInput = {
+  challenger: string;
+  challenged: string;
+  battleId?: string;
+  matchContext?: string;
+};
+
+type ArenaChallengeRender = (input: ArenaChallengeRenderInput) => { headline: string; details: string[] };
+
+const ARENA_CHALLENGE_EVENT_RENDERS: Readonly<Record<string, ArenaChallengeRender>> = {
+  received: ({ challenger, matchContext }) => ({
+    headline: `${challenger} challenged you to an arena match`,
+    details: [...(matchContext !== undefined ? [matchContext] : []), 'Use: arena accept | arena decline'],
+  }),
+  accepted: ({ challenged, battleId }) => ({
+    headline:
+      battleId !== undefined
+        ? `${challenged} accepted your arena challenge — battle ${battleId}`
+        : `${challenged} accepted your arena challenge`,
+    details: [...(battleId !== undefined ? [`Battle started (ID: ${battleId})`] : []), 'Next: get_battle_status'],
+  }),
+  declined: ({ challenged }) => ({
+    headline: `${challenged} declined your arena challenge`,
+    details: [],
+  }),
+  cancelled: ({ challenger }) => ({
+    headline: `${challenger} cancelled the arena challenge`,
+    details: [],
+  }),
+};
+
 function previewBattleLeft(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  const name = safeScalar(data.username) ?? 'Someone';
-  const raw = safeScalar(data.reason);
-  const reason = typeof raw === 'string' ? raw.trim().toLowerCase() : undefined;
-  let headline = `${name} left the battle`;
-  if (reason === 'fled') {
-    headline = `${name} fled the battle`;
-  } else if (reason === 'destroyed') {
-    headline = `${name} was destroyed — combat over`;
-  } else if (reason === 'emergency_warp') {
-    headline = `${name} emergency-warped out of the battle`;
-  }
+  const name = String(safeScalar(data.username) ?? 'Someone');
+  const token = previewToken(data.reason);
+  const gloss =
+    token !== undefined && Object.hasOwn(BATTLE_LEFT_REASON_HEADLINES, token)
+      ? BATTLE_LEFT_REASON_HEADLINES[token]
+      : undefined;
+  const headline = gloss !== undefined ? gloss(name) : `${name} left the battle`;
   return headlinePreview('BATTLE', headline, options);
+}
+
+/** max_side_size 0 is the full-fleet sentinel, not "zero ships". */
+function arenaReceivedMatchContext(data: Record<string, unknown>): string | undefined {
+  const sizeAndPlace: string[] = [];
+  const sideSize = finiteNumber(data.max_side_size);
+  if (sideSize === 1) sizeAndPlace.push('solo');
+  else if (sideSize === 0) sizeAndPlace.push('full fleet');
+  else if (sideSize !== undefined && Number.isInteger(sideSize) && sideSize > 1) {
+    sizeAndPlace.push(`up to ${sideSize} ships per side`);
+  }
+
+  const poi = safeScalar(data.poi_id);
+  if (poi !== undefined) sizeAndPlace.push(`at ${poi}`);
+
+  const expiresTick = finiteNumber(data.expires_tick);
+  const expires = expiresTick !== undefined ? `expires tick ${expiresTick}` : undefined;
+  if (sizeAndPlace.length === 0) return expires;
+  if (expires === undefined) return sizeAndPlace.join(' ');
+  return `${sizeAndPlace.join(' ')} · ${expires}`;
+}
+
+function previewArenaChallenge(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const token = previewToken(data.event);
+  const render =
+    token !== undefined && Object.hasOwn(ARENA_CHALLENGE_EVENT_RENDERS, token)
+      ? ARENA_CHALLENGE_EVENT_RENDERS[token]
+      : undefined;
+  if (render === undefined) {
+    return headlinePreview('ARENA', 'Arena challenge updated', options);
+  }
+
+  const battleScalar = safeScalar(data.battle_id);
+  const { headline, details } = render({
+    challenger: scalarOr(data.challenger_name, 'Someone'),
+    challenged: scalarOr(data.challenged_name, 'Someone'),
+    battleId: battleScalar !== undefined ? String(battleScalar) : undefined,
+    matchContext: arenaReceivedMatchContext(data),
+  });
+  return details.length > 0
+    ? detailPreview('ARENA', headline, details, options)
+    : headlinePreview('ARENA', headline, options);
 }
 
 function previewBattleEnded(
@@ -2090,6 +2177,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   battle_joined: previewBattleJoined,
   battle_left: previewBattleLeft,
   battle_ended: previewBattleEnded,
+  arena_challenge: previewArenaChallenge,
   ship_captured: previewShipCaptured,
   prize_update: previewPrizeUpdate,
   // Social domain (PR7b)
