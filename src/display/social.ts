@@ -22,6 +22,7 @@ import {
   sumNumericField,
   withPausedRentSuffix,
 } from './helpers.ts';
+import { formatZoneMoveReason } from './zone-move-reason.ts';
 
 function formatTimestampPreview(value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
@@ -309,10 +310,34 @@ function personnelCasualtyColumns(rows: Array<Record<string, unknown>>): Array<[
   return columns;
 }
 
+function zoneMoveLogRows(entries: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return flattenTickRecords(entries, 'zone_moves').map((row) => ({
+    ...row,
+    reason_display: formatZoneMoveReason(row.reason),
+  }));
+}
+
+function zoneMoveLogColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Tick', ['tick']],
+    ['Player', ['player_id']],
+    ['From', ['old_zone']],
+    ['To', ['new_zone']],
+  ];
+  if (hasAnyField(rows, ['reason_display', 'reason'])) {
+    columns.push(['Reason', ['reason_display', 'reason']]);
+  }
+  return columns;
+}
+
 function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): void {
   const boardingRows = boardingLogRows(entries);
   if (boardingRows.length) {
     printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows), { maxCellWidth: 40 });
+  }
+  const zoneMoveRows = zoneMoveLogRows(entries);
+  if (zoneMoveRows.length) {
+    printCompactTable('Zone moves', zoneMoveRows, zoneMoveLogColumns(zoneMoveRows), { maxCellWidth: 56 });
   }
   const captureRows = captureIdentityRows(flattenTickRecords(entries, 'captures'));
   if (captureRows.length) {
@@ -1904,6 +1929,7 @@ export const socialFormatters = [
             flee: flees || undefined,
             kills: kills || undefined,
             boarding: eventCount(entry.boarding),
+            zone_moves: eventCount(entry.zone_moves),
             captures: eventCount(entry.captures),
             casualties: eventCount(entry.personnel_casualties),
             ended: formatBattleEndedCell(entry.battle_ended),
@@ -1919,6 +1945,7 @@ export const socialFormatters = [
         if (hasAnyField(rows, ['hull'])) tickColumns.push(['Hull', ['hull']]);
         tickColumns.push(['Burns', ['burns']], ['Flee', ['flee']], ['Kills', ['kills']]);
         if (hasAnyField(rows, ['boarding'])) tickColumns.push(['Board', ['boarding']]);
+        if (hasAnyField(rows, ['zone_moves'])) tickColumns.push(['Moves', ['zone_moves']]);
         if (hasAnyField(rows, ['captures'])) tickColumns.push(['Captures', ['captures']]);
         if (hasAnyField(rows, ['casualties'])) tickColumns.push(['Casualties', ['casualties']]);
         tickColumns.push(['Ended', ['ended']]);

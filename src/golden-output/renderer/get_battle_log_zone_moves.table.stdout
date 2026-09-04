@@ -1,0 +1,20 @@
+
+=== Battle Log ===
+ID: battle-42
+Status: active
+Total Ticks: 2
+Has More: no
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Moves | Ended
+  -----+---------+------+--------+-------+------+-------+-------+------
+  4    | 0       | 0    |        |       |      |       | 1     |      
+  5    | 0       | 0    |        |       |      |       | 1     |      
+
+=== Zone moves ===
+
+  Tick | Player   | From  | To      | Reason                                                
+  -----+----------+-------+---------+-------------------------------------------------------
+  4    | player-1 | outer | middle  | retreat_intercepted (retreat cancelled by interceptor)
+  5    | pirate-1 | inner | engaged | pulled_closer                                         

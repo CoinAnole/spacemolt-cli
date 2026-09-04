@@ -610,6 +610,38 @@ export const battleLogPlunderedFixture = {
   ],
 };
 
+/** Zone ring moves including retreat_intercepted (boarding cancel) and pulled_closer. */
+export const battleLogZoneMovesFixture = {
+  battle_id: 'battle-42',
+  status: 'active',
+  total_ticks: 2,
+  has_more: false,
+  entries: [
+    {
+      tick: 4,
+      zone_moves: [
+        {
+          player_id: 'player-1',
+          old_zone: 'outer',
+          new_zone: 'middle',
+          reason: 'retreat_intercepted',
+        },
+      ],
+    },
+    {
+      tick: 5,
+      zone_moves: [
+        {
+          player_id: 'pirate-1',
+          old_zone: 'inner',
+          new_zone: 'engaged',
+          reason: 'pulled_closer',
+        },
+      ],
+    },
+  ],
+};
+
 export const battleLogBoardingFixture = {
   battle_id: 'battle-42',
   status: 'completed',
@@ -1499,6 +1531,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
   get_battle_log_plundered: { command: 'get_battle_log', fixture: battleLogPlunderedFixture },
+  get_battle_log_zone_moves: { command: 'get_battle_log', fixture: battleLogZoneMovesFixture },
   get_battle_log_snapshots: { command: 'get_battle_log', fixture: battleLogSnapshotsFixture },
   get_battle_log_interrupted: { command: 'get_battle_log', fixture: battleLogInterruptedFixture },
   facility_types: { command: 'facility_types', fixture: facilityTypesFixture },

@@ -1,0 +1,30 @@
+{
+  "battle_id": "battle-42",
+  "status": "active",
+  "total_ticks": 2,
+  "has_more": false,
+  "entries": [
+    {
+      "tick": 4,
+      "zone_moves": [
+        {
+          "player_id": "player-1",
+          "old_zone": "outer",
+          "new_zone": "middle",
+          "reason": "retreat_intercepted"
+        }
+      ]
+    },
+    {
+      "tick": 5,
+      "zone_moves": [
+        {
+          "player_id": "pirate-1",
+          "old_zone": "inner",
+          "new_zone": "engaged",
+          "reason": "pulled_closer"
+        }
+      ]
+    }
+  ]
+}

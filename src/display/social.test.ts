@@ -10,6 +10,7 @@ import {
   battleLogInterruptedFixture,
   battleLogPlunderedFixture,
   battleLogSnapshotsFixture,
+  battleLogZoneMovesFixture,
   battleStatusBoardingFixture,
   battleStatusCombatStateFixture,
   battleStatusFixture,
@@ -1950,11 +1951,56 @@ test('get_battle_log omits Board Captures Casualties columns without those array
   const ticks = battleLogTicksSection(stdout);
 
   expect(ticks).not.toContain('Board');
+  expect(ticks).not.toContain('Moves');
   expect(ticks).not.toContain('Captures');
   expect(ticks).not.toContain('Casualties');
   expect(stdout).not.toContain('=== Boarding ===');
+  expect(stdout).not.toContain('=== Zone moves ===');
   expect(stdout).not.toContain('=== Captures ===');
   expect(stdout).not.toContain('=== Personnel casualties ===');
+});
+
+test('get_battle_log prints zone moves after ticks with retreat_intercepted gloss', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogZoneMovesFixture) as Record<string, unknown>);
+  const ticks = battleLogTicksSection(stdout);
+  const zoneMoves = sectionAfter(stdout, 'Zone moves');
+
+  expect(stdout).not.toContain('=== Attacks ===');
+  expect(stdout).not.toContain('=== Boarding ===');
+  expect(ticks).toContain('Moves');
+  expect(ticks).not.toContain('Board');
+  expect(stdout.indexOf('=== Ticks ===')).toBeLessThan(stdout.indexOf('=== Zone moves ==='));
+  expect(zoneMoves).toContain('player-1');
+  expect(zoneMoves).toContain('outer');
+  expect(zoneMoves).toContain('middle');
+  expect(zoneMoves).toContain('retreat_intercepted (retreat cancelled by interceptor)');
+  expect(zoneMoves).toContain('pirate-1');
+  expect(zoneMoves).toContain('pulled_closer');
+  expect(zoneMoves).not.toContain('pulled_closer (');
+});
+
+test('get_battle_log places Zone moves between Boarding and Captures', () => {
+  const fixture = structuredClone(battleLogBoardingFixture) as Record<string, unknown>;
+  const entries = fixture.entries as Array<Record<string, unknown>>;
+  const firstEntry = entries[0];
+  expect(firstEntry).toBeDefined();
+  if (!firstEntry) return;
+  firstEntry.zone_moves = [
+    {
+      player_id: 'player-1',
+      old_zone: 'outer',
+      new_zone: 'middle',
+      reason: 'retreat_intercepted',
+    },
+  ];
+  const stdout = renderBattleLog(fixture);
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(ticks).toContain('Board');
+  expect(ticks).toContain('Moves');
+  expect(ticks).toContain('Captures');
+  expect(stdout.indexOf('=== Boarding ===')).toBeLessThan(stdout.indexOf('=== Zone moves ==='));
+  expect(stdout.indexOf('=== Zone moves ===')).toBeLessThan(stdout.indexOf('=== Captures ==='));
 });
 
 test('get_battle_log prints boarding detail tables after ticks when there are no attacks', () => {
