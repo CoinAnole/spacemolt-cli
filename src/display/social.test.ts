@@ -5,6 +5,8 @@ import { facilityBillingPaused, withPausedRentSuffix } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   actionLogCursorFixture,
+  actionLogFixture,
+  actionLogPersonnelCaptureFixture,
   battleLogBoardingFixture,
   battleLogFixture,
   battleLogInterruptedFixture,
@@ -132,6 +134,14 @@ test('renders cursor action-log entries in server order with the next polling cu
   expect(stdout).toContain('Summary');
   expect(stdout).toContain('Category');
   expect(stdout).toContain('Event');
+  expect(stdout).toContain('Runs');
+  expect(stdout).toContain('Venue');
+  expect(stdout).toContain('4');
+  expect(stdout).toContain('alloy-foundry');
+  expect(stdout).toContain('Ship');
+  expect(stdout).toContain('ship-prospector-42');
+  expect(stdout).toContain('Base');
+  expect(stdout).toContain('nova-terra-central');
   expect(stdout).toContain('More entries available.');
   expect(stdout).toContain('Next since_id: 105');
   expect(stdout).not.toContain('=== Response ===');
@@ -156,6 +166,71 @@ test('omits malformed action-log cursors from human output', () => {
     expect(stdout).not.toContain('Next since_id:');
     expect(stdout).toContain('Faction production cycle completed.');
   }
+});
+
+test('lifts nested craft receipt fields into action-log table columns', () => {
+  const rendered = renderStructuredResult('get_action_log', structuredClone(actionLogFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Job');
+  expect(stdout).toContain('Mode');
+  expect(stdout).toContain('Runs');
+  expect(stdout).toContain('Venue');
+  expect(stdout).toContain('Storage');
+  expect(stdout).toContain('job-craft-1');
+  expect(stdout).toContain('job-craft-42');
+  expect(stdout).toContain('craft');
+  expect(stdout).toContain('10');
+  expect(stdout).toContain('player-refinery');
+  expect(stdout).toContain('faction');
+  expect(stdout).toContain('Commission');
+  expect(stdout).toContain('commission-1');
+  expect(stdout).toContain('Ship');
+  expect(stdout).toContain('ship-42');
+  expect(stdout).toContain('Class');
+  expect(stdout).toContain('prospector');
+  expect(stdout).toContain('Base');
+  expect(stdout).toContain('Earth Station');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders recruit/treat costs and capture insurance from action-log data', () => {
+  const rendered = renderStructuredResult(
+    'get_action_log',
+    structuredClone(actionLogPersonnelCaptureFixture),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('ship.recruit_personnel');
+  expect(stdout).toContain('ship.treat_personnel');
+  expect(stdout).toContain('combat.ship_captured');
+  expect(stdout).toContain('combat.ship_lost_to_capture');
+  expect(stdout).toContain('Crew');
+  expect(stdout).toContain('Marines');
+  expect(stdout).toContain('Cost');
+  expect(stdout).toContain('Base');
+  expect(stdout).toContain('Source');
+  expect(stdout).toContain('Insurance');
+  expect(stdout).toContain('4');
+  expect(stdout).toContain('2');
+  expect(stdout).toContain('900cr');
+  expect(stdout).toContain('125cr');
+  expect(stdout).toContain('Earth Station');
+  expect(stdout).toContain('station');
+  expect(stdout).toContain('ship-skiff-7');
+  expect(stdout).toContain('skiff');
+  expect(stdout).toContain('ship-42');
+  expect(stdout).toContain('prospector');
+  const capturedRow = stdout.split('\n').find((line) => line.includes('combat.ship_captured'));
+  const lostRow = stdout.split('\n').find((line) => line.includes('combat.ship_lost_to_capture'));
+  expect(capturedRow).toMatch(/\bno\b/);
+  expect(lostRow).toMatch(/\byes\b/);
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
 });
 
 test('renders ranch status as a dashboard with feed and production tables', () => {

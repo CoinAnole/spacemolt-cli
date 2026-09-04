@@ -1261,7 +1261,7 @@ export const socialFixtureCases = {
  * Multi-entry GetActionLogResponse sample (schema-shaped).
  * Entry ids are integers; optional job/mode/runs/venue/storage live under `data`
  * so they do not create extra-in-fixture drift against additionalProperties: false.
- * Selected receipt IDs are projected into dedicated table columns while all action
+ * Nested receipt scalars are lifted into dedicated table columns while all action
  * data remains nested in machine formats.
  */
 export const actionLogFixture = {
@@ -1325,6 +1325,75 @@ export const actionLogFixture = {
         ship_name: 'Prospector',
         base_id: 'earth_station',
         base_name: 'Earth Station',
+      },
+    },
+  ],
+};
+
+/** Recruit/treat costs and boarding capture insurance flags in action-log data (v0.582.0). */
+export const actionLogPersonnelCaptureFixture = {
+  category: 'all',
+  has_more: false,
+  page: 1,
+  page_size: 50,
+  total: 4,
+  total_pages: 1,
+  entries: [
+    {
+      id: 201,
+      created_at: '2026-09-03T10:00:00.000Z',
+      summary: 'Hired 4 crew and 2 marines at Earth Station.',
+      category: 'ship',
+      event_type: 'ship.recruit_personnel',
+      data: {
+        crew_recruited: 4,
+        marines_recruited: 2,
+        cost: 900,
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+      },
+    },
+    {
+      id: 202,
+      created_at: '2026-09-03T10:05:00.000Z',
+      summary: 'Treated 3 crew and 1 marine at Earth Station infirmary.',
+      category: 'ship',
+      event_type: 'ship.treat_personnel',
+      data: {
+        crew_treated: 3,
+        marines_treated: 1,
+        cost: 125,
+        source: 'station',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+      },
+    },
+    {
+      id: 203,
+      created_at: '2026-09-03T10:10:00.000Z',
+      summary: 'Captured Pirate Skiff intact.',
+      category: 'combat',
+      event_type: 'combat.ship_captured',
+      data: {
+        ship_id: 'ship-skiff-7',
+        ship_class: 'skiff',
+        insurance_voided: false,
+        battle_id: 'battle-42',
+        boarding_operation_id: 'board-1',
+      },
+    },
+    {
+      id: 204,
+      created_at: '2026-09-03T10:12:00.000Z',
+      summary: 'Lost Prospector to boarding capture; insurance voided.',
+      category: 'combat',
+      event_type: 'combat.ship_lost_to_capture',
+      data: {
+        ship_id: 'ship-42',
+        ship_class: 'prospector',
+        insurance_voided: true,
+        battle_id: 'battle-42',
+        boarding_operation_id: 'board-2',
       },
     },
   ],
@@ -1546,6 +1615,10 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_chat_history: { command: 'get_chat_history', fixture: chatHistoryFixture },
   get_action_log: { command: 'get_action_log', fixture: actionLogFixture },
   get_action_log_cursor: { command: 'get_action_log', fixture: actionLogCursorFixture },
+  get_action_log_personnel_capture: {
+    command: 'get_action_log',
+    fixture: actionLogPersonnelCaptureFixture,
+  },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
   faction_info: { command: 'faction_info', fixture: factionInfoFixture },

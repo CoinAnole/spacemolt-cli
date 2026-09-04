@@ -1249,12 +1249,39 @@ export const socialFormatters = [
       const category = r.category || 'all';
       const rows = r.entries.filter(isRecord).map((entry) => {
         const data = isRecord(entry.data) ? entry.data : undefined;
+        const scalarFrom = (key: string): unknown =>
+          entry[key] !== undefined && entry[key] !== null && entry[key] !== '' ? entry[key] : data?.[key];
+        const crewRecruited = scalarFrom('crew_recruited');
+        const crewTreated = scalarFrom('crew_treated');
+        const marinesRecruited = scalarFrom('marines_recruited');
+        const marinesTreated = scalarFrom('marines_treated');
+        const insuranceVoided = scalarFrom('insurance_voided');
         return {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
           category: entry.category ?? category,
           commission_id: identifierText(entry.commission_id) ?? identifierText(data?.commission_id),
           ship_id: identifierText(entry.ship_id) ?? identifierText(data?.ship_id),
+          job_id: identifierText(entry.job_id) ?? identifierText(data?.job_id),
+          mode: scalarFrom('mode'),
+          runs: scalarFrom('runs'),
+          venue: scalarFrom('venue'),
+          storage: scalarFrom('storage'),
+          crew_recruited: crewRecruited,
+          marines_recruited: marinesRecruited,
+          crew_treated: crewTreated,
+          marines_treated: marinesTreated,
+          cost: scalarFrom('cost'),
+          base_id: scalarFrom('base_id'),
+          base_name: scalarFrom('base_name'),
+          source: scalarFrom('source'),
+          insurance_voided: insuranceVoided,
+          ship_class: scalarFrom('ship_class'),
+          crew_display: formatNumber(crewRecruited) ?? formatNumber(crewTreated),
+          marines_display: formatNumber(marinesRecruited) ?? formatNumber(marinesTreated),
+          base_display: identifierText(scalarFrom('base_name')) ?? identifierText(scalarFrom('base_id')),
+          insurance_voided_display: formatYesNo(insuranceVoided),
+          cost_display: formatCredits(scalarFrom('cost')) ?? formatNumber(scalarFrom('cost')),
         };
       });
       const columns: Array<[string, string[]]> = [
@@ -1265,11 +1292,26 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['event_type', 'type'])) columns.push(['Event', ['event_type', 'type']]);
       if (hasAnyField(rows, ['commission_id'])) columns.push(['Commission', ['commission_id']]);
       if (hasAnyField(rows, ['ship_id'])) columns.push(['Ship', ['ship_id']]);
+      if (hasAnyField(rows, ['ship_class'])) columns.push(['Class', ['ship_class']]);
       if (hasAnyField(rows, ['job_id'])) columns.push(['Job', ['job_id']]);
       if (hasAnyField(rows, ['mode'])) columns.push(['Mode', ['mode']]);
       if (hasAnyField(rows, ['runs'])) columns.push(['Runs', ['runs']]);
       if (hasAnyField(rows, ['venue'])) columns.push(['Venue', ['venue']]);
       if (hasAnyField(rows, ['storage'])) columns.push(['Storage', ['storage']]);
+      if (hasAnyField(rows, ['crew_display', 'crew_recruited', 'crew_treated'])) {
+        columns.push(['Crew', ['crew_display', 'crew_recruited', 'crew_treated']]);
+      }
+      if (hasAnyField(rows, ['marines_display', 'marines_recruited', 'marines_treated'])) {
+        columns.push(['Marines', ['marines_display', 'marines_recruited', 'marines_treated']]);
+      }
+      if (hasAnyField(rows, ['cost_display', 'cost'])) columns.push(['Cost', ['cost_display', 'cost']]);
+      if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
+        columns.push(['Base', ['base_display', 'base_name', 'base_id']]);
+      }
+      if (hasAnyField(rows, ['source'])) columns.push(['Source', ['source']]);
+      if (hasAnyField(rows, ['insurance_voided_display', 'insurance_voided'])) {
+        columns.push(['Insurance', ['insurance_voided_display', 'insurance_voided']]);
+      }
       emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);

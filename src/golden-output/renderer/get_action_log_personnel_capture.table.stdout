@@ -1,0 +1,10 @@
+category all
+
+=== Entries ===
+
+  Timestamp           | Summary                                                 | Category | Event                       | Ship         | Class      | Crew | Marines | Cost  | Base          | Source  | Insurance
+  --------------------+---------------------------------------------------------+----------+-----------------------------+--------------+------------+------+---------+-------+---------------+---------+----------
+  2026-09-03 10:00:00 | Hired 4 crew and 2 marines at Earth Station.            | ship     | ship.recruit_personnel      |              |            | 4    | 2       | 900cr | Earth Station |         |          
+  2026-09-03 10:05:00 | Treated 3 crew and 1 marine at Earth Station infirmary. | ship     | ship.treat_personnel        |              |            | 3    | 1       | 125cr | Earth Station | station |          
+  2026-09-03 10:10:00 | Captured Pirate Skiff intact.                           | combat   | combat.ship_captured        | ship-skiff-7 | skiff      |      |         |       |               |         | no       
+  2026-09-03 10:12:00 | Lost Prospector to boarding capture; insurance voided.  | combat   | combat.ship_lost_to_capture | ship-42      | prospector |      |         |       |               |         | yes      
