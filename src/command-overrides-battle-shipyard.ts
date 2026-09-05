@@ -5,7 +5,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       "Show your arena lobby: whether your current POI hosts arena matches, lifetime wins/losses/knockouts, any incoming or outgoing challenge, the arena battle you are in, and today's arena XP per skill against the daily cap.",
     example: 'spacemolt arena status',
-    seeAlso: ['arena_challenge', 'arena_accept', 'get_battle_status', 'get_nearby'],
+    seeAlso: ['arena_challenge', 'arena_accept', 'arena_challenges', 'arena_fight', 'get_battle_status', 'get_nearby'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_arena/status',
   },
@@ -45,6 +45,27 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     seeAlso: ['arena_status', 'arena_challenge'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_arena/cancel',
+  },
+  arena_challenges: {
+    description:
+      'List every NPC arena trial by series and stage: whether it is ready here, needs travel, or is locked, the enemy line, active loadout rules, and your win count. Start one with arena fight <challenge_id>.',
+    example: 'spacemolt arena challenges',
+    discoverWith: ['arena_status', 'get_poi'],
+    seeAlso: ['arena_fight', 'arena_status', 'get_battle_status'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/challenges',
+  },
+  arena_fight: {
+    usage: '<challenge_id>',
+    description:
+      'Start an unlocked NPC trial at this arena. challenge_id comes from arena challenges. Locked trials refuse with challenge_locked. Fleet members at the arena join your side when the rules allow. Fight it with get_battle_status, battle_target, and battle_stance.',
+    example: 'spacemolt arena fight two_on_one',
+    discoverWith: ['arena_challenges'],
+    seeAlso: ['arena_challenges', 'get_battle_status', 'battle_target', 'battle_stance'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_arena/fight',
+    positionals: ['challenge_id'],
+    aliases: { challenge_id: 'id' },
   },
   battle_engage: {
     usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
