@@ -237,6 +237,11 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_salvage/scrap',
   },
   sell_wreck: {
+    description:
+      "Sell a towed wreck to an NPC salvage yard for credits. The yard pays a fraction of the hull materials and remaining cargo at local market value from the station manager's credits. A broke manager may pay less than the offer (the message says so). Player-owned yards refuse; use scrap_wreck there instead.",
+    example: 'spacemolt sell_wreck',
+    discoverWith: ['get_wrecks', 'get_status'],
+    seeAlso: ['scrap_wreck', 'tow_wreck', 'get_wrecks', 'view_market'],
     category: 'Salvage & Tow',
     apiRoute: 'POST /api/v2/spacemolt_salvage/sell',
   },

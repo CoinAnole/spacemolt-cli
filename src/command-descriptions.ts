@@ -133,7 +133,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   scrap_wreck: "Scrap a towed wreck at a salvage yard or your faction's own player station.",
   search_systems: 'Search for systems by name',
   self_destruct: 'Destroy your own ship',
-  sell_wreck: 'Sell a towed wreck to the salvage yard for credits',
+  sell_wreck: 'Sell a towed wreck to an NPC salvage yard for credits',
   service_prize: 'Stop, resume, redirect, refuel, or repair a claimed intact prize',
   set_colors: 'Set your ship colors',
   set_drone_name: 'Set or clear a display name for a drone.',

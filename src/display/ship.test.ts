@@ -2,7 +2,14 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import { formatCrewRatio } from './personnel.ts';
-import { factionGaragesFixture, listShipsFixture, shipFixture, shipIncapacitatedFixture } from './ship.fixtures.ts';
+import {
+  factionGaragesFixture,
+  listShipsFixture,
+  sellWreckFixture,
+  sellWreckPartialPayFixture,
+  shipFixture,
+  shipIncapacitatedFixture,
+} from './ship.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -440,4 +447,64 @@ test('get_ship omits Survivor recovery when only personnel_recovery_tick is set'
   const stdout = renderShip(fixture).stdout.join('\n');
   expect(stdout).not.toContain('Survivor recovery:');
   expect(stdout).not.toContain('tick 12600');
+});
+
+function renderSellWreck(fixture: Record<string, unknown>) {
+  return renderStructuredResult('sell_wreck', structuredClone(fixture), options, context);
+}
+
+test('sell_wreck prints Offer and Paid when they match', () => {
+  const stdout = renderSellWreck(sellWreckFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Sold ===');
+  expect(stdout).toContain('Wreck: wreck-1 (skiff)');
+  expect(stdout).toContain('Offer: 500 cr');
+  expect(stdout).toContain('Paid: 500 cr');
+  expect(stdout).toContain('Salvage value: 400 cr');
+  expect(stdout).toContain('New balance: 2,400 cr');
+  expect(stdout).toContain('Sold wreck.');
+  expect(stdout).not.toContain('less than offer');
+  expect(stdout).not.toContain('Cargo Value');
+  expect(stdout).not.toContain('Total Payout');
+  expect(stdout).not.toContain('=== Sell Complete ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('sell_wreck labels a shortfall when paid is less than offer', () => {
+  const stdout = renderSellWreck(sellWreckPartialPayFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Sold ===');
+  expect(stdout).toContain('Offer: 500 cr');
+  expect(stdout).toContain('Paid: 350 cr (150 cr less than offer)');
+  expect(stdout).toContain('New balance: 2,250 cr');
+  expect(stdout).toContain('Station manager was short on credits and paid what they could.');
+  expect(stdout).not.toContain('=== Sell Complete ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('sell_wreck declines without an offer pair', () => {
+  const fixture = structuredClone(sellWreckFixture) as { details: Record<string, unknown> };
+  delete fixture.details.offer;
+  const stdout = renderSellWreck(fixture).stdout.join('\n');
+  expect(stdout).not.toContain('=== Wreck Sold ===');
+  expect(stdout).not.toContain('=== Sell Complete ===');
+  expect(
+    stdout.includes('=== Sell Wreck ===') || stdout.includes('Total Payout') || stdout.includes('=== Response ==='),
+  ).toBe(true);
+});
+
+test('sell_wreck does not claim a market sell shape', () => {
+  const stdout = renderSellWreck({
+    details: {
+      action: 'sell_wreck',
+      wreck_id: 'wreck-1',
+      offer: 500,
+      total_payout: 500,
+      new_balance: 2400,
+      item: 'iron_ore',
+      quantity_sold: 10,
+      fills: [{ quantity: 10, price_each: 50, subtotal: 500 }],
+      message: 'Sold items.',
+    },
+  }).stdout.join('\n');
+  expect(stdout).not.toContain('=== Wreck Sold ===');
+  expect(stdout).not.toContain('=== Sell Complete ===');
 });

@@ -1,10 +1,8 @@
 
-=== Sell Wreck ===
-Action: sell_wreck
-Wreck Id: wreck-1
-Message: Sold wreck.
-New Balance: 2400
-Total Payout: 500
-Salvage Value: 400
-Cargo Value: 100
-Ship Class: skiff
+=== Wreck Sold ===
+Wreck: wreck-1 (skiff)
+Offer: 500 cr
+Paid: 500 cr
+Salvage value: 400 cr
+New balance: 2,400 cr
+Sold wreck.

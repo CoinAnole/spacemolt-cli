@@ -1,0 +1,12 @@
+
+details:
+  action: sell_wreck
+  wreck_id: "wreck-1"
+  message: "Station manager was short on credits and paid what they could."
+  new_balance: 2250
+  offer: 500
+  total_payout: 350
+  salvage_value: 400
+  ship_class: skiff
+player:
+  credits: 2250

@@ -84,6 +84,45 @@ function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
 
+type SellWreckReceipt = {
+  wreckId: string;
+  offer: number;
+  paid: number;
+  newBalance: number;
+  salvageValue?: number;
+  shipClass?: string;
+  message?: string;
+};
+
+function readSellWreckReceipt(r: Record<string, unknown>): SellWreckReceipt | undefined {
+  if (r.action !== 'sell_wreck') return undefined;
+  if (r.fills !== undefined || r.quantity_sold !== undefined || r.item !== undefined) return undefined;
+  if (typeof r.wreck_id !== 'string' || r.wreck_id === '') return undefined;
+  const offer = finiteNumber(r.offer);
+  const paid = finiteNumber(r.total_payout);
+  const newBalance = finiteNumber(r.new_balance);
+  if (offer === undefined || paid === undefined || newBalance === undefined) return undefined;
+  const salvageValue = finiteNumber(r.salvage_value);
+  const shipClass = typeof r.ship_class === 'string' && r.ship_class !== '' ? r.ship_class : undefined;
+  const message = typeof r.message === 'string' && r.message !== '' ? r.message : undefined;
+  return {
+    wreckId: r.wreck_id,
+    offer,
+    paid,
+    newBalance,
+    salvageValue,
+    shipClass,
+    message,
+  };
+}
+
+function formatPaidVersusOffer(offer: number, paid: number): string {
+  if (paid < offer) {
+    return `Paid: ${formatCredits(paid)} (${formatCredits(offer - paid)} less than offer)`;
+  }
+  return `Paid: ${formatCredits(paid)}`;
+}
+
 function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
   return rows.some((row) =>
     fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''),
@@ -559,6 +598,22 @@ export const shipFormatters = [
       return true;
     },
     { commands: ['get_wrecks'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      const receipt = readSellWreckReceipt(r);
+      if (!receipt) return false;
+      emitLine(`\n${c.bright}=== Wreck Sold ===${c.reset}`);
+      emitLine(`Wreck: ${receipt.wreckId}${receipt.shipClass ? ` (${receipt.shipClass})` : ''}`);
+      emitLine(`Offer: ${formatCredits(receipt.offer)}`);
+      emitLine(formatPaidVersusOffer(receipt.offer, receipt.paid));
+      if (receipt.salvageValue !== undefined) emitLine(`Salvage value: ${formatCredits(receipt.salvageValue)}`);
+      emitLine(`New balance: ${formatCredits(receipt.newBalance)}`);
+      if (receipt.message) emitLine(`${c.dim}${receipt.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['sell_wreck'], shapeFallback: true },
   ),
 
   // Drones

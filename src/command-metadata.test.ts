@@ -2150,6 +2150,15 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
 
+  test('sell_wreck documents NPC salvage yard trade', () => {
+    expect(COMMANDS.sell_wreck?.description).toContain('NPC salvage yard');
+    expect(COMMANDS.sell_wreck?.description).toContain('Player-owned');
+    expect(COMMANDS.sell_wreck?.description).toContain('scrap_wreck');
+    expect(COMMANDS.sell_wreck?.seeAlso).toEqual(['scrap_wreck', 'tow_wreck', 'get_wrecks', 'view_market']);
+    expect(COMMANDS.sell_wreck?.seeAlso).toContain('view_market');
+    expect(COMMANDS.sell_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'sell', method: 'POST' });
+  });
+
   test('get_map documents optional system_id and chart description', () => {
     const config = COMMANDS.get_map;
     expect(config).toBeDefined();

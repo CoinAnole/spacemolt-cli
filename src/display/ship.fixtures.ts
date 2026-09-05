@@ -427,12 +427,26 @@ export const sellWreckFixture = {
     wreck_id: 'wreck-1',
     message: 'Sold wreck.',
     new_balance: 2400,
+    offer: 500,
     total_payout: 500,
     salvage_value: 400,
-    cargo_value: 100,
     ship_class: 'skiff',
   },
   player: { credits: 2400 },
+};
+
+export const sellWreckPartialPayFixture = {
+  details: {
+    action: 'sell_wreck',
+    wreck_id: 'wreck-1',
+    message: 'Station manager was short on credits and paid what they could.',
+    new_balance: 2250,
+    offer: 500,
+    total_payout: 350,
+    salvage_value: 400,
+    ship_class: 'skiff',
+  },
+  player: { credits: 2250 },
 };
 
 export const reloadFixture = {
@@ -618,6 +632,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   release_tow: { command: 'release_tow', fixture: releaseTowFixture },
   scrap_wreck: { command: 'scrap_wreck', fixture: scrapWreckFixture },
   sell_wreck: { command: 'sell_wreck', fixture: sellWreckFixture },
+  sell_wreck_partial: { command: 'sell_wreck', fixture: sellWreckPartialPayFixture },
   refuel: { command: 'refuel', fixture: refuelFixture, schemaTarget: 'details' },
   refuel_station: { command: 'refuel', fixture: stationRefuelFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },

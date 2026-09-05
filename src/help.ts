@@ -1136,7 +1136,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     tow_wreck <wreck_id>      Tow a wreck
     release_tow               Release towed wreck
     scrap_wreck               Scrap towed wreck at salvage yard or faction station
-    sell_wreck                Sell towed wreck at station
+    sell_wreck                Sell towed wreck to NPC salvage yard for credits
     claim_prize <prize_id> <station>  Assign crew and recover an intact prize
     service_prize <prize_id> <action> Stop/resume/redirect/refuel/repair a prize
 
