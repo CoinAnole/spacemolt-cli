@@ -850,6 +850,100 @@ test('get_location prints nearby prizes after players and before pirate counts',
   expect(piratesIdx).toBeGreaterThan(prizesIdx);
 });
 
+test('get_location formats a jump in transit when identity fields are empty strings', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      credits: 1781133,
+      location: {
+        connections: [],
+        docked_at: null,
+        empire: '',
+        in_transit: true,
+        poi_id: '',
+        poi_name: '',
+        poi_type: '',
+        system_id: '',
+        system_name: '',
+        security_status: '',
+        transit_arrival_tick: 1799077,
+        transit_dest_system_id: 'antares',
+        transit_dest_system_name: 'Antares',
+        transit_type: 'jump',
+      },
+      message: 'Current location',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).toContain('Credits: 1,781,133');
+  expect(stdout).toContain('Transit: jump → Antares (antares)');
+  expect(stdout).toContain('Arrival tick: 1799077');
+  expect(stdout).not.toContain('System:');
+  expect(stdout).not.toContain('POI:');
+});
+
+test('get_location prints travel transit alongside the current system', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        empire: 'Terran',
+        in_transit: true,
+        poi_id: '',
+        poi_name: '',
+        poi_type: '',
+        transit_arrival_tick: 42,
+        transit_dest_poi_id: 'sol-station',
+        transit_dest_poi_name: 'Sol Station',
+        transit_type: 'travel',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('System: Sol (sol)');
+  expect(stdout).toContain('Transit: travel → Sol Station (sol-station)');
+  expect(stdout).toContain('Arrival tick: 42');
+});
+
+test('get_location prints pathfinder drift details', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: '',
+        system_name: '',
+        poi_id: '',
+        poi_name: '',
+        in_transit: true,
+        transit_type: 'pathfinder',
+        transit_bearing: 270,
+        transit_x: 12.5,
+        transit_y: -3,
+        transit_ticks_elapsed: 17,
+        void_message: 'Stars thin out behind you.',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('Transit: pathfinder');
+  expect(stdout).toContain('Bearing: 270°');
+  expect(stdout).toContain('Position: 12.5, -3');
+  expect(stdout).toContain('Ticks elapsed: 17');
+  expect(stdout).toContain('Stars thin out behind you.');
+});
+
 test('get_status and get_state print location.nearby_prizes', () => {
   for (const command of ['get_status', 'get_state'] as const) {
     const stdout = renderStructuredResult(command, structuredClone(getStatusFixture), options, context).stdout.join(
