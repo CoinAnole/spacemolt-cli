@@ -749,33 +749,60 @@ describe('command metadata', () => {
   test('arena group claims curated flats with distinct Battle copy and challenge player alias', () => {
     const arena = BUNDLED_COMMAND_REGISTRY.commandGroups.arena;
     expect(arena).toBeDefined();
-    expect(Object.keys(arena?.actions ?? {}).sort()).toEqual(['accept', 'cancel', 'challenge', 'decline', 'status']);
+    expect(Object.keys(arena?.actions ?? {}).sort()).toEqual([
+      'accept',
+      'cancel',
+      'challenge',
+      'challenges',
+      'decline',
+      'fight',
+      'status',
+    ]);
 
     const status = arena?.actions.status?.config;
     const challenge = arena?.actions.challenge?.config;
     const accept = arena?.actions.accept?.config;
     const decline = arena?.actions.decline?.config;
     const cancel = arena?.actions.cancel?.config;
+    const challenges = arena?.actions.challenges?.config;
+    const fight = arena?.actions.fight?.config;
 
     expect(status?.category).toBe('Battle');
     expect(challenge?.category).toBe('Battle');
     expect(accept?.category).toBe('Battle');
     expect(decline?.category).toBe('Battle');
     expect(cancel?.category).toBe('Battle');
+    expect(challenges?.category).toBe('Battle');
+    expect(fight?.category).toBe('Battle');
 
     expect(status?.description).toContain('arena lobby');
     expect(challenge?.description).toContain('Challenge a pilot');
     expect(accept?.description).toContain('Accept the incoming arena challenge');
     expect(decline?.description).toContain('Decline the incoming arena challenge');
     expect(cancel?.description).toContain('Withdraw your own unanswered arena challenge');
+    expect(challenges?.description).toContain('NPC arena trial');
+    expect(challenges?.description).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+    expect(fight?.description).toContain('unlocked NPC trial');
+    expect(fight?.description).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
 
-    const descriptions = [status, challenge, accept, decline, cancel].map((config) => config?.description);
-    expect(new Set(descriptions).size).toBe(5);
+    const descriptions = [status, challenge, accept, decline, cancel, challenges, fight].map(
+      (config) => config?.description,
+    );
+    expect(new Set(descriptions).size).toBe(7);
     const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_arena/status']?.summary ?? '';
     expect(generatedSummary).toBeTruthy();
     for (const description of descriptions) {
       expect(description).not.toBe(generatedSummary);
     }
+
+    expect(fight?.usage).toContain('<challenge_id>');
+    expect(fight?.args).toEqual(['challenge_id']);
+    expect(fight?.required).toEqual(['challenge_id']);
+    expect(fight?.aliases).toEqual({ challenge_id: 'id' });
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_fight?.positionals).toEqual(['challenge_id']);
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_fight?.aliases).toEqual({ challenge_id: 'id' });
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenges?.discoverWith).toEqual(['arena_status', 'get_poi']);
+    expect(status?.seeAlso).toEqual(expect.arrayContaining(['arena_challenges', 'arena_fight']));
 
     expect(challenge?.usage).toContain('<player>');
     expect(challenge?.usage).toContain('[max_side_size=N]');
@@ -803,6 +830,8 @@ describe('command metadata', () => {
 
     expect(captureFullHelp()).toContain('arena status              Arena lobby: record, pending challenges, XP cap');
     expect(captureFullHelp()).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
+    expect(captureFullHelp()).toContain('arena challenges          NPC trials by series: READY / TRAVEL / LOCKED');
+    expect(captureFullHelp()).toContain('arena fight <id>          Start an unlocked NPC trial at this arena');
   });
 
   test('unload_passenger help documents all-passenger bulk unload', () => {

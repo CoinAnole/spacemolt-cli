@@ -1,0 +1,47 @@
+{
+  "details": {
+    "action": "fight",
+    "challenge_id": "two_on_one",
+    "name": "Two on One",
+    "battle_id": "btl-7e1",
+    "your_side": 2,
+    "enemy_side": 1,
+    "participants": [
+      {
+        "player_id": "npc-rc-1",
+        "username": "Ring Cleaver 1",
+        "side_id": 1
+      },
+      {
+        "player_id": "npc-rc-2",
+        "username": "Ring Cleaver 2",
+        "side_id": 1
+      },
+      {
+        "player_id": "player-12",
+        "username": "Coin",
+        "side_id": 2
+      }
+    ],
+    "enemies": [
+      {
+        "name": "Ring Cleaver",
+        "ship_class": "ring_cleaver",
+        "ship_class_name": "Fighter",
+        "count": 2,
+        "is_boss": false
+      }
+    ],
+    "message": "Trial started: Two on One"
+  },
+  "ship": {
+    "id": "ship-wayfarer",
+    "name": "Wayfarer",
+    "cargo_used": 0,
+    "cargo_capacity": 500
+  },
+  "location": {
+    "poi_id": "36_ophiuchi_belt",
+    "system_id": "36_ophiuchi"
+  }
+}

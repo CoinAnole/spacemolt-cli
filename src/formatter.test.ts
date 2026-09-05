@@ -6749,6 +6749,56 @@ describe('structuredContent formatters', () => {
         Next: arena status (wait for an answer) · arena cancel (withdraw)
         Kestrel has until tick 41260 to answer."
       ,
+        "arena_challenges": 
+      "
+      === NPC Trials ===
+      Ready here: 1   Travel: 0   Locked: 14
+
+      Blood Arena  @ Blood Arena  — you are here
+        READY   1  First Blood        first_blood       3 wins
+                   1× Ring Cleaver (Fighter) · solo duel
+        READY   2  Two on One         two_on_one
+                   2× Ring Cleaver (Fighter) · solo duel
+        LOCKED  3  The Trial Master   trial_master      needs Two on One
+        LOCKED  4  Gravemaker         gravemaker        needs The Trial Master
+
+      Hauler's Gauntlet  @ Blood Arena  — you are here
+        LOCKED  1  Hauler's Gauntlet  haulers_gauntlet  needs First Blood
+
+      Clean Fight  @ Blood Arena  — you are here
+        LOCKED  1  Clean Fight        clean_fight       needs First Blood
+
+      The Swarm  @ Blood Arena  — you are here
+        LOCKED  1  Ten Shards         ten_shards        needs First Blood
+        LOCKED  2  Twenty Shards      twenty_shards     needs Ten Shards
+        LOCKED  3  Thirty Shards      thirty_shards     needs Twenty Shards
+        LOCKED  4  Forty Shards       forty_shards      needs Thirty Shards
+        LOCKED  5  Fifty Shards       fifty_shards      needs Forty Shards
+        LOCKED  6  Sixty Shards       sixty_shards      needs Fifty Shards
+        LOCKED  7  Seventy Shards     seventy_shards    needs Sixty Shards
+        LOCKED  8  Eighty Shards      eighty_shards     needs Seventy Shards
+        LOCKED  9  Ninety Shards      ninety_shards     needs Eighty Shards
+        LOCKED 10  The Century        the_century       needs Ninety Shards
+
+      Next: arena fight two_on_one"
+      ,
+        "arena_fight": 
+      "
+      === Trial started: Two on One ===
+      Battle: btl-7e1   Challenge: two_on_one
+      Your side: 2   Enemy side: 1
+      Enemies: 2× Ring Cleaver (Fighter)
+
+      === Participants ===
+
+        Side | Team  | Pilot          | Player ID
+        -----+-------+----------------+----------
+        1    | enemy | Ring Cleaver 1 | npc-rc-1
+        1    | enemy | Ring Cleaver 2 | npc-rc-2
+        2    | yours | Coin (you)     | player-12
+
+      Next: get_battle_status · battle_target <pilot> · battle_stance <stance>"
+      ,
         "arena_status": 
       "
       === Arena ===
