@@ -5,20 +5,33 @@ import {
   arenaAcceptFixture,
   arenaCancelFixture,
   arenaChallengeFixture,
+  arenaChallengesEmptyFixture,
+  arenaChallengesFixture,
+  arenaChallengesTravelFixture,
   arenaDeclineFixture,
+  arenaFightFixture,
   arenaStatusIdleFixture,
   arenaStatusInBattleFixture,
   arenaStatusIncomingFixture,
+  sixteenTrialMidSeries,
+  trialDef,
 } from './arena.fixtures.ts';
 import {
   arenaStatLines,
   battleLabels,
   battleRulesetFromCategory,
   battleRulesetFromLogEntries,
+  countLedger,
   formatArenaPoiLine,
   formatArenaRecord,
   formatArenaSideSize,
+  formatEnemyDigest,
+  formatRuleDigest,
+  groupTrialsBySeries,
   readArenaRecord,
+  suggestedFight,
+  trialNameIndex,
+  trialReadiness,
 } from './arena.ts';
 import { renderStructuredResult } from './index.ts';
 
@@ -234,6 +247,194 @@ test('declines malformed arena shapes and keeps the raw fallback', () => {
   expect(output('arena_status', { at_arena: 'yes', arena_wins: 3 })).toContain('=== Response ===');
   expect(output('arena_accept', { details: { action: 'accept', battle_id: 'btl-5c3' } })).toContain('=== Response ===');
   expect(output('arena_decline', { details: { action: 'decline' } })).toContain('=== Response ===');
+});
+
+test('trialReadiness keeps wins as a badge and carries travel/locked payloads', () => {
+  const names = new Map([
+    ['two_on_one', 'Two on One'],
+    ['first_blood', 'First Blood'],
+  ]);
+  expect(
+    trialReadiness(
+      trialDef({ challenge_id: 'two_on_one', name: 'Two on One', series: 'Blood Arena', stage: 2, wins: 3 }),
+      names,
+    ),
+  ).toEqual({ kind: 'ready' });
+  expect(
+    trialReadiness(
+      trialDef({
+        challenge_id: 'two_on_one',
+        name: 'Two on One',
+        series: 'Blood Arena',
+        stage: 2,
+        at_this_arena: false,
+      }),
+      names,
+    ),
+  ).toEqual({ kind: 'travel', poi_name: 'Blood Arena', poi_id: 'krynn_blood_arena' });
+  expect(
+    trialReadiness(
+      trialDef({
+        challenge_id: 'trial_master',
+        name: 'The Trial Master',
+        series: 'Blood Arena',
+        stage: 3,
+        locked: true,
+        requires: ['two_on_one', 'missing_id'],
+      }),
+      names,
+    ),
+  ).toEqual({ kind: 'locked', needs: ['Two on One', 'missing_id'] });
+});
+
+test('groupTrialsBySeries preserves server order and marks here from any row', () => {
+  const sections = groupTrialsBySeries([
+    trialDef({ challenge_id: 'a', name: 'A', series: 'Blood Arena', stage: 1 }),
+    trialDef({ challenge_id: 'b', name: 'B', series: 'Blood Arena', stage: 2, at_this_arena: false }),
+    trialDef({
+      challenge_id: 'c',
+      name: 'C',
+      series: 'The Swarm',
+      stage: 1,
+      locked: true,
+      at_this_arena: false,
+      poi_name: 'Other Arena',
+      poi_id: 'other_arena',
+    }),
+  ]);
+  expect(sections).toHaveLength(2);
+  expect(sections[0]?.series).toBe('Blood Arena');
+  expect(sections[0]?.here).toBe(true);
+  expect(sections[0]?.trials).toHaveLength(2);
+  expect(sections[1]?.series).toBe('The Swarm');
+  expect(sections[1]?.here).toBe(false);
+  expect(sections[1]?.poi_name).toBe('Other Arena');
+});
+
+test('countLedger excludes rematches from Ready here', () => {
+  const trials = sixteenTrialMidSeries();
+  expect(countLedger(trials, trialNameIndex(trials))).toEqual({ readyHere: 1, travel: 0, locked: 14 });
+});
+
+test('suggestedFight prefers a new ready trial, then a travel new trial', () => {
+  const ready = sixteenTrialMidSeries();
+  expect(suggestedFight(ready)?.challenge_id).toBe('two_on_one');
+  const travel = ready.map((trial) => ({ ...trial, at_this_arena: false }));
+  expect(suggestedFight(travel)?.challenge_id).toBe('two_on_one');
+  const rematchOnly = ready.map((trial) =>
+    trial.challenge_id === 'two_on_one' ? { ...trial, locked: true, wins: 0 } : trial,
+  );
+  expect(suggestedFight(rematchOnly)?.challenge_id).toBe('first_blood');
+});
+
+test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or zero optionals', () => {
+  expect(formatRuleDigest({ max_side_size: 0 })).toBe('full fleet (every eligible member)');
+  expect(formatRuleDigest({ max_side_size: 1 })).toBe('solo duel');
+  expect(
+    formatRuleDigest({
+      max_side_size: 1,
+      allowed_ship_categories: ['Industrial', 'Commercial'],
+      allowed_damage_types: ['energy'],
+      allowed_modules: [],
+      banned_cargo: [],
+      max_crew: 0,
+      max_marines: 0,
+      min_side_size: 0,
+      no_drones: false,
+      no_cloak: true,
+    }),
+  ).toBe('solo duel · Industrial, Commercial · energy only · no cloak');
+  expect(
+    formatRuleDigest({
+      max_side_size: 2,
+      min_ship_tier: 2,
+      max_ship_tier: 4,
+      max_ship_scale: 2,
+      banned_modules: ['webifier'],
+      allowed_cargo: ['fuel'],
+    }),
+  ).toBe('up to 2 ships per side · tier 2–4 · max scale 2 · only fuel · no webifier');
+});
+
+test('formatEnemyDigest marks a singleton boss and otherwise prints count × name', () => {
+  expect(
+    formatEnemyDigest([
+      { name: 'Gravemaker', ship_class: 'gravemaker', ship_class_name: 'Cruiser', count: 1, is_boss: true },
+      { name: 'Ring Cleaver', ship_class: 'ring_cleaver', ship_class_name: 'Fighter', count: 2, is_boss: false },
+    ]),
+  ).toBe('Gravemaker (boss, Cruiser) · 2× Ring Cleaver (Fighter)');
+  expect(
+    formatEnemyDigest([
+      { name: 'Ring Cleaver', ship_class: 'ring_cleaver', ship_class_name: 'Fighter', count: 1, is_boss: false },
+    ]),
+  ).toBe('1× Ring Cleaver (Fighter)');
+});
+
+test('renders the sixteen-trial catalog as series sections without lore', () => {
+  const stdout = output('arena_challenges', arenaChallengesFixture);
+  expect(stdout).toContain('=== NPC Trials ===');
+  expect(stdout).toContain('Ready here: 1   Travel: 0   Locked: 14');
+  expect(stdout).toContain('Blood Arena  @ Blood Arena  — you are here');
+  expect(stdout).toContain('READY');
+  expect(stdout).toContain('LOCKED');
+  expect(stdout).toContain('first_blood');
+  expect(stdout).toContain('3 wins');
+  expect(stdout).toContain('1× Ring Cleaver (Fighter) · solo duel');
+  expect(stdout).toContain('2× Ring Cleaver (Fighter) · solo duel');
+  expect(stdout).toContain('needs Two on One');
+  expect(stdout).toContain("Hauler's Gauntlet  @ Blood Arena  — you are here");
+  expect(stdout).toContain('The Swarm  @ Blood Arena  — you are here');
+  expect(stdout).toContain('LOCKED 10');
+  expect(stdout).toContain('Next: arena fight two_on_one');
+  expect(stdout).not.toContain('TRAVEL');
+  expect(stdout).not.toContain('=== Response ===');
+  const firstBlood = sixteenTrialMidSeries()[0];
+  expect(firstBlood?.description).toBe('');
+});
+
+test('renders travel state and a travel footer', () => {
+  const stdout = output('arena_challenges', arenaChallengesTravelFixture);
+  expect(stdout).toContain('Ready here: 0   Travel: 2   Locked: 14');
+  expect(stdout).toContain('Blood Arena  @ Blood Arena  — travel here');
+  expect(stdout).toContain('TRAVEL');
+  expect(stdout).toContain('Next: travel to Blood Arena (krynn_blood_arena), then arena fight two_on_one');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders an empty NPC trial catalog', () => {
+  const stdout = output('arena_challenges', arenaChallengesEmptyFixture);
+  expect(stdout).toContain('=== NPC Trials ===');
+  expect(stdout).toContain('No NPC trials defined.');
+  expect(stdout).not.toContain('Ready here:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a fight start with enemy digest and enemy team label', () => {
+  const stdout = output('arena_fight', arenaFightFixture);
+  expect(stdout).toContain('=== Trial started: Two on One ===');
+  expect(stdout).toContain('Battle: btl-7e1   Challenge: two_on_one');
+  expect(stdout).toContain('Your side: 2   Enemy side: 1');
+  expect(stdout).toContain('Enemies: 2× Ring Cleaver (Fighter)');
+  expect(stdout).toContain('enemy');
+  expect(stdout).toContain('Coin (you)');
+  expect(stdout).toContain('Ring Cleaver 1');
+  expect(stdout).not.toContain('opponent');
+  expect(stdout).not.toContain('Trial started: Two on One\n');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('accept still says opponent after the shared participant helper', () => {
+  const stdout = output('arena_accept', arenaAcceptFixture);
+  expect(stdout).toContain('opponent');
+  expect(stdout).not.toContain('enemy');
+});
+
+test('declines malformed catalog and fight shapes', () => {
+  expect(output('arena_challenges', { action: 'challenges' })).toContain('=== Response ===');
+  expect(output('arena_challenges', { action: 'challenges', challenges: [{ challenge_id: 'x' }] })).toContain(
+    '=== Response ===',
+  );
+  expect(output('arena_fight', { details: { action: 'fight', battle_id: 'btl-7e1' } })).toContain('=== Response ===');
 });
 
 test('suppresses shape fallback when an arena formatter declines', () => {
