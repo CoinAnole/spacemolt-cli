@@ -5,6 +5,7 @@ import {
   commandNameEquals,
   emitCreditBalance,
   emitLine,
+  emitLines,
   emitStationDefences,
   emitStationFuelPricing,
   emitStationIds,
@@ -55,6 +56,38 @@ function formatDisplayValue(value: unknown): string {
     if (id) return String(id);
   }
   return String(value);
+}
+
+function locationTransitLines(loc: Record<string, unknown>): string[] {
+  const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
+  const named = (name: unknown, id: unknown) => {
+    const nameText = text(name);
+    const idText = text(id);
+    return nameText && idText && nameText !== idText ? `${nameText} (${idText})` : (nameText ?? idText);
+  };
+  const type = text(loc.transit_type);
+  const poi = named(loc.transit_dest_poi_name, loc.transit_dest_poi_id);
+  const system = named(loc.transit_dest_system_name, loc.transit_dest_system_id);
+  const destination = type === 'travel' ? (poi ?? system) : (system ?? poi);
+  const lines: string[] = [];
+  if (type || destination) {
+    lines.push(`${c.cyan}Transit:${c.reset} ${[type, destination].filter(Boolean).join(' → ')}`);
+  } else if (loc.in_transit === true) {
+    lines.push(`${c.cyan}Transit:${c.reset} in transit`);
+  }
+  if (typeof loc.transit_arrival_tick === 'number') {
+    lines.push(`${c.cyan}Arrival tick:${c.reset} ${loc.transit_arrival_tick}`);
+  }
+  if (typeof loc.transit_bearing === 'number') lines.push(`${c.cyan}Bearing:${c.reset} ${loc.transit_bearing}°`);
+  if (typeof loc.transit_x === 'number' && typeof loc.transit_y === 'number') {
+    lines.push(`${c.cyan}Position:${c.reset} ${loc.transit_x}, ${loc.transit_y}`);
+  }
+  if (typeof loc.transit_ticks_elapsed === 'number') {
+    lines.push(`${c.cyan}Ticks elapsed:${c.reset} ${loc.transit_ticks_elapsed}`);
+  }
+  const voidMessage = text(loc.void_message);
+  if (voidMessage) lines.push(`${c.dim}${voidMessage}${c.reset}`);
+  return lines;
 }
 
 function emitTradingRestriction(player: Record<string, unknown>): void {
@@ -1135,7 +1168,8 @@ export const statusFormatters = [
     (r) => {
       if (!isRecord(r.location)) return false;
       const loc = r.location;
-      if (!loc.system_id && !loc.system_name && !loc.poi_id && !loc.poi_name) return false;
+      const transitLines = locationTransitLines(loc);
+      if (!loc.system_id && !loc.system_name && !loc.poi_id && !loc.poi_name && transitLines.length === 0) return false;
       const connections = Array.isArray(loc.connections) ? loc.connections : [];
       const nearbyPlayers = Array.isArray(loc.nearby_players) ? loc.nearby_players.filter(isRecord) : [];
       const nearbyPlayerCount = numberOrDefault(loc.nearby_player_count, nearbyPlayers.length);
@@ -1160,6 +1194,7 @@ export const statusFormatters = [
       if (loc.docked_at) {
         emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
       }
+      emitLines(transitLines);
       emitUnknownSignatureHint(loc);
       if (isRecord(r.ship)) emitShipCombatEffects(r.ship);
       if (nearbyPlayerCount > 0) {
