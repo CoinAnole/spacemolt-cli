@@ -1508,6 +1508,26 @@ describe('help output branches', () => {
     expect(output).toContain('Scrap towed wreck at salvage yard or faction station');
   });
 
+  test('full help sell_wreck line names NPC salvage yard', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('sell_wreck                Sell towed wreck to NPC salvage yard for credits');
+  });
+
+  test('sell_wreck help documents NPC yard and scrap_wreck for player-owned yards', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('sell_wreck', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('NPC salvage yard');
+    expect(output).toContain('Player-owned');
+    expect(output).toContain('scrap_wreck');
+  });
+
   test('full help get_ship line names current or remote owned/faction-garage ship fit', () => {
     const capture = captureWriter();
 

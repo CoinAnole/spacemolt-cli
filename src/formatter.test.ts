@@ -3538,14 +3538,14 @@ describe('structuredContent formatters', () => {
           wreck_id: 'wreck-1',
           message: 'Sold wreck.',
           new_balance: 2400,
+          offer: 500,
           total_payout: 500,
           salvage_value: 400,
-          cargo_value: 100,
           ship_class: 'skiff',
         },
         player: { credits: 2400 },
       },
-      'Total Payout: 500',
+      'Paid: 500 cr',
     ],
     [
       'scrap_wreck',
@@ -4531,6 +4531,30 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Sell Complete ===');
     expect(stdout).not.toContain('Item: unknown');
     expect(stdout).toContain('wreck-1');
+  });
+
+  test('sell_wreck table output shows Offer and Paid, not Cargo Value or Total Payout', () => {
+    const { stdout, stderr } = captureStructuredOutput('sell_wreck', {
+      details: {
+        action: 'sell_wreck',
+        wreck_id: 'wreck-1',
+        message: 'Sold wreck.',
+        new_balance: 2400,
+        offer: 500,
+        total_payout: 500,
+        salvage_value: 400,
+        ship_class: 'skiff',
+      },
+      player: { credits: 2400 },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Wreck Sold ===');
+    expect(stdout).toContain('Offer: 500 cr');
+    expect(stdout).toContain('Paid: 500 cr');
+    expect(stdout).not.toContain('Cargo Value');
+    expect(stdout).not.toContain('Total Payout');
+    expect(stdout).not.toContain('=== Sell Complete ===');
   });
 
   test('formats direct buy fills, delivery, and auto-listed unfilled quantity', () => {

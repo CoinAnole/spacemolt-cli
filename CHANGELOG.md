@@ -4,6 +4,10 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### sell_wreck salvage-yard receipt
+
+- Human `sell_wreck` prints Offer vs Paid, and a shortfall delta when the yard pays less than the quote. Help now says NPC salvage yards only; player-owned yards need `scrap_wreck`. JSON/YAML/jq field names are unchanged.
+
 ### Arena command group (breaking)
 
 Consequence-free PvP at an arena POI is a **grouped multi-command** (same pattern as `storage` / `faction`). The generated flat names stop resolving.
