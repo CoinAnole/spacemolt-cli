@@ -28,6 +28,8 @@ pirates:
     primary_color: #c45a2a
     secondary_color: #1a1a1a
 pirate_count: 1
+arena_npcs: []
+arena_npc_count: 0
 empire_npcs:
   - npc_id: "npc-patrol-1"
     name: Patrol

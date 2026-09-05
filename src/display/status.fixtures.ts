@@ -327,6 +327,8 @@ export const nearbyFixture = {
     },
   ],
   pirate_count: 1,
+  arena_npcs: [],
+  arena_npc_count: 0,
   empire_npcs: [
     {
       npc_id: 'npc-patrol-1',
@@ -383,6 +385,43 @@ export const nearbyLiveryFixture = {
       ...nearbyFixture.pirates[0],
       primary_color: '#c45a2a',
       secondary_color: '#1a1a1a',
+    },
+  ],
+};
+
+export const nearbyArenaFixture = {
+  ...nearbyFixture,
+  arena_npc_count: 2,
+  arena_npcs: [
+    {
+      npc_id: 'arena-cleaver-1',
+      name: 'Ring Cleaver',
+      primary_color: '#c45a2a',
+      secondary_color: '#1a1a1a',
+      is_boss: false,
+      ship_class: 'fighter',
+      ship_class_name: 'Fighter',
+      hull: 180,
+      max_hull: 180,
+      shield: 60,
+      max_shield: 60,
+      battle_id: 'btl-first-blood',
+      status: 'ready',
+    },
+    {
+      npc_id: 'arena-master-1',
+      name: 'Trial Master',
+      primary_color: '#8b1a3a',
+      secondary_color: '#2a0a14',
+      is_boss: true,
+      ship_class: 'dreadnought',
+      ship_class_name: 'Dreadnought',
+      hull: 900,
+      max_hull: 900,
+      shield: 300,
+      max_shield: 300,
+      battle_id: 'btl-first-blood',
+      status: 'guarding',
     },
   ],
 };
@@ -813,6 +852,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   get_nearby_boss: { command: 'get_nearby', fixture: nearbyBossFixture },
   get_nearby_livery: { command: 'get_nearby', fixture: nearbyLiveryFixture },
+  get_nearby_arena: { command: 'get_nearby', fixture: nearbyArenaFixture },
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },

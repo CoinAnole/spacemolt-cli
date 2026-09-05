@@ -54,6 +54,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   get_map_system: 'get_map',
   get_nearby_boss: 'get_nearby',
   get_nearby_livery: 'get_nearby',
+  get_nearby_arena: 'get_nearby',
   scan_creature: 'scan',
 };
 

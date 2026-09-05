@@ -9,6 +9,7 @@ import {
   getMapSystemFixture,
   getStatusDetainedFixture,
   getStatusFixture,
+  nearbyArenaFixture,
   nearbyBossFixture,
   nearbyFixture,
   payBountyFixture,
@@ -663,6 +664,7 @@ test('get_nearby prints copyable Prize ID and Actor and omits personnel', () => 
   expect(stdout).toContain('=== Nearby ===');
   assertCopyablePrizeIds(stdout, 'Prizes');
   expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Arena NPCs');
 });
 
 test('get_nearby pirate lines stay unprefixed when is_boss is false', () => {
@@ -809,6 +811,110 @@ test('get_nearby prefixes Boss only on pirates with is_boss true', () => {
   expect(stdout).toContain('Pirates (2):');
   expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
   expect(stdout).toContain('Boss Dreadnought (battleship) - Admiral Kael - hostile');
+});
+
+test('get_nearby prints Arena NPCs after Pirates and before Empire NPCs', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(nearbyArenaFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const pirates = stdout.indexOf('Pirates (1):');
+  const arena = stdout.indexOf('Arena NPCs (2):');
+  const empire = stdout.indexOf('Empire NPCs (1):');
+
+  expect(pirates).toBeGreaterThan(-1);
+  expect(arena).toBeGreaterThan(pirates);
+  expect(empire).toBeGreaterThan(arena);
+  expect(stdout).toContain('  (in-match only; cannot be attacked from outside — see: arena status)');
+  expect(stdout).toContain(
+    '  Ring Cleaver [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-first-blood - ready',
+  );
+  expect(stdout).toContain(
+    '  Boss Trial Master [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding',
+  );
+});
+
+test('get_nearby colors boss arena NPC names after an uncolored Boss prefix', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(nearbyArenaFixture),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const bossLine = nearbyPirateLine(stdout, 'Trial Master');
+  const regularLine = nearbyPirateLine(stdout, 'Ring Cleaver');
+
+  expect(bossLine).toBe(
+    `  Boss ${hexColor('Trial Master', '#8b1a3a', '#2a0a14')} [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding`,
+  );
+  expect(bossLine?.startsWith('  Boss \x1b')).toBe(true);
+  expect(regularLine).toBe(
+    `  ${hexColor('Ring Cleaver', '#c45a2a', '#1a1a1a')} [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-first-blood - ready`,
+  );
+});
+
+test('get_nearby --plain leaves arena NPC names uncolored even with valid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(nearbyArenaFixture),
+    { ...options, plain: true },
+    context,
+  ).stdout.join('\n');
+  const bossLine = nearbyPirateLine(stdout, 'Trial Master');
+  const regularLine = nearbyPirateLine(stdout, 'Ring Cleaver');
+
+  expect(regularLine).toBe(
+    '  Ring Cleaver [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-first-blood - ready',
+  );
+  expect(bossLine).toBe(
+    '  Boss Trial Master [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding',
+  );
+  expect(regularLine).not.toContain('\x1b');
+  expect(bossLine).not.toContain('\x1b');
+});
+
+test('subscribe_observation omits Arena NPCs when arena fields are absent', () => {
+  const stdout = renderStructuredResult(
+    'subscribe_observation',
+    structuredClone(subscribeObservationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Arena NPCs');
+});
+
+test('get_nearby falls back to arena_npcs length and truncates past the table limit', () => {
+  const extra = Array.from({ length: 11 }, (_, index) => ({
+    npc_id: `arena-extra-${index + 1}`,
+    name: `Shard ${index + 1}`,
+    primary_color: '#335577',
+    secondary_color: '#88aacc',
+    is_boss: false,
+    ship_class: 'fighter',
+    ship_class_name: 'Fighter',
+    hull: 10,
+    max_hull: 10,
+    shield: 0,
+    max_shield: 0,
+    battle_id: 'btl-swarm',
+  }));
+  const withoutCount = structuredClone(nearbyArenaFixture) as Record<string, unknown>;
+  delete withoutCount.arena_npc_count;
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    { ...withoutCount, arena_npcs: extra },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Arena NPCs (11):');
+  expect(stdout).toContain('  Shard 1 [arena-extra-1] (Fighter) - hull 10/10 - shield 0/0 - battle btl-swarm');
+  expect(stdout).toContain('  Shard 10 [arena-extra-10] (Fighter) - hull 10/10 - shield 0/0 - battle btl-swarm');
+  expect(stdout).not.toContain('Shard 11');
+  expect(stdout).toContain('  ... and 1 more');
 });
 
 test('subscribe_observation prefixes Boss when a pirate is_boss is true', () => {

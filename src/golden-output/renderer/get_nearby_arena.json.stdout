@@ -34,8 +34,39 @@
     }
   ],
   "pirate_count": 1,
-  "arena_npcs": [],
-  "arena_npc_count": 0,
+  "arena_npcs": [
+    {
+      "npc_id": "arena-cleaver-1",
+      "name": "Ring Cleaver",
+      "primary_color": "#c45a2a",
+      "secondary_color": "#1a1a1a",
+      "is_boss": false,
+      "ship_class": "fighter",
+      "ship_class_name": "Fighter",
+      "hull": 180,
+      "max_hull": 180,
+      "shield": 60,
+      "max_shield": 60,
+      "battle_id": "btl-first-blood",
+      "status": "ready"
+    },
+    {
+      "npc_id": "arena-master-1",
+      "name": "Trial Master",
+      "primary_color": "#8b1a3a",
+      "secondary_color": "#2a0a14",
+      "is_boss": true,
+      "ship_class": "dreadnought",
+      "ship_class_name": "Dreadnought",
+      "hull": 900,
+      "max_hull": 900,
+      "shield": 300,
+      "max_shield": 300,
+      "battle_id": "btl-first-blood",
+      "status": "guarding"
+    }
+  ],
+  "arena_npc_count": 2,
   "empire_npcs": [
     {
       "npc_id": "npc-patrol-1",

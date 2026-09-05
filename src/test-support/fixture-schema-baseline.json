@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.586.0",
+  "generatedAtGameserver": "v0.590.0",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].description",
@@ -421,6 +421,8 @@
     "reload|reload|required-missing|ship.utility_slots",
     "reload|reload|required-missing|ship.weapon_slots",
     "scrap_wreck|scrap_wreck|required-missing|cargo[0].size",
+    "sell_wreck|sell_wreck|extra-in-fixture|details.cargo_value",
+    "sell_wreck|sell_wreck|required-missing|details.offer",
     "sell_wreck|sell_wreck|required-missing|player.clan_tag",
     "sell_wreck|sell_wreck|required-missing|player.empire",
     "sell_wreck|sell_wreck|required-missing|player.home_base",
