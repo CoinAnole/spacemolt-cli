@@ -36,6 +36,8 @@
     }
   ],
   "pirate_count": 1,
+  "arena_npcs": [],
+  "arena_npc_count": 0,
   "empire_npcs": [
     {
       "npc_id": "npc-patrol-1",

@@ -361,6 +361,26 @@ function formatNearbyPirateLine(p: Record<string, unknown>): string {
   return `${boss}${name}${ship}${crew}${status}`;
 }
 
+function formatNearbyArenaNpcLine(npc: Record<string, unknown>): string {
+  const rawName = typeof npc.name === 'string' ? npc.name : '';
+  const rawId = typeof npc.npc_id === 'string' ? npc.npc_id : '';
+  const name = rawName || rawId || 'Unknown';
+  const coloredName = formatLiveryName(name, npc);
+  const boss = npc.is_boss === true ? 'Boss ' : '';
+  const targetId = rawId && rawId !== name ? ` [${rawId}]` : '';
+  const shipClass = npc.ship_class_name || npc.ship_class;
+  const ship = shipClass ? ` (${shipClass})` : '';
+  const hull =
+    npc.hull !== undefined || npc.max_hull !== undefined ? ` - hull ${npc.hull ?? '?'}/${npc.max_hull ?? '?'}` : '';
+  const shield =
+    npc.shield !== undefined || npc.max_shield !== undefined
+      ? ` - shield ${npc.shield ?? '?'}/${npc.max_shield ?? '?'}`
+      : '';
+  const battle = npc.battle_id ? ` - battle ${npc.battle_id}` : '';
+  const status = npc.status ? ` - ${npc.status}` : '';
+  return `${boss}${coloredName}${targetId}${ship}${hull}${shield}${battle}${status}`;
+}
+
 function summarizeObjectiveForDisplay(objective: unknown): string {
   if (!isRecord(objective)) return String(objective);
   const description = objective.description ?? objective.title ?? objective.type;
@@ -1041,7 +1061,6 @@ export const statusFormatters = [
     { commands: ['get_poi'], shapeFallback: true },
   ),
 
-  // Nearby players, pirates, and empire NPCs
   namedFormatter(
     'nearby',
     ['nearby', 'prizes'],
@@ -1051,6 +1070,7 @@ export const statusFormatters = [
       if (!Array.isArray(playerSource)) return false;
       const players = playerSource.filter(isRecord);
       const pirates = Array.isArray(r.pirates) ? r.pirates.filter(isRecord) : [];
+      const arenaNpcs = Array.isArray(r.arena_npcs) ? r.arena_npcs.filter(isRecord) : [];
       const npcs = Array.isArray(r.empire_npcs) ? r.empire_npcs.filter(isRecord) : [];
       const creatures = Array.isArray(r.creatures) ? r.creatures.filter(isRecord) : [];
       const prizes = Array.isArray(r.prizes) ? r.prizes.filter(isRecord) : [];
@@ -1062,6 +1082,10 @@ export const statusFormatters = [
             : players.length;
       const pirateCount =
         typeof r.pirate_count === 'number' && Number.isFinite(r.pirate_count) ? r.pirate_count : pirates.length;
+      const arenaNpcCount =
+        typeof r.arena_npc_count === 'number' && Number.isFinite(r.arena_npc_count)
+          ? r.arena_npc_count
+          : arenaNpcs.length;
       const empireNpcCount = typeof r.empire_npc_count === 'number' ? r.empire_npc_count : npcs.length;
       const creatureCount = typeof r.creature_count === 'number' ? r.creature_count : creatures.length;
 
@@ -1081,6 +1105,15 @@ export const statusFormatters = [
           emitLine(`  ${formatNearbyPirateLine(p)}`);
         }
         if (pirateCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${pirateCount - NEARBY_TABLE_LIMIT} more`);
+      }
+
+      if (arenaNpcCount > 0) {
+        emitLine(`\n${c.magenta}Arena NPCs (${arenaNpcCount}):${c.reset}`);
+        emitLine('  (in-match only; cannot be attacked from outside — see: arena status)');
+        for (const npc of arenaNpcs.slice(0, NEARBY_TABLE_LIMIT)) {
+          emitLine(`  ${formatNearbyArenaNpcLine(npc)}`);
+        }
+        if (arenaNpcCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${arenaNpcCount - NEARBY_TABLE_LIMIT} more`);
       }
 
       if (empireNpcCount > 0) {

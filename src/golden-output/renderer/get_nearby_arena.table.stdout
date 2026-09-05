@@ -1,0 +1,28 @@
+
+=== Nearby ===
+
+Players (2):
+  Marlowe [SMC] (prospector)
+  Ibis [SMC] (hauler) - "refitting" [DOCKED]
+
+Pirates (1):
+  Raider (skiff) - Admiral Kael - hostile
+
+Arena NPCs (2):
+  (in-match only; cannot be attacked from outside — see: arena status)
+  Ring Cleaver [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-first-blood - ready
+  Boss Trial Master [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding
+
+Empire NPCs (1):
+  Patrol (interceptor)
+
+Creatures (1):
+  Pilot-Whale Pod [creature_pilot_whale_1] (pilot_whale) - grazer - hull 80/120
+
+Prizes (1):
+
+=== Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+-----------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
