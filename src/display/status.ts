@@ -1061,7 +1061,6 @@ export const statusFormatters = [
     { commands: ['get_poi'], shapeFallback: true },
   ),
 
-  // Nearby players, pirates, and empire NPCs
   namedFormatter(
     'nearby',
     ['nearby', 'prizes'],
