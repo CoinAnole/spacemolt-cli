@@ -133,68 +133,52 @@ type BooleanRuleKey =
   | 'require_empty_cargo';
 type StringListRuleKey = Exclude<OptionalRuleKey, NumericRuleKey | BooleanRuleKey>;
 
-type RuleDescriptor<Key extends keyof ArenaRuleset> = {
-  readonly key: Key;
-};
+type HullAllowRuleKey = 'allowed_ship_categories' | 'allowed_hull_classes' | 'allowed_ship_classes';
+type SpecialCasedRuleKey = 'allowed_damage_types' | 'min_ship_tier' | 'max_ship_tier' | 'max_ship_scale';
+type RemainingNumericRuleKey = Exclude<NumericRuleKey, 'min_ship_tier' | 'max_ship_tier' | 'max_ship_scale'>;
+type RemainingListRuleKey = Exclude<StringListRuleKey, HullAllowRuleKey | 'allowed_damage_types'>;
 
-const HULL_ALLOW_RULES: readonly RuleDescriptor<
-  'allowed_ship_categories' | 'allowed_hull_classes' | 'allowed_ship_classes'
->[] = [{ key: 'allowed_ship_categories' }, { key: 'allowed_hull_classes' }, { key: 'allowed_ship_classes' }];
+const HULL_ALLOW_RULES = [
+  'allowed_ship_categories',
+  'allowed_hull_classes',
+  'allowed_ship_classes',
+] as const satisfies readonly HullAllowRuleKey[];
 
-const BOOLEAN_RULES: readonly { key: BooleanRuleKey; label: string }[] = [
-  { key: 'no_drones', label: 'no drones' },
-  { key: 'no_cloak', label: 'no cloak' },
-  { key: 'no_boarding', label: 'no boarding' },
-  { key: 'no_tackle', label: 'no tackle' },
-  { key: 'no_consumables', label: 'no consumables' },
-  { key: 'no_ammo_weapons', label: 'no ammo weapons' },
-  { key: 'require_empty_cargo', label: 'empty cargo' },
-];
+const BOOLEAN_RULES = {
+  no_drones: 'no drones',
+  no_cloak: 'no cloak',
+  no_boarding: 'no boarding',
+  no_tackle: 'no tackle',
+  no_consumables: 'no consumables',
+  no_ammo_weapons: 'no ammo weapons',
+  require_empty_cargo: 'empty cargo',
+} as const satisfies Record<BooleanRuleKey, string>;
 
-const REMAINING_NUMERIC_RULES: readonly { key: 'max_crew' | 'max_marines' | 'min_side_size'; label: string }[] = [
-  { key: 'max_crew', label: 'max crew' },
-  { key: 'max_marines', label: 'max marines' },
-  { key: 'min_side_size', label: 'min side' },
-];
+const REMAINING_NUMERIC_RULES = {
+  max_crew: 'max crew',
+  max_marines: 'max marines',
+  min_side_size: 'min side',
+} as const satisfies Record<RemainingNumericRuleKey, string>;
 
-const REMAINING_LIST_RULES: readonly { key: StringListRuleKey; kind: 'only' | 'no' }[] = [
-  { key: 'allowed_modules', kind: 'only' },
-  { key: 'allowed_cargo', kind: 'only' },
-  { key: 'banned_ship_categories', kind: 'no' },
-  { key: 'banned_hull_classes', kind: 'no' },
-  { key: 'banned_ship_classes', kind: 'no' },
-  { key: 'banned_effect_types', kind: 'no' },
-  { key: 'banned_modules', kind: 'no' },
-  { key: 'banned_cargo', kind: 'no' },
-];
+const REMAINING_LIST_RULES = {
+  allowed_modules: 'only',
+  allowed_cargo: 'only',
+  banned_ship_categories: 'no',
+  banned_hull_classes: 'no',
+  banned_ship_classes: 'no',
+  banned_effect_types: 'no',
+  banned_modules: 'no',
+  banned_cargo: 'no',
+} as const satisfies Record<RemainingListRuleKey, 'only' | 'no'>;
 
-const OPTIONAL_RULE_COVERAGE: Record<OptionalRuleKey, true> = {
-  allowed_cargo: true,
-  allowed_damage_types: true,
-  allowed_hull_classes: true,
-  allowed_modules: true,
-  allowed_ship_categories: true,
-  allowed_ship_classes: true,
-  banned_cargo: true,
-  banned_effect_types: true,
-  banned_hull_classes: true,
-  banned_modules: true,
-  banned_ship_categories: true,
-  banned_ship_classes: true,
-  max_crew: true,
-  max_marines: true,
-  max_ship_scale: true,
-  max_ship_tier: true,
-  min_ship_tier: true,
-  min_side_size: true,
-  no_ammo_weapons: true,
-  no_boarding: true,
-  no_cloak: true,
-  no_consumables: true,
-  no_drones: true,
-  no_tackle: true,
-  require_empty_cargo: true,
-};
+type CoveredOptionalRuleKey =
+  | (typeof HULL_ALLOW_RULES)[number]
+  | SpecialCasedRuleKey
+  | keyof typeof BOOLEAN_RULES
+  | keyof typeof REMAINING_NUMERIC_RULES
+  | keyof typeof REMAINING_LIST_RULES;
+type _MissingOptionalRuleKey = Exclude<OptionalRuleKey, CoveredOptionalRuleKey>;
+type _AssertOptionalRulesCovered = [_MissingOptionalRuleKey] extends [never] ? true : _MissingOptionalRuleKey;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
@@ -362,12 +346,11 @@ function activeCap(value: unknown): number | undefined {
 }
 
 export function formatRuleDigest(rules: ArenaRuleset): string {
-  void OPTIONAL_RULE_COVERAGE;
   const tokens: string[] = [];
   const sideSize = formatArenaSideSize(rules.max_side_size);
   if (sideSize) tokens.push(sideSize);
 
-  for (const { key } of HULL_ALLOW_RULES) {
+  for (const key of HULL_ALLOW_RULES) {
     const list = activeStringList(rules[key]);
     if (list) tokens.push(list.join(', '));
   }
@@ -384,18 +367,19 @@ export function formatRuleDigest(rules: ArenaRuleset): string {
   const maxScale = activeCap(rules.max_ship_scale);
   if (maxScale !== undefined) tokens.push(`max scale ${maxScale}`);
 
-  for (const { key, label } of BOOLEAN_RULES) {
-    if (rules[key] === true) tokens.push(label);
+  for (const key of Object.keys(BOOLEAN_RULES) as BooleanRuleKey[]) {
+    if (rules[key] === true) tokens.push(BOOLEAN_RULES[key]);
   }
 
-  for (const { key, label } of REMAINING_NUMERIC_RULES) {
+  for (const key of Object.keys(REMAINING_NUMERIC_RULES) as RemainingNumericRuleKey[]) {
     const cap = activeCap(rules[key]);
-    if (cap !== undefined) tokens.push(`${label} ${cap}`);
+    if (cap !== undefined) tokens.push(`${REMAINING_NUMERIC_RULES[key]} ${cap}`);
   }
 
-  for (const { key, kind } of REMAINING_LIST_RULES) {
+  for (const key of Object.keys(REMAINING_LIST_RULES) as RemainingListRuleKey[]) {
     const list = activeStringList(rules[key]);
     if (!list) continue;
+    const kind = REMAINING_LIST_RULES[key];
     tokens.push(kind === 'only' ? `only ${list.join(', ')}` : `no ${list.join(', ')}`);
   }
 
