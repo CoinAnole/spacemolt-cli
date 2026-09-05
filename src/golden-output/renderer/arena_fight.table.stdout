@@ -1,0 +1,15 @@
+
+=== Trial started: Two on One ===
+Battle: btl-7e1   Challenge: two_on_one
+Your side: 2   Enemy side: 1
+Enemies: 2× Ring Cleaver (Fighter)
+
+=== Participants ===
+
+  Side | Team  | Pilot          | Player ID
+  -----+-------+----------------+----------
+  1    | enemy | Ring Cleaver 1 | npc-rc-1 
+  1    | enemy | Ring Cleaver 2 | npc-rc-2 
+  2    | yours | Coin (you)     | player-12
+
+Next: get_battle_status · battle_target <pilot> · battle_stance <stance>
