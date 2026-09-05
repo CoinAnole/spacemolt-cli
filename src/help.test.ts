@@ -531,6 +531,8 @@ describe('help output branches', () => {
     expect(output).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
     expect(output).toContain('arena accept | decline    Answer an incoming arena challenge');
     expect(output).toContain('arena cancel              Withdraw your outgoing challenge');
+    expect(output).toContain('arena challenges          NPC trials by series: READY / TRAVEL / LOCKED');
+    expect(output).toContain('arena fight <id>          Start an unlocked NPC trial at this arena');
 
     const combatSection = output.slice(combatIndex, personnelIndex);
     expect(combatSection).not.toContain('claim_prize');
@@ -591,9 +593,14 @@ describe('help output branches', () => {
     expect(output).toContain('arena accept');
     expect(output).toContain('arena decline');
     expect(output).toContain('arena cancel');
+    expect(output).toContain('arena challenges');
+    expect(output).toContain('arena fight');
+    expect(output).toContain('NPC arena trial');
+    expect(output).toContain('unlocked NPC trial');
     expect(output).toContain('max_side_size');
     expect(output).not.toContain('arena_status');
     expect(output).not.toContain('arena_challenge');
+    expect(output).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
   });
 
   test('help combat lists arena actions under Battle', () => {
@@ -607,6 +614,8 @@ describe('help output branches', () => {
     expect(output).toContain('arena accept');
     expect(output).toContain('arena decline');
     expect(output).toContain('arena cancel');
+    expect(output).toContain('arena challenges');
+    expect(output).toContain('arena fight');
     expect(output).not.toContain('arena_challenge');
   });
 

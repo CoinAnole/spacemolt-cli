@@ -830,6 +830,8 @@ describe('command metadata', () => {
 
     expect(captureFullHelp()).toContain('arena status              Arena lobby: record, pending challenges, XP cap');
     expect(captureFullHelp()).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
+    expect(captureFullHelp()).toContain('arena challenges          NPC trials by series: READY / TRAVEL / LOCKED');
+    expect(captureFullHelp()).toContain('arena fight <id>          Start an unlocked NPC trial at this arena');
   });
 
   test('unload_passenger help documents all-passenger bulk unload', () => {

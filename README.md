@@ -236,6 +236,8 @@ spacemolt arena challenge <player> [max_side_size=N]
 spacemolt arena accept                          # answer the incoming challenge
 spacemolt arena decline
 spacemolt arena cancel                          # withdraw your outgoing challenge
+spacemolt arena challenges                      # NPC trials by series: READY / TRAVEL / LOCKED
+spacemolt arena fight <challenge_id>            # start an unlocked NPC trial at this arena
 spacemolt help arena                            # actions and argument details
 ```
 
