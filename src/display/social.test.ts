@@ -1724,7 +1724,9 @@ test('get_battle_log renders shield/hull ticks, defense legend, and attacks with
     'Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H = shield/hull. Trailing flags may truncate.',
   );
   expect(stdout).toContain('Pulse Laser kinetic 500→470→455→440 (S6 T3 F3)');
-  expect(stdout).toContain('chance 12% roll 81');
+  expect(stdout).toContain('Scatter Cannon chance 12% roll 81');
+  expect(stdout).toContain('hit 2/3');
+  expect(stdout).toContain('Mining Laser chance 35% roll 61');
   expect(stdout).toContain('Railgun energy 400→380→360→350 (S5 T5 F3)');
   expect(stdout).toContain('Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)');
 });
