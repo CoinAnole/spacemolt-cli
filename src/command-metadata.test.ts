@@ -856,6 +856,9 @@ describe('command metadata', () => {
     expect(license?.required).toEqual(['ship_class']);
     expect(license?.schema?.ship_class?.type).toBe('string');
     expect(license?.schema?.empire).toBeUndefined();
+    expect(license?.description).toContain('empire reputation requirement');
+    expect(license?.description).toContain("your faction's own station");
+    expect(license?.description).toContain('Piloting');
 
     const commission = BUNDLED_COMMAND_REGISTRY.commands.commission_ship;
     expect(commission?.usage).toContain('fund_from_faction');
@@ -869,18 +872,24 @@ describe('command metadata', () => {
     expect(commission?.description).toContain('Do not combine provide_materials with source_missing_materials');
     expect(commission?.description).toContain('do not market-source missing materials');
     expect(commission?.description).toContain('NPC, empire, and faction yards');
+    expect(commission?.description).toContain('buy_ship_license');
+    expect(commission?.description).toContain('required_reputation');
+    expect(commission?.description).toContain("your faction's own station");
+    expect(commission?.description).toContain('Piloting');
     expect(commission?.example).toBe('spacemolt commission_ship viper source_missing_materials=true');
-    expect(commission?.seeAlso).toEqual(['commission_quote', 'commission_status', 'catalog']);
+    expect(commission?.seeAlso).toEqual(['commission_quote', 'commission_status', 'catalog', 'buy_ship_license']);
     expect(commission?.args).toEqual(['ship_class', 'provide_materials']);
     expect(commission?.schema?.bare_hull?.type).toBe('boolean');
     expect(commission?.schema?.source_missing_materials?.type).toBe('boolean');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).toBe(
-      'Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing.',
+      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies.",
     );
 
     const licenseHelp = captureHelp('buy_ship_license');
     expect(licenseHelp).toContain('ship_class');
     expect(licenseHelp).toContain('specific ship design');
+    expect(licenseHelp).toContain('empire reputation requirement');
+    expect(licenseHelp).toContain('Piloting');
 
     const commissionHelp = captureHelp('commission_ship');
     expect(commissionHelp).toContain('fund_from_faction');
@@ -892,6 +901,24 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('Do not combine with provide_materials.');
     expect(commissionHelp).toContain('spacemolt commission_ship viper source_missing_materials=true');
     expect(commissionHelp).toMatch(/Arguments:\n {2}ship_class, provide_materials\n/);
+    expect(commissionHelp).toContain('buy_ship_license');
+    expect(commissionHelp).toContain('required_reputation');
+  });
+
+  test('catalog commissionable documents faction-licensed hulls at own station', () => {
+    const catalog = BUNDLED_COMMAND_REGISTRY.commands.catalog;
+    expect(catalog?.description).toBe('Browse reference data such as ships, items, skills, recipes, and facilities.');
+    expect(catalog?.schema?.commissionable?.type).toBe('boolean');
+    expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');
+    expect(catalog?.schema?.commissionable?.description).toContain("your faction's own station");
+    expect(catalog?.schema?.commissionable?.description).toContain('reputation waived');
+    expect(catalog?.schema?.commissionable?.description).toContain('Piloting and yard tier still apply');
+    expect(catalog?.example).toContain('commissionable=true');
+    expect(catalog?.seeAlso).toEqual(['get_guide', 'get_commands', 'commission_ship', 'buy_ship_license']);
+
+    const help = captureHelp('catalog');
+    expect(help).toContain('licensed with buy_ship_license');
+    expect(help).toContain('reputation waived');
   });
 
   test('commission_quote documents bare_hull and source_missing_materials', () => {
@@ -928,6 +955,7 @@ describe('command metadata', () => {
     const help = captureFullHelp();
     expect(help).toContain('Order a custom ship (fitted default; optional bare hull)');
     expect(help).toContain('Quote a build (bare hull / partial sourcing)');
+    expect(help).toContain("buy_ship_license <class>  License a hull for your faction's own stations");
   });
 
   test('craft help documents queued station-storage production and packages', () => {

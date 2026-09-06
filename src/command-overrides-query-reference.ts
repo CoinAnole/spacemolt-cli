@@ -454,11 +454,17 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage:
       '<type> [id] [category] [search] [page] [page_size] [class=...] [empire=...] [tier=...] [commissionable=true/false]  (ships: class/empire/tier/commissionable filters; types: ships, items, skills, recipes, facilities)',
     description: 'Browse reference data such as ships, items, skills, recipes, and facilities.',
-    example: 'spacemolt catalog type=ships empire=solarian tier=3',
-    seeAlso: ['get_guide', 'get_commands'],
+    example: 'spacemolt catalog type=ships empire=solarian tier=3; spacemolt catalog type=ships commissionable=true',
+    seeAlso: ['get_guide', 'get_commands', 'commission_ship', 'buy_ship_license'],
     category: 'Reference & Help',
     apiRoute: 'POST /api/v2/spacemolt_catalog',
     positionals: ['type', 'id', 'category', 'search', 'page', 'page_size'],
+    schemaExtensions: {
+      commissionable: {
+        description:
+          "Ships only: filter to ships this player can commission at this shipyard (requires auth + docked). At your faction's own station this includes hulls licensed with buy_ship_license (reputation waived; Piloting and yard tier still apply).",
+      },
+    },
   },
   get_guide: {
     description: 'Read server-provided gameplay guides.',

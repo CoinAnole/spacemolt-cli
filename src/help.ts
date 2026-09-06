@@ -89,6 +89,7 @@ const COMMAND_GROUPS: CommandGroup[] = [
 const COMMAND_GROUP_INCLUDES: Record<string, string[]> = {
   storage: ['jettison', 'loot_wreck'],
   faction: ['faction_build', 'faction_facility_list', 'faction_facility_owned', 'faction_facility_upgrade'],
+  ship: ['buy_ship_license'],
 };
 
 export function printJsonResponse(response: APIResponse, compact = false, writer?: CliWriter): void {
@@ -1141,6 +1142,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     service_prize <prize_id> <action> Stop/resume/redirect/refuel/repair a prize
 
   ${c.cyan}Shipyard:${c.reset}
+    buy_ship_license <class>  License a hull for your faction's own stations
     commission_ship <class>   Order a custom ship (fitted default; optional bare hull)
     commission_quote <class>  Quote a build (bare hull / partial sourcing)
     commission_status         Check build progress
