@@ -105,6 +105,75 @@ export function sixteenTrialMidSeries(): ArenaTrial[] {
   ];
 }
 
+const UNRESTRICTED_FLEET = { max_side_size: 0 } as const;
+
+const PIRATE_SCOUT: ArenaEnemyLine = {
+  name: 'Pirate Scout',
+  ship_class: 'pirate_scout',
+  ship_class_name: 'Fighter',
+  count: 1,
+  is_boss: false,
+};
+
+const PIRATE_RAIDER: ArenaEnemyLine = {
+  name: 'Pirate Raider',
+  ship_class: 'pirate_raider',
+  ship_class_name: 'Fighter',
+  count: 2,
+  is_boss: false,
+};
+
+const ARMOR_COLUMN: ArenaEnemyLine = {
+  name: 'Armor Column',
+  ship_class: 'armor_column',
+  ship_class_name: 'Cruiser',
+  count: 1,
+  is_boss: true,
+};
+
+/** Synthetic challenge_ids (snake_case of display names); not live catalog keys. */
+export function briefingVariantsCatalog(): ArenaTrial[] {
+  return [
+    trialDef({
+      challenge_id: 'lone_scout',
+      name: 'Lone Scout',
+      series: 'Pirates',
+      stage: 1,
+      rules: UNRESTRICTED_FLEET,
+      enemies: [PIRATE_SCOUT],
+    }),
+    trialDef({
+      challenge_id: 'raider_squad',
+      name: 'Raider Squad',
+      series: 'Pirates',
+      stage: 2,
+      locked: true,
+      requires: ['lone_scout'],
+      rules: UNRESTRICTED_FLEET,
+      enemies: [PIRATE_RAIDER],
+    }),
+    trialDef({
+      // Supporting 0.590 row: READY energy-only briefing. Not a live 0.592 slice.
+      challenge_id: 'clean_fight',
+      name: 'Clean Fight',
+      series: 'Clean Fight',
+      stage: 1,
+      requires: ['first_blood'],
+      locked: false,
+      rules: { max_side_size: 1, allowed_damage_types: ['energy'] },
+    }),
+    trialDef({
+      challenge_id: 'armor_column',
+      name: 'Armor Column',
+      series: 'Doctrine',
+      stage: 1,
+      description: 'Armor doctrine: kinetic and explosive answer it; EM hardeners do not.',
+      rules: UNRESTRICTED_FLEET,
+      enemies: [ARMOR_COLUMN],
+    }),
+  ];
+}
+
 function catalogEnvelope(trials: ArenaTrial[]): Record<string, unknown> {
   return {
     action: 'challenges',
@@ -236,6 +305,8 @@ export const arenaChallengesTravelFixture = catalogEnvelope(
 
 export const arenaChallengesEmptyFixture = catalogEnvelope([]);
 
+export const arenaChallengesBriefingVariantsFixture = catalogEnvelope(briefingVariantsCatalog());
+
 export const arenaFightDetails = {
   action: 'fight',
   challenge_id: 'two_on_one',
@@ -274,5 +345,10 @@ export const arenaHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   arena_challenges: arenaEntry('arena_challenges', arenaChallengesFixture, 'structuredContent'),
   arena_challenges_travel: arenaEntry('arena_challenges', arenaChallengesTravelFixture, 'structuredContent'),
   arena_challenges_empty: arenaEntry('arena_challenges', arenaChallengesEmptyFixture, 'structuredContent'),
+  arena_challenges_briefing_variants: arenaEntry(
+    'arena_challenges',
+    arenaChallengesBriefingVariantsFixture,
+    'structuredContent',
+  ),
   arena_fight: arenaEntry('arena_fight', arenaFightFixture, 'details'),
 };

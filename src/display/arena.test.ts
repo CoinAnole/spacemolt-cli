@@ -5,6 +5,7 @@ import {
   arenaAcceptFixture,
   arenaCancelFixture,
   arenaChallengeFixture,
+  arenaChallengesBriefingVariantsFixture,
   arenaChallengesEmptyFixture,
   arenaChallengesFixture,
   arenaChallengesTravelFixture,
@@ -467,6 +468,23 @@ test('renders the sixteen-trial catalog as series sections without lore', () => 
   expect(stdout).not.toContain('=== Response ===');
   const firstBlood = sixteenTrialMidSeries()[0];
   expect(firstBlood?.description).toBe('');
+});
+
+test('renders briefing variants for unrestricted, restricted, boss, and lore-omit rows', () => {
+  const stdout = output('arena_challenges', arenaChallengesBriefingVariantsFixture);
+  expect(stdout).toContain('Ready here: 3   Travel: 0   Locked: 1');
+  expect(stdout).toContain('Pirates  @ Blood Arena  — you are here');
+  expect(stdout).toContain('Clean Fight  @ Blood Arena  — you are here');
+  expect(stdout).toContain('Doctrine  @ Blood Arena  — you are here');
+  expect(stdout).toContain('full fleet (every eligible member)');
+  expect(stdout).toContain('needs Lone Scout');
+  expect(stdout).not.toMatch(/Raider Squad[^\n]*\n {13}/);
+  expect(stdout).toContain('Armor Column (boss, Cruiser)');
+  expect(stdout).toContain('energy only');
+  expect(stdout).toContain('Next: arena fight lone_scout');
+  expect(stdout).not.toContain('Armor doctrine:');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('TRAVEL');
 });
 
 test('renders travel state and a travel footer', () => {
