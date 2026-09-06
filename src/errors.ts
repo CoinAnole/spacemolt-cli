@@ -297,6 +297,23 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['fleet_leave', 'fleet_status'],
   },
+  challenge_locked: {
+    code: 'challenge_locked',
+    message: 'Arena trial is locked.',
+    suggestion:
+      'This trial is locked until you win a required prior trial (the error names it). Run "spacemolt arena challenges" and start a READY trial.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['arena_challenges', 'arena_fight'],
+  },
+  arena_rule: {
+    code: 'arena_rule',
+    message: 'Consumable is banned in this arena trial.',
+    suggestion: 'That consumable is banned for this trial. Run "spacemolt arena challenges" to see the loadout rules.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['arena_challenges', 'use_item'],
+  },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_REGISTRY);
