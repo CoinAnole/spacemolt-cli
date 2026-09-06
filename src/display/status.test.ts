@@ -4,6 +4,7 @@ import { hexColor } from './ansi.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   getLocationFixture,
+  getLocationResourcesFixture,
   getMapFixture,
   getMapStarlessFixture,
   getMapSystemFixture,
@@ -1009,12 +1010,89 @@ test('get_location prints nearby prizes after players and before pirate counts',
 
   expect(stdout).toContain('=== Location ===');
   expect(stdout).not.toContain('=== Nearby ===');
+  expect(stdout).not.toContain('Resources:');
   assertCopyablePrizeIds(stdout, 'Nearby Prizes');
   const playersIdx = stdout.indexOf('Nearby Players');
   const prizesIdx = stdout.indexOf('Nearby Prizes');
   const piratesIdx = stdout.indexOf('Nearby Pirates');
   expect(prizesIdx).toBeGreaterThan(playersIdx);
   expect(piratesIdx).toBeGreaterThan(prizesIdx);
+});
+
+test('get_location prints resources after ship combat effects and before nearby players', () => {
+  const fixture = {
+    ...structuredClone(getLocationResourcesFixture),
+    ship: { burn_ticks_remaining: 3 },
+  };
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Docked at: earth_station');
+  expect(stdout).toContain('Effects:');
+  expect(stdout).toContain('Burn: 3 ticks');
+  expect(stdout).toContain('Resources:');
+  expect(stdout).toContain('- Iron Ore: richness 3, 750, supports power 12');
+  expect(stdout).toContain('- Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse');
+  const dockedIdx = stdout.indexOf('Docked at:');
+  const effectsIdx = stdout.indexOf('Effects:');
+  const resourcesIdx = stdout.indexOf('Resources:');
+  const playersIdx = stdout.indexOf('Nearby Players');
+  expect(effectsIdx).toBeGreaterThan(dockedIdx);
+  expect(resourcesIdx).toBeGreaterThan(effectsIdx);
+  expect(playersIdx).toBeGreaterThan(resourcesIdx);
+});
+
+test('get_location remaining -1 prints unlimited', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        resources: [{ item_id: 'ore_iron', item_name: 'Iron Ore', richness: 3, remaining: -1 }],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('- Iron Ore: richness 3, unlimited');
+  expect(stdout).not.toContain('-1');
+});
+
+test('get_location remaining 0 prints depleted without strikethrough', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        resources: [{ item_id: 'ore_iron', item_name: 'Iron Ore', richness: 3, remaining: 0 }],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('- Iron Ore: richness 3, depleted');
+  expect(stdout).not.toContain('\x1b[9m');
+});
+
+test('get_location empty resources array prints no Resources heading', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        resources: [],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).not.toContain('Resources:');
 });
 
 test('get_location formats a jump in transit when identity fields are empty strings', () => {

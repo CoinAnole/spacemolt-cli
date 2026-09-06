@@ -1235,6 +1235,16 @@ export const statusFormatters = [
       emitLines(transitLines);
       emitUnknownSignatureHint(loc);
       if (isRecord(r.ship)) emitShipCombatEffects(r.ship);
+      const resources = Array.isArray(loc.resources) ? loc.resources.filter(isRecord) : [];
+      if (resources.length) {
+        emitLine(`\n${c.bright}Resources:${c.reset}`);
+        for (const res of resources) {
+          const name = res.item_name || res.item_id || res.name || res.resource_id;
+          const remaining =
+            res.remaining === -1 ? 'unlimited' : res.remaining === 0 ? 'depleted' : String(res.remaining);
+          emitLine(`  - ${name}: richness ${res.richness}, ${remaining}${formatResourceWorkabilitySuffix(res)}`);
+        }
+      }
       if (nearbyPlayerCount > 0) {
         emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
         for (const player of nearbyPlayers.slice(0, NEARBY_TABLE_LIMIT)) {

@@ -11,6 +11,8 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   fit can always finish the vein; omitted `too_sparse` means workable.
 - Human `inspect` POI resource tables add Power / Lock / Sparse columns when
   those fields are present.
+- Human `get_location` prints `location.resources` as bullets with the same
+  workability suffix. Remaining is `unlimited`, `depleted`, or the integer.
 - JSON/YAML/jq field names are unchanged.
 
 ### Arena error suggestions (gameserver 0.590.0)

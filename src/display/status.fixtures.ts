@@ -38,6 +38,31 @@ export const getLocationFixture = {
   },
 };
 
+export const getLocationResourcesFixture = {
+  ...getLocationFixture,
+  location: {
+    ...getLocationFixture.location,
+    resources: [
+      {
+        item_id: 'ore_iron',
+        item_name: 'Iron Ore',
+        richness: 3,
+        remaining: 750,
+        supported_power: 12,
+      },
+      {
+        item_id: 'ore_gold',
+        item_name: 'Gold Ore',
+        richness: 1,
+        remaining: 74,
+        supported_power: 3,
+        lock_minimum_stock: 200,
+        too_sparse: true,
+      },
+    ],
+  },
+};
+
 export const getStatusFixture = {
   player: {
     username: 'Marlowe',
@@ -914,6 +939,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   },
   player_profile: { command: 'player_profile', fixture: publicPlayerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
+  get_location_resources: { command: 'get_location', fixture: getLocationResourcesFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_poi_workability: { command: 'get_poi', fixture: poiWorkabilityFixture },
