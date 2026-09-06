@@ -1917,6 +1917,69 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt fleet leave');
   });
 
+  test('displayError gives challenge_locked a READY-trial suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'arena fight',
+      { code: 'challenge_locked', message: 'Locked. Win First Blood before starting this trial.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [challenge_locked]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt arena challenges');
+    expect(output).toContain('READY');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('arena_challenges');
+  });
+
+  test('displayError gives arena_rule a loadout-rules suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'use_item',
+      { code: 'arena_rule', message: 'That consumable is banned in this arena trial.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [arena_rule]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt arena challenges');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('arena_challenges');
+
+    const quiet = captureWriter();
+    displayError(
+      'use_item',
+      { code: 'arena_rule', message: 'That consumable is banned in this arena trial.' },
+      {
+        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
+      },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [arena_rule]:');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+  });
+
   test('displayError tells users to verify state before retrying persistence errors', () => {
     const baseContext: CliRuntimeContext = {
       env: {},

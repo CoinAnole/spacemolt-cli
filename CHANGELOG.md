@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Arena error suggestions (gameserver 0.590.0)
+
+- Human stderr for `challenge_locked` (`arena fight` on a locked trial) and
+  `arena_rule` (`use_item` of a banned consumable mid-match) prints a
+  `Suggestion:` pointing at `spacemolt arena challenges` and no longer claims
+  the error is retryable. JSON / `--structured` envelopes are unchanged.
+  `--format yaml` still uses human `displayError`.
+
 ### get_battle_log per-weapon volleys (gameserver 0.593.0)
 
 - Human `get_battle_log` prints per-weapon volleys as `hit N/M` and shows missed guns' chance/roll. JSON/YAML unchanged.
