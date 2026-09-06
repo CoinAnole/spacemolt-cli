@@ -352,6 +352,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_state',
   },
   fleet_status: {
+    description:
+      'Show fleet members, leader, location, and pending invites. An arena-only fleet (over ordinary capacity at an arena) is unlimited at this arena and disbands if the leader leaves the arena.',
+    example: 'spacemolt fleet status',
+    seeAlso: ['fleet_invite', 'create_fleet'],
     category: 'Fleet',
     apiRoute: 'POST /api/v2/spacemolt_fleet/status',
   },
@@ -361,8 +365,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   fleet_invite: {
     usage: '<player_id_or_name>',
-    description: 'Invite a player to your fleet.',
-    example: 'spacemolt fleet_invite <player_id_or_name>',
+    description:
+      'Invite a player at your current location to join your fleet. Inviting beyond ordinary capacity while undocked at an arena converts the fleet to an unlimited arena-only fleet, which disbands if the leader leaves the arena.',
+    example: 'spacemolt fleet invite <player_id_or_name>',
     discoverWith: ['get_nearby', 'get_system_agents'],
     seeAlso: ['fleet_status', 'create_fleet'],
     category: 'Fleet',

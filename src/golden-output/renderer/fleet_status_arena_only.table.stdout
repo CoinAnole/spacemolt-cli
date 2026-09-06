@@ -1,0 +1,19 @@
+
+=== Fleet ===
+ID: fleet-1
+Leader: Marlowe
+You are leader: yes
+Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)
+
+=== Members ===
+
+  Name    | ID       | Ship       | Location | Status | Passenger | Riding        
+  --------+----------+------------+----------+--------+-----------+---------------
+  Marlowe | player-1 | Prospector | sol      |        |           |               
+  Rook    | player-2 |            | sol      |        | yes       | ship-marlowe-1
+
+=== Pending Invites ===
+
+  Name | ID      
+  -----+---------
+  Ibis | player-3

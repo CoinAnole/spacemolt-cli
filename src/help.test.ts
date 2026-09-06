@@ -581,6 +581,30 @@ describe('help output branches', () => {
     expect(output).not.toContain('faction_create_buy_order <item>');
   });
 
+  test('fleet group documents arena-only conversion on status and invite', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('fleet', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const fleetHelp = capture.stdout.join('\n');
+    const statusLine = fleetHelp.split('\n').find((line) => /^\s*fleet status\b/.test(line));
+    const inviteLine = fleetHelp.split('\n').find((line) => /^\s*fleet invite\b/.test(line));
+    expect(statusLine).toBeDefined();
+    expect(statusLine).not.toContain('Create and manage player fleets');
+    expect(inviteLine).toContain('undocked at an arena');
+  });
+
+  test('showFullHelp keeps short fleet one-liners', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Current fleet membership and members');
+    expect(output).toContain('Invite a player');
+    expect(output).not.toContain('undocked at an arena');
+  });
+
   test('arena group lists curated actions and stays out of Generated API', () => {
     const capture = captureWriter();
 
