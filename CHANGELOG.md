@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### get_player arena trial wins
+
+- Human `get_player` prints `Arena trials: <challenge_id> ×N, ...` after the
+  arena W/L/KO line when `player.arena_won` has at least one positive count.
+  The line is omitted until the first NPC-trial win. JSON/YAML/jq field names
+  are unchanged.
+
 ### sell_wreck salvage-yard receipt
 
 - Human `sell_wreck` prints Offer vs Paid, and a shortfall delta when the yard pays less than the quote. Help now says NPC salvage yards only; player-owned yards need `scrap_wreck`. JSON/YAML/jq field names are unchanged.

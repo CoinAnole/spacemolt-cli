@@ -256,6 +256,10 @@ export const playerArenaFixture = {
       by_skill: { shields: 40, gunnery: 120 },
       day: '2026-09-04',
     },
+    arena_won: {
+      two_on_one: 1,
+      first_blood: 3,
+    },
   },
 };
 

@@ -545,12 +545,28 @@ function formatArenaXpLine(arenaXp: unknown): string | undefined {
   return day ? `Arena XP today (${day}): ${parts.join(', ')}` : `Arena XP today: ${parts.join(', ')}`;
 }
 
-export function arenaStatLines(stats: Record<string, unknown>, arenaXp: unknown): string[] {
+function formatArenaWonLine(arenaWon: unknown): string | undefined {
+  if (!isRecord(arenaWon)) return undefined;
+  const parts = Object.keys(arenaWon)
+    .filter((id) => id.length > 0)
+    .filter((id) => {
+      const count = finiteNumber(arenaWon[id]);
+      return count !== undefined && Number.isInteger(count) && count > 0;
+    })
+    .sort((left, right) => left.localeCompare(right))
+    .map((id) => `${id} ×${finiteNumber(arenaWon[id])}`);
+  if (parts.length === 0) return undefined;
+  return `Arena trials: ${parts.join(', ')}`;
+}
+
+export function arenaStatLines(stats: Record<string, unknown>, arenaXp: unknown, arenaWon?: unknown): string[] {
   const lines: string[] = [];
   const record = readArenaRecord(stats);
   if (record && (record.wins > 0 || record.losses > 0 || record.knockouts > 0)) {
     lines.push(`Arena: ${formatArenaRecord(record)}`);
   }
+  const wonLine = formatArenaWonLine(arenaWon);
+  if (wonLine) lines.push(wonLine);
   const xpLine = formatArenaXpLine(arenaXp);
   if (xpLine) lines.push(xpLine);
   return lines;

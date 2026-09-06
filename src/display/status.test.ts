@@ -398,8 +398,11 @@ test('get_player prints arena record and XP after skill stats', () => {
   ).stdout.join('\n');
   expect(stdout).toContain('Crafting: Level 2 (175 XP)');
   expect(stdout).toContain('Arena: 3 wins / 1 loss / 7 knockouts');
+  expect(stdout).toContain('Arena trials: first_blood ×3, two_on_one ×1');
   expect(stdout).toContain('Arena XP today (2026-09-04): gunnery 120, shields 40');
   expect(stdout.indexOf('Crafting:')).toBeLessThan(stdout.indexOf('Arena: 3 wins'));
+  expect(stdout.indexOf('Arena: 3 wins')).toBeLessThan(stdout.indexOf('Arena trials:'));
+  expect(stdout.indexOf('Arena trials:')).toBeLessThan(stdout.indexOf('Arena XP today'));
 });
 
 test('get_player omits arena stats at 0/0/0 with no XP', () => {
@@ -411,16 +414,38 @@ test('get_player omits arena stats at 0/0/0 with no XP', () => {
   fixture.player.stats.arena_knockouts = 0;
   const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Crafting: Level 2 (175 XP)');
-  expect(stdout).not.toContain('Arena:');
+  expect(stdout).not.toContain('Arena: ');
+  expect(stdout).not.toContain('Arena trials:');
+  expect(stdout).not.toContain('Arena XP today');
 });
 
 test('get_status does not print arena stats', () => {
   const fixture = structuredClone(getStatusFixture) as { player: Record<string, unknown> };
   fixture.player.stats = { arena_wins: 3, arena_losses: 1, arena_knockouts: 7 };
   fixture.player.arena_xp = { by_skill: { gunnery: 120 }, day: '2026-09-04' };
+  fixture.player.arena_won = { first_blood: 3 };
   const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
   expect(stdout).not.toContain('Arena: 3 wins');
+  expect(stdout).not.toContain('Arena trials');
   expect(stdout).not.toContain('Arena XP today');
+});
+
+test('get_player omits Arena trials when arena_won is empty or all zeros', () => {
+  const empty = structuredClone(playerArenaFixture) as {
+    player: { arena_won?: Record<string, number> };
+  };
+  empty.player.arena_won = {};
+  const emptyOut = renderStructuredResult('get_player', empty, options, context).stdout.join('\n');
+  expect(emptyOut).toContain('Arena: 3 wins');
+  expect(emptyOut).not.toContain('Arena trials:');
+
+  const zeros = structuredClone(playerArenaFixture) as {
+    player: { arena_won?: Record<string, number> };
+  };
+  zeros.player.arena_won = { first_blood: 0 };
+  const zerosOut = renderStructuredResult('get_player', zeros, options, context).stdout.join('\n');
+  expect(zerosOut).toContain('Arena: 3 wins');
+  expect(zerosOut).not.toContain('Arena trials:');
 });
 
 test('get_player prints detention after trading restriction and before stats', () => {

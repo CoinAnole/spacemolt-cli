@@ -642,7 +642,7 @@ export const statusFormatters = [
         const skillLines = [
           formatSkillSummary(stats, 'piloting', 'Piloting'),
           formatSkillSummary(stats, 'crafting', 'Crafting'),
-          ...arenaStatLines(stats, player.arena_xp),
+          ...arenaStatLines(stats, player.arena_xp, player.arena_won),
         ].filter((line): line is string => Boolean(line));
         if (skillLines.length) {
           emitLine(`\n${c.bright}Stats:${c.reset}`);
