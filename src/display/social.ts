@@ -98,6 +98,11 @@ function formatYesNo(value: unknown): string | undefined {
   return value ? 'yes' : 'no';
 }
 
+function formatArenaOnlyFleetLine(arenaOnly: unknown): string | undefined {
+  if (arenaOnly !== true) return undefined;
+  return 'Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)';
+}
+
 function emitDefinedLine(label: string, value: unknown): void {
   if (value === undefined || value === null || value === '') return;
   if (isRecord(value) || Array.isArray(value)) return;
@@ -1796,6 +1801,8 @@ export const socialFormatters = [
         const memberCount = Array.isArray(members) ? members.length : undefined;
         emitLine(memberCount === undefined ? `Size: ${fleet.max_size}` : `Size: ${memberCount}/${fleet.max_size}`);
       }
+      const arenaOnlyLine = formatArenaOnlyFleetLine(fleet.arena_only);
+      if (arenaOnlyLine) emitLine(arenaOnlyLine);
       if (Array.isArray(members)) {
         const rows = members.filter(isRecord).map((member) => {
           const ship = member.ship;

@@ -398,6 +398,13 @@ export const fleetFixture = {
   ],
 };
 
+const { max_size: _omittedMaxSize, ...fleetFixtureWithoutMaxSize } = fleetFixture;
+
+export const fleetArenaOnlyFixture = {
+  ...fleetFixtureWithoutMaxSize,
+  arena_only: true,
+};
+
 export const battleStatusFixture = {
   battle_id: 'battle-1',
   system_id: 'sol',
@@ -1656,6 +1663,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_list',
   },
   fleet_status: { command: 'fleet_status', fixture: fleetFixture },
+  fleet_status_arena_only: { command: 'fleet_status', fixture: fleetArenaOnlyFixture },
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
   get_battle_status_combat_state: { command: 'get_battle_status', fixture: battleStatusCombatStateFixture },

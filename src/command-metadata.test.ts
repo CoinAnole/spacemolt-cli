@@ -834,6 +834,23 @@ describe('command metadata', () => {
     expect(captureFullHelp()).toContain('arena fight <id>          Start an unlocked NPC trial at this arena');
   });
 
+  test('fleet status and fleet invite help document arena-only fleets', () => {
+    const statusHelp = captureHelp('fleet status');
+    expect(statusHelp).toContain('arena-only');
+    expect(statusHelp).toContain('unlimited at this arena');
+    expect(statusHelp).not.toContain('Create and manage player fleets');
+
+    const inviteHelp = captureHelp('fleet invite');
+    expect(inviteHelp).toContain('undocked at an arena');
+    expect(inviteHelp).toContain('ordinary capacity');
+    expect(inviteHelp).not.toContain('spacemolt fleet_invite');
+
+    const fullHelp = captureFullHelp();
+    expect(fullHelp).toContain('Current fleet membership and members');
+    expect(fullHelp).toContain('Invite a player');
+    expect(fullHelp).not.toContain('undocked at an arena');
+  });
+
   test('unload_passenger help documents all-passenger bulk unload', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.unload_passenger;
     expect(config?.usage).toContain('all');

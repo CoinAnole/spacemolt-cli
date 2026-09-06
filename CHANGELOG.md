@@ -4,6 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Arena-only fleets (gameserver 0.589.0)
+
+- Human `fleet status` prints `Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)`
+  when `arena_only` is true. The Size line still appears only when the server
+  sends `max_size`. Ordinary fleets omit the new line. JSON/YAML/jq field names
+  are unchanged.
+- `help fleet invite` documents that inviting past ordinary capacity while
+  undocked at an arena converts the fleet. `help fleet status` no longer falls
+  through to the generated fleet-tool summary.
+
 ### Help copy (gameserver 0.591.1)
 
 - `help buy_ship_license` notes that a per-design license covers the hull's

@@ -32,6 +32,8 @@ import {
   factionScanPoiEmptyFixture,
   factionScanPoiFixture,
   factionScanPoiPartialFixture,
+  fleetArenaOnlyFixture,
+  fleetFixture,
   forumThreadFixture,
   ranchSetCullFixture,
   ranchStatusFixture,
@@ -1020,47 +1022,24 @@ test('omits faction facility state column when the API omits that field', () => 
   expect(stdout).toContain('Rent');
 });
 
-test('renders flat fleet_status response from v2 schema', () => {
-  const rendered = renderStructuredResult(
-    'fleet_status',
-    {
-      action: 'status',
-      in_fleet: true,
-      fleet_id: 'fleet-1',
-      leader: 'Marlowe',
-      is_leader: true,
-      max_size: 5,
-      system_id: 'sol',
-      poi_id: 'earth_station',
-      invites: [{ player_id: 'player-3', username: 'Ibis' }],
-      members: [
-        {
-          player_id: 'player-1',
-          username: 'Marlowe',
-          is_leader: true,
-          ship: 'Prospector',
-          fuel_per_jump: 12,
-        },
-        {
-          player_id: 'player-2',
-          username: 'Rook',
-          is_leader: false,
-          passenger: true,
-          riding_ship_id: 'ship-marlowe-1',
-        },
-      ],
-    },
-    options,
-    context,
-  );
+const ARENA_ONLY_FLEET_LINE = 'Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)';
 
+function renderFleetStatus(fixture: Record<string, unknown>): string {
+  const rendered = renderStructuredResult('fleet_status', fixture, options, context);
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
+  return stdout;
+}
+
+test('renders flat fleet_status response from v2 schema', () => {
+  const stdout = renderFleetStatus(fleetFixture);
+
   expect(stdout).toContain('=== Fleet ===');
   expect(stdout).toContain('ID: fleet-1');
   expect(stdout).toContain('Leader: Marlowe');
   expect(stdout).toContain('You are leader: yes');
   expect(stdout).toContain('Size: 2/5');
+  expect(stdout).not.toContain('Arena-only');
   expect(stdout).toContain('Marlowe');
   expect(stdout).toContain('Prospector');
   expect(stdout).toContain('sol');
@@ -1074,6 +1053,36 @@ test('renders flat fleet_status response from v2 schema', () => {
   const rookLine = stdout.split('\n').find((line) => line.includes('Rook'));
   expect(rookLine).toBeDefined();
   expect(rookLine).toMatch(/Rook\s+\|\s+player-2\s+\|\s+\|\s+/);
+});
+
+test('renders arena-only fleet status without a Size line', () => {
+  const stdout = renderFleetStatus(fleetArenaOnlyFixture);
+
+  expect(stdout).toContain(ARENA_ONLY_FLEET_LINE);
+  expect(stdout).not.toContain('Size:');
+  expect(stdout).toContain('=== Members ===');
+  expect(stdout).toContain('Pending Invites');
+});
+
+test('omits Arena-only when arena_only is false', () => {
+  const stdout = renderFleetStatus({ ...fleetFixture, arena_only: false });
+
+  expect(stdout).toContain('Size: 2/5');
+  expect(stdout).not.toContain('Arena-only');
+});
+
+test('omits Arena-only when arena_only is the string true', () => {
+  const stdout = renderFleetStatus({ ...fleetFixture, arena_only: 'true' });
+
+  expect(stdout).toContain('Size: 2/5');
+  expect(stdout).not.toContain('Arena-only');
+});
+
+test('prints Size and Arena-only when both fields are present', () => {
+  const stdout = renderFleetStatus({ ...fleetFixture, arena_only: true });
+
+  expect(stdout).toContain('Size: 2/5');
+  expect(stdout).toContain(ARENA_ONLY_FLEET_LINE);
 });
 
 test('fleet shape fallback does not claim public faction profiles', () => {
