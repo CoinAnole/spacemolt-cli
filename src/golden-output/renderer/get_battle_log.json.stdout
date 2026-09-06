@@ -96,6 +96,34 @@
           ]
         },
         {
+          "attacker_id": "pirate-1",
+          "target_id": "player-1",
+          "zone_distance": 0,
+          "weapons": [
+            {
+              "instance_id": "w-legacy",
+              "name": "Light Blaster",
+              "base_damage": 80,
+              "after_disruption": 80,
+              "type_bonus_pct": 0,
+              "crit_chance": 0.05,
+              "crit_roll": 0.5,
+              "crit_fired": false,
+              "damage": 0,
+              "damage_type": "kinetic"
+            }
+          ],
+          "raw_damage": 80,
+          "weapon_skill_pct": 0,
+          "landed_damage": 0,
+          "hit_chance": 0.12,
+          "hit_success": false,
+          "final_damage": 0,
+          "shield_damage": 0,
+          "hull_damage": 0,
+          "damage_type": "kinetic"
+        },
+        {
           "attacker_id": "player-1",
           "target_id": "pirate-1",
           "hit_success": true,

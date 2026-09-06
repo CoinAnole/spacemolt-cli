@@ -1731,6 +1731,17 @@ test('get_battle_log renders shield/hull ticks, defense legend, and attacks with
   expect(stdout).toContain('Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)');
 });
 
+test('get_battle_log mixed-age tick-1 historical miss prints chance 12% without roll', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogFixture) as Record<string, unknown>);
+  const ticks = battleLogTicksSection(stdout);
+  const attacks = sectionAfter(stdout, 'Attacks');
+
+  expect(ticks).toMatch(/^\s*1\s*\|\s*3\s*\|\s*1\s*\|\s*520\s*\|/m);
+  expect(attacks).toContain('Scatter Cannon chance 12% roll 81');
+  expect(attacks).toMatch(/^\s*1\s*\|\s*pirate-1\s*\|\s*player-1\s*\|\s*miss\s*\|\s*\|\s*chance 12%\s*$/m);
+  expect(attacks).not.toContain('Light Blaster');
+});
+
 function battleLogTicksSection(stdout: string): string {
   return stdout.split('=== Ticks ===')[1]?.split('=== Attacks ===')[0] ?? '';
 }
