@@ -784,15 +784,21 @@ export const battleLogFixture = {
           damage_type: 'kinetic',
           landed_damage: 500,
           hit_chance: 0.65,
+          zone_distance: 0,
+          raw_damage: 500,
+          weapon_skill_pct: 0,
           weapons: [
-            {
+            weaponFireDetail({
               instance_id: 'w-pulse',
               name: 'Pulse Laser',
+              base_damage: 500,
+              after_disruption: 500,
+              damage: 500,
               damage_type: 'kinetic',
               hit_chance: 0.65,
               hit_roll: 0.2,
               hit_success: true,
-            },
+            }),
           ],
           defense_components: [
             {
@@ -827,16 +833,25 @@ export const battleLogFixture = {
           target_id: 'player-1',
           hit_success: false,
           final_damage: 0,
-          hit_chance: 12,
+          hit_chance: 0.12,
           landed_damage: 0,
+          zone_distance: 0,
+          raw_damage: 200,
+          weapon_skill_pct: 0,
+          damage_type: 'kinetic',
+          shield_damage: 0,
+          hull_damage: 0,
           weapons: [
-            {
+            weaponFireDetail({
               instance_id: 'w-scatter',
               name: 'Scatter Cannon',
+              base_damage: 200,
+              after_disruption: 200,
+              damage: 0,
               damage_type: 'kinetic',
               hit_chance: 0.12,
               hit_roll: 0.81,
-            },
+            }),
           ],
         },
         {
@@ -848,30 +863,43 @@ export const battleLogFixture = {
           hull_damage: 180,
           landed_damage: 600,
           hit_chance: 0.65,
+          zone_distance: 0,
+          raw_damage: 600,
+          weapon_skill_pct: 0,
+          damage_type: 'energy',
           weapons: [
-            {
+            weaponFireDetail({
               instance_id: 'w-rail',
               name: 'Railgun',
+              base_damage: 400,
+              after_disruption: 400,
+              damage: 400,
               damage_type: 'energy',
               hit_chance: 0.65,
               hit_roll: 0.2,
               hit_success: true,
-            },
-            {
+            }),
+            weaponFireDetail({
               instance_id: 'w-cannon',
               name: 'Pulse Cannon',
+              base_damage: 200,
+              after_disruption: 200,
+              damage: 200,
               damage_type: 'kinetic',
               hit_chance: 0.65,
               hit_roll: 0.3,
               hit_success: true,
-            },
-            {
+            }),
+            weaponFireDetail({
               instance_id: 'w-mining',
               name: 'Mining Laser',
+              base_damage: 150,
+              after_disruption: 150,
+              damage: 0,
               damage_type: 'kinetic',
               hit_chance: 0.35,
               hit_roll: 0.61,
-            },
+            }),
           ],
           defense_components: [
             {
@@ -965,6 +993,23 @@ function attackLogEntry(overrides: Record<string, unknown> = {}): Record<string,
     final_damage: 10,
     shield_damage: 7,
     hull_damage: 3,
+    damage_type: 'kinetic',
+    ...overrides,
+  };
+}
+
+// optional WeaponFireDetail hit fields stay off the defaults
+function weaponFireDetail(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    instance_id: 'w-gun',
+    name: 'Pulse Laser',
+    base_damage: 100,
+    after_disruption: 100,
+    type_bonus_pct: 0,
+    crit_chance: 0.05,
+    crit_roll: 0.5,
+    crit_fired: false,
+    damage: 100,
     damage_type: 'kinetic',
     ...overrides,
   };
