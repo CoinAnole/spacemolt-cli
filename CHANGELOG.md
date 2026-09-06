@@ -4,6 +4,10 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### get_battle_log per-weapon volleys (gameserver 0.593.0)
+
+- Human `get_battle_log` prints per-weapon volleys as `hit N/M` and shows missed guns' chance/roll. JSON/YAML unchanged.
+
 ### Arena-only fleets (gameserver 0.589.0)
 
 - Human `fleet status` prints `Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)`
