@@ -782,6 +782,18 @@ export const battleLogFixture = {
           hull_damage: 120,
           shield_damage: 300,
           damage_type: 'kinetic',
+          landed_damage: 500,
+          hit_chance: 0.65,
+          weapons: [
+            {
+              instance_id: 'w-pulse',
+              name: 'Pulse Laser',
+              damage_type: 'kinetic',
+              hit_chance: 0.65,
+              hit_roll: 0.2,
+              hit_success: true,
+            },
+          ],
           defense_components: [
             {
               weapon_instance_id: 'w-pulse',
@@ -816,7 +828,16 @@ export const battleLogFixture = {
           hit_success: false,
           final_damage: 0,
           hit_chance: 12,
-          hit_roll: 81,
+          landed_damage: 0,
+          weapons: [
+            {
+              instance_id: 'w-scatter',
+              name: 'Scatter Cannon',
+              damage_type: 'kinetic',
+              hit_chance: 0.12,
+              hit_roll: 0.81,
+            },
+          ],
         },
         {
           attacker_id: 'player-1',
@@ -825,6 +846,33 @@ export const battleLogFixture = {
           final_damage: 520,
           shield_damage: 340,
           hull_damage: 180,
+          landed_damage: 600,
+          hit_chance: 0.65,
+          weapons: [
+            {
+              instance_id: 'w-rail',
+              name: 'Railgun',
+              damage_type: 'energy',
+              hit_chance: 0.65,
+              hit_roll: 0.2,
+              hit_success: true,
+            },
+            {
+              instance_id: 'w-cannon',
+              name: 'Pulse Cannon',
+              damage_type: 'kinetic',
+              hit_chance: 0.65,
+              hit_roll: 0.3,
+              hit_success: true,
+            },
+            {
+              instance_id: 'w-mining',
+              name: 'Mining Laser',
+              damage_type: 'kinetic',
+              hit_chance: 0.35,
+              hit_roll: 0.61,
+            },
+          ],
           defense_components: [
             {
               weapon_instance_id: 'w-rail',
@@ -911,9 +959,8 @@ function attackLogEntry(overrides: Record<string, unknown> = {}): Record<string,
     weapons: [],
     raw_damage: 12,
     weapon_skill_pct: 0,
-    pre_hit_damage: 12,
+    landed_damage: 12,
     hit_chance: 0.65,
-    hit_roll: 0.2,
     hit_success: true,
     final_damage: 10,
     shield_damage: 7,

@@ -16,9 +16,10 @@ Defense: incoming→shield skill→typed resist→flat/adaptive (S# T# F#). S/H 
 
 === Attacks ===
 
-  Tick | From     | To       | Hit  | S/H     | Defense                                        
-  -----+----------+----------+------+---------+------------------------------------------------
-  0    | player-1 | pirate-1 | hit  | 300/120 | Pulse Laser kinetic 500→470→455→440 (S6 T3 F3) 
-  1    | pirate-1 | player-1 | miss |         | chance 12% roll 81                             
-  1    | player-1 | pirate-1 | hit  | 200/150 | Railgun energy 400→380→360→350 (S5 T5 F3)      
-  1    | player-1 | pirate-1 | hit  | 140/30  | Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)
+  Tick | From     | To       | Hit     | S/H     | Defense                                        
+  -----+----------+----------+---------+---------+------------------------------------------------
+  0    | player-1 | pirate-1 | hit     | 300/120 | Pulse Laser kinetic 500→470→455→440 (S6 T3 F3) 
+  1    | pirate-1 | player-1 | miss    |         | Scatter Cannon chance 12% roll 81              
+  1    | player-1 | pirate-1 | hit 2/3 | 200/150 | Railgun energy 400→380→360→350 (S5 T5 F3)      
+  1    | player-1 | pirate-1 | hit 2/3 | 140/30  | Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)
+  1    | player-1 | pirate-1 | hit 2/3 |         | Mining Laser chance 35% roll 61                
