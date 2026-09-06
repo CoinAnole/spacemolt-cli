@@ -120,4 +120,25 @@ describe('battle log fixture AttackLogEntry / WeaponFireDetail', () => {
     const miss = tick1?.attacks.find((attack) => attack.hit_success === false);
     expect(miss?.hit_chance).toBe(0.12);
   });
+
+  test('battleLogFixture tick-1 historical miss omits weapon hit fields', () => {
+    const tick1 = battleLogFixture.entries.find((entry) => entry.tick === 1);
+    const historical = tick1?.attacks.find(
+      (attack) =>
+        Array.isArray(attack.weapons) &&
+        attack.weapons.some((weapon) => isRecord(weapon) && weapon.name === 'Light Blaster'),
+    );
+    expect(historical?.hit_success).toBe(false);
+    expect(historical?.hit_chance).toBe(0.12);
+    expect(historical?.raw_damage).toBe(80);
+    expect(historical).not.toHaveProperty('hit_roll');
+    const weapons = attackWeapons(historical ?? {});
+    expect(weapons).toHaveLength(1);
+    const blaster = weapons[0];
+    expect(blaster?.name).toBe('Light Blaster');
+    expect(blaster?.damage).toBe(0);
+    expect(blaster).not.toHaveProperty('hit_chance');
+    expect(blaster).not.toHaveProperty('hit_roll');
+    expect(blaster).not.toHaveProperty('hit_success');
+  });
 });
