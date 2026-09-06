@@ -107,7 +107,7 @@ function weaponFired(weapon: Record<string, unknown>): boolean {
 }
 
 function weaponConnected(weapon: Record<string, unknown>): boolean {
-  return weapon.hit_success === true; // omitted or false => miss
+  return weapon.hit_success === true;
 }
 
 function firedWeapons(attack: Record<string, unknown>): Array<Record<string, unknown>> {
@@ -156,7 +156,7 @@ function appendAttackRows(
   const fired = firedWeapons(attack);
   if (fired.length === 0) {
     if (attack.hit_success === false) {
-      rows.push(missRow(tick, attack, snapshots)); // ignores components + S/H
+      rows.push(missRow(tick, attack, snapshots));
       return;
     }
     const components = recordComponents(attack.defense_components);
