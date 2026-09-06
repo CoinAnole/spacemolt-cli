@@ -153,7 +153,7 @@ export function briefingVariantsCatalog(): ArenaTrial[] {
       enemies: [PIRATE_RAIDER],
     }),
     trialDef({
-      // Supporting 0.590 row: READY energy-only briefing. Not a live 0.592 slice.
+      // Unlocked so the energy-only briefing is emitted (locked rows omit it).
       challenge_id: 'clean_fight',
       name: 'Clean Fight',
       series: 'Clean Fight',
