@@ -127,6 +127,83 @@ test('arenaStatLines ignores malformed arena_xp', () => {
   expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, { day: '2026-09-04' })).toEqual([]);
 });
 
+const zeroArenaRecord = { arena_wins: 0, arena_losses: 0, arena_knockouts: 0 };
+
+test('arenaStatLines prints a sorted Arena trials line from arena_won', () => {
+  expect(arenaStatLines(zeroArenaRecord, undefined, { two_on_one: 1, first_blood: 3 })).toEqual([
+    'Arena trials: first_blood ×3, two_on_one ×1',
+  ]);
+});
+
+test('arenaStatLines omits Arena trials when the map is missing, empty, or all dropped', () => {
+  expect(arenaStatLines(zeroArenaRecord, undefined)).toEqual([]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, undefined)).toEqual([]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, {})).toEqual([]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, { first_blood: 0 })).toEqual([]);
+  expect(
+    arenaStatLines(zeroArenaRecord, undefined, {
+      first_blood: Number.NaN,
+      two_on_one: Number.POSITIVE_INFINITY,
+      gravemaker: 'x',
+    }),
+  ).toEqual([]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, 'won')).toEqual([]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, ['first_blood'])).toEqual([]);
+});
+
+test('arenaStatLines drops non-positive, non-integer, empty-key, and malformed arena_won entries', () => {
+  expect(arenaStatLines(zeroArenaRecord, undefined, { first_blood: 0, two_on_one: 2 })).toEqual([
+    'Arena trials: two_on_one ×2',
+  ]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, { first_blood: -1, two_on_one: 2 })).toEqual([
+    'Arena trials: two_on_one ×2',
+  ]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, { first_blood: '3' })).toEqual(['Arena trials: first_blood ×3']);
+  expect(arenaStatLines(zeroArenaRecord, undefined, { first_blood: 1.5, two_on_one: 1 })).toEqual([
+    'Arena trials: two_on_one ×1',
+  ]);
+  expect(arenaStatLines(zeroArenaRecord, undefined, { '': 4, first_blood: 1 })).toEqual([
+    'Arena trials: first_blood ×1',
+  ]);
+});
+
+test('arenaStatLines sorts trial ids with localeCompare', () => {
+  expect(
+    arenaStatLines(zeroArenaRecord, undefined, {
+      two_on_one: 1,
+      trial_master: 2,
+      first_blood: 3,
+    }),
+  ).toEqual(['Arena trials: first_blood ×3, trial_master ×2, two_on_one ×1']);
+});
+
+test('arenaStatLines prints record, trials, then XP', () => {
+  expect(
+    arenaStatLines(
+      { arena_wins: 3, arena_losses: 1, arena_knockouts: 7 },
+      {
+        by_skill: { shields: 40, gunnery: 120 },
+        day: '2026-09-04',
+      },
+      { two_on_one: 1, first_blood: 3 },
+    ),
+  ).toEqual([
+    'Arena: 3 wins / 1 loss / 7 knockouts',
+    'Arena trials: first_blood ×3, two_on_one ×1',
+    'Arena XP today (2026-09-04): gunnery 120, shields 40',
+  ]);
+});
+
+test('arenaStatLines keeps trials when XP is malformed', () => {
+  expect(arenaStatLines({ arena_wins: 1, arena_losses: 0, arena_knockouts: 0 }, 'today', { first_blood: 1 })).toEqual([
+    'Arena: 1 wins / 0 losses / 0 knockouts',
+    'Arena trials: first_blood ×1',
+  ]);
+  expect(arenaStatLines(zeroArenaRecord, { by_skill: {} }, { first_blood: 1 })).toEqual([
+    'Arena trials: first_blood ×1',
+  ]);
+});
+
 test('battleRulesetFromCategory treats only arena as the arena ruleset', () => {
   expect(battleRulesetFromCategory('arena')).toBe('arena');
   expect(battleRulesetFromCategory(' ARENA ')).toBe('arena');
