@@ -630,6 +630,26 @@ export const completedMissionDetailFixture = {
   chain_next: 'mission-refinery-check',
 };
 
+export const completedMissionBountyFixture = {
+  template_id: 'faction-bounty-kestrel',
+  title: 'Hunt Kestrel',
+  type: 'bounty',
+  difficulty: 4,
+  description: "Destroy Kestrel's ship.",
+  giver: { name: 'Vale', title: 'Quartermaster' },
+  completion_time: '2026-09-05T19:00:00Z',
+  repeatable: false,
+  objectives: [
+    {
+      type: 'kill_player',
+      description: 'Destroy Kestrel',
+      target_player: 'Kestrel',
+      target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+    },
+  ],
+  rewards: { credits: 50000 },
+};
+
 /** Live-shaped nested SC for complete_mission (P1 envelope: details only, no schemaTarget). */
 export const completeMissionFixture = {
   details: {
@@ -869,6 +889,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   scan_creature: { command: 'scan', fixture: scanCreatureFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
+  view_completed_mission_bounty: { command: 'view_completed_mission', fixture: completedMissionBountyFixture },
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
   complete_mission_shortfall: { command: 'complete_mission', fixture: completeMissionShortfallFixture },
   completed_missions: { command: 'completed_missions', fixture: completedMissionsFixture },

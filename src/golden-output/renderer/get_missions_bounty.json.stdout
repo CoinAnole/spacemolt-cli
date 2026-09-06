@@ -1,0 +1,38 @@
+{
+  "base_id": "earth_station",
+  "base_name": "Earth Station",
+  "missions": [
+    {
+      "difficulty": 3,
+      "mission_id": "pirate_sweep",
+      "title": "Pirate Sweep",
+      "type": "combat",
+      "description": "Clear pirate contacts harassing local shipping lanes.",
+      "expires_in_ticks": 48,
+      "rewards": {
+        "pirate_rep": 5,
+        "pirate_faction": "pirate_kael"
+      }
+    },
+    {
+      "difficulty": 4,
+      "mission_id": "bounty-kestrel-1",
+      "template_id": "faction-bounty-kestrel",
+      "title": "Hunt Kestrel",
+      "type": "bounty",
+      "description": "Destroy Kestrel's ship.",
+      "expires_in_ticks": 72,
+      "rewards": {
+        "credits": 50000
+      },
+      "objectives": [
+        {
+          "type": "kill_player",
+          "description": "Destroy Kestrel",
+          "target_player": "Kestrel",
+          "target_player_id": "9c8913b2cf825728a2404c9e4c4d7afb"
+        }
+      ]
+    }
+  ]
+}

@@ -57,10 +57,12 @@ function summarizeObjective(objective: unknown): string {
     objective.target ??
     objective.target_name ??
     objective.target_username ??
+    objective.target_player ??
     objective.target_base_name ??
     objective.target_base ??
     objective.system_name ??
-    objective.item_id;
+    objective.item_id ??
+    objective.target_player_id;
   const parts = [description, isRecord(target) ? (target.name ?? target.id) : target, summarizeProgress(objective)]
     .filter((part) => part !== undefined && part !== null && part !== '')
     .map(String);
@@ -237,6 +239,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Title', ['title', 'name']],
     ['ID', ['mission_id', 'id', 'template_id']],
     ['Type', ['type']],
+    ['Objectives', ['objectives_summary']],
     ['Difficulty', ['difficulty']],
     ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
     ['Rewards', ['rewards_summary']],
@@ -1220,7 +1223,15 @@ export const genericFormatters = [
       if (!rows.every(isRecord)) return false;
       const recordRows = (rows as Array<Record<string, unknown>>).map((row) => {
         if (key === 'items') return { ...row, effects_summary: summarizeCatalogItemEffects(row) };
-        if (key === 'missions') return { ...row, rewards_summary: summarizeRewards(row.rewards) };
+        if (key === 'missions') {
+          return {
+            ...row,
+            rewards_summary: summarizeRewards(row.rewards),
+            objectives_summary: Array.isArray(row.objectives)
+              ? row.objectives.map(summarizeObjective).filter(Boolean).join('; ')
+              : '',
+          };
+        }
         return row;
       });
       const columnCandidates = GENERIC_LIST_COLUMNS_BY_KEY[key] ?? GENERIC_LIST_COLUMNS;

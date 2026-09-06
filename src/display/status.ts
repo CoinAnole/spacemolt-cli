@@ -391,6 +391,10 @@ function summarizeObjectiveForDisplay(objective: unknown): string {
   if (system !== undefined) details.push(`system ${system}`);
   const targetBase = objective.target_base_name ?? objective.target_base_id;
   if (targetBase !== undefined) details.push(`station ${targetBase}`);
+  if (objective.target_player !== undefined) details.push(`target ${objective.target_player}`);
+  if (objective.target_player_id !== undefined && objective.target_player_id !== objective.target_player) {
+    details.push(`id ${objective.target_player_id}`);
+  }
   if (Array.isArray(objective.participants) && objective.participants.length > 0) {
     details.push(`participants ${objective.participants.join(', ')}`);
   }

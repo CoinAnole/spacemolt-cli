@@ -1,0 +1,18 @@
+
+template_id: "faction-bounty-kestrel"
+title: "Hunt Kestrel"
+type: bounty
+difficulty: 4
+description: "Destroy Kestrel's ship."
+giver:
+  name: Vale
+  title: Quartermaster
+completion_time: 2026-09-05T19:00:00Z
+repeatable: false
+objectives:
+  - type: kill_player
+    description: "Destroy Kestrel"
+    target_player: Kestrel
+    target_player_id: 9c8913b2cf825728a2404c9e4c4d7afb
+rewards:
+  credits: 50000

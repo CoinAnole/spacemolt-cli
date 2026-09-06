@@ -8,6 +8,7 @@ import {
   browseShipsFixture,
   cargoFixture,
   catalogItemsFixture,
+  completedMissionBountyFixture,
   completedMissionDetailFixture,
   completedMissionsFixture,
   createSellOrderFixture,
@@ -26,6 +27,7 @@ import {
   listStationPassengersFixture,
   listStationPassengersWithLoungeFixture,
   loadPassengerConnectingFixture,
+  missionsBountyFixture,
   missionsFixture,
   nearbyBossFixture,
   nearbyFixture,
@@ -5005,6 +5007,114 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('kepler_hub');
     expect(stdout).toContain('Deliver Parts frontier_cache 0/2');
     expect(stdout).toContain('nova_station');
+  });
+
+  test('get_active_missions prints bounty target_player and falls back to target_player_id', () => {
+    const named = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-bounty-kestrel-1',
+            title: 'Hunt Kestrel',
+            type: 'bounty',
+            objectives: [
+              {
+                type: 'kill_player',
+                description: 'Destroy Kestrel',
+                target_player: 'Kestrel',
+                target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+                current: 0,
+                required: 1,
+              },
+            ],
+            rewards: {},
+          },
+          {
+            mission_id: 'mission-faction-delivery-1',
+            title: 'Faction Supply Delivery',
+            type: 'delivery',
+            objectives: [
+              {
+                completed: false,
+                current: 0,
+                description: 'Deliver Food Rations',
+                item_id: 'food_rations',
+                required: 5,
+                target_base: 'earth_station',
+                type: 'deliver_item',
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const idOnly = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-bounty-id-only',
+            title: 'Hunt by ID',
+            type: 'bounty',
+            objectives: [
+              {
+                type: 'kill_player',
+                description: 'Destroy Kestrel',
+                target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+                current: 0,
+                required: 1,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(named.stderr).toBe('');
+    expect(named.stdout).toContain('Destroy Kestrel Kestrel 0/1');
+    expect(named.stdout).not.toContain('9c8913b2cf825728a2404c9e4c4d7afb');
+    expect(named.stdout).toContain('Deliver Food Rations earth_station 0/5');
+    expect(idOnly.stderr).toBe('');
+    expect(idOnly.stdout).toContain('9c8913b2cf825728a2404c9e4c4d7afb');
+  });
+
+  test('get_missions mixed board shows bounty objectives beside existing combat rows', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', missionsBountyFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Pirate Sweep');
+    expect(stdout).toContain('Hunt Kestrel');
+    expect(stdout).toContain('bounty');
+    expect(stdout).toContain('Destroy Kestrel');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('view_completed_mission prints bounty target without item or quantity', () => {
+    const both = captureStructuredOutput('view_completed_mission', completedMissionBountyFixture);
+    const idOnly = captureStructuredOutput('view_completed_mission', {
+      template_id: 'faction-bounty-kestrel',
+      title: 'Hunt Kestrel',
+      type: 'bounty',
+      objectives: [
+        {
+          type: 'kill_player',
+          description: 'Destroy Kestrel',
+          target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+        },
+      ],
+    });
+
+    expect(both.stderr).toBe('');
+    expect(both.stdout).toContain('target Kestrel');
+    expect(both.stdout).toContain('id 9c8913b2cf825728a2404c9e4c4d7afb');
+    expect(both.stdout).not.toContain('item');
+    expect(both.stdout).not.toContain('quantity');
+    expect(idOnly.stderr).toBe('');
+    expect(idOnly.stdout).toContain('id 9c8913b2cf825728a2404c9e4c4d7afb');
+    expect(idOnly.stdout).not.toContain('target ');
   });
 
   test('completed_missions formats history table with giver and completion time', () => {
