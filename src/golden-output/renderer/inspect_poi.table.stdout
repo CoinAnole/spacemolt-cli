@@ -1,0 +1,21 @@
+
+=== Inspect: main_belt ===
+Kind: poi
+Source: poi
+
+POI: Main Belt
+ID: main_belt
+Class: asteroid_belt
+Online: 3
+Position: (1, 2)
+
+A dense ring of iron-rich rock.
+Services: mining, scan
+
+=== Resources ===
+
+  Resource   | Remaining | Richness | Power | Lock | Sparse    
+  -----------+-----------+----------+-------+------+-----------
+  ore_iron   | 120 units | 3        | 6     | 200  |           
+  ore_gold   | 74 units  | 1        | 3     | 200  | too sparse
+  ore_copper | depleted  | 2        |       | 200  | too sparse

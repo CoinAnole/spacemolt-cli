@@ -18,6 +18,7 @@ import {
   isRecord,
   printCompactTable,
   type ResultFormatter,
+  resourceWorkability,
 } from './helpers.ts';
 
 function text(value: unknown): string | undefined {
@@ -270,16 +271,24 @@ function emitPoi(poi: Record<string, unknown>, factionIntel: unknown): void {
       ? summary.resources.filter(isRecord)
       : [];
   if (resources.length) {
-    printCompactTable(
-      'Resources',
-      resources,
-      [
-        ['Resource', ['resource_id', 'name', 'id']],
-        ['Remaining', ['remaining_display', 'remaining']],
-        ['Richness', ['richness']],
-      ],
-      { maxCellWidth: 40 },
-    );
+    const rows = resources.map((res) => {
+      const work = resourceWorkability(res);
+      return {
+        ...res,
+        power_display: work.supportedPower !== undefined ? String(work.supportedPower) : '',
+        lock_display: work.lockMinimumStock !== undefined ? String(work.lockMinimumStock) : '',
+        sparse_display: work.tooSparse ? 'too sparse' : '',
+      };
+    });
+    const columns: Array<[string, string[]]> = [
+      ['Resource', ['resource_id', 'name', 'id']],
+      ['Remaining', ['remaining_display', 'remaining']],
+      ['Richness', ['richness']],
+    ];
+    if (rows.some((row) => row.power_display)) columns.push(['Power', ['power_display']]);
+    if (rows.some((row) => row.lock_display)) columns.push(['Lock', ['lock_display']]);
+    if (rows.some((row) => row.sparse_display)) columns.push(['Sparse', ['sparse_display']]);
+    printCompactTable('Resources', rows, columns, { maxCellWidth: 40 });
   }
 
   if (detail?.wormhole_destination_id || detail?.wormhole_destination) {

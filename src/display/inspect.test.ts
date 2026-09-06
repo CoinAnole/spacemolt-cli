@@ -8,6 +8,7 @@ import {
   inspectCatalogBoardingModuleFixture,
   inspectCatalogModuleFixture,
   inspectCatalogShipFixture,
+  inspectPoiFixture,
 } from './inspect.fixtures.ts';
 
 const options: GlobalOptions = {
@@ -783,7 +784,76 @@ test('renders poi inspect results with description', () => {
   expect(stdout).toContain('A dense ring of iron-rich rock.');
   expect(stdout).toContain('Services: mining, scan');
   expect(stdout).toContain('iron_ore');
+  expect(stdout).not.toContain('Power');
+  expect(stdout).not.toContain('Lock');
+  expect(stdout).not.toContain('Sparse');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders poi inspect workability columns when ship-relative fields are present', () => {
+  const rendered = renderStructuredResult('inspect', structuredClone(inspectPoiFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Power');
+  expect(stdout).toContain('Lock');
+  expect(stdout).toContain('Sparse');
+  expect(stdout).toContain('ore_iron');
+  expect(stdout).toContain('ore_gold');
+  expect(stdout).toContain('ore_copper');
+
+  const ironLine = stdout.split('\n').find((line) => line.includes('ore_iron'));
+  const goldLine = stdout.split('\n').find((line) => line.includes('ore_gold'));
+  const copperLine = stdout.split('\n').find((line) => line.includes('ore_copper'));
+  expect(ironLine).toBeDefined();
+  expect(goldLine).toBeDefined();
+  expect(copperLine).toBeDefined();
+  expect(ironLine).not.toContain('too sparse');
+  expect(goldLine).toContain('too sparse');
+  expect(copperLine).toContain('too sparse');
+
+  const copperCells = copperLine?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(copperCells[3]).toBe('');
+});
+
+test('poi inspect too_sparse false does not create a Sparse column', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      source: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          class: 'asteroid_belt',
+          online: 3,
+          has_base: false,
+          fuel_reserve: 0,
+        },
+        detail: {
+          resources: [
+            {
+              resource_id: 'ore_iron',
+              remaining: 120,
+              richness: 3,
+              supported_power: 6,
+              lock_minimum_stock: 200,
+              too_sparse: false,
+            },
+          ],
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Power');
+  expect(stdout).toContain('Lock');
+  expect(stdout).not.toContain('Sparse');
+  expect(stdout).not.toContain('too sparse');
 });
 
 test('renders base inspect results with station defences', () => {

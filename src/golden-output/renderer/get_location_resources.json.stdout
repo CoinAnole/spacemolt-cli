@@ -1,0 +1,73 @@
+{
+  "message": "Location retrieved",
+  "credits": 12345,
+  "location": {
+    "system_id": "sol",
+    "system_name": "Sol",
+    "empire": "Terran",
+    "security_status": "high security",
+    "connections": [
+      "alpha_centauri"
+    ],
+    "poi_id": "sol_earth",
+    "poi_name": "Earth",
+    "poi_type": "planet",
+    "docked_at": "earth_station",
+    "nearby_player_count": 1,
+    "nearby_players": [
+      {
+        "username": "Marlowe",
+        "faction_tag": "SMC",
+        "ship_class": "prospector"
+      }
+    ],
+    "nearby_prizes": [
+      {
+        "prize_id": "prize-dust-1",
+        "actor_id": "actor-prize-1",
+        "ship_id": "ship-prize-1",
+        "ship_class": "frigate",
+        "ship_name": "Dust Devil",
+        "status": "available",
+        "hull": 40,
+        "max_hull": 80,
+        "shield": 10,
+        "max_shield": 20,
+        "in_combat": false
+      }
+    ],
+    "nearby_prize_count": 1,
+    "nearby_pirate_count": 2,
+    "nearby_pirates": [
+      {
+        "name": "Raider",
+        "faction": "pirate_kael",
+        "faction_name": "Admiral Kael"
+      }
+    ],
+    "nearby_empire_npc_count": 1,
+    "nearby_empire_npcs": [
+      {
+        "name": "Patrol"
+      }
+    ],
+    "resources": [
+      {
+        "item_id": "ore_iron",
+        "item_name": "Iron Ore",
+        "richness": 3,
+        "remaining": 750,
+        "supported_power": 12
+      },
+      {
+        "item_id": "ore_gold",
+        "item_name": "Gold Ore",
+        "richness": 1,
+        "remaining": 74,
+        "supported_power": 3,
+        "lock_minimum_stock": 200,
+        "too_sparse": true
+      }
+    ]
+  }
+}

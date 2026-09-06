@@ -1,0 +1,28 @@
+
+=== Location ===
+Credits: 12,345
+System: Sol (sol)
+Empire: Terran
+Security: high security
+Connections: alpha_centauri
+POI: Earth (planet)
+Docked at: earth_station
+
+Resources:
+  - Iron Ore: richness 3, 750, supports power 12
+  - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse
+
+Nearby Players (1):
+  Marlowe [SMC] (prospector)
+
+Nearby Prizes (1):
+
+=== Nearby Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+-----------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
+
+Nearby Pirates: 2
+
+Nearby NPCs: 1

@@ -1,5 +1,6 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
 import { baseRepairsFixture } from './ship.fixtures.ts';
+import { poiWorkabilityResources } from './status.fixtures.ts';
 
 export const inspectPackageFixture = {
   id: 'package:pkg_abc',
@@ -274,6 +275,37 @@ export const inspectBaseRepairsFixture = {
   base: baseRepairsFixture,
 };
 
+export const inspectPoiFixture = {
+  id: 'main_belt',
+  kind: 'poi',
+  source: 'poi',
+  poi: {
+    summary: {
+      id: 'main_belt',
+      name: 'Main Belt',
+      class: 'asteroid_belt',
+      type: 'asteroid_belt',
+      online: 3,
+      has_base: false,
+      fuel_reserve: 0,
+      position: { x: 1, y: 2 },
+    },
+    detail: {
+      kind: 'normal',
+      poi: {
+        id: 'main_belt',
+        name: 'Main Belt',
+        class: 'asteroid_belt',
+        type: 'asteroid_belt',
+        system_id: 'sol',
+        description: 'A dense ring of iron-rich rock.',
+      },
+      services: ['mining', 'scan'],
+      resources: poiWorkabilityResources,
+    },
+  },
+};
+
 export const inspectFixtureCases = {
   inspect_package: { command: 'inspect', fixture: inspectPackageFixture },
   inspect_package_shipment: { command: 'inspect', fixture: inspectPackageShipmentFixture },
@@ -292,4 +324,5 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_catalog_recipe: { command: 'inspect', fixture: inspectCatalogRecipeFixture },
   inspect_base: { command: 'inspect', fixture: inspectBaseFixture },
   inspect_base_repairs: { command: 'inspect', fixture: inspectBaseRepairsFixture },
+  inspect_poi: { command: 'inspect', fixture: inspectPoiFixture },
 };

@@ -1,0 +1,71 @@
+{
+  "id": "main_belt",
+  "kind": "poi",
+  "source": "poi",
+  "poi": {
+    "summary": {
+      "id": "main_belt",
+      "name": "Main Belt",
+      "class": "asteroid_belt",
+      "type": "asteroid_belt",
+      "online": 3,
+      "has_base": false,
+      "fuel_reserve": 0,
+      "position": {
+        "x": 1,
+        "y": 2
+      }
+    },
+    "detail": {
+      "kind": "normal",
+      "poi": {
+        "id": "main_belt",
+        "name": "Main Belt",
+        "class": "asteroid_belt",
+        "type": "asteroid_belt",
+        "system_id": "sol",
+        "description": "A dense ring of iron-rich rock."
+      },
+      "services": [
+        "mining",
+        "scan"
+      ],
+      "resources": [
+        {
+          "resource_id": "ore_iron",
+          "name": "Iron Ore",
+          "richness": 3,
+          "remaining": 120,
+          "remaining_display": "120 units",
+          "max_remaining": 300,
+          "depletion_percent": 60,
+          "supported_power": 6,
+          "lock_minimum_stock": 200
+        },
+        {
+          "resource_id": "ore_gold",
+          "name": "Gold Ore",
+          "richness": 1,
+          "remaining": 74,
+          "remaining_display": "74 units",
+          "max_remaining": 300,
+          "depletion_percent": 75.33333333333333,
+          "supported_power": 3,
+          "lock_minimum_stock": 200,
+          "too_sparse": true
+        },
+        {
+          "resource_id": "ore_copper",
+          "name": "Copper Ore",
+          "richness": 2,
+          "remaining": 0,
+          "remaining_display": "depleted",
+          "max_remaining": 300,
+          "depletion_percent": 100,
+          "lock_minimum_stock": 200,
+          "too_sparse": true
+        }
+      ]
+    }
+  }
+}
