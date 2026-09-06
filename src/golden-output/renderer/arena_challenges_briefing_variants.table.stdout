@@ -1,0 +1,18 @@
+
+=== NPC Trials ===
+Ready here: 3   Travel: 0   Locked: 1
+
+Pirates  @ Blood Arena  — you are here
+  READY   1  Lone Scout    lone_scout
+             1× Pirate Scout (Fighter) · full fleet (every eligible member)
+  LOCKED  2  Raider Squad  raider_squad  needs Lone Scout
+
+Clean Fight  @ Blood Arena  — you are here
+  READY   1  Clean Fight   clean_fight
+             1× Ring Cleaver (Fighter) · solo duel · energy only
+
+Doctrine  @ Blood Arena  — you are here
+  READY   1  Armor Column  armor_column
+             Armor Column (boss, Cruiser) · full fleet (every eligible member)
+
+Next: arena fight lone_scout
