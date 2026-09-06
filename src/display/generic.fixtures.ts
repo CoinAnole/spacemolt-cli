@@ -226,6 +226,40 @@ export const missionsFixture = {
   ],
 };
 
+export const missionsBountyFixture = {
+  base_id: 'earth_station',
+  base_name: 'Earth Station',
+  missions: [
+    {
+      difficulty: 3,
+      mission_id: 'pirate_sweep',
+      title: 'Pirate Sweep',
+      type: 'combat',
+      description: 'Clear pirate contacts harassing local shipping lanes.',
+      expires_in_ticks: 48,
+      rewards: { pirate_rep: 5, pirate_faction: 'pirate_kael' },
+    },
+    {
+      difficulty: 4,
+      mission_id: 'bounty-kestrel-1',
+      template_id: 'faction-bounty-kestrel',
+      title: 'Hunt Kestrel',
+      type: 'bounty',
+      description: "Destroy Kestrel's ship.",
+      expires_in_ticks: 72,
+      rewards: { credits: 50000 },
+      objectives: [
+        {
+          type: 'kill_player',
+          description: 'Destroy Kestrel',
+          target_player: 'Kestrel',
+          target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+        },
+      ],
+    },
+  ],
+};
+
 export const activeMissionsFixture = {
   message: 'Active missions',
   missions: {
@@ -295,6 +329,38 @@ export const activeMissionsFixture = {
         },
         title: 'Faction Supply Delivery',
         type: 'delivery',
+      },
+    ],
+    max_missions: 5,
+  },
+};
+
+export const activeMissionsBountyFixture = {
+  message: 'Active missions',
+  missions: {
+    active: [
+      {
+        accepted_at: '2026-09-05T18:00:00Z',
+        description: "Destroy Kestrel's ship.",
+        difficulty: 4,
+        expires_in_ticks: 40,
+        issuing_base: 'Earth Station',
+        mission_id: 'mission-bounty-kestrel-1',
+        percent_complete: 0,
+        title: 'Hunt Kestrel',
+        type: 'bounty',
+        rewards: { credits: 50000 },
+        objectives: [
+          {
+            type: 'kill_player',
+            description: 'Destroy Kestrel',
+            target_player: 'Kestrel',
+            target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+            current: 0,
+            required: 1,
+            completed: false,
+          },
+        ],
       },
     ],
     max_missions: 5,
@@ -934,6 +1000,7 @@ export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
+  get_active_missions_bounty: { command: 'get_active_missions', fixture: activeMissionsBountyFixture },
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
@@ -949,6 +1016,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
+  get_missions_bounty: { command: 'get_missions', fixture: missionsBountyFixture },
   get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },

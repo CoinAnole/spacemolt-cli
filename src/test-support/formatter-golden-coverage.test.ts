@@ -52,6 +52,12 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('get_battle_log_interrupted');
     expect(report.requiredCoverageKeys).toContain('get_battle_summary_interrupted');
     expect(report.highValueFixtureLabels).toContain('get_battle_summary_interrupted');
+    expect(report.requiredCoverageKeys).toContain('get_missions_bounty');
+    expect(report.highValueFixtureLabels).toContain('get_missions_bounty');
+    expect(report.requiredCoverageKeys).toContain('get_active_missions_bounty');
+    expect(report.highValueFixtureLabels).toContain('get_active_missions_bounty');
+    expect(report.requiredCoverageKeys).toContain('view_completed_mission_bounty');
+    expect(report.highValueFixtureLabels).toContain('view_completed_mission_bounty');
   });
 
   test('friendly formatting gap targets have high-value non-fallback table output', () => {

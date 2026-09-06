@@ -211,6 +211,7 @@
     "get_map|get_map|required-missing|systems[1].position",
     "get_map|get_map|required-missing|systems[1].visited",
     "get_map|get_map|required-missing|systems[1].visited_at",
+    "get_missions_bounty|get_missions|required-missing|missions[0].rewards.credits",
     "get_missions|get_missions|required-missing|missions[0].rewards.credits",
     "get_player_arena|get_player|required-missing|player.id",
     "get_player_arena|get_player|required-missing|player.is_cloaked",

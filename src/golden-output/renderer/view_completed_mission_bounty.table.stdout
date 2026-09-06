@@ -1,0 +1,14 @@
+
+=== Completed Mission: Hunt Kestrel ===
+ID: faction-bounty-kestrel
+Type: bounty
+Difficulty: 4
+Giver: Quartermaster Vale
+Completed: 2026-09-05T19:00:00Z
+Repeatable: false
+
+Destroy Kestrel's ship.
+
+Objectives:
+  - Destroy Kestrel (target Kestrel, id 9c8913b2cf825728a2404c9e4c4d7afb)
+Rewards: 50,000 cr

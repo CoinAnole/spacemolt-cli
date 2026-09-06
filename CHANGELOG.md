@@ -4,6 +4,18 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Faction kill bounties (gameserver 0.591.0)
+
+- `help faction post_mission` documents `type=bounty` with a `kill_player`
+  objective (`target_id` = username or player ID) and a payload example.
+  `triggers: ["open_to_all"]` was already in Fields.
+- Human `get_missions` / `get_active_missions` print the named pilot from
+  `target_player` (fallback `target_player_id`). `get_missions` grows an
+  Objectives column whenever the server sends `objectives[]` (normal 0.591+
+  boards, not bounty-only). `view_completed_mission` prints the same fields
+  when history includes them. JSON/YAML/jq field names are unchanged.
+- Killing a bounty target in policed empire space is still a crime.
+
 ### get_player arena trial wins
 
 - Human `get_player` prints `Arena trials: <challenge_id> ×N, ...` after the

@@ -1,0 +1,7 @@
+
+=== Missions ===
+
+  Title        | ID               | Type   | Objectives              | Difficulty | Expires | Rewards                     | Description                     
+  -------------+------------------+--------+-------------------------+------------+---------+-----------------------------+---------------------------------
+  Pirate Sweep | pirate_sweep     | combat |                         | 3          | 48      | pirate rep +5 (pirate_kael) | Clear pirate contacts harassi...
+  Hunt Kestrel | bounty-kestrel-1 | bounty | Destroy Kestrel Kestrel | 4          | 72      | 50000 cr                    | Destroy Kestrel's ship.         

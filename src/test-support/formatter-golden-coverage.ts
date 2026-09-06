@@ -49,6 +49,8 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   get_battle_summary_captures: 'get_battle_summary',
   get_battle_summary_captures_kind: 'get_battle_summary',
   get_battle_summary_interrupted: 'get_battle_summary',
+  get_active_missions_bounty: 'get_active_missions',
+  get_missions_bounty: 'get_missions',
   get_player_arena: 'get_player',
   get_poi_arena: 'get_poi',
   get_map_system: 'get_map',
@@ -57,6 +59,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   get_nearby_arena: 'get_nearby',
   sell_wreck_partial: 'sell_wreck',
   scan_creature: 'scan',
+  view_completed_mission_bounty: 'view_completed_mission',
 };
 
 export interface FormatterGoldenCoverageReport {

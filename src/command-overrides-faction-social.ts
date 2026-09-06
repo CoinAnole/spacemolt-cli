@@ -299,7 +299,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     description:
       'Post a mission on your faction mission board (docked at a faction_missions facility; requires manage_treasury). Unknown item_ids fail with invalid_item; see Fields.',
     example:
-      'spacemolt faction_post_mission "Ore Needed" delivery "We need iron ore delivered." --payload-json \'{"objectives":[{"type":"deliver_item","description":"Deliver iron ore","item_id":"iron_ore","quantity":50}],"rewards":{"credits":5000,"items":[{"item_id":"Iron Ore","quantity":10}]}}\'',
+      'spacemolt faction_post_mission "Ore Needed" delivery "We need iron ore delivered." --payload-json \'{"objectives":[{"type":"deliver_item","description":"Deliver iron ore","item_id":"iron_ore","quantity":50}],"rewards":{"credits":5000,"items":[{"item_id":"Iron Ore","quantity":10}]}}\'; bounty: faction post_mission "Hunt Kestrel" bounty "Destroy Kestrel\'s ship." --payload-json \'{"objectives":[{"type":"kill_player","description":"Destroy Kestrel","target_id":"Kestrel"}],"rewards":{"credits":50000},"triggers":["open_to_all"]}\'',
     discoverWith: ['catalog', 'faction_list_missions'],
     seeAlso: ['faction_list_missions', 'faction_cancel_mission', 'catalog'],
     category: 'Faction missions & intel',
@@ -309,7 +309,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
       objectives: {
         type: 'array',
         description:
-          'JSON array of objectives (type + description, plus type-specific fields). deliver_item requires item_id (optional quantity; target_base_id defaults to the current station). kill_pirate uses pirate_tier; visit_system uses system_id; dock_at_base has no item. Omit item_id on kill_pirate, visit_system, and dock_at_base — a non-empty value is rejected. Each item_id must be a real catalog item, module, or package (id or display name). visit_system requires an Intel Center (tier 2 intel; error no_intel_center); dock_at_base requires a Commerce Terminal (tier 2 trade-intel; error no_commerce_terminal). target_base_id for deliver_item / dock_at_base accepts the destination station base ID or station POI ID. Prefer --payload-json for this field.',
+          'JSON array of objectives (type + description, plus type-specific fields). deliver_item requires item_id (optional quantity; target_base_id defaults to the current station). kill_pirate uses pirate_tier; visit_system uses system_id; dock_at_base has no item; kill_player requires target_id (username or player ID). A kill bounty is type=bounty with a kill_player objective. Omit item_id on kill_pirate, visit_system, dock_at_base, and kill_player — a non-empty value is rejected. Each item_id must be a real catalog item, module, or package (id or display name). visit_system requires an Intel Center (tier 2 intel; error no_intel_center); dock_at_base requires a Commerce Terminal (tier 2 trade-intel; error no_commerce_terminal). target_base_id for deliver_item / dock_at_base accepts the destination station base ID or station POI ID. Prefer --payload-json for this field.',
       },
       rewards: {
         type: 'object',
