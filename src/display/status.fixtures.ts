@@ -231,6 +231,51 @@ export const poiInfoFixture = {
   ],
 };
 
+export const poiWorkabilityResources = [
+  {
+    resource_id: 'ore_iron',
+    name: 'Iron Ore',
+    richness: 3,
+    remaining: 120,
+    remaining_display: '120 units',
+    max_remaining: 300,
+    depletion_percent: 60,
+    supported_power: 6,
+    lock_minimum_stock: 200,
+    // too_sparse omitted: 120 is above the 75-unit depletion floor
+  },
+  {
+    resource_id: 'ore_gold',
+    name: 'Gold Ore',
+    richness: 1,
+    remaining: 74,
+    remaining_display: '74 units',
+    max_remaining: 300,
+    depletion_percent: 75.33333333333333, // 100 - 74/300*100; suffix toFixed(2) → 24.67% remaining
+    supported_power: 3,
+    lock_minimum_stock: 200,
+    too_sparse: true,
+  },
+  {
+    resource_id: 'ore_copper',
+    name: 'Copper Ore',
+    richness: 2,
+    remaining: 0,
+    remaining_display: 'depleted',
+    max_remaining: 300,
+    depletion_percent: 100,
+    lock_minimum_stock: 200,
+    too_sparse: true,
+    // supported_power omitted: schema omits it when depleted
+  },
+];
+
+export const poiWorkabilityFixture = {
+  kind: 'normal',
+  poi: { ...poiInfoFixture.poi },
+  resources: poiWorkabilityResources,
+};
+
 export const poiArenaFixture = {
   kind: 'normal',
   poi: {
@@ -871,6 +916,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
+  get_poi_workability: { command: 'get_poi', fixture: poiWorkabilityFixture },
   get_poi_arena: { command: 'get_poi', fixture: poiArenaFixture },
   get_poi_station: { command: 'get_poi', fixture: stationPoiInfoFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },

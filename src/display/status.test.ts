@@ -16,6 +16,8 @@ import {
   playerArenaFixture,
   playerProfileFixture,
   poiArenaFixture,
+  poiInfoFixture,
+  poiWorkabilityFixture,
   scanCreatureFixture,
   stationPoiInfoFixture,
   subscribeObservationFixture,
@@ -641,6 +643,40 @@ test('get_poi nested station omits POI when poi_id is absent', () => {
 
   expect(stdout).toContain('  ID: earth_station');
   expect(stdout).not.toContain('  POI:');
+});
+
+test('get_poi prints lock min and too sparse on workability deposits', () => {
+  const stdout = renderStructuredResult(
+    'get_poi',
+    structuredClone(poiWorkabilityFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('- Iron Ore: richness 3, 120/300 (40.00% remaining), supports power 6, lock min 200');
+  expect(stdout).toContain(
+    '- Gold Ore: richness 1, 74/300 (24.67% remaining), supports power 3, lock min 200, too sparse',
+  );
+  expect(stdout).toContain('- \x1b[9mCopper Ore: richness 2, depleted, lock min 200, too sparse\x1b[29m');
+});
+
+test('get_poi too_sparse false does not print too sparse', () => {
+  const fixture = {
+    ...poiInfoFixture,
+    resources: poiInfoFixture.resources.map((resource) => ({ ...resource, too_sparse: false })),
+  };
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('supports power 12');
+  expect(stdout).not.toContain('too sparse');
+});
+
+test('get_poi omitted lock does not print lock min', () => {
+  const stdout = renderStructuredResult('get_poi', structuredClone(poiInfoFixture), options, context).stdout.join('\n');
+
+  expect(stdout).toContain('- Iron Ore: richness 3, 750/1000 (75.00% remaining), supports power 12');
+  expect(stdout).not.toContain('lock min');
+  expect(stdout).not.toContain('too sparse');
 });
 
 test('pay_bounty declines to raw response without amount_paid', () => {

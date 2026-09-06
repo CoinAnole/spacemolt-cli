@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Deposit workability (gameserver 0.595.0)
+
+- Human `get_poi` resource lines print `lock min N` when `lock_minimum_stock` is
+  present and `too sparse` when `too_sparse` is true. Omitted lock means this
+  fit can always finish the vein; omitted `too_sparse` means workable.
+- Human `inspect` POI resource tables add Power / Lock / Sparse columns when
+  those fields are present.
+- JSON/YAML/jq field names are unchanged.
+
 ### Arena error suggestions (gameserver 0.590.0)
 
 - Human stderr for `challenge_locked` (`arena fight` on a locked trial) and

@@ -13,6 +13,7 @@ import {
   formatLiveryName,
   formatPlayer,
   formatReputationChangesSummary,
+  formatResourceWorkabilitySuffix,
   formatter,
   isRecord,
   namedFormatter,
@@ -1025,10 +1026,10 @@ export const statusFormatters = [
         emitLine(`\n${c.bright}Resources:${c.reset}`);
         for (const res of resources) {
           const display = res.remaining_display || `${res.remaining} remaining`;
-          const supportedPower = res.supported_power !== undefined ? `, supports power ${res.supported_power}` : '';
+          const workability = formatResourceWorkabilitySuffix(res);
           if (display === 'depleted' || res.remaining === 0) {
             emitLine(
-              `  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${supportedPower}${c.reset}\x1b[29m`,
+              `  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${workability}${c.reset}\x1b[29m`,
             );
             continue;
           }
@@ -1037,7 +1038,7 @@ export const statusFormatters = [
             res.depletion_percent !== undefined ? formatDepletionRemainingSuffix(res.depletion_percent) : '';
           const remaining = res.max_remaining ? `${res.remaining}/${res.max_remaining}` : display;
           emitLine(
-            `  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}${supportedPower}`,
+            `  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}${workability}`,
           );
         }
       }

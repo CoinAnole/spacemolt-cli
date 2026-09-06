@@ -152,6 +152,31 @@ export function formatDepletionRemainingSuffix(depletionPercent: unknown): strin
   return ` (${color}${remainingPct.toFixed(2)}% remaining${c.reset})`;
 }
 
+export interface ResourceWorkability {
+  supportedPower: number | undefined;
+  lockMinimumStock: number | undefined;
+  tooSparse: boolean;
+}
+
+/** Ship-relative deposit fields from ResourceInfo / V2Resource. Omitted lock_minimum_stock
+ *  means this fit can always finish; omitted too_sparse means workable. */
+export function resourceWorkability(res: Record<string, unknown>): ResourceWorkability {
+  return {
+    supportedPower: finiteNumber(res.supported_power),
+    lockMinimumStock: finiteNumber(res.lock_minimum_stock),
+    tooSparse: res.too_sparse === true,
+  };
+}
+
+export function formatResourceWorkabilitySuffix(res: Record<string, unknown>): string {
+  const { supportedPower, lockMinimumStock, tooSparse } = resourceWorkability(res);
+  const parts: string[] = [];
+  if (supportedPower !== undefined) parts.push(`supports power ${supportedPower}`);
+  if (lockMinimumStock !== undefined) parts.push(`lock min ${lockMinimumStock}`);
+  if (tooSparse) parts.push(`${c.red}too sparse${c.reset}`);
+  return parts.length ? `, ${parts.join(', ')}` : '';
+}
+
 export function sumNumericField(values: unknown, field: string): number | undefined {
   if (!Array.isArray(values)) return undefined;
   let total = 0;
