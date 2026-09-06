@@ -544,7 +544,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   buy_ship_license: {
     usage: '<ship_class>',
     description:
-      "License a specific ship design so your faction can build it at its own stations. Cost is paid from the faction treasury and scales with the design's tier.",
+      "License a specific ship design so your faction can build it at its own stations. Cost is paid from the faction treasury and scales with the design's tier. The license covers the hull's empire reputation requirement at your faction's own station; the commissioning member still needs its Piloting level.",
     example: 'spacemolt buy_ship_license solarian_frigate',
     seeAlso: ['station_info', 'commission_ship', 'catalog'],
     category: 'Facilities',

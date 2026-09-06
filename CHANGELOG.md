@@ -4,6 +4,21 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Help copy (gameserver 0.591.1)
+
+- `help buy_ship_license` notes that a per-design license covers the hull's
+  empire reputation requirement at your faction's own station; the
+  commissioning member still needs its Piloting level.
+- `help commission_ship` notes the same waiver for faction-funded builds at
+  your faction's own station (`buy_ship_license` covers `required_reputation`;
+  Piloting, shipyard tier, and materials still apply).
+- `help catalog` Fields documents that `commissionable=true` includes hulls
+  licensed with `buy_ship_license` at your faction's own station (reputation
+  waived; Piloting and yard tier still apply). Catalog ship tables still print
+  Rep from `required_reputation` (the hull's empire requirement; the license
+  is the exception). JSON/YAML/jq field names are unchanged.
+- `help ship` / `help shipyard` and `help all` Shipyard list `buy_ship_license`.
+
 ### Faction kill bounties (gameserver 0.591.0)
 
 - `help faction post_mission` documents `type=bounty` with a `kill_player`

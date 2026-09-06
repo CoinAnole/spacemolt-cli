@@ -17,7 +17,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   cloak: 'Toggle cloaking device',
   commission_quote: 'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews',
   commission_ship:
-    'Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing.',
+    "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies.",
   commission_status: 'Check the status of your ship commissions',
   complete_mission: 'Complete a mission and claim rewards',
   completed_missions: 'List all missions you have completed',

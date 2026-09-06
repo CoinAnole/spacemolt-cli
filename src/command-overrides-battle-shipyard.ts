@@ -106,7 +106,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       // Keep this description. Dropping it restores generated `target_id` wording, which help forbids.
       id: {
         description:
-          "Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). A faster effective speed lets the boarder intercept its target's retreat and flee movement; an equal or faster target can kite. Changing away from board begins non-instant withdrawal.",
+          "Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). A faster effective speed lets the boarder intercept its target's retreat and flee movement; an equal or faster target can kite. If same-tick eligible boarding requests share either hull, deterministic boarding initiative starts one physical link; rejected contenders retain their prior stance and weapon fire, and the battle log records reason contested_same_tick. Changing away from board begins non-instant withdrawal.",
       },
       target: {
         description:
@@ -249,9 +249,9 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage:
       '<ship_class> [bare_hull=true/false] [provide_materials=true/false] [source_missing_materials=true/false] [fund_from_faction=true/false]',
     description:
-      'Commission a ship at this shipyard. Default is a fitted hull; bare_hull=true works at NPC, empire, and faction yards. At empire/NPC yards choose one material mode: credits-only (default), provide_materials=true, or source_missing_materials=true. Do not combine provide_materials with source_missing_materials. Faction yards require fund_from_faction=true (ManageTreasury) and do not market-source missing materials. Quote first with commission_quote using the same bare_hull and source_missing_materials choices.',
+      "Commission a ship at this shipyard. Default is a fitted hull; bare_hull=true works at NPC, empire, and faction yards. At empire/NPC yards choose one material mode: credits-only (default), provide_materials=true, or source_missing_materials=true. Do not combine provide_materials with source_missing_materials. Faction yards require fund_from_faction=true (ManageTreasury) and do not market-source missing materials. Quote first with commission_quote using the same bare_hull and source_missing_materials choices. A faction buy_ship_license for this hull covers required_reputation at your faction's own station; Piloting, shipyard tier, and materials still apply.",
     example: 'spacemolt commission_ship viper source_missing_materials=true',
-    seeAlso: ['commission_quote', 'commission_status', 'catalog'],
+    seeAlso: ['commission_quote', 'commission_status', 'catalog', 'buy_ship_license'],
     category: 'Shipyard',
     apiRoute: 'POST /api/v2/spacemolt_ship/commission_ship',
     positionals: ['ship_class', 'provide_materials'],

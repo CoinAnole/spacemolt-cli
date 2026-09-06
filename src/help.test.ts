@@ -639,6 +639,22 @@ describe('help output branches', () => {
     expect(output).not.toContain('salvage_wreck <wreck_id>');
   });
 
+  test('help ship lists buy_ship_license without recategorizing it', () => {
+    const capture = captureWriter();
+    expect(showCommandGroup('ship', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('buy_ship_license');
+    expect(output).toContain('Facilities');
+
+    const shipyard = captureWriter();
+    expect(showCommandGroup('shipyard', shipyard.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(shipyard.stdout.join('\n')).toContain('buy_ship_license');
+
+    const facility = captureWriter();
+    expect(showCommandGroup('facility', facility.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(facility.stdout.join('\n')).toContain('buy_ship_license');
+  });
+
   test('full help storage section includes standalone storage workflows', () => {
     const capture = captureWriter();
 
