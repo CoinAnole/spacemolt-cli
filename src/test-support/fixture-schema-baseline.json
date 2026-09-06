@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.590.0",
+  "generatedAtGameserver": "v0.592.2",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].description",
@@ -212,7 +212,6 @@
     "get_map|get_map|required-missing|systems[1].visited",
     "get_map|get_map|required-missing|systems[1].visited_at",
     "get_missions|get_missions|required-missing|missions[0].rewards.credits",
-    "get_player_arena|get_player|extra-in-fixture|player.arena_xp",
     "get_player_arena|get_player|required-missing|player.id",
     "get_player_arena|get_player|required-missing|player.is_cloaked",
     "get_player_arena|get_player|required-missing|player.primary_color",
