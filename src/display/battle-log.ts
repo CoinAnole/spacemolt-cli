@@ -97,22 +97,108 @@ export function battleLogCombatantRows(entries: unknown): Array<Record<string, u
   return [...roster.values()];
 }
 
+function weaponFired(weapon: Record<string, unknown>): boolean {
+  return (
+    finiteNumber(weapon.hit_chance) !== undefined ||
+    finiteNumber(weapon.hit_roll) !== undefined ||
+    weapon.hit_success === true ||
+    weapon.hit_success === false
+  );
+}
+
+function weaponConnected(weapon: Record<string, unknown>): boolean {
+  return weapon.hit_success === true;
+}
+
+function firedWeapons(attack: Record<string, unknown>): Array<Record<string, unknown>> {
+  if (!Array.isArray(attack.weapons)) return [];
+  return attack.weapons.filter(isRecord).filter(weaponFired);
+}
+
+function volleyHitCell(attack: Record<string, unknown>, fired: Array<Record<string, unknown>>): string {
+  if (fired.length === 0) {
+    if (attack.hit_success === true) return 'hit';
+    if (attack.hit_success === false) return 'miss';
+    return '';
+  }
+  const n = fired.filter(weaponConnected).length;
+  const m = fired.length;
+  if (n === 0) return 'miss';
+  if (m === 1) return 'hit';
+  return `hit ${n}/${m}`;
+}
+
+function recordComponents(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function unmatchedHitDefense(weapon: Record<string, unknown>): string {
+  return [stringLabel(weapon.name), stringLabel(weapon.damage_type)].filter(Boolean).join(' ');
+}
+
+function weaponMissDefense(weapon: Record<string, unknown>, attack: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const name = stringLabel(weapon.name);
+  if (name) parts.push(name);
+  const chance = formatBattleHitChance(weapon.hit_chance) ?? formatBattleHitChance(attack.hit_chance);
+  if (chance !== undefined) parts.push(`chance ${chance}`);
+  const roll = formatBattleHitScale(weapon.hit_roll); // never attack.hit_roll
+  if (roll !== undefined) parts.push(`roll ${roll}`);
+  return parts.join(' ');
+}
+
 function appendAttackRows(
   rows: BattleLogAttackRow[],
   tick: unknown,
   attack: Record<string, unknown>,
   snapshots: unknown,
 ): void {
-  if (attack.hit_success === false) {
-    rows.push(missRow(tick, attack, snapshots));
+  const fired = firedWeapons(attack);
+  if (fired.length === 0) {
+    if (attack.hit_success === false) {
+      rows.push(missRow(tick, attack, snapshots));
+      return;
+    }
+    const components = recordComponents(attack.defense_components);
+    if (components.length > 0) {
+      for (const component of components) {
+        rows.push(attackRowFromComponent(tick, attack, component, snapshots));
+      }
+      return;
+    }
+    rows.push(attackRowFromAttack(tick, attack, snapshots));
     return;
   }
-  const components = Array.isArray(attack.defense_components) ? attack.defense_components.filter(isRecord) : [];
-  if (components.length > 0) {
-    for (const component of components) rows.push(attackRowFromComponent(tick, attack, component, snapshots));
-    return;
+
+  const hitLabel = volleyHitCell(attack, fired);
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const component of recordComponents(attack.defense_components)) {
+    const id = stringLabel(component.weapon_instance_id);
+    if (id && !byId.has(id)) byId.set(id, component);
   }
-  rows.push(attackRowFromAttack(tick, attack, snapshots));
+
+  for (const weapon of fired) {
+    const id = stringLabel(weapon.instance_id);
+    const component = id ? byId.get(id) : undefined;
+    if (weaponConnected(weapon) && component) {
+      rows.push(
+        combatantRow(
+          tick,
+          attack,
+          snapshots,
+          hitLabel,
+          formatShieldHull(component.shield_damage, component.hull_damage),
+          formatBattleDefenseLine(component, 'component'),
+        ),
+      );
+      continue;
+    }
+    if (weaponConnected(weapon)) {
+      rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', unmatchedHitDefense(weapon)));
+      continue;
+    }
+    rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', weaponMissDefense(weapon, attack)));
+  }
 }
 
 function missRow(tick: unknown, attack: Record<string, unknown>, snapshots: unknown): BattleLogAttackRow {

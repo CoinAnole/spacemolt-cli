@@ -1844,7 +1844,7 @@ test('get_battle_log attack-level resist percents skip fabricated stage hops', (
             target_id: 'pirate-1',
             hit_success: true,
             raw_damage: 900,
-            pre_hit_damage: 800,
+            landed_damage: 800,
             final_damage: 420,
             shield_damage: 300,
             hull_damage: 120,
@@ -1863,6 +1863,224 @@ test('get_battle_log attack-level resist percents skip fabricated stage hops', (
   expect(stdout).not.toContain('900→');
   expect(stdout).not.toContain('800→');
   expect(stdout).not.toContain('→420');
+});
+
+test('get_battle_log live partial volley prints hit N/M, missed-gun rolls, and omits leftover Ghost Cannon', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-partial',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 1,
+        snapshots: [
+          { player_id: 'player-1', username: 'Ace' },
+          { player_id: 'pirate-1', username: 'Raider' },
+        ],
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 520,
+            shield_damage: 340,
+            hull_damage: 180,
+            landed_damage: 600,
+            hit_chance: 0.65,
+            weapons: [
+              {
+                instance_id: 'w-rail',
+                name: 'Railgun',
+                damage_type: 'energy',
+                hit_chance: 0.65,
+                hit_roll: 0.2,
+                hit_success: true,
+              },
+              {
+                instance_id: 'w-cannon',
+                name: 'Pulse Cannon',
+                damage_type: 'kinetic',
+                hit_chance: 0.65,
+                hit_roll: 0.3,
+                hit_success: true,
+              },
+              {
+                instance_id: 'w-mining',
+                name: 'Mining Laser',
+                damage_type: 'kinetic',
+                hit_chance: 0.35,
+                hit_roll: 0.61,
+              },
+            ],
+            defense_components: [
+              {
+                weapon_instance_id: 'w-rail',
+                weapon_name: 'Railgun',
+                damage_type: 'energy',
+                incoming_damage: 400,
+                shield_resist_pct: 5,
+                after_shield_resist: 380,
+                type_resist_pct: 5,
+                after_type_resist: 360,
+                flat_reduction_pct: 3,
+                after_flat_reduction: 350,
+                shield_bypass_pct: 0,
+                armor_bypass_pct: 0,
+                ignore_all_defense: false,
+                final_damage: 350,
+                shield_damage: 200,
+                hull_damage: 150,
+              },
+              {
+                weapon_instance_id: 'w-cannon',
+                weapon_name: 'Pulse Cannon',
+                damage_type: 'kinetic',
+                incoming_damage: 200,
+                shield_resist_pct: 5,
+                after_shield_resist: 190,
+                type_resist_pct: 5,
+                after_type_resist: 180,
+                flat_reduction_pct: 6,
+                after_flat_reduction: 170,
+                shield_bypass_pct: 0,
+                armor_bypass_pct: 0,
+                ignore_all_defense: false,
+                final_damage: 170,
+                shield_damage: 140,
+                hull_damage: 30,
+              },
+              leftoverDefenseComponent(),
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  const ticks = battleLogTicksSection(stdout);
+  const attacks = sectionAfter(stdout, 'Attacks', 'Combatants');
+
+  expect(ticks).toMatch(/\|\s*1\s*\|\s*1\s*\|\s*520\s*\|\s*340\s*\|\s*180\s*\|/);
+  expect(attacks.match(/hit 2\/3/g)?.length).toBe(3);
+  expect(attacks).toContain('Railgun energy 400→380→360→350 (S5 T5 F3)');
+  expect(attacks).toContain('Pulse Cannon kinetic 200→190→180→170 (S5 T5 F6)');
+  expect(attacks).toContain('Mining Laser chance 35% roll 61');
+  expect(attacks).not.toContain('Ghost Cannon');
+  expect(attacks).not.toContain('| miss |');
+  expect(stdout).not.toContain('600→');
+});
+
+test('get_battle_log live full miss prints per-gun chance/roll and omits leftover Ghost Cannon', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-full-miss',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 1,
+        snapshots: [
+          { player_id: 'player-1', username: 'Ace' },
+          { player_id: 'pirate-1', username: 'Raider' },
+        ],
+        attacks: [
+          {
+            attacker_id: 'pirate-1',
+            target_id: 'player-1',
+            hit_success: false,
+            final_damage: 0,
+            shield_damage: 200,
+            hull_damage: 150,
+            landed_damage: 0,
+            hit_chance: 0.12,
+            weapons: [
+              {
+                instance_id: 'w-scatter',
+                name: 'Scatter Cannon',
+                damage_type: 'kinetic',
+                hit_chance: 0.12,
+                hit_roll: 0.81,
+              },
+              {
+                instance_id: 'w-blaster',
+                name: 'Light Blaster',
+                damage_type: 'kinetic',
+                hit_chance: 0.12,
+                hit_roll: 0.9,
+              },
+            ],
+            defense_components: [leftoverDefenseComponent()],
+          },
+        ],
+      },
+    ],
+  });
+
+  const ticks = battleLogTicksSection(stdout);
+  const attacks = sectionAfter(stdout, 'Attacks', 'Combatants');
+
+  expect(ticks).toMatch(/\|\s*1\s*\|\s*0\s*\|/);
+  expect(ticks).not.toContain('Shield');
+  expect(ticks).not.toContain('Hull');
+  expect(ticks).not.toContain('200');
+  expect(ticks).not.toContain('150');
+  expect(attacks.match(/\| miss \|/g)?.length).toBe(2);
+  expect(attacks).toContain('Scatter Cannon chance 12% roll 81');
+  expect(attacks).toContain('Light Blaster chance 12% roll 90');
+  expect(attacks).not.toContain('Ghost Cannon');
+  expect(attacks).not.toContain('400→380→360→350');
+  expect(attacks).not.toContain('200/150');
+});
+
+test('get_battle_log Ticks Hits still counts a volley when every fired weapon omitted hit_success', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-disagree',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 1,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 10,
+            shield_damage: 7,
+            hull_damage: 3,
+            landed_damage: 12,
+            weapons: [
+              {
+                instance_id: 'w-scatter',
+                name: 'Scatter Cannon',
+                damage_type: 'kinetic',
+                hit_chance: 0.12,
+                hit_roll: 0.81,
+              },
+              {
+                instance_id: 'w-blaster',
+                name: 'Light Blaster',
+                damage_type: 'kinetic',
+                hit_chance: 0.12,
+                hit_roll: 0.9,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  const ticks = battleLogTicksSection(stdout);
+  const attacks = sectionAfter(stdout, 'Attacks');
+
+  expect(ticks).toMatch(/\|\s*1\s*\|\s*1\s*\|\s*10\s*\|/);
+  expect(attacks.match(/\| miss \|/g)?.length).toBe(2);
+  expect(attacks).toContain('Scatter Cannon chance 12% roll 81');
+  expect(attacks).toContain('Light Blaster chance 12% roll 90');
+  expect(attacks).not.toContain('| hit |');
 });
 
 test('get_battle_log uses weapons[0].name when defense_components are absent', () => {
