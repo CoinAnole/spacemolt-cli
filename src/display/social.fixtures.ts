@@ -998,7 +998,7 @@ function attackLogEntry(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
-// hit_chance/hit_roll/hit_success are optional; omit hit_success on a miss
+// optional WeaponFireDetail hit fields stay off the defaults
 function weaponFireDetail(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     instance_id: 'w-gun',
