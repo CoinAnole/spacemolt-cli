@@ -1,0 +1,5 @@
+
+details:
+  kind: filtered
+  filtered: true
+  message: "Extraction filter rejected every workable deposit at this POI. Unfit the filter, or move to a field carrying an ore the filter accepts."

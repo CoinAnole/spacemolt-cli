@@ -2,7 +2,7 @@ import { arenaFixtureCases, arenaHighValueFixtures } from './arena.fixtures.ts';
 import { genericFixtureCases, genericHighValueFixtures } from './generic.fixtures.ts';
 import { inspectHighValueFixtures } from './inspect.fixtures.ts';
 import { marketFixtureCases, marketHighValueFixtures } from './market.fixtures.ts';
-import { mineFixtureCases } from './mine.fixtures.ts';
+import { mineFixtureCases, mineHighValueFixtures } from './mine.fixtures.ts';
 import { notificationsHighValueFixtures } from './notifications.fixtures.ts';
 import { passengerHighValueFixtures } from './passenger.fixtures.ts';
 import { prizesHighValueFixtures } from './prizes.fixtures.ts';
@@ -56,6 +56,7 @@ export const formatterFixtureCases = {
 export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...statusHighValueFixtures,
   ...surveyHighValueFixtures,
+  ...mineHighValueFixtures,
   ...marketHighValueFixtures,
   ...passengerHighValueFixtures,
   ...shipHighValueFixtures,

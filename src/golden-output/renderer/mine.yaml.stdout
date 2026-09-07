@@ -1,0 +1,24 @@
+
+details:
+  kind: yield
+  resource_id: ore_iron
+  resource_name: "Iron Ore"
+  quantity: 42
+  remaining: 120
+  remaining_display: "120 units"
+  max_remaining: 300
+  depletion_percent: 60
+  xp_gained:
+    mining: 8
+location:
+  system_id: sol
+  system_name: Sol
+  poi_id: sol_asteroid_belt
+  poi_name: "Sol Asteroid Belt"
+skills:
+  mining:
+    name: Mining
+    category: Industry
+    level: 21
+    max_level: 100
+    xp: 18008
