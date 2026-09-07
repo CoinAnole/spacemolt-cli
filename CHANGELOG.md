@@ -40,6 +40,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   the error is retryable. JSON / `--structured` envelopes are unchanged.
   `--format yaml` still uses human `displayError`.
 
+### Over-capacity fit markers (gameserver 0.593.2)
+
+- Human `get_ship`, `get_status` / `get_state`, and `get_cargo` append
+  `(over capacity)` when CPU, power, or cargo used exceeds capacity.
+  Equality is full, not over. Module CPU/Power columns stay raw usage.
+  JSON/YAML/jq field names are unchanged.
+
 ### Fit and deposit error suggestions (gameserver 0.593.2–0.595.0)
 
 - Human stderr for `deposit_too_sparse` (`mine` on a vein this fit cannot lock),

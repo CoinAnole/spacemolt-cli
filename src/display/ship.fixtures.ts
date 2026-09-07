@@ -19,6 +19,14 @@ export const cargoFixture = {
   ],
 };
 
+export const cargoOverCapacityFixture = {
+  ...cargoFixture,
+  ship: {
+    ...cargoFixture.ship,
+    cargo_used: 120,
+  },
+};
+
 export const emptyCargoFixture = {
   message: 'Cargo contents',
   credits: 12345,
@@ -112,6 +120,16 @@ export const shipIncapacitatedFixture = {
     incapacitated: true,
     personnel_recovery_ticks_remaining: 5,
     personnel_recovery_tick: 12600,
+  },
+};
+
+export const shipOverCapacityFixture = {
+  ...shipFixture,
+  ship: {
+    ...shipFixture.ship,
+    cpu_used: 40,
+    power_used: 80,
+    cargo_used: 1300,
   },
 };
 
@@ -621,8 +639,10 @@ export const listShipsFixture = {
 export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
+  get_cargo_over_capacity: { command: 'get_cargo', fixture: cargoOverCapacityFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
   get_ship_incapacitated: { command: 'get_ship', fixture: shipIncapacitatedFixture },
+  get_ship_over_capacity: { command: 'get_ship', fixture: shipOverCapacityFixture },
   get_ship_drone_bay: { command: 'get_ship', fixture: shipDroneBayFixture },
   get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
