@@ -1,0 +1,18 @@
+
+=== Trial started: Survive Wave ===
+Battle: btl-obj-survive   Challenge: obj_survive_wave
+Your side: 2   Enemy side: 1
+Enemies: 3× Crimson Skirmisher (Fighter)
+Objective: survive 40 ticks
+Waves: Second Wind @ tick 20 and when 2 left (2× Crimson Skirmisher (Fighter))
+
+=== Participants ===
+
+  Side | Team  | Pilot                | Player ID
+  -----+-------+----------------------+----------
+  1    | enemy | Crimson Skirmisher 1 | npc-cs-1 
+  1    | enemy | Crimson Skirmisher 2 | npc-cs-2 
+  1    | enemy | Crimson Skirmisher 3 | npc-cs-3 
+  2    | yours | Coin (you)           | player-12
+
+Next: get_battle_status · battle_target <pilot> · battle_stance <stance>

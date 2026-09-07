@@ -12,6 +12,7 @@ const RING_CLEAVER: ArenaEnemyLine = {
   ship_class_name: 'Fighter',
   count: 1,
   is_boss: false,
+  flees: false,
 };
 
 export function trialDef(
@@ -25,6 +26,8 @@ export function trialDef(
     locked: false,
     rules: { max_side_size: 1 },
     enemies: [RING_CLEAVER],
+    objective: {},
+    waves: [],
     wins: 0,
     ...partial,
   };
@@ -113,6 +116,7 @@ const PIRATE_SCOUT: ArenaEnemyLine = {
   ship_class_name: 'Fighter',
   count: 1,
   is_boss: false,
+  flees: false,
 };
 
 const PIRATE_RAIDER: ArenaEnemyLine = {
@@ -121,6 +125,7 @@ const PIRATE_RAIDER: ArenaEnemyLine = {
   ship_class_name: 'Fighter',
   count: 2,
   is_boss: false,
+  flees: false,
 };
 
 const ARMOR_COLUMN: ArenaEnemyLine = {
@@ -129,6 +134,7 @@ const ARMOR_COLUMN: ArenaEnemyLine = {
   ship_class_name: 'Cruiser',
   count: 1,
   is_boss: true,
+  flees: false,
 };
 
 /** Synthetic challenge_ids (snake_case of display names); not live catalog keys. */
@@ -170,6 +176,90 @@ export function briefingVariantsCatalog(): ArenaTrial[] {
       description: 'Armor doctrine: kinetic and explosive answer it; EM hardeners do not.',
       rules: UNRESTRICTED_FLEET,
       enemies: [ARMOR_COLUMN],
+    }),
+  ];
+}
+
+const CRIMSON_SKIRMISHER: ArenaEnemyLine = {
+  name: 'Crimson Skirmisher',
+  ship_class: 'skirmisher',
+  ship_class_name: 'Fighter',
+  count: 3,
+  is_boss: false,
+  flees: false,
+};
+
+const SECOND_WIND_WAVE = {
+  name: 'Second Wind',
+  after_ticks: 20,
+  when_enemies_remaining: 2,
+  enemies: [{ ...CRIMSON_SKIRMISHER, count: 2 }],
+} as const;
+
+const RING_RUNNER: ArenaEnemyLine = {
+  name: 'Ring Runner',
+  ship_class: 'ring_runner',
+  ship_class_name: 'Fighter',
+  count: 1,
+  is_boss: false,
+  flees: true,
+};
+
+const SOLARIAN_INTERCEPTOR: ArenaEnemyLine = {
+  name: 'Solarian Interceptor',
+  ship_class: 'interceptor',
+  ship_class_name: 'Fighter',
+  count: 4,
+  is_boss: false,
+  flees: false,
+};
+
+/** Synthetic challenge_ids (snake_case of display names); not live catalog keys. */
+export function objectivesCatalog(): ArenaTrial[] {
+  return [
+    trialDef({
+      challenge_id: 'obj_survive_wave',
+      name: 'Survive Wave',
+      series: 'Objectives',
+      stage: 1,
+      rules: { max_side_size: 3, max_ship_tier: 4 },
+      enemies: [CRIMSON_SKIRMISHER],
+      objective: { survive_ticks: 40 },
+      waves: [{ ...SECOND_WIND_WAVE, enemies: [...SECOND_WIND_WAVE.enemies] }],
+    }),
+    trialDef({
+      challenge_id: 'obj_time_limit',
+      name: 'Time Limit',
+      series: 'Objectives',
+      stage: 2,
+      rules: { max_side_size: 10, max_ship_tier: 4 },
+      enemies: [SOLARIAN_INTERCEPTOR],
+      objective: { time_limit_ticks: 60 },
+    }),
+    trialDef({
+      challenge_id: 'obj_no_escape',
+      name: 'No Escape',
+      series: 'Objectives',
+      stage: 3,
+      enemies: [RING_RUNNER, { ...RING_CLEAVER, count: 2 }],
+      objective: { no_enemy_escape: true },
+    }),
+    trialDef({
+      challenge_id: 'obj_last_side',
+      name: 'Last Side',
+      series: 'Objectives',
+      stage: 4,
+      enemies: [{ ...RING_CLEAVER, count: 2 }],
+    }),
+    trialDef({
+      challenge_id: 'obj_locked_wave',
+      name: 'Locked Wave',
+      series: 'Objectives',
+      stage: 5,
+      locked: true,
+      requires: ['obj_last_side'],
+      objective: { survive_ticks: 40 },
+      waves: [{ ...SECOND_WIND_WAVE, enemies: [...SECOND_WIND_WAVE.enemies] }],
     }),
   ];
 }
@@ -253,6 +343,65 @@ export const arenaStatusInBattleFixture: Record<string, unknown> = {
   xp_cap_per_skill: 500,
 };
 
+export const arenaStatusMatchFixture: Record<string, unknown> = {
+  action: 'status',
+  at_arena: true,
+  arena_wins: 3,
+  arena_losses: 1,
+  arena_knockouts: 7,
+  battle_id: 'btl-obj-survive',
+  match: {
+    challenge_id: 'obj_survive_wave',
+    name: 'Survive Wave',
+    objective: { survive_ticks: 40 },
+    elapsed_ticks: 12,
+    ticks_remaining: 28,
+    enemies_remaining: 3,
+    waves_remaining: 1,
+  },
+  xp_used_today: {},
+  xp_cap_per_skill: 500,
+};
+
+export const arenaStatusMatchDeadlineFixture: Record<string, unknown> = {
+  action: 'status',
+  at_arena: true,
+  arena_wins: 3,
+  arena_losses: 1,
+  arena_knockouts: 7,
+  battle_id: 'btl-obj-limit',
+  match: {
+    challenge_id: 'obj_time_limit',
+    name: 'Time Limit',
+    objective: { time_limit_ticks: 60 },
+    elapsed_ticks: 60,
+    ticks_remaining: 0,
+    enemies_remaining: 2,
+    waves_remaining: 0,
+  },
+  xp_used_today: {},
+  xp_cap_per_skill: 500,
+};
+
+export const arenaStatusMatchLastSideFixture: Record<string, unknown> = {
+  action: 'status',
+  at_arena: true,
+  arena_wins: 3,
+  arena_losses: 1,
+  arena_knockouts: 7,
+  battle_id: 'btl-obj-last',
+  match: {
+    challenge_id: 'obj_last_side',
+    name: 'Last Side',
+    objective: {},
+    elapsed_ticks: 8,
+    enemies_remaining: 2,
+    waves_remaining: 0,
+  },
+  xp_used_today: {},
+  xp_cap_per_skill: 500,
+};
+
 export const arenaChallengeDetails = {
   action: 'challenge',
   challenge_id: 'chal-a02',
@@ -307,6 +456,8 @@ export const arenaChallengesEmptyFixture = catalogEnvelope([]);
 
 export const arenaChallengesBriefingVariantsFixture = catalogEnvelope(briefingVariantsCatalog());
 
+export const arenaChallengesObjectivesFixture = catalogEnvelope(objectivesCatalog());
+
 export const arenaFightDetails = {
   action: 'fight',
   challenge_id: 'two_on_one',
@@ -320,8 +471,31 @@ export const arenaFightDetails = {
     { player_id: 'player-12', username: 'Coin', side_id: 2 },
   ],
   enemies: [{ ...RING_CLEAVER, count: 2 }],
+  objective: {},
+  waves: [],
   message: 'Trial started: Two on One',
 };
+
+export const arenaFightObjectiveDetails = {
+  action: 'fight',
+  challenge_id: 'obj_survive_wave',
+  name: 'Survive Wave',
+  battle_id: 'btl-obj-survive',
+  your_side: 2,
+  enemy_side: 1,
+  participants: [
+    { player_id: 'npc-cs-1', username: 'Crimson Skirmisher 1', side_id: 1 },
+    { player_id: 'npc-cs-2', username: 'Crimson Skirmisher 2', side_id: 1 },
+    { player_id: 'npc-cs-3', username: 'Crimson Skirmisher 3', side_id: 1 },
+    { player_id: 'player-12', username: 'Coin', side_id: 2 },
+  ],
+  enemies: [CRIMSON_SKIRMISHER],
+  objective: { survive_ticks: 40 },
+  waves: [{ ...SECOND_WIND_WAVE, enemies: [...SECOND_WIND_WAVE.enemies] }],
+  message: 'Trial started: Survive Wave',
+};
+
+export const arenaFightObjectiveFixture = mutationEnvelope(arenaFightObjectiveDetails);
 
 export const arenaFightFixture = mutationEnvelope(arenaFightDetails);
 
@@ -350,5 +524,10 @@ export const arenaHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     arenaChallengesBriefingVariantsFixture,
     'structuredContent',
   ),
+  arena_challenges_objectives: arenaEntry('arena_challenges', arenaChallengesObjectivesFixture, 'structuredContent'),
   arena_fight: arenaEntry('arena_fight', arenaFightFixture, 'details'),
+  arena_fight_objective: arenaEntry('arena_fight', arenaFightObjectiveFixture, 'details'),
+  arena_status_match: arenaEntry('arena_status', arenaStatusMatchFixture, 'structuredContent'),
+  arena_status_match_deadline: arenaEntry('arena_status', arenaStatusMatchDeadlineFixture, 'structuredContent'),
+  arena_status_match_last_side: arenaEntry('arena_status', arenaStatusMatchLastSideFixture, 'structuredContent'),
 };

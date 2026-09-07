@@ -29,9 +29,12 @@
         "ship_class": "ring_cleaver",
         "ship_class_name": "Fighter",
         "count": 2,
-        "is_boss": false
+        "is_boss": false,
+        "flees": false
       }
     ],
+    "objective": {},
+    "waves": [],
     "message": "Trial started: Two on One"
   },
   "ship": {

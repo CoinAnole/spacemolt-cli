@@ -1,0 +1,18 @@
+
+action: status
+at_arena: true
+arena_wins: 3
+arena_losses: 1
+arena_knockouts: 7
+battle_id: "btl-obj-limit"
+match:
+  challenge_id: obj_time_limit
+  name: "Time Limit"
+  objective:
+    time_limit_ticks: 60
+  elapsed_ticks: 60
+  ticks_remaining: 0
+  enemies_remaining: 2
+  waves_remaining: 0
+xp_used_today: {}
+xp_cap_per_skill: 500

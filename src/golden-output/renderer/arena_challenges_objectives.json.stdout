@@ -1,0 +1,197 @@
+{
+  "action": "challenges",
+  "challenges": [
+    {
+      "description": "",
+      "poi_id": "krynn_blood_arena",
+      "poi_name": "Blood Arena",
+      "at_this_arena": true,
+      "requires": [],
+      "locked": false,
+      "rules": {
+        "max_side_size": 3,
+        "max_ship_tier": 4
+      },
+      "enemies": [
+        {
+          "name": "Crimson Skirmisher",
+          "ship_class": "skirmisher",
+          "ship_class_name": "Fighter",
+          "count": 3,
+          "is_boss": false,
+          "flees": false
+        }
+      ],
+      "objective": {
+        "survive_ticks": 40
+      },
+      "waves": [
+        {
+          "name": "Second Wind",
+          "after_ticks": 20,
+          "when_enemies_remaining": 2,
+          "enemies": [
+            {
+              "name": "Crimson Skirmisher",
+              "ship_class": "skirmisher",
+              "ship_class_name": "Fighter",
+              "count": 2,
+              "is_boss": false,
+              "flees": false
+            }
+          ]
+        }
+      ],
+      "wins": 0,
+      "challenge_id": "obj_survive_wave",
+      "name": "Survive Wave",
+      "series": "Objectives",
+      "stage": 1
+    },
+    {
+      "description": "",
+      "poi_id": "krynn_blood_arena",
+      "poi_name": "Blood Arena",
+      "at_this_arena": true,
+      "requires": [],
+      "locked": false,
+      "rules": {
+        "max_side_size": 10,
+        "max_ship_tier": 4
+      },
+      "enemies": [
+        {
+          "name": "Solarian Interceptor",
+          "ship_class": "interceptor",
+          "ship_class_name": "Fighter",
+          "count": 4,
+          "is_boss": false,
+          "flees": false
+        }
+      ],
+      "objective": {
+        "time_limit_ticks": 60
+      },
+      "waves": [],
+      "wins": 0,
+      "challenge_id": "obj_time_limit",
+      "name": "Time Limit",
+      "series": "Objectives",
+      "stage": 2
+    },
+    {
+      "description": "",
+      "poi_id": "krynn_blood_arena",
+      "poi_name": "Blood Arena",
+      "at_this_arena": true,
+      "requires": [],
+      "locked": false,
+      "rules": {
+        "max_side_size": 1
+      },
+      "enemies": [
+        {
+          "name": "Ring Runner",
+          "ship_class": "ring_runner",
+          "ship_class_name": "Fighter",
+          "count": 1,
+          "is_boss": false,
+          "flees": true
+        },
+        {
+          "name": "Ring Cleaver",
+          "ship_class": "ring_cleaver",
+          "ship_class_name": "Fighter",
+          "count": 2,
+          "is_boss": false,
+          "flees": false
+        }
+      ],
+      "objective": {
+        "no_enemy_escape": true
+      },
+      "waves": [],
+      "wins": 0,
+      "challenge_id": "obj_no_escape",
+      "name": "No Escape",
+      "series": "Objectives",
+      "stage": 3
+    },
+    {
+      "description": "",
+      "poi_id": "krynn_blood_arena",
+      "poi_name": "Blood Arena",
+      "at_this_arena": true,
+      "requires": [],
+      "locked": false,
+      "rules": {
+        "max_side_size": 1
+      },
+      "enemies": [
+        {
+          "name": "Ring Cleaver",
+          "ship_class": "ring_cleaver",
+          "ship_class_name": "Fighter",
+          "count": 2,
+          "is_boss": false,
+          "flees": false
+        }
+      ],
+      "objective": {},
+      "waves": [],
+      "wins": 0,
+      "challenge_id": "obj_last_side",
+      "name": "Last Side",
+      "series": "Objectives",
+      "stage": 4
+    },
+    {
+      "description": "",
+      "poi_id": "krynn_blood_arena",
+      "poi_name": "Blood Arena",
+      "at_this_arena": true,
+      "requires": [
+        "obj_last_side"
+      ],
+      "locked": true,
+      "rules": {
+        "max_side_size": 1
+      },
+      "enemies": [
+        {
+          "name": "Ring Cleaver",
+          "ship_class": "ring_cleaver",
+          "ship_class_name": "Fighter",
+          "count": 1,
+          "is_boss": false,
+          "flees": false
+        }
+      ],
+      "objective": {
+        "survive_ticks": 40
+      },
+      "waves": [
+        {
+          "name": "Second Wind",
+          "after_ticks": 20,
+          "when_enemies_remaining": 2,
+          "enemies": [
+            {
+              "name": "Crimson Skirmisher",
+              "ship_class": "skirmisher",
+              "ship_class_name": "Fighter",
+              "count": 2,
+              "is_boss": false,
+              "flees": false
+            }
+          ]
+        }
+      ],
+      "wins": 0,
+      "challenge_id": "obj_locked_wave",
+      "name": "Locked Wave",
+      "series": "Objectives",
+      "stage": 5
+    }
+  ]
+}
