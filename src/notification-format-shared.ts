@@ -1260,6 +1260,95 @@ function previewArenaChallenge(
     : headlinePreview('ARENA', headline, options);
 }
 
+const ARENA_OBJECTIVE_LABELS: Readonly<Record<string, string>> = {
+  survive_ticks: 'survive ticks',
+  time_limit: 'time limit',
+  enemy_escaped: 'enemy escaped',
+};
+
+type ArenaObjectiveRender = (input: { waveName?: string; enemiesLine?: string; objectiveLabel?: string }) => {
+  headline: string;
+  details: string[];
+};
+
+function definedLines(...lines: Array<string | undefined>): string[] {
+  return lines.filter((line): line is string => typeof line === 'string' && line.length > 0);
+}
+
+const ARENA_OBJECTIVE_EVENT_RENDERS: Readonly<Record<string, ArenaObjectiveRender>> = {
+  wave_arrived: ({ waveName, enemiesLine }) => ({
+    headline: waveName !== undefined ? `Wave arrived: ${waveName}` : 'Wave arrived',
+    details: definedLines(enemiesLine),
+  }),
+  objective_won: ({ objectiveLabel }) => ({
+    headline: objectiveLabel !== undefined ? `Objective won (${objectiveLabel})` : 'Objective won',
+    details: [],
+  }),
+  objective_lost: ({ objectiveLabel }) => ({
+    headline: objectiveLabel !== undefined ? `Objective lost (${objectiveLabel})` : 'Objective lost',
+    details: [],
+  }),
+};
+
+function formatArenaObjectiveEnemyDigest(value: unknown, limit = 6): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts: string[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const name = safeScalar(entry.name);
+    if (name === undefined) continue;
+    const shipClass = safeScalar(entry.ship_class);
+    const flees = entry.flees === true;
+    const tags: string[] = [];
+    if (shipClass !== undefined) tags.push(String(shipClass));
+    if (flees) tags.push('flees');
+    parts.push(tags.length ? `${name} (${tags.join(', ')})` : String(name));
+  }
+  if (!parts.length) return undefined;
+  const preview = parts.slice(0, limit).join(' · ');
+  const extra = parts.length > limit ? `, +${parts.length - limit} more` : '';
+  return `${preview}${extra}`;
+}
+
+function previewArenaObjective(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const token = previewToken(data.event);
+  const render =
+    token !== undefined && Object.hasOwn(ARENA_OBJECTIVE_EVENT_RENDERS, token)
+      ? ARENA_OBJECTIVE_EVENT_RENDERS[token]
+      : undefined;
+
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+
+  if (render === undefined) {
+    return headlinePreview('ARENA', messageLine || 'Arena objective updated', options);
+  }
+
+  const objectiveToken = previewToken(data.objective);
+  const objectiveLabel =
+    objectiveToken !== undefined && Object.hasOwn(ARENA_OBJECTIVE_LABELS, objectiveToken)
+      ? ARENA_OBJECTIVE_LABELS[objectiveToken]
+      : undefined;
+
+  const { headline, details } = render({
+    waveName: safeScalar(data.wave_name) !== undefined ? String(safeScalar(data.wave_name)) : undefined,
+    enemiesLine: formatArenaObjectiveEnemyDigest(data.enemies),
+    objectiveLabel,
+  });
+
+  if (messageLine && messageLine !== token && !headline.includes(messageLine) && !details.includes(messageLine)) {
+    details.push(messageLine);
+  }
+
+  return details.length > 0
+    ? detailPreview('ARENA', headline, details, options)
+    : headlinePreview('ARENA', headline, options);
+}
+
 function previewBattleEnded(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -2303,6 +2392,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   battle_left: previewBattleLeft,
   battle_ended: previewBattleEnded,
   arena_challenge: previewArenaChallenge,
+  arena_objective: previewArenaObjective, // 0.597.0 NPC waves/verdict; coarse type is system, not combat
   ship_captured: previewShipCaptured,
   prize_update: previewPrizeUpdate,
   // Social domain (PR7b)

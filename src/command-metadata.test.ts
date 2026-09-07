@@ -2441,6 +2441,8 @@ describe('command metadata', () => {
       expect(help).toContain('fall back to system');
       expect(help).toContain('types=combat does not include them');
       expect(help).toContain('pirate_radio');
+      expect(help).toContain('arena_challenge');
+      expect(help).toContain('arena_objective');
       expect(help).not.toContain('types=action_result');
       expect(help).not.toContain('types (chat|combat|trade|faction|friend|forum');
     }
