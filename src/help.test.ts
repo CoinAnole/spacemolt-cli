@@ -527,7 +527,7 @@ describe('help output branches', () => {
     expect(output).toContain('claim_prize <prize_id> <station>  Assign crew and recover an intact prize');
     expect(output).toContain('service_prize <prize_id> <action> Stop/resume/redirect/refuel/repair a prize');
     expect(output).toContain('faction personnel [status|recruit|deposit|withdraw]  Local crew/marine reserve');
-    expect(output).toContain('arena status              Arena lobby: record, pending challenges, XP cap');
+    expect(output).toContain('arena status              Arena lobby: record, pending challenges, live match, XP cap');
     expect(output).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
     expect(output).toContain('arena accept | decline    Answer an incoming arena challenge');
     expect(output).toContain('arena cancel              Withdraw your outgoing challenge');
@@ -621,6 +621,10 @@ describe('help output branches', () => {
     expect(output).toContain('arena fight');
     expect(output).toContain('NPC arena trial');
     expect(output).toContain('unlocked NPC trial');
+    expect(output).toContain('live NPC-challenge match state');
+    expect(output).toContain('runners marked flees');
+    expect(output).toContain('win condition');
+    expect(output).toContain('reinforcement waves');
     expect(output).toContain('max_side_size');
     expect(output).not.toContain('arena_status');
     expect(output).not.toContain('arena_challenge');
@@ -640,7 +644,42 @@ describe('help output branches', () => {
     expect(output).toContain('arena cancel');
     expect(output).toContain('arena challenges');
     expect(output).toContain('arena fight');
+    expect(output).toContain('live NPC-challenge match state');
+    expect(output).toContain('runners marked flees');
+    expect(output).toContain('reinforcement waves');
     expect(output).not.toContain('arena_challenge');
+    expect(output).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+  });
+
+  test('arena command help documents objectives, waves, and live match', () => {
+    const status = captureWriter();
+    expect(showCommandHelp('arena status', status.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const statusHelp = status.stdout.join('\n');
+    expect(statusHelp).toContain('live NPC-challenge match state');
+    expect(statusHelp).toContain('ticks remaining');
+    expect(statusHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+    expect(statusHelp).not.toContain('`');
+
+    const challenges = captureWriter();
+    expect(showCommandHelp('arena challenges', challenges.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+    const challengesHelp = challenges.stdout.join('\n');
+    expect(challengesHelp).toContain('runners marked flees');
+    expect(challengesHelp).toContain('win condition');
+    expect(challengesHelp).toContain('reinforcement waves');
+    expect(challengesHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+    expect(challengesHelp).not.toContain('`');
+
+    const fight = captureWriter();
+    expect(showCommandHelp('arena fight', fight.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const fightHelp = fight.stdout.join('\n');
+    expect(fightHelp).toContain('opening enemies, win condition, and any reinforcement waves');
+    expect(fightHelp).toContain('track the live objective with arena status');
+    expect(fightHelp).toContain('See also:');
+    expect(fightHelp).toContain('arena status');
+    expect(fightHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+    expect(fightHelp).not.toContain('`');
   });
 
   test('storage group includes nested actions and standalone storage workflows', () => {
