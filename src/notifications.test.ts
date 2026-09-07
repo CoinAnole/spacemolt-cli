@@ -201,6 +201,26 @@ describe('notification formatting', () => {
       ],
     },
     {
+      msgType: 'arena_objective',
+      data: {
+        event: 'wave_arrived',
+        battle_id: 'battle-1',
+        challenge_id: 'first_blood',
+        wave_name: 'Second Line',
+        message: 'Second Line has entered the ring.',
+        enemies: [
+          { npc_id: 'npc-1', name: 'Ring Runner', ship_class: 'ring_runner', flees: true },
+          { npc_id: 'npc-2', name: 'Ring Cleaver 1', ship_class: 'ring_cleaver', flees: false },
+        ],
+      },
+      snippets: [
+        '[ARENA]',
+        'Wave arrived: Second Line',
+        'Ring Runner (ring_runner, flees)',
+        'Ring Cleaver 1 (ring_cleaver)',
+      ],
+    },
+    {
       msgType: 'system_progress_summary',
       data: {
         count: 10,
@@ -2095,6 +2115,7 @@ describe('notification formatting', () => {
       'battle_left',
       'battle_ended',
       'arena_challenge',
+      'arena_objective',
       'ship_captured',
     ] as const;
 
@@ -3394,6 +3415,300 @@ describe('notification formatting', () => {
       });
       expect(prototypeEvent.headline).toBe('Arena challenge updated');
       expect(prototypeEvent.headline).not.toContain('constructor');
+    });
+
+    test('arena_objective headlines, details, and unknown events stay token-silent', () => {
+      expect(hasPreviewHandler('arena_objective')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('arena_objective');
+
+      const twoShipDigest = 'Ring Runner (ring_runner, flees) · Ring Cleaver 1 (ring_cleaver)';
+      const waveArrivedFull = {
+        type: 'system',
+        msg_type: 'arena_objective',
+        timestamp: '2026-05-23T19:20:00.000Z',
+        data: {
+          event: 'wave_arrived',
+          battle_id: 'battle-1',
+          challenge_id: 'first_blood',
+          wave_name: 'Second Line',
+          message: 'Second Line has entered the ring.',
+          enemies: [
+            { npc_id: 'npc-1', name: 'Ring Runner', ship_class: 'ring_runner', flees: true },
+            { npc_id: 'npc-2', name: 'Ring Cleaver 1', ship_class: 'ring_cleaver', flees: false },
+          ],
+        },
+      };
+      const waveArrivedPreview = formatNotificationPreview(waveArrivedFull);
+      expect(waveArrivedPreview.tag).toBe('ARENA');
+      expect(waveArrivedPreview.severity).toBeUndefined();
+      expect(waveArrivedPreview.headline).toBe('Wave arrived: Second Line');
+      expect(waveArrivedPreview.details).toEqual([twoShipDigest, 'Second Line has entered the ring.']);
+      expect(
+        waveArrivedPreview.details.filter((line) => line.includes('Ring Runner') || line.includes('Ring Cleaver')),
+      ).toHaveLength(1);
+      expect(waveArrivedPreview.details[0]).toContain('Ring Runner (ring_runner, flees)');
+      expect(waveArrivedPreview.details[0]).toContain('Ring Cleaver 1 (ring_cleaver)');
+      expect(waveArrivedPreview.details[0]).not.toContain('ring_cleaver, flees');
+      const waveArrivedTable = tableMessageFromPreview(
+        formatNotificationPreview(waveArrivedFull, { maxLineLength: 120 }),
+      );
+      expect(waveArrivedTable).toBe(formatNotificationMessage(waveArrivedFull));
+      expect(waveArrivedTable).toBe(`Wave arrived: Second Line; ${twoShipDigest}`);
+      expect(waveArrivedTable).not.toBe('ARENA');
+      expect(twoShipDigest.length).toBeLessThanOrEqual(80);
+      const waveArrivedCopy = [waveArrivedPreview.headline, ...waveArrivedPreview.details, waveArrivedTable].join('\n');
+      expect(waveArrivedCopy).not.toContain('npc_id');
+      expect(waveArrivedCopy).not.toContain('npc-1');
+      expect(waveArrivedCopy).not.toContain('npc-2');
+      expectNoDiagnosticTokens(waveArrivedCopy);
+      const waveArrivedInline = stripAnsi(formatNotification(waveArrivedFull).join('\n'));
+      expect(waveArrivedInline).toContain('[ARENA]');
+      expect(waveArrivedInline).not.toContain('[ARENA_OBJECTIVE]');
+
+      const noWave = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'arena_objective',
+        data: { event: 'wave_arrived', battle_id: 'battle-1', challenge_id: 'first_blood', enemies: [] },
+      });
+      expect(noWave.headline).toBe('Wave arrived');
+      expect(noWave.details).toEqual([]);
+      expectNoDiagnosticTokens(noWave.headline);
+
+      const whitespaceWave = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'wave_arrived', wave_name: '   ', message: 'A wave arrives.' },
+      });
+      expect(whitespaceWave.headline).toBe('Wave arrived');
+      expect(whitespaceWave.details).toEqual(['A wave arrives.']);
+
+      const paddedWave = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'wave_arrived', wave_name: '  Second Line  ' },
+      });
+      expect(paddedWave.headline).toBe('Wave arrived:   Second Line  ');
+
+      const junkEnemiesNotification = {
+        type: 'system',
+        msg_type: 'arena_objective',
+        data: {
+          event: 'wave_arrived',
+          battle_id: 'battle-1',
+          challenge_id: 'first_blood',
+          enemies: [
+            null,
+            'junk',
+            42,
+            { npc_id: 'npc-1' },
+            { name: '   ' },
+            { name: 'Good Ship', ship_class: 'fighter', flees: true },
+            { npc_id: 'npc-2', name: 'Also Good' },
+          ],
+        },
+      };
+      expect(() => formatNotificationPreview(junkEnemiesNotification)).not.toThrow();
+      const junkPreview = formatNotificationPreview(junkEnemiesNotification);
+      expect(junkPreview.headline).toBe('Wave arrived');
+      expect(junkPreview.details).toEqual(['Good Ship (fighter, flees) · Also Good']);
+      const junkCopy = [
+        junkPreview.headline,
+        ...junkPreview.details,
+        tableMessageFromPreview(formatNotificationPreview(junkEnemiesNotification, { maxLineLength: 120 })),
+      ].join('\n');
+      expect(junkCopy).not.toContain('[object Object]');
+      expect(junkCopy).not.toContain('npc_id');
+      expect(junkCopy).not.toContain('npc-1');
+      expect(junkCopy).not.toContain('npc-2');
+      expectNoDiagnosticTokens(junkCopy);
+
+      expect(() =>
+        formatNotificationPreview({
+          msg_type: 'arena_objective',
+          data: { event: 'wave_arrived', enemies: { not: 'array' } },
+        }),
+      ).not.toThrow();
+      expect(
+        formatNotificationPreview({
+          msg_type: 'arena_objective',
+          data: { event: 'wave_arrived', enemies: { not: 'array' } },
+        }).details,
+      ).toEqual([]);
+
+      const fleesGated = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: {
+          event: 'wave_arrived',
+          enemies: [
+            { name: 'Runner', ship_class: 'skiff', flees: true },
+            { name: 'False Flag', ship_class: 'skiff', flees: false },
+            { name: 'Omitted', ship_class: 'skiff' },
+            { name: 'String True', ship_class: 'skiff', flees: 'true' },
+            { name: 'Numeric', ship_class: 'skiff', flees: 1 },
+            { name: 'Runner', flees: true },
+          ],
+        },
+      });
+      expect(fleesGated.details[0]).toBe(
+        'Runner (skiff, flees) · False Flag (skiff) · Omitted (skiff) · String True (skiff) · Numeric (skiff) · Runner (flees)',
+      );
+      expect(fleesGated.details[0]).toContain('Runner (flees)');
+      expect(fleesGated.details[0]).not.toContain('False Flag (skiff, flees)');
+      expect(fleesGated.details[0]).not.toContain('Omitted (skiff, flees)');
+      expect(fleesGated.details[0]).not.toContain('String True (skiff, flees)');
+      expect(fleesGated.details[0]).not.toContain('Numeric (skiff, flees)');
+
+      const sevenEnemies = Array.from({ length: 7 }, (_, index) => ({
+        npc_id: `npc-${index + 1}`,
+        name: `Ship ${index + 1}`,
+        ship_class: 'fighter',
+        flees: false,
+      }));
+      const sevenNotification = {
+        type: 'system',
+        msg_type: 'arena_objective',
+        data: { event: 'wave_arrived', wave_name: 'Reserve', enemies: sevenEnemies },
+      };
+      const sevenPreview = formatNotificationPreview(sevenNotification);
+      expect(sevenPreview.details[0]).toBe(
+        'Ship 1 (fighter) · Ship 2 (fighter) · Ship 3 (fighter) · Ship 4 (fighter) · Ship 5 (fighter) · Ship 6 (fighter), +1 more',
+      );
+      expect(sevenPreview.details[0]).not.toContain('Ship 7');
+      const sevenTable = tableMessageFromPreview(formatNotificationPreview(sevenNotification, { maxLineLength: 120 }));
+      expect(sevenTable).toBe('Wave arrived: Reserve');
+      expect(sevenTable).not.toContain('Ship 1');
+      const sevenCopy = [sevenPreview.headline, ...sevenPreview.details, sevenTable].join('\n');
+      expect(sevenCopy).not.toContain('npc_id');
+      expect(sevenCopy).not.toContain('npc-1');
+      expect(sevenCopy).not.toContain('npc-7');
+      expectNoDiagnosticTokens(sevenCopy);
+
+      const wonSurvive = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_won', objective: 'survive_ticks' },
+      });
+      expect(wonSurvive.headline).toBe('Objective won (survive ticks)');
+      expect(wonSurvive.details).toEqual([]);
+
+      const wonWithMessage = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_won', objective: 'survive_ticks', message: 'The ring held.' },
+      });
+      expect(wonWithMessage.headline).toBe('Objective won (survive ticks)');
+      expect(wonWithMessage.details).toEqual(['The ring held.']);
+
+      const lostTime = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_lost', objective: 'time_limit' },
+      });
+      expect(lostTime.headline).toBe('Objective lost (time limit)');
+
+      const lostEscape = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_lost', objective: 'enemy_escaped' },
+      });
+      expect(lostEscape.headline).toBe('Objective lost (enemy escaped)');
+
+      const oddPairing = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_won', objective: 'enemy_escaped' },
+      });
+      expect(oddPairing.headline).toBe('Objective won (enemy escaped)');
+
+      const wonMissing = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_won' },
+      });
+      expect(wonMissing.headline).toBe('Objective won');
+      expect(wonMissing.headline).not.toContain('undefined');
+      expect(wonMissing.details.join('\n')).not.toContain('undefined');
+
+      const lostMissing = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_lost' },
+      });
+      expect(lostMissing.headline).toBe('Objective lost');
+      expect(lostMissing.headline).not.toContain('undefined');
+
+      const unknownObjective = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_won', objective: 'totally_new' },
+      });
+      expect(unknownObjective.headline).toBe('Objective won');
+      expect(unknownObjective.headline).not.toContain('totally_new');
+      expect(unknownObjective.headline).not.toContain('(');
+      expect(unknownObjective.details.join('\n')).not.toContain('totally_new');
+
+      const unknownEvent = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'arena_objective',
+        data: {
+          event: 'totally_new',
+          battle_id: 'battle-1',
+          challenge_id: 'first_blood',
+          message: 'Something unexpected happened.\nSecond line.',
+        },
+      });
+      expect(unknownEvent.tag).toBe('ARENA');
+      expect(unknownEvent.headline).toBe('Something unexpected happened.');
+      expect(unknownEvent.details).toEqual([]);
+      const unknownEventTable = tableMessageFromPreview(
+        formatNotificationPreview(
+          {
+            type: 'system',
+            msg_type: 'arena_objective',
+            data: {
+              event: 'totally_new',
+              battle_id: 'battle-1',
+              challenge_id: 'first_blood',
+              message: 'Something unexpected happened.\nSecond line.',
+            },
+          },
+          { maxLineLength: 120 },
+        ),
+      );
+      const unknownEventCopy = [unknownEvent.headline, ...unknownEvent.details, unknownEventTable].join('\n');
+      expect(unknownEventCopy).not.toContain('totally_new');
+      expect(unknownEventCopy).not.toContain('event=');
+      expect(unknownEventCopy).not.toContain('challenge_id=');
+      expectNoDiagnosticTokens(unknownEventCopy);
+
+      const unknownNoMessage = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'expired', battle_id: 'battle-1', challenge_id: 'first_blood' },
+      });
+      expect(unknownNoMessage.tag).toBe('ARENA');
+      expect(unknownNoMessage.headline).toBe('Arena objective updated');
+      expect(unknownNoMessage.details).toEqual([]);
+      expect(unknownNoMessage.headline).not.toContain('expired');
+      expect(unknownNoMessage.headline).not.toContain('event=');
+      expect(unknownNoMessage.headline).not.toContain('challenge_id=');
+
+      const booleanEvent = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: true, message: 'Keep the ring.' },
+      });
+      expect(booleanEvent.headline).toBe('Keep the ring.');
+      expect(booleanEvent.headline).not.toContain('true');
+      expect(booleanEvent.details.join('\n')).not.toContain('true');
+
+      const prototypeEvent = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'constructor' },
+      });
+      expect(prototypeEvent.headline).toBe('Arena objective updated');
+      expect(prototypeEvent.headline).not.toContain('constructor');
+
+      const tokenMessage = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: {
+          event: 'wave_arrived',
+          wave_name: 'Second Line',
+          message: 'wave_arrived',
+          enemies: [{ name: 'Ring Runner', ship_class: 'ring_runner', flees: true }],
+        },
+      });
+      expect(tokenMessage.headline).toBe('Wave arrived: Second Line');
+      expect(tokenMessage.details.join('\n')).not.toContain('wave_arrived');
+      expect(tokenMessage.details).toEqual(['Ring Runner (ring_runner, flees)']);
     });
 
     test('K13: table Type stays raw msg_type; Message uses pure preview headline', () => {

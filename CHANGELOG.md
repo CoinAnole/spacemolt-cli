@@ -19,6 +19,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   clock; `0` is the deadline tick.
 - Human `get_nearby` arena NPC lines append ` - flees` when the NPC is running
   for the ring beacons.
+- Human `get_notifications` / `notifications` / inline notifications print
+  `arena_objective` with `[ARENA]`: wave arrivals name the wave and list hulls
+  (`flees` when the runner flag is true); objective verdicts print won/lost with
+  survive ticks / time limit / enemy escaped. Table Type stays raw
+  `arena_objective`. Coarse poll filter is `types=system`, not `types=combat`.
+  JSON/YAML/jq field names are unchanged.
 
 ### Unsolicited move notifications (gameserver 0.596.2)
 

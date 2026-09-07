@@ -96,6 +96,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'PIRATES':
     case 'PIRATE RADIO':
     case 'BATTLE':
+    case 'ARENA':
     case 'RAID':
       return c.red;
     case 'TRADE':
