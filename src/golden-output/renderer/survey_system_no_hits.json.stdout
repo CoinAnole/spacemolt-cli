@@ -1,0 +1,15 @@
+{
+  "details": {
+    "system_id": "sol",
+    "system_name": "Sol",
+    "survey_power": 8,
+    "message": "Survey complete. No hidden deposits resolved.",
+    "bloom_status": "none",
+    "bloom_intensity": 0,
+    "newly_revealed": [],
+    "already_revealed": [],
+    "faint_signatures": [],
+    "wildlife": [],
+    "xp_gained": {}
+  }
+}

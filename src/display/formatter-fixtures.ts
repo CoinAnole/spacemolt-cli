@@ -9,6 +9,7 @@ import { shipFixtureCases, shipHighValueFixtures } from './ship.fixtures.ts';
 import { shippingHighValueFixtures } from './shipping.fixtures.ts';
 import { socialFixtureCases, socialHighValueFixtures } from './social.fixtures.ts';
 import { statusFixtureCases, statusHighValueFixtures } from './status.fixtures.ts';
+import { surveyFixtureCases, surveyHighValueFixtures } from './survey.fixtures.ts';
 
 export * from './arena.fixtures.ts';
 export * from './generic.fixtures.ts';
@@ -21,6 +22,7 @@ export * from './ship.fixtures.ts';
 export * from './shipping.fixtures.ts';
 export * from './social.fixtures.ts';
 export * from './status.fixtures.ts';
+export * from './survey.fixtures.ts';
 
 /**
  * Optional metadata for high-value fixtures used by the schema divergence reporter.
@@ -40,6 +42,7 @@ export interface HighValueFixtureEntry {
 
 export const formatterFixtureCases = {
   ...statusFixtureCases,
+  ...surveyFixtureCases,
   ...marketFixtureCases,
   ...shipFixtureCases,
   ...socialFixtureCases,
@@ -49,6 +52,7 @@ export const formatterFixtureCases = {
 
 export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...statusHighValueFixtures,
+  ...surveyHighValueFixtures,
   ...marketHighValueFixtures,
   ...passengerHighValueFixtures,
   ...shipHighValueFixtures,

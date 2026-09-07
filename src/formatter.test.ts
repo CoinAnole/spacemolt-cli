@@ -7359,6 +7359,37 @@ describe('structuredContent formatters', () => {
         --------------+--------+-------+-------+--------------
         Earth Station | Sol    | 12    | 1     | earth_station"
       ,
+        "survey_system": 
+      "
+      === Survey: Sol (sol) ===
+      Survey power: 18
+      Bloom: active (intensity 0.8)
+      Survey complete. Hidden deposits resolved.
+      A faint resonance west of the belt.
+
+      Newly Revealed:
+        - Kaiser Vein (sol_kaiser_vein)  asteroid_belt
+          A dense iron-gold plug beneath the main belt.
+          - Iron Ore: richness 3, 120/300 (40.00% remaining), supports power 6, lock min 200
+          - Gold Ore: richness 1, 74/300 (24.67% remaining), supports power 3, lock min 200, too sparse
+          - Copper Ore: richness 2, depleted, lock min 200, too sparse
+
+      Already Known:
+        - Outer Belt Cache (sol_outer_cache)  asteroid_belt
+          - Iron Ore: richness 3, 750/1000 (75.00% remaining), supports power 12
+
+      Faint Signatures:
+        - deep_core: Need more survey power (difficulty 24)
+
+      === Wildlife ===
+
+        Species        | Name           | Role     | Estimate | Abundance | Ranched
+        ---------------+----------------+----------+----------+-----------+--------
+        ember_grazer   | Ember Grazer   | grazer   | 42       | common    | 0
+        molt_leviathan | Molt Leviathan | predator | 1        | rare      |
+
+      Skill XP: scanning +12, deep_core_mining +8"
+      ,
         "system_info": 
       "
       === System: Sol ===
