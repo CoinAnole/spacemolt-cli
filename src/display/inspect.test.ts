@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { packageOperationLabel } from './catalog-detail.ts';
+import { catalogEnergyCrystalItem } from './generic.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   inspectBaseFixture,
@@ -332,6 +333,41 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).toContain('Details');
   expect(stdout).toContain('Raw iron-bearing rock.');
   expect(stdout).toContain('Page 1/1');
+  expect(stdout).not.toContain('Mining group');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders catalog inspect Mining group for a crystal ore', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'energy_crystal',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: [structuredClone(catalogEnergyCrystalItem)],
+        page: 1,
+        total_pages: 1,
+        total: 1,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const entryHeader = stdout.split('\n').find((line) => line.includes('Name') && line.includes('Category'));
+  expect(stdout).toContain('=== Inspect: energy_crystal ===');
+  expect(stdout).toContain('Kind: catalog');
+  expect(stdout).toContain('Catalog (items)');
+  expect(stdout).toContain('Energy Crystal');
+  expect(stdout).toContain('energy_crystal');
+  expect(stdout).toContain('Details');
+  expect(stdout).toContain('A charged crystal used in high-energy systems.');
+  expect(stdout).toContain('Mining group: crystal');
+  expect(entryHeader).toBeDefined();
+  expect(entryHeader).not.toContain('Mining group');
   expect(stdout).not.toContain('=== Response ===');
 });
 

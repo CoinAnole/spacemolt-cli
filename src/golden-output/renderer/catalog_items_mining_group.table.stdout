@@ -1,0 +1,15 @@
+
+=== Items ===
+
+  Name           | ID             | Category | Rarity | Mining group | Value | Size | Compression
+  ---------------+----------------+----------+--------+--------------+-------+------+------------
+  Energy Crystal | energy_crystal | ore      | rare   | crystal      | 120   | 1    | ore        
+
+Details
+A charged crystal used in high-energy systems.
+Size: 1
+Base value: 120
+Category: ore
+Mining group: crystal
+page 1/1 | page size 20 | total 1
+Items: showing 1 of 1

@@ -163,6 +163,7 @@ function summarizeBuildMaterials(value: unknown): string {
 export function emitCatalogItemDetail(entry: Record<string, unknown>, catalog: Record<string, unknown>): void {
   emitDetailsHeader();
   emitCatalogIdentity(entry);
+  emitCatalogOptional('Mining group', entry.mining_group);
 
   const effect = summarizeEffect(entry.effect);
   if (effect) emitLine(`Effect: ${effect}`);

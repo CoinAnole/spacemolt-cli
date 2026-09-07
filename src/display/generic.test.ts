@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import {
+  catalogItemsFixture,
+  catalogItemsMiningGroupFixture,
   catalogItemsModulesFixture,
   catalogShipsFixture,
   dockFixture,
@@ -1178,6 +1180,137 @@ test('omits catalog item compression when no item declares it', () => {
 
   expect(rendered.success).toBe(true);
   expect(stdout).not.toContain('Compression');
+});
+
+function catalogItemsHeader(stdout: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes('Name') && line.includes('ID') && line.includes('Category'));
+}
+
+test('renders Mining group column and Details for a one-row catalog item', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogItemsMiningGroupFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(catalogItemsHeader(stdout)).toContain('Mining group');
+  expect(stdout).toContain('crystal');
+  expect(stdout).toContain('=== Items ===');
+  expect(stdout).toContain('Details');
+  expect(stdout.indexOf('=== Items ===')).toBeLessThan(stdout.indexOf('Details'));
+  expect(stdout).toContain('Mining group: crystal');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits Mining group column and Details for multi-row catalog items without mining_group', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogItemsFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(catalogItemsHeader(stdout)).not.toContain('Mining group');
+  expect(stdout).toContain('Antimatter Torpedoes');
+  expect(stdout).toContain('Quantum Fragments');
+  expect(stdout).not.toContain('Details');
+});
+
+test('renders Mining group column without Details when one of several catalog items has mining_group', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        structuredClone(catalogItemsMiningGroupFixture.items[0]),
+        {
+          id: 'iron_ore',
+          name: 'Iron Ore',
+          category: 'ore',
+          base_value: 2,
+          size: 1,
+        },
+      ],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(catalogItemsHeader(stdout)).toContain('Mining group');
+  expect(stdout).toContain('crystal');
+  expect(stdout).toContain('Iron Ore');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('Mining group:');
+});
+
+test('omits Mining group on a one-row catalog item that does not declare it', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          id: 'food_rations',
+          name: 'Food Rations',
+          category: 'consumable',
+          base_value: 10,
+          size: 1,
+        },
+      ],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(catalogItemsHeader(stdout)).not.toContain('Mining group');
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Mining group:');
+});
+
+test('does not render catalog item Details for a one-row module', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          id: 'warp_scrambler',
+          name: 'Warp Scrambler',
+          category: 'module',
+          slot: 'utility',
+          base_value: 4500,
+          size: 10,
+        },
+      ],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(catalogItemsHeader(stdout)).toContain('Slot');
+  expect(stdout).toContain('utility');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('Mining group:');
+});
+
+test('does not render catalog item Details for a non-catalog items list', () => {
+  const rendered = renderStructuredResult(
+    'get_mobile_base',
+    {
+      items: [structuredClone(catalogItemsMiningGroupFixture.items[0])],
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Energy Crystal');
+  expect(stdout).toContain('crystal');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('Mining group:');
 });
 
 test('renders catalog facilities with maintenance_fuel and maintenance_inputs req. stock', () => {

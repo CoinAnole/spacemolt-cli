@@ -50,6 +50,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `resources` stay silent. `get_status --summary` is unchanged.
 - JSON/YAML/jq field names are unchanged.
 
+### Catalog item mining group (gameserver 0.595.0)
+
+- Human `catalog type=items` tables print a Mining group column when an item
+  has `mining_group`. One-row `catalog type=items` pages and `inspect` of a
+  catalog item print `Mining group:` with the raw token (currently `crystal`).
+  The column and line are omitted when the server omits the field.
+  JSON/YAML/jq field names are unchanged.
+
 ### Help copy (jettison 0.594.0 / mine notes through 0.595)
 
 - `help jettison` documents shared-POI containers, mid-flight destruction, and
@@ -64,7 +72,6 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   filters (`filter_*` modules), and the filtered empty cycle.
 - `help get_wrecks` notes jettison containers (10-minute despawn, settle-back).
 - `help get_action_log` mentions `event_type=other.jettison_dispersed`.
-  JSON/YAML/jq field names are unchanged.
 
 ### Arena error suggestions (gameserver 0.590.0)
 
