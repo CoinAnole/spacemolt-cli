@@ -1275,6 +1275,15 @@ describe('notification formatting', () => {
       expect(preview.headline).not.toContain('()');
     });
 
+    test('fleet_dock with base_name only prints the name without empty parens', () => {
+      const preview = formatNotificationPreview(note('fleet_dock', { base_name: 'Haven Exchange' }));
+      expect(preview.headline).toBe('Fleet docked at Haven Exchange');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('()');
+      expect(preview.details.join('\n')).not.toContain('Docked at:');
+      expect(preview.details.join('\n')).not.toContain('base_id=');
+    });
+
     test('fleet_dock without name or id is Fleet docked', () => {
       const preview = formatNotificationPreview(
         note('fleet_dock', { ship: { name: 'Dust Devil', hull: 130 }, player: { username: 'Marlowe' } }),

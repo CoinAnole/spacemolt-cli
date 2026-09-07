@@ -2198,7 +2198,7 @@ function previewObservationUpdate(
 
 const TYPED_MOVE_LOCATION_KEYS = ['system_name', 'poi_name', 'base_id', 'base_name', 'system_id', 'poi_id'] as const;
 
-/** Preferred location keys only — no fill-from-rest (collectScalarBits would leak message/tick/command). */
+/** Only TYPED_MOVE_LOCATION_KEYS, in order, up to limit — loc may be the whole payload. */
 function locationScalarDetails(bag: Record<string, unknown>, limit = 4): string[] {
   const bits: string[] = [];
   for (const key of TYPED_MOVE_LOCATION_KEYS) {
