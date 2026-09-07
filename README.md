@@ -274,7 +274,7 @@ spacemolt storage jettison ore_iron 5
 | `storage deposit` | Station storage | Cargo → storage; player/empire/faction gifts; station material gifts (`target=station:<base-or-POI-ID>`, docked-only); faction buckets; bulk `items=JSON`. Docs/v1 `send_gift` to a station is this command; there is no `send_gift` CLI command. |
 | `storage withdraw` | Station storage | Storage → cargo; faction compartments; bulk `items=JSON` |
 | `storage loot` | Wrecks | Distinct from top-level `loot_wreck` |
-| `storage jettison` | Cargo | Distinct from top-level `jettison` (prefer `jettison` for ordinary dumps) |
+| `storage jettison` | Cargo | Distinct from top-level `jettison` (prefer `jettison` for ordinary dumps); unwanted ore dumped at a mineable POI settles back into the deposit when the container despawns. |
 
 Related top-level helpers (unchanged): `jettison`, `loot_wreck`, `faction_deposit_credits`, `faction_withdraw_credits`.
 

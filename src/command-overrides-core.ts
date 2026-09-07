@@ -111,10 +111,11 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   mine: {
-    description: 'Mine resources at an asteroid POI. Use get_system or get_location to check current POI resources.',
+    description:
+      'Mine one cycle at the current POI (asteroid, ice field, or gas cloud). The required extractor is keyed on the resource, not the POI type — a gas cloud can hold ore a mining laser works. Yield depends on fitted mining power, deposit richness, and Mining skill. get_poi and survey_system report supported_power, lock_minimum_stock, and too_sparse for this hull. Deep-core deposits still work down to zero (too_sparse / deposit_too_sparse do not apply); extra beam power above supported_power is capped. A fitted extraction filter (filter_* modules) removes that ore from the deposit draw so every cycle targets remaining deposits; if filters reject every workable deposit, the cycle returns nothing and says so.',
     example: 'spacemolt mine',
-    discoverWith: ['get_status', 'get_system'],
-    seeAlso: ['get_cargo', 'sell'],
+    discoverWith: ['get_status', 'get_system', 'get_poi'],
+    seeAlso: ['get_cargo', 'sell', 'get_poi', 'survey_system', 'catalog'],
     category: 'Mining',
     apiRoute: 'POST /api/v2/spacemolt/mine',
   },

@@ -1063,7 +1063,7 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_cargo           Cargo contents
   get_nearby          Nearby players, NPCs, creatures, and intact prizes
   get_skills          Your skill levels and XP
-  get_wrecks          Wrecks at POI (for looting)
+  get_wrecks          Wrecks and jettison containers at POI
   get_map             Galaxy map (all systems, or one system)
   get_empire_info     Empire policy snapshots
   get_tax_estimate    Preview taxes owed
@@ -1091,7 +1091,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     System/POI IDs: exact id/name by default; --fuzzy-ids allows unique prefix only (never substring)
 
   ${c.cyan}Mining & Trading:${c.reset}
-    mine                      Mine at asteroid belt
+    mine                      Mine at current POI (asteroid, ice, or gas)
     sell <item_id> <qty>      Sell to NPC market
     buy <item_id> [qty]       Buy from market
     refuel [fuel_cell_id]     Refuel at station to full or use fuel cells

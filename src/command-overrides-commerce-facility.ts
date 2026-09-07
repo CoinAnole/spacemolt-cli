@@ -173,8 +173,11 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
-    description: 'Jettison one cargo item, or several cargo item types with items=JSON, into one container.',
+    description:
+      'Dump cargo into a lootable container at your current POI; repeated dumps at the same POI share one container. Mid-flight (jump or Pathfinder drift) still jettisons, but there is no POI to anchor a container — the cargo is destroyed and the response says so. When a container despawns, cargo that matches a mineable deposit at that POI settles back into it up to capacity, so dumping unwanted ore does not strip it out of the belt; cargo the POI does not mine is lost. Despawn receipts are get_action_log event_type=other.jettison_dispersed.',
     example: 'spacemolt jettison items=\'[{"item_id":"iron_ore","quantity":50}]\'',
+    discoverWith: ['get_cargo'],
+    seeAlso: ['get_cargo', 'get_wrecks', 'get_action_log'],
     category: 'Cargo',
     apiRoute: 'POST /api/v2/spacemolt/jettison',
     positionals: ['item_id', 'quantity', 'items'],
@@ -287,7 +290,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[item_id] [quantity] [items=JSON]  (item_id/quantity required unless items=JSON; same style as cargo jettison)',
     description:
-      'Jettison items via spacemolt_storage/jettison. Prefer top-level jettison (spacemolt/jettison) for ordinary cargo dumps unless you specifically need this path.',
+      'Jettison items via spacemolt_storage/jettison. Prefer top-level jettison (spacemolt/jettison) for ordinary cargo dumps unless you specifically need this path. Same container, mid-flight destruction, and deposit-settle rules as top-level jettison.',
     example: 'spacemolt storage_jettison items=\'[{"item_id":"ore_iron","quantity":50}]\'',
     category: 'Cargo',
     apiRoute: 'POST /api/v2/spacemolt_storage/jettison',
