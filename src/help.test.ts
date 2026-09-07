@@ -1007,6 +1007,28 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt server-help travel');
   });
 
+  test('faction list_missions help points at post, cancel, and get_missions', () => {
+    const list = captureWriter();
+    const cancel = captureWriter();
+
+    expect(showCommandHelp('faction list_missions', list.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(showCommandHelp('faction cancel_mission', cancel.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+
+    const listOutput = list.stdout.join('\n');
+    expect(listOutput).toContain('posted contracts');
+    expect(listOutput).toContain('bounty targets');
+    expect(listOutput).toContain('See also: faction post_mission, faction cancel_mission, get_missions');
+    expect(listOutput).not.toContain('faction_post_mission');
+    expect(listOutput).not.toContain('faction_cancel_mission');
+    expect(listOutput).not.toContain('`');
+
+    const cancelOutput = cancel.stdout.join('\n');
+    expect(cancelOutput).toContain('See also: faction list_missions');
+    expect(cancelOutput).not.toContain('faction_list_missions');
+  });
+
   test('related metadata translates grouped flat command names to nested names', () => {
     const capture = captureWriter();
 
