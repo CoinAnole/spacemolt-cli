@@ -147,6 +147,16 @@ export const getStatusFixture = {
   },
 };
 
+export const getStatusOverCapacityFixture = {
+  ...getStatusFixture,
+  ship: {
+    ...getStatusFixture.ship,
+    cpu_used: 22,
+    power_used: 30,
+    cargo_used: 80,
+  },
+};
+
 export const getStatusResourcesFixture = {
   ...getStatusFixture,
   location: {
@@ -939,6 +949,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     command: 'get_state',
     fixture: getStatusFixture,
   },
+  get_status_over_capacity: { command: 'get_status', fixture: getStatusOverCapacityFixture },
   get_status_resources: { command: 'get_status', fixture: getStatusResourcesFixture },
   get_state_resources: { command: 'get_state', fixture: getStatusResourcesFixture },
   get_status_detained: { command: 'get_status', fixture: getStatusDetainedFixture },

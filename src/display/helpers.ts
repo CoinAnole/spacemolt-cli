@@ -152,6 +152,20 @@ export function formatDepletionRemainingSuffix(depletionPercent: unknown): strin
   return ` (${color}${remainingPct.toFixed(2)}% remaining${c.reset})`;
 }
 
+/** True when both values are finite and used exceeds capacity. Equality is full, not over. */
+export function isOverCapacity(used: unknown, capacity: unknown): boolean {
+  const usedN = finiteNumber(used);
+  const capN = finiteNumber(capacity);
+  if (usedN === undefined || capN === undefined) return false;
+  return usedN > capN;
+}
+
+/** Append ` (over capacity)` when used > capacity. Empty string otherwise. */
+export function overCapacitySuffix(used: unknown, capacity: unknown): string {
+  if (!isOverCapacity(used, capacity)) return '';
+  return ` ${c.yellow}(over capacity)${c.reset}`;
+}
+
 export interface ResourceWorkability {
   supportedPower: number | undefined;
   lockMinimumStock: number | undefined;

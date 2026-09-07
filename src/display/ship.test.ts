@@ -3,12 +3,15 @@ import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import { formatCrewRatio } from './personnel.ts';
 import {
+  cargoFixture,
+  cargoOverCapacityFixture,
   factionGaragesFixture,
   listShipsFixture,
   sellWreckFixture,
   sellWreckPartialPayFixture,
   shipFixture,
   shipIncapacitatedFixture,
+  shipOverCapacityFixture,
 } from './ship.fixtures.ts';
 
 const options: GlobalOptions = {
@@ -447,6 +450,64 @@ test('get_ship omits Survivor recovery when only personnel_recovery_tick is set'
   const stdout = renderShip(fixture).stdout.join('\n');
   expect(stdout).not.toContain('Survivor recovery:');
   expect(stdout).not.toContain('tick 12600');
+});
+
+test('get_ship flags only over-capacity ratios', () => {
+  const fixture = { ...shipFixture, ship: { ...shipFixture.ship, cpu_used: 40 } };
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('CPU: 40/34 (over capacity)');
+  expect(stdout).toContain('Cargo: 0/1250');
+  expect(stdout).toContain('Power: 23/75');
+  expect(stdout).not.toContain('Cargo: 0/1250 (over capacity)');
+  expect(stdout).not.toContain('Power: 23/75 (over capacity)');
+});
+
+test('get_ship does not flag per-module CPU or Power', () => {
+  const stdout = renderShip(shipOverCapacityFixture).stdout.join('\n');
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  expect(modulesHalf).not.toContain('(over capacity)');
+  const expander = tableRow(stdout, 'Cargo Expander III');
+  const laser = tableRow(stdout, 'Pulse Laser III');
+  expect(expander).toMatch(/\|\s*2\s*\|\s*2\s*\|/);
+  expect(laser).toMatch(/\|\s*3\s*\|\s*8\s*\|/);
+});
+
+test('get_cargo flags used over capacity without inventing available', () => {
+  const stdout = renderStructuredResult(
+    'get_cargo',
+    structuredClone(cargoOverCapacityFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Used: 120/100 (over capacity)');
+  expect(stdout).not.toContain('(available)');
+});
+
+test('get_cargo does not flag equal used and capacity', () => {
+  const stdout = renderStructuredResult('get_cargo', structuredClone(cargoFixture), options, context).stdout.join('\n');
+  expect(stdout).toContain('Used: 50/100');
+  expect(stdout).not.toContain('(over capacity)');
+});
+
+test('get_cargo prints over-capacity before available', () => {
+  const stdout = renderStructuredResult(
+    'get_cargo',
+    { ...cargoOverCapacityFixture, available: 5 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Used: 120/100 (over capacity) (5 available)');
+});
+
+test('install_mod ship fallback flags over-capacity CPU', () => {
+  const stdout = renderStructuredResult(
+    'install_mod',
+    structuredClone(shipOverCapacityFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Ship:');
+  expect(stdout).toContain('CPU: 40/34 (over capacity)');
 });
 
 function renderSellWreck(fixture: Record<string, unknown>) {

@@ -17,6 +17,7 @@ import {
   formatter,
   isRecord,
   namedFormatter,
+  overCapacitySuffix,
   pirateCrewLabel,
   printCompactTable,
 } from './helpers.ts';
@@ -826,9 +827,9 @@ export const statusFormatters = [
         emitLine(`  Shield: ${s.shield}/${s.max_shield} (+${s.shield_recharge}/tick)`);
         emitLine(`  Armor: ${s.armor || 0}`);
         emitLine(`  Fuel: ${s.fuel}/${s.max_fuel}`);
-        emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}`);
-        emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}`);
-        emitLine(`  Power: ${s.power_used}/${s.power_capacity}`);
+        emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}${overCapacitySuffix(s.cargo_used, s.cargo_capacity)}`);
+        emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}${overCapacitySuffix(s.cpu_used, s.cpu_capacity)}`);
+        emitLine(`  Power: ${s.power_used}/${s.power_capacity}${overCapacitySuffix(s.power_used, s.power_capacity)}`);
         emitShipPersonnel(s, { indent: '  ' });
         emitShipCombatEffects(s);
 

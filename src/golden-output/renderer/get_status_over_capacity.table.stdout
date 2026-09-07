@@ -1,0 +1,46 @@
+
+=== Player Status ===
+Username: Marlowe
+Empire: Terran
+Citizenships: solarian, nebula
+Credits: 4242
+Faction: smc (captain)
+Trading restricted until: 2026-07-18T12:34:56Z
+
+Standings:
+  solarian: 12, crimson: 94, pirate_voss: -10 (bounty 500), pirate_kael: 5
+
+Location:
+  System: Sol
+  POI: Earth
+  Docked: Yes (earth_station)
+
+Ship: Surveyor (prospector)
+  Hull: 90/100
+  Shield: 35/50 (+5/tick)
+  Armor: 10
+  Fuel: 80/100
+  Cargo: 80/60 (over capacity)
+  CPU: 22/20 (over capacity)
+  Power: 30/25 (over capacity)
+  Crew: 4/6 fit (min 3)
+  Marines: 2/4 fit
+  Efficiency: 67%
+  Operational speed: 8
+
+Nearby Players: 1
+  - Ibis (hauler)
+
+Nearby Prizes (1):
+
+=== Nearby Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+-----------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
+
+=== Prize recoveries ===
+
+  Prize ID        | Ship                    | Status     | Destination   | Crew     | Hull  | Fuel  | Location                  | Arrival | Wait   
+  ----------------+-------------------------+------------+---------------+----------+-------+-------+---------------------------+---------+--------
+  prize-recover-1 | Captured Lark (frigate) | in_transit | earth_station | 3 aboard | 40/80 | 20/50 | jump sol → alpha_centauri | 12500   | no_fuel

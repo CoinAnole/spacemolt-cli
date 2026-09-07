@@ -17,6 +17,7 @@ import {
   formatter,
   isRecord,
   namedFormatter,
+  overCapacitySuffix,
   printCompactTable,
   printItemTable,
 } from './helpers.ts';
@@ -287,7 +288,7 @@ export const shipFormatters = [
       const available = r.available ?? r.cargo_available;
       if (used !== undefined || capacity !== undefined) {
         const suffix = available !== undefined ? ` (${available} available)` : '';
-        emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${suffix}\n`);
+        emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${overCapacitySuffix(used, capacity)}${suffix}\n`);
       }
       if (r.bay_used !== undefined || r.bay_capacity !== undefined) {
         emitLine(`Carrier bay: ${r.bay_used ?? '?'}/${r.bay_capacity ?? '?'}`);
@@ -378,9 +379,15 @@ export const shipFormatters = [
       emitLine(`Shield: ${ship.shield ?? '?'}/${ship.max_shield ?? '?'} (+${ship.shield_recharge ?? 0}/tick)`);
       emitLine(`Armor: ${ship.armor ?? 0}`);
       emitLine(`Fuel: ${ship.fuel ?? '?'}/${ship.max_fuel ?? '?'}`);
-      emitLine(`Cargo: ${ship.cargo_used ?? '?'}/${ship.cargo_capacity ?? '?'}`);
-      emitLine(`CPU: ${ship.cpu_used ?? '?'}/${ship.cpu_capacity ?? '?'}`);
-      emitLine(`Power: ${ship.power_used ?? '?'}/${ship.power_capacity ?? '?'}`);
+      emitLine(
+        `Cargo: ${ship.cargo_used ?? '?'}/${ship.cargo_capacity ?? '?'}${overCapacitySuffix(ship.cargo_used, ship.cargo_capacity)}`,
+      );
+      emitLine(
+        `CPU: ${ship.cpu_used ?? '?'}/${ship.cpu_capacity ?? '?'}${overCapacitySuffix(ship.cpu_used, ship.cpu_capacity)}`,
+      );
+      emitLine(
+        `Power: ${ship.power_used ?? '?'}/${ship.power_capacity ?? '?'}${overCapacitySuffix(ship.power_used, ship.power_capacity)}`,
+      );
       emitLine(
         `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
       );

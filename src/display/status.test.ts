@@ -10,6 +10,7 @@ import {
   getMapSystemFixture,
   getStatusDetainedFixture,
   getStatusFixture,
+  getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   nearbyArenaFixture,
   nearbyBossFixture,
@@ -1397,6 +1398,41 @@ test('get_nearby still declines when location is an object so get_location keeps
   expect(stdout).toContain('=== Location ===');
   expect(stdout).not.toContain('=== Nearby ===');
   assertCopyablePrizeIds(stdout, 'Nearby Prizes');
+});
+
+test('get_status flags each over-capacity ratio independently', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    structuredClone(getStatusOverCapacityFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('  Cargo: 80/60 (over capacity)');
+  expect(stdout).toContain('  CPU: 22/20 (over capacity)');
+  expect(stdout).toContain('  Power: 30/25 (over capacity)');
+});
+
+test('get_status flags only the over-capacity CPU line', () => {
+  const fixture = { ...getStatusFixture, ship: { ...getStatusFixture.ship, cpu_used: 22 } };
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('  CPU: 22/20 (over capacity)');
+  expect(stdout).toContain('  Cargo: 12/60');
+  expect(stdout).toContain('  Power: 10/25');
+  expect(stdout).not.toContain('  Cargo: 12/60 (over capacity)');
+  expect(stdout).not.toContain('  Power: 10/25 (over capacity)');
+});
+
+test('get_status_summary stays compact without over-capacity ratio lines', () => {
+  const stdout = renderStructuredResult(
+    'get_status_summary',
+    structuredClone(getStatusOverCapacityFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toContain('CPU:');
+  expect(stdout).not.toContain('Power:');
+  expect(stdout).not.toContain('Cargo:');
+  expect(stdout).not.toContain('(over capacity)');
 });
 
 test('get_status prints personnel after Power and prize recoveries after nearby prizes', () => {
