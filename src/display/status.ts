@@ -6,10 +6,10 @@ import {
   emitCreditBalance,
   emitLine,
   emitLines,
+  emitResourceInfoLines,
   emitStationDefences,
   emitStationFuelPricing,
   emitStationIds,
-  formatDepletionRemainingSuffix,
   formatLiveryName,
   formatPlayer,
   formatReputationChangesSummary,
@@ -1036,27 +1036,7 @@ export const statusFormatters = [
         emitLine(`Faction Fuel: ${reserve}/${capacity}`);
       }
 
-      const resources = (r.resources || poi.resources) as Array<Record<string, unknown>> | undefined;
-      if (resources?.length) {
-        emitLine(`\n${c.bright}Resources:${c.reset}`);
-        for (const res of resources) {
-          const display = res.remaining_display || `${res.remaining} remaining`;
-          const workability = formatResourceWorkabilitySuffix(res);
-          if (display === 'depleted' || res.remaining === 0) {
-            emitLine(
-              `  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${workability}${c.reset}\x1b[29m`,
-            );
-            continue;
-          }
-
-          const depletion =
-            res.depletion_percent !== undefined ? formatDepletionRemainingSuffix(res.depletion_percent) : '';
-          const remaining = res.max_remaining ? `${res.remaining}/${res.max_remaining}` : display;
-          emitLine(
-            `  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}${workability}`,
-          );
-        }
-      }
+      emitResourceInfoLines(r.resources || poi.resources);
 
       const base = r.base as Record<string, unknown> | undefined;
       if (poi.base_id && !base) emitLine(`\nStation Base ID: ${poi.base_id} (use 'dock' to enter)`);

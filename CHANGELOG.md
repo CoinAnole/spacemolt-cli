@@ -4,6 +4,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Survey system formatter
+
+- Human `survey_system` prints survey power, bloom, newly revealed and already-known
+  POIs, faint signatures, wildlife census, and XP. Resource lines use the same
+  remaining and workability grammar as `get_poi` (`lock min`, `too sparse`,
+  `supports power`). Empty newly-revealed and wildlife lists print `(none)`.
+  JSON/YAML/jq field names are unchanged.
+
 ### Deposit workability (gameserver 0.595.0)
 
 - Human `get_poi` resource lines print `lock min N` when `lock_minimum_stock` is

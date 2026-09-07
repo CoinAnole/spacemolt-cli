@@ -11,11 +11,13 @@ import { shipFormatters } from './ship.ts';
 import { shippingFormatters } from './shipping.ts';
 import { socialFormatters } from './social.ts';
 import { statusFormatters } from './status.ts';
+import { surveyFormatters } from './survey.ts';
 
 export * from './helpers.ts';
 
 export const resultFormatters: ResultFormatter[] = [
   ...statusFormatters,
+  ...surveyFormatters,
   ...marketFormatters,
   ...notificationFormatters,
   ...passengerFormatters,
