@@ -1,0 +1,16 @@
+
+=== NPC Trials ===
+Ready here: 4   Travel: 0   Locked: 1
+
+Objectives  @ Blood Arena  — you are here
+  READY   1  Survive Wave  obj_survive_wave
+             3× Crimson Skirmisher (Fighter) · survive 40 ticks · + Second Wind @ tick 20 and when 2 left · up to 3 ships per side · max tier 4
+  READY   2  Time Limit    obj_time_limit
+             4× Solarian Interceptor (Fighter) · time limit 60 ticks · up to 10 ships per side · max tier 4
+  READY   3  No Escape     obj_no_escape
+             1× Ring Runner (Fighter, flees) · 2× Ring Cleaver (Fighter) · no escape · solo duel
+  READY   4  Last Side     obj_last_side
+             2× Ring Cleaver (Fighter) · solo duel
+  LOCKED  5  Locked Wave   obj_locked_wave   needs Last Side
+
+Next: arena fight obj_survive_wave

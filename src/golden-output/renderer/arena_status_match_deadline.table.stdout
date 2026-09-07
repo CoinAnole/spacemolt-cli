@@ -1,0 +1,14 @@
+
+=== Arena ===
+At arena POI: yes
+Record: 3 wins / 1 loss / 7 knockouts
+
+In battle: btl-obj-limit
+  Time Limit (obj_time_limit)
+  Elapsed: 60 ticks   Remaining: 0 ticks
+  Enemies: 2   Waves remaining: 0
+  Objective: time limit 60 ticks
+  Next: get_battle_status
+
+Arena XP today (cap 500 per skill)
+  none today

@@ -32,6 +32,7 @@ arena_npcs:
     primary_color: #c45a2a
     secondary_color: #1a1a1a
     is_boss: false
+    flees: false
     ship_class: fighter
     ship_class_name: Fighter
     hull: 180
@@ -45,6 +46,7 @@ arena_npcs:
     primary_color: #8b1a3a
     secondary_color: #2a0a14
     is_boss: true
+    flees: false
     ship_class: dreadnought
     ship_class_name: Dreadnought
     hull: 900

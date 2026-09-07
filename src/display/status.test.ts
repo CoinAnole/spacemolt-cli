@@ -13,6 +13,7 @@ import {
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   nearbyArenaFixture,
+  nearbyArenaFleesFixture,
   nearbyBossFixture,
   nearbyFixture,
   payBountyFixture,
@@ -990,6 +991,39 @@ test('subscribe_observation omits Arena NPCs when arena fields are absent', () =
   expect(stdout).not.toContain('Arena NPCs');
 });
 
+test('get_nearby marks arena NPC runners after ship class only when flees is true', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(nearbyArenaFleesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const runner = nearbyPirateLine(stdout, 'Ring Runner');
+  const fighter = nearbyPirateLine(stdout, 'Ring Cleaver');
+
+  expect(runner).toBe(
+    '  Ring Runner [arena-runner-1] (Fighter) - flees - hull 180/180 - shield 60/60 - battle btl-obj-escape - ready',
+  );
+  expect(fighter).toBe(
+    '  Ring Cleaver [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-obj-escape - ready',
+  );
+  expect(fighter).not.toContain(' - flees');
+});
+
+test('get_nearby leaves the flees token uncolored after a colored arena NPC name', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    structuredClone(nearbyArenaFleesFixture),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const runner = nearbyPirateLine(stdout, 'Ring Runner');
+
+  expect(runner).toBe(
+    `  ${hexColor('Ring Runner', '#c45a2a', '#1a1a1a')} [arena-runner-1] (Fighter) - flees - hull 180/180 - shield 60/60 - battle btl-obj-escape - ready`,
+  );
+});
+
 test('get_nearby falls back to arena_npcs length and truncates past the table limit', () => {
   const extra = Array.from({ length: 11 }, (_, index) => ({
     npc_id: `arena-extra-${index + 1}`,
@@ -997,6 +1031,7 @@ test('get_nearby falls back to arena_npcs length and truncates past the table li
     primary_color: '#335577',
     secondary_color: '#88aacc',
     is_boss: false,
+    flees: false,
     ship_class: 'fighter',
     ship_class_name: 'Fighter',
     hull: 10,

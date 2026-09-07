@@ -8,7 +8,9 @@ challenges:
     requires: []
     locked: false
     rules: {max_side_size: 0}
-    enemies: [{name: "Pirate Scout", ship_class: pirate_scout, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Pirate Scout", ship_class: pirate_scout, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: lone_scout
     name: "Lone Scout"
@@ -21,7 +23,9 @@ challenges:
     requires: [lone_scout]
     locked: true
     rules: {max_side_size: 0}
-    enemies: [{name: "Pirate Raider", ship_class: pirate_raider, ship_class_name: Fighter, count: 2, is_boss: false}]
+    enemies: [{name: "Pirate Raider", ship_class: pirate_raider, ship_class_name: Fighter, count: 2, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: raider_squad
     name: "Raider Squad"
@@ -34,7 +38,9 @@ challenges:
     requires: [first_blood]
     locked: false
     rules: {max_side_size: 1, allowed_damage_types: [energy]}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: clean_fight
     name: "Clean Fight"
@@ -47,7 +53,9 @@ challenges:
     requires: []
     locked: false
     rules: {max_side_size: 0}
-    enemies: [{name: "Armor Column", ship_class: armor_column, ship_class_name: Cruiser, count: 1, is_boss: true}]
+    enemies: [{name: "Armor Column", ship_class: armor_column, ship_class_name: Cruiser, count: 1, is_boss: true, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: armor_column
     name: "Armor Column"

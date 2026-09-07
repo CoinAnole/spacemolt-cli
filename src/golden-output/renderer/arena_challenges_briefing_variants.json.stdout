@@ -17,9 +17,12 @@
           "ship_class": "pirate_scout",
           "ship_class_name": "Fighter",
           "count": 1,
-          "is_boss": false
+          "is_boss": false,
+          "flees": false
         }
       ],
+      "objective": {},
+      "waves": [],
       "wins": 0,
       "challenge_id": "lone_scout",
       "name": "Lone Scout",
@@ -44,9 +47,12 @@
           "ship_class": "pirate_raider",
           "ship_class_name": "Fighter",
           "count": 2,
-          "is_boss": false
+          "is_boss": false,
+          "flees": false
         }
       ],
+      "objective": {},
+      "waves": [],
       "wins": 0,
       "challenge_id": "raider_squad",
       "name": "Raider Squad",
@@ -74,9 +80,12 @@
           "ship_class": "ring_cleaver",
           "ship_class_name": "Fighter",
           "count": 1,
-          "is_boss": false
+          "is_boss": false,
+          "flees": false
         }
       ],
+      "objective": {},
+      "waves": [],
       "wins": 0,
       "challenge_id": "clean_fight",
       "name": "Clean Fight",
@@ -99,9 +108,12 @@
           "ship_class": "armor_column",
           "ship_class_name": "Cruiser",
           "count": 1,
-          "is_boss": true
+          "is_boss": true,
+          "flees": false
         }
       ],
+      "objective": {},
+      "waves": [],
       "wins": 0,
       "challenge_id": "armor_column",
       "name": "Armor Column",

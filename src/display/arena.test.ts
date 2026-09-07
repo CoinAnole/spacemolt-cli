@@ -8,17 +8,24 @@ import {
   arenaChallengesBriefingVariantsFixture,
   arenaChallengesEmptyFixture,
   arenaChallengesFixture,
+  arenaChallengesObjectivesFixture,
   arenaChallengesTravelFixture,
   arenaDeclineFixture,
+  arenaFightDetails,
   arenaFightFixture,
+  arenaFightObjectiveFixture,
   arenaStatusIdleFixture,
   arenaStatusInBattleFixture,
   arenaStatusIncomingFixture,
+  arenaStatusMatchDeadlineFixture,
+  arenaStatusMatchFixture,
+  arenaStatusMatchLastSideFixture,
   sixteenTrialMidSeries,
   trialDef,
 } from './arena.fixtures.ts';
 import {
   arenaStatLines,
+  asTrialStart,
   battleLabels,
   battleRulesetFromCategory,
   battleRulesetFromLogEntries,
@@ -27,7 +34,11 @@ import {
   formatArenaRecord,
   formatArenaSideSize,
   formatEnemyDigest,
+  formatObjectiveDigest,
   formatRuleDigest,
+  formatWaveBriefing,
+  formatWaveDigest,
+  formatWaveTrigger,
   groupTrialsBySeries,
   readArenaRecord,
   suggestedFight,
@@ -448,6 +459,110 @@ test('formatEnemyDigest marks a singleton boss and otherwise prints count × nam
   ).toBe('1× Ring Cleaver (Fighter)');
 });
 
+test('formatEnemyDigest appends flees only when the flag is true', () => {
+  const runner = {
+    name: 'Ring Runner',
+    ship_class: 'ring_runner',
+    ship_class_name: 'Fighter',
+    count: 1,
+    is_boss: false,
+  };
+  expect(formatEnemyDigest([{ ...runner, flees: true }])).toBe('1× Ring Runner (Fighter, flees)');
+  expect(formatEnemyDigest([{ ...runner, count: 2, flees: true }])).toBe('2× Ring Runner (Fighter, flees)');
+  expect(formatEnemyDigest([{ ...runner, flees: false }])).toBe('1× Ring Runner (Fighter)');
+  expect(formatEnemyDigest([runner])).toBe('1× Ring Runner (Fighter)');
+  expect(
+    formatEnemyDigest([
+      {
+        name: 'Runner Boss',
+        ship_class: 'runner_boss',
+        ship_class_name: 'Cruiser',
+        count: 1,
+        is_boss: true,
+        flees: true,
+      },
+    ]),
+  ).toBe('Runner Boss (boss, Cruiser, flees)');
+});
+
+test('formatObjectiveDigest prints survive and time limit as distinct jobs', () => {
+  expect(formatObjectiveDigest(undefined)).toBe('');
+  expect(formatObjectiveDigest({})).toBe('');
+  expect(formatObjectiveDigest({ survive_ticks: 0 })).toBe('');
+  expect(formatObjectiveDigest({ time_limit_ticks: 0 })).toBe('');
+  expect(formatObjectiveDigest({ no_enemy_escape: false })).toBe('');
+  expect(formatObjectiveDigest({ survive_ticks: 40 })).toBe('survive 40 ticks');
+  expect(formatObjectiveDigest({ time_limit_ticks: 60 })).toBe('time limit 60 ticks');
+  expect(formatObjectiveDigest({ no_enemy_escape: true })).toBe('no escape');
+  expect(formatObjectiveDigest({ survive_ticks: 40, no_enemy_escape: true })).toBe('survive 40 ticks · no escape');
+  expect(formatObjectiveDigest({ survive_ticks: 40, time_limit_ticks: 60 })).toBe(
+    'survive 40 ticks · time limit 60 ticks',
+  );
+  expect(formatObjectiveDigest({ survive_ticks: 40, time_limit_ticks: 60 })).not.toContain('win in');
+  expect(formatObjectiveDigest({ survive_ticks: 40, time_limit_ticks: 60 })).not.toContain('clear in');
+  expect(formatObjectiveDigest({ survive_ticks: 40, time_limit_ticks: 60 })).not.toContain('finish before');
+});
+
+const secondWindEnemies = [
+  {
+    name: 'Crimson Skirmisher',
+    ship_class: 'skirmisher',
+    ship_class_name: 'Fighter',
+    count: 2,
+    is_boss: false,
+    flees: false,
+  },
+];
+
+test('formatWaveTrigger joins dual triggers with and and treats 0 remaining as ring clear', () => {
+  expect(formatWaveTrigger({ name: 'Second Wind', after_ticks: 20, enemies: secondWindEnemies })).toBe('@ tick 20');
+  expect(formatWaveTrigger({ name: 'Last Push', when_enemies_remaining: 1, enemies: secondWindEnemies })).toBe(
+    'when 1 left',
+  );
+  expect(formatWaveTrigger({ name: 'Cleanup', when_enemies_remaining: 0, enemies: secondWindEnemies })).toBe(
+    'when ring clear',
+  );
+  expect(
+    formatWaveTrigger({
+      name: 'Second Wind',
+      after_ticks: 20,
+      when_enemies_remaining: 2,
+      enemies: secondWindEnemies,
+    }),
+  ).toBe('@ tick 20 and when 2 left');
+  expect(formatWaveTrigger({ name: 'Now', enemies: secondWindEnemies })).toBe('');
+  expect(formatWaveTrigger({ name: 'Immediate', after_ticks: 0, enemies: secondWindEnemies })).toBe('');
+});
+
+test('formatWaveDigest prefixes catalog waves and omits empty lists', () => {
+  expect(formatWaveDigest(undefined)).toBe('');
+  expect(formatWaveDigest([])).toBe('');
+  expect(formatWaveDigest([{ name: 'Second Wind', after_ticks: 20, enemies: secondWindEnemies }])).toBe(
+    '+ Second Wind @ tick 20',
+  );
+  expect(formatWaveDigest([{ name: 'Last Push', when_enemies_remaining: 1, enemies: secondWindEnemies }])).toBe(
+    '+ Last Push when 1 left',
+  );
+  expect(formatWaveDigest([{ name: 'Cleanup', when_enemies_remaining: 0, enemies: secondWindEnemies }])).toBe(
+    '+ Cleanup when ring clear',
+  );
+  expect(
+    formatWaveDigest([{ name: 'Second Wind', after_ticks: 20, when_enemies_remaining: 2, enemies: secondWindEnemies }]),
+  ).toBe('+ Second Wind @ tick 20 and when 2 left');
+  expect(formatWaveDigest([{ name: 'Now', enemies: secondWindEnemies }])).toBe('+ Now');
+});
+
+test('formatWaveBriefing includes per-wave composition for fight start', () => {
+  expect(formatWaveBriefing(undefined)).toBe('');
+  expect(formatWaveBriefing([])).toBe('');
+  expect(
+    formatWaveBriefing([
+      { name: 'Second Wind', after_ticks: 20, when_enemies_remaining: 2, enemies: secondWindEnemies },
+    ]),
+  ).toBe('Second Wind @ tick 20 and when 2 left (2× Crimson Skirmisher (Fighter))');
+  expect(formatWaveBriefing([{ name: 'Now', enemies: [] }])).toBe('Now');
+});
+
 test('renders the sixteen-trial catalog as series sections without lore', () => {
   const stdout = output('arena_challenges', arenaChallengesFixture);
   expect(stdout).toContain('=== NPC Trials ===');
@@ -541,4 +656,132 @@ test('suppresses shape fallback when an arena formatter declines', () => {
   expect(stdout).toContain('=== Response ===');
   expect(stdout).toContain('not enough');
   expect(stdout).not.toContain('Challenge');
+});
+
+test('catalog declines when one trial has a malformed objective', () => {
+  const trial = trialDef({
+    challenge_id: 'first_blood',
+    name: 'First Blood',
+    series: 'Blood Arena',
+    stage: 1,
+  });
+  const stdout = output('arena_challenges', {
+    action: 'challenges',
+    challenges: [{ ...trial, objective: { survive_ticks: 'forty' } }],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== NPC Trials ===');
+});
+
+test('fight start omits malformed waves without declining the battle', () => {
+  const stdout = output('arena_fight', {
+    details: {
+      ...arenaFightDetails,
+      waves: [{ name: 1, enemies: [] }],
+    },
+  });
+  expect(stdout).toContain('Battle: btl-7e1');
+  expect(stdout).toContain('Enemies: 2× Ring Cleaver (Fighter)');
+  expect(stdout).not.toContain('Waves:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('asTrialStart copies well-typed objective and waves onto fight start', () => {
+  const objective = { survive_ticks: 40 };
+  const waves = [
+    {
+      name: 'Second Wind',
+      after_ticks: 20,
+      when_enemies_remaining: 2,
+      enemies: secondWindEnemies,
+    },
+  ];
+  const start = asTrialStart({
+    ...arenaFightDetails,
+    objective,
+    waves,
+  });
+  expect(start?.objective).toEqual(objective);
+  expect(start?.waves).toEqual(waves);
+
+  const stdout = output('arena_fight', { details: { ...arenaFightDetails, objective, waves } });
+  expect(stdout).toContain('Objective: survive 40 ticks');
+  expect(stdout).toContain('Waves: Second Wind @ tick 20 and when 2 left (2× Crimson Skirmisher (Fighter))');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('skips a malformed match and still renders the lobby', () => {
+  const idle = output('arena_status', { ...arenaStatusIdleFixture, match: { challenge_id: 1 } });
+  expect(idle).toContain('=== Arena ===');
+  expect(idle).toContain('At arena POI: yes');
+  expect(idle).not.toContain('Elapsed:');
+  expect(idle).not.toContain('=== Response ===');
+
+  const inBattle = output('arena_status', { ...arenaStatusInBattleFixture, match: { ticks_remaining: 'soon' } });
+  expect(inBattle).toContain('In battle: btl-5c3');
+  expect(inBattle).toContain('Next: get_battle_status');
+  expect(inBattle).not.toContain('Elapsed:');
+  expect(inBattle).not.toContain('=== Response ===');
+});
+
+test('renders objective catalog briefing including dual-trigger waves and silent last-side rows', () => {
+  const stdout = output('arena_challenges', arenaChallengesObjectivesFixture);
+  expect(stdout).toContain('+ Second Wind @ tick 20 and when 2 left');
+  expect(stdout).toContain(
+    '3× Crimson Skirmisher (Fighter) · survive 40 ticks · + Second Wind @ tick 20 and when 2 left · up to 3 ships per side · max tier 4',
+  );
+  expect(stdout).toContain(
+    '4× Solarian Interceptor (Fighter) · time limit 60 ticks · up to 10 ships per side · max tier 4',
+  );
+  expect(stdout).toContain('1× Ring Runner (Fighter, flees) · 2× Ring Cleaver (Fighter) · no escape · solo duel');
+  expect(stdout).toContain('2× Ring Cleaver (Fighter) · solo duel');
+  expect(stdout).not.toContain('last side standing');
+  expect(stdout).not.toMatch(/Locked Wave[^\n]*\n {13}/);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a fight start with objective and wave composition', () => {
+  const stdout = output('arena_fight', arenaFightObjectiveFixture);
+  expect(stdout).toContain('=== Trial started: Survive Wave ===');
+  expect(stdout).toContain('Battle: btl-obj-survive   Challenge: obj_survive_wave');
+  expect(stdout).toContain('Enemies: 3× Crimson Skirmisher (Fighter)');
+  expect(stdout).toContain('Objective: survive 40 ticks');
+  expect(stdout).toContain('Waves: Second Wind @ tick 20 and when 2 left (2× Crimson Skirmisher (Fighter))');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('nests live match under In battle and treats omitted ticks_remaining unlike 0', () => {
+  const running = output('arena_status', arenaStatusMatchFixture);
+  expect(running).toContain('In battle: btl-obj-survive');
+  expect(running).toContain('  Survive Wave (obj_survive_wave)');
+  expect(running).toContain('  Elapsed: 12 ticks   Remaining: 28 ticks');
+  expect(running).toContain('  Enemies: 3   Waves remaining: 1');
+  expect(running).toContain('  Objective: survive 40 ticks');
+  expect(running.indexOf('Waves remaining')).toBeLessThan(running.indexOf('Next: get_battle_status'));
+  expect(running).not.toContain('=== Response ===');
+
+  const deadline = output('arena_status', arenaStatusMatchDeadlineFixture);
+  expect(deadline).toContain('  Elapsed: 60 ticks   Remaining: 0 ticks');
+  expect(deadline).toContain('  Enemies: 2   Waves remaining: 0');
+  expect(deadline).toContain('  Objective: time limit 60 ticks');
+  expect(deadline).not.toContain('=== Response ===');
+
+  const lastSide = output('arena_status', arenaStatusMatchLastSideFixture);
+  expect(lastSide).toContain('  Last Side (obj_last_side)');
+  expect(lastSide).toContain('  Elapsed: 8 ticks');
+  expect(lastSide).not.toContain('Remaining:');
+  expect(lastSide).toContain('  Enemies: 2   Waves remaining: 0');
+  expect(lastSide).not.toContain('Objective:');
+  expect(lastSide).not.toContain('=== Response ===');
+});
+
+test('renders a well-typed match even when battle_id is omitted', () => {
+  const stdout = output('arena_status', {
+    ...arenaStatusIdleFixture,
+    match: arenaStatusMatchFixture.match,
+  });
+  expect(stdout).toContain('Survive Wave (obj_survive_wave)');
+  expect(stdout).not.toContain('In battle:');
+  expect(stdout).not.toContain('Next: get_battle_status');
+  expect(stdout).not.toContain('=== Response ===');
 });

@@ -30,6 +30,30 @@ export type ArenaEnemyLine = {
   ship_class_name: string;
   count: number;
   is_boss: boolean;
+  flees?: boolean;
+};
+
+export type ArenaObjective = {
+  survive_ticks?: number;
+  time_limit_ticks?: number;
+  no_enemy_escape?: boolean;
+};
+
+export type ArenaWave = {
+  name: string;
+  enemies: ArenaEnemyLine[];
+  after_ticks?: number;
+  when_enemies_remaining?: number;
+};
+
+export type ArenaMatch = {
+  challenge_id: string;
+  name: string;
+  objective: ArenaObjective;
+  elapsed_ticks: number;
+  enemies_remaining: number;
+  waves_remaining: number;
+  ticks_remaining?: number;
 };
 
 export type ArenaRuleset = {
@@ -74,6 +98,8 @@ export type ArenaTrial = {
   locked: boolean;
   rules: ArenaRuleset;
   enemies: ArenaEnemyLine[];
+  objective?: ArenaObjective;
+  waves?: ArenaWave[];
   wins: number;
 };
 
@@ -91,6 +117,8 @@ export type TrialStart = {
   enemy_side: number;
   participants: ArenaParticipant[];
   enemies: ArenaEnemyLine[];
+  objective?: ArenaObjective;
+  waves?: ArenaWave[];
   message: string;
 };
 
@@ -210,8 +238,39 @@ export function isArenaEnemy(value: unknown): value is ArenaEnemyLine {
     isNonEmptyString(value.ship_class) &&
     isNonEmptyString(value.ship_class_name) &&
     finiteNumber(value.count) !== undefined &&
-    typeof value.is_boss === 'boolean'
+    typeof value.is_boss === 'boolean' &&
+    (value.flees === undefined || typeof value.flees === 'boolean')
   );
+}
+
+export function isArenaObjective(value: unknown): value is ArenaObjective {
+  if (!isRecord(value)) return false;
+  if (value.survive_ticks !== undefined && finiteNumber(value.survive_ticks) === undefined) return false;
+  if (value.time_limit_ticks !== undefined && finiteNumber(value.time_limit_ticks) === undefined) return false;
+  if (value.no_enemy_escape !== undefined && typeof value.no_enemy_escape !== 'boolean') return false;
+  return true;
+}
+
+export function isArenaWave(value: unknown): value is ArenaWave {
+  if (!isRecord(value)) return false;
+  return (
+    isNonEmptyString(value.name) &&
+    Array.isArray(value.enemies) &&
+    value.enemies.every(isArenaEnemy) &&
+    (value.after_ticks === undefined || finiteNumber(value.after_ticks) !== undefined) &&
+    (value.when_enemies_remaining === undefined || finiteNumber(value.when_enemies_remaining) !== undefined)
+  );
+}
+
+export function isArenaMatch(value: unknown): value is ArenaMatch {
+  if (!isRecord(value)) return false;
+  if (!isNonEmptyString(value.challenge_id) || !isNonEmptyString(value.name)) return false;
+  if (!isArenaObjective(value.objective)) return false;
+  if (finiteNumber(value.elapsed_ticks) === undefined) return false;
+  if (finiteNumber(value.enemies_remaining) === undefined) return false;
+  if (finiteNumber(value.waves_remaining) === undefined) return false;
+  if (value.ticks_remaining !== undefined && finiteNumber(value.ticks_remaining) === undefined) return false;
+  return true;
 }
 
 export function isArenaRules(value: unknown): value is ArenaRuleset {
@@ -236,6 +295,8 @@ export function isArenaTrial(value: unknown): value is ArenaTrial {
     isArenaRules(value.rules) &&
     Array.isArray(value.enemies) &&
     value.enemies.every(isArenaEnemy) &&
+    (value.objective === undefined || isArenaObjective(value.objective)) &&
+    (value.waves === undefined || (Array.isArray(value.waves) && value.waves.every(isArenaWave))) &&
     finiteNumber(value.wins) !== undefined
   );
 }
@@ -265,6 +326,8 @@ export function asTrialStart(value: unknown): TrialStart | undefined {
     participants: value.participants,
     enemies: value.enemies,
     message: value.message,
+    ...(isArenaObjective(value.objective) ? { objective: value.objective } : {}),
+    ...(Array.isArray(value.waves) && value.waves.every(isArenaWave) ? { waves: value.waves } : {}),
   };
 }
 
@@ -327,8 +390,12 @@ export function suggestedFight(trials: readonly ArenaTrial[]): ArenaTrial | unde
 export function formatEnemyDigest(enemies: readonly ArenaEnemyLine[]): string {
   return enemies
     .map((enemy) => {
-      if (enemy.count === 1 && enemy.is_boss) return `${enemy.name} (boss, ${enemy.ship_class_name})`;
-      return `${enemy.count}× ${enemy.name} (${enemy.ship_class_name})`;
+      const tags: string[] = [];
+      if (enemy.count === 1 && enemy.is_boss) tags.push('boss');
+      tags.push(enemy.ship_class_name);
+      if (enemy.flees === true) tags.push('flees');
+      const body = `${enemy.count === 1 && enemy.is_boss ? enemy.name : `${enemy.count}× ${enemy.name}`} (${tags.join(', ')})`;
+      return body;
     })
     .join(' · ');
 }
@@ -343,6 +410,50 @@ function activeCap(value: unknown): number | undefined {
   const size = finiteNumber(value);
   if (size === undefined || size === 0) return undefined;
   return size;
+}
+
+export function formatObjectiveDigest(objective: ArenaObjective | undefined): string {
+  if (!objective) return '';
+  const tokens: string[] = [];
+  const survive = activeCap(objective.survive_ticks);
+  const limit = activeCap(objective.time_limit_ticks);
+  if (survive !== undefined) tokens.push(`survive ${survive} ticks`);
+  if (limit !== undefined) tokens.push(`time limit ${limit} ticks`);
+  if (objective.no_enemy_escape === true) tokens.push('no escape');
+  return tokens.join(' · ');
+}
+
+export function formatWaveTrigger(wave: ArenaWave): string {
+  const parts: string[] = [];
+  const after = finiteNumber(wave.after_ticks);
+  if (after !== undefined && after > 0) parts.push(`@ tick ${after}`);
+  const remaining = finiteNumber(wave.when_enemies_remaining);
+  if (remaining !== undefined) {
+    parts.push(remaining === 0 ? 'when ring clear' : `when ${remaining} left`);
+  }
+  return parts.join(' and ');
+}
+
+export function formatWaveDigest(waves: readonly ArenaWave[] | undefined): string {
+  if (!waves?.length) return '';
+  return waves
+    .map((wave) => {
+      const trigger = formatWaveTrigger(wave);
+      return trigger ? `+ ${wave.name} ${trigger}` : `+ ${wave.name}`;
+    })
+    .join(' · ');
+}
+
+export function formatWaveBriefing(waves: readonly ArenaWave[] | undefined): string {
+  if (!waves?.length) return '';
+  return waves
+    .map((wave) => {
+      const trigger = formatWaveTrigger(wave);
+      const enemies = formatEnemyDigest(wave.enemies);
+      const head = trigger ? `${wave.name} ${trigger}` : wave.name;
+      return enemies ? `${head} (${enemies})` : head;
+    })
+    .join(' · ');
 }
 
 export function formatRuleDigest(rules: ArenaRuleset): string {
@@ -432,6 +543,10 @@ export function emitTrialStart(start: TrialStart): void {
   emitLine(`Your side: ${start.your_side}   Enemy side: ${start.enemy_side}`);
   const enemies = formatEnemyDigest(start.enemies);
   if (enemies) emitLine(`Enemies: ${enemies}`);
+  const objective = formatObjectiveDigest(start.objective);
+  if (objective) emitLine(`Objective: ${objective}`);
+  const waves = formatWaveBriefing(start.waves);
+  if (waves) emitLine(`Waves: ${waves}`);
   if (start.message && start.message !== heading && start.message !== `=== ${heading} ===`) {
     emitLine(start.message);
   }
@@ -465,7 +580,14 @@ export function emitTrialCatalog(trials: readonly ArenaTrial[]): void {
         `  ${formatStatusLabel(readiness).padEnd(6)} ${String(trial.stage).padStart(2)}  ${trial.name.padEnd(nameWidth)}  ${id}${extras ? `  ${extras}` : ''}`,
       );
       if (readiness.kind === 'locked') continue;
-      const briefing = [formatEnemyDigest(trial.enemies), formatRuleDigest(trial.rules)].filter(Boolean).join(' · ');
+      const briefing = [
+        formatEnemyDigest(trial.enemies),
+        formatObjectiveDigest(trial.objective),
+        formatWaveDigest(trial.waves),
+        formatRuleDigest(trial.rules),
+      ]
+        .filter(Boolean)
+        .join(' · ');
       if (briefing) emitLine(`${briefingPad}${briefing}`);
     }
   }
@@ -597,6 +719,20 @@ function emitChallengeBlock(
   emitLine(`  ${nextSteps}`);
 }
 
+function emitMatchBlock(match: unknown): void {
+  if (!isArenaMatch(match)) return;
+  emitLine(`  ${match.name} (${match.challenge_id})`);
+  const elapsed = `Elapsed: ${match.elapsed_ticks} ticks`;
+  if (match.ticks_remaining === undefined) {
+    emitLine(`  ${elapsed}`);
+  } else {
+    emitLine(`  ${elapsed}   Remaining: ${match.ticks_remaining} ticks`);
+  }
+  emitLine(`  Enemies: ${match.enemies_remaining}   Waves remaining: ${match.waves_remaining}`);
+  const objective = formatObjectiveDigest(match.objective);
+  if (objective) emitLine(`  Objective: ${objective}`);
+}
+
 function emitXpTable(result: Record<string, unknown>): void {
   const cap = finiteNumber(result.xp_cap_per_skill);
   const usedToday = isRecord(result.xp_used_today) ? result.xp_used_today : {};
@@ -637,7 +773,10 @@ function renderArenaStatus(result: Record<string, unknown>, command?: string): b
   if (isNonEmptyString(result.battle_id)) {
     emitLine('');
     emitLine(`In battle: ${result.battle_id}`);
+    emitMatchBlock(result.match);
     emitLine('  Next: get_battle_status');
+  } else {
+    emitMatchBlock(result.match);
   }
 
   if (isChallengeInfo(result.incoming)) {

@@ -1,0 +1,14 @@
+
+=== Arena ===
+At arena POI: yes
+Record: 3 wins / 1 loss / 7 knockouts
+
+In battle: btl-obj-survive
+  Survive Wave (obj_survive_wave)
+  Elapsed: 12 ticks   Remaining: 28 ticks
+  Enemies: 3   Waves remaining: 1
+  Objective: survive 40 ticks
+  Next: get_battle_status
+
+Arena XP today (cap 500 per skill)
+  none today

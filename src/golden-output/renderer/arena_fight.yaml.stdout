@@ -22,6 +22,9 @@ details:
       ship_class_name: Fighter
       count: 2
       is_boss: false
+      flees: false
+  objective: {}
+  waves: []
   message: "Trial started: Two on One"
 ship:
   id: "ship-wayfarer"

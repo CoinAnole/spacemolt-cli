@@ -388,6 +388,7 @@ function formatNearbyArenaNpcLine(npc: Record<string, unknown>): string {
   const targetId = rawId && rawId !== name ? ` [${rawId}]` : '';
   const shipClass = npc.ship_class_name || npc.ship_class;
   const ship = shipClass ? ` (${shipClass})` : '';
+  const flees = npc.flees === true ? ' - flees' : '';
   const hull =
     npc.hull !== undefined || npc.max_hull !== undefined ? ` - hull ${npc.hull ?? '?'}/${npc.max_hull ?? '?'}` : '';
   const shield =
@@ -396,7 +397,7 @@ function formatNearbyArenaNpcLine(npc: Record<string, unknown>): string {
       : '';
   const battle = npc.battle_id ? ` - battle ${npc.battle_id}` : '';
   const status = npc.status ? ` - ${npc.status}` : '';
-  return `${boss}${coloredName}${targetId}${ship}${hull}${shield}${battle}${status}`;
+  return `${boss}${coloredName}${targetId}${ship}${flees}${hull}${shield}${battle}${status}`;
 }
 
 function summarizeObjectiveForDisplay(objective: unknown): string {

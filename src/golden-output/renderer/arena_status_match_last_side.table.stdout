@@ -1,0 +1,13 @@
+
+=== Arena ===
+At arena POI: yes
+Record: 3 wins / 1 loss / 7 knockouts
+
+In battle: btl-obj-last
+  Last Side (obj_last_side)
+  Elapsed: 8 ticks
+  Enemies: 2   Waves remaining: 0
+  Next: get_battle_status
+
+Arena XP today (cap 500 per skill)
+  none today

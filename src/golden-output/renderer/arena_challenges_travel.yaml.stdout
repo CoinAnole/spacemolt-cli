@@ -8,7 +8,9 @@ challenges:
     requires: []
     locked: false
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 3
     challenge_id: first_blood
     name: "First Blood"
@@ -21,7 +23,9 @@ challenges:
     requires: []
     locked: false
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 2, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 2, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: two_on_one
     name: "Two on One"
@@ -34,7 +38,9 @@ challenges:
     requires: [two_on_one]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: trial_master
     name: "The Trial Master"
@@ -47,7 +53,9 @@ challenges:
     requires: [trial_master]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: gravemaker
     name: Gravemaker
@@ -60,7 +68,9 @@ challenges:
     requires: [first_blood]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: haulers_gauntlet
     name: "Hauler's Gauntlet"
@@ -73,7 +83,9 @@ challenges:
     requires: [first_blood]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: clean_fight
     name: "Clean Fight"
@@ -86,7 +98,9 @@ challenges:
     requires: [first_blood]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: ten_shards
     name: "Ten Shards"
@@ -99,7 +113,9 @@ challenges:
     requires: [ten_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: twenty_shards
     name: "Twenty Shards"
@@ -112,7 +128,9 @@ challenges:
     requires: [twenty_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: thirty_shards
     name: "Thirty Shards"
@@ -125,7 +143,9 @@ challenges:
     requires: [thirty_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: forty_shards
     name: "Forty Shards"
@@ -138,7 +158,9 @@ challenges:
     requires: [forty_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: fifty_shards
     name: "Fifty Shards"
@@ -151,7 +173,9 @@ challenges:
     requires: [fifty_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: sixty_shards
     name: "Sixty Shards"
@@ -164,7 +188,9 @@ challenges:
     requires: [sixty_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: seventy_shards
     name: "Seventy Shards"
@@ -177,7 +203,9 @@ challenges:
     requires: [seventy_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: eighty_shards
     name: "Eighty Shards"
@@ -190,7 +218,9 @@ challenges:
     requires: [eighty_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: ninety_shards
     name: "Ninety Shards"
@@ -203,7 +233,9 @@ challenges:
     requires: [ninety_shards]
     locked: true
     rules: {max_side_size: 1}
-    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false}]
+    enemies: [{name: "Ring Cleaver", ship_class: ring_cleaver, ship_class_name: Fighter, count: 1, is_boss: false, flees: false}]
+    objective: {}
+    waves: []
     wins: 0
     challenge_id: the_century
     name: "The Century"
