@@ -1,0 +1,12 @@
+count 6
+
+=== Notifications ===
+
+  Timestamp           | Type                      | Message                                                                                 
+  --------------------+---------------------------+-----------------------------------------------------------------------------------------
+  2026-05-23 19:30:00 | action_result             | You died (tick 902200); Docked at: Earth Station (earth_station)                        
+  2026-05-23 19:30:05 | action_result             | Carrier lost — you were stranded (tick 902201); Docked at: Earth Station (earth_station)
+  2026-05-23 19:30:10 | fleet_dock                | Fleet docked at Haven Exchange (haven_exchange)                                         
+  2026-05-23 19:30:15 | action_result             | Mobile Capital jumped (tick 902203); Docked at: Alfirk Gate (alfirk_gate)               
+  2026-05-23 19:30:20 | emergency_warp_stabilizer | Emergency Warp Stabilizer fired                                                         
+  2026-05-23 19:30:25 | action_result             | Fleet docked at Haven Exchange (haven_exchange) (tick 902205)                           
