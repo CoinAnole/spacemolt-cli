@@ -1,0 +1,10 @@
+count 4
+
+=== Notifications ===
+
+  Timestamp           | Type            | Message                                                                                    
+  --------------------+-----------------+--------------------------------------------------------------------------------------------
+  2026-05-23 19:25:00 | arena_objective | Wave arrived: Second Line; Ring Runner (ring_runner, flees) · Ring Cleaver 1 (ring_cleaver)
+  2026-05-23 19:25:05 | arena_objective | Objective won (survive ticks); The ring held.                                              
+  2026-05-23 19:25:10 | arena_objective | Objective lost (time limit); Time ran out.                                                 
+  2026-05-23 19:25:15 | arena_objective | Objective lost (enemy escaped); A runner escaped the ring.                                 
