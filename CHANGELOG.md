@@ -4,6 +4,22 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Arena objectives and waves (gameserver 0.597.0)
+
+- Human `arena challenges` briefing lines print win conditions (`survive N ticks`,
+  `time limit N ticks`, `no escape`), reinforcement waves (`+ Name @ tick N` /
+  `when N left` / `when ring clear` / `@ tick N and when N left`), and mark `flees` on runner enemy lines.
+  Last-side-standing and empty `waves` stay silent. Locked rows still omit
+  briefing. Lore `description` is still omitted.
+- Human `arena fight` prints `Objective:` and `Waves:` when set. Wave lines
+  include composition. JSON/YAML/jq field names are unchanged.
+- Human `arena status` nests live `match` under `In battle` when present
+  (elapsed / remaining ticks, enemies, waves remaining, objective). Player
+  duels omit `match` and stay unchanged. `ticks_remaining` omitted means no
+  clock; `0` is the deadline tick.
+- Human `get_nearby` arena NPC lines append ` - flees` when the NPC is running
+  for the ring beacons.
+
 ### Unsolicited move notifications (gameserver 0.596.2)
 
 - Human `action_result` previews treat event-named `command` values as events,

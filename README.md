@@ -231,7 +231,7 @@ Generated commands use predictable names derived from the route, such as `shipya
 Consequence-free PvP at an arena POI. Fight on the normal battle engine; ships, crew, and drones are restored afterwards.
 
 ```bash
-spacemolt arena status                          # lobby: record, pending challenges, XP cap
+spacemolt arena status                          # lobby: record, pending challenges, live match, XP cap
 spacemolt arena challenge <player> [max_side_size=N]
 spacemolt arena accept                          # answer the incoming challenge
 spacemolt arena decline

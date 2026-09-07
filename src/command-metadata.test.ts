@@ -776,13 +776,19 @@ describe('command metadata', () => {
     expect(fight?.category).toBe('Battle');
 
     expect(status?.description).toContain('arena lobby');
+    expect(status?.description).toContain('live NPC-challenge match state');
     expect(challenge?.description).toContain('Challenge a pilot');
     expect(accept?.description).toContain('Accept the incoming arena challenge');
     expect(decline?.description).toContain('Decline the incoming arena challenge');
     expect(cancel?.description).toContain('Withdraw your own unanswered arena challenge');
     expect(challenges?.description).toContain('NPC arena trial');
+    expect(challenges?.description).toContain('runners marked flees');
+    expect(challenges?.description).toContain('win condition');
+    expect(challenges?.description).toContain('reinforcement waves');
     expect(challenges?.description).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
     expect(fight?.description).toContain('unlocked NPC trial');
+    expect(fight?.description).toContain('opening enemies, win condition, and any reinforcement waves');
+    expect(fight?.description).toContain('track the live objective with arena status');
     expect(fight?.description).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
 
     const descriptions = [status, challenge, accept, decline, cancel, challenges, fight].map(
@@ -803,6 +809,13 @@ describe('command metadata', () => {
     expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_fight?.aliases).toEqual({ challenge_id: 'id' });
     expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.arena_challenges?.discoverWith).toEqual(['arena_status', 'get_poi']);
     expect(status?.seeAlso).toEqual(expect.arrayContaining(['arena_challenges', 'arena_fight']));
+    expect(fight?.seeAlso).toEqual([
+      'arena_challenges',
+      'arena_status',
+      'get_battle_status',
+      'battle_target',
+      'battle_stance',
+    ]);
 
     expect(challenge?.usage).toContain('<player>');
     expect(challenge?.usage).toContain('[max_side_size=N]');
@@ -828,7 +841,25 @@ describe('command metadata', () => {
     expect(challengeHelp).toContain('solo duel');
     expect(challengeHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
 
-    expect(captureFullHelp()).toContain('arena status              Arena lobby: record, pending challenges, XP cap');
+    const statusHelp = captureHelp('arena status');
+    expect(statusHelp).toContain('live NPC-challenge match state');
+    expect(statusHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
+    expect(statusHelp).not.toContain('`');
+
+    const challengesHelp = captureHelp('arena challenges');
+    expect(challengesHelp).toContain('runners marked flees');
+    expect(challengesHelp).toContain('reinforcement waves');
+    expect(challengesHelp).not.toContain('`');
+
+    const fightHelp = captureHelp('arena fight');
+    expect(fightHelp).toContain('opening enemies, win condition, and any reinforcement waves');
+    expect(fightHelp).toContain('track the live objective with arena status');
+    expect(fightHelp).toContain('arena status');
+    expect(fightHelp).not.toContain('`');
+
+    expect(captureFullHelp()).toContain(
+      'arena status              Arena lobby: record, pending challenges, live match, XP cap',
+    );
     expect(captureFullHelp()).toContain('arena challenge <player>  Consequence-free duel at an arena POI');
     expect(captureFullHelp()).toContain('arena challenges          NPC trials by series: READY / TRAVEL / LOCKED');
     expect(captureFullHelp()).toContain('arena fight <id>          Start an unlocked NPC trial at this arena');
