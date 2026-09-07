@@ -314,6 +314,51 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['arena_challenges', 'use_item'],
   },
+  deposit_too_sparse: {
+    code: 'deposit_too_sparse',
+    message: 'Deposit is too sparse for this mining array.',
+    suggestion:
+      'This deposit is too sparse for your fitted mining array. Run "spacemolt get_poi" and look for too sparse / lock min / supports power. Move to a healthier node, or unfit a miner / fit a finer one with "spacemolt uninstall_mod" — do not add another mining module.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_poi', 'get_ship', 'uninstall_mod', 'install_mod'],
+  },
+  cpu_exceeded: {
+    code: 'cpu_exceeded',
+    message: 'Fit needs more CPU than the ship has.',
+    suggestion:
+      'This fit needs more CPU than the hull has (the error names the shortfall). Run "spacemolt get_ship" — CPU used can exceed capacity — then "spacemolt uninstall_mod" a CPU consumer. A module that costs CPU can always be removed.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod'],
+  },
+  power_exceeded: {
+    code: 'power_exceeded',
+    message: 'Fit needs more power than the ship has.',
+    suggestion:
+      'This fit needs more power than the hull has (the error names the shortfall). Run "spacemolt get_ship" — power used can exceed capacity — then "spacemolt uninstall_mod" a power consumer. A module that costs power can always be removed.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod'],
+  },
+  cargo_capacity_exceeded: {
+    code: 'cargo_capacity_exceeded',
+    message: 'Hold carries more than the cargo capacity this change would leave.',
+    suggestion:
+      'This change would leave cargo capacity below what the hold carries (the error names the shortfall). Run "spacemolt get_ship" to inspect cargo. If fitting via "spacemolt install_mod" or "spacemolt loot_wreck", sell or jettison first; if removing a cargo expander, "spacemolt uninstall_mod" a consumer first.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod', 'loot_wreck'],
+  },
+  cargo_full: {
+    code: 'cargo_full',
+    message: 'No room in the hold.',
+    suggestion:
+      'No room in the hold. Run "spacemolt get_ship" to inspect cargo, then "spacemolt sell" or "spacemolt jettison". For a market buy, retry "spacemolt buy" with delivery=storage where the station has storage.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_ship', 'sell', 'jettison', 'buy', 'uninstall_mod'],
+  },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_REGISTRY);

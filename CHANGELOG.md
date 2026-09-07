@@ -40,6 +40,18 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   the error is retryable. JSON / `--structured` envelopes are unchanged.
   `--format yaml` still uses human `displayError`.
 
+### Fit and deposit error suggestions (gameserver 0.593.2–0.595.0)
+
+- Human stderr for `deposit_too_sparse` (`mine` on a vein this fit cannot lock),
+  `cpu_exceeded`, `power_exceeded`, `cargo_capacity_exceeded`
+  (`install_mod` / `uninstall_mod` / `loot_wreck` fit changes), and
+  `cargo_full` (`buy` with no hold room, or an in-space unfit that still
+  needs cargo space) prints a `Suggestion:` pointing at `spacemolt get_poi`
+  or `spacemolt get_ship` / `spacemolt uninstall_mod` / `spacemolt buy`
+  with `delivery=storage` as appropriate, and no longer claims the error is
+  retryable. JSON / `--structured` envelopes are unchanged.
+  `--format yaml` still uses human `displayError`.
+
 ### get_battle_log per-weapon volleys (gameserver 0.593.0)
 
 - Human `get_battle_log` prints per-weapon volleys as `hit N/M` and shows missed guns' chance/roll. JSON/YAML unchanged.
