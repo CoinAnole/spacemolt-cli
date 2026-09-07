@@ -1980,6 +1980,142 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
   });
 
+  test('displayError gives deposit_too_sparse a mining-array suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'mine',
+      { code: 'deposit_too_sparse', message: 'This deposit is too sparse for your mining array.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [deposit_too_sparse]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt get_poi');
+    expect(output).toContain('spacemolt uninstall_mod');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+
+    const quiet = captureWriter();
+    displayError(
+      'mine',
+      { code: 'deposit_too_sparse', message: 'This deposit is too sparse for your mining array.' },
+      {
+        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
+      },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [deposit_too_sparse]:');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives cpu_exceeded a fit-capacity suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('uninstall_mod', { code: 'cpu_exceeded', message: 'Need 12 more CPU' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [cpu_exceeded]');
+    expect(output).toContain('Need 12 more CPU');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt get_ship');
+    expect(output).toContain('spacemolt uninstall_mod');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError gives power_exceeded a fit-capacity suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('install_mod', { code: 'power_exceeded', message: 'Need 12 more power' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [power_exceeded]');
+    expect(output).toContain('Need 12 more power');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt get_ship');
+    expect(output).toContain('spacemolt uninstall_mod');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError gives cargo_capacity_exceeded a hold-capacity suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'loot_wreck',
+      { code: 'cargo_capacity_exceeded', message: 'Need 12 more cargo capacity' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [cargo_capacity_exceeded]');
+    expect(output).toContain('Need 12 more cargo capacity');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt get_ship');
+    expect(output).toContain('spacemolt uninstall_mod');
+    expect(output).toContain('spacemolt install_mod');
+    expect(output).toContain('spacemolt loot_wreck');
+    expect(output).not.toContain('storage_loot');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError gives cargo_full a hold-space suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('buy', { code: 'cargo_full', message: 'No room in the hold.' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [cargo_full]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt get_ship');
+    expect(output).toContain('spacemolt sell');
+    expect(output).toContain('spacemolt jettison');
+    expect(output).toContain('spacemolt buy');
+    expect(output).toContain('delivery=storage');
+    expect(output).not.toContain('storage_loot');
+    expect(output).not.toContain('deliver_to');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
   test('displayError tells users to verify state before retrying persistence errors', () => {
     const baseContext: CliRuntimeContext = {
       env: {},
