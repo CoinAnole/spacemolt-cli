@@ -2196,6 +2196,53 @@ function previewObservationUpdate(
   };
 }
 
+const TYPED_MOVE_LOCATION_KEYS = ['system_name', 'poi_name', 'base_id', 'base_name', 'system_id', 'poi_id'] as const;
+
+/** Preferred location keys only — no fill-from-rest (collectScalarBits would leak message/tick/command). */
+function locationScalarDetails(bag: Record<string, unknown>, limit = 4): string[] {
+  const bits: string[] = [];
+  for (const key of TYPED_MOVE_LOCATION_KEYS) {
+    if (bits.length >= limit) break;
+    const scalar = safeScalar(bag[key]);
+    if (scalar === undefined) continue;
+    bits.push(`${key}=${scalar}`);
+  }
+  return bits;
+}
+
+function previewUnsolicitedMoveTyped(
+  tag: string,
+  fallbackHeadline: string,
+  data: Record<string, unknown>,
+  options: ResolvedPreviewOptions,
+  extras: { alwaysUseGetStatus?: boolean } = {},
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const headline = message !== undefined ? firstLine(String(message)) : fallbackHeadline;
+  const details: string[] = [];
+  const loc = isRecord(data.location) ? data.location : data;
+  const dockLine = formatDockStateLine(loc);
+  if (dockLine) {
+    details.push(dockLine);
+  } else {
+    details.push(...locationScalarDetails(loc));
+  }
+  if (extras.alwaysUseGetStatus) details.push('Use: get_status');
+  return details.length ? detailPreview(tag, headline, details, options) : headlinePreview(tag, headline, options);
+}
+
+function previewFleetDock(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const identity = fleetDockIdentity(data) ?? (isRecord(data.location) ? fleetDockIdentity(data.location) : undefined);
+  const fallback = identity ? `Fleet docked at ${identity}` : 'Fleet docked';
+  const headline = message !== undefined ? firstLine(String(message)) : fallback;
+  return headlinePreview('FLEET', headline, options);
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -2295,6 +2342,22 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   queue_cleared: previewQueueCleared,
   poi_arrival: previewPoiArrival,
   poi_departure: previewPoiDeparture,
+
+  emergency_warp_stabilizer: (data, _notification, options) =>
+    previewUnsolicitedMoveTyped('WARP', 'Emergency Warp Stabilizer fired', data, options),
+  passenger_stranded: (data, _notification, options) =>
+    previewUnsolicitedMoveTyped('STRANDED', 'Carrier lost — you were stranded', data, options, {
+      alwaysUseGetStatus: true,
+    }),
+  fleet_kicked: (data, _notification, options) =>
+    previewUnsolicitedMoveTyped('FLEET', 'You were kicked from the fleet', data, options, {
+      alwaysUseGetStatus: true,
+    }),
+  fleet_disbanded: (data, _notification, options) =>
+    previewUnsolicitedMoveTyped('FLEET', 'Fleet disbanded', data, options, { alwaysUseGetStatus: true }),
+  mobile_capital_transit: (data, _notification, options) =>
+    previewUnsolicitedMoveTyped('TRANSIT', 'Mobile Capital jumped', data, options),
+  fleet_dock: previewFleetDock,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

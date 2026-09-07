@@ -283,6 +283,11 @@ describe('notification formatting', () => {
       snippets: ['[DRONE]', 'combat drone dealt 6 damage'],
     },
     {
+      msgType: 'emergency_warp_stabilizer',
+      data: {},
+      snippets: ['[WARP]', 'Emergency Warp Stabilizer fired'],
+    },
+    {
       msgType: 'faction_alliance_broken',
       data: {
         by_faction_id: 'fac_1',
@@ -353,6 +358,17 @@ describe('notification formatting', () => {
       },
       snippets: ['[WAR]', 'Raiders declared war on Wardens.', 'Reason: territory'],
     },
+    {
+      msgType: 'fleet_disbanded',
+      data: {},
+      snippets: ['[FLEET]', 'Fleet disbanded'],
+    },
+    { msgType: 'fleet_dock', data: {}, snippets: ['[FLEET]', 'Fleet docked'] },
+    {
+      msgType: 'fleet_kicked',
+      data: {},
+      snippets: ['[FLEET]', 'You were kicked from the fleet'],
+    },
     { msgType: 'friend_offline', data: { username: 'Marlowe' }, snippets: ['[FRIEND]', 'Marlowe went offline'] },
     { msgType: 'friend_online', data: { username: 'Marlowe' }, snippets: ['[FRIEND]', 'Marlowe is now online'] },
     { msgType: 'friend_removed', data: { username: 'Marlowe' }, snippets: ['[FRIEND]', 'Marlowe removed you'] },
@@ -367,6 +383,11 @@ describe('notification formatting', () => {
       snippets: ['[FRIEND]', 'Marlowe accepted your friend request'],
     },
     { msgType: 'mining_yield', data: { quantity: 2, resource_id: 'ore_iron' }, snippets: ['[MINED]', '+2x ore_iron'] },
+    {
+      msgType: 'mobile_capital_transit',
+      data: {},
+      snippets: ['[TRANSIT]', 'Mobile Capital jumped'],
+    },
     {
       msgType: 'observation_update',
       data: {
@@ -478,6 +499,11 @@ describe('notification formatting', () => {
     },
     { msgType: 'pirate_spawn', data: { num_pirates: 2 }, snippets: ['[PIRATES]', '2 pirate(s) appeared'] },
     { msgType: 'pirate_warning', data: { message: 'Incoming' }, snippets: ['[PIRATES]', 'Incoming'] },
+    {
+      msgType: 'passenger_stranded',
+      data: {},
+      snippets: ['[STRANDED]', 'Carrier lost — you were stranded'],
+    },
     {
       msgType: 'player_died',
       data: { killer_name: 'Raider', respawn_base: 'home' },
@@ -1146,6 +1172,207 @@ describe('notification formatting', () => {
         data: { command: 'player_died' },
       });
       expect(preview.headline).toBe('You died (tick ?)');
+    });
+  });
+
+  describe('unsolicited state events (0.596.2)', () => {
+    const typedMoveTypes = [
+      'emergency_warp_stabilizer',
+      'passenger_stranded',
+      'fleet_kicked',
+      'fleet_disbanded',
+      'mobile_capital_transit',
+      'fleet_dock',
+    ] as const;
+    const statusHintTypes = ['passenger_stranded', 'fleet_kicked', 'fleet_disbanded'] as const;
+    const fallbackByType: Record<(typeof typedMoveTypes)[number], { tag: string; headline: string }> = {
+      emergency_warp_stabilizer: { tag: 'WARP', headline: 'Emergency Warp Stabilizer fired' },
+      passenger_stranded: { tag: 'STRANDED', headline: 'Carrier lost — you were stranded' },
+      fleet_kicked: { tag: 'FLEET', headline: 'You were kicked from the fleet' },
+      fleet_disbanded: { tag: 'FLEET', headline: 'Fleet disbanded' },
+      mobile_capital_transit: { tag: 'TRANSIT', headline: 'Mobile Capital jumped' },
+      fleet_dock: { tag: 'FLEET', headline: 'Fleet docked' },
+    };
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: string;
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: msgType,
+        msg_type: msgType,
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data,
+      };
+    }
+
+    test('registers typed handlers for each unsolicited state msg_type', () => {
+      for (const msgType of typedMoveTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+      }
+    });
+
+    test.each([...typedMoveTypes])('empty %s bag uses last-resort headline without JSON dump', (msgType) => {
+      const notification = note(msgType, {});
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const expected = fallbackByType[msgType];
+
+      expect(preview.tag).toBe(expected.tag);
+      expect(preview.headline).toBe(expected.headline);
+      expect(output).toContain(`[${expected.tag}]`);
+      expect(output).toContain(expected.headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('message=');
+      expect(output).not.toContain('tick=');
+      expect(preview.headline).not.toContain('Someone');
+      expect(preview.headline).not.toContain('()');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      expectNoNestedJsonDump(output);
+    });
+
+    test.each([...statusHintTypes])('%s always includes Use: get_status', (msgType) => {
+      const empty = formatNotificationPreview(note(msgType, {}));
+      expect(empty.details).toContain('Use: get_status');
+      expect(empty.headline).toBe(fallbackByType[msgType].headline);
+
+      const docked = formatNotificationPreview(
+        note(msgType, { location: { docked_at: 'haven_exchange', poi_name: 'Haven Exchange' } }),
+      );
+      expect(docked.details).toContain('Docked at: Haven Exchange (haven_exchange)');
+      expect(docked.details).toContain('Use: get_status');
+    });
+
+    test('warp and transit omit Use: get_status', () => {
+      for (const msgType of ['emergency_warp_stabilizer', 'mobile_capital_transit'] as const) {
+        const preview = formatNotificationPreview(note(msgType, {}));
+        expect(preview.details).not.toContain('Use: get_status');
+      }
+    });
+
+    test('fleet_dock with base_id and base_name prints canonical identity in the headline', () => {
+      const preview = formatNotificationPreview(
+        note('fleet_dock', { base_id: 'haven_exchange', base_name: 'Haven Exchange' }),
+      );
+      expect(preview.tag).toBe('FLEET');
+      expect(preview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange)');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('Someone');
+      expect(preview.details.join('\n')).not.toContain('Docked at:');
+      expect(preview.details.join('\n')).not.toContain('base_id=');
+    });
+
+    test('fleet_dock with base_id only falls the name back to the id', () => {
+      const preview = formatNotificationPreview(note('fleet_dock', { base_id: 'haven_exchange' }));
+      expect(preview.headline).toBe('Fleet docked at haven_exchange');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('()');
+    });
+
+    test('fleet_dock without name or id is Fleet docked', () => {
+      const preview = formatNotificationPreview(
+        note('fleet_dock', { ship: { name: 'Dust Devil', hull: 130 }, player: { username: 'Marlowe' } }),
+      );
+      expect(preview.headline).toBe('Fleet docked');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('Someone');
+      expect(preview.headline).not.toContain('Dust Devil');
+      expectNoNestedJsonDump(preview.headline);
+    });
+
+    test('fleet_dock nested location still supplies identity without a Docked at detail', () => {
+      const preview = formatNotificationPreview(
+        note('fleet_dock', {
+          location: { base_name: 'Haven Exchange', base_id: 'haven_exchange', docked_at: 'haven_exchange' },
+        }),
+      );
+      expect(preview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange)');
+      expect(preview.details).toEqual([]);
+      expect(preview.details.join('\n')).not.toContain('Docked at:');
+    });
+
+    test('no-docked_at bag prints preferred location scalars and does not leak message=/tick=', () => {
+      const notification = note('emergency_warp_stabilizer', {
+        message: 'Stabilizer fired.',
+        tick: 1442,
+        command: 'emergency_warp_stabilizer',
+        system_name: 'Sol',
+        poi_name: 'Earth Station',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        system_id: 'sol',
+        poi_id: 'earth',
+        ship: { id: 'ship-1', name: 'Dust Devil', hull: 130 },
+        player: { username: 'Marlowe' },
+        cargo: { ore_iron: 5 },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const joined = preview.details.join('\n');
+
+      expect(preview.headline).toBe('Stabilizer fired.');
+      expect(preview.details).toEqual([
+        'system_name=Sol',
+        'poi_name=Earth Station',
+        'base_id=earth_station',
+        'base_name=Earth Station',
+      ]);
+      expect(joined).not.toContain('system_id=');
+      expect(joined).not.toContain('poi_id=');
+      expect(joined).not.toContain('message=');
+      expect(joined).not.toContain('tick=');
+      expect(joined).not.toContain('command=');
+      expect(output).not.toContain('Dust Devil');
+      expect(output).not.toContain('Marlowe');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('nested location without docked_at uses nested scalars, not outer bag keys', () => {
+      const preview = formatNotificationPreview(
+        note('passenger_stranded', {
+          message: 'You were stranded.',
+          tick: 88,
+          location: {
+            system_name: 'Alfirk',
+            poi_name: 'Alfirk Gate',
+            system_id: 'alfirk',
+            poi_id: 'alfirk_gate',
+          },
+        }),
+      );
+      expect(preview.headline).toBe('You were stranded.');
+      expect(preview.details).toEqual([
+        'system_name=Alfirk',
+        'poi_name=Alfirk Gate',
+        'system_id=alfirk',
+        'poi_id=alfirk_gate',
+        'Use: get_status',
+      ]);
+      expect(preview.details.join('\n')).not.toContain('message=');
+      expect(preview.details.join('\n')).not.toContain('tick=');
+    });
+
+    test('nested location with docked_at uses the dock line instead of location scalars', () => {
+      const preview = formatNotificationPreview(
+        note('mobile_capital_transit', {
+          location: {
+            docked_at: 'haven_exchange',
+            poi_name: 'Haven Exchange',
+            system_name: 'Sol',
+            system_id: 'sol',
+          },
+        }),
+      );
+      expect(preview.headline).toBe('Mobile Capital jumped');
+      expect(preview.details).toEqual(['Docked at: Haven Exchange (haven_exchange)']);
+      expect(preview.details.join('\n')).not.toContain('system_name=');
+      expect(preview.details).not.toContain('Use: get_status');
     });
   });
 
