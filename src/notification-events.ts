@@ -9,10 +9,10 @@ export const UNSOLICITED_STATE_EVENTS = new Set([
   'mobile_capital_transit',
 ]);
 
-/** previewActionResult: never interpolate "completed" for these command strings. */
+/** Command strings that are events rather than completed mutations (`UNSOLICITED_STATE_EVENTS` plus `fleet_dock`). */
 export const NON_COMPLETION_ACTION_RESULT_COMMANDS = new Set([...UNSOLICITED_STATE_EVENTS, 'fleet_dock']);
 
-/** String trim+lower only. Not safeScalar: that does not lowercase and can return a number. */
+/** Reject non-strings; trim and lowercase. Empty after trim is missing. */
 export function normalizeActionResultCommand(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const command = value.trim().toLowerCase();

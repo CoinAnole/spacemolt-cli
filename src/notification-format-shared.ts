@@ -513,10 +513,7 @@ function fleetDockIdentity(data: Record<string, unknown>): string | undefined {
   return formatNameId(firstBagString(bags, FLEET_DOCK_NAME_KEYS), firstBagString(bags, FLEET_DOCK_ID_KEYS));
 }
 
-/**
- * Headlines for NON_COMPLETION_ACTION_RESULT_COMMANDS. Inner default is `{command} (tick N)`
- * with no "completed"; the caller decides set membership so real mutations keep "completed".
- */
+/** Event copy for an action_result command. Default is `{command} (tick N)`. */
 export function actionResultEventHeadline(command: string, tick: unknown, data?: Record<string, unknown>): string {
   const tickLabel = tick ?? '?';
   switch (command) {
@@ -560,8 +557,7 @@ function previewActionResult(
   const tick = safeScalar(data.tick);
   const result = isRecord(data.result) ? data.result : undefined;
 
-  // Two levels: set membership first, then headline. A single switch(command) default
-  // would strip "completed" from real mutations that are not in the set.
+  // Membership first; headline helper never adds "completed".
   let headline =
     command !== undefined && NON_COMPLETION_ACTION_RESULT_COMMANDS.has(command)
       ? actionResultEventHeadline(command, tick, data)
