@@ -4,6 +4,12 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Mine formatter
+
+- Human `mine` prints the resource name and id, quantity, remaining stock, depletion,
+  and XP. Filtered cycles print a no-yield line plus the server message.
+  JSON/YAML/jq field names are unchanged.
+
 ### Survey system formatter
 
 - Human `survey_system` prints survey power, bloom, newly revealed and already-known
