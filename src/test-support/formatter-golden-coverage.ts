@@ -4,7 +4,6 @@ import { renderStructuredResult } from '../display/index.ts';
 
 const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
   get_status_summary: 'Internal display variant selected from get_status --summary; covered by CLI golden output.',
-  mine: 'Yield + filtered renderer goldens deferred to PR 2; unit tests and named-formatter snapshot cover table output.',
   storage_carrier_load:
     'Internal display variant selected from storage deposit payload context; covered by renderResponse behavior tests.',
 };
