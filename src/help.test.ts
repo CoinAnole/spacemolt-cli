@@ -678,6 +678,8 @@ describe('help output branches', () => {
     expect(fightHelp).toContain('track the live objective with arena status');
     expect(fightHelp).toContain('See also:');
     expect(fightHelp).toContain('arena status');
+    expect(fightHelp).toContain('rule_*');
+    expect(fightHelp).toContain('refuses the whole side');
     expect(fightHelp).not.toContain('Consequence-free combat at an arena POI: challenge a pilot');
     expect(fightHelp).not.toContain('`');
   });
@@ -2097,6 +2099,68 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).toContain('Error [arena_rule]:');
     expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
     expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives rule_hull_tier a loadout-rule suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'arena fight',
+      { code: 'rule_hull_tier', message: 'Pilot Alice on Hull Foo breaks rule hull_tier.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [rule_hull_tier]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt arena challenges');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('arena_challenges');
+
+    const quiet = captureWriter();
+    displayError(
+      'arena fight',
+      { code: 'rule_hull_tier', message: 'Pilot Alice on Hull Foo breaks rule hull_tier.' },
+      {
+        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
+      },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [rule_hull_tier]:');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives rule_no_drones the same fight-start family suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'arena fight',
+      { code: 'rule_no_drones', message: 'Pilot Alice on Hull Foo breaks rule no_drones.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [rule_no_drones]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt arena challenges');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('arena_challenges');
   });
 
   test('displayError gives deposit_too_sparse a mining-array suggestion', () => {
