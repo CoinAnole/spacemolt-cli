@@ -4,6 +4,23 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Unsolicited move notifications (gameserver 0.596.2)
+
+- Human `action_result` previews treat event-named `command` values as events,
+  not completed commands: `player_died`, `ship_captured`,
+  `emergency_warp_stabilizer`, `passenger_stranded`, `fleet_kicked`,
+  `fleet_disbanded`, `mobile_capital_transit`. Copy is e.g. `You died (tick N)`,
+  never `player_died completed`. Location still prints as a compact dock line
+  when `result.location` is present. JSON/YAML/jq field names are unchanged.
+- Human previews for typed `emergency_warp_stabilizer`, `passenger_stranded`,
+  `fleet_kicked`, `fleet_disbanded`, `mobile_capital_transit`, and `fleet_dock`
+  (`base_id` plus display name). Table Type stays the raw `msg_type`.
+- This CLI does not keep a live WebSocket or a cached position. After a move,
+  poll `get_status` (or `get_status --watch`) for ship, location, and riding.
+  `get_notifications` / inline notifications tell you that you were moved.
+  Fleet-follower arrivals still use `command=travel|jump` and may summarize
+  with other routine travel when two or more such frames arrive together.
+
 ### Faction mission board (gameserver 0.596.1)
 
 - Human `faction list_missions` prints a dedicated table with title, template ID,

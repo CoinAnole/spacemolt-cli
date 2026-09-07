@@ -615,6 +615,115 @@ export const getNotificationsPirateRadioFixture = {
   ],
 };
 
+/** Unsolicited move poll: action_result event commands plus typed fleet_dock and warp. */
+export const getNotificationsUnsolicitedStateFixture = {
+  count: 6,
+  current_tick: 902200,
+  remaining: 0,
+  timestamp: 1779566000,
+  notifications: [
+    {
+      id: 'notif-action-died-1',
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-05-23T19:30:00.000Z',
+      data: {
+        command: 'player_died',
+        tick: 902200,
+        result: {
+          location: {
+            docked_at: 'earth_station',
+            poi_name: 'Earth Station',
+            system_name: 'Sol',
+            nearby_players: [
+              {
+                username: 'ILC Knurl',
+                faction_tag: 'ILC',
+                ship_class: 'hauler',
+                ship_name: 'Long Haul',
+              },
+              {
+                username: 'Cody',
+                faction_tag: 'SMC',
+                ship_class: 'scout',
+                ship_name: 'Quick Look',
+              },
+              { username: 'Wisp', ship_class: 'prospector' },
+            ],
+          },
+        },
+      },
+    },
+    {
+      id: 'notif-action-stranded-1',
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-05-23T19:30:05.000Z',
+      data: {
+        command: 'passenger_stranded',
+        tick: 902201,
+        result: {
+          location: {
+            docked_at: 'earth_station',
+            poi_name: 'Earth Station',
+            system_name: 'Sol',
+          },
+        },
+      },
+    },
+    {
+      id: 'notif-fleet-dock-1',
+      type: 'system',
+      msg_type: 'fleet_dock',
+      timestamp: '2026-05-23T19:30:10.000Z',
+      data: {
+        base_id: 'haven_exchange',
+        base_name: 'Haven Exchange',
+      },
+    },
+    {
+      id: 'notif-action-transit-1',
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-05-23T19:30:15.000Z',
+      data: {
+        command: 'mobile_capital_transit',
+        tick: 902203,
+        result: {
+          location: {
+            docked_at: 'alfirk_gate',
+            poi_name: 'Alfirk Gate',
+            system_name: 'Alfirk',
+          },
+        },
+      },
+    },
+    {
+      id: 'notif-warp-stabilizer-1',
+      type: 'system',
+      msg_type: 'emergency_warp_stabilizer',
+      timestamp: '2026-05-23T19:30:20.000Z',
+      data: {},
+    },
+    {
+      id: 'notif-action-fleet-dock-1',
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-05-23T19:30:25.000Z',
+      data: {
+        command: 'fleet_dock',
+        tick: 902205,
+        result: {
+          location: {
+            docked_at: 'haven_exchange',
+            poi_name: 'Haven Exchange',
+          },
+        },
+      },
+    },
+  ],
+};
+
 export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_notifications: {
     command: 'get_notifications',
@@ -639,6 +748,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_pirate_radio: {
     command: 'get_notifications',
     fixture: getNotificationsPirateRadioFixture,
+  },
+  get_notifications_unsolicited_state: {
+    command: 'get_notifications',
+    fixture: getNotificationsUnsolicitedStateFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {
