@@ -53,7 +53,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_invite: 'Invite a player to your faction',
   faction_kick: 'Kick a player from your faction',
   faction_list: 'List all factions',
-  faction_list_missions: 'List your faction posted missions at this station.',
+  faction_list_missions: 'List your faction posted contracts at this station, including bounty targets.',
   faction_personnel: "View, recruit, or transfer personnel held in your faction's local reserve",
   faction_post_mission: 'Post a mission on your faction mission board.',
   faction_promote: 'Promote or demote a faction member',

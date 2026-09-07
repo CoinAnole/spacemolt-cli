@@ -319,6 +319,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     },
   },
   faction_cancel_mission: {
+    seeAlso: ['faction_list_missions'],
     category: 'Faction missions & intel',
     apiRoute: 'POST /api/v2/spacemolt_faction/cancel_mission',
     positionals: ['template_id'],
@@ -327,6 +328,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     },
   },
   faction_list_missions: {
+    seeAlso: ['faction_post_mission', 'faction_cancel_mission', 'get_missions'],
     category: 'Faction missions & intel',
     apiRoute: 'POST /api/v2/spacemolt_faction/list_missions',
   },
