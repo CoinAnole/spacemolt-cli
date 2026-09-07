@@ -1200,6 +1200,63 @@ describe('command metadata', () => {
     expect(jettisonHelp).toContain('Bulk mode');
   });
 
+  test('jettison, mine, wrecks, and action-log help document settle-back and filters', () => {
+    const jettison = BUNDLED_COMMAND_REGISTRY.commands.jettison;
+    expect(jettison?.seeAlso).toEqual(expect.arrayContaining(['get_action_log', 'get_wrecks']));
+    expect(jettison?.discoverWith).toEqual(expect.arrayContaining(['get_cargo']));
+    expect(CURATED_COMMAND_DESCRIPTIONS.jettison).toContain('settles back into the belt');
+
+    const jettisonHelp = captureHelp('jettison');
+    expect(jettisonHelp).toContain('container');
+    expect(jettisonHelp).toMatch(/mid-flight|Pathfinder/);
+    expect(jettisonHelp).toMatch(/settles back|does not strip/);
+    expect(jettisonHelp).toContain('other.jettison_dispersed');
+    expect(jettisonHelp).toContain('[items=JSON]');
+    expect(jettisonHelp).toContain('Bulk mode');
+    expect(jettisonHelp).not.toContain('always destroyed');
+    expect(jettisonHelp).not.toContain('destroyed on despawn');
+    expect(jettisonHelp).not.toContain('10 minutes');
+    expect(jettisonHelp).not.toContain('~10');
+
+    const storageJettison = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.jettison?.config;
+    expect(storageJettison?.description).toContain('Prefer top-level jettison');
+    expect(storageJettison?.description).toContain('Same container, mid-flight destruction, and deposit-settle rules');
+    expect(storageJettison?.description).not.toContain('other.jettison_dispersed');
+
+    const storageJettisonHelp = captureHelp('storage jettison');
+    expect(storageJettisonHelp).toContain('Prefer top-level jettison');
+    expect(storageJettisonHelp).toContain('Same container, mid-flight destruction, and deposit-settle rules');
+    expect(storageJettisonHelp).not.toContain('other.jettison_dispersed');
+
+    const mineHelp = captureHelp('mine');
+    expect(mineHelp).toContain('ice');
+    expect(mineHelp).toContain('gas');
+    expect(mineHelp).toContain('filter_*');
+    expect(mineHelp).toContain('too_sparse');
+    expect(mineHelp).toContain('get_poi');
+    expect(mineHelp).toMatch(/deep-core|work down to zero|work to zero/i);
+    expect(mineHelp).toMatch(/capped|supported_power is capped/);
+    expect(mineHelp).toContain('too_sparse / deposit_too_sparse do not apply');
+    expect(mineHelp).not.toContain('exempt from that cutoff');
+    expect(mineHelp).not.toContain('Hyper Mining Laser');
+    expect(mineHelp).not.toContain('catalog special');
+    expect(CURATED_COMMAND_DESCRIPTIONS.mine).toContain('asteroid, ice, or gas');
+
+    const wrecksHelp = captureHelp('get_wrecks');
+    expect(wrecksHelp).toContain('container');
+    expect(wrecksHelp).toContain('despawn after 10 minutes');
+    expect(wrecksHelp).toMatch(/settle/);
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_wrecks).toContain('jettison containers');
+
+    const actionLogHelp = captureHelp('get_action_log');
+    expect(actionLogHelp).toContain('session.daily_balance');
+    expect(actionLogHelp).toContain('next_since_id');
+    expect(actionLogHelp).toContain(
+      'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
+    );
+    expect(actionLogHelp).toContain('other.jettison_dispersed');
+  });
+
   test('view_market help teaches Company Store narrowing', () => {
     const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
     expect(viewMarket?.description).toContain('public plus your faction');
@@ -2332,10 +2389,12 @@ describe('command metadata', () => {
       arrayFields: ['event_type'],
     });
     expect(COMMANDS.get_action_log?.description).toContain('session.daily_balance');
+    expect(COMMANDS.get_action_log?.description).toContain('other.jettison_dispersed');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
     const eventTypeSchema = COMMANDS.get_action_log?.schema?.event_type as { description?: string } | undefined;
     expect(eventTypeSchema?.description).toContain('session.daily_balance');
+    expect(eventTypeSchema?.description).toContain('other.jettison_dispersed');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {

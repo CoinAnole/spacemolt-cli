@@ -32,6 +32,22 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `resources` stay silent. `get_status --summary` is unchanged.
 - JSON/YAML/jq field names are unchanged.
 
+### Help copy (jettison 0.594.0 / mine notes through 0.595)
+
+- `help jettison` documents shared-POI containers, mid-flight destruction, and
+  deposit settle-back when the container despawns (matching ore returns to the
+  belt up to capacity; cargo the POI does not mine is lost). Despawn receipts
+  are `get_action_log event_type=other.jettison_dispersed`. `help storage jettison`
+  still prefers top-level `jettison` and points at the same rules.
+- `help mine` covers ice/gas, resource-keyed extractors, `get_poi` workability
+  fields (`supported_power`, `lock_minimum_stock`, `too_sparse`; deep-core
+  deposits still work to zero — `too_sparse` / `deposit_too_sparse` do not
+  apply; extra beam power above `supported_power` is still capped), extraction
+  filters (`filter_*` modules), and the filtered empty cycle.
+- `help get_wrecks` notes jettison containers (10-minute despawn, settle-back).
+- `help get_action_log` mentions `event_type=other.jettison_dispersed`.
+  JSON/YAML/jq field names are unchanged.
+
 ### Arena error suggestions (gameserver 0.590.0)
 
 - Human stderr for `challenge_locked` (`arena fight` on a locked trial) and

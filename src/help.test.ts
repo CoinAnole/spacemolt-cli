@@ -663,6 +663,28 @@ describe('help output branches', () => {
     expect(output).not.toContain('salvage_wreck <wreck_id>');
   });
 
+  test('storage group prefers top-level jettison without duplicating settle-back copy', () => {
+    const capture = captureWriter();
+
+    expect(showCommandGroup('storage', capture.writer)).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Prefer top-level jettison');
+    expect(output).toContain('jettison [item_id] [quantity] [items=JSON]');
+
+    const storageJettisonLine = output.split('\n').find((line) => line.includes('storage jettison'));
+    expect(storageJettisonLine).toBeDefined();
+    expect(storageJettisonLine).toContain('Prefer top-level jettison');
+    expect(storageJettisonLine).toContain('Same container, mid-flight destruction, and deposit-settle rules');
+    expect(storageJettisonLine).not.toContain('other.jettison_dispersed');
+    expect(storageJettisonLine).not.toContain('settles back');
+
+    const jettisonLine = output.split('\n').find((line) => /^\s+jettison /.test(line));
+    expect(jettisonLine).toBeDefined();
+    expect(jettisonLine).toContain('settles back');
+    expect(jettisonLine).toContain('other.jettison_dispersed');
+  });
+
   test('help ship lists buy_ship_license without recategorizing it', () => {
     const capture = captureWriter();
     expect(showCommandGroup('ship', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
@@ -697,6 +719,18 @@ describe('help output branches', () => {
     expect(output).toContain('storage loot [wreck_id] [item_id] [quantity] [module_id=…]');
     expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity] [module_id=…]');
     expect(output).not.toContain('salvage_wreck <wreck_id>');
+  });
+
+  test('showFullHelp catalog lines cover ice/gas mining and jettison containers', () => {
+    const capture = captureWriter();
+
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Mine at current POI');
+    expect(output).toContain('Wrecks and jettison containers at POI');
+    expect(output).not.toContain('Mine at asteroid belt');
+    expect(output).not.toContain('Wrecks at POI (for looting)');
   });
 
   test('showCommandHelp renders no-arg commands without args placeholder', () => {
@@ -754,6 +788,7 @@ describe('help output branches', () => {
     expect(output).toContain('Page-based queries return newest-first');
     expect(output).toContain('since_id requests newer entries oldest-first');
     expect(output).toContain('session.daily_balance');
+    expect(output).toContain('other.jettison_dispersed');
     expect(output).toContain(
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
