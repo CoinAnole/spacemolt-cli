@@ -177,6 +177,32 @@ export function formatResourceWorkabilitySuffix(res: Record<string, unknown>): s
   return parts.length ? `, ${parts.join(', ')}` : '';
 }
 
+export function emitResourceInfoLines(resources: unknown, options: { indent?: string; heading?: boolean } = {}): void {
+  const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
+  if (!rows.length) return; // empty array is silent
+  // indent is the heading indent; bullets are `${indent}  - `
+  const indent = options.indent ?? '';
+  if (options.heading !== false) {
+    emitLine(`\n${indent}${c.bright}Resources:${c.reset}`);
+  }
+  for (const res of rows) {
+    const display = res.remaining_display || `${res.remaining} remaining`;
+    const workability = formatResourceWorkabilitySuffix(res);
+    if (display === 'depleted' || res.remaining === 0) {
+      // strikethrough must wrap the workability suffix
+      emitLine(
+        `${indent}  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${workability}${c.reset}\x1b[29m`,
+      );
+      continue;
+    }
+    const depletion = res.depletion_percent !== undefined ? formatDepletionRemainingSuffix(res.depletion_percent) : '';
+    const remaining = res.max_remaining ? `${res.remaining}/${res.max_remaining}` : display;
+    emitLine(
+      `${indent}  - ${res.name || res.resource_id}: richness ${res.richness}, ${remaining}${depletion}${workability}`,
+    );
+  }
+}
+
 export function sumNumericField(values: unknown, field: string): number | undefined {
   if (!Array.isArray(values)) return undefined;
   let total = 0;
