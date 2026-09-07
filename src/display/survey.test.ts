@@ -249,6 +249,50 @@ test('survey_system formats flat details without an envelope', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+function overlaySurveyedPoi(rows: unknown, value: unknown): void {
+  const poi = Array.isArray(rows) ? rows[0] : undefined;
+  if (!poi || typeof poi !== 'object') throw new Error('expected surveyed POI');
+  (poi as Record<string, unknown>).deep_core = value;
+}
+
+test('survey_system appends [deep core] on a newly revealed overlay', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      overlaySurveyedPoi(details.newly_revealed, true);
+    }),
+  );
+
+  expect(stdout).toContain('Kaiser Vein (sol_kaiser_vein)  asteroid_belt [deep core]');
+  expect(stdout).toContain('  - deep_core: Need more survey power (difficulty 24)');
+  expect(stdout).not.toContain('Deep core: yes');
+});
+
+test('survey_system appends [deep core] on an already known overlay', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      overlaySurveyedPoi(details.already_revealed, true);
+    }),
+  );
+
+  expect(stdout).toContain('Outer Belt Cache (sol_outer_cache)  asteroid_belt [deep core]');
+  expect(stdout).toContain('  - deep_core: Need more survey power (difficulty 24)');
+});
+
+test('survey_system omits [deep core] when false or missing and leaves faint signatures unchanged', () => {
+  const missing = stdoutOf(structuredClone(surveySystemFixture));
+  expect(missing).not.toContain('[deep core]');
+  expect(missing).toContain('  - deep_core: Need more survey power (difficulty 24)');
+
+  const falsy = stdoutOf(
+    clonePresent((details) => {
+      overlaySurveyedPoi(details.newly_revealed, false);
+      overlaySurveyedPoi(details.already_revealed, 'true');
+    }),
+  );
+  expect(falsy).not.toContain('[deep core]');
+  expect(falsy).toContain('  - deep_core: Need more survey power (difficulty 24)');
+});
+
 test('survey_system does not dump sibling location or skills', () => {
   const stdout = stdoutOf(structuredClone(surveySystemFixture));
 

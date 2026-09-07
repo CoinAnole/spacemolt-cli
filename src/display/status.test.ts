@@ -394,6 +394,46 @@ test('get_poi prints an arena line after Class', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+const DEEP_CORE_LINE = 'Deep core: yes (too-sparse cutoff never applies; needs deep_core_access)';
+
+test('get_poi prints Deep core after Class when overlaid', () => {
+  const fixture = structuredClone(poiInfoFixture);
+  (fixture.poi as Record<string, unknown>).deep_core = true;
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Class: common');
+  expect(stdout).toContain(DEEP_CORE_LINE);
+  expect(stdout.indexOf('Class: common')).toBeLessThan(stdout.indexOf(DEEP_CORE_LINE));
+  expect(stdout).not.toContain('[deep core]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_poi prints Deep core after the arena line when both are set', () => {
+  const fixture = structuredClone(poiArenaFixture);
+  (fixture.poi as Record<string, unknown>).deep_core = true;
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Arena: yes (consequence-free matches; see: arena status)');
+  expect(stdout).toContain(DEEP_CORE_LINE);
+  expect(stdout.indexOf('Arena: yes')).toBeLessThan(stdout.indexOf(DEEP_CORE_LINE));
+});
+
+test('get_poi omits Deep core when false, missing, or non-boolean', () => {
+  const missing = renderStructuredResult('get_poi', structuredClone(poiInfoFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(missing).not.toContain('Deep core');
+  expect(missing).not.toContain('[deep core]');
+
+  for (const value of [false, 'true', 1]) {
+    const fixture = structuredClone(poiInfoFixture);
+    (fixture.poi as Record<string, unknown>).deep_core = value;
+    const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+    expect(stdout).not.toContain('Deep core');
+    expect(stdout).not.toContain('[deep core]');
+  }
+});
+
 test('get_player prints arena record and XP after skill stats', () => {
   const stdout = renderStructuredResult(
     'get_player',
@@ -2085,4 +2125,80 @@ test('get_system classified fixture does not fall back', () => {
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('[object Object]');
+});
+
+function withPoiDeepCore(
+  fixture: typeof systemInfoFixture,
+  listValue: unknown | undefined,
+  currentValue: unknown | undefined,
+) {
+  const next = structuredClone(fixture);
+  const poi = next.system.pois[0] as Record<string, unknown>;
+  if (listValue === undefined) delete poi.deep_core;
+  else poi.deep_core = listValue;
+  const current = next.poi as Record<string, unknown>;
+  if (currentValue === undefined) delete current.deep_core;
+  else current.deep_core = currentValue;
+  return next;
+}
+
+test('get_system appends [deep core] on list and Current POI when overlaid', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiDeepCore(systemInfoFixture, true, true),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [garden] [deep core] [station] (2 online)');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden] [deep core]');
+  expect(stdout).not.toContain('Deep core: yes');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system prints [deep core] on the list when Current POI omits it', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiDeepCore(systemInfoFixture, true, undefined),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [garden] [deep core] [station] (2 online)');
+  expect(stdout).not.toMatch(/Current POI:.*\[deep core\]/);
+  expect(stdout).toContain('Current POI: Earth (planet) [garden]');
+});
+
+test('get_system prints [deep core] on Current POI when the list omits it', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiDeepCore(systemInfoFixture, undefined, true),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Earth (planet) [garden] [station] (2 online)');
+  expect(stdout).not.toMatch(/- Earth \(planet\) \[garden\] \[deep core\]/);
+  expect(stdout).toContain('Current POI: Earth (planet) [garden] [deep core]');
+});
+
+test('get_system omits [deep core] when false or non-boolean', () => {
+  const missing = renderStructuredResult(
+    'get_system',
+    structuredClone(systemInfoFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(missing).not.toContain('[deep core]');
+
+  for (const value of [false, 'true', 1]) {
+    const stdout = renderStructuredResult(
+      'get_system',
+      withPoiDeepCore(systemInfoFixture, value, value),
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain('[deep core]');
+    expect(stdout).not.toContain('Deep core:');
+  }
 });

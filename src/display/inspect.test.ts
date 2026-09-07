@@ -816,6 +816,77 @@ test('renders poi inspect workability columns when ship-relative fields are pres
   expect(copperCells[3]).toBe('');
 });
 
+const DEEP_CORE_LINE = 'Deep core: yes (too-sparse cutoff never applies; needs deep_core_access)';
+
+function inspectPoiDeepCoreCount(stdout: string): number {
+  return stdout.split('\n').filter((line) => line.includes('Deep core: yes')).length;
+}
+
+test('inspect POI prints Deep core from a summary overlay', () => {
+  const fixture = structuredClone(inspectPoiFixture);
+  (fixture.poi.summary as Record<string, unknown>).deep_core = true;
+  const stdout = renderStructuredResult('inspect', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain(DEEP_CORE_LINE);
+  expect(inspectPoiDeepCoreCount(stdout)).toBe(1);
+  expect(stdout).not.toContain('[deep core]');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('inspect POI prints Deep core from a detail overlay when summary omits it', () => {
+  const fixture = structuredClone(inspectPoiFixture);
+  (fixture.poi.detail.poi as Record<string, unknown>).deep_core = true;
+  const stdout = renderStructuredResult('inspect', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain(DEEP_CORE_LINE);
+  expect(inspectPoiDeepCoreCount(stdout)).toBe(1);
+  expect(stdout.indexOf('POI: Main Belt')).toBeLessThan(stdout.indexOf(DEEP_CORE_LINE));
+});
+
+test('inspect POI faction intel does not print a second Deep core line when the header printed', () => {
+  const fixture = {
+    ...structuredClone(inspectPoiFixture),
+    faction_poi_intel: { name: 'Main Belt', class: 'asteroid_belt', deep_core: true },
+  };
+  (fixture.poi.summary as Record<string, unknown>).deep_core = true;
+  const stdout = renderStructuredResult('inspect', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Faction intel');
+  expect(stdout).toContain(DEEP_CORE_LINE);
+  expect(inspectPoiDeepCoreCount(stdout)).toBe(1);
+  expect(stdout.indexOf(DEEP_CORE_LINE)).toBeLessThan(stdout.indexOf('Faction intel'));
+});
+
+test('inspect POI prints Deep core in faction intel when the header omitted it', () => {
+  const fixture = {
+    ...structuredClone(inspectPoiFixture),
+    faction_poi_intel: { name: 'Main Belt', class: 'asteroid_belt', deep_core: true },
+  };
+  const stdout = renderStructuredResult('inspect', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Faction intel');
+  expect(stdout).toContain(DEEP_CORE_LINE);
+  expect(inspectPoiDeepCoreCount(stdout)).toBe(1);
+  expect(stdout.indexOf('Faction intel')).toBeLessThan(stdout.indexOf(DEEP_CORE_LINE));
+});
+
+test('inspect POI omits Deep core when false, missing, or non-boolean', () => {
+  const missing = renderStructuredResult('inspect', structuredClone(inspectPoiFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(missing).not.toContain('Deep core');
+  expect(missing).not.toContain('[deep core]');
+
+  for (const value of [false, 'true', 1]) {
+    const fixture = structuredClone(inspectPoiFixture);
+    (fixture.poi.summary as Record<string, unknown>).deep_core = value;
+    (fixture.poi.detail.poi as Record<string, unknown>).deep_core = value;
+    const stdout = renderStructuredResult('inspect', fixture, options, context).stdout.join('\n');
+    expect(stdout).not.toContain('Deep core');
+    expect(stdout).not.toContain('[deep core]');
+  }
+});
+
 test('poi inspect too_sparse false does not create a Sparse column', () => {
   const stdout = renderStructuredResult(
     'inspect',

@@ -3,6 +3,7 @@ import {
   emitLine,
   finiteNumber,
   firstArray,
+  formatDeepCoreMark,
   formatDepletionRemainingSuffix,
   formatter,
   isRecord,
@@ -1265,7 +1266,7 @@ export const marketFormatters = [
           const poiName = String(poi.name ?? poi.id ?? 'unknown');
           const poiType = poi.type ? ` (${poi.type})` : '';
           const poiId = poi.id ? ` ${c.dim}${poi.id}${c.reset}` : '';
-          emitLine(`  ${poiName}${poiType}${poiId}`);
+          emitLine(`  ${poiName}${poiType}${formatDeepCoreMark(poi.deep_core)}${poiId}`);
 
           const resources = Array.isArray(poi.resources) ? poi.resources.filter(isRecord) : [];
           for (const resource of resources) {

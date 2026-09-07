@@ -3,6 +3,7 @@ import {
   emitLine,
   emitResourceInfoLines,
   finiteNumber,
+  formatDeepCoreMark,
   isRecord,
   namedFormatter,
   printCompactTable,
@@ -20,7 +21,7 @@ function formatSurveyedPoiHeadline(poi: Record<string, unknown>): string {
   const id = poi.id && poi.id !== name ? ` (${poi.id})` : '';
   const type = poi.type ? `  ${poi.type}` : '';
   const poiClass = typeof poi.class === 'string' && poi.class.trim() ? ` [${poi.class.trim()}]` : '';
-  return `${name}${id}${type}${poiClass}`;
+  return `${name}${id}${type}${poiClass}${formatDeepCoreMark(poi.deep_core)}`;
 }
 
 function emitSurveyedPoiList(title: string, value: unknown, emptyCopy?: string): void {

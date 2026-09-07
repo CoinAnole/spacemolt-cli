@@ -633,6 +633,7 @@ export const factionQueryIntelFixture = {
           id: 'sol_gas_cloud',
           type: 'gas_cloud',
           name: 'Sol Gas Cloud',
+          deep_core: true,
           position: { x: 12, y: -4 },
           resources: [
             {

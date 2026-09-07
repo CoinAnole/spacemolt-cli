@@ -10,6 +10,8 @@ import {
   emitStationDefences,
   emitStationFuelPricing,
   emitStationIds,
+  formatDeepCoreLine,
+  formatDeepCoreMark,
   formatLiveryName,
   formatPlayer,
   formatReputationChangesSummary,
@@ -552,7 +554,7 @@ function displayClass(value: unknown): string | undefined {
 function formatSystemPoiName(poi: Record<string, unknown>): string {
   const poiClass = displayClass(poi.class);
   const classMark = poiClass ? ` [${poiClass}]` : '';
-  return `${poi.name} (${poi.type})${classMark}`;
+  return `${poi.name} (${poi.type})${classMark}${formatDeepCoreMark(poi.deep_core)}`;
 }
 
 function formatGalacticPosition(value: unknown): string | undefined {
@@ -1029,6 +1031,8 @@ export const statusFormatters = [
       if (poi.class) emitLine(`Class: ${poi.class}`);
       const arenaLine = formatArenaPoiLine(poi.arena);
       if (arenaLine) emitLine(arenaLine);
+      const deepCoreLine = formatDeepCoreLine(poi.deep_core);
+      if (deepCoreLine) emitLine(deepCoreLine);
       const factionFuelReserve = poi.faction_fuel_reserve ?? r.faction_fuel_reserve;
       const factionFuelCapacity = poi.faction_fuel_capacity ?? r.faction_fuel_capacity;
       if (factionFuelReserve !== undefined || factionFuelCapacity !== undefined) {

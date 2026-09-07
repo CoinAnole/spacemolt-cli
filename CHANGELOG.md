@@ -25,6 +25,17 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `supports power`). Empty newly-revealed and wildlife lists print `(none)`.
   JSON/YAML/jq field names are unchanged.
 
+### Deep-core POI tags (gameserver 0.595.0)
+
+- Human `get_poi` and `inspect` POI print
+  `Deep core: yes (too-sparse cutoff never applies; needs deep_core_access)`
+  when `deep_core` is true. Inspect faction intel prints that line only if the
+  POI header did not.
+- Human `get_system` POI names, `survey_system` revealed rows, and
+  `faction_query_intel` POI bullets append `[deep core]`.
+- Omitted or false `deep_core` stays silent. JSON/YAML/jq field names are
+  unchanged.
+
 ### Deposit workability (gameserver 0.595.0)
 
 - Human `get_poi` resource lines print `lock min N` when `lock_minimum_stock` is
