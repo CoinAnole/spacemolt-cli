@@ -17,6 +17,8 @@ import {
   empireInfoFixture,
   factionCreateBuyOrderBulkFixture,
   factionCreateSellOrderBulkFixture,
+  factionListMissionsEmptyFixture,
+  factionListMissionsFixture,
   factionQueryIntelFixture,
   formatterFixtureCases,
   getLocationFixture,
@@ -5090,6 +5092,234 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('bounty');
     expect(stdout).toContain('Destroy Kestrel');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_list_missions mixed board prints officer columns and bounty targets', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', factionListMissionsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Missions ===');
+    expect(stdout).toContain('Deliver Iron Ore');
+    expect(stdout).toContain('bounty');
+    expect(stdout).toContain('Kestrel');
+    expect(stdout).toContain('player_unresolved_bounty');
+    expect(stdout).not.toContain('9c8913b2cf825728a2404c9e4c4d7afb');
+    expect(stdout).toContain('posted 3/3');
+    expect(stdout).toContain('Posted by');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Missions ===');
+  });
+
+  test('faction_list_missions named bounty prints target_player and hides target_player_id', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', {
+      missions: [
+        {
+          template_id: 'faction-bounty-kestrel',
+          title: 'Hunt Kestrel',
+          type: 'bounty',
+          difficulty: 4,
+          reward_credits: 50000,
+          active_instances: 1,
+          objectives: [
+            {
+              type: 'kill_player',
+              description: 'Destroy Kestrel',
+              target_player: 'Kestrel',
+              target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+            },
+          ],
+        },
+      ],
+      count: 1,
+      max_posted: 3,
+      message: 'Your faction has 1/3 missions posted at this station.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Kestrel');
+    expect(stdout).not.toContain('9c8913b2cf825728a2404c9e4c4d7afb');
+    expect(stdout).not.toContain('Posted by');
+  });
+
+  test('faction_list_missions unresolved bounty prints target_player_id', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', {
+      missions: [
+        {
+          template_id: 'faction-bounty-id-only',
+          title: 'Hunt by ID',
+          type: 'bounty',
+          difficulty: 4,
+          reward_credits: 50000,
+          active_instances: 1,
+          objectives: [
+            {
+              type: 'kill_player',
+              description: 'Destroy Kestrel',
+              target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+            },
+          ],
+        },
+      ],
+      count: 1,
+      max_posted: 3,
+      message: 'Your faction has 1/3 missions posted at this station.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('9c8913b2cf825728a2404c9e4c4d7afb');
+  });
+
+  test('faction_list_missions empty board prints None and posted capacity', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', factionListMissionsEmptyFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Missions ===');
+    expect(stdout).toContain('(None)');
+    expect(stdout).toContain('posted 0/3');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Missions ===');
+  });
+
+  test('formats faction list_missions using grouped display command name', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction list_missions', factionListMissionsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Missions ===');
+    expect(stdout).toContain('Deliver Iron Ore');
+    expect(stdout).not.toContain('=== Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_list_missions keeps a blank Objectives cell when objectives are empty', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', {
+      missions: [
+        {
+          template_id: 'faction-empty-objectives',
+          title: 'Empty Objectives Run',
+          type: 'delivery',
+          difficulty: 2,
+          reward_credits: 500,
+          active_instances: 1,
+          posted_by: 'FactionOfficer',
+          objectives: [],
+        },
+      ],
+      count: 1,
+      max_posted: 3,
+      message: 'Your faction has 1/3 missions posted at this station.',
+    });
+
+    expect(stderr).toBe('');
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Objectives'));
+    expect(header).toBeDefined();
+    const objectivesIndex = cells(header ?? '').indexOf('Objectives');
+    expect(objectivesIndex).toBeGreaterThanOrEqual(0);
+    const dataLine = stdout.split('\n').find((line) => line.includes('Empty Objectives Run'));
+    expect(dataLine).toBeDefined();
+    expect(cells(dataLine ?? '')[objectivesIndex]).toBe('');
+  });
+
+  test('faction_list_missions omits Posted by when no row has a poster', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', {
+      missions: [
+        {
+          template_id: 'faction-delivery-iron',
+          title: 'Deliver Iron Ore',
+          type: 'delivery',
+          difficulty: 2,
+          reward_credits: 0,
+          active_instances: 1,
+          objectives: [
+            {
+              type: 'deliver_item',
+              description: 'Deliver 50 iron ore',
+              item_id: 'iron_ore',
+              quantity: 50,
+            },
+          ],
+        },
+      ],
+      count: 1,
+      max_posted: 3,
+      message: 'Your faction has 1/3 missions posted at this station.',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Posted by');
+    expect(stdout).toContain('0 cr');
+  });
+
+  test('faction_list_missions shows Posted by when some rows have a poster', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', {
+      missions: [
+        {
+          template_id: 'faction-delivery-iron',
+          title: 'Deliver Iron Ore',
+          type: 'delivery',
+          difficulty: 2,
+          reward_credits: 1500,
+          active_instances: 2,
+          posted_by: 'FactionOfficer',
+          objectives: [
+            {
+              type: 'deliver_item',
+              description: 'Deliver 50 iron ore',
+              item_id: 'iron_ore',
+              quantity: 50,
+            },
+          ],
+        },
+        {
+          template_id: 'faction-bounty-unresolved',
+          title: 'Hunt Unresolved',
+          type: 'bounty',
+          difficulty: 3,
+          reward_credits: 1000,
+          active_instances: 0,
+          objectives: [
+            {
+              type: 'kill_player',
+              description: 'Destroy the named pilot',
+              target_player_id: 'player_unresolved_bounty',
+            },
+          ],
+        },
+      ],
+      count: 2,
+      max_posted: 3,
+      message: 'Your faction has 2/3 missions posted at this station.',
+    });
+
+    expect(stderr).toBe('');
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Posted by'));
+    expect(header).toBeDefined();
+    const postedByIndex = cells(header ?? '').indexOf('Posted by');
+    expect(postedByIndex).toBeGreaterThanOrEqual(0);
+    const postedRow = stdout.split('\n').find((line) => line.includes('Deliver Iron Ore'));
+    const blankRow = stdout.split('\n').find((line) => line.includes('Hunt Unresolved'));
+    expect(postedRow).toBeDefined();
+    expect(blankRow).toBeDefined();
+    expect(cells(postedRow ?? '')[postedByIndex]).toBe('FactionOfficer');
+    expect(cells(blankRow ?? '')[postedByIndex]).toBe('');
+  });
+
+  test('faction_list_missions declines missing or malformed missions arrays', () => {
+    const missing = captureStructuredOutput('faction_list_missions', {
+      count: 0,
+      max_posted: 3,
+      message: 'Your faction has 0/3 missions posted at this station.',
+    });
+    const malformed = captureStructuredOutput('faction_list_missions', {
+      missions: ['not-a-record'],
+      count: 1,
+      max_posted: 3,
+      message: 'Your faction has 1/3 missions posted at this station.',
+    });
+
+    expect(missing.stdout).not.toContain('=== Faction Missions ===');
+    expect(malformed.stdout).not.toContain('=== Faction Missions ===');
   });
 
   test('view_completed_mission prints bounty target without item or quantity', () => {

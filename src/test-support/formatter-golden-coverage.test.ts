@@ -54,6 +54,8 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('get_battle_summary_interrupted');
     expect(report.requiredCoverageKeys).toContain('get_missions_bounty');
     expect(report.highValueFixtureLabels).toContain('get_missions_bounty');
+    expect(report.requiredCoverageKeys).toContain('faction_list_missions_empty');
+    expect(report.highValueFixtureLabels).toContain('faction_list_missions_empty');
     expect(report.requiredCoverageKeys).toContain('get_active_missions_bounty');
     expect(report.highValueFixtureLabels).toContain('get_active_missions_bounty');
     expect(report.requiredCoverageKeys).toContain('view_completed_mission_bounty');

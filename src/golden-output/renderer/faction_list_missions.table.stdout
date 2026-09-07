@@ -1,0 +1,10 @@
+
+=== Faction Missions ===
+
+  Title            | ID                        | Type     | Objectives                                       | Difficulty | Reward    | Active | Posted by     
+  -----------------+---------------------------+----------+--------------------------------------------------+------------+-----------+--------+---------------
+  Deliver Iron Ore | faction-delivery-iron     | delivery | Deliver 50 iron ore iron_ore                     | 2          | 1,500 cr  | 2      | FactionOfficer
+  Hunt Kestrel     | faction-bounty-kestrel    | bounty   | Destroy Kestrel Kestrel                          | 4          | 50,000 cr | 1      | Marlowe       
+  Hunt Unresolved  | faction-bounty-unresolved | bounty   | Destroy the named pilot player_unresolved_bounty | 3          | 1,000 cr  | 0      | Arbiter47     
+posted 3/3
+Your faction has 3/3 missions posted at this station.

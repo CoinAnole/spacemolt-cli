@@ -260,6 +260,71 @@ export const missionsBountyFixture = {
   ],
 };
 
+export const factionListMissionsFixture = {
+  missions: [
+    {
+      template_id: 'faction-delivery-iron',
+      title: 'Deliver Iron Ore',
+      type: 'delivery',
+      difficulty: 2,
+      reward_credits: 1500,
+      active_instances: 2,
+      posted_by: 'FactionOfficer',
+      objectives: [
+        {
+          type: 'deliver_item',
+          description: 'Deliver 50 iron ore',
+          item_id: 'iron_ore',
+          quantity: 50,
+        },
+      ],
+    },
+    {
+      template_id: 'faction-bounty-kestrel',
+      title: 'Hunt Kestrel',
+      type: 'bounty',
+      difficulty: 4,
+      reward_credits: 50000,
+      active_instances: 1,
+      posted_by: 'Marlowe',
+      objectives: [
+        {
+          type: 'kill_player',
+          description: 'Destroy Kestrel',
+          target_player: 'Kestrel',
+          target_player_id: '9c8913b2cf825728a2404c9e4c4d7afb',
+        },
+      ],
+    },
+    {
+      template_id: 'faction-bounty-unresolved',
+      title: 'Hunt Unresolved',
+      type: 'bounty',
+      difficulty: 3,
+      reward_credits: 1000,
+      active_instances: 0,
+      posted_by: 'Arbiter47',
+      objectives: [
+        {
+          type: 'kill_player',
+          description: 'Destroy the named pilot',
+          target_player_id: 'player_unresolved_bounty',
+        },
+      ],
+    },
+  ],
+  count: 3,
+  max_posted: 3,
+  message: 'Your faction has 3/3 missions posted at this station.',
+};
+
+export const factionListMissionsEmptyFixture = {
+  missions: [],
+  count: 0,
+  max_posted: 3,
+  message: 'Your faction has 0/3 missions posted at this station.',
+};
+
 export const activeMissionsFixture = {
   message: 'Active missions',
   missions: {
@@ -1017,6 +1082,8 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   get_missions_bounty: { command: 'get_missions', fixture: missionsBountyFixture },
+  faction_list_missions: { command: 'faction_list_missions', fixture: factionListMissionsFixture },
+  faction_list_missions_empty: { command: 'faction_list_missions', fixture: factionListMissionsEmptyFixture },
   get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
