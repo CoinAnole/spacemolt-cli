@@ -11,6 +11,23 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `target_player_id`), difficulty, credit reward, active instances, and poster.
   Board capacity prints as `posted N/M`. JSON/YAML/jq field names are unchanged.
 
+### catalog_dump
+
+- New public command `catalog_dump` downloads `GET /api/catalog.json` and in human
+  mode prints dump version, mining constants, and section counts. No login.
+  Rate-limited to 1 request/minute/IP; cached locally for one hour
+  (`refresh=true` revalidates). Fetch once per gameserver version (`get_version`);
+  do not poll. Formulas: `get_guide miner`. Paginated `catalog` is unchanged.
+  `--structured` / `--jq .mining` print the dump object; CLI `--json` keeps the
+  existing `structuredContent` envelope.
+
+### Module special rename (gameserver 0.595.0)
+
+- Gameserver 0.595.0 renamed module special `rare_ore_access` to `deep_core_access`.
+  The old token still works on the server; catalog modules no longer report it.
+  Human `Special:` prints whatever the server sends. Scripts that grepped
+  `rare_ore_access` should match `deep_core_access`.
+
 ### Mine formatter
 
 - Human `mine` prints the resource name and id, quantity, remaining stock, depletion,

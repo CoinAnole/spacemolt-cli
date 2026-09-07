@@ -707,6 +707,15 @@ describe('dry-run previews', () => {
     expect(response.result).toContain('GET https://game.spacemolt.com/wheres-mobile-base');
   });
 
+  test('catalog_dump dry-run previews GET /api/catalog.json', () => {
+    const response = createDryRunResponse('catalog_dump', {});
+
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+    expect(response.structuredContent?.method).toBe('GET');
+    expect(response.structuredContent?.url).toBe('https://game.spacemolt.com/api/catalog.json');
+    expect(response.result).toContain('GET https://game.spacemolt.com/api/catalog.json');
+  });
+
   test('player_profile previews the public path-param endpoint', () => {
     const response = createDryRunResponse('player_profile', { name: 'Arbiter47' });
 

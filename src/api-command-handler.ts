@@ -63,8 +63,13 @@ export class ApiCommandHandler implements CommandHandler<Record<string, unknown>
     return { ok: true, payload: prepared.payload };
   }
 
-  async run(payload: Record<string, unknown>, options: GlobalOptions, client?: SpaceMoltClient) {
-    return runCommand(this.name, payload, options, client, this.registry.commands[this.name]);
+  async run(
+    payload: Record<string, unknown>,
+    options: GlobalOptions,
+    client?: SpaceMoltClient,
+    context?: CliRuntimeContext,
+  ) {
+    return runCommand(this.name, payload, options, client, this.registry.commands[this.name], context);
   }
 
   async render(

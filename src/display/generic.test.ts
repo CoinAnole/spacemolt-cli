@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import {
+  catalogDumpFixture,
   catalogItemsFixture,
   catalogItemsMiningGroupFixture,
   catalogItemsModulesFixture,
@@ -2496,4 +2497,94 @@ test('places Label column after Job when only label is present on bulk craft res
   expect(header.indexOf('Job')).toBeLessThan(header.indexOf('Label'));
   expect(header.indexOf('Label')).toBeLessThan(header.indexOf('Recipe'));
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('catalog_dump prints version, mining constants, counts, and guide pointer', () => {
+  const stdout = renderStructuredResult(
+    'catalog_dump',
+    structuredClone(catalogDumpFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Catalog dump ===');
+  expect(stdout).toContain('Version: 0.596.2');
+  expect(stdout).toContain('Mining constants');
+  expect(stdout).toContain('precision_k: 20');
+  expect(stdout).toContain('overkill_ratio: 4');
+  expect(stdout).toContain('depletion_floor: 0.25');
+  expect(stdout).toContain('rare_ore_rarity_weight_per_level: 0.1');
+  expect(stdout).toContain('See: spacemolt get_guide miner');
+  expect(stdout).toContain('ships: 0');
+  expect(stdout).toContain('items: 0');
+  expect(stdout).toContain('hidden achievements: 9');
+  expect(stdout).toContain('hidden faction achievements: 2');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('run catalog_dump refresh=true');
+});
+
+test('catalog_dump omits mining keys that are not finite numbers', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.mining = {
+    precision_k: 20,
+    overkill_ratio: 'n/a',
+    depletion_floor: Number.NaN,
+  };
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('precision_k: 20');
+  expect(stdout).not.toContain('overkill_ratio');
+  expect(stdout).not.toContain('depletion_floor');
+  expect(stdout).not.toContain('rare_ore_rarity_weight_per_level');
+});
+
+test('catalog_dump still claims when mining is missing and does not table items', () => {
+  const stdout = renderStructuredResult(
+    'catalog_dump',
+    {
+      version: '0.590.0',
+      items: [
+        { id: 'energy_crystal', name: 'Energy Crystal' },
+        { id: 'iron_ore', name: 'Iron Ore' },
+      ],
+      ships: [{ id: 'viper' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Catalog dump ===');
+  expect(stdout).toContain('Version: 0.590.0');
+  expect(stdout).toContain('run catalog_dump refresh=true');
+  expect(stdout).not.toContain('Mining constants');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Energy Crystal');
+  expect(stdout).toContain('items: 2');
+  expect(stdout).toContain('ships: 1');
+});
+
+test('catalog_dump omits missing array and hidden-count lines', () => {
+  const stdout = renderStructuredResult(
+    'catalog_dump',
+    { version: '0.596.2', mining: { precision_k: 20 }, ships: [] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('ships: 0');
+  expect(stdout).not.toContain('skills:');
+  expect(stdout).not.toContain('hidden achievements:');
+  expect(stdout).not.toContain('hidden faction achievements:');
+});
+
+test('catalog_dump declines dry-run route previews', () => {
+  const stdout = renderStructuredResult(
+    'catalog_dump',
+    {
+      dry_run: true,
+      server_request_sent: false,
+      method: 'GET',
+      url: 'https://game.spacemolt.com/api/catalog.json',
+      payload: {},
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toContain('=== Catalog dump ===');
 });
