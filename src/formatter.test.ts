@@ -7270,6 +7270,13 @@ describe('structuredContent formatters', () => {
         ---------+------+----------+--------+-------+-------+------------------+--------
         Iron Ore | buy  | 75/100   | 25     | 12 cr | 25 cr | 2026-05-29 00:00 | order-1"
       ,
+        "mine": 
+      "
+      === Mine ===
+      Mined 42 Iron Ore (ore_iron)
+      Deposit: 120/300 (40.00% remaining)
+      Skill XP: mining +8"
+      ,
         "nearby": 
       "
       === Nearby ===

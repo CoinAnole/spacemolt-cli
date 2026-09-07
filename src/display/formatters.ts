@@ -4,6 +4,7 @@ import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
 import { inspectFormatters } from './inspect.ts';
 import { marketFormatters } from './market.ts';
+import { mineFormatters } from './mine.ts';
 import { notificationFormatters } from './notifications.ts';
 import { passengerFormatters } from './passenger.ts';
 import { prizeFormatters } from './prizes.ts';
@@ -18,6 +19,7 @@ export * from './helpers.ts';
 export const resultFormatters: ResultFormatter[] = [
   ...statusFormatters,
   ...surveyFormatters,
+  ...mineFormatters,
   ...marketFormatters,
   ...notificationFormatters,
   ...passengerFormatters,
