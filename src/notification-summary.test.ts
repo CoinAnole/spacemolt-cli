@@ -475,6 +475,67 @@ describe('notification presentation', () => {
     expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual(['mine', 'sell']);
   });
 
+  test('does not summarize a pair of unsolicited event action_results', () => {
+    const died = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:06:10.000Z',
+      data: { command: 'player_died', tick: 1523, result: { location: { docked_at: 'haven_exchange' } } },
+    };
+    const stranded = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:06:15.000Z',
+      data: { command: 'passenger_stranded', tick: 1524, result: { location: { docked_at: 'haven_exchange' } } },
+    };
+
+    const presented = presentNotifications([died, stranded]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result']);
+    expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual([
+      'player_died',
+      'passenger_stranded',
+    ]);
+  });
+
+  test('keeps an unsolicited event individual while a travel pair still summarizes', () => {
+    const died = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:05:10.000Z',
+      data: { command: 'player_died', tick: 1433949, result: { location: { docked_at: 'haven_exchange' } } },
+    };
+
+    const presented = presentNotifications([actionResultA, died, actionResultB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary', 'action_result']);
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'action_result_summary',
+      data: { count: 2, commands: { undock: 1, jump: 1 } },
+    });
+    expect(presented.notifications[1]).toMatchObject({
+      msg_type: 'action_result',
+      data: { command: 'player_died' },
+    });
+  });
+
+  test('leaves a lone travel action_result individual', () => {
+    const travel = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:07:00.000Z',
+      data: { command: 'travel', tick: 1434200, result: { details: { action: 'travel' } } },
+    };
+
+    const presented = presentNotifications([travel]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result']);
+    expect(presented.notifications[0]).toMatchObject({ data: { command: 'travel' } });
+  });
+
   test('summarizes travel and dock action_results on the allowlist', () => {
     const travel = {
       type: 'action_result',

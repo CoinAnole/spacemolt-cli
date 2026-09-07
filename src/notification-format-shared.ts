@@ -1,10 +1,11 @@
 import { normalizeCaptorKind } from './display/captor-kind.ts';
-import { formatDockStateLine } from './display/dock-state.ts';
+import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
 import {
   formatMissingMaterialsPreview,
   isMissingMaterialErrorCode,
   parseMissingMaterialRows,
 } from './error-details.ts';
+import { NON_COMPLETION_ACTION_RESULT_COMMANDS, normalizeActionResultCommand } from './notification-events.ts';
 import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 
 /** Local isRecord — same style as ship-commission-receipt.ts; no import from response.ts. */
@@ -484,21 +485,96 @@ export function formatActionResultDetails(details: Record<string, unknown>): str
   return bits.length ? bits.join(' ') : undefined;
 }
 
+const FLEET_DOCK_NAME_KEYS = ['base_name', 'station_name', 'name', 'poi_name'] as const;
+const FLEET_DOCK_ID_KEYS = ['base_id', 'docked_at', 'station_id'] as const;
+const ACTION_RESULT_STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
+
+function nonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  return text || undefined;
+}
+
+function firstBagString(bags: Record<string, unknown>[], keys: readonly string[]): string | undefined {
+  for (const bag of bags) {
+    for (const key of keys) {
+      const value = nonEmptyString(bag[key]);
+      if (value !== undefined) return value;
+    }
+  }
+  return undefined;
+}
+
+function fleetDockIdentity(data: Record<string, unknown>): string | undefined {
+  const bags: Record<string, unknown>[] = [data];
+  const result = isRecord(data.result) ? data.result : undefined;
+  if (result && isRecord(result.location)) bags.push(result.location);
+  if (result) bags.push(result);
+  return formatNameId(firstBagString(bags, FLEET_DOCK_NAME_KEYS), firstBagString(bags, FLEET_DOCK_ID_KEYS));
+}
+
+/**
+ * Headlines for NON_COMPLETION_ACTION_RESULT_COMMANDS. Inner default is `{command} (tick N)`
+ * with no "completed"; the caller decides set membership so real mutations keep "completed".
+ */
+export function actionResultEventHeadline(command: string, tick: unknown, data?: Record<string, unknown>): string {
+  const tickLabel = tick ?? '?';
+  switch (command) {
+    case 'player_died':
+      return `You died (tick ${tickLabel})`;
+    case 'ship_captured': {
+      const result = data && isRecord(data.result) ? data.result : undefined;
+      const dockLine = formatDockStateLine(result?.location);
+      const resultMessage = result ? safeScalar(result.message) : undefined;
+      if (dockLine === undefined && resultMessage !== undefined) {
+        const messageLine = firstLine(String(resultMessage));
+        if (messageLine) return `${messageLine} (tick ${tickLabel})`;
+      }
+      return `You were captured (tick ${tickLabel})`;
+    }
+    case 'emergency_warp_stabilizer':
+      return `Emergency Warp Stabilizer fired (tick ${tickLabel})`;
+    case 'passenger_stranded':
+      return `Carrier lost — you were stranded (tick ${tickLabel})`;
+    case 'fleet_kicked':
+      return `You were kicked from the fleet (tick ${tickLabel})`;
+    case 'fleet_disbanded':
+      return `Fleet disbanded (tick ${tickLabel})`;
+    case 'mobile_capital_transit':
+      return `Mobile Capital jumped (tick ${tickLabel})`;
+    case 'fleet_dock': {
+      const identity = data ? fleetDockIdentity(data) : undefined;
+      return identity ? `Fleet docked at ${identity} (tick ${tickLabel})` : `Fleet docked (tick ${tickLabel})`;
+    }
+    default:
+      return `${command} (tick ${tickLabel})`;
+  }
+}
+
 function previewActionResult(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  const command = safeScalar(data.command);
+  const command = normalizeActionResultCommand(data.command);
   const tick = safeScalar(data.tick);
-  const headline = truncate(`${command ?? 'action'} completed (tick ${tick ?? '?'})`, options);
+  const result = isRecord(data.result) ? data.result : undefined;
+
+  // Two levels: set membership first, then headline. A single switch(command) default
+  // would strip "completed" from real mutations that are not in the set.
+  let headline =
+    command !== undefined && NON_COMPLETION_ACTION_RESULT_COMMANDS.has(command)
+      ? actionResultEventHeadline(command, tick, data)
+      : `${command ?? 'action'} completed (tick ${tick ?? '?'})`;
 
   const details: string[] = [];
-  const result = isRecord(data.result) ? data.result : undefined;
   if (result) {
     const resultMessage = safeScalar(result.message);
     if (resultMessage !== undefined) {
-      details.push(truncate(firstLine(String(resultMessage)), options));
+      const messageLine = firstLine(String(resultMessage));
+      if (!messageLine || !headline.startsWith(messageLine)) {
+        details.push(truncate(messageLine, options));
+      }
     } else {
       const nested = isRecord(result.details) ? result.details : undefined;
       const summary = nested ? formatActionResultDetails(nested) : undefined;
@@ -509,10 +585,16 @@ function previewActionResult(
   if (data.auto_docked === true) details.push('auto-docked');
   if (data.auto_undocked === true) details.push('auto-undocked');
 
-  const loc = result && isRecord(result.location) ? result.location : undefined;
-  const dockLine = formatDockStateLine(loc);
-  if (dockLine) details.push(truncate(dockLine, options));
+  const dockLine = formatDockStateLine(result?.location);
+  if (dockLine && !(command === 'fleet_dock' && fleetDockIdentity(data))) {
+    details.push(truncate(dockLine, options));
+  }
 
+  if (command !== undefined && ACTION_RESULT_STATUS_HINT_COMMANDS.has(command)) {
+    details.push('Use: get_status');
+  }
+
+  headline = truncate(headline, options);
   const omittedHint = omittedBulkyHint(result ?? data);
   return { tag: 'ACTION RESULT', headline, details, ...(omittedHint ? { omittedHint } : {}) };
 }

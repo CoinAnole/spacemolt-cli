@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
 import { getNotificationsFixture, getNotificationsObservationFixture } from './display/notifications.fixtures';
 import { truncateCell } from './display/tables';
+import { UNSOLICITED_STATE_EVENTS } from './notification-events';
 import {
+  actionResultEventHeadline,
   formatActionResultDetails,
   formatInventoryPreview,
   formatNotificationPreview,
@@ -936,6 +938,215 @@ describe('notification formatting', () => {
     expect(preview.details).not.toContain('auto-docked');
     expect(preview.details).not.toContain('auto-undocked');
     expect(tableMessageFromPreview(preview)).toBe('jump completed (tick 99); Arrived in Alfirk.');
+  });
+
+  describe('action_result unsolicited event commands', () => {
+    const EVENT_HEADLINES: Record<string, string> = {
+      player_died: 'You died (tick 1523)',
+      ship_captured: 'You were captured (tick 1523)',
+      emergency_warp_stabilizer: 'Emergency Warp Stabilizer fired (tick 1523)',
+      passenger_stranded: 'Carrier lost — you were stranded (tick 1523)',
+      fleet_kicked: 'You were kicked from the fleet (tick 1523)',
+      fleet_disbanded: 'Fleet disbanded (tick 1523)',
+      mobile_capital_transit: 'Mobile Capital jumped (tick 1523)',
+    };
+    const STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
+
+    function actionResultNote(
+      command: unknown,
+      extras: Record<string, unknown> = {},
+    ): {
+      type: 'action_result';
+      msg_type: 'action_result';
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'action_result',
+        msg_type: 'action_result',
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data: { command, tick: 1523, ...extras },
+      };
+    }
+
+    const bulkyLocation = {
+      docked_at: 'haven_exchange',
+      poi_name: 'Haven Exchange',
+      nearby_players: [{ username: 'ILC Knurl' }],
+      nearby_player_count: 88,
+    };
+    const bulkyShip = { id: 'ship-1', name: 'Dust Devil', hull: 130 };
+
+    test.each([...UNSOLICITED_STATE_EVENTS])('command %s never says completed and includes tick', (command) => {
+      const notification = actionResultNote(command);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const preview = formatNotificationPreview(notification);
+      const expectedHeadline = EVENT_HEADLINES[command];
+      if (expectedHeadline === undefined) throw new Error(`missing headline for ${command}`);
+
+      expect(preview.headline).toBe(expectedHeadline);
+      expect(preview.headline).toContain('tick');
+      expect(preview.headline).not.toContain('completed');
+      expect(output).toContain('[ACTION RESULT]');
+      expect(output).toContain(expectedHeadline);
+      expect(output).not.toContain('completed');
+      if (STATUS_HINT_COMMANDS.has(command)) {
+        expect(preview.details).toContain('Use: get_status');
+        expect(output).toContain('Use: get_status');
+      } else {
+        expect(preview.details).not.toContain('Use: get_status');
+      }
+    });
+
+    test('mine and scan still say completed', () => {
+      for (const command of ['mine', 'scan'] as const) {
+        const preview = formatNotificationPreview(actionResultNote(command));
+        expect(preview.headline).toBe(`${command} completed (tick 1523)`);
+        expect(preview.headline).toContain('completed');
+      }
+    });
+
+    test('mixed-case Player_Died matches after normalize and does not say completed', () => {
+      const preview = formatNotificationPreview(actionResultNote('Player_Died'));
+      expect(preview.headline).toBe('You died (tick 1523)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.headline).toContain('tick');
+    });
+
+    test('inner default omits completed; outer default keeps it for unknown commands', () => {
+      expect(actionResultEventHeadline('future_event', 7)).toBe('future_event (tick 7)');
+      const preview = formatNotificationPreview(actionResultNote('future_event', { tick: 7 }));
+      expect(preview.headline).toBe('future_event completed (tick 7)');
+      expect(preview.headline).toContain('completed');
+    });
+
+    test('missing command still says action completed', () => {
+      const preview = formatNotificationPreview(actionResultNote(undefined));
+      expect(preview.headline).toBe('action completed (tick 1523)');
+    });
+
+    test('fleet_dock identity from result.location is in the headline, not a Docked at detail', () => {
+      const notification = actionResultNote('fleet_dock', {
+        result: { location: { docked_at: 'haven_exchange', poi_name: 'Haven Exchange' } },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const tableMessage = tableMessageFromPreview(preview);
+
+      expect(preview.headline).toContain('Fleet docked at Haven Exchange (haven_exchange)');
+      expect(preview.headline).toContain('(tick');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.details.join('\n')).not.toContain('Docked at:');
+      expect(output).not.toContain('Docked at:');
+      expect(tableMessage).toContain('Fleet docked at Haven Exchange (haven_exchange)');
+      expect(tableMessage).not.toContain('Docked at:');
+      expect(tableMessage).not.toContain('completed');
+    });
+
+    test('fleet_dock identity from data base_name/base_id', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('fleet_dock', { base_name: 'Haven Exchange', base_id: 'haven_exchange' }),
+      );
+      expect(preview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange) (tick 1523)');
+      expect(preview.details.join('\n')).not.toContain('Docked at:');
+    });
+
+    test('fleet_dock identity from result top-level scalars', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('fleet_dock', { result: { base_name: 'Haven Exchange', base_id: 'haven_exchange' } }),
+      );
+      expect(preview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange) (tick 1523)');
+    });
+
+    test('fleet_dock without name or id is Fleet docked (tick N)', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('fleet_dock', { result: { ship: { name: 'Dust Devil', hull: 130 } } }),
+      );
+      expect(preview.headline).toBe('Fleet docked (tick 1523)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.headline).not.toContain('Dust Devil');
+      expect(preview.details.join('\n')).not.toContain('Docked at:');
+    });
+
+    test('player_died with docked_at includes Docked at and omits bulky dumps', () => {
+      const notification = actionResultNote('player_died', {
+        result: {
+          ship: bulkyShip,
+          location: bulkyLocation,
+          nearby_players: [{ username: 'Cody' }],
+        },
+      });
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const preview = formatNotificationPreview(notification);
+
+      expect(preview.headline).toBe('You died (tick 1523)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.details).toContain('Docked at: Haven Exchange (haven_exchange)');
+      expect(output).toContain('Docked at: Haven Exchange (haven_exchange)');
+      expect(output).not.toContain('nearby_players');
+      expect(output).not.toContain('ILC Knurl');
+      expect(output).not.toContain('Dust Devil');
+      expect(output).not.toMatch(/"hull"\s*:/);
+      expectNoNestedJsonDump(output);
+      expect(preview.omittedHint).toBeDefined();
+    });
+
+    test('ship_captured action_result does not include claim_prize', () => {
+      const notification = actionResultNote('ship_captured', {
+        result: { location: bulkyLocation, ship: bulkyShip },
+      });
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const preview = formatNotificationPreview(notification);
+
+      expect(preview.headline).toBe('You were captured (tick 1523)');
+      expect(output).not.toContain('Use: get_nearby then claim_prize');
+      expect(preview.details.join('\n')).not.toContain('claim_prize');
+      expect(preview.details).toContain('Docked at: Haven Exchange (haven_exchange)');
+    });
+
+    test('ship_captured without dockable location uses result.message as headline', () => {
+      const notification = actionResultNote('ship_captured', {
+        result: { message: 'Boarding complete.' },
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Boarding complete. (tick 1523)');
+      expect(preview.headline).toContain('tick');
+      expect(preview.headline).not.toContain('You were captured');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.details).not.toContain('Boarding complete.');
+    });
+
+    test('ship_captured with dock line keeps default headline and still shows the message as a detail', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('ship_captured', {
+          result: { message: 'Boarding complete.', location: bulkyLocation },
+        }),
+      );
+      expect(preview.headline).toBe('You were captured (tick 1523)');
+      expect(preview.details[0]).toBe('Boarding complete.');
+      expect(preview.details).toContain('Docked at: Haven Exchange (haven_exchange)');
+    });
+
+    test.each([
+      'passenger_stranded',
+      'fleet_kicked',
+      'fleet_disbanded',
+    ] as const)('%s includes Use: get_status even when a dock line is present', (command) => {
+      const preview = formatNotificationPreview(actionResultNote(command, { result: { location: bulkyLocation } }));
+      expect(preview.details).toContain('Docked at: Haven Exchange (haven_exchange)');
+      expect(preview.details).toContain('Use: get_status');
+      expect(preview.headline).not.toContain('completed');
+    });
+
+    test('missing tick still prints tick ? on event headlines', () => {
+      const preview = formatNotificationPreview({
+        type: 'action_result',
+        msg_type: 'action_result',
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data: { command: 'player_died' },
+      });
+      expect(preview.headline).toBe('You died (tick ?)');
+    });
   });
 
   describe('action_error details preview', () => {

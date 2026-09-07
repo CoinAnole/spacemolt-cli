@@ -1,3 +1,4 @@
+import { normalizeActionResultCommand, UNSOLICITED_STATE_EVENTS } from './notification-events.ts';
 import { isRecord } from './response.ts';
 import type { APIResponse } from './types.ts';
 
@@ -114,8 +115,7 @@ const TRAVEL_SYSTEM_ACTIONS = new Set(['jump', 'travel', 'warp', 'dock', 'undock
 
 function actionResultCommand(notification: Notification): string | undefined {
   const data = isRecord(notification.data) ? notification.data : undefined;
-  const command = data?.command;
-  return typeof command === 'string' && command.trim() ? command.trim().toLowerCase() : undefined;
+  return normalizeActionResultCommand(data?.command);
 }
 
 function isRoutineActionResult(notification: Notification): boolean {
@@ -124,7 +124,10 @@ function isRoutineActionResult(notification: Notification): boolean {
   if (msgType !== 'action_result' && notification.type !== 'action_result') return false;
   const command = actionResultCommand(notification);
   // Missing or non-allowlisted command → fail open (keep individual).
-  if (!command || !ROUTINE_ACTION_RESULT_COMMANDS.has(command)) return false;
+  if (!command) return false;
+  // Unsolicited event names are never travel noise, even if they appear in the allowlist.
+  if (UNSOLICITED_STATE_EVENTS.has(command)) return false;
+  if (!ROUTINE_ACTION_RESULT_COMMANDS.has(command)) return false;
   return true;
 }
 
