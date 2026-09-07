@@ -47,8 +47,8 @@ function formatXpGained(value: unknown): string | undefined {
 function emitDepositRemaining(r: Record<string, unknown>): void {
   const remainingNum = finiteNumber(r.remaining);
   const display = typeof r.remaining_display === 'string' ? r.remaining_display : '';
-  // Unlimited/depleted skip the depletion suffix so we never print -1/N.
   if (remainingNum === -1 || display === 'unlimited') {
+    // remaining === -1 must not fall through to remaining/max_remaining.
     emitLine('Deposit: unlimited');
     return;
   }

@@ -8,7 +8,7 @@ export const mineYieldDetails = {
   remaining: 120,
   remaining_display: '120 units',
   max_remaining: 300,
-  depletion_percent: 60, // 40.00% remaining via formatDepletionRemainingSuffix
+  depletion_percent: 60,
   xp_gained: { mining: 8 },
 };
 
@@ -26,7 +26,6 @@ export const mineYieldFixture = {
     system_name: 'Sol',
     poi_id: 'sol_asteroid_belt', // must not equal resource_id
     poi_name: 'Sol Asteroid Belt',
-    // no docked_at
   },
   skills: {
     mining: { name: 'Mining', category: 'Industry', level: 21, max_level: 100, xp: 18008 },
