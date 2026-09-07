@@ -2705,6 +2705,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Faction Intel ===');
     expect(stdout).toContain('Sol');
     expect(stdout).toContain('Sol Gas Cloud');
+    expect(stdout).toContain('[deep core]');
     expect(stdout).toContain('hydrogen_gas');
     expect(stdout).toContain('argon_gas');
     expect(stdout).toContain('richness 4');
@@ -7426,7 +7427,7 @@ describe('structuredContent formatters', () => {
       Empire: solarian
       Police: 3
       Intel tick: 900685 by Marlowe, age 5 ticks
-        Sol Gas Cloud (gas_cloud) sol_gas_cloud
+        Sol Gas Cloud (gas_cloud) [deep core] sol_gas_cloud
           - hydrogen_gas: richness 4, 500/1000 (50.00% remaining)
           - argon_gas: richness 2, 200/500 (40.00% remaining)"
       ,

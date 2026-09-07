@@ -14,6 +14,7 @@ import {
   emitStationLifeSupport,
   emitStationPower,
   emitStationRepairs,
+  formatDeepCoreLine,
   formatter,
   isRecord,
   printCompactTable,
@@ -251,6 +252,9 @@ function emitPoi(poi: Record<string, unknown>, factionIntel: unknown): void {
     emitLine(`Base: ${baseName ?? 'yes'}`);
   }
 
+  const headerDeepCoreLine = formatDeepCoreLine(summary?.deep_core ?? detailPoi?.deep_core);
+  if (headerDeepCoreLine) emitLine(headerDeepCoreLine);
+
   const description = text(detailPoi?.description) ?? text(summary?.description) ?? text(poi.description);
   if (description) emitLine(`\n${description}`);
 
@@ -306,6 +310,10 @@ function emitPoi(poi: Record<string, unknown>, factionIntel: unknown): void {
     if (factionIntel.class) emitLine(`Class: ${factionIntel.class}`);
     if (factionIntel.base_name || factionIntel.base_id) {
       emitLine(`Base: ${text(factionIntel.base_name) ?? text(factionIntel.base_id)}`);
+    }
+    if (!headerDeepCoreLine) {
+      const intelDeepCoreLine = formatDeepCoreLine(factionIntel.deep_core);
+      if (intelDeepCoreLine) emitLine(intelDeepCoreLine);
     }
     if (typeof factionIntel.description === 'string' && factionIntel.description.trim()) {
       emitLine(factionIntel.description.trim());
