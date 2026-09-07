@@ -3442,7 +3442,7 @@ describe('notification formatting', () => {
       expect(waveArrivedPreview.tag).toBe('ARENA');
       expect(waveArrivedPreview.severity).toBeUndefined();
       expect(waveArrivedPreview.headline).toBe('Wave arrived: Second Line');
-      expect(waveArrivedPreview.details[0]).toBe(twoShipDigest);
+      expect(waveArrivedPreview.details).toEqual([twoShipDigest, 'Second Line has entered the ring.']);
       expect(
         waveArrivedPreview.details.filter((line) => line.includes('Ring Runner') || line.includes('Ring Cleaver')),
       ).toHaveLength(1);
@@ -3543,12 +3543,14 @@ describe('notification formatting', () => {
             { name: 'Omitted', ship_class: 'skiff' },
             { name: 'String True', ship_class: 'skiff', flees: 'true' },
             { name: 'Numeric', ship_class: 'skiff', flees: 1 },
+            { name: 'Runner', flees: true },
           ],
         },
       });
       expect(fleesGated.details[0]).toBe(
-        'Runner (skiff, flees) · False Flag (skiff) · Omitted (skiff) · String True (skiff) · Numeric (skiff)',
+        'Runner (skiff, flees) · False Flag (skiff) · Omitted (skiff) · String True (skiff) · Numeric (skiff) · Runner (flees)',
       );
+      expect(fleesGated.details[0]).toContain('Runner (flees)');
       expect(fleesGated.details[0]).not.toContain('False Flag (skiff, flees)');
       expect(fleesGated.details[0]).not.toContain('Omitted (skiff, flees)');
       expect(fleesGated.details[0]).not.toContain('String True (skiff, flees)');
@@ -3585,6 +3587,13 @@ describe('notification formatting', () => {
       });
       expect(wonSurvive.headline).toBe('Objective won (survive ticks)');
       expect(wonSurvive.details).toEqual([]);
+
+      const wonWithMessage = formatNotificationPreview({
+        msg_type: 'arena_objective',
+        data: { event: 'objective_won', objective: 'survive_ticks', message: 'The ring held.' },
+      });
+      expect(wonWithMessage.headline).toBe('Objective won (survive ticks)');
+      expect(wonWithMessage.details).toEqual(['The ring held.']);
 
       const lostTime = formatNotificationPreview({
         msg_type: 'arena_objective',
