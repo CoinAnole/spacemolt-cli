@@ -1,0 +1,26 @@
+
+count: 4
+current_tick: 902150
+remaining: 0
+timestamp: 1779565500
+notifications:
+  - id: "notif-arena-objective-wave-1"
+    type: system
+    msg_type: arena_objective
+    timestamp: 2026-05-23T19:25:00.000Z
+    data: {event: wave_arrived, battle_id: "battle-1", challenge_id: first_blood, wave_name: "Second Line", message: "Second Line has entered the ring.", enemies: [{npc_id: "npc-1", name: "Ring Runner", ship_class: ring_runner, flees: true}, {npc_id: "npc-2", name: "Ring Cleaver 1", ship_class: ring_cleaver, flees: false}]}
+  - id: "notif-arena-objective-won-1"
+    type: system
+    msg_type: arena_objective
+    timestamp: 2026-05-23T19:25:05.000Z
+    data: {event: objective_won, battle_id: "battle-2", challenge_id: hold_the_ring, objective: survive_ticks, message: "The ring held."}
+  - id: "notif-arena-objective-lost-time-1"
+    type: system
+    msg_type: arena_objective
+    timestamp: 2026-05-23T19:25:10.000Z
+    data: {event: objective_lost, battle_id: "battle-3", challenge_id: timed_assault, objective: time_limit, message: "Time ran out."}
+  - id: "notif-arena-objective-lost-escape-1"
+    type: system
+    msg_type: arena_objective
+    timestamp: 2026-05-23T19:25:15.000Z
+    data: {event: objective_lost, battle_id: "battle-4", challenge_id: no_escape, objective: enemy_escaped, message: "A runner escaped the ring."}
