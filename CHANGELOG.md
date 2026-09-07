@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Faction mission board (gameserver 0.596.1)
+
+- Human `faction list_missions` prints a dedicated table with title, template ID,
+  type, objectives (including bounty `target_player`, falling back to
+  `target_player_id`), difficulty, credit reward, active instances, and poster.
+  Board capacity prints as `posted N/M`. JSON/YAML/jq field names are unchanged.
+
 ### Mine formatter
 
 - Human `mine` prints the resource name and id, quantity, remaining stock, depletion,

@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.596.0",
+  "generatedAtGameserver": "v0.596.2",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].description",

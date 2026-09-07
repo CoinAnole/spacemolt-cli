@@ -69,6 +69,10 @@ function summarizeObjective(objective: unknown): string {
   return parts.join(' ');
 }
 
+function objectivesSummary(objectives: unknown): string {
+  return Array.isArray(objectives) ? objectives.map(summarizeObjective).filter(Boolean).join('; ') : '';
+}
+
 function summarizeRewards(rewards: unknown): string {
   if (!isRecord(rewards)) return '';
   const parts: string[] = [];
@@ -117,6 +121,12 @@ function formatCount(value: unknown): string | undefined {
   const number = finiteNumber(value);
   if (number === undefined) return undefined;
   return number.toLocaleString();
+}
+
+function formatFactionRewardCredits(value: unknown): string | undefined {
+  const amount = finiteNumber(value);
+  if (amount === undefined) return undefined;
+  return `${formatCount(amount) ?? amount} cr`;
 }
 
 function countFromFieldOrArray(
@@ -1031,14 +1041,50 @@ export const genericFormatters = [
 
   formatter(
     (r) => {
+      if (!Array.isArray(r.missions)) return false;
+      if (r.missions.length > 0 && !r.missions.every(isRecord)) return false;
+      const missions = r.missions.filter(isRecord);
+
+      const rows = missions.map((mission) => ({
+        ...mission,
+        objectives_summary: objectivesSummary(mission.objectives),
+        reward_credits_display: formatFactionRewardCredits(mission.reward_credits),
+      }));
+
+      const columns: Array<[string, string[]]> = [
+        ['Title', ['title']],
+        ['ID', ['template_id']],
+        ['Type', ['type']],
+        ['Objectives', ['objectives_summary']],
+        ['Difficulty', ['difficulty']],
+        ['Reward', ['reward_credits_display', 'reward_credits']],
+        ['Active', ['active_instances']],
+      ];
+      insertOptionalColumn(columns, rows, 'Posted by', ['posted_by'], 'Active');
+
+      printCompactTable('Faction Missions', rows, columns, { maxCellWidth: 64 });
+
+      const count = finiteNumber(r.count);
+      const maxPosted = finiteNumber(r.max_posted);
+      if (count !== undefined && maxPosted !== undefined) {
+        emitLine(`${c.dim}posted ${count}/${maxPosted}${c.reset}`);
+      }
+      if (typeof r.message === 'string' && r.message) {
+        emitLine(`${c.dim}${r.message}${c.reset}`);
+      }
+      return true;
+    },
+    { commands: ['faction_list_missions'] },
+  ),
+
+  formatter(
+    (r) => {
       const missions = activeMissionRows(r);
       if (!missions) return false;
 
       const rows = missions.map((mission) => ({
         ...mission,
-        objectives_summary: Array.isArray(mission.objectives)
-          ? mission.objectives.map(summarizeObjective).filter(Boolean).join('; ')
-          : '',
+        objectives_summary: objectivesSummary(mission.objectives),
         rewards_summary: summarizeRewards(mission.rewards),
       }));
 
@@ -1227,9 +1273,7 @@ export const genericFormatters = [
           return {
             ...row,
             rewards_summary: summarizeRewards(row.rewards),
-            objectives_summary: Array.isArray(row.objectives)
-              ? row.objectives.map(summarizeObjective).filter(Boolean).join('; ')
-              : '',
+            objectives_summary: objectivesSummary(row.objectives),
           };
         }
         return row;
