@@ -13,6 +13,9 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   those fields are present.
 - Human `get_location` prints `location.resources` as bullets with the same
   workability suffix. Remaining is `unlimited`, `depleted`, or the integer.
+- Human `get_status` / `get_state` print `location.resources` as indented
+  bullets under Location, with the same workability suffix. Omitted or empty
+  `resources` stay silent. `get_status --summary` is unchanged.
 - JSON/YAML/jq field names are unchanged.
 
 ### Arena error suggestions (gameserver 0.590.0)
