@@ -1,5 +1,6 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
 import {
+  emitCatalogItemDetail,
   emitCatalogShipDetail,
   formatShipAvailability,
   joinStringIds,
@@ -239,6 +240,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['ID', ['id', 'item_id']],
     ['Category', ['category', 'type']],
     ['Rarity', ['rarity']],
+    ['Mining group', ['mining_group']],
     ['Value', ['base_value', 'price_each', 'price']],
     ['Size', ['size']],
     ['Compression', ['compression']],
@@ -1286,6 +1288,15 @@ export const genericFormatters = [
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
         maxCellWidth: key === 'items' ? 80 : undefined,
       });
+      const onlyItem = key === 'items' && recordRows.length === 1 ? recordRows[0] : undefined;
+      if (
+        onlyItem &&
+        commandNameEquals(command, 'catalog') &&
+        r.type === 'items' &&
+        typeof onlyItem.slot !== 'string'
+      ) {
+        emitCatalogItemDetail(onlyItem, r);
+      }
       printMetadata(r);
       printCatalogTruncationWarning(command, r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);

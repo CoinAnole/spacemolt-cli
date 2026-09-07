@@ -63,6 +63,31 @@ export const catalogItemsFixture = {
   type: 'items',
 };
 
+export const catalogEnergyCrystalItem = {
+  base_value: 120,
+  category: 'ore',
+  compression: 'ore',
+  description: 'A charged crystal used in high-energy systems.',
+  extracted_by: 'mining',
+  id: 'energy_crystal',
+  mining_group: 'crystal',
+  name: 'Energy Crystal',
+  rarity: 'rare',
+  size: 1,
+  stackable: true,
+  tradeable: true,
+};
+
+export const catalogItemsMiningGroupFixture = {
+  items: [catalogEnergyCrystalItem],
+  message: 'Items: showing 1 of 1',
+  page: 1,
+  page_size: 20,
+  total: 1,
+  total_pages: 1,
+  type: 'items',
+};
+
 export const catalogItemsModulesFixture = {
   items: [
     {
@@ -1077,6 +1102,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   recycle: { command: 'recycle', fixture: recycleQuoteFixture },
   recycle_retarget: { command: 'recycle', fixture: recycleRetargetFixture },
   catalog_items: { command: 'catalog', fixture: catalogItemsFixture },
+  catalog_items_mining_group: { command: 'catalog', fixture: catalogItemsMiningGroupFixture },
   catalog_items_modules: { command: 'catalog', fixture: catalogItemsModulesFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
