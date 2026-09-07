@@ -128,6 +128,20 @@ function emitUnknownSignatureHint(...sources: unknown[]): void {
   emitLine(`${c.yellow}Unknown cloaked signature detected.${c.reset} Run: scan`);
 }
 
+function emitLocationResources(resources: unknown, options: { indent?: string; leadingNewline?: boolean } = {}): void {
+  const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
+  if (!rows.length) return; // empty array is silent
+  const indent = options.indent ?? '';
+  const heading = `${indent}${c.bright}Resources:${c.reset}`;
+  emitLine(options.leadingNewline === false ? heading : `\n${heading}`);
+  for (const res of rows) {
+    const name = res.item_name || res.item_id || res.name || res.resource_id;
+    // remaining -1/0 map to unlimited/depleted
+    const remaining = res.remaining === -1 ? 'unlimited' : res.remaining === 0 ? 'depleted' : String(res.remaining);
+    emitLine(`${indent}  - ${name}: richness ${res.richness}, ${remaining}${formatResourceWorkabilitySuffix(res)}`);
+  }
+}
+
 function textFromRecord(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
   if (!record) return undefined;
   for (const key of keys) {
@@ -788,7 +802,9 @@ export const statusFormatters = [
       emitLine(`  POI: ${poi?.name || p.current_poi}`);
       emitLine(`  Docked: ${p.docked_at_base ? `Yes (${p.docked_at_base})` : 'No'}`);
       if (p.is_cloaked) emitLine(`  ${c.cyan}[CLOAKED]${c.reset}`);
-      emitUnknownSignatureHint(r, r.location, poi);
+      const location = isRecord(r.location) ? r.location : undefined;
+      emitLocationResources(location?.resources, { indent: '  ', leadingNewline: false });
+      emitUnknownSignatureHint(r, location, poi);
 
       if (p.towing_wreck_id) {
         emitLine(`\n${c.bright}Towing wreck:${c.reset} ${p.towing_wreck_id}`);
@@ -841,7 +857,6 @@ export const statusFormatters = [
         }
         if (nearby.length > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${nearby.length - NEARBY_TABLE_LIMIT} more`);
       }
-      const location = isRecord(r.location) ? r.location : undefined;
       emitNearbyPrizes({
         prizes: location?.nearby_prizes ?? r.nearby_prizes,
         prizeCount: location?.nearby_prize_count ?? r.nearby_prize_count,
@@ -1235,16 +1250,7 @@ export const statusFormatters = [
       emitLines(transitLines);
       emitUnknownSignatureHint(loc);
       if (isRecord(r.ship)) emitShipCombatEffects(r.ship);
-      const resources = Array.isArray(loc.resources) ? loc.resources.filter(isRecord) : [];
-      if (resources.length) {
-        emitLine(`\n${c.bright}Resources:${c.reset}`);
-        for (const res of resources) {
-          const name = res.item_name || res.item_id || res.name || res.resource_id;
-          const remaining =
-            res.remaining === -1 ? 'unlimited' : res.remaining === 0 ? 'depleted' : String(res.remaining);
-          emitLine(`  - ${name}: richness ${res.richness}, ${remaining}${formatResourceWorkabilitySuffix(res)}`);
-        }
-      }
+      emitLocationResources(loc.resources);
       if (nearbyPlayerCount > 0) {
         emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
         for (const player of nearbyPlayers.slice(0, NEARBY_TABLE_LIMIT)) {

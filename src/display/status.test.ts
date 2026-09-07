@@ -10,6 +10,7 @@ import {
   getMapSystemFixture,
   getStatusDetainedFixture,
   getStatusFixture,
+  getStatusResourcesFixture,
   nearbyArenaFixture,
   nearbyBossFixture,
   nearbyFixture,
@@ -1403,6 +1404,7 @@ test('get_status prints personnel after Power and prize recoveries after nearby 
     '\n',
   );
 
+  expect(stdout).not.toContain('Resources:');
   expect(stdout).toContain('  Crew: 4/6 fit (min 3)');
   expect(stdout).toContain('  Marines: 2/4 fit');
   expect(stdout).toContain('  Efficiency: 67%');
@@ -1424,6 +1426,146 @@ test('get_status prints personnel after Power and prize recoveries after nearby 
   const recoveriesIdx = stdout.indexOf('Prize recoveries');
   expect(crewIdx).toBeGreaterThan(powerIdx);
   expect(recoveriesIdx).toBeGreaterThan(nearbyIdx);
+});
+
+test('get_status prints location.resources as indented bullets under Location', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    structuredClone(getStatusResourcesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Location:');
+  expect(stdout).toContain('  Resources:');
+  expect(stdout).toContain('    - Iron Ore: richness 3, 750, supports power 12');
+  expect(stdout).toContain('    - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse');
+});
+
+test('get_status inserts resources after cloak and before unknown-signature and towing', () => {
+  const fixture = structuredClone(getStatusResourcesFixture) as {
+    player: Record<string, unknown>;
+    location: Record<string, unknown>;
+  };
+  fixture.player.is_cloaked = true;
+  fixture.player.towing_wreck_id = 'wreck-1';
+  fixture.location.unknown_signature = true;
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+
+  const dockedIdx = stdout.indexOf('Docked:');
+  const cloakedIdx = stdout.indexOf('[CLOAKED]');
+  const resourcesIdx = stdout.indexOf('Resources:');
+  const unknownIdx = stdout.indexOf('Unknown cloaked signature');
+  const towingIdx = stdout.indexOf('Towing wreck');
+  const shipIdx = stdout.indexOf('Ship:');
+  const nearbyIdx = stdout.indexOf('Nearby Players');
+  const prizesIdx = stdout.indexOf('Nearby Prizes');
+  expect(cloakedIdx).toBeGreaterThan(dockedIdx);
+  expect(resourcesIdx).toBeGreaterThan(cloakedIdx);
+  expect(unknownIdx).toBeGreaterThan(resourcesIdx);
+  expect(towingIdx).toBeGreaterThan(unknownIdx);
+  expect(shipIdx).toBeGreaterThan(towingIdx);
+  expect(nearbyIdx).toBeGreaterThan(shipIdx);
+  expect(prizesIdx).toBeGreaterThan(nearbyIdx);
+});
+
+test('get_state prints location.resources with the status formatter', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStatusResourcesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout).toContain('    - Iron Ore: richness 3, 750, supports power 12');
+  expect(stdout).toContain('    - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_status empty resources array prints no Resources heading', () => {
+  const fixture = structuredClone(getStatusResourcesFixture) as {
+    location: { resources: unknown[] };
+  };
+  fixture.location.resources = [];
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Location:');
+  expect(stdout).not.toContain('Resources:');
+});
+
+test('get_status remaining -1 prints unlimited', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    {
+      player: { username: 'Marlowe', empire: 'Terran', credits: 100 },
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        resources: [{ item_id: 'ore_iron', item_name: 'Iron Ore', richness: 3, remaining: -1 }],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('- Iron Ore: richness 3, unlimited');
+  expect(stdout).not.toContain('-1');
+});
+
+test('get_status remaining 0 prints depleted without strikethrough', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    {
+      player: { username: 'Marlowe', empire: 'Terran', credits: 100 },
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        resources: [{ item_id: 'ore_iron', item_name: 'Iron Ore', richness: 3, remaining: 0 }],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('- Iron Ore: richness 3, depleted');
+  expect(stdout).not.toContain('\x1b[9m');
+});
+
+test('get_status too_sparse false does not print too sparse', () => {
+  const fixture = structuredClone(getStatusResourcesFixture) as {
+    location: { resources: Array<Record<string, unknown>> };
+  };
+  fixture.location.resources = [
+    {
+      item_id: 'ore_iron',
+      item_name: 'Iron Ore',
+      richness: 3,
+      remaining: 750,
+      supported_power: 12,
+      too_sparse: false,
+    },
+  ];
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('supports power 12');
+  expect(stdout).not.toContain('too sparse');
+});
+
+test('get_status_summary with location.resources stays compact without resource lines', () => {
+  const stdout = renderStructuredResult(
+    'get_status_summary',
+    structuredClone(getStatusResourcesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Player:');
+  expect(stdout).toContain('Credits:');
+  expect(stdout).toContain('System:');
+  expect(stdout).not.toContain('Resources:');
+  expect(stdout).not.toContain('too sparse');
+  expect(stdout).not.toContain('lock min');
 });
 
 test('get_status indents INCAPACITATED in the personnel block before combat effects', () => {

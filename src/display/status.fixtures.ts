@@ -38,28 +38,30 @@ export const getLocationFixture = {
   },
 };
 
+export const v2LocationWorkabilityResources = [
+  {
+    item_id: 'ore_iron',
+    item_name: 'Iron Ore',
+    richness: 3,
+    remaining: 750,
+    supported_power: 12,
+  },
+  {
+    item_id: 'ore_gold',
+    item_name: 'Gold Ore',
+    richness: 1,
+    remaining: 74,
+    supported_power: 3,
+    lock_minimum_stock: 200,
+    too_sparse: true,
+  },
+];
+
 export const getLocationResourcesFixture = {
   ...getLocationFixture,
   location: {
     ...getLocationFixture.location,
-    resources: [
-      {
-        item_id: 'ore_iron',
-        item_name: 'Iron Ore',
-        richness: 3,
-        remaining: 750,
-        supported_power: 12,
-      },
-      {
-        item_id: 'ore_gold',
-        item_name: 'Gold Ore',
-        richness: 1,
-        remaining: 74,
-        supported_power: 3,
-        lock_minimum_stock: 200,
-        too_sparse: true,
-      },
-    ],
+    resources: [...v2LocationWorkabilityResources],
   },
 };
 
@@ -142,6 +144,14 @@ export const getStatusFixture = {
     nearby_players: [{ username: 'Ibis', ship_class: 'hauler' }],
     nearby_prizes: [intactPrizeInfo],
     nearby_prize_count: 1,
+  },
+};
+
+export const getStatusResourcesFixture = {
+  ...getStatusFixture,
+  location: {
+    ...getStatusFixture.location,
+    resources: [...v2LocationWorkabilityResources],
   },
 };
 
@@ -929,6 +939,8 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     command: 'get_state',
     fixture: getStatusFixture,
   },
+  get_status_resources: { command: 'get_status', fixture: getStatusResourcesFixture },
+  get_state_resources: { command: 'get_state', fixture: getStatusResourcesFixture },
   get_status_detained: { command: 'get_status', fixture: getStatusDetainedFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
   get_player_arena: { command: 'get_player', fixture: playerArenaFixture },
