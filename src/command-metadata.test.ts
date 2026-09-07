@@ -924,18 +924,60 @@ describe('command metadata', () => {
 
   test('catalog commissionable documents faction-licensed hulls at own station', () => {
     const catalog = BUNDLED_COMMAND_REGISTRY.commands.catalog;
-    expect(catalog?.description).toBe('Browse reference data such as ships, items, skills, recipes, and facilities.');
+    expect(catalog?.description).toContain(
+      'Browse reference data such as ships, items, skills, recipes, and facilities.',
+    );
+    expect(catalog?.description).toContain(
+      'Mining lock/selection constants are on catalog_dump (GET /api/catalog.json), not on this paginated command.',
+    );
     expect(catalog?.schema?.commissionable?.type).toBe('boolean');
     expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');
     expect(catalog?.schema?.commissionable?.description).toContain("your faction's own station");
     expect(catalog?.schema?.commissionable?.description).toContain('reputation waived');
     expect(catalog?.schema?.commissionable?.description).toContain('Piloting and yard tier still apply');
     expect(catalog?.example).toContain('commissionable=true');
-    expect(catalog?.seeAlso).toEqual(['get_guide', 'get_commands', 'commission_ship', 'buy_ship_license']);
+    expect(catalog?.seeAlso).toEqual([
+      'catalog_dump',
+      'get_guide',
+      'get_commands',
+      'commission_ship',
+      'buy_ship_license',
+    ]);
 
     const help = captureHelp('catalog');
     expect(help).toContain('licensed with buy_ship_license');
     expect(help).toContain('reputation waived');
+    expect(help).toContain('catalog_dump');
+    expect(help).toContain('(ships|skills|recipes|items|facilities)');
+  });
+
+  test('catalog_dump is a public unauthenticated dump with a client-only refresh flag', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.catalog_dump;
+    expect(config?.route).toEqual({
+      tool: 'public',
+      action: 'catalog-dump',
+      method: 'GET',
+      rootPath: 'api/catalog.json',
+      publicUnauthenticated: true,
+      bareResponse: true,
+    });
+    expect(config?.clientOnlyFields).toEqual(['refresh']);
+    expect(config?.schema?.refresh?.type).toBe('boolean');
+    expect(config?.schema?.refresh?.description).toContain('Not a query parameter');
+    expect(config?.seeAlso).toEqual(['catalog', 'get_guide', 'get_version']);
+    expect(config?.description).toContain('1 request/minute/IP');
+    expect(config?.description).toContain('cached locally for one hour');
+    expect(config?.description).toContain('refresh=true');
+    expect(config?.description).toContain('get_version');
+    expect(config?.description).toContain('get_guide miner');
+    expect(config?.description).toContain('rare_ore_access');
+    expect(config?.description).toContain('deep_core_access');
+
+    const help = captureHelp('catalog_dump');
+    expect(help).toContain('1 request/minute/IP');
+    expect(help).toContain('refresh');
+    expect(help).toContain('Public endpoint');
+    expect(help).not.toContain('type=mining');
   });
 
   test('commission_quote documents bare_hull and source_missing_materials', () => {

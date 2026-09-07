@@ -1042,6 +1042,56 @@ describe('runInvocation option isolation', () => {
     expect(JSON.parse(stdout.join('\n'))).toEqual({ empires: [{ id: 'solarian', sales_tax_bps: 500 }] });
   });
 
+  test('public catalog_dump renders without a configured profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-catalog-dump-'));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const executeCalls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      expect(String(input)).toBe('https://game.spacemolt.com/api/catalog.json');
+      return new Response(
+        JSON.stringify({
+          version: '0.596.2',
+          mining: { precision_k: 20, overkill_ratio: 4, depletion_floor: 0.25, rare_ore_rarity_weight_per_level: 0.1 },
+          ships: [],
+          items: [],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }) as unknown as typeof fetch;
+    const client = {
+      config: {
+        apiBase: 'https://game.spacemolt.com/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: false,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+      async executeCommandConfig(command: string) {
+        executeCalls.push(command);
+        throw new Error('executeCommandConfig should not run for catalog_dump');
+      },
+    } as unknown as SpaceMoltClient;
+
+    try {
+      const exitCode = await runInvocation(
+        ['--structured', 'catalog_dump'],
+        client,
+        fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome }),
+      );
+      expect(exitCode).toBe(0);
+      expect(executeCalls).toEqual([]);
+      expect(stderr).toEqual([]);
+      expect(JSON.parse(stdout.join('\n'))).toMatchObject({ version: '0.596.2' });
+      expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'sessions'))).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test('public player_profile and faction profile render without a configured profile', async () => {
     const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-profiles-'));
     const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];

@@ -939,6 +939,25 @@ export const mobileBaseFixture = {
   system: 'frontier_outpost',
 };
 
+export const catalogDumpFixture = {
+  version: '0.596.2',
+  mining: {
+    precision_k: 20,
+    overkill_ratio: 4,
+    depletion_floor: 0.25,
+    rare_ore_rarity_weight_per_level: 0.1,
+  },
+  ships: [],
+  skills: [],
+  recipes: [],
+  items: [],
+  facilities: [],
+  achievements: [],
+  faction_achievements: [],
+  hidden_achievement_count: 9,
+  hidden_faction_achievement_count: 2,
+};
+
 export const facilityDismantleFixture = {
   action: 'dismantle',
   facility_id: 'fac-1',
@@ -1111,6 +1130,11 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   faction_list_missions: { command: 'faction_list_missions', fixture: factionListMissionsFixture },
   faction_list_missions_empty: { command: 'faction_list_missions', fixture: factionListMissionsEmptyFixture },
   get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },
+  catalog_dump: {
+    command: 'catalog_dump',
+    fixture: catalogDumpFixture,
+    apiRoute: 'GET /api/catalog.json',
+  },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
   get_empire_info: { command: 'get_empire_info', fixture: empireInfoFixture },
   get_tax_estimate: { command: 'get_tax_estimate', fixture: taxEstimateFixture },

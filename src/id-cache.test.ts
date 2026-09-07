@@ -525,6 +525,45 @@ describe('id cache', () => {
     expect(cache.hints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'ore_iron' }));
   });
 
+  test('catalog_dump responses do not change the on-disk ID cache', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-catalog-dump-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    const existing = `${JSON.stringify(
+      {
+        version: 1,
+        hints: [
+          {
+            kind: 'poi',
+            id: 'sol_earth',
+            name: 'Earth',
+            sourceCommand: 'get_system',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`;
+    fs.writeFileSync(cachePath, existing);
+
+    await cacheIdsFromResponse(
+      'catalog_dump',
+      {
+        structuredContent: {
+          version: '0.596.2',
+          items: [{ id: 'energy_crystal', name: 'Energy Crystal' }],
+          ships: [{ id: 'ship-1', name: 'Viper' }],
+          facilities: [{ id: 'fac-1', name: 'Smelter' }],
+        },
+      },
+      sessionPath,
+    );
+
+    expect(fs.readFileSync(cachePath, 'utf-8')).toBe(existing);
+  });
+
   test('cacheIdsFromResponse accepts a deterministic clock for seenAt', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'pilot.json');

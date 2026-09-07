@@ -563,6 +563,23 @@ function isDryRunRoutePreview(result: Record<string, unknown>): boolean {
   );
 }
 
+function emitCatalogDumpMiningLine(key: string, value: unknown): void {
+  const number = finiteNumber(value);
+  if (number === undefined) return;
+  emitLine(`  ${key}: ${number}`);
+}
+
+function emitCatalogDumpArrayCount(label: string, value: unknown): void {
+  if (!Array.isArray(value)) return;
+  emitLine(`  ${label}: ${value.length}`);
+}
+
+function emitCatalogDumpHiddenCount(label: string, value: unknown): void {
+  const number = finiteNumber(value);
+  if (number === undefined) return;
+  emitLine(`  ${label}: ${number}`);
+}
+
 function formatCreditsAmount(value: unknown): string | undefined {
   const number = finiteNumber(value);
   if (number === undefined) return undefined;
@@ -774,6 +791,43 @@ export const genericFormatters = [
       return true;
     },
     { commands: ['get_mobile_base'] },
+  ),
+
+  formatter(
+    (r, command) => {
+      if (!commandNameEquals(command, 'catalog_dump')) return false;
+      if (isDryRunRoutePreview(r)) return false;
+      // Always claim so a dump without mining cannot fall through to the generic item table.
+      emitLine(`\n${c.bright}=== Catalog dump ===${c.reset}`);
+      if (typeof r.version === 'string' && r.version) emitLine(`Version: ${r.version}`);
+
+      if (isRecord(r.mining)) {
+        emitLine('');
+        emitLine('Mining constants');
+        emitCatalogDumpMiningLine('precision_k', r.mining.precision_k);
+        emitCatalogDumpMiningLine('overkill_ratio', r.mining.overkill_ratio);
+        emitCatalogDumpMiningLine('depletion_floor', r.mining.depletion_floor);
+        emitCatalogDumpMiningLine('rare_ore_rarity_weight_per_level', r.mining.rare_ore_rarity_weight_per_level);
+        emitLine('');
+        emitLine('See: spacemolt get_guide miner');
+      } else {
+        emitLine(`${c.dim}run catalog_dump refresh=true${c.reset}`);
+      }
+
+      emitLine('');
+      emitLine('Counts');
+      emitCatalogDumpArrayCount('ships', r.ships);
+      emitCatalogDumpArrayCount('skills', r.skills);
+      emitCatalogDumpArrayCount('recipes', r.recipes);
+      emitCatalogDumpArrayCount('items', r.items);
+      emitCatalogDumpArrayCount('facilities', r.facilities);
+      emitCatalogDumpArrayCount('achievements', r.achievements);
+      emitCatalogDumpArrayCount('faction_achievements', r.faction_achievements);
+      emitCatalogDumpHiddenCount('hidden achievements', r.hidden_achievement_count);
+      emitCatalogDumpHiddenCount('hidden faction achievements', r.hidden_faction_achievement_count);
+      return true;
+    },
+    { commands: ['catalog_dump'] },
   ),
 
   formatter(

@@ -1,7 +1,8 @@
 import { defaultClient, type SpaceMoltClient } from './api.ts';
+import { defaultCatalogDumpCacheDir, loadCatalogDump } from './catalog-dump-cache.ts';
 import { catalogTruncationWarning } from './catalog-pagination.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
-import type { CommandConfig } from './commands.ts';
+import { buildRequestUrl, type CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
@@ -11,6 +12,7 @@ import { hasOutputSearch } from './output-search.ts';
 import { colorsForPlain } from './output-style.ts';
 import { createCommandConfigDryRunResponse, createDryRunResponse, getServerPreviewCommand } from './preview.ts';
 import { getStructuredResult, isRecord } from './response.ts';
+import { FETCH_TIMEOUT_MS } from './runtime.ts';
 import { tryGetSessionPath } from './session.ts';
 import { enrichStorageViewStructuredContent } from './storage-view-display.ts';
 import type { APIResponse, GlobalOptions } from './types.ts';
@@ -39,22 +41,48 @@ export async function runCommand(
   options: GlobalOptions,
   client: SpaceMoltClient = defaultClient,
   commandConfig?: CommandConfig,
+  context?: CliRuntimeContext,
 ): Promise<CommandRunResult> {
   const requestPayload = stripClientOnlyFields(payload, commandConfig);
   const serverPreviewCommand = options.dryRun ? getServerPreviewCommand(command, requestPayload) : null;
-  const response = options.dryRun
-    ? serverPreviewCommand
+  if (options.dryRun) {
+    const response = serverPreviewCommand
       ? await client.execute(serverPreviewCommand, requestPayload)
       : commandConfig
         ? createCommandConfigDryRunResponse(command, commandConfig, requestPayload)
-        : createDryRunResponse(command, requestPayload)
-    : commandConfig && typeof client.executeCommandConfig === 'function'
+        : createDryRunResponse(command, requestPayload);
+    return {
+      command,
+      displayCommand: serverPreviewCommand || command,
+      commandConfig,
+      payload,
+      response,
+    };
+  }
+
+  if (command === 'catalog_dump' && commandConfig?.route) {
+    const response = await loadCatalogDump({
+      url: buildRequestUrl(client.config.apiBase, commandConfig.route),
+      refresh: payload.refresh === true,
+      cacheDir: defaultCatalogDumpCacheDir(context?.env as NodeJS.ProcessEnv | undefined),
+      userAgent: client.config.userAgent,
+      now: context?.clock.now() ?? new Date(),
+      writer: context?.writer,
+      debug: context?.output?.debug ?? options.debug,
+      quiet: context?.output?.quiet ?? options.quiet,
+      timeoutMs: FETCH_TIMEOUT_MS,
+    });
+    return { command, displayCommand: command, commandConfig, payload, response };
+  }
+
+  const response =
+    commandConfig && typeof client.executeCommandConfig === 'function'
       ? await client.executeCommandConfig(command, commandConfig, requestPayload)
       : await client.execute(command, requestPayload);
 
   return {
     command,
-    displayCommand: serverPreviewCommand || command,
+    displayCommand: command,
     commandConfig,
     payload,
     response,

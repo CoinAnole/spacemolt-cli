@@ -1730,6 +1730,29 @@ describe('help output branches', () => {
     expect(output).toContain('cancel_ship_listing <id>');
   });
 
+  test('help catalog points mining constants at catalog_dump', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('catalog', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Mining lock/selection constants are on catalog_dump (GET /api/catalog.json)');
+    expect(output).toContain('commissionable');
+    expect(output).toContain('(ships|skills|recipes|items|facilities)');
+    expect(output).not.toContain('type=mining');
+  });
+
+  test('help catalog_dump documents the public dump cache and mining formulas', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('catalog_dump', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Public endpoint');
+    expect(output).toContain('1 request/minute/IP');
+    expect(output).toContain('cached locally for one hour');
+    expect(output).toContain('refresh=true');
+    expect(output).toContain('get_guide miner');
+    expect(output).toContain('rare_ore_access');
+    expect(output).toContain('deep_core_access');
+  });
+
   test('showFullHelp includes cache sections near command discovery', () => {
     const capture = captureWriter();
 

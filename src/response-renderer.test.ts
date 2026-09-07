@@ -3,9 +3,12 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { SpaceMoltClient } from './api';
+import { ApiCommandHandler } from './api-command-handler';
+import { catalogDumpCachePath } from './catalog-dump-cache';
 import type { CliRuntimeContext } from './cli-context';
 import { BUNDLED_COMMAND_REGISTRY } from './command-registry';
 import { renderResponse, runCommand } from './response-renderer';
+import { DEFAULT_V2_API_BASE } from './runtime';
 import type { APIResponse, GlobalOptions } from './types';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
@@ -2074,5 +2077,71 @@ describe('response renderer', () => {
       { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
       { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 0, size: 1 },
     ]);
+  });
+
+  test('runCommand does not call executeCommandConfig for live catalog_dump', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-catalog-dump-run-'));
+    const fetchCalls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      fetchCalls.push(String(input));
+      return new Response(JSON.stringify({ version: '0.596.2', mining: { precision_k: 20 }, ships: [], items: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json', etag: '"v1"' },
+      });
+    }) as unknown as typeof fetch;
+    const executeCalls: string[] = [];
+    const client = {
+      config: { apiBase: DEFAULT_V2_API_BASE, userAgent: 'test-agent' },
+      async executeCommandConfig(command: string) {
+        executeCalls.push(command);
+        throw new Error('executeCommandConfig should not run for catalog_dump');
+      },
+    } as unknown as SpaceMoltClient;
+    const capture = fakeContext();
+    capture.context.env = { XDG_CONFIG_HOME: configHome };
+
+    try {
+      const result = await runCommand(
+        'catalog_dump',
+        { refresh: true },
+        baseOptions,
+        client,
+        BUNDLED_COMMAND_REGISTRY.commands.catalog_dump,
+        capture.context,
+      );
+      expect(executeCalls).toEqual([]);
+      expect(fetchCalls).toEqual(['https://game.spacemolt.com/api/catalog.json']);
+      expect(result.response.structuredContent?.version).toBe('0.596.2');
+      expect(result.response.structuredContent?.refresh).toBeUndefined();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test('ApiCommandHandler.run forwards runtime context into catalog_dump', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-catalog-dump-handler-'));
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ version: '0.596.2', mining: { precision_k: 20 } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch;
+    const client = {
+      config: { apiBase: DEFAULT_V2_API_BASE },
+      async executeCommandConfig() {
+        throw new Error('executeCommandConfig should not run for catalog_dump');
+      },
+    } as unknown as SpaceMoltClient;
+    const capture = fakeContext();
+    capture.context.env = { XDG_CONFIG_HOME: configHome };
+    const handler = new ApiCommandHandler('catalog_dump');
+
+    try {
+      await handler.run({}, baseOptions, client, capture.context);
+      expect(fs.existsSync(catalogDumpCachePath(path.join(configHome, 'spacemolt-cli')))).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

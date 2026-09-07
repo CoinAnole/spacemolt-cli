@@ -256,6 +256,7 @@ export async function cacheIdsFromResponse(
   sessionPath?: string,
   clock: Clock = DEFAULT_CLOCK,
 ): Promise<void> {
+  if (command === 'catalog_dump') return;
   if (response.error) return;
   const result = getStructuredResult(response) || getObjectResult(response);
   if (!result) return;
