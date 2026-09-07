@@ -74,6 +74,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'MINED':
     case 'RECONNECTED':
     case 'ARRIVAL':
+    case 'TRANSIT':
       return c.green;
     case 'SHIP READY':
     case 'KILL':
@@ -83,10 +84,12 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'BASE DESTROYED':
     case 'WAR':
     case 'DEATH':
+    case 'STRANDED':
     case 'ACTION FAILED':
       return `${c.red}${c.bright}`;
     case 'SYSTEM':
     case 'FACTION':
+    case 'FLEET':
       return c.magenta;
     case 'COMBAT':
     case 'POLICE':
@@ -101,6 +104,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'QUEUE':
     case 'DEPARTURE':
     case 'PRIZE':
+    case 'WARP':
       return c.yellow;
     case 'SCAN':
     case 'VERSION':
