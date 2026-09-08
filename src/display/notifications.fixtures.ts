@@ -833,6 +833,97 @@ export const getNotificationsBattleDronesFixture = {
   ],
 };
 
+/** Personnel treatment/transfer and achievement unlock poll (OpenAPI remainder). */
+export const getNotificationsPersonnelAchievementsFixture = {
+  count: 4,
+  current_tick: 902600,
+  remaining: 0,
+  timestamp: 1779568000,
+  notifications: [
+    {
+      id: 'notif-personnel-treatment-1',
+      type: 'system',
+      msg_type: 'personnel_update',
+      timestamp: '2026-05-23T19:52:00.000Z',
+      data: {
+        action: 'treatment',
+        ship_id: 'ship-1',
+        source_player_id: 'player-marlowe',
+        source_username: 'Marlowe',
+        crew_capacity: 8,
+        marine_capacity: 4,
+        crew_treated: 2,
+        marines_treated: 0,
+        personnel: {
+          version: 3,
+          fit_crew: 6,
+          injured_crew: 0,
+          fit_marines: 4,
+          injured_marines: 0,
+        },
+      },
+    },
+    {
+      id: 'notif-personnel-transfer-1',
+      type: 'system',
+      msg_type: 'personnel_update',
+      timestamp: '2026-05-23T19:52:05.000Z',
+      data: {
+        action: 'transfer',
+        ship_id: 'ship-1',
+        source_player_id: 'player-marlowe',
+        source_username: 'Marlowe',
+        crew_capacity: 8,
+        marine_capacity: 4,
+        fit_crew_transferred: 2,
+        fit_marines_transferred: 0,
+        injured_crew_transferred: 0,
+        injured_marines_transferred: 0,
+        injured_crew_swapped: 0,
+        injured_marines_swapped: 1,
+        personnel: {
+          version: 4,
+          fit_crew: 6,
+          injured_crew: 1,
+          fit_marines: 3,
+          injured_marines: 1,
+        },
+      },
+    },
+    {
+      id: 'notif-achievement-personal-1',
+      type: 'system',
+      msg_type: 'achievement_unlocked',
+      timestamp: '2026-05-23T19:52:10.000Z',
+      data: {
+        achievements: [
+          {
+            id: 'first_blood',
+            name: 'First Blood',
+            category: 'combat',
+            description: 'Destroy another ship.',
+            points: 10,
+            share_url: 'https://spacemolt.com/a/first_blood',
+          },
+        ],
+      },
+    },
+    {
+      id: 'notif-achievement-faction-1',
+      type: 'system',
+      msg_type: 'achievement_unlocked',
+      timestamp: '2026-05-23T19:52:15.000Z',
+      data: {
+        faction: true,
+        achievements: [
+          { id: 'first_blood', name: 'First Blood', category: 'combat', points: 10 },
+          { id: 'deep_pockets', name: 'Deep Pockets', category: 'economy', points: 15 },
+        ],
+      },
+    },
+  ],
+};
+
 /** Mixed 0.597.1 typed-payload poll: cloak, complete_mission, error, fleet, and ok dock. */
 export const getNotificationsTypedPayloadsFixture = {
   count: 6,
@@ -1063,6 +1154,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_battle_drones: {
     command: 'get_notifications',
     fixture: getNotificationsBattleDronesFixture,
+  },
+  get_notifications_personnel_achievements: {
+    command: 'get_notifications',
+    fixture: getNotificationsPersonnelAchievementsFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {

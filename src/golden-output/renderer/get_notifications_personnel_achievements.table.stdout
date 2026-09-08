@@ -1,0 +1,10 @@
+count 4
+
+=== Notifications ===
+
+  Timestamp           | Type                 | Message                                                             
+  --------------------+----------------------+---------------------------------------------------------------------
+  2026-05-23 19:52:00 | personnel_update     | Marlowe treated your crew; 2 crew treated                           
+  2026-05-23 19:52:05 | personnel_update     | Marlowe transferred personnel; 2 fit crew, 1 injured marines swapped
+  2026-05-23 19:52:10 | achievement_unlocked | Achievement unlocked: First Blood; 10 pts                           
+  2026-05-23 19:52:15 | achievement_unlocked | 2 faction achievements unlocked; First Blood, Deep Pockets          

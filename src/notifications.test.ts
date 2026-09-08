@@ -5,6 +5,7 @@ import {
   getNotificationsFacilitiesFixture,
   getNotificationsFixture,
   getNotificationsObservationFixture,
+  getNotificationsPersonnelAchievementsFixture,
   getNotificationsTypedPayloadsFixture,
 } from './display/notifications.fixtures';
 import { truncateCell } from './display/tables';
@@ -18,6 +19,7 @@ import {
   tableMessageFromPreview,
 } from './notification-format-shared';
 import { displayNotifications, formatNotification, NOTIFICATION_TYPES } from './notifications';
+import { loadOpenApiSpec, openapiNotificationMsgTypes } from './test-support/openapi-schema';
 
 function stripAnsi(value: string): string {
   return value.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '');
@@ -158,6 +160,22 @@ describe('notification formatting', () => {
   });
 
   const knownCases: Array<{ msgType: string; data: Record<string, unknown>; snippets: string[] }> = [
+    {
+      msgType: 'achievement_unlocked',
+      data: {
+        achievements: [
+          {
+            id: 'first_blood',
+            name: 'First Blood',
+            category: 'combat',
+            description: 'Destroy another ship.',
+            points: 10,
+            share_url: 'https://spacemolt.com/a/first_blood',
+          },
+        ],
+      },
+      snippets: ['[ACHIEVEMENT]', 'Achievement unlocked: First Blood', '10 pts', 'Use: get_achievements'],
+    },
     {
       msgType: 'action_error',
       data: { command: 'travel', tick: 7, message: 'blocked' },
@@ -655,6 +673,33 @@ describe('notification formatting', () => {
       msgType: 'passenger_stranded',
       data: {},
       snippets: ['[STRANDED]', 'Carrier lost — you were stranded'],
+    },
+    {
+      msgType: 'personnel_update',
+      data: {
+        action: 'treatment',
+        ship_id: 'ship-1',
+        source_player_id: 'player-marlowe',
+        source_username: 'Marlowe',
+        crew_capacity: 8,
+        marine_capacity: 4,
+        crew_treated: 2,
+        marines_treated: 1,
+        personnel: {
+          version: 3,
+          fit_crew: 6,
+          injured_crew: 0,
+          fit_marines: 4,
+          injured_marines: 0,
+        },
+      },
+      snippets: [
+        '[PERSONNEL]',
+        'Marlowe treated your crew',
+        '2 crew treated, 1 marines treated',
+        'crew 6/8 fit',
+        'marines 4/4 fit',
+      ],
     },
     {
       msgType: 'player_died',
@@ -3607,6 +3652,454 @@ describe('notification formatting', () => {
     });
   });
 
+  describe('personnel and achievement typed previews', () => {
+    const typedTypes = ['personnel_update', 'achievement_unlocked'] as const;
+    const emptyFallback = {
+      personnel_update: { tag: 'PERSONNEL', headline: 'Personnel update', severity: 'info' },
+      achievement_unlocked: { tag: 'ACHIEVEMENT', headline: 'Achievement unlocked', severity: 'success' },
+    } as const;
+    const fullPersonnel = {
+      version: 3,
+      fit_crew: 6,
+      injured_crew: 0,
+      fit_marines: 4,
+      injured_marines: 0,
+    };
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: 'system';
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    test('registers never-null handlers for personnel_update and achievement_unlocked', () => {
+      for (const msgType of typedTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+        const preview = formatNotificationPreview(note(msgType, {}));
+        expect(preview.tag).toBe(emptyFallback[msgType].tag);
+        expect(preview.headline).not.toBe('notification');
+      }
+    });
+
+    test.each([...typedTypes])('empty %s bag uses last-resort headline without JSON dump', (msgType) => {
+      const notification = note(msgType, {});
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const expected = emptyFallback[msgType];
+
+      expect(preview.tag).toBe(expected.tag);
+      expect(preview.headline).toBe(expected.headline);
+      expect(preview.severity).toBe(expected.severity);
+      expect(preview.details).toEqual([]);
+      expect(output).toContain(`[${expected.tag}]`);
+      expect(output).toContain(expected.headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('Use:');
+      expect(output).not.toContain('Someone');
+      expect(output).not.toContain('()');
+      expectNoDiagnosticTokens(previewText(preview));
+      expectNoNestedJsonDump(output);
+    });
+
+    test('K13: table Type stays raw msg_type; Message is not the display tag', () => {
+      for (const msgType of typedTypes) {
+        const notification = note(msgType, {});
+        const message = formatNotificationMessage(notification);
+        expect(message).not.toBe(emptyFallback[msgType].tag);
+        expect(message).toBe(tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })));
+        expect(stripAnsi(formatNotification(notification).join('\n'))).toContain(`[${emptyFallback[msgType].tag}]`);
+      }
+    });
+
+    describe('personnel_update', () => {
+      test('treatment headline, one counts line, compact complement, no Use:', () => {
+        const notification = note('personnel_update', {
+          action: 'treatment',
+          ship_id: 'ship-1',
+          source_player_id: 'player-marlowe',
+          source_username: 'Marlowe',
+          crew_capacity: 8,
+          marine_capacity: 4,
+          crew_treated: 2,
+          marines_treated: 1,
+          personnel: fullPersonnel,
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('PERSONNEL');
+        expect(preview.severity).toBe('info');
+        expect(preview.headline).toBe('Marlowe treated your crew');
+        expect(preview.details).toEqual(['2 crew treated, 1 marines treated', 'crew 6/8 fit', 'marines 4/4 fit']);
+        expect(preview.details.join('\n')).not.toContain('0 injured');
+        expect(preview.details.join('\n')).not.toContain('version');
+        expect(formatNotificationMessage(notification)).toBe(
+          'Marlowe treated your crew; 2 crew treated, 1 marines treated',
+        );
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[PERSONNEL]');
+        expect(output).not.toContain('[PERSONNEL_UPDATE]');
+        expect(output).not.toContain('Use:');
+        expect(output).not.toContain('player-marlowe');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('missing source_username uses An ally', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'treatment',
+            crew_treated: 2,
+            crew_capacity: 8,
+            personnel: { ...fullPersonnel },
+          }),
+        );
+        expect(preview.headline).toBe('An ally treated your crew');
+        expect(preview.details[0]).toBe('2 crew treated');
+      });
+
+      test('transfer joins positive counts onto one line and keeps complement', () => {
+        const notification = note('personnel_update', {
+          action: 'transfer',
+          source_username: 'Marlowe',
+          crew_capacity: 8,
+          marine_capacity: 4,
+          fit_crew_transferred: 2,
+          fit_marines_transferred: 0,
+          injured_crew_transferred: 0,
+          injured_marines_transferred: 0,
+          injured_crew_swapped: 0,
+          injured_marines_swapped: 1,
+          personnel: {
+            version: 4,
+            fit_crew: 6,
+            injured_crew: 1,
+            fit_marines: 3,
+            injured_marines: 1,
+          },
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).toBe('Marlowe transferred personnel');
+        expect(preview.details).toEqual([
+          '2 fit crew, 1 injured marines swapped',
+          'crew 6/8 fit, 1 injured',
+          'marines 3/4 fit, 1 injured',
+        ]);
+        expect(preview.details[0]).not.toContain('0');
+        expect(formatNotificationMessage(notification)).toBe(
+          'Marlowe transferred personnel; 2 fit crew, 1 injured marines swapped',
+        );
+      });
+
+      test('all six transfer counts stay on one line so complement survives maxDetails', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'transfer',
+            source_username: 'Marlowe',
+            crew_capacity: 8,
+            marine_capacity: 4,
+            fit_crew_transferred: 1,
+            fit_marines_transferred: 2,
+            injured_crew_transferred: 3,
+            injured_marines_transferred: 4,
+            injured_crew_swapped: 5,
+            injured_marines_swapped: 6,
+            personnel: {
+              version: 5,
+              fit_crew: 6,
+              injured_crew: 2,
+              fit_marines: 3,
+              injured_marines: 1,
+            },
+          }),
+        );
+        expect(preview.details).toHaveLength(3);
+        expect(preview.details[0]).toBe(
+          '1 fit crew, 2 fit marines, 3 injured crew, 4 injured marines, 5 injured crew swapped, 6 injured marines swapped',
+        );
+        expect(preview.details[1]).toBe('crew 6/8 fit, 2 injured');
+        expect(preview.details[2]).toBe('marines 3/4 fit, 1 injured');
+      });
+
+      test('unknown action is token-silent Personnel update', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'medevac',
+            source_username: 'Marlowe',
+            ship_id: 'ship-1',
+            crew_treated: 2,
+            personnel: { ...fullPersonnel },
+            crew_capacity: 8,
+            marine_capacity: 4,
+          }),
+        );
+        expect(preview.headline).toBe('Personnel update');
+        expect(preview.headline).not.toContain('medevac');
+        expect(preview.details.join('\n')).not.toContain('medevac');
+        expect(preview.details.join('\n')).not.toContain('action=');
+        expect(preview.details[0]).toBe('crew 6/8 fit');
+        expectNoDiagnosticTokens(previewText(preview));
+      });
+
+      test('non-string action and missing action use Personnel update', () => {
+        const objectAction = formatNotificationPreview(
+          note('personnel_update', { action: { kind: 'treatment' }, source_username: 'Marlowe' }),
+        );
+        expect(objectAction.headline).toBe('Personnel update');
+        expect(previewText(objectAction)).not.toContain('treatment');
+        expectNoNestedJsonDump(previewText(objectAction));
+
+        const missing = formatNotificationPreview(note('personnel_update', { source_username: 'Marlowe' }));
+        expect(missing.headline).toBe('Personnel update');
+      });
+
+      test('mixed-case treatment token still matches', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', { action: 'Treatment', source_username: 'Marlowe', crew_treated: 1 }),
+        );
+        expect(preview.headline).toBe('Marlowe treated your crew');
+        expect(preview.details).toEqual(['1 crew treated']);
+      });
+
+      test('omits , 0 injured and zero treatment counts', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'treatment',
+            source_username: 'Marlowe',
+            crew_capacity: 8,
+            marine_capacity: 4,
+            crew_treated: 0,
+            marines_treated: 2,
+            personnel: {
+              version: 1,
+              fit_crew: 6,
+              injured_crew: 0,
+              fit_marines: 4,
+              injured_marines: 0,
+            },
+          }),
+        );
+        expect(preview.details).toEqual(['2 marines treated', 'crew 6/8 fit', 'marines 4/4 fit']);
+        expect(previewText(preview)).not.toContain(', 0 injured');
+        expect(previewText(preview)).not.toContain('0 crew treated');
+      });
+
+      test('never dumps personnel.version or the raw personnel object', () => {
+        const notification = note('personnel_update', {
+          action: 'treatment',
+          source_username: 'Marlowe',
+          crew_capacity: 8,
+          marine_capacity: 4,
+          personnel: { ...fullPersonnel, version: 99 },
+        });
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).not.toContain('99');
+        expect(output).not.toContain('version');
+        expect(output).not.toContain('fit_crew');
+        expectNoNestedJsonDump(output);
+      });
+
+      test('ship_id prints only when other details are empty', () => {
+        const identity = formatNotificationPreview(
+          note('personnel_update', { action: 'treatment', ship_id: 'ship-1', source_username: 'Marlowe' }),
+        );
+        expect(identity.details).toEqual(['ship ship-1']);
+
+        const withCounts = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'treatment',
+            ship_id: 'ship-1',
+            source_username: 'Marlowe',
+            crew_treated: 2,
+          }),
+        );
+        expect(withCounts.details).toEqual(['2 crew treated']);
+        expect(withCounts.details.join('\n')).not.toContain('ship-1');
+      });
+
+      test('object personnel and non-finite counts do not dump', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'treatment',
+            source_username: 'Marlowe',
+            crew_treated: Number.NaN,
+            marines_treated: { n: 1 },
+            personnel: 'not-a-record',
+            ship_id: { id: 'ship-1' },
+          }),
+        );
+        expect(preview.headline).toBe('Marlowe treated your crew');
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(previewText(preview));
+        expectNoNestedJsonDump(previewText(preview));
+      });
+    });
+
+    describe('achievement_unlocked', () => {
+      test('personal single with name prints pts, category, and Use: last', () => {
+        const notification = note('achievement_unlocked', {
+          achievements: [
+            {
+              id: 'first_blood',
+              name: 'First Blood',
+              category: 'combat',
+              description: 'Destroy another ship.',
+              points: 10,
+              share_url: 'https://spacemolt.com/a/first_blood',
+            },
+          ],
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('ACHIEVEMENT');
+        expect(preview.severity).toBe('success');
+        expect(preview.headline).toBe('Achievement unlocked: First Blood');
+        expect(preview.details).toEqual(['10 pts', 'combat', 'Use: get_achievements']);
+        expect(preview.details[preview.details.length - 1]).toBe('Use: get_achievements');
+        expect(previewText(preview)).not.toContain('Destroy another ship');
+        expect(previewText(preview)).not.toContain('share_url');
+        expect(previewText(preview)).not.toContain('https://');
+        expect(formatNotificationMessage(notification)).toBe('Achievement unlocked: First Blood; 10 pts');
+        expect(formatNotificationMessage(notification)).not.toContain('Use:');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[ACHIEVEMENT]');
+        expect(output).not.toContain('[ACHIEVEMENT_UNLOCKED]');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('faction === true prefixes a named single and uses get_faction_achievements', () => {
+        const preview = formatNotificationPreview(
+          note('achievement_unlocked', {
+            faction: true,
+            achievements: [{ id: 'first_blood', name: 'First Blood', points: 10, category: 'combat' }],
+          }),
+        );
+        expect(preview.headline).toBe('Faction achievement unlocked: First Blood');
+        expect(preview.details).toEqual(['10 pts', 'combat', 'Use: get_faction_achievements']);
+        expect(preview.details).not.toContain('Use: get_achievements');
+      });
+
+      test('single without name but with id details the id', () => {
+        const notification = note('achievement_unlocked', {
+          achievements: [{ id: 'first_blood', points: 0 }],
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).toBe('Achievement unlocked');
+        expect(preview.details).toEqual(['id first_blood', '0 pts', 'Use: get_achievements']);
+        expect(formatNotificationMessage(notification)).toBe('Achievement unlocked; id first_blood');
+        expect(formatNotificationMessage(notification)).not.toContain('Use:');
+      });
+
+      test('points 0 prints; missing points and empty category are omitted', () => {
+        const zero = formatNotificationPreview(
+          note('achievement_unlocked', {
+            achievements: [{ name: 'First Blood', points: 0, category: '' }],
+          }),
+        );
+        expect(zero.details).toEqual(['0 pts', 'Use: get_achievements']);
+
+        const missing = formatNotificationPreview(
+          note('achievement_unlocked', { achievements: [{ name: 'First Blood' }] }),
+        );
+        expect(missing.details).toEqual(['Use: get_achievements']);
+      });
+
+      test('category already in the headline is not repeated', () => {
+        const preview = formatNotificationPreview(
+          note('achievement_unlocked', {
+            achievements: [{ name: 'combat veteran', category: 'combat', points: 5 }],
+          }),
+        );
+        expect(preview.headline).toBe('Achievement unlocked: combat veteran');
+        expect(preview.details).toEqual(['5 pts', 'Use: get_achievements']);
+        expect(preview.details).not.toContain('combat');
+      });
+
+      test('N>1 uses a names line of the first 3 plus +N more', () => {
+        const notification = note('achievement_unlocked', {
+          achievements: [
+            { name: 'First Blood' },
+            { name: 'Deep Pockets' },
+            { name: 'Cartographer' },
+            { name: 'Ghost' },
+          ],
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).toBe('4 achievements unlocked');
+        expect(preview.details).toEqual(['First Blood, Deep Pockets, Cartographer, +1 more', 'Use: get_achievements']);
+        expect(preview.details.join('\n')).not.toContain('Ghost');
+        expect(formatNotificationMessage(notification)).toBe(
+          '4 achievements unlocked; First Blood, Deep Pockets, Cartographer, +1 more',
+        );
+        expect(formatNotificationMessage(notification)).not.toContain('Use:');
+      });
+
+      test('faction multi uses faction count headline and faction Use:', () => {
+        const preview = formatNotificationPreview(
+          note('achievement_unlocked', {
+            faction: true,
+            achievements: [
+              { name: 'First Blood', description: 'hidden' },
+              { name: 'Deep Pockets', share_url: 'https://example.test' },
+            ],
+          }),
+        );
+        expect(preview.headline).toBe('2 faction achievements unlocked');
+        expect(preview.details).toEqual(['First Blood, Deep Pockets', 'Use: get_faction_achievements']);
+        expect(previewText(preview)).not.toContain('hidden');
+        expect(previewText(preview)).not.toContain('https://');
+      });
+
+      test('empty or missing achievements omit Use:', () => {
+        const missing = formatNotificationPreview(note('achievement_unlocked', {}));
+        expect(missing.headline).toBe('Achievement unlocked');
+        expect(missing.details).toEqual([]);
+
+        const empty = formatNotificationPreview(note('achievement_unlocked', { achievements: [], faction: true }));
+        expect(empty.headline).toBe('Achievement unlocked');
+        expect(empty.details).toEqual([]);
+        expect(empty.details.join('\n')).not.toContain('Use:');
+      });
+
+      test('faction must be boolean true; truthy non-booleans stay personal', () => {
+        const preview = formatNotificationPreview(
+          note('achievement_unlocked', {
+            faction: 'true',
+            achievements: [{ name: 'First Blood' }],
+          }),
+        );
+        expect(preview.headline).toBe('Achievement unlocked: First Blood');
+        expect(preview.details).toEqual(['Use: get_achievements']);
+      });
+
+      test('non-record achievements and nested objects do not dump', () => {
+        const preview = formatNotificationPreview(
+          note('achievement_unlocked', {
+            achievements: [null, 'First Blood', { name: { nested: true }, description: { text: 'hidden' } }],
+          }),
+        );
+        expect(preview.headline).toBe('Achievement unlocked');
+        expect(preview.details).toEqual(['Use: get_achievements']);
+        expect(previewText(preview)).not.toContain('hidden');
+        expectNoNestedJsonDump(previewText(preview));
+      });
+    });
+  });
+
   describe('action_error details preview', () => {
     const opticalFiber = {
       item_id: 'optical_fiber_bundle',
@@ -5968,12 +6461,11 @@ describe('notification formatting', () => {
       return tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 }));
     }
 
-    test('registers ship_captured and prize_update; personnel_update stays unhandled', () => {
+    test('registers ship_captured and prize_update', () => {
       for (const msgType of boardingPrizeTypes) {
         expect(hasPreviewHandler(msgType)).toBe(true);
         expect(NOTIFICATION_TYPES).toContain(msgType);
       }
-      expect(hasPreviewHandler('personnel_update')).toBe(false);
     });
 
     test('full ship_captured names captor, class, and former owner and folds Use:', () => {
@@ -7179,6 +7671,17 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
     });
 
+    test('unknown future msg_type is not claimed typed and stays Policy 5', () => {
+      expect(hasPreviewHandler('not_a_real_type_v0_599')).toBe(false);
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'not_a_real_type_v0_599',
+        data: { message: 'Hello from a future gameserver.' },
+      });
+      expect(preview.tag).toBe('NOT_A_REAL_TYPE_V0_599');
+      expect(preview.headline).toBe('Hello from a future gameserver.');
+    });
+
     test('peace accepted empty bag uses last-resort headline', () => {
       const preview = formatNotificationPreview({
         type: 'system',
@@ -8078,6 +8581,62 @@ describe('notification formatting', () => {
       const preview = formatNotificationPreview(alert);
       expect(preview.details).toContain('2v3');
       expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('StubPilot');
+    });
+  });
+
+  describe('personnel and achievement remainder poll fixture', () => {
+    const rows = getNotificationsPersonnelAchievementsFixture.notifications;
+
+    test('every fixture msg_type hits its typed handler', () => {
+      expect(getNotificationsPersonnelAchievementsFixture.count).toBe(rows.length);
+      expect(rows.map((notification) => notification.msg_type)).toEqual([
+        'personnel_update',
+        'personnel_update',
+        'achievement_unlocked',
+        'achievement_unlocked',
+      ]);
+      for (const notification of rows) {
+        expect(notification.type).toBe('system');
+        expect(hasPreviewHandler(notification.msg_type)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(notification.msg_type);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).not.toBe('notification');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      }
+    });
+
+    test('treatment complement never prints , 0 injured', () => {
+      const treatment = rows.find((entry) => entry.id === 'notif-personnel-treatment-1');
+      if (!treatment) throw new Error('expected personnel treatment fixture row');
+      const preview = formatNotificationPreview(treatment);
+      expect(preview.headline).toBe('Marlowe treated your crew');
+      expect(preview.details.join('\n')).not.toContain(', 0 injured');
+      expect(preview.details).toContain('crew 6/8 fit');
+      expect(preview.details).toContain('marines 4/4 fit');
+    });
+
+    test('faction multi uses get_faction_achievements; personal uses get_achievements', () => {
+      const personal = rows.find((entry) => entry.id === 'notif-achievement-personal-1');
+      const faction = rows.find((entry) => entry.id === 'notif-achievement-faction-1');
+      if (!personal) throw new Error('expected personal achievement fixture row');
+      if (!faction) throw new Error('expected faction achievement fixture row');
+      const personalPreview = formatNotificationPreview(personal);
+      const factionPreview = formatNotificationPreview(faction);
+      expect(personalPreview.details[personalPreview.details.length - 1]).toBe('Use: get_achievements');
+      expect(factionPreview.headline).toBe('2 faction achievements unlocked');
+      expect(factionPreview.details[factionPreview.details.length - 1]).toBe('Use: get_faction_achievements');
+    });
+  });
+
+  describe('OpenAPI NotificationPayload inventory lock', () => {
+    test('every bundled Notification_* msg_type has a preview handler', () => {
+      const types = openapiNotificationMsgTypes(loadOpenApiSpec());
+      expect(types.length).toBeGreaterThan(0);
+      expect(new Set(types).size).toBe(types.length);
+      expect(types).toEqual(
+        expect.arrayContaining(['cloak', 'battle_alert', 'personnel_update', 'facility_rent_warning']),
+      );
+      expect(types.filter((t) => !hasPreviewHandler(t))).toEqual([]);
     });
   });
 
