@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
-import { getNotificationsFixture, getNotificationsObservationFixture } from './display/notifications.fixtures';
+import {
+  getNotificationsFixture,
+  getNotificationsObservationFixture,
+  getNotificationsTypedPayloadsFixture,
+} from './display/notifications.fixtures';
 import { truncateCell } from './display/tables';
 import { UNSOLICITED_STATE_EVENTS } from './notification-events';
 import {
@@ -7020,6 +7024,64 @@ describe('notification formatting', () => {
       );
       expectNoDiagnosticTokens(inline);
       expectNoNestedJsonDump(tableMessage);
+    });
+  });
+
+  describe('0.597.1 typed payload poll fixture', () => {
+    const typedNotifications = getNotificationsTypedPayloadsFixture.notifications;
+
+    test('every fixture msg_type hits its typed handler', () => {
+      expect(getNotificationsTypedPayloadsFixture.count).toBe(typedNotifications.length);
+      expect(typedNotifications.map((notification) => notification.msg_type)).toEqual([
+        'cloak',
+        'complete_mission',
+        'error',
+        'fleet',
+        'ok',
+        'ok',
+      ]);
+      for (const notification of typedNotifications) {
+        expect(notification.type).toBe('system');
+        expect(hasPreviewHandler(notification.msg_type)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(notification.msg_type);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).not.toBe('notification');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      }
+    });
+
+    test('error pending_command pins pending: in the table Message', () => {
+      const notification = typedNotifications.find((entry) => entry.msg_type === 'error');
+      if (!notification) throw new Error('expected error fixture row');
+      expect(tableMessageFromPreview(formatNotificationPreview(notification))).toContain('pending: mine');
+    });
+
+    test('complete_mission headline contains credits and XP', () => {
+      const notification = typedNotifications.find((entry) => entry.msg_type === 'complete_mission');
+      if (!notification) throw new Error('expected complete_mission fixture row');
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toContain('cr');
+      expect(preview.headline).toContain('XP:');
+      expect(tableMessageFromPreview(preview)).toContain('500 cr');
+      expect(tableMessageFromPreview(preview)).toContain('XP: mining×40');
+    });
+
+    test('with-message ok headline joins dock identity', () => {
+      const notification = typedNotifications.find((entry) => entry.id === 'notif-ok-dock-1');
+      if (!notification) throw new Error('expected with-message ok fixture row');
+      const expected = 'Your fleet has docked — Sol Central (confederacy_central_command)';
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe(expected);
+      expect(tableMessageFromPreview(preview)).toBe(expected);
+      expect(formatNotificationMessage(notification)).toBe(expected);
+    });
+
+    test('no-message ok headline uses Fleet docked at', () => {
+      const notification = typedNotifications.find((entry) => entry.id === 'notif-ok-dock-2');
+      if (!notification) throw new Error('expected no-message ok fixture row');
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toContain('Fleet docked at');
+      expect(tableMessageFromPreview(preview)).toBe('Fleet docked at Sol Central (confederacy_central_command)');
     });
   });
 

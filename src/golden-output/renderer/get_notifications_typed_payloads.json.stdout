@@ -1,0 +1,80 @@
+{
+  "count": 6,
+  "current_tick": 902300,
+  "remaining": 0,
+  "timestamp": 1779566500,
+  "notifications": [
+    {
+      "id": "notif-cloak-1",
+      "type": "system",
+      "msg_type": "cloak",
+      "timestamp": "2026-05-23T19:40:00.000Z",
+      "data": {
+        "enabled": false,
+        "cloak_strength": 0,
+        "message": "Cloaking device disengaged: insufficient fuel"
+      }
+    },
+    {
+      "id": "notif-complete-mission-1",
+      "type": "system",
+      "msg_type": "complete_mission",
+      "timestamp": "2026-05-23T19:40:05.000Z",
+      "data": {
+        "mission_id": "distress-1",
+        "mission_title": "Mayday at Cloudbank",
+        "rewards": {
+          "credits": 500,
+          "skill_xp": {
+            "mining": 40
+          }
+        }
+      }
+    },
+    {
+      "id": "notif-error-1",
+      "type": "system",
+      "msg_type": "error",
+      "timestamp": "2026-05-23T19:40:10.000Z",
+      "data": {
+        "code": "action_pending",
+        "message": "Already queued.",
+        "pending_command": "mine"
+      }
+    },
+    {
+      "id": "notif-fleet-1",
+      "type": "system",
+      "msg_type": "fleet",
+      "timestamp": "2026-05-23T19:40:15.000Z",
+      "data": {
+        "action": "fleet_member_died",
+        "message": "FleetPilot was destroyed and has left the fleet.",
+        "player_name": "FleetPilot"
+      }
+    },
+    {
+      "id": "notif-ok-dock-1",
+      "type": "system",
+      "msg_type": "ok",
+      "timestamp": "2026-05-23T19:40:20.000Z",
+      "data": {
+        "action": "fleet_dock",
+        "base": "Sol Central",
+        "base_id": "confederacy_central_command",
+        "message": "Your fleet has docked."
+      }
+    },
+    {
+      "id": "notif-ok-dock-2",
+      "type": "system",
+      "msg_type": "ok",
+      "timestamp": "2026-05-23T19:40:25.000Z",
+      "data": {
+        "action": "fleet_dock",
+        "base": "Sol Central",
+        "base_id": "confederacy_central_command"
+      }
+    }
+  ]
+}

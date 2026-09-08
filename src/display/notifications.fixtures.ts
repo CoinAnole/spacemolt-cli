@@ -681,6 +681,83 @@ export const getNotificationsArenaObjectiveFixture = {
   ],
 };
 
+/** Mixed 0.597.1 typed-payload poll: cloak, complete_mission, error, fleet, and ok dock. */
+export const getNotificationsTypedPayloadsFixture = {
+  count: 6,
+  current_tick: 902300,
+  remaining: 0,
+  timestamp: 1779566500,
+  notifications: [
+    {
+      id: 'notif-cloak-1',
+      type: 'system',
+      msg_type: 'cloak',
+      timestamp: '2026-05-23T19:40:00.000Z',
+      data: {
+        enabled: false,
+        cloak_strength: 0,
+        message: 'Cloaking device disengaged: insufficient fuel',
+      },
+    },
+    {
+      id: 'notif-complete-mission-1',
+      type: 'system',
+      msg_type: 'complete_mission',
+      timestamp: '2026-05-23T19:40:05.000Z',
+      data: {
+        mission_id: 'distress-1',
+        mission_title: 'Mayday at Cloudbank',
+        rewards: { credits: 500, skill_xp: { mining: 40 } },
+      },
+    },
+    {
+      id: 'notif-error-1',
+      type: 'system',
+      msg_type: 'error',
+      timestamp: '2026-05-23T19:40:10.000Z',
+      data: {
+        code: 'action_pending',
+        message: 'Already queued.',
+        pending_command: 'mine',
+      },
+    },
+    {
+      id: 'notif-fleet-1',
+      type: 'system',
+      msg_type: 'fleet',
+      timestamp: '2026-05-23T19:40:15.000Z',
+      data: {
+        action: 'fleet_member_died',
+        message: 'FleetPilot was destroyed and has left the fleet.',
+        player_name: 'FleetPilot',
+      },
+    },
+    {
+      id: 'notif-ok-dock-1',
+      type: 'system',
+      msg_type: 'ok',
+      timestamp: '2026-05-23T19:40:20.000Z',
+      data: {
+        action: 'fleet_dock',
+        base: 'Sol Central',
+        base_id: 'confederacy_central_command',
+        message: 'Your fleet has docked.',
+      },
+    },
+    {
+      id: 'notif-ok-dock-2',
+      type: 'system',
+      msg_type: 'ok',
+      timestamp: '2026-05-23T19:40:25.000Z',
+      data: {
+        action: 'fleet_dock',
+        base: 'Sol Central',
+        base_id: 'confederacy_central_command',
+      },
+    },
+  ],
+};
+
 /** Unsolicited move poll: action_result event commands plus typed fleet_dock and warp. */
 export const getNotificationsUnsolicitedStateFixture = {
   count: 6,
@@ -822,6 +899,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_unsolicited_state: {
     command: 'get_notifications',
     fixture: getNotificationsUnsolicitedStateFixture,
+  },
+  get_notifications_typed_payloads: {
+    command: 'get_notifications',
+    fixture: getNotificationsTypedPayloadsFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {

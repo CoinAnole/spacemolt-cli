@@ -1,0 +1,12 @@
+count 6
+
+=== Notifications ===
+
+  Timestamp           | Type             | Message                                                          
+  --------------------+------------------+------------------------------------------------------------------
+  2026-05-23 19:40:00 | cloak            | Cloaking device disengaged: insufficient fuel; strength 0        
+  2026-05-23 19:40:05 | complete_mission | Mission complete: Mayday at Cloudbank — 500 cr, XP: mining×40    
+  2026-05-23 19:40:10 | error            | action_pending: Already queued.; pending: mine                   
+  2026-05-23 19:40:15 | fleet            | FleetPilot was destroyed and has left the fleet.                 
+  2026-05-23 19:40:20 | ok               | Your fleet has docked — Sol Central (confederacy_central_command)
+  2026-05-23 19:40:25 | ok               | Fleet docked at Sol Central (confederacy_central_command)        
