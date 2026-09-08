@@ -458,6 +458,13 @@ function headlinePreview(tag: string, headline: string, options: ResolvedPreview
   };
 }
 
+function autoDockDetails(data: Record<string, unknown>): string[] {
+  const details: string[] = [];
+  if (data.auto_docked === true) details.push('auto-docked');
+  if (data.auto_undocked === true) details.push('auto-undocked');
+  return details;
+}
+
 /**
  * Compact action_result details (Policy 3 field priority for details tree).
  * Prefers details.message, then selected scalars — never nested ship/location dumps.
@@ -2332,6 +2339,116 @@ function previewFleetDock(
   return headlinePreview('FLEET', headline, options);
 }
 
+/** True only for a strength-specific token, not a bare digit (duration ticks in message). */
+function headlineShowsCloakStrength(headline: string, strength: number): boolean {
+  return new RegExp(`(?:strength\\s+|cloak_strength=)${strength}(?!\\d)`).test(headline);
+}
+
+function previewCloak(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const strength = finiteNumber(data.cloak_strength);
+  const fallback =
+    data.enabled === true
+      ? strength !== undefined
+        ? `Cloak engaged (strength ${strength})`
+        : 'Cloak engaged'
+      : data.enabled === false
+        ? 'Cloak disengaged'
+        : 'Cloak state changed';
+
+  const headline = messageLine || fallback;
+  const details: string[] = [];
+  if (strength !== undefined && !headlineShowsCloakStrength(headline, strength)) {
+    details.push(`strength ${strength}`);
+  }
+  details.push(...autoDockDetails(data));
+
+  const preview = details.length
+    ? detailPreview('CLOAK', headline, details, options)
+    : headlinePreview('CLOAK', headline, options);
+  return {
+    ...preview,
+    severity: data.enabled === false ? 'warning' : data.enabled === true ? 'info' : 'neutral',
+  };
+}
+
+function formatMissionAutoCompleteRewards(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const bits: string[] = [];
+  const credits = finiteNumber(value.credits);
+  if (credits !== undefined) bits.push(`${credits.toLocaleString()} cr`);
+  const xp = formatCountMap(value.skill_xp);
+  if (xp) bits.push(`XP: ${xp}`);
+  return bits.length ? bits.join(', ') : undefined;
+}
+
+function previewCompleteMission(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const title = safeScalar(data.mission_title);
+  const id = safeScalar(data.mission_id);
+  const rewards = formatMissionAutoCompleteRewards(data.rewards);
+  const lead = title !== undefined ? `Mission complete: ${firstLine(String(title))}` : 'Mission complete';
+  const headline = rewards ? `${lead} — ${rewards}` : lead;
+  const details: string[] = [];
+  if (id !== undefined && title === undefined) details.push(`id ${id}`);
+  const preview = details.length
+    ? detailPreview('MISSION', headline, details, options)
+    : headlinePreview('MISSION', headline, options);
+  return { ...preview, severity: 'success' };
+}
+
+function previewError(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const code = safeScalar(data.code);
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const codeText = code !== undefined ? String(code) : undefined;
+
+  let headline: string;
+  if (messageLine && codeText && messageLine !== codeText) {
+    headline = `${codeText}: ${messageLine}`;
+  } else if (messageLine) {
+    headline = messageLine;
+  } else if (codeText) {
+    headline = codeText;
+  } else {
+    headline = 'Error';
+  }
+
+  const details: string[] = [];
+  const pending = safeScalar(data.pending_command);
+  if (pending !== undefined) details.push(`pending: ${pending}`);
+
+  if (isRecord(data.details)) {
+    const maxKeys = Math.max(0, options.maxDetails - details.length);
+    for (const bit of collectScalarBits(data.details, {
+      preferredKeys: GENERIC_SCALAR_KEYS,
+      maxKeys,
+    })) {
+      details.push(truncate(bit, options));
+    }
+  } else {
+    const detailsScalar = safeScalar(data.details);
+    if (detailsScalar !== undefined) details.push(truncate(firstLine(String(detailsScalar)), options));
+  }
+
+  return {
+    ...detailPreview('ERROR', headline, details, options),
+    severity: 'danger',
+  };
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -2448,6 +2565,10 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   mobile_capital_transit: (data, _notification, options) =>
     previewUnsolicitedMoveTyped('TRANSIT', 'Mobile Capital jumped', data, options),
   fleet_dock: previewFleetDock,
+
+  cloak: previewCloak,
+  complete_mission: previewCompleteMission,
+  error: previewError,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

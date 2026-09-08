@@ -271,9 +271,23 @@ describe('notification formatting', () => {
       snippets: ['[CHAT:local]', 'Marlowe: Docking.'],
     },
     {
+      msgType: 'cloak',
+      data: { message: 'Emergency cloak engaged for 15 ticks', enabled: true, cloak_strength: 1 },
+      snippets: ['[CLOAK]', 'Emergency cloak engaged for 15 ticks', 'strength 1'],
+    },
+    {
       msgType: 'combat_update',
       data: { attacker: 'raider', target: 'ship', damage: 4, damage_type: 'laser' },
       snippets: ['[COMBAT]', 'raider hit ship for 4 laser damage'],
+    },
+    {
+      msgType: 'complete_mission',
+      data: {
+        mission_id: 'distress-1',
+        mission_title: 'Mayday at Cloudbank',
+        rewards: { credits: 500, skill_xp: { mining: 40 } },
+      },
+      snippets: ['[MISSION]', 'Mission complete: Mayday at Cloudbank — 500 cr, XP: mining×40'],
     },
     {
       msgType: 'drone_adrift',
@@ -306,6 +320,11 @@ describe('notification formatting', () => {
       msgType: 'emergency_warp_stabilizer',
       data: {},
       snippets: ['[WARP]', 'Emergency Warp Stabilizer fired'],
+    },
+    {
+      msgType: 'error',
+      data: { code: 'combat_interrupt', message: 'Mining interrupted by combat.' },
+      snippets: ['[ERROR]', 'combat_interrupt: Mining interrupted by combat.'],
     },
     {
       msgType: 'faction_alliance_broken',
@@ -1402,6 +1421,435 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual(['Docked at: Haven Exchange (haven_exchange)']);
       expect(preview.details.join('\n')).not.toContain('system_name=');
       expect(preview.details).not.toContain('Use: get_status');
+    });
+  });
+
+  describe('cloak, complete_mission, and error typed previews (0.597.1)', () => {
+    const typedTypes = ['cloak', 'complete_mission', 'error'] as const;
+    const emptyFallback = {
+      cloak: { tag: 'CLOAK', headline: 'Cloak state changed', severity: 'neutral' },
+      complete_mission: { tag: 'MISSION', headline: 'Mission complete', severity: 'success' },
+      error: { tag: 'ERROR', headline: 'Error', severity: 'danger' },
+    } as const;
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: 'system';
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    test('registers never-null handlers for cloak, complete_mission, and error', () => {
+      for (const msgType of typedTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+        const preview = formatNotificationPreview(note(msgType, {}));
+        expect(preview.tag).toBe(emptyFallback[msgType].tag);
+        expect(preview.headline).not.toBe('notification');
+      }
+    });
+
+    test.each([...typedTypes])('empty %s bag uses last-resort headline without JSON dump', (msgType) => {
+      const notification = note(msgType, {});
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const expected = emptyFallback[msgType];
+
+      expect(preview.tag).toBe(expected.tag);
+      expect(preview.headline).toBe(expected.headline);
+      expect(preview.severity).toBe(expected.severity);
+      expect(preview.details).toEqual([]);
+      expect(output).toContain(`[${expected.tag}]`);
+      expect(output).toContain(expected.headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('enabled=');
+      expect(output).not.toContain('Use: get_missions');
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      expectNoNestedJsonDump(output);
+    });
+
+    describe('cloak', () => {
+      test('15-tick emergency message still shows strength 1 as a detail', () => {
+        const notification = note('cloak', {
+          message: 'Emergency cloak engaged for 15 ticks',
+          enabled: true,
+          cloak_strength: 1,
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('CLOAK');
+        expect(preview.headline).toBe('Emergency cloak engaged for 15 ticks');
+        expect(preview.details).toContain('strength 1');
+        expect(preview.severity).toBe('info');
+        expect(preview.headline).not.toContain('enabled=');
+        expect(preview.details.join('\n')).not.toContain('enabled=');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[CLOAK]');
+        expect(output).toContain('strength 1');
+        expect(output).not.toContain('enabled=true');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('headline already containing strength N does not duplicate the detail', () => {
+        const preview = formatNotificationPreview(
+          note('cloak', {
+            message: 'Cloak engaged at strength 12',
+            enabled: true,
+            cloak_strength: 12,
+          }),
+        );
+        expect(preview.headline).toBe('Cloak engaged at strength 12');
+        expect(preview.details).not.toContain('strength 12');
+        expect(preview.details.join('\n')).not.toContain('strength 12');
+      });
+
+      test('cloak_strength=N token in the headline skips the strength detail', () => {
+        const preview = formatNotificationPreview(
+          note('cloak', {
+            message: 'cloak_strength=3 online',
+            enabled: true,
+            cloak_strength: 3,
+          }),
+        );
+        expect(preview.headline).toBe('cloak_strength=3 online');
+        expect(preview.details).not.toContain('strength 3');
+      });
+
+      test('strength 1 is not treated as shown inside strength 12', () => {
+        const preview = formatNotificationPreview(
+          note('cloak', {
+            message: 'Cloak engaged at strength 12',
+            enabled: true,
+            cloak_strength: 1,
+          }),
+        );
+        expect(preview.details).toContain('strength 1');
+      });
+
+      test('cloak_strength 0 is shown when disabled', () => {
+        const preview = formatNotificationPreview(
+          note('cloak', {
+            message: 'Cloak dropped — fuel exhausted',
+            enabled: false,
+            cloak_strength: 0,
+          }),
+        );
+        expect(preview.headline).toBe('Cloak dropped — fuel exhausted');
+        expect(preview.details).toContain('strength 0');
+        expect(preview.severity).toBe('warning');
+      });
+
+      test('missing enabled falls back to Cloak state changed, not disengaged', () => {
+        const preview = formatNotificationPreview(note('cloak', { cloak_strength: 4 }));
+        expect(preview.headline).toBe('Cloak state changed');
+        expect(preview.details).toContain('strength 4');
+        expect(preview.severity).toBe('neutral');
+        expect(preview.headline).not.toBe('Cloak disengaged');
+        expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('enabled=');
+      });
+
+      test('enabled true without message uses strength in the fallback headline', () => {
+        const withStrength = formatNotificationPreview(note('cloak', { enabled: true, cloak_strength: 8 }));
+        expect(withStrength.headline).toBe('Cloak engaged (strength 8)');
+        expect(withStrength.details).not.toContain('strength 8');
+        expect(withStrength.severity).toBe('info');
+
+        const withoutStrength = formatNotificationPreview(note('cloak', { enabled: true }));
+        expect(withoutStrength.headline).toBe('Cloak engaged');
+        expect(withoutStrength.details).toEqual([]);
+        expect(withoutStrength.severity).toBe('info');
+      });
+
+      test('enabled false without message is Cloak disengaged', () => {
+        const preview = formatNotificationPreview(note('cloak', { enabled: false, cloak_strength: 0 }));
+        expect(preview.headline).toBe('Cloak disengaged');
+        expect(preview.details).toContain('strength 0');
+        expect(preview.severity).toBe('warning');
+      });
+
+      test('non-boolean enabled is not treated as engaged or disengaged', () => {
+        const preview = formatNotificationPreview(note('cloak', { enabled: 'true', cloak_strength: 2 }));
+        expect(preview.headline).toBe('Cloak state changed');
+        expect(preview.severity).toBe('neutral');
+      });
+
+      test('auto-dock flags print only when boolean true', () => {
+        const both = formatNotificationPreview(
+          note('cloak', {
+            message: 'Emergency cloak engaged for 15 ticks',
+            enabled: true,
+            cloak_strength: 1,
+            auto_docked: true,
+            auto_undocked: true,
+          }),
+        );
+        expect(both.details).toEqual(['strength 1', 'auto-docked', 'auto-undocked']);
+
+        const dockedOnly = formatNotificationPreview(
+          note('cloak', {
+            message: 'Cloak engaged',
+            enabled: true,
+            cloak_strength: 2,
+            auto_docked: true,
+          }),
+        );
+        expect(dockedOnly.details).toEqual(['strength 2', 'auto-docked']);
+        expect(dockedOnly.details).not.toContain('auto-undocked');
+
+        const omitted = formatNotificationPreview(
+          note('cloak', {
+            message: 'Cloak engaged',
+            enabled: true,
+            cloak_strength: 2,
+            auto_docked: false,
+            auto_undocked: 'true',
+          }),
+        );
+        expect(omitted.details).toEqual(['strength 2']);
+        expect(omitted.details).not.toContain('auto-docked');
+        expect(omitted.details).not.toContain('auto-undocked');
+
+        const absent = formatNotificationPreview(
+          note('cloak', { message: 'Cloak engaged', enabled: true, cloak_strength: 2 }),
+        );
+        expect(absent.details).toEqual(['strength 2']);
+      });
+
+      test('never prints enabled=true as a scalar bag', () => {
+        const preview = formatNotificationPreview(note('cloak', { enabled: true, cloak_strength: 12 }));
+        const joined = `${preview.headline}\n${preview.details.join('\n')}`;
+        expect(joined).not.toContain('enabled=true');
+        expect(joined).not.toContain('enabled=');
+        expect(preview.headline).toBe('Cloak engaged (strength 12)');
+      });
+    });
+
+    describe('complete_mission', () => {
+      const receiptHeadline = 'Mission complete: Mayday at Cloudbank — 500 cr, XP: mining×40';
+
+      test('compact receipt lives in the headline, not on two detail lines', () => {
+        const notification = note('complete_mission', {
+          mission_id: 'distress-1',
+          mission_title: 'Mayday at Cloudbank',
+          rewards: { credits: 500, skill_xp: { mining: 40 } },
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('MISSION');
+        expect(preview.headline).toBe(receiptHeadline);
+        expect(preview.details).toEqual([]);
+        expect(preview.severity).toBe('success');
+        expect(tableMessageFromPreview(preview)).toBe(receiptHeadline);
+        expect(preview.headline).not.toContain('distress-1');
+        expect(preview.details.join('\n')).not.toContain('get_missions');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[MISSION]');
+        expect(output).toContain(receiptHeadline);
+        expect(output).not.toContain('Use: get_missions');
+        expect(output).not.toContain('omitted: rewards');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('0 cr with empty skill_xp omits the XP clause', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_title: 'Mayday at Cloudbank',
+            rewards: { credits: 0, skill_xp: {} },
+          }),
+        );
+        expect(preview.headline).toBe('Mission complete: Mayday at Cloudbank — 0 cr');
+        expect(preview.headline).not.toContain('XP:');
+        expect(preview.details).toEqual([]);
+        expect(tableMessageFromPreview(preview)).toBe(preview.headline);
+      });
+
+      test('zero skill_xp counts do not print an XP clause', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_title: 'Mayday at Cloudbank',
+            rewards: { credits: 0, skill_xp: { mining: 0 } },
+          }),
+        );
+        expect(preview.headline).toBe('Mission complete: Mayday at Cloudbank — 0 cr');
+        expect(preview.headline).not.toContain('XP:');
+      });
+
+      test('title without rewards is Mission complete: title', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', { mission_id: 'distress-1', mission_title: 'Mayday at Cloudbank' }),
+        );
+        expect(preview.headline).toBe('Mission complete: Mayday at Cloudbank');
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toContain('distress-1');
+      });
+
+      test('mission_id prints only when title is missing', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_id: 'distress-1',
+            rewards: { credits: 25, skill_xp: {} },
+          }),
+        );
+        expect(preview.headline).toBe('Mission complete — 25 cr');
+        expect(preview.details).toEqual(['id distress-1']);
+        expect(tableMessageFromPreview(preview)).toBe('Mission complete — 25 cr; id distress-1');
+      });
+
+      test('XP-only rewards omit the credits clause', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_title: 'Mayday at Cloudbank',
+            rewards: { skill_xp: { mining: 40 } },
+          }),
+        );
+        expect(preview.headline).toBe('Mission complete: Mayday at Cloudbank — XP: mining×40');
+        expect(preview.headline).not.toContain(' cr');
+      });
+
+      test('non-object rewards are omitted from the headline', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_title: 'Mayday at Cloudbank',
+            rewards: [500, { mining: 40 }],
+          }),
+        );
+        expect(preview.headline).toBe('Mission complete: Mayday at Cloudbank');
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      });
+
+      test('verbose extras may still append mission_id when title is present', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_id: 'distress-1',
+            mission_title: 'Mayday at Cloudbank',
+            rewards: { credits: 500, skill_xp: { mining: 40 } },
+          }),
+          { verbose: true },
+        );
+        expect(preview.headline).toBe(receiptHeadline);
+        expect(preview.details).toContain('mission_id=distress-1');
+      });
+    });
+
+    describe('error', () => {
+      test('combat_interrupt OpenAPI poll example leads with code: message', () => {
+        const notification = note('error', {
+          code: 'combat_interrupt',
+          message: 'Mining interrupted by combat.',
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('ERROR');
+        expect(preview.headline).toBe('combat_interrupt: Mining interrupted by combat.');
+        expect(preview.details).toEqual([]);
+        expect(preview.details.join('\n')).not.toContain('pending:');
+        expect(preview.severity).toBe('danger');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[ERROR]');
+        expect(output).not.toContain('[ACTION FAILED]');
+        expect(output).not.toContain('pending:');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('pending_command is a detail, not a headline prefix', () => {
+        const preview = formatNotificationPreview(
+          note('error', {
+            code: 'action_pending',
+            message: 'Already queued.',
+            pending_command: 'mine',
+          }),
+        );
+        expect(preview.headline).toBe('action_pending: Already queued.');
+        expect(preview.headline.startsWith('pending:')).toBe(false);
+        expect(preview.headline).not.toContain('pending: mine');
+        expect(preview.details).toEqual(['pending: mine']);
+        expect(tableMessageFromPreview(preview)).toBe('action_pending: Already queued.; pending: mine');
+      });
+
+      test('object details emit scalar bits only', () => {
+        const preview = formatNotificationPreview(
+          note('error', {
+            code: 'action_pending',
+            message: 'Already queued.',
+            details: {
+              hint: 'wait for the current action',
+              tick: 88,
+              nested: { hull: 12, name: 'Dust Devil' },
+            },
+          }),
+        );
+        expect(preview.details).toContain('hint=wait for the current action');
+        expect(preview.details).toContain('tick=88');
+        expect(preview.details.join('\n')).not.toContain('[object Object]');
+        expect(preview.details.join('\n')).not.toContain('Dust Devil');
+        expect(preview.details.join('\n')).not.toContain('"hull"');
+        expectNoNestedJsonDump(preview.details.join('\n'));
+      });
+
+      test('string details become one line; arrays are skipped', () => {
+        const stringDetails = formatNotificationPreview(
+          note('error', {
+            code: 'timeout',
+            message: 'Timed out.',
+            details: 'try again next tick',
+          }),
+        );
+        expect(stringDetails.details).toEqual(['try again next tick']);
+
+        const multiline = formatNotificationPreview(
+          note('error', {
+            code: 'timeout',
+            message: 'Timed out.',
+            details: 'first line\nsecond line',
+          }),
+        );
+        expect(multiline.details).toEqual(['first line']);
+        expect(multiline.details.join('\n')).not.toContain('second line');
+
+        const arrayDetails = formatNotificationPreview(
+          note('error', {
+            code: 'timeout',
+            message: 'Timed out.',
+            details: [{ hull: 12 }, 'retry'],
+          }),
+        );
+        expect(arrayDetails.details).toEqual([]);
+        expectNoDiagnosticTokens(`${arrayDetails.headline}\n${arrayDetails.details.join('\n')}`);
+      });
+
+      test('code-only, message-only, and identical code/message headlines', () => {
+        expect(formatNotificationPreview(note('error', { code: 'timeout' })).headline).toBe('timeout');
+        expect(formatNotificationPreview(note('error', { message: 'Something broke.' })).headline).toBe(
+          'Something broke.',
+        );
+        expect(formatNotificationPreview(note('error', { code: 'timeout', message: 'timeout' })).headline).toBe(
+          'timeout',
+        );
+      });
+
+      test('does not reuse the action_error tag or command/tick headline', () => {
+        const preview = formatNotificationPreview(
+          note('error', {
+            code: 'combat_interrupt',
+            message: 'Mining interrupted by combat.',
+            command: 'mine',
+            tick: 77,
+          }),
+        );
+        expect(preview.tag).toBe('ERROR');
+        expect(preview.tag).not.toBe('ACTION FAILED');
+        expect(preview.headline).toBe('combat_interrupt: Mining interrupted by combat.');
+        expect(preview.headline).not.toContain('mine failed');
+        expect(preview.headline).not.toContain('tick 77');
+      });
     });
   });
 

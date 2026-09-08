@@ -13,6 +13,20 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `isRetryableError(code)` directly; `isKnownErrorCode` remains exact-registry
   and stays `false` for family codes.
 
+### Cloak, mission auto-complete, and error notifications (gameserver 0.597.1)
+
+- Human `get_notifications` / `notifications` / inline notifications print
+  `cloak` with `[CLOAK]`: prefers the server `message`, then engaged / disengaged
+  fallbacks. Cloak strength and auto-dock / auto-undock flags print as details.
+  Table Type stays raw `cloak`. JSON/YAML/jq field names are unchanged.
+- Human previews for `complete_mission` print `[MISSION]` with the title and a
+  compact credits / XP receipt on one line (e.g. `Mission complete: Mayday at
+  Cloudbank — 500 cr, XP: mining×40`). Table Type stays raw `complete_mission`.
+- Human previews for `error` print `[ERROR]` leading with `code: message`.
+  `pending_command` is a detail. Distinct from `action_error` (`[ACTION FAILED]`).
+  Table Type stays raw `error`. Coarse poll filter is `types=system`.
+  JSON/YAML/jq field names are unchanged.
+
 ### Arena objectives and waves (gameserver 0.597.0)
 
 - Human `arena challenges` briefing lines print win conditions (`survive N ticks`,
