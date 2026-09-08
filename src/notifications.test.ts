@@ -398,6 +398,15 @@ describe('notification formatting', () => {
       snippets: ['[WAR]', 'Raiders declared war on Wardens.', 'Reason: territory'],
     },
     {
+      msgType: 'fleet',
+      data: {
+        action: 'fleet_member_died',
+        message: 'FleetPilot was destroyed and has left the fleet.',
+        player_name: 'FleetPilot',
+      },
+      snippets: ['[FLEET]', 'FleetPilot was destroyed and has left the fleet.'],
+    },
+    {
       msgType: 'fleet_disbanded',
       data: {},
       snippets: ['[FLEET]', 'Fleet disbanded'],
@@ -1850,6 +1859,305 @@ describe('notification formatting', () => {
         expect(preview.headline).not.toContain('mine failed');
         expect(preview.headline).not.toContain('tick 77');
       });
+    });
+  });
+
+  describe('fleet lifecycle typed previews (0.597.1)', () => {
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: 'system';
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    test('registers a never-null handler for fleet', () => {
+      expect(hasPreviewHandler('fleet')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('fleet');
+      const preview = formatNotificationPreview(note('fleet', {}));
+      expect(preview.tag).toBe('FLEET');
+      expect(preview.headline).toBe('Fleet update');
+      expect(preview.headline).not.toBe('notification');
+    });
+
+    describe('fleet_leader_promoted', () => {
+      test('prefers the server message and omits raw action=', () => {
+        const notification = note('fleet', {
+          action: 'fleet_leader_promoted',
+          message: 'Fleet leadership passed to Marlowe.',
+          new_leader: 'Marlowe',
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Fleet leadership passed to Marlowe.');
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toContain('action=');
+        expect(preview.details.join('\n')).not.toContain('action=');
+        expect(preview.details).not.toContain('Use: get_status');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[FLEET]');
+        expect(output).not.toContain('Use: get_status');
+        expect(output).not.toContain('action=');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('missing message with new_leader uses the leadership fallback', () => {
+        const preview = formatNotificationPreview(
+          note('fleet', { action: 'fleet_leader_promoted', new_leader: 'Marlowe' }),
+        );
+        expect(preview.headline).toBe('Fleet leadership passed to Marlowe');
+        expect(preview.details).toEqual([]);
+        expect(preview.details).not.toContain('leader Marlowe');
+        expect(preview.details).not.toContain('Use: get_status');
+      });
+
+      test('missing message and no leader is Fleet leadership changed', () => {
+        const preview = formatNotificationPreview(note('fleet', { action: 'fleet_leader_promoted' }));
+        expect(preview.headline).toBe('Fleet leadership changed');
+        expect(preview.details).toEqual([]);
+        expect(preview.details).not.toContain('Use: get_status');
+      });
+
+      test('mixed-case action token still matches the leadership fallback', () => {
+        const preview = formatNotificationPreview(
+          note('fleet', { action: 'Fleet_Leader_Promoted', new_leader: 'Marlowe' }),
+        );
+        expect(preview.headline).toBe('Fleet leadership passed to Marlowe');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('multiline message uses the first line', () => {
+        const preview = formatNotificationPreview(
+          note('fleet', {
+            action: 'fleet_leader_promoted',
+            message: 'Leadership passed to Marlowe.\nSecond line.',
+            new_leader: 'Marlowe',
+          }),
+        );
+        expect(preview.headline).toBe('Leadership passed to Marlowe.');
+        expect(preview.headline).not.toContain('Second line');
+        expect(preview.details).toEqual([]);
+      });
+    });
+
+    describe('fleet_disbanded', () => {
+      test('prefers the server message', () => {
+        const preview = formatNotificationPreview(
+          note('fleet', { action: 'fleet_disbanded', message: 'The fleet has disbanded.' }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('The fleet has disbanded.');
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toContain('action=');
+        expect(preview.details).not.toContain('Use: get_status');
+      });
+
+      test('empty or missing message falls back to Fleet disbanded without Use: get_status', () => {
+        const missing = formatNotificationPreview(note('fleet', { action: 'fleet_disbanded' }));
+        expect(missing.headline).toBe('Fleet disbanded');
+        expect(missing.details).toEqual([]);
+        expect(missing.details).not.toContain('Use: get_status');
+
+        const empty = formatNotificationPreview(note('fleet', { action: 'fleet_disbanded', message: '' }));
+        expect(empty.headline).toBe('Fleet disbanded');
+        expect(empty.details).not.toContain('Use: get_status');
+
+        const whitespace = formatNotificationPreview(note('fleet', { action: 'fleet_disbanded', message: '   ' }));
+        expect(whitespace.headline).toBe('Fleet disbanded');
+        expect(whitespace.details).not.toContain('Use: get_status');
+      });
+    });
+
+    describe('fleet_member_died', () => {
+      test('OpenAPI-style message plus player_name prefers the sentence', () => {
+        const notification = note('fleet', {
+          action: 'fleet_member_died',
+          message: 'FleetPilot was destroyed and has left the fleet.',
+          player_name: 'FleetPilot',
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('FleetPilot was destroyed and has left the fleet.');
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toContain('action=');
+        expect(preview.details).not.toContain('Use: get_status');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[FLEET]');
+        expect(output).not.toContain('Use: get_status');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('missing message with player_name uses the destroyed-member fallback', () => {
+        const preview = formatNotificationPreview(
+          note('fleet', { action: 'fleet_member_died', player_name: 'FleetPilot' }),
+        );
+        expect(preview.headline).toBe('FleetPilot was destroyed and has left the fleet');
+        expect(preview.details).toEqual([]);
+        expect(preview.details).not.toContain('FleetPilot');
+        expect(preview.details).not.toContain('Use: get_status');
+      });
+
+      test('missing message and player_name is A fleet member was destroyed', () => {
+        const preview = formatNotificationPreview(note('fleet', { action: 'fleet_member_died' }));
+        expect(preview.headline).toBe('A fleet member was destroyed');
+        expect(preview.details).toEqual([]);
+        expect(preview.details).not.toContain('Use: get_status');
+      });
+    });
+
+    test('unknown future action with no message stays typed as Fleet {action}', () => {
+      const preview = formatNotificationPreview(note('fleet', { action: 'fleet_merged' }));
+      expect(preview.tag).toBe('FLEET');
+      expect(preview.headline).toBe('Fleet fleet_merged');
+      expect(preview.headline).not.toBe('notification');
+      expect(preview.details).toEqual([]);
+      expect(preview.details).not.toContain('Use: get_status');
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('action=');
+    });
+
+    test('missing action and message is Fleet update', () => {
+      const preview = formatNotificationPreview(note('fleet', {}));
+      expect(preview.tag).toBe('FLEET');
+      expect(preview.headline).toBe('Fleet update');
+      expect(preview.details).toEqual([]);
+      expect(preview.details).not.toContain('Use: get_status');
+    });
+
+    test('leader and member details print only when not already in the headline', () => {
+      const leaderInMessage = formatNotificationPreview(
+        note('fleet', {
+          action: 'fleet_leader_promoted',
+          message: 'Fleet leadership passed to Marlowe.',
+          new_leader: 'Marlowe',
+        }),
+      );
+      expect(leaderInMessage.details).toEqual([]);
+
+      const leaderDetail = formatNotificationPreview(
+        note('fleet', {
+          action: 'fleet_leader_promoted',
+          message: 'Leadership changed.',
+          new_leader: 'Marlowe',
+        }),
+      );
+      expect(leaderDetail.headline).toBe('Leadership changed.');
+      expect(leaderDetail.details).toEqual(['leader Marlowe']);
+      expect(tableMessageFromPreview(leaderDetail)).toBe('Leadership changed.; leader Marlowe');
+
+      const memberInMessage = formatNotificationPreview(
+        note('fleet', {
+          action: 'fleet_member_died',
+          message: 'FleetPilot was destroyed and has left the fleet.',
+          player_name: 'FleetPilot',
+        }),
+      );
+      expect(memberInMessage.details).toEqual([]);
+
+      const memberDetail = formatNotificationPreview(
+        note('fleet', {
+          action: 'fleet_member_died',
+          message: 'A fleet member was destroyed.',
+          player_name: 'FleetPilot',
+        }),
+      );
+      expect(memberDetail.headline).toBe('A fleet member was destroyed.');
+      expect(memberDetail.details).toEqual(['FleetPilot']);
+
+      const both = formatNotificationPreview(
+        note('fleet', {
+          action: 'fleet_merged',
+          message: 'Fleet roster updated.',
+          new_leader: 'Marlowe',
+          player_name: 'FleetPilot',
+        }),
+      );
+      expect(both.details).toEqual(['leader Marlowe', 'FleetPilot']);
+    });
+
+    test('object new_leader and player_name do not dump', () => {
+      const preview = formatNotificationPreview(
+        note('fleet', {
+          action: 'fleet_leader_promoted',
+          message: 'Leadership changed.',
+          new_leader: { username: 'Marlowe' },
+          player_name: { username: 'FleetPilot' },
+        }),
+      );
+      expect(preview.headline).toBe('Leadership changed.');
+      expect(preview.details).toEqual([]);
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+    });
+
+    test('no diagnostic tokens and no Use: get_status on any msg_type=fleet path', () => {
+      const payloads: Record<string, unknown>[] = [
+        {},
+        { action: 'fleet_leader_promoted' },
+        { action: 'fleet_leader_promoted', new_leader: 'Marlowe' },
+        { action: 'fleet_disbanded' },
+        { action: 'fleet_disbanded', message: '' },
+        { action: 'fleet_member_died' },
+        { action: 'fleet_member_died', player_name: 'FleetPilot' },
+        { action: 'fleet_merged' },
+        { action: 'fleet_leader_promoted', message: 'Leadership changed.', new_leader: 'Marlowe' },
+      ];
+      for (const data of payloads) {
+        const notification = note('fleet', data);
+        const preview = formatNotificationPreview(notification);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.details).not.toContain('Use: get_status');
+        expect(output).not.toContain('Use: get_status');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${output}`);
+      }
+    });
+
+    test('three-way collision: fleet action vs msg_type=fleet_disbanded vs action_result.command', () => {
+      expect(hasPreviewHandler('fleet')).toBe(true);
+      expect(hasPreviewHandler('fleet_disbanded')).toBe(true);
+      expect(hasPreviewHandler('action_result')).toBe(true);
+
+      const lifecycle = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'fleet',
+        data: { action: 'fleet_disbanded', message: 'The fleet has disbanded.' },
+      });
+      expect(lifecycle.tag).toBe('FLEET');
+      expect(lifecycle.headline).toBe('The fleet has disbanded.');
+      expect(lifecycle.details).not.toContain('Use: get_status');
+
+      const move = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'fleet_disbanded',
+        data: {},
+      });
+      expect(move.headline).toBe('Fleet disbanded');
+      expect(move.details).toContain('Use: get_status');
+
+      const actionResult = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'action_result',
+        data: { command: 'fleet_disbanded', tick: 1523, result: {} },
+      });
+      expect(actionResult.tag).toBe('ACTION RESULT');
+      expect(actionResult.headline).toBe('Fleet disbanded (tick 1523)');
+      expect(actionResult.details).toContain('Use: get_status');
+
+      const lifecycleEmpty = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'fleet',
+        data: { action: 'fleet_disbanded', message: '' },
+      });
+      expect(lifecycleEmpty.headline).toBe('Fleet disbanded');
+      expect(lifecycleEmpty.details).not.toContain('Use: get_status');
     });
   });
 
