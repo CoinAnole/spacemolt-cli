@@ -940,7 +940,7 @@ export const mobileBaseFixture = {
 };
 
 export const catalogDumpFixture = {
-  version: '0.596.2',
+  version: '0.598.3',
   mining: {
     precision_k: 20,
     overkill_ratio: 4,

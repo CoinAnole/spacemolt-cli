@@ -2507,7 +2507,7 @@ test('catalog_dump prints version, mining constants, counts, and guide pointer',
     context,
   ).stdout.join('\n');
   expect(stdout).toContain('=== Catalog dump ===');
-  expect(stdout).toContain('Version: 0.596.2');
+  expect(stdout).toContain('Version: 0.598.3');
   expect(stdout).toContain('Mining constants');
   expect(stdout).toContain('precision_k: 20');
   expect(stdout).toContain('overkill_ratio: 4');
