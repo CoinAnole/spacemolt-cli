@@ -2860,6 +2860,139 @@ function previewDroneSurvey(
   return { ...preview, severity: 'info' };
 }
 
+function personnelActionHeadline(action: string | undefined, source: string): string {
+  if (action === 'treatment') return `${source} treated your crew`;
+  if (action === 'transfer') return `${source} transferred personnel`;
+  return 'Personnel update';
+}
+
+const PERSONNEL_TRANSFER_COUNTS = [
+  ['fit_crew_transferred', 'fit crew'],
+  ['fit_marines_transferred', 'fit marines'],
+  ['injured_crew_transferred', 'injured crew'],
+  ['injured_marines_transferred', 'injured marines'],
+  ['injured_crew_swapped', 'injured crew swapped'],
+  ['injured_marines_swapped', 'injured marines swapped'],
+] as const;
+
+function personnelCountLine(action: string | undefined, data: Record<string, unknown>): string | undefined {
+  const parts: string[] = [];
+  if (action === 'treatment') {
+    const crew = positiveFinite(data.crew_treated);
+    if (crew !== undefined) parts.push(`${crew} crew treated`);
+    const marines = positiveFinite(data.marines_treated);
+    if (marines !== undefined) parts.push(`${marines} marines treated`);
+  } else if (action === 'transfer') {
+    for (const [key, label] of PERSONNEL_TRANSFER_COUNTS) {
+      const n = positiveFinite(data[key]);
+      if (n !== undefined) parts.push(`${n} ${label}`);
+    }
+  }
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+function personnelComplementLine(label: string, fit: unknown, capacity: unknown, injured: unknown): string | undefined {
+  const fitN = finiteNumber(fit);
+  const capN = finiteNumber(capacity);
+  if (fitN === undefined || capN === undefined) return undefined;
+  const injuredN = positiveFinite(injured);
+  return injuredN !== undefined ? `${label} ${fitN}/${capN} fit, ${injuredN} injured` : `${label} ${fitN}/${capN} fit`;
+}
+
+function previewPersonnelUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const action = previewToken(data.action);
+  const source = nonEmptyString(data.source_username) ?? 'An ally';
+  const headline = personnelActionHeadline(action, source);
+
+  const details: string[] = [];
+  const counts = personnelCountLine(action, data);
+  if (counts !== undefined && !headline.includes(counts)) details.push(counts);
+
+  const personnel = isRecord(data.personnel) ? data.personnel : undefined;
+  if (personnel) {
+    const crew = personnelComplementLine('crew', personnel.fit_crew, data.crew_capacity, personnel.injured_crew);
+    if (crew !== undefined && !headline.includes(crew)) details.push(crew);
+    const marines = personnelComplementLine(
+      'marines',
+      personnel.fit_marines,
+      data.marine_capacity,
+      personnel.injured_marines,
+    );
+    if (marines !== undefined && !headline.includes(marines)) details.push(marines);
+  }
+
+  const shipId = nonEmptyString(data.ship_id);
+  if (details.length === 0 && shipId !== undefined && !headline.includes(shipId)) {
+    details.push(`ship ${shipId}`);
+  }
+
+  const preview = details.length
+    ? detailPreview('PERSONNEL', headline, details, options)
+    : headlinePreview('PERSONNEL', headline, options);
+  return { ...preview, severity: 'info' };
+}
+
+function previewAchievementUnlocked(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const items = records(data.achievements);
+  const faction = data.faction === true;
+
+  if (!items.length) {
+    const preview = headlinePreview('ACHIEVEMENT', 'Achievement unlocked', options);
+    return { ...preview, severity: 'success' };
+  }
+
+  const details: string[] = [];
+  let headline: string;
+
+  const item = items[0];
+  if (items.length === 1 && item) {
+    const name = nonEmptyString(item.name);
+    if (name !== undefined) {
+      headline = faction ? `Faction achievement unlocked: ${name}` : `Achievement unlocked: ${name}`;
+    } else {
+      headline = 'Achievement unlocked';
+      const id = nonEmptyString(item.id);
+      if (id !== undefined) details.push(`id ${id}`);
+    }
+    const points = finiteNumber(item.points);
+    if (points !== undefined) {
+      const line = `${points} pts`;
+      if (!headline.includes(line)) details.push(line);
+    }
+    const category = nonEmptyString(item.category);
+    if (category !== undefined && !headline.includes(category)) details.push(category);
+  } else {
+    headline = faction ? `${items.length} faction achievements unlocked` : `${items.length} achievements unlocked`;
+    const names: string[] = [];
+    for (const item of items) {
+      const name = nonEmptyString(item.name);
+      if (name !== undefined) names.push(name);
+    }
+    if (names.length) {
+      const shown = names.slice(0, 3).join(', ');
+      const extra = names.length > 3 ? `, +${names.length - 3} more` : '';
+      const line = `${shown}${extra}`;
+      if (!headline.includes(line)) details.push(line);
+    }
+  }
+
+  const useLine = faction ? 'Use: get_faction_achievements' : 'Use: get_achievements';
+  if (!headline.includes(useLine)) details.push(useLine);
+
+  const preview = details.length
+    ? detailPreview('ACHIEVEMENT', headline, details, options)
+    : headlinePreview('ACHIEVEMENT', headline, options);
+  return { ...preview, severity: 'success' };
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -2993,6 +3126,8 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   battle_alert: previewBattleAlert,
   drone_scan: previewDroneScan,
   drone_survey: previewDroneSurvey,
+  personnel_update: previewPersonnelUpdate,
+  achievement_unlocked: previewAchievementUnlocked,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

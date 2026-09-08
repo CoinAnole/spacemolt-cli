@@ -58,6 +58,24 @@ export function loadOpenApiSpec(customPath?: string): OpenApiSpec {
   return spec;
 }
 
+const NOTIFICATION_SCHEMA_PREFIX = 'Notification_';
+
+/** msg_type names from NotificationPayload.anyOf $refs, in spec order. */
+export function openapiNotificationMsgTypes(spec: OpenApiSpec): string[] {
+  const anyOf = spec.components?.schemas?.NotificationPayload?.anyOf;
+  if (!Array.isArray(anyOf)) return [];
+  const types: string[] = [];
+  for (const entry of anyOf) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    if (entry.type === 'null') continue;
+    const name = schemaRefName(entry);
+    if (name === undefined || !name.startsWith(NOTIFICATION_SCHEMA_PREFIX)) continue;
+    const msgType = name.slice(NOTIFICATION_SCHEMA_PREFIX.length);
+    if (msgType) types.push(msgType);
+  }
+  return types;
+}
+
 export function resolveRef(spec: OpenApiSpec, ref: string, seen = new Set<string>()): JsonSchema {
   if (!ref.startsWith('#/')) throw new Error(`Unsupported $ref: ${ref}`);
   if (seen.has(ref)) return {};

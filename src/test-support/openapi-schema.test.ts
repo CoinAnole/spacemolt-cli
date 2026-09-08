@@ -8,6 +8,7 @@ import {
   getEffectiveSchema,
   loadOpenApiSpec,
   type OpenApiSpec,
+  openapiNotificationMsgTypes,
   resolveSuccessResponseSchema,
 } from './openapi-schema';
 
@@ -141,6 +142,15 @@ function makeSpec(): OpenApiSpec {
           type: 'object',
           properties: { kind: { type: 'string' }, beta: { type: 'string' } },
         },
+        NotificationPayload: {
+          anyOf: [
+            { $ref: '#/components/schemas/Notification_cloak' },
+            { $ref: '#/components/schemas/Notification_battle_alert' },
+            { type: 'null' },
+          ],
+        },
+        Notification_cloak: { type: 'object' },
+        Notification_battle_alert: { type: 'object' },
       },
     },
   };
@@ -271,5 +281,19 @@ describe('OpenAPI schema utilities', () => {
     );
 
     expect([...fields].sort()).toEqual(['base_fare', 'passengers', 'speed_bonus']);
+  });
+
+  test('openapiNotificationMsgTypes walks NotificationPayload anyOf in order and skips null', () => {
+    expect(openapiNotificationMsgTypes(makeSpec())).toEqual(['cloak', 'battle_alert']);
+  });
+
+  test('openapiNotificationMsgTypes is empty when NotificationPayload or anyOf is missing', () => {
+    expect(openapiNotificationMsgTypes({})).toEqual([]);
+    expect(openapiNotificationMsgTypes({ components: { schemas: {} } })).toEqual([]);
+    expect(
+      openapiNotificationMsgTypes({
+        components: { schemas: { NotificationPayload: { anyOf: [] } } },
+      }),
+    ).toEqual([]);
   });
 });

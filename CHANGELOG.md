@@ -37,6 +37,17 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   unlimited, `0` is depleted) and the same `Use: get_drone` last.
   Table Type stays raw `drone_survey`. Coarse poll filter is
   `types=system`. JSON/YAML/jq field names are unchanged.
+- Human `get_notifications` / `notifications` / inline notifications print
+  `personnel_update` with `[PERSONNEL]`: treatment (`{source} treated your
+  crew`) and transfer (`{source} transferred personnel`) grammar, plus
+  compact `crew 6/8 fit` complement (no `, 0 injured`). Table Type stays
+  raw `personnel_update`. Coarse poll filter is `types=system`.
+  JSON/YAML/jq field names are unchanged.
+- Human previews for `achievement_unlocked` print `[ACHIEVEMENT]` with the
+  achievement name or a count, points, and `Use: get_achievements` /
+  `get_faction_achievements` last. Table Type stays raw
+  `achievement_unlocked`. Coarse poll filter is `types=system`.
+  JSON/YAML/jq field names are unchanged.
 
 ### Wildlife hunt battle labels
 

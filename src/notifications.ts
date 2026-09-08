@@ -83,6 +83,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'KILL':
     case 'CAPTURE':
     case 'LEVEL UP':
+    case 'ACHIEVEMENT':
       return `${c.green}${c.bright}`;
     case 'BASE DESTROYED':
     case 'WAR':
@@ -118,6 +119,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'SCAN':
     case 'VERSION':
     case 'XP':
+    case 'PERSONNEL':
       return c.cyan;
     case 'DRONE':
       return c.blue;
