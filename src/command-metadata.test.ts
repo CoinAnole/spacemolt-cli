@@ -2432,6 +2432,9 @@ describe('command metadata', () => {
     expect(COMMANDS.get_notifications?.schema?.types?.enum).toEqual(emittedTypes);
     expect(COMMANDS.get_notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
     expect(COMMANDS.notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('action_error, error, drone_adrift');
+    expect(captureHelp('get_notifications')).toContain('action_error, error, drone_adrift');
+    expect(captureHelp('notifications')).toContain('action_error, error, drone_adrift');
     for (const command of ['get_notifications', 'notifications']) {
       const config = COMMANDS[command];
       expect(config?.schema?.types?.enum).toEqual(emittedTypes);
@@ -2442,6 +2445,7 @@ describe('command metadata', () => {
       expect(help).toContain('types=chat,combat,market,observation');
       expect(help).toContain('fall back to system');
       expect(help).toContain('types=combat does not include them');
+      expect(help).toContain('action_error, error, drone_adrift');
       expect(help).toContain('pirate_radio');
       expect(help).toContain('arena_challenge');
       expect(help).toContain('arena_objective');
