@@ -2449,6 +2449,42 @@ function previewError(
   };
 }
 
+const FLEET_ACTION_FALLBACKS: Readonly<Record<string, (data: Record<string, unknown>) => string>> = {
+  fleet_leader_promoted: (data) => {
+    const leader = safeScalar(data.new_leader);
+    return leader !== undefined ? `Fleet leadership passed to ${leader}` : 'Fleet leadership changed';
+  },
+  fleet_disbanded: () => 'Fleet disbanded',
+  fleet_member_died: (data) => {
+    const name = safeScalar(data.player_name);
+    return name !== undefined ? `${name} was destroyed and has left the fleet` : 'A fleet member was destroyed';
+  },
+};
+
+function previewFleet(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const action = previewToken(data.action);
+  const fallbackFn =
+    action !== undefined && Object.hasOwn(FLEET_ACTION_FALLBACKS, action) ? FLEET_ACTION_FALLBACKS[action] : undefined;
+  const fallback = fallbackFn ? fallbackFn(data) : action ? `Fleet ${action}` : 'Fleet update';
+  const headline = messageLine || fallback;
+
+  const details: string[] = [];
+  const leader = safeScalar(data.new_leader);
+  if (leader !== undefined && !headline.includes(String(leader))) details.push(`leader ${leader}`);
+  const member = safeScalar(data.player_name);
+  if (member !== undefined && !headline.includes(String(member))) details.push(String(member));
+
+  return details.length
+    ? detailPreview('FLEET', headline, details, options)
+    : headlinePreview('FLEET', headline, options);
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -2569,6 +2605,8 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   cloak: previewCloak,
   complete_mission: previewCompleteMission,
   error: previewError,
+  // Membership frames: action=fleet_disbanded is not msg_type=fleet_disbanded.
+  fleet: previewFleet,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

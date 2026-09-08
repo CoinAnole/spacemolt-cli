@@ -27,6 +27,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   Table Type stays raw `error`. Coarse poll filter is `types=system`.
   JSON/YAML/jq field names are unchanged.
 
+### Fleet lifecycle notifications (gameserver 0.597.1)
+
+- Human `get_notifications` / `notifications` / inline notifications print
+  `fleet` membership events with `[FLEET]`: prefers the server `message`, then
+  leadership / disbanded / member-destroyed fallbacks. Distinct from
+  `fleet_disbanded` move events (`Use: get_status` stays on those). Table Type
+  stays raw `fleet`. JSON/YAML/jq field names are unchanged.
+
 ### Arena objectives and waves (gameserver 0.597.0)
 
 - Human `arena challenges` briefing lines print win conditions (`survive N ticks`,
