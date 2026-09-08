@@ -1669,16 +1669,33 @@ describe('command metadata', () => {
     expect(COMMANDS.get_base?.description).toContain('combined');
     expect(COMMANDS.get_base?.description).toContain('shared stock');
     expect(COMMANDS.get_base?.description).toContain('missing supplies');
+    expect(COMMANDS.get_base?.description).toContain('sovereign mint');
+    expect(COMMANDS.get_base?.description).toContain('Trade Crystal');
     expect(COMMANDS.get_base?.seeAlso).toEqual(['facility_repair', 'facility_list', 'view_market', 'storage']);
 
     const help = captureHelp('get_base');
     expect(help).toContain('repair queue');
     expect(help).toContain('combined');
     expect(help).toContain('shared stock');
+    expect(help).toContain('sovereign mint');
+    expect(help).toContain('Trade Crystal');
     expect(help).toContain('facility repair');
     expect(help).toContain('facility list');
     expect(help).toContain('view_market');
     expect(help).toContain('storage');
+    expect(help).not.toContain('`');
+  });
+
+  test('inspect help documents the docked-base repair queue and sovereign mint report', () => {
+    expect(COMMANDS.inspect?.description).toContain('sovereign mint');
+    expect(COMMANDS.inspect?.description).toContain('repair queue');
+    expect(COMMANDS.inspect?.description).toContain(
+      'Docked-base inspect prints the same repair queue and sovereign mint shortage report as get_base.',
+    );
+
+    const help = captureHelp('inspect');
+    expect(help).toContain('sovereign mint');
+    expect(help).toContain('repair queue');
     expect(help).not.toContain('`');
   });
 

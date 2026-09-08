@@ -4,6 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Sovereign mint shortage report (gameserver 0.598.2)
+
+- Human `get_base` and `inspect` of a docked base print `sovereign_mint` when
+  authenticator production is blocked: raw `status` (`blocked_inputs` /
+  `blocked_internal`), output item, input shortages in the same
+  `Trade Crystal: 2/10, 8 missing` grammar as station repairs, internal
+  production-stage blockers, and the server remediation (sell Trade Crystals
+  to the station). The block is omitted when the server omits the field.
+- JSON/YAML/jq field names are unchanged.
+
 ### Arena fight-start rule_* errors (gameserver 0.590.0)
 
 - Human stderr for `rule_*` on `arena fight` prints a `Suggestion:` pointing at

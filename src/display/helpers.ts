@@ -765,4 +765,96 @@ export function emitStationRepairs(repairs: unknown, options: { skipWrecked?: bo
   return true;
 }
 
+function formatMintNameId(name: unknown, id: unknown): string | undefined {
+  const displayName = nonEmptyString(name);
+  const displayId = nonEmptyString(id);
+  if (displayName && displayId && displayName !== displayId) return `${displayName} (${displayId})`;
+  return displayName ?? displayId;
+}
+
+function printableMintShortages(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const lines: string[] = [];
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const formatted = formatStationMaterial(row);
+    if (formatted) lines.push(formatted);
+  }
+  return lines;
+}
+
+function hasPrintableMintBlocker(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  return Boolean(
+    nonEmptyString(value.stage) ||
+      nonEmptyString(value.item_id) ||
+      nonEmptyString(value.status) ||
+      nonEmptyString(value.remediation) ||
+      nonEmptyString(value.facility_id) ||
+      nonEmptyString(value.facility_name) ||
+      nonEmptyString(value.name),
+  );
+}
+
+function hasPrintableMint(mint: Record<string, unknown>): boolean {
+  if (nonEmptyString(mint.status)) return true;
+  if (nonEmptyString(mint.output_name) || nonEmptyString(mint.output_item_id)) return true;
+  if (nonEmptyString(mint.remediation)) return true;
+  if (printableMintShortages(mint.shortages).length) return true;
+  return Array.isArray(mint.internal_blockers) && mint.internal_blockers.some(hasPrintableMintBlocker);
+}
+
+function emitMintBlocker(blocker: Record<string, unknown>): void {
+  const stage = nonEmptyString(blocker.stage);
+  const status = nonEmptyString(blocker.status);
+  if (stage && status) emitLine(`  ${stage} — ${status}`);
+  else if (stage || status) emitLine(`  ${stage ?? status}`);
+
+  const item = formatMintNameId(blocker.name, blocker.item_id);
+  if (item) emitLine(`    Item: ${item}`);
+
+  const facilityName = nonEmptyString(blocker.facility_name);
+  if (facilityName) emitLine(`    Facility: ${facilityName}`);
+  const facilityId = nonEmptyString(blocker.facility_id);
+  if (facilityId) emitLine(`    Facility ID: ${facilityId}`);
+
+  const remediation = nonEmptyString(blocker.remediation);
+  if (remediation) emitLine(`    ${remediation}`);
+}
+
+/** SovereignMintStatus from get_base / inspect docked base. No-op if absent or empty. */
+export function emitSovereignMint(mint: unknown): boolean {
+  if (!isRecord(mint) || !hasPrintableMint(mint)) return false;
+
+  emitLine('');
+  emitLine(`${c.bright}=== Sovereign Mint ===${c.reset}`);
+
+  const status = nonEmptyString(mint.status);
+  if (status) emitLine(`Status: ${status}`);
+
+  const output = formatMintNameId(mint.output_name, mint.output_item_id);
+  if (output) emitLine(`Output: ${output}`);
+
+  const combined = printableMintShortages(mint.shortages);
+  if (combined.length) {
+    emitLine('Shortages:');
+    for (const line of combined) emitLine(`  ${line}`);
+  }
+
+  if (Array.isArray(mint.internal_blockers)) {
+    const blockers = mint.internal_blockers.filter(hasPrintableMintBlocker);
+    if (blockers.length) {
+      emitLine('Internal blockers:');
+      for (const blocker of blockers) emitMintBlocker(blocker);
+    }
+  }
+
+  const remediation = nonEmptyString(mint.remediation);
+  if (remediation) {
+    if (combined.length) emitLine('');
+    emitLine(remediation);
+  }
+  return true;
+}
+
 export { firstArray, rowValue };

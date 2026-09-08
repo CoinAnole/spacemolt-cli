@@ -6,6 +6,7 @@ import {
   emitCreditBalance,
   emitLine,
   emitLines,
+  emitSovereignMint,
   emitStationConstruction,
   emitStationDefences,
   emitStationFuelPricing,
@@ -480,6 +481,7 @@ export const shipFormatters = [
 
       emitStationRepairs(r.repairs, { skipWrecked: base.wrecked === true });
       emitStationConstruction(r.construction);
+      emitSovereignMint(r.sovereign_mint);
 
       if (base.description) emitLine(`\n${base.description}`);
       return true;

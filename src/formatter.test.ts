@@ -4,7 +4,10 @@ import { displayStructuredResult } from './client';
 import { renderResult, renderStructuredResult } from './display';
 import {
   activeMissionsFixture,
+  baseFixture,
   baseRepairsFixture,
+  baseSovereignMintInputsFixture,
+  baseSovereignMintInternalFixture,
   browseShipsFixture,
   cargoFixture,
   catalogItemsFixture,
@@ -6201,6 +6204,53 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Station: Earth Station ===');
     expect(stdout).not.toContain('=== Repairs ===');
     expect(stdout).not.toContain('=== Repair Queue ===');
+    expect(stdout).not.toContain('=== Sovereign Mint ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints sovereign mint blocked_inputs shortages', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', baseSovereignMintInputsFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sovereign Mint ===');
+    expect(stdout).toContain('Status: blocked_inputs');
+    expect(stdout).toContain('Output: Trade Authenticator (trade_authenticator)');
+    expect(stdout).toContain('Trade Crystal: 2/10, 8 missing');
+    expect(stdout).toContain(
+      'Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.',
+    );
+    expect(stdout).not.toContain('  Mine or otherwise acquire');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints sovereign mint blocked_internal facility blockers', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', baseSovereignMintInternalFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sovereign Mint ===');
+    expect(stdout).toContain('blocked_internal');
+    expect(stdout).toContain('sovereign_mint — unavailable');
+    expect(stdout).toContain('Facility: Sovereign Mint');
+    expect(stdout).toContain('Facility ID: fac-mint-1');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base omits sovereign mint when the payload has no mint object', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', baseFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Sovereign Mint ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base omits sovereign mint when the mint object is empty', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      sovereign_mint: {},
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Sovereign Mint ===');
     expect(stdout).not.toContain('=== Response ===');
   });
 
