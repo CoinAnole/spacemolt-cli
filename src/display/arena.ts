@@ -624,7 +624,7 @@ export type BattleLabels = {
 
 export type ArenaRecord = { wins: number; losses: number; knockouts: number };
 
-// Unconfirmed guesses: OpenAPI does not enum category; docs say wildlife hunts; command is hunt.
+// Exact unconfirmed tokens; unknown categories stay standard.
 const HUNT_CATEGORIES = new Set(['wildlife', 'hunt']);
 
 const BATTLE_LABELS: Record<BattleRuleset, BattleLabels> = {
