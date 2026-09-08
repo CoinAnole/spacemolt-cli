@@ -7,6 +7,7 @@ import {
 import {
   c,
   emitLine,
+  emitSovereignMint,
   emitStationConstruction,
   emitStationDefences,
   emitStationFuelPricing,
@@ -359,6 +360,7 @@ function emitBase(basePayload: Record<string, unknown>): void {
 
   emitStationRepairs(basePayload.repairs, { skipWrecked: base.wrecked === true });
   emitStationConstruction(basePayload.construction);
+  emitSovereignMint(basePayload.sovereign_mint);
 
   if (typeof base.description === 'string' && base.description.trim()) {
     emitLine(`\n${base.description.trim()}`);

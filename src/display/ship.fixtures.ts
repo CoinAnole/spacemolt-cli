@@ -212,6 +212,50 @@ export const baseFixture = {
   services: ['crafting', 'market', 'missions', 'refuel'],
 };
 
+export const sovereignMintBlockedInputs = {
+  status: 'blocked_inputs',
+  output_item_id: 'trade_authenticator',
+  output_name: 'Trade Authenticator',
+  shortages: [
+    {
+      item_id: 'trade_crystal',
+      name: 'Trade Crystal',
+      quantity_in_storage: 2,
+      quantity_missing: 8,
+      quantity_required: 10,
+    },
+  ],
+  remediation:
+    'Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.',
+};
+
+export const sovereignMintBlockedInternal = {
+  status: 'blocked_internal',
+  output_item_id: 'trade_authenticator',
+  output_name: 'Trade Authenticator',
+  internal_blockers: [
+    {
+      stage: 'sovereign_mint',
+      item_id: 'trade_authenticator',
+      name: 'Trade Authenticator',
+      status: 'unavailable',
+      facility_id: 'fac-mint-1',
+      facility_name: 'Sovereign Mint',
+      remediation: 'Restore the sovereign mint; Trade Authenticators cannot be produced until this stage is online.',
+    },
+  ],
+};
+
+export const baseSovereignMintInputsFixture = {
+  ...baseFixture,
+  sovereign_mint: sovereignMintBlockedInputs,
+};
+
+export const baseSovereignMintInternalFixture = {
+  ...baseFixture,
+  sovereign_mint: sovereignMintBlockedInternal,
+};
+
 const baseRepairsNextBlocked = {
   instance_id: 'fac-ls-1',
   definition_id: 'life_support_mk1',
@@ -647,6 +691,8 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_base_repairs: { command: 'get_base', fixture: baseRepairsFixture },
+  get_base_sovereign_mint_inputs: { command: 'get_base', fixture: baseSovereignMintInputsFixture },
+  get_base_sovereign_mint_internal: { command: 'get_base', fixture: baseSovereignMintInternalFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
   tow_wreck: { command: 'tow_wreck', fixture: towWreckFixture },
   release_tow: { command: 'release_tow', fixture: releaseTowFixture },

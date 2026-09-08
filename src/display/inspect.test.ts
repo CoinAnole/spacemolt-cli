@@ -6,6 +6,8 @@ import { renderStructuredResult } from './index.ts';
 import {
   inspectBaseFixture,
   inspectBaseRepairsFixture,
+  inspectBaseSovereignMintInputsFixture,
+  inspectBaseSovereignMintInternalFixture,
   inspectCatalogBoardingModuleFixture,
   inspectCatalogModuleFixture,
   inspectCatalogShipFixture,
@@ -1052,6 +1054,42 @@ test('renders base inspect without a repairs section when repairs are absent', (
   expect(stdout).toMatch(/^ID: earth_station$/m);
   expect(stdout).not.toContain('=== Repairs ===');
   expect(stdout).not.toContain('=== Repair Queue ===');
+  expect(stdout).not.toContain('=== Sovereign Mint ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders nested base sovereign mint shortages matching get_base', () => {
+  const rendered = renderStructuredResult('inspect', inspectBaseSovereignMintInputsFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: nova_terra_central ===');
+  expect(stdout).toContain('Station: Nova Terra Central');
+  expect(stdout).not.toContain('=== Station: Nova Terra Central ===');
+  expect(stdout).toContain('=== Sovereign Mint ===');
+  expect(stdout).toContain('Status: blocked_inputs');
+  expect(stdout).toContain('Output: Trade Authenticator (trade_authenticator)');
+  expect(stdout).toContain('Trade Crystal: 2/10, 8 missing');
+  expect(stdout).toContain(
+    'Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.',
+  );
+  expect(stdout).not.toContain('  Mine or otherwise acquire');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders nested base sovereign mint internal blockers matching get_base', () => {
+  const rendered = renderStructuredResult('inspect', inspectBaseSovereignMintInternalFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: nova_terra_central ===');
+  expect(stdout).toContain('Station: Nova Terra Central');
+  expect(stdout).not.toContain('=== Station:');
+  expect(stdout).toContain('=== Sovereign Mint ===');
+  expect(stdout).toContain('blocked_internal');
+  expect(stdout).toContain('sovereign_mint — unavailable');
+  expect(stdout).toContain('Facility: Sovereign Mint');
+  expect(stdout).toContain('Facility ID: fac-mint-1');
   expect(stdout).not.toContain('=== Response ===');
 });
 

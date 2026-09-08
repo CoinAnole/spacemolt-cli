@@ -90,7 +90,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_action_log: 'Retrieve your or your faction persistent action history.',
   get_active_missions: 'View your active missions and progress.',
   get_base:
-    'Get docked station details. When facilities are damaged, table output shows the repair queue, hull recovery, combined supply shortages that count shared stock once, missing supplies, and how to deliver them.',
+    'Get docked station details. When facilities are damaged, table output shows the repair queue, hull recovery, combined supply shortages that count shared stock once, missing supplies, and how to deliver them. When authenticator production is blocked, table output shows the sovereign mint shortage report: missing Trade Crystals (and how to sell them to the station) or an internal mint-stage blocker.',
   get_battle_status: 'View current battle status',
   get_battle_summary: 'View the aggregate result of a battle by ID',
   get_battle_log:

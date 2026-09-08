@@ -1,5 +1,9 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
-import { baseRepairsFixture } from './ship.fixtures.ts';
+import {
+  baseRepairsFixture,
+  baseSovereignMintInputsFixture,
+  baseSovereignMintInternalFixture,
+} from './ship.fixtures.ts';
 import { poiWorkabilityResources } from './status.fixtures.ts';
 
 export const inspectPackageFixture = {
@@ -275,6 +279,20 @@ export const inspectBaseRepairsFixture = {
   base: baseRepairsFixture,
 };
 
+export const inspectBaseSovereignMintInputsFixture = {
+  id: 'nova_terra_central',
+  kind: 'base',
+  source: 'station',
+  base: baseSovereignMintInputsFixture,
+};
+
+export const inspectBaseSovereignMintInternalFixture = {
+  id: 'nova_terra_central',
+  kind: 'base',
+  source: 'station',
+  base: baseSovereignMintInternalFixture,
+};
+
 export const inspectPoiFixture = {
   id: 'main_belt',
   kind: 'poi',
@@ -324,5 +342,7 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_catalog_recipe: { command: 'inspect', fixture: inspectCatalogRecipeFixture },
   inspect_base: { command: 'inspect', fixture: inspectBaseFixture },
   inspect_base_repairs: { command: 'inspect', fixture: inspectBaseRepairsFixture },
+  inspect_base_sovereign_mint_inputs: { command: 'inspect', fixture: inspectBaseSovereignMintInputsFixture },
+  inspect_base_sovereign_mint_internal: { command: 'inspect', fixture: inspectBaseSovereignMintInternalFixture },
   inspect_poi: { command: 'inspect', fixture: inspectPoiFixture },
 };

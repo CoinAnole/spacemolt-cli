@@ -1,0 +1,54 @@
+
+=== Inspect: nova_terra_central ===
+Kind: base
+Source: station
+
+Station: Nova Terra Central
+ID: nova_terra_central
+POI: nova_terra_central
+Empire: solarian
+Hull: 8000/10000
+Shield: 2500/3000
+Armor: 400
+Guns: 120 DPS (reach 2)
+Fuel: 290750/0
+Fuel Price: 6 credits
+
+Power:
+  Power: 95/120 draw (85% efficiency)
+  Battery: 420/600
+
+Life Support:
+  Slots: 35/40 used
+  Plants online: 2
+  Upkeep every 100 ticks: Oxygen x100, Water Ice x200
+  Short of upkeep: Oxygen x100
+  Restock Oxygen to keep life support online.
+Condition: Critical infrastructure failure. (16% satisfaction)
+Services: crafting, market, missions, refuel
+Facilities: 3
+  fuel_grid, trade_nexus, fleet_yards
+
+=== Construction ===
+
+=== Pending ===
+
+  Name               | ID               | Category       | Status              | ETA | Materials                       
+  -------------------+------------------+----------------+---------------------+-----+---------------------------------
+  Life Support Mk II | life_support_mk2 | infrastructure | gathering_materials |     | Circuit Board: 12/40, 28 missing
+
+=== Under Construction ===
+
+  Name              | ID               | Category       | Status   | ETA     | Materials
+  ------------------+------------------+----------------+----------+---------+----------
+  Battery Bank Mk I | battery_bank_mk1 | infrastructure | building | 9 ticks |          
+
+=== Sovereign Mint ===
+Status: blocked_inputs
+Output: Trade Authenticator (trade_authenticator)
+Shortages:
+  Trade Crystal: 2/10, 8 missing
+
+Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.
+
+A busy trade station.
