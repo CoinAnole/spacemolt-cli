@@ -1,0 +1,49 @@
+{
+  "battle_id": "battle-99",
+  "status": "completed",
+  "total_ticks": 6,
+  "has_more": false,
+  "entries": [
+    {
+      "tick": 6,
+      "kills": [
+        {
+          "victim_id": "creature-1",
+          "killer_id": "player-1"
+        }
+      ],
+      "battle_ended": {
+        "outcome": "victory",
+        "winning_side": 1,
+        "duration": 6,
+        "total_damage": 1800,
+        "ships_destroyed": 1,
+        "participants": [
+          {
+            "player_id": "player-1",
+            "username": "Marlowe",
+            "side_id": 1,
+            "damage_dealt": 0,
+            "damage_taken": 0,
+            "kill_count": 0,
+            "survived": true,
+            "kind": "player",
+            "is_npc": false
+          },
+          {
+            "player_id": "creature-1",
+            "username": "Pilot Whale",
+            "side_id": 2,
+            "damage_dealt": 0,
+            "damage_taken": 0,
+            "kill_count": 0,
+            "survived": false,
+            "kind": "creature",
+            "is_npc": true
+          }
+        ],
+        "category": "wildlife"
+      }
+    }
+  ]
+}

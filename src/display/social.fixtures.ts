@@ -500,6 +500,34 @@ export const battleSummaryArenaFixture = {
   ships_captured: 0,
 };
 
+export const battleSummaryHuntFixture = {
+  battle_id: 'battle-99',
+  system_id: 'sol',
+  system_name: 'Sol',
+  status: 'completed',
+  category: 'wildlife',
+  start_tick: 900300,
+  duration_ticks: 6,
+  participant_count: 2,
+  total_damage: 1800,
+  ships_destroyed: 1,
+  outcome: 'victory',
+  winning_side: 1,
+  player_names: ['Marlowe', 'Pilot Whale'],
+  destroyed_names: ['Pilot Whale'],
+  sides: [
+    {
+      side_id: 1,
+      participants: ['Marlowe'],
+    },
+    {
+      side_id: 2,
+      participants: ['Pilot Whale'],
+    },
+  ],
+  ships_captured: 0,
+};
+
 export const battleSummaryFixture = {
   battle_id: 'battle-42',
   system_id: 'sol',
@@ -660,6 +688,38 @@ export const battleLogArenaFixture = {
           reason: 'target_not_boardable',
         },
       ],
+    },
+  ],
+};
+
+export const battleLogHuntFixture = {
+  battle_id: 'battle-99',
+  status: 'completed',
+  total_ticks: 6,
+  has_more: false,
+  entries: [
+    {
+      tick: 6,
+      kills: [{ victim_id: 'creature-1', killer_id: 'player-1' }],
+      battle_ended: {
+        outcome: 'victory',
+        winning_side: 1,
+        duration: 6,
+        total_damage: 1800,
+        ships_destroyed: 1,
+        participants: [
+          participantSummary({ username: 'Marlowe', kind: 'player', is_npc: false, survived: true }),
+          participantSummary({
+            player_id: 'creature-1',
+            username: 'Pilot Whale',
+            side_id: 2,
+            kind: 'creature',
+            is_npc: true,
+            survived: false,
+          }),
+        ],
+        category: 'wildlife',
+      },
     },
   ],
 };
@@ -1784,11 +1844,13 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_status_combat_state: { command: 'get_battle_status', fixture: battleStatusCombatStateFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
   get_battle_summary_arena: { command: 'get_battle_summary', fixture: battleSummaryArenaFixture },
+  get_battle_summary_hunt: { command: 'get_battle_summary', fixture: battleSummaryHuntFixture },
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
   get_battle_summary_captures_kind: { command: 'get_battle_summary', fixture: battleSummaryCapturesKindFixture },
   get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_arena: { command: 'get_battle_log', fixture: battleLogArenaFixture },
+  get_battle_log_hunt: { command: 'get_battle_log', fixture: battleLogHuntFixture },
   get_battle_log_boarding: { command: 'get_battle_log', fixture: battleLogBoardingFixture },
   get_battle_log_plundered: { command: 'get_battle_log', fixture: battleLogPlunderedFixture },
   get_battle_log_zone_moves: { command: 'get_battle_log', fixture: battleLogZoneMovesFixture },

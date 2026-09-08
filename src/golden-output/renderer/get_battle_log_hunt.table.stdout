@@ -1,0 +1,13 @@
+
+=== Battle Log ===
+ID: battle-99
+Status: completed
+Total Ticks: 6
+Has More: no
+Wildlife hunt: creatures have hull and armor but no shields; kills drop carcass wrecks. Wildlife never dogpiles. Most creatures flee when badly hurt; some apex never flee.
+
+=== Ticks ===
+
+  Tick | Attacks | Hits | Damage | Burns | Flee | Kills | Ended  
+  -----+---------+------+--------+-------+------+-------+--------
+  6    | 0       | 0    |        |       |      | 1     | victory
