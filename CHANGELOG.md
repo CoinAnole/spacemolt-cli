@@ -4,6 +4,13 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Help copy (gameserver 0.598.3)
+
+- `help upload_drone` notes that DroneLang `MOVE` and `at()` accept a POI ID
+  or that station's base ID (same system only). The CLI still sends the script
+  as an opaque string. JSON/YAML/jq field names are unchanged.
+- `help all` Drones line mentions the same POI-or-base-ID rule.
+
 ### Sovereign mint shortage report (gameserver 0.598.2)
 
 - Human `get_base` and `inspect` of a docked base print `sovereign_mint` when

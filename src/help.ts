@@ -1131,7 +1131,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     load_drone <item_id>      Load a drone from cargo
     deploy_drone <drone_id>   Deploy a loaded drone
     recall_drone [drone_id]   Recall one drone, or all=true
-    upload_drone <id> <code>  Upload DroneLang script
+    upload_drone <id> <code>  Upload DroneLang (MOVE/at() take POI or base ID)
 
   ${c.cyan}Salvage & Tow:${c.reset}
     tow_wreck <wreck_id>      Tow a wreck

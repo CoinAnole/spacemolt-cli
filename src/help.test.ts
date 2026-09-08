@@ -774,6 +774,14 @@ describe('help output branches', () => {
     expect(output).not.toContain('Wrecks at POI (for looting)');
   });
 
+  test('showFullHelp drone catalog mentions POI or base ID for upload_drone', () => {
+    const capture = captureWriter();
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('upload_drone <id> <code>  Upload DroneLang (MOVE/at() take POI or base ID)');
+    expect(output).not.toContain('upload_drone <id> <code>  Upload DroneLang script');
+  });
+
   test('showCommandHelp renders no-arg commands without args placeholder', () => {
     const capture = captureWriter();
     const registry: Pick<CommandRegistrySnapshot, 'allCommands'> = {

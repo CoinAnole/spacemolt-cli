@@ -1992,6 +1992,24 @@ describe('command metadata', () => {
     expect(help).toContain('deploy every in-bay drone');
   });
 
+  test('upload_drone help documents MOVE/at() POI or station base IDs', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.upload_drone;
+    expect(config?.usage).toBe('<drone_id> <script>');
+    expect(config?.description).toBe(
+      "Upload a DroneLang script to a drone. MOVE and at() accept a POI ID or that station's base ID (same system only).",
+    );
+    expect(config?.example).toBe('spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"');
+    expect(config?.schema?.text?.description).toContain('max 2000 chars');
+    expect(config?.schema?.text?.description).toContain('Pass empty string to clear');
+
+    const help = captureHelp('upload_drone');
+    expect(help).toContain("MOVE and at() accept a POI ID or that station's base ID (same system only).");
+    expect(help).toContain('spacemolt upload_drone <drone_id> <script>');
+    expect(help).toContain('spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"');
+    expect(help).toContain('Pass empty string to clear');
+    expect(help).not.toContain('at("poi_id")');
+  });
+
   test('profile help advertises local action forms without key-value action fields', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.profile;
     expect(config).toBeDefined();
