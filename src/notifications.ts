@@ -73,6 +73,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'FRIEND':
     case 'MINED':
     case 'MISSION':
+    case 'OK':
     case 'RECONNECTED':
     case 'ARRIVAL':
     case 'TRANSIT':

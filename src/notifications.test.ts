@@ -452,6 +452,16 @@ describe('notification formatting', () => {
       ],
     },
     {
+      msgType: 'ok',
+      data: {
+        action: 'fleet_dock',
+        message: 'Your fleet has docked.',
+        base: 'Sol Central',
+        base_id: 'confederacy_central_command',
+      },
+      snippets: ['[FLEET]', 'Your fleet has docked — Sol Central (confederacy_central_command)'],
+    },
+    {
       msgType: 'market_update',
       data: {
         base_id: 'haven_exchange',
@@ -1125,6 +1135,26 @@ describe('notification formatting', () => {
       expect(preview.details.join('\n')).not.toContain('Docked at:');
     });
 
+    test('fleet_dock string base is accepted as the display name', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('fleet_dock', { base: 'Sol Central', base_id: 'confederacy_central_command' }),
+      );
+      expect(preview.headline).toBe('Fleet docked at Sol Central (confederacy_central_command) (tick 1523)');
+    });
+
+    test('fleet_dock object base plus base_id is id-only, not [object Object]', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('fleet_dock', {
+          base: { name: 'Sol Central' },
+          base_id: 'confederacy_central_command',
+        }),
+      );
+      expect(preview.headline).toBe('Fleet docked at confederacy_central_command (tick 1523)');
+      expect(preview.headline).not.toContain('Sol Central');
+      expect(preview.headline).not.toContain('[object Object]');
+      expect(preview.headline).not.toContain('{');
+    });
+
     test('fleet_dock identity from result top-level scalars', () => {
       const preview = formatNotificationPreview(
         actionResultNote('fleet_dock', { result: { base_name: 'Haven Exchange', base_id: 'haven_exchange' } }),
@@ -1352,6 +1382,41 @@ describe('notification formatting', () => {
       expect(preview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange)');
       expect(preview.details).toEqual([]);
       expect(preview.details.join('\n')).not.toContain('Docked at:');
+    });
+
+    test('fleet_dock string base is accepted as the display name', () => {
+      const preview = formatNotificationPreview(
+        note('fleet_dock', { base: 'Sol Central', base_id: 'confederacy_central_command' }),
+      );
+      expect(preview.headline).toBe('Fleet docked at Sol Central (confederacy_central_command)');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('fleet_dock object base plus base_id is id-only, not [object Object]', () => {
+      const preview = formatNotificationPreview(
+        note('fleet_dock', {
+          base: { name: 'Sol Central' },
+          base_id: 'confederacy_central_command',
+        }),
+      );
+      expect(preview.headline).toBe('Fleet docked at confederacy_central_command');
+      expect(preview.headline).not.toContain('Sol Central');
+      expect(preview.details).toEqual([]);
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      expect(preview.headline).not.toContain('{');
+    });
+
+    test('fleet_dock with message joins identity into the headline with an em dash', () => {
+      const preview = formatNotificationPreview(
+        note('fleet_dock', {
+          message: 'Your fleet has docked.',
+          base_name: 'Haven Exchange',
+          base_id: 'haven_exchange',
+        }),
+      );
+      expect(preview.headline).toBe('Your fleet has docked — Haven Exchange (haven_exchange)');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('Your fleet has docked.;');
     });
 
     test('no-docked_at bag prints preferred location scalars and does not leak message=/tick=', () => {
@@ -2158,6 +2223,452 @@ describe('notification formatting', () => {
       });
       expect(lifecycleEmpty.headline).toBe('Fleet disbanded');
       expect(lifecycleEmpty.details).not.toContain('Use: get_status');
+    });
+  });
+
+  describe('ok fleet movement typed previews (0.597.1)', () => {
+    const dockIdentity = 'Sol Central (confederacy_central_command)';
+    const dockHeadline = `Your fleet has docked — ${dockIdentity}`;
+    const openApiDock = {
+      action: 'fleet_dock',
+      message: 'Your fleet has docked.',
+      base: 'Sol Central',
+      base_id: 'confederacy_central_command',
+    } as const;
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: 'system';
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    test('registers a never-null handler for ok', () => {
+      expect(hasPreviewHandler('ok')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('ok');
+      const preview = formatNotificationPreview(note('ok', {}));
+      expect(preview.tag).toBe('OK');
+      expect(preview.headline).toBe('OK');
+      expect(preview.headline).not.toBe('notification');
+    });
+
+    describe('fleet_dock', () => {
+      test('OpenAPI example with message joins identity into the headline, not details', () => {
+        const notification = note('ok', { ...openApiDock });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe(dockHeadline);
+        expect(preview.details).toEqual([]);
+        expect(tableMessageFromPreview(preview)).toBe(dockHeadline);
+        expect(formatNotificationMessage(notification)).toBe(dockHeadline);
+        expect(preview.headline).not.toContain('Your fleet has docked.;');
+        expect(preview.headline).not.toContain('Your fleet has docked.');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[FLEET]');
+        expect(output).toContain(dockHeadline);
+        expect(output).not.toContain('Use: get_status');
+        expect(output).not.toContain('action=');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('long message still ends with identity within maxLineLength 120', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            message: 'A'.repeat(200),
+            base: 'Sol Central',
+            base_id: 'confederacy_central_command',
+          }),
+          { maxLineLength: 120 },
+        );
+        expect(preview.headline.length).toBeLessThanOrEqual(120);
+        expect(preview.headline.endsWith(` — ${dockIdentity}`)).toBe(true);
+        expect(preview.details).toEqual([]);
+        expect(tableMessageFromPreview(preview)).toBe(preview.headline);
+      });
+
+      test('suffix that cannot fit uses identity alone', () => {
+        const preview = formatNotificationPreview(note('ok', { ...openApiDock }), { maxLineLength: 44 });
+        expect(preview.headline).toBe(dockIdentity);
+        expect(preview.headline.length).toBeLessThanOrEqual(44);
+        expect(preview.details).toEqual([]);
+      });
+
+      test('no-message string base headlines Fleet docked at Name (id)', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            base: 'Sol Central',
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe(`Fleet docked at ${dockIdentity}`);
+        expect(preview.details).toEqual([]);
+        expect(tableMessageFromPreview(preview)).toBe(`Fleet docked at ${dockIdentity}`);
+      });
+
+      test('no-message base_name/base_id still headlines Name (id)', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            base_name: 'Haven Exchange',
+            base_id: 'haven_exchange',
+          }),
+        );
+        expect(preview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange)');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('object base plus base_id is id-only, not [object Object]', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            base: { name: 'Sol Central' },
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(preview.headline).toBe('Fleet docked at confederacy_central_command');
+        expect(preview.headline).not.toContain('Sol Central');
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+        expect(preview.headline).not.toContain('{');
+      });
+
+      test('null base plus base_id is id-only', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            base: null,
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(preview.headline).toBe('Fleet docked at confederacy_central_command');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('message that already contains identity keeps the server sentence', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            message: `Docked at ${dockIdentity}.`,
+            base: 'Sol Central',
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(preview.headline).toBe(`Docked at ${dockIdentity}.`);
+        expect(preview.details).toEqual([]);
+      });
+
+      test('empty or whitespace message uses the no-message fallback', () => {
+        const empty = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            message: '',
+            base: 'Sol Central',
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(empty.headline).toBe(`Fleet docked at ${dockIdentity}`);
+        expect(empty.details).toEqual([]);
+
+        const whitespace = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_dock',
+            message: '   ',
+            base: 'Sol Central',
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(whitespace.headline).toBe(`Fleet docked at ${dockIdentity}`);
+      });
+
+      test('mixed-case action token still dispatches to dock identity', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'Fleet_Dock',
+            message: 'Your fleet has docked.',
+            base: 'Sol Central',
+            base_id: 'confederacy_central_command',
+          }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe(dockHeadline);
+      });
+
+      test('dock without identity is Fleet docked', () => {
+        const preview = formatNotificationPreview(note('ok', { action: 'fleet_dock' }));
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Fleet docked');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('does not print Use: get_status', () => {
+        const preview = formatNotificationPreview(note('ok', { ...openApiDock }));
+        expect(preview.details).not.toContain('Use: get_status');
+        expect(stripAnsi(formatNotification(note('ok', { ...openApiDock })).join('\n'))).not.toContain(
+          'Use: get_status',
+        );
+      });
+    });
+
+    describe('fleet_undock', () => {
+      test('prefers the server message', () => {
+        const preview = formatNotificationPreview(
+          note('ok', { action: 'fleet_undock', message: 'Your fleet has undocked.' }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Your fleet has undocked.');
+        expect(preview.details).toEqual([]);
+        expect(preview.details).not.toContain('Use: get_status');
+        expect(tableMessageFromPreview(preview)).toBe('Your fleet has undocked.');
+      });
+
+      test('missing message is Fleet undocked', () => {
+        const preview = formatNotificationPreview(note('ok', { action: 'fleet_undock' }));
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Fleet undocked');
+        expect(preview.details).toEqual([]);
+        expect(preview.details).not.toContain('Use: get_status');
+      });
+
+      test('empty or whitespace message uses the undock fallback', () => {
+        expect(formatNotificationPreview(note('ok', { action: 'fleet_undock', message: '' })).headline).toBe(
+          'Fleet undocked',
+        );
+        expect(formatNotificationPreview(note('ok', { action: 'fleet_undock', message: '   ' })).headline).toBe(
+          'Fleet undocked',
+        );
+      });
+    });
+
+    describe('fleet_travel and fleet_jump', () => {
+      test('no-message travel puts destination and arrival tick in the headline', () => {
+        const preview = formatNotificationPreview(
+          note('ok', { action: 'fleet_travel', destination: 'Alfirk', arrival_tick: 900 }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Fleet traveling → Alfirk (arrival tick 900)');
+        expect(preview.details).toEqual([]);
+        expect(tableMessageFromPreview(preview)).toBe('Fleet traveling → Alfirk (arrival tick 900)');
+      });
+
+      test('no-message jump puts destination and arrival tick in the headline', () => {
+        const preview = formatNotificationPreview(
+          note('ok', { action: 'fleet_jump', destination: 'Alfirk', arrival_tick: 900 }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Fleet jumping → Alfirk (arrival tick 900)');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('message travel attaches destination and tick as details', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Your fleet has departed.',
+            destination: 'Alfirk',
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Your fleet has departed.');
+        expect(preview.details).toEqual(['→ Alfirk', 'arrival tick 900']);
+        expect(tableMessageFromPreview(preview)).toBe('Your fleet has departed.; → Alfirk');
+      });
+
+      test('message jump attaches destination and tick as details', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            message: 'Your fleet is jumping.',
+            destination: 'Alfirk',
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.headline).toBe('Your fleet is jumping.');
+        expect(preview.details).toEqual(['→ Alfirk', 'arrival tick 900']);
+      });
+
+      test('does not duplicate destination or tick already in the message', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Traveling to Alfirk, arrival tick 900.',
+            destination: 'Alfirk',
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.headline).toBe('Traveling to Alfirk, arrival tick 900.');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('travel with destination only, jump with arrival only, and empty movement', () => {
+        const destOnly = formatNotificationPreview(note('ok', { action: 'fleet_travel', destination: 'Alfirk' }));
+        expect(destOnly.headline).toBe('Fleet traveling → Alfirk');
+        expect(destOnly.details).toEqual([]);
+
+        const arrivalOnly = formatNotificationPreview(note('ok', { action: 'fleet_jump', arrival_tick: 900 }));
+        expect(arrivalOnly.headline).toBe('Fleet jumping (arrival tick 900)');
+        expect(arrivalOnly.details).toEqual([]);
+
+        const emptyTravel = formatNotificationPreview(note('ok', { action: 'fleet_travel' }));
+        expect(emptyTravel.headline).toBe('Fleet traveling');
+        expect(emptyTravel.details).toEqual([]);
+
+        const emptyJump = formatNotificationPreview(note('ok', { action: 'fleet_jump' }));
+        expect(emptyJump.headline).toBe('Fleet jumping');
+        expect(emptyJump.details).toEqual([]);
+      });
+
+      test('object destination is ignored, not stringified', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Your fleet has departed.',
+            destination: { name: 'Alfirk' },
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.headline).toBe('Your fleet has departed.');
+        expect(preview.details).toEqual(['arrival tick 900']);
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+        expect(preview.details.join('\n')).not.toContain('{');
+      });
+    });
+
+    test('unknown action uses tag OK and prefers the server message', () => {
+      const withMessage = formatNotificationPreview(note('ok', { action: 'ack', message: 'Command accepted.' }));
+      expect(withMessage.tag).toBe('OK');
+      expect(withMessage.headline).toBe('Command accepted.');
+      expect(withMessage.details).toEqual([]);
+
+      const noMessage = formatNotificationPreview(note('ok', { action: 'ack' }));
+      expect(noMessage.tag).toBe('OK');
+      expect(noMessage.headline).toBe('ack');
+      expect(noMessage.details).toEqual([]);
+    });
+
+    test('missing action uses tag OK', () => {
+      const withMessage = formatNotificationPreview(note('ok', { message: 'All good.' }));
+      expect(withMessage.tag).toBe('OK');
+      expect(withMessage.headline).toBe('All good.');
+      expect(withMessage.details).toEqual([]);
+
+      const empty = formatNotificationPreview(note('ok', {}));
+      expect(empty.tag).toBe('OK');
+      expect(empty.headline).toBe('OK');
+      expect(empty.details).toEqual([]);
+    });
+
+    test('unknown action attaches unused identity and destination as details', () => {
+      const preview = formatNotificationPreview(
+        note('ok', {
+          action: 'ack',
+          message: 'Command accepted.',
+          base: 'Sol Central',
+          base_id: 'confederacy_central_command',
+          destination: 'Alfirk',
+        }),
+      );
+      expect(preview.tag).toBe('OK');
+      expect(preview.headline).toBe('Command accepted.');
+      expect(preview.details).toEqual([dockIdentity, '→ Alfirk']);
+    });
+
+    test('object action and object base do not dump on missing-action ok', () => {
+      const preview = formatNotificationPreview(
+        note('ok', {
+          action: { name: 'fleet_dock' },
+          base: { name: 'Sol Central' },
+          base_id: 'confederacy_central_command',
+        }),
+      );
+      expect(preview.tag).toBe('OK');
+      expect(preview.headline).toBe('OK');
+      expect(preview.details).toEqual(['confederacy_central_command']);
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('{');
+    });
+
+    test('three-way collision: msg_type=ok vs msg_type=fleet_dock vs action_result.command=fleet_dock', () => {
+      expect(hasPreviewHandler('ok')).toBe(true);
+      expect(hasPreviewHandler('fleet_dock')).toBe(true);
+      expect(hasPreviewHandler('action_result')).toBe(true);
+
+      const okDock = note('ok', { ...openApiDock });
+      const residualDock = note('fleet_dock', {
+        base_name: 'Haven Exchange',
+        base_id: 'haven_exchange',
+      });
+      const actionResultDock = {
+        type: 'system',
+        msg_type: 'action_result',
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data: { command: 'fleet_dock', tick: 1523, result: {} },
+      };
+
+      const okPreview = formatNotificationPreview(okDock);
+      expect(okPreview.tag).toBe('FLEET');
+      expect(okPreview.headline).toBe(dockHeadline);
+      expect(okPreview.details).toEqual([]);
+      expect(okPreview.details).not.toContain('Use: get_status');
+      expect(formatNotificationMessage(okDock)).toBe(dockHeadline);
+      expect(formatNotificationMessage(okDock)).not.toBe('FLEET');
+      expect(formatNotificationMessage(okDock)).not.toBe('ok');
+
+      const residualPreview = formatNotificationPreview(residualDock);
+      expect(residualPreview.tag).toBe('FLEET');
+      expect(residualPreview.headline).toBe('Fleet docked at Haven Exchange (haven_exchange)');
+      expect(residualPreview.details).toEqual([]);
+      expect(residualPreview.details).not.toContain('Use: get_status');
+      expect(formatNotificationMessage(residualDock)).toBe('Fleet docked at Haven Exchange (haven_exchange)');
+
+      const actionPreview = formatNotificationPreview(actionResultDock);
+      expect(actionPreview.tag).toBe('ACTION RESULT');
+      expect(actionPreview.headline).toBe('Fleet docked (tick 1523)');
+      expect(actionPreview.headline).not.toContain('completed');
+      expect(formatNotificationMessage(actionResultDock)).toBe('Fleet docked (tick 1523)');
+      expect(formatNotificationMessage(actionResultDock)).not.toBe('ACTION RESULT');
+
+      expect(okPreview.headline).not.toBe(residualPreview.headline);
+      expect(okPreview.headline).not.toBe(actionPreview.headline);
+      expect(residualPreview.headline).not.toBe(actionPreview.headline);
+    });
+
+    test('no diagnostic tokens and no Use: get_status on documented fleet ok actions', () => {
+      const payloads: Record<string, unknown>[] = [
+        { ...openApiDock },
+        { action: 'fleet_dock', base: 'Sol Central', base_id: 'confederacy_central_command' },
+        { action: 'fleet_dock', base: { name: 'Sol Central' }, base_id: 'confederacy_central_command' },
+        { action: 'fleet_undock' },
+        { action: 'fleet_undock', message: 'Your fleet has undocked.' },
+        { action: 'fleet_travel', destination: 'Alfirk', arrival_tick: 900 },
+        { action: 'fleet_travel', message: 'Your fleet has departed.', destination: 'Alfirk' },
+        { action: 'fleet_jump', destination: 'Alfirk', arrival_tick: 900 },
+        { action: 'fleet_jump', message: 'Your fleet is jumping.', arrival_tick: 900 },
+        { action: 'ack' },
+        { message: 'All good.' },
+        {},
+      ];
+      for (const data of payloads) {
+        const notification = note('ok', data);
+        const preview = formatNotificationPreview(notification);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(preview.details).not.toContain('Use: get_status');
+        expect(output).not.toContain('Use: get_status');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${output}`);
+      }
     });
   });
 

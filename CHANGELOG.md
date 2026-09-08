@@ -35,6 +35,14 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `fleet_disbanded` move events (`Use: get_status` stays on those). Table Type
   stays raw `fleet`. JSON/YAML/jq field names are unchanged.
 
+### Fleet movement ok notifications (gameserver 0.597.1)
+
+- Human `get_notifications` / `notifications` / inline notifications print
+  fleet-follower dock, undock, travel, and jump under `[FLEET]` when
+  `msg_type=ok`. Dock identity joins the headline even when `message` is
+  present (e.g. `Your fleet has docked — Sol Central (confederacy_central_command)`).
+  Table Type stays raw `ok`. JSON/YAML/jq field names are unchanged.
+
 ### Arena objectives and waves (gameserver 0.597.0)
 
 - Human `arena challenges` briefing lines print win conditions (`survive N ticks`,

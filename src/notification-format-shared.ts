@@ -492,7 +492,7 @@ export function formatActionResultDetails(details: Record<string, unknown>): str
   return bits.length ? bits.join(' ') : undefined;
 }
 
-const FLEET_DOCK_NAME_KEYS = ['base_name', 'station_name', 'name', 'poi_name'] as const;
+const FLEET_DOCK_NAME_KEYS = ['base', 'base_name', 'station_name', 'name', 'poi_name'] as const;
 const FLEET_DOCK_ID_KEYS = ['base_id', 'docked_at', 'station_id'] as const;
 const ACTION_RESULT_STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
 
@@ -2335,7 +2335,27 @@ function previewFleetDock(
   const message = safeScalar(data.message);
   const identity = fleetDockIdentity(data) ?? (isRecord(data.location) ? fleetDockIdentity(data.location) : undefined);
   const fallback = identity ? `Fleet docked at ${identity}` : 'Fleet docked';
-  const headline = message !== undefined ? firstLine(String(message)) : fallback;
+  let headline: string;
+  if (message !== undefined) {
+    const messageLine = firstLine(String(message));
+    if (identity && !messageLine.includes(identity)) {
+      // Clip the lead so ` — identity` still fits in maxLineLength.
+      const lead = messageLine.replace(/\.+$/, '').trim();
+      const suffix = ` — ${identity}`;
+      const budget = options.maxLineLength - suffix.length;
+      if (budget <= 1) {
+        headline = identity;
+      } else if (lead.length <= budget) {
+        headline = `${lead}${suffix}`;
+      } else {
+        headline = `${lead.slice(0, budget - 1)}…${suffix}`;
+      }
+    } else {
+      headline = messageLine;
+    }
+  } else {
+    headline = fallback;
+  }
   return headlinePreview('FLEET', headline, options);
 }
 
@@ -2460,6 +2480,71 @@ const FLEET_ACTION_FALLBACKS: Readonly<Record<string, (data: Record<string, unkn
     return name !== undefined ? `${name} was destroyed and has left the fleet` : 'A fleet member was destroyed';
   },
 };
+
+function okBaseLabel(data: Record<string, unknown>): string | undefined {
+  return fleetDockIdentity(data);
+}
+
+function previewOk(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const action = previewToken(data.action);
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+
+  if (action === 'fleet_dock') {
+    return previewFleetDock(data, _notification, options);
+  }
+
+  let tag = 'OK';
+  let headline = messageLine;
+  const details: string[] = [];
+
+  switch (action) {
+    case 'fleet_undock':
+      tag = 'FLEET';
+      headline = messageLine || 'Fleet undocked';
+      break;
+    case 'fleet_travel':
+    case 'fleet_jump': {
+      tag = 'FLEET';
+      const destination = safeScalar(data.destination);
+      const arrival = safeScalar(data.arrival_tick);
+      if (!headline) {
+        const verb = action === 'fleet_jump' ? 'Fleet jumping' : 'Fleet traveling';
+        const parts = [verb];
+        if (destination !== undefined) parts.push(`→ ${destination}`);
+        if (arrival !== undefined) parts.push(`(arrival tick ${arrival})`);
+        headline = parts.join(' ');
+      } else {
+        if (destination !== undefined && !headline.includes(String(destination))) {
+          details.push(`→ ${destination}`);
+        }
+        if (arrival !== undefined && !headline.includes(String(arrival))) {
+          details.push(`arrival tick ${arrival}`);
+        }
+      }
+      break;
+    }
+    default: {
+      if (!headline) {
+        headline = action ? String(safeScalar(data.action)) : 'OK';
+      }
+      const identity = okBaseLabel(data);
+      if (identity && !headline.includes(identity)) details.push(identity);
+      const destination = safeScalar(data.destination);
+      if (destination !== undefined && !headline.includes(String(destination))) {
+        details.push(`→ ${destination}`);
+      }
+      break;
+    }
+  }
+
+  if (!headline) headline = 'OK';
+  return details.length ? detailPreview(tag, headline, details, options) : headlinePreview(tag, headline, options);
+}
 
 function previewFleet(
   data: Record<string, unknown>,
@@ -2605,8 +2690,10 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   cloak: previewCloak,
   complete_mission: previewCompleteMission,
   error: previewError,
-  // Membership frames: action=fleet_disbanded is not msg_type=fleet_disbanded.
+  // msg_type=fleet action=fleet_disbanded is not msg_type=fleet_disbanded;
+  // msg_type=ok action=fleet_dock is not msg_type=fleet_dock. Keep all four keys distinct.
   fleet: previewFleet,
+  ok: previewOk,
 };
 
 /** True when a native pure preview handler is registered for msgType. */
