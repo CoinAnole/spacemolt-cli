@@ -486,7 +486,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   upload_drone: {
     usage: '<drone_id> <script>',
-    description: 'Upload a DroneLang script to a drone.',
+    description:
+      "Upload a DroneLang script to a drone. MOVE and at() accept a POI ID or that station's base ID (same system only).",
     example: 'spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"',
     discoverWith: ['list_drones', 'get_drone'],
     seeAlso: ['get_drone', 'deploy_drone'],
