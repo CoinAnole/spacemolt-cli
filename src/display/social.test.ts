@@ -10,6 +10,7 @@ import {
   battleLogArenaFixture,
   battleLogBoardingFixture,
   battleLogFixture,
+  battleLogHuntFixture,
   battleLogInterruptedFixture,
   battleLogPlunderedFixture,
   battleLogSnapshotsFixture,
@@ -21,6 +22,7 @@ import {
   battleSummaryCapturesFixture,
   battleSummaryCapturesKindFixture,
   battleSummaryFixture,
+  battleSummaryHuntFixture,
   battleSummaryInterruptedFixture,
   facilityListFixture,
   facilityListSimpleFixture,
@@ -1683,6 +1685,21 @@ test('get_battle_summary arena uses knockout labels and does not claim ammo rest
   expect(stdout).not.toContain('Destroyed:');
 });
 
+test('get_battle_summary hunt uses wildlife labels and does not use knockout copy', () => {
+  const stdout = renderBattleSummary(structuredClone(battleSummaryHuntFixture) as Record<string, unknown>);
+  expect(stdout).toContain('Category: wildlife');
+  expect(stdout).toContain(
+    'Wildlife hunt: creatures have hull and armor but no shields; kills drop carcass wrecks. Wildlife never dogpiles. Most creatures flee when badly hurt; some apex never flee.',
+  );
+  expect(stdout).toContain('Destroyed: 1');
+  expect(stdout).toContain('Killed: Pilot Whale');
+  expect(stdout).toContain('=== Sides ===');
+  expect(stdout).not.toContain('Ships Destroyed');
+  expect(stdout).not.toContain('Destroyed: Pilot Whale');
+  expect(stdout).not.toContain('Ships Knocked Out');
+  expect(stdout).not.toContain('Knocked out');
+});
+
 function renderBattleLog(fixture: Record<string, unknown>): string {
   const rendered = renderStructuredResult('get_battle_log', fixture, options, context);
   const stdout = rendered.stdout.join('\n');
@@ -2397,6 +2414,56 @@ test('get_battle_log recovered arena summary uses knockout labels', () => {
   expect(recovered).toContain('Ships Knocked Out: 1');
   expect(recovered).toContain('Knocked out: Kestrel');
   expect(recovered).not.toContain('Ships Destroyed');
+});
+
+test('get_battle_log hunt prints the hunt note and keeps Kills', () => {
+  const stdout = renderBattleLog(structuredClone(battleLogHuntFixture) as Record<string, unknown>);
+  expect(stdout).toContain(
+    'Wildlife hunt: creatures have hull and armor but no shields; kills drop carcass wrecks. Wildlife never dogpiles. Most creatures flee when badly hurt; some apex never flee.',
+  );
+  expect(stdout).toContain('| Kills |');
+  expect(stdout).not.toContain('| KOs |');
+  expect(stdout).toContain('victory');
+  expect(stdout).not.toContain('| Board |');
+  expect(stdout).not.toContain('=== Boarding ===');
+});
+
+test('get_battle_log recovered hunt summary uses hunt labels', () => {
+  // Header also shows the hunt note (unlike the arena recovered clone); assert recovered only.
+  const fixture = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const summary = recoveredSummaryOf(fixture);
+  summary.category = 'wildlife';
+  summary.ships_destroyed = 1;
+  summary.destroyed_names = ['Pilot Whale'];
+  const stdout = renderBattleLog(fixture);
+  const recovered = sectionAfter(stdout, 'Recovered Summary');
+  expect(recovered).toContain('Category: wildlife');
+  expect(recovered).toContain(
+    'Wildlife hunt: creatures have hull and armor but no shields; kills drop carcass wrecks. Wildlife never dogpiles. Most creatures flee when badly hurt; some apex never flee.',
+  );
+  expect(recovered).toContain('Destroyed: 1');
+  expect(recovered).toContain('Killed: Pilot Whale');
+  expect(recovered).not.toContain('Ships Destroyed');
+});
+
+test('get_battle_log mixed arena flag and hunt recovered category splits', () => {
+  const fixture = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const entry = (fixture.entries as Array<Record<string, unknown>>)[0];
+  if (!entry) throw new Error('expected log entry');
+  entry.arena = true;
+  recoveredSummaryOf(fixture).category = 'wildlife';
+  const stdout = renderBattleLog(fixture);
+  const beforeRecovered = stdout.split('=== Recovered Summary ===')[0] ?? '';
+  const ticks = battleLogTicksOnly(stdout);
+  const recovered = sectionAfter(stdout, 'Recovered Summary');
+  expect(beforeRecovered).toContain('Arena match: knockouts restore ships, drones, and personnel');
+  expect(beforeRecovered).not.toContain('Wildlife hunt');
+  expect(ticks).toContain('| KOs |');
+  expect(ticks).not.toContain('| Kills |');
+  expect(recovered).toContain('Category: wildlife');
+  expect(recovered).toContain('Wildlife hunt:');
+  expect(recovered).not.toContain('Arena match');
+  expect(recovered).not.toContain('Ships Knocked Out');
 });
 
 test('get_battle_log Event glosses plundered without truncating', () => {

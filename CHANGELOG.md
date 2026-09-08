@@ -4,6 +4,16 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Wildlife hunt battle labels
+
+- Human `get_battle_summary`, `get_battle_log`, and recovered summaries print hunt
+  wording when the server sends `category` `wildlife` or `hunt` (unconfirmed tokens;
+  other values stay standard): a wildlife-hunt note (no shields, carcass wrecks,
+  no dogpile, flee), count header `Destroyed`, names header `Killed`. Ticks column
+  stays `Kills`. Arena knockout wording is unchanged. Unknown categories keep
+  standard `Ships Destroyed` / `Destroyed` / `Kills` and still print the raw
+  `Category` token on summary/recovered. JSON/YAML/jq field names are unchanged.
+
 ### Help copy (gameserver 0.598.3)
 
 - `help upload_drone` notes that DroneLang `MOVE` and `at()` accept a POI ID
