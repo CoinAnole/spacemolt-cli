@@ -1,0 +1,9 @@
+count 3
+
+=== Notifications ===
+
+  Timestamp           | Type         | Message                                                                                                
+  --------------------+--------------+--------------------------------------------------------------------------------------------------------
+  2026-05-23 19:51:00 | battle_alert | Battle underway in Sol; ID: battle-42                                                                  
+  2026-05-23 19:51:05 | drone_scan   | Scout scan at sol_cloudbank; Ada (72% hull) · Wisp (40% hull)                                          
+  2026-05-23 19:51:10 | drone_survey | Survey of Cloudbank (sol_cloudbank) in sol; ore_iron richness 42, 750 left · ice richness 10, unlimited
