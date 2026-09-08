@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
 import {
+  getNotificationsFacilitiesFixture,
   getNotificationsFixture,
   getNotificationsObservationFixture,
   getNotificationsTypedPayloadsFixture,
@@ -402,6 +403,43 @@ describe('notification formatting', () => {
       snippets: ['[WAR]', 'Raiders declared war on Wardens.', 'Reason: territory'],
     },
     {
+      msgType: 'facility_reclaimed',
+      data: {
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        message: 'Unpaid facilities were repossessed.',
+        facilities: ['Workshop', 'Recycler', 'Hangar'],
+        faction_id: 'fac_wardens',
+      },
+      snippets: [
+        '[FACILITY]',
+        'Unpaid facilities were repossessed.',
+        'Earth Station (earth_station)',
+        'faction fac_wardens',
+        'Repossessed: Workshop, Recycler, Hangar',
+      ],
+    },
+    {
+      msgType: 'facility_rent_warning',
+      data: {
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        message: 'Rent is overdue on your facilities.',
+        credits_owed: 12000,
+        facilities_behind: 2,
+        missed_cycles: 3,
+        grace_cycles: 260,
+      },
+      snippets: [
+        '[RENT]',
+        'Rent is overdue on your facilities.',
+        'Earth Station (earth_station)',
+        '12,000cr owed',
+        '3/260 cycles missed',
+        '2 facilities behind',
+      ],
+    },
+    {
       msgType: 'fleet',
       data: {
         action: 'fleet_member_died',
@@ -623,6 +661,28 @@ describe('notification formatting', () => {
     },
     { msgType: 'queue_cleared', data: { reason: 'manual' }, snippets: ['[QUEUE]', 'Action queue cleared: manual'] },
     {
+      msgType: 'ranch_poached',
+      data: {
+        ranch_id: 'ranch-ada-1',
+        ranch_name: "Ada's Ranch",
+        species_id: 'space_cattle',
+        species_name: 'space cattle',
+        poi_id: 'sol_cloudbank',
+        poi_name: 'Cloudbank',
+        system_id: 'sol',
+        killer_id: 'player-raider',
+        killer_name: 'Raider',
+        herd_left: 12,
+        message: "Raider poached space cattle at Ada's Ranch.",
+      },
+      snippets: [
+        '[RANCH]',
+        "Raider poached space cattle at Ada's Ranch.",
+        'herd left 12',
+        'Cloudbank (sol_cloudbank), sol',
+      ],
+    },
+    {
       msgType: 'reconnected',
       data: { message: 'Back online', was_pilotless: true, ticks_remaining: 2 },
       snippets: ['[RECONNECTED]', 'Back online', 'recovered with 2 ticks'],
@@ -712,6 +772,11 @@ describe('notification formatting', () => {
       msgType: 'skill_xp_gain',
       data: { skill_id: 'mining', xp_gained: 5, current_xp: 10, next_level_xp: 20 },
       snippets: ['[XP]', '+5 XP in mining', '10/20'],
+    },
+    {
+      msgType: 'station_repaired',
+      data: { base_id: 'earth_station', base_name: 'Earth Station', system_id: 'sol' },
+      snippets: ['[STATION]', 'Earth Station is back in service', 'in sol'],
     },
     {
       msgType: 'system',
@@ -2673,6 +2738,418 @@ describe('notification formatting', () => {
         expect(output).not.toContain('Use: get_status');
         expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}\n${output}`);
       }
+    });
+  });
+
+  describe('facility, station, and ranch typed previews', () => {
+    const typedTypes = ['facility_rent_warning', 'facility_reclaimed', 'station_repaired', 'ranch_poached'] as const;
+    const emptyFallback = {
+      facility_rent_warning: { tag: 'RENT', headline: 'Rent overdue', severity: 'warning' },
+      facility_reclaimed: { tag: 'FACILITY', headline: 'Facilities repossessed', severity: 'danger' },
+      station_repaired: { tag: 'STATION', headline: 'Station is back in service', severity: 'success' },
+      ranch_poached: { tag: 'RANCH', headline: 'Ranch poached', severity: 'warning' },
+    } as const;
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: 'system';
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    test('registers never-null handlers for facility, station, and ranch types', () => {
+      for (const msgType of typedTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+        const preview = formatNotificationPreview(note(msgType, {}));
+        expect(preview.tag).toBe(emptyFallback[msgType].tag);
+        expect(preview.headline).not.toBe('notification');
+      }
+    });
+
+    test.each([...typedTypes])('empty %s bag uses last-resort headline without JSON dump', (msgType) => {
+      const notification = note(msgType, {});
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const expected = emptyFallback[msgType];
+
+      expect(preview.tag).toBe(expected.tag);
+      expect(preview.headline).toBe(expected.headline);
+      expect(preview.severity).toBe(expected.severity);
+      expect(preview.details).toEqual([]);
+      expect(output).toContain(`[${expected.tag}]`);
+      expect(output).toContain(expected.headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('Use:');
+      expectNoDiagnosticTokens(previewText(preview));
+      expectNoNestedJsonDump(output);
+    });
+
+    test('K13: table Type stays raw msg_type; Message is not the display tag', () => {
+      for (const msgType of typedTypes) {
+        const notification = note(msgType, {});
+        const message = formatNotificationMessage(notification);
+        expect(message).not.toBe(emptyFallback[msgType].tag);
+        expect(message).toBe(tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })));
+        expect(stripAnsi(formatNotification(notification).join('\n'))).toContain(`[${emptyFallback[msgType].tag}]`);
+      }
+    });
+
+    describe('facility_rent_warning', () => {
+      test('prefers the server message and keeps arrears in details', () => {
+        const notification = note('facility_rent_warning', {
+          base_id: 'earth_station',
+          base_name: 'Earth Station',
+          message: 'Rent is overdue on your facilities.',
+          credits_owed: 12000,
+          facilities_behind: 2,
+          missed_cycles: 3,
+          grace_cycles: 260,
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('RENT');
+        expect(preview.severity).toBe('warning');
+        expect(preview.headline).toBe('Rent is overdue on your facilities.');
+        expect(preview.headline).not.toContain('cycles missed');
+        expect(preview.details).toEqual([
+          'Earth Station (earth_station)',
+          '12,000cr owed',
+          '3/260 cycles missed',
+          '2 facilities behind',
+        ]);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[RENT]');
+        expect(output).not.toContain('[FACILITY_RENT_WARNING]');
+        expect(output).not.toContain('Use:');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('no-message fallback uses station identity', () => {
+        const preview = formatNotificationPreview(
+          note('facility_rent_warning', {
+            base_id: 'earth_station',
+            base_name: 'Earth Station',
+            credits_owed: 500,
+          }),
+        );
+        expect(preview.headline).toBe('Rent overdue at Earth Station (earth_station)');
+        expect(preview.details).toEqual(['500cr owed']);
+        expect(preview.details).not.toContain('Earth Station (earth_station)');
+      });
+
+      test('no-message without station identity is Rent overdue, never Rent overdue at Rent overdue', () => {
+        const preview = formatNotificationPreview(note('facility_rent_warning', { credits_owed: 1 }));
+        expect(preview.headline).toBe('Rent overdue');
+        expect(preview.headline).not.toBe('Rent overdue at Rent overdue');
+        expect(preview.details).toEqual(['1cr owed']);
+      });
+
+      test('credits_owed 0 prints 0cr owed', () => {
+        const preview = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            credits_owed: 0,
+          }),
+        );
+        expect(preview.details).toContain('0cr owed');
+        expectNoDiagnosticTokens(previewText(preview));
+      });
+
+      test('facilities_behind 0 is omitted; positive prints', () => {
+        const zero = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            facilities_behind: 0,
+          }),
+        );
+        expect(zero.details.join('\n')).not.toContain('facilities behind');
+
+        const positive = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            facilities_behind: 3,
+          }),
+        );
+        expect(positive.details).toContain('3 facilities behind');
+      });
+
+      test('faction_id prints as faction {id}', () => {
+        const preview = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Faction rent is overdue.',
+            faction_id: 'fac_wardens',
+            base_id: 'haven_exchange',
+            base_name: 'Haven Exchange',
+          }),
+        );
+        expect(preview.details).toContain('faction fac_wardens');
+        expect(preview.details).toContain('Haven Exchange (haven_exchange)');
+      });
+
+      test('grace_cycles alone is omitted; both missed and grace print the pair', () => {
+        const graceOnly = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            grace_cycles: 260,
+          }),
+        );
+        expect(graceOnly.details.join('\n')).not.toContain('260');
+        expect(graceOnly.details.join('\n')).not.toContain('cycles');
+
+        const missedOnly = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            missed_cycles: 3,
+          }),
+        );
+        expect(missedOnly.details.join('\n')).not.toContain('3');
+        expect(missedOnly.details.join('\n')).not.toContain('cycles');
+
+        const both = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            missed_cycles: 0,
+            grace_cycles: 260,
+          }),
+        );
+        expect(both.details).toContain('0/260 cycles missed');
+      });
+
+      test('non-string faction_id and object credits_owed do not dump', () => {
+        const preview = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            faction_id: { id: 'fac_wardens' },
+            credits_owed: { amount: 12 },
+            facilities_behind: Number.NaN,
+          }),
+        );
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(previewText(preview));
+        expectNoNestedJsonDump(previewText(preview));
+      });
+    });
+
+    describe('facility_reclaimed', () => {
+      test('prefers the server message and prints station, faction, and digest', () => {
+        const notification = note('facility_reclaimed', {
+          base_id: 'earth_station',
+          base_name: 'Earth Station',
+          message: 'Unpaid facilities were repossessed.',
+          facilities: ['Workshop', 'Recycler', 'Hangar'],
+          faction_id: 'fac_wardens',
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('FACILITY');
+        expect(preview.severity).toBe('danger');
+        expect(preview.headline).toBe('Unpaid facilities were repossessed.');
+        expect(preview.details).toEqual([
+          'Earth Station (earth_station)',
+          'faction fac_wardens',
+          'Repossessed: Workshop, Recycler, Hangar',
+        ]);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[FACILITY]');
+        expect(output).not.toContain('[FACILITY_RECLAIMED]');
+        expect(output).not.toContain('Use:');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('no-message with names uses station identity in the headline', () => {
+        const preview = formatNotificationPreview(
+          note('facility_reclaimed', {
+            base_id: 'earth_station',
+            base_name: 'Earth Station',
+            facilities: ['Workshop'],
+          }),
+        );
+        expect(preview.headline).toBe('Facilities repossessed at Earth Station (earth_station)');
+        expect(preview.details).toEqual(['Repossessed: Workshop']);
+        expect(preview.details).not.toContain('Earth Station (earth_station)');
+      });
+
+      test('no-message without station identity is Facilities repossessed', () => {
+        const preview = formatNotificationPreview(note('facility_reclaimed', { facilities: ['Workshop'] }));
+        expect(preview.headline).toBe('Facilities repossessed');
+        expect(preview.details).toEqual(['Repossessed: Workshop']);
+      });
+
+      test('faction_id prints on reclaimed the same way as rent', () => {
+        const preview = formatNotificationPreview(
+          note('facility_reclaimed', {
+            message: 'Faction facilities were repossessed.',
+            faction_id: 'fac_wardens',
+            facilities: ['Ore Refinery'],
+          }),
+        );
+        expect(preview.details).toContain('faction fac_wardens');
+        expect(preview.details).toContain('Repossessed: Ore Refinery');
+      });
+
+      test('facilities digest skips non-strings and caps at 6 names', () => {
+        const mixed = formatNotificationPreview(
+          note('facility_reclaimed', {
+            message: 'Repossession complete.',
+            facilities: ['Workshop', 1, null, { name: 'hidden' }, 'Recycler', ''],
+          }),
+        );
+        expect(mixed.details).toContain('Repossessed: Workshop, Recycler');
+        expect(previewText(mixed)).not.toContain('hidden');
+        expectNoNestedJsonDump(previewText(mixed));
+
+        const seven = formatNotificationPreview(
+          note('facility_reclaimed', {
+            message: 'Repossession complete.',
+            facilities: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+          }),
+        );
+        expect(seven.details).toContain('Repossessed: A, B, C, D, E, F, +1 more');
+        expect(seven.details.join('\n')).not.toContain('G');
+      });
+    });
+
+    describe('station_repaired', () => {
+      test('base_name headline and system detail', () => {
+        const notification = note('station_repaired', {
+          base_id: 'earth_station',
+          base_name: 'Earth Station',
+          system_id: 'sol',
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('STATION');
+        expect(preview.severity).toBe('success');
+        expect(preview.headline).toBe('Earth Station is back in service');
+        expect(preview.details).toEqual(['in sol']);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[STATION]');
+        expect(output).not.toContain('Use: get_base');
+        expect(output).not.toContain('[STATION_REPAIRED]');
+      });
+
+      test('falls back to base_id then Station is back in service', () => {
+        const idOnly = formatNotificationPreview(note('station_repaired', { base_id: 'earth_station' }));
+        expect(idOnly.headline).toBe('earth_station is back in service');
+        expect(idOnly.details).toEqual([]);
+
+        const empty = formatNotificationPreview(note('station_repaired', {}));
+        expect(empty.headline).toBe('Station is back in service');
+        expect(empty.details).toEqual([]);
+      });
+
+      test('skips system detail when already in the headline', () => {
+        const preview = formatNotificationPreview(
+          note('station_repaired', {
+            base_name: 'in sol yards',
+            system_id: 'sol',
+          }),
+        );
+        expect(preview.headline).toBe('in sol yards is back in service');
+        expect(preview.details).toEqual([]);
+      });
+    });
+
+    describe('ranch_poached', () => {
+      test('prefers the server message; herd and location are details', () => {
+        const notification = note('ranch_poached', {
+          ranch_id: 'ranch-ada-1',
+          ranch_name: "Ada's Ranch",
+          species_id: 'space_cattle',
+          species_name: 'space cattle',
+          poi_id: 'sol_cloudbank',
+          poi_name: 'Cloudbank',
+          system_id: 'sol',
+          killer_id: 'player-raider',
+          killer_name: 'Raider',
+          herd_left: 12,
+          message: "Raider poached space cattle at Ada's Ranch.",
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('RANCH');
+        expect(preview.severity).toBe('warning');
+        expect(preview.headline).toBe("Raider poached space cattle at Ada's Ranch.");
+        expect(preview.details).toEqual(['herd left 12', 'Cloudbank (sol_cloudbank), sol']);
+        const joined = previewText(preview);
+        expect(joined).not.toContain('ranch-ada-1');
+        expect(joined).not.toContain('player-raider');
+        expect(joined).not.toContain('space_cattle');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[RANCH]');
+        expect(output).not.toContain('[RANCH_POACHED]');
+        expect(output).not.toContain('Use:');
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('no-message fallback interpolates killer, species, and ranch', () => {
+        const full = formatNotificationPreview(
+          note('ranch_poached', {
+            killer_name: 'Raider',
+            species_name: 'space cattle',
+            ranch_name: "Ada's Ranch",
+            herd_left: 4,
+          }),
+        );
+        expect(full.headline).toBe("Raider poached space cattle at Ada's Ranch");
+        expect(full.details).toEqual(['herd left 4']);
+
+        const noRanch = formatNotificationPreview(
+          note('ranch_poached', { killer_name: 'Raider', species_name: 'space cattle' }),
+        );
+        expect(noRanch.headline).toBe('Raider poached space cattle');
+
+        const noSpecies = formatNotificationPreview(
+          note('ranch_poached', { killer_name: 'Raider', ranch_name: "Ada's Ranch" }),
+        );
+        expect(noSpecies.headline).toBe("Raider poached at Ada's Ranch");
+
+        const killerOnly = formatNotificationPreview(note('ranch_poached', { killer_name: 'Raider' }));
+        expect(killerOnly.headline).toBe('Raider poached');
+      });
+
+      test('missing killer_name uses Ranch poached at {ranch_name}', () => {
+        const preview = formatNotificationPreview(note('ranch_poached', { ranch_name: "Ada's Ranch", herd_left: 1 }));
+        expect(preview.headline).toBe("Ranch poached at Ada's Ranch");
+        expect(preview.details).toEqual(['herd left 1']);
+      });
+
+      test('herd_left 0 still prints', () => {
+        const preview = formatNotificationPreview(
+          note('ranch_poached', {
+            message: 'The herd was wiped out.',
+            herd_left: 0,
+          }),
+        );
+        expect(preview.details).toContain('herd left 0');
+        expectNoDiagnosticTokens(previewText(preview));
+      });
+
+      test('object killer and nested location do not dump', () => {
+        const preview = formatNotificationPreview(
+          note('ranch_poached', {
+            message: 'Poaching reported.',
+            killer_name: { username: 'Raider' },
+            herd_left: { n: 0 },
+            poi_name: { name: 'Cloudbank' },
+          }),
+        );
+        expect(preview.headline).toBe('Poaching reported.');
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(previewText(preview));
+        expectNoNestedJsonDump(previewText(preview));
+      });
     });
   });
 
@@ -7082,6 +7559,42 @@ describe('notification formatting', () => {
       const preview = formatNotificationPreview(notification);
       expect(preview.headline).toContain('Fleet docked at');
       expect(tableMessageFromPreview(preview)).toBe('Fleet docked at Sol Central (confederacy_central_command)');
+    });
+  });
+
+  describe('facility remainder poll fixture', () => {
+    const rows = getNotificationsFacilitiesFixture.notifications;
+
+    test('every fixture msg_type hits its typed handler', () => {
+      expect(getNotificationsFacilitiesFixture.count).toBe(rows.length);
+      expect(rows.map((notification) => notification.msg_type)).toEqual([
+        'facility_rent_warning',
+        'facility_rent_warning',
+        'facility_reclaimed',
+        'facility_reclaimed',
+        'station_repaired',
+        'ranch_poached',
+      ]);
+      for (const notification of rows) {
+        expect(notification.type).toBe('system');
+        expect(hasPreviewHandler(notification.msg_type)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(notification.msg_type);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).not.toBe('notification');
+        expect(preview.details.join('\n')).not.toContain('Use:');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      }
+    });
+
+    test('includes faction_id on both a rent-warning row and a reclaimed row', () => {
+      const rent = rows.find((entry) => entry.id === 'notif-rent-faction-1');
+      const reclaimed = rows.find((entry) => entry.id === 'notif-reclaimed-faction-1');
+      if (!rent) throw new Error('expected faction rent-warning fixture row');
+      if (!reclaimed) throw new Error('expected faction reclaimed fixture row');
+      expect(rent.data.faction_id).toBe('fac_wardens');
+      expect(reclaimed.data.faction_id).toBe('fac_wardens');
+      expect(formatNotificationPreview(rent).details).toContain('faction fac_wardens');
+      expect(formatNotificationPreview(reclaimed).details).toContain('faction fac_wardens');
     });
   });
 

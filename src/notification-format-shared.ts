@@ -2570,6 +2570,151 @@ function previewFleet(
     : headlinePreview('FLEET', headline, options);
 }
 
+// OpenAPI remainder (0.598.3 fallbacks)
+
+function positiveFinite(value: unknown): number | undefined {
+  const n = finiteNumber(value);
+  return n !== undefined && n > 0 ? n : undefined;
+}
+
+function formatRepossessedDigest(value: unknown, limit = 6): string | undefined {
+  const names = stringList(value);
+  if (!names.length) return undefined;
+  const shown = names.slice(0, limit).join(', ');
+  const extra = names.length > limit ? `, +${names.length - limit} more` : '';
+  return `Repossessed: ${shown}${extra}`;
+}
+
+function ranchPoachedFallback(data: Record<string, unknown>): string {
+  const killer = nonEmptyString(data.killer_name);
+  const species = nonEmptyString(data.species_name);
+  const ranch = nonEmptyString(data.ranch_name);
+  if (killer !== undefined) {
+    if (species !== undefined && ranch !== undefined) return `${killer} poached ${species} at ${ranch}`;
+    if (species !== undefined) return `${killer} poached ${species}`;
+    return ranch !== undefined ? `${killer} poached at ${ranch}` : `${killer} poached`;
+  }
+  return ranch !== undefined ? `Ranch poached at ${ranch}` : 'Ranch poached';
+}
+
+function previewFacilityRentWarning(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const base = formatNameId(nonEmptyString(data.base_name), nonEmptyString(data.base_id));
+  const headline = messageLine || (base ? `Rent overdue at ${base}` : 'Rent overdue');
+
+  const details: string[] = [];
+  if (base !== undefined && !headline.includes(base)) details.push(base);
+  const factionId = nonEmptyString(data.faction_id);
+  if (factionId !== undefined) {
+    const line = `faction ${factionId}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+  const owed = formatCreditsAmount(data.credits_owed);
+  if (owed !== undefined) {
+    const line = `${owed} owed`;
+    if (!headline.includes(line)) details.push(line);
+  }
+  const missed = finiteNumber(data.missed_cycles);
+  const grace = finiteNumber(data.grace_cycles);
+  if (missed !== undefined && grace !== undefined) {
+    const line = `${missed}/${grace} cycles missed`;
+    if (!headline.includes(line)) details.push(line);
+  }
+  const behind = positiveFinite(data.facilities_behind);
+  if (behind !== undefined) {
+    const line = `${behind} facilities behind`;
+    if (!headline.includes(line)) details.push(line);
+  }
+
+  const preview = details.length
+    ? detailPreview('RENT', headline, details, options)
+    : headlinePreview('RENT', headline, options);
+  return { ...preview, severity: 'warning' };
+}
+
+function previewFacilityReclaimed(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const base = formatNameId(nonEmptyString(data.base_name), nonEmptyString(data.base_id));
+  const headline = messageLine || (base ? `Facilities repossessed at ${base}` : 'Facilities repossessed');
+
+  const details: string[] = [];
+  if (base !== undefined && !headline.includes(base)) details.push(base);
+  const factionId = nonEmptyString(data.faction_id);
+  if (factionId !== undefined) {
+    const line = `faction ${factionId}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+  const digest = formatRepossessedDigest(data.facilities);
+  if (digest !== undefined && !headline.includes(digest)) details.push(digest);
+
+  const preview = details.length
+    ? detailPreview('FACILITY', headline, details, options)
+    : headlinePreview('FACILITY', headline, options);
+  return { ...preview, severity: 'danger' };
+}
+
+function previewStationRepaired(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const baseName = nonEmptyString(data.base_name);
+  const baseId = nonEmptyString(data.base_id);
+  const headline = baseName
+    ? `${baseName} is back in service`
+    : baseId
+      ? `${baseId} is back in service`
+      : 'Station is back in service';
+
+  const details: string[] = [];
+  const systemId = nonEmptyString(data.system_id);
+  if (systemId !== undefined) {
+    const line = `in ${systemId}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+
+  const preview = details.length
+    ? detailPreview('STATION', headline, details, options)
+    : headlinePreview('STATION', headline, options);
+  return { ...preview, severity: 'success' };
+}
+
+function previewRanchPoached(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const headline = messageLine || ranchPoachedFallback(data);
+
+  const details: string[] = [];
+  const herdLeft = finiteNumber(data.herd_left);
+  if (herdLeft !== undefined) {
+    const line = `herd left ${herdLeft}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+  const poi = formatNameId(nonEmptyString(data.poi_name), nonEmptyString(data.poi_id));
+  const systemId = nonEmptyString(data.system_id);
+  const location = poi !== undefined && systemId !== undefined ? `${poi}, ${systemId}` : (poi ?? systemId);
+  if (location !== undefined && !headline.includes(location)) details.push(location);
+
+  const preview = details.length
+    ? detailPreview('RANCH', headline, details, options)
+    : headlinePreview('RANCH', headline, options);
+  return { ...preview, severity: 'warning' };
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -2694,6 +2839,12 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   // msg_type=ok action=fleet_dock is not msg_type=fleet_dock. Keep all four keys distinct.
   fleet: previewFleet,
   ok: previewOk,
+
+  // OpenAPI remainder (0.598.3 fallbacks)
+  facility_rent_warning: previewFacilityRentWarning,
+  facility_reclaimed: previewFacilityReclaimed,
+  station_repaired: previewStationRepaired,
+  ranch_poached: previewRanchPoached,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

@@ -1,0 +1,36 @@
+
+count: 6
+current_tick: 902400
+remaining: 0
+timestamp: 1779567000
+notifications:
+  - id: "notif-rent-personal-1"
+    type: system
+    msg_type: facility_rent_warning
+    timestamp: 2026-05-23T19:50:00.000Z
+    data: {base_id: earth_station, base_name: "Earth Station", message: "Rent is overdue on your facilities.", credits_owed: 12000, facilities_behind: 2, missed_cycles: 3, grace_cycles: 260}
+  - id: "notif-rent-faction-1"
+    type: system
+    msg_type: facility_rent_warning
+    timestamp: 2026-05-23T19:50:05.000Z
+    data: {base_id: haven_exchange, base_name: "Haven Exchange", message: "Faction facilities are in arrears.", credits_owed: 45000, facilities_behind: 4, missed_cycles: 8, grace_cycles: 260, faction_id: fac_wardens}
+  - id: "notif-reclaimed-1"
+    type: system
+    msg_type: facility_reclaimed
+    timestamp: 2026-05-23T19:50:10.000Z
+    data: {base_id: earth_station, base_name: "Earth Station", message: "Unpaid facilities were repossessed.", facilities: [Workshop, Recycler, Hangar]}
+  - id: "notif-reclaimed-faction-1"
+    type: system
+    msg_type: facility_reclaimed
+    timestamp: 2026-05-23T19:50:15.000Z
+    data: {base_id: haven_exchange, base_name: "Haven Exchange", message: "Faction facilities were repossessed.", facilities: ["Ore Refinery", Shipyard], faction_id: fac_wardens}
+  - id: "notif-station-repaired-1"
+    type: system
+    msg_type: station_repaired
+    timestamp: 2026-05-23T19:50:20.000Z
+    data: {base_id: earth_station, base_name: "Earth Station", system_id: sol}
+  - id: "notif-ranch-poached-1"
+    type: system
+    msg_type: ranch_poached
+    timestamp: 2026-05-23T19:50:25.000Z
+    data: {ranch_id: "ranch-ada-1", ranch_name: "Ada's Ranch", species_id: space_cattle, species_name: "space cattle", poi_id: sol_cloudbank, poi_name: Cloudbank, system_id: sol, killer_id: "player-raider", killer_name: Raider, herd_left: 12, message: "Raider poached space cattle at Ada's Ranch."}
