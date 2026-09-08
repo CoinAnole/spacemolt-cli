@@ -58,7 +58,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   arena_fight: {
     usage: '<challenge_id>',
     description:
-      'Start an unlocked NPC trial at this arena. challenge_id comes from arena challenges. Locked trials refuse with challenge_locked. Fleet members at the arena join your side when the rules allow. The reply shows the opening enemies, win condition, and any reinforcement waves. Fight it with get_battle_status, battle_target, and battle_stance; track the live objective with arena status.',
+      'Start an unlocked NPC trial at this arena. challenge_id comes from arena challenges. Locked trials refuse with challenge_locked. A ship that breaks a loadout rule refuses the whole side with a rule_* error naming the pilot, hull, and rule. Fleet members at the arena join your side when the rules allow. The reply shows the opening enemies, win condition, and any reinforcement waves. Fight it with get_battle_status, battle_target, and battle_stance; track the live objective with arena status.',
     example: 'spacemolt arena fight two_on_one',
     discoverWith: ['arena_challenges'],
     seeAlso: ['arena_challenges', 'arena_status', 'get_battle_status', 'battle_target', 'battle_stance'],

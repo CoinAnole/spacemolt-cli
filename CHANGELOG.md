@@ -4,6 +4,15 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Arena fight-start rule_* errors (gameserver 0.590.0)
+
+- Human stderr for `rule_*` on `arena fight` prints a `Suggestion:` pointing at
+  `spacemolt arena challenges` and no longer claims the error is retryable.
+  JSON / `--structured` envelopes are unchanged. `--format yaml` still uses
+  human `displayError`. `@spacemolt/client` consumers must call
+  `isRetryableError(code)` directly; `isKnownErrorCode` remains exact-registry
+  and stays `false` for family codes.
+
 ### Arena objectives and waves (gameserver 0.597.0)
 
 - Human `arena challenges` briefing lines print win conditions (`survive N ticks`,

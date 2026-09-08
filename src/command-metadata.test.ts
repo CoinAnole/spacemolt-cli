@@ -855,6 +855,8 @@ describe('command metadata', () => {
     expect(fightHelp).toContain('opening enemies, win condition, and any reinforcement waves');
     expect(fightHelp).toContain('track the live objective with arena status');
     expect(fightHelp).toContain('arena status');
+    expect(fightHelp).toContain('rule_*');
+    expect(fightHelp).toContain('refuses the whole side');
     expect(fightHelp).not.toContain('`');
 
     expect(captureFullHelp()).toContain(

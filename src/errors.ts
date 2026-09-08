@@ -367,20 +367,41 @@ export function isKnownErrorCode(code: string): code is keyof typeof ERROR_REGIS
   return code in ERROR_REGISTRY;
 }
 
+const RULE_FAMILY_PREFIX = 'rule_';
+
+const FIGHT_START_RULE_FALLBACK: ErrorCodeEntry = {
+  code: 'rule_*',
+  message: "A ship on your side breaks this arena trial's loadout rules.",
+  suggestion:
+    'A ship on your side breaks a loadout rule (the error names the pilot, hull, and rule). Run "spacemolt arena challenges" to see the trial rules, change that ship\'s loadout (hull, modules, or cargo) to satisfy the named rule, then retry "spacemolt arena fight".',
+  retryable: false,
+  auth: false,
+  relatedCommands: ['arena_challenges', 'arena_fight'],
+};
+
+// Only prefix fallback in this module. Further families need a new design, not another startsWith.
+function isFightStartRuleError(code: string): boolean {
+  return code.startsWith(RULE_FAMILY_PREFIX) && code.length > RULE_FAMILY_PREFIX.length;
+}
+
+function lookupError(code: string): ErrorCodeEntry | undefined {
+  return ERROR_REGISTRY[code] ?? (isFightStartRuleError(code) ? FIGHT_START_RULE_FALLBACK : undefined);
+}
+
 export function isRetryableError(code: string): boolean {
-  return ERROR_REGISTRY[code]?.retryable ?? true;
+  return lookupError(code)?.retryable ?? true;
 }
 
 export function isAuthError(code: string): boolean {
-  return ERROR_REGISTRY[code]?.auth ?? false;
+  return lookupError(code)?.auth ?? false;
 }
 
 export function getErrorSuggestion(code: string): string | undefined {
-  return ERROR_REGISTRY[code]?.suggestion;
+  return lookupError(code)?.suggestion;
 }
 
 export function getRelatedCommands(code: string): string[] {
-  return ERROR_REGISTRY[code]?.relatedCommands ?? [];
+  return lookupError(code)?.relatedCommands ?? [];
 }
 
 export class ServiceUnavailableError extends Error {

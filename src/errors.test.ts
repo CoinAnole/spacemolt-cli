@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  ERROR_CODES,
   ERROR_REGISTRY,
   getErrorSuggestion,
   getRelatedCommands,
   isAuthError,
+  isKnownErrorCode,
   isRetryableError,
   ServiceUnavailableError,
 } from './errors.ts';
@@ -47,9 +49,41 @@ describe('arena trial errors', () => {
     expect(getRelatedCommands('arena_rule')).toEqual(['arena_challenges', 'use_item']);
   });
 
-  test('rule_* fight-start codes stay unregistered and default to retryable', () => {
-    expect(isRetryableError('rule_hull_tier')).toBe(true);
+  test('rule_hull_tier is unregistered, non-retryable, and suggests arena challenges', () => {
     expect(ERROR_REGISTRY.rule_hull_tier).toBeUndefined();
+    expect(isKnownErrorCode('rule_hull_tier')).toBe(false);
+    expect(ERROR_CODES).not.toContain('rule_hull_tier');
+    expect(isRetryableError('rule_hull_tier')).toBe(false);
+    expect(isAuthError('rule_hull_tier')).toBe(false);
+    expect(getErrorSuggestion('rule_hull_tier')).toContain('spacemolt arena challenges');
+    expect(getErrorSuggestion('rule_hull_tier')).toContain('spacemolt arena fight');
+    expect(getErrorSuggestion('rule_hull_tier')).toContain('loadout');
+    expect(getErrorSuggestion('rule_hull_tier')).not.toContain('arena_challenges');
+    expect(getRelatedCommands('rule_hull_tier')).toEqual(['arena_challenges', 'arena_fight']);
+  });
+
+  test('rule_no_drones uses the same fight-start family fallback', () => {
+    expect(ERROR_REGISTRY.rule_no_drones).toBeUndefined();
+    expect(isKnownErrorCode('rule_no_drones')).toBe(false);
+    expect(ERROR_CODES).not.toContain('rule_no_drones');
+    expect(isRetryableError('rule_no_drones')).toBe(false);
+    expect(isAuthError('rule_no_drones')).toBe(false);
+    expect(getErrorSuggestion('rule_no_drones')).toContain('spacemolt arena challenges');
+    expect(getErrorSuggestion('rule_no_drones')).toContain('spacemolt arena fight');
+    expect(getErrorSuggestion('rule_no_drones')).toContain('loadout');
+    expect(getErrorSuggestion('rule_no_drones')).not.toContain('arena_challenges');
+    expect(getRelatedCommands('rule_no_drones')).toEqual(['arena_challenges', 'arena_fight']);
+  });
+
+  test('rule_* matcher negatives stay unknown and retryable', () => {
+    for (const code of ['rule', 'rule_', 'ruled_out', 'Rule_hull_tier']) {
+      expect(ERROR_REGISTRY[code]).toBeUndefined();
+      expect(isKnownErrorCode(code)).toBe(false);
+      expect(isRetryableError(code)).toBe(true);
+      expect(isAuthError(code)).toBe(false);
+      expect(getErrorSuggestion(code)).toBeUndefined();
+      expect(getRelatedCommands(code)).toEqual([]);
+    }
   });
 });
 
