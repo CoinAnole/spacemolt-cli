@@ -22,6 +22,21 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
   `message`, then killer / species / ranch fallbacks. Herd remaining (including
   `0`) and location are details. Table Type stays raw `ranch_poached`. Coarse
   poll filter is `types=system`. JSON/YAML/jq field names are unchanged.
+- Human `get_notifications` / `notifications` / inline notifications print
+  `battle_alert` with `[BATTLE]`: prefers the server `message`, then
+  `Battle in {system}`. Battle id and a sides digest (`2v3`, including
+  three-side `2v3v4`) print as details. Participants are not listed.
+  Table Type stays raw `battle_alert`. Coarse poll filter is
+  `types=combat`. JSON/YAML/jq field names are unchanged.
+- Human previews for `drone_scan` print `[DRONE]` (`Scout scan at {poi}`)
+  with a one-line player digest (`Ada (72% hull) · Wisp (40% hull)`) and
+  `Use: get_drone drone_id=…` last. Table Type stays raw `drone_scan`.
+  Coarse poll filter is `types=system`.
+- Human previews for `drone_survey` print `[DRONE]` with a one-line
+  resource digest (`ore_iron richness 42, 750 left`; remaining `-1` is
+  unlimited, `0` is depleted) and the same `Use: get_drone` last.
+  Table Type stays raw `drone_survey`. Coarse poll filter is
+  `types=system`. JSON/YAML/jq field names are unchanged.
 
 ### Wildlife hunt battle labels
 

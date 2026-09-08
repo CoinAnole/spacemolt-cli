@@ -2597,6 +2597,62 @@ function ranchPoachedFallback(data: Record<string, unknown>): string {
   return ranch !== undefined ? `Ranch poached at ${ranch}` : 'Ranch poached';
 }
 
+function formatBattleSidesDigest(value: unknown): string | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const sides: Array<{ sideId: number; playerCount: number }> = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) return undefined;
+    const sideId = finiteNumber(entry.side_id);
+    const playerCount = finiteNumber(entry.player_count);
+    if (sideId === undefined || playerCount === undefined) return undefined;
+    sides.push({ sideId, playerCount });
+  }
+  sides.sort((left, right) => left.sideId - right.sideId);
+  return sides.map((side) => String(side.playerCount)).join('v');
+}
+
+function formatPlayerScanDigest(players: unknown, limit = 6): string {
+  const rows = Array.isArray(players) ? players.filter(isRecord) : [];
+  const entries: string[] = [];
+  for (const row of rows) {
+    const name = nonEmptyString(row.username) ?? nonEmptyString(row.id);
+    if (name === undefined) continue;
+    const hull = finiteNumber(row.hull_pct);
+    entries.push(hull === undefined ? name : `${name} (${hull}% hull)`);
+  }
+  if (!entries.length) return 'no ships detected';
+  const shown = entries.slice(0, limit).join(' · ');
+  const extra = entries.length > limit ? `, +${entries.length - limit} more` : '';
+  return `${shown}${extra}`;
+}
+
+/** remaining === -1/0 map to unlimited/depleted; other finite remaining is `N left`. */
+function surveyRemainingLabel(remaining: unknown): string | undefined {
+  if (remaining === -1) return 'unlimited';
+  if (remaining === 0) return 'depleted';
+  const n = finiteNumber(remaining);
+  return n === undefined ? undefined : `${n} left`;
+}
+
+function formatSurveyResourceDigest(resources: unknown, limit = 6): string {
+  const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
+  const entries: string[] = [];
+  for (const row of rows) {
+    const resourceId = nonEmptyString(row.resource_id);
+    if (resourceId === undefined) continue;
+    const richness = finiteNumber(row.richness);
+    const remainingLabel = surveyRemainingLabel(row.remaining);
+    let token = resourceId;
+    if (richness !== undefined) token = `${resourceId} richness ${richness}`;
+    if (remainingLabel !== undefined) token = `${token}, ${remainingLabel}`;
+    entries.push(token);
+  }
+  if (!entries.length) return 'no deposits';
+  const shown = entries.slice(0, limit).join(' · ');
+  const extra = entries.length > limit ? `, +${entries.length - limit} more` : '';
+  return `${shown}${extra}`;
+}
+
 function previewFacilityRentWarning(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -2713,6 +2769,95 @@ function previewRanchPoached(
     ? detailPreview('RANCH', headline, details, options)
     : headlinePreview('RANCH', headline, options);
   return { ...preview, severity: 'warning' };
+}
+
+function previewBattleAlert(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const systemId = nonEmptyString(data.system_id);
+  const headline = messageLine || (systemId !== undefined ? `Battle in ${systemId}` : 'Battle alert');
+
+  const details: string[] = [];
+  const battleId = nonEmptyString(data.battle_id);
+  if (battleId !== undefined) {
+    const line = `ID: ${battleId}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+  const sidesDigest = formatBattleSidesDigest(data.sides);
+  if (sidesDigest !== undefined && !headline.includes(sidesDigest)) details.push(sidesDigest);
+
+  const preview = details.length
+    ? detailPreview('BATTLE', headline, details, options)
+    : headlinePreview('BATTLE', headline, options);
+  return { ...preview, severity: 'warning' };
+}
+
+function previewDroneScan(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const poiId = nonEmptyString(data.poi_id);
+  const droneId = nonEmptyString(data.drone_id);
+  const headline = poiId !== undefined ? `Scout scan at ${poiId}` : 'Scout scan complete';
+
+  const details: string[] = [];
+  if (poiId !== undefined || droneId !== undefined || Array.isArray(data.players)) {
+    const digest = formatPlayerScanDigest(data.players);
+    if (!headline.includes(digest)) details.push(digest);
+  }
+  if (droneId !== undefined) {
+    const line = `Use: get_drone drone_id=${droneId}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+
+  const preview = details.length
+    ? detailPreview('DRONE', headline, details, options)
+    : headlinePreview('DRONE', headline, options);
+  return { ...preview, severity: 'info' };
+}
+
+function droneSurveyHeadline(data: Record<string, unknown>): string {
+  const poi = formatNameId(nonEmptyString(data.poi_name), nonEmptyString(data.poi_id));
+  const systemId = nonEmptyString(data.system_id);
+  if (poi !== undefined && systemId !== undefined) return `Survey of ${poi} in ${systemId}`;
+  if (poi !== undefined) return `Survey of ${poi}`;
+  if (systemId !== undefined) return `Survey in ${systemId}`;
+  return 'Survey complete';
+}
+
+function previewDroneSurvey(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const headline = droneSurveyHeadline(data);
+  const droneId = nonEmptyString(data.drone_id);
+  const hasSurveyFrame =
+    droneId !== undefined ||
+    nonEmptyString(data.system_id) !== undefined ||
+    nonEmptyString(data.poi_id) !== undefined ||
+    nonEmptyString(data.poi_name) !== undefined ||
+    Array.isArray(data.resources);
+
+  const details: string[] = [];
+  if (hasSurveyFrame) {
+    const digest = formatSurveyResourceDigest(data.resources);
+    if (!headline.includes(digest)) details.push(digest);
+  }
+  if (droneId !== undefined) {
+    const line = `Use: get_drone drone_id=${droneId}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+
+  const preview = details.length
+    ? detailPreview('DRONE', headline, details, options)
+    : headlinePreview('DRONE', headline, options);
+  return { ...preview, severity: 'info' };
 }
 
 /**
@@ -2845,6 +2990,9 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   facility_reclaimed: previewFacilityReclaimed,
   station_repaired: previewStationRepaired,
   ranch_poached: previewRanchPoached,
+  battle_alert: previewBattleAlert,
+  drone_scan: previewDroneScan,
+  drone_survey: previewDroneSurvey,
 };
 
 /** True when a native pure preview handler is registered for msgType. */

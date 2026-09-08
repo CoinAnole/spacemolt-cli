@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
 import {
+  getNotificationsBattleDronesFixture,
   getNotificationsFacilitiesFixture,
   getNotificationsFixture,
   getNotificationsObservationFixture,
@@ -253,6 +254,20 @@ describe('notification formatting', () => {
       snippets: ['[RAID]', 'Outpost: 80/100 HP'],
     },
     {
+      msgType: 'battle_alert',
+      data: {
+        battle_id: 'battle-42',
+        system_id: 'sol',
+        message: 'Battle underway in Sol',
+        sides: [
+          { side_id: 1, player_count: 2 },
+          { side_id: 2, player_count: 3 },
+        ],
+        participants: [{ player_id: 'p-stub', username: 'StubPilot', side_id: 1, zone: 'alpha' }],
+      },
+      snippets: ['[BATTLE]', 'Battle underway in Sol', 'ID: battle-42', '2v3'],
+    },
+    {
       msgType: 'battle_damage',
       data: { attacker: 'Alpha', target: 'Beta', damage: 3 },
       snippets: ['[BATTLE]', 'Alpha hit Beta for 3 damage'],
@@ -315,6 +330,43 @@ describe('notification formatting', () => {
       msgType: 'drone_destroyed',
       data: { drone_type: 'combat', drone_id: 'drone_1' },
       snippets: ['[DRONE]', 'combat drone was destroyed', 'drone_1'],
+    },
+    {
+      msgType: 'drone_scan',
+      data: {
+        drone_id: 'drone-1',
+        poi_id: 'sol_cloudbank',
+        players: [
+          { id: 'p1', username: 'Ada', faction_id: 'fac_1', hull_pct: 72 },
+          { id: 'p2', username: 'Wisp', faction_id: 'fac_2', hull_pct: 40 },
+        ],
+      },
+      snippets: [
+        '[DRONE]',
+        'Scout scan at sol_cloudbank',
+        'Ada (72% hull) · Wisp (40% hull)',
+        'Use: get_drone drone_id=drone-1',
+      ],
+    },
+    {
+      msgType: 'drone_survey',
+      data: {
+        drone_id: 'drone-1',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        poi_name: 'Cloudbank',
+        resources: [
+          { resource_id: 'ore_iron', richness: 42, remaining: 750 },
+          { resource_id: 'ice', richness: 10, remaining: -1 },
+        ],
+      },
+      snippets: [
+        '[DRONE]',
+        'Survey of Cloudbank (sol_cloudbank) in sol',
+        'ore_iron richness 42, 750 left',
+        'ice richness 10, unlimited',
+        'Use: get_drone drone_id=drone-1',
+      ],
     },
     {
       msgType: 'drone_update',
@@ -3149,6 +3201,408 @@ describe('notification formatting', () => {
         expect(preview.details).toEqual([]);
         expectNoDiagnosticTokens(previewText(preview));
         expectNoNestedJsonDump(previewText(preview));
+      });
+    });
+  });
+
+  describe('battle alert and drone scan/survey typed previews', () => {
+    const typedTypes = ['battle_alert', 'drone_scan', 'drone_survey'] as const;
+    const emptyFallback = {
+      battle_alert: { tag: 'BATTLE', headline: 'Battle alert', severity: 'warning' },
+      drone_scan: { tag: 'DRONE', headline: 'Scout scan complete', severity: 'info' },
+      drone_survey: { tag: 'DRONE', headline: 'Survey complete', severity: 'info' },
+    } as const;
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: string;
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: msgType === 'battle_alert' ? 'combat' : 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    test('registers never-null handlers for battle alert and drone types', () => {
+      for (const msgType of typedTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+        const preview = formatNotificationPreview(note(msgType, {}));
+        expect(preview.tag).toBe(emptyFallback[msgType].tag);
+        expect(preview.headline).not.toBe('notification');
+      }
+    });
+
+    test.each([...typedTypes])('empty %s bag uses last-resort headline without JSON dump', (msgType) => {
+      const notification = note(msgType, {});
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const expected = emptyFallback[msgType];
+
+      expect(preview.tag).toBe(expected.tag);
+      expect(preview.headline).toBe(expected.headline);
+      expect(preview.severity).toBe(expected.severity);
+      expect(preview.details).toEqual([]);
+      expect(output).toContain(`[${expected.tag}]`);
+      expect(output).toContain(expected.headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('Use:');
+      expectNoDiagnosticTokens(previewText(preview));
+      expectNoNestedJsonDump(output);
+    });
+
+    test('K13: table Type stays raw msg_type; Message is not the display tag', () => {
+      for (const msgType of typedTypes) {
+        const notification = note(msgType, {});
+        const message = formatNotificationMessage(notification);
+        expect(message).not.toBe(emptyFallback[msgType].tag);
+        expect(message).toBe(tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })));
+        expect(stripAnsi(formatNotification(notification).join('\n'))).toContain(`[${emptyFallback[msgType].tag}]`);
+      }
+    });
+
+    describe('battle_alert', () => {
+      const stubParticipants = [
+        { player_id: 'p-stub', username: 'StubPilot', side_id: 1, zone: 'alpha' },
+        { player_id: 'p-other', username: 'HiddenAce', side_id: 2, zone: 'bravo' },
+      ];
+
+      test('prefers the server message; ID and sides digest are details', () => {
+        const notification = note('battle_alert', {
+          battle_id: 'battle-42',
+          system_id: 'sol',
+          message: 'Battle underway in Sol',
+          sides: [
+            { side_id: 1, player_count: 2 },
+            { side_id: 2, player_count: 3 },
+          ],
+          participants: stubParticipants,
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('BATTLE');
+        expect(preview.severity).toBe('warning');
+        expect(preview.headline).toBe('Battle underway in Sol');
+        expect(preview.details).toEqual(['ID: battle-42', '2v3']);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[BATTLE]');
+        expect(output).not.toContain('[BATTLE_ALERT]');
+        expect(output).not.toContain('Use: get_battle_status');
+        expect(formatNotificationMessage(notification)).toBe('Battle underway in Sol; ID: battle-42');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('no-message fallback uses Battle in {system_id}', () => {
+        const preview = formatNotificationPreview(
+          note('battle_alert', {
+            battle_id: 'battle-9',
+            system_id: 'alfirk',
+            sides: [{ side_id: 0, player_count: 5 }],
+            participants: [],
+          }),
+        );
+        expect(preview.headline).toBe('Battle in alfirk');
+        expect(preview.details).toEqual(['ID: battle-9', '5']);
+      });
+
+      test('three-side digest is 2v3v4 after sort by side_id', () => {
+        const preview = formatNotificationPreview(
+          note('battle_alert', {
+            battle_id: 'battle-3',
+            message: 'Three-way fight.',
+            sides: [
+              { side_id: 3, player_count: 4 },
+              { side_id: 1, player_count: 2 },
+              { side_id: 2, player_count: 3 },
+            ],
+            participants: stubParticipants,
+          }),
+        );
+        expect(preview.details).toContain('2v3v4');
+        expect(preview.details.filter((line) => line.includes('v'))).toEqual(['2v3v4']);
+        expect(preview.details).toHaveLength(2);
+      });
+
+      test('stub participant usernames are absent from the preview', () => {
+        const preview = formatNotificationPreview(
+          note('battle_alert', {
+            battle_id: 'battle-42',
+            message: 'Battle underway in Sol',
+            sides: [
+              { side_id: 1, player_count: 2 },
+              { side_id: 2, player_count: 3 },
+            ],
+            participants: stubParticipants,
+          }),
+        );
+        const joined = previewText(preview);
+        expect(joined).not.toContain('StubPilot');
+        expect(joined).not.toContain('HiddenAce');
+        expect(joined).not.toContain('p-stub');
+        expect(joined).not.toContain('alpha');
+        const output = stripAnsi(
+          formatNotification(
+            note('battle_alert', {
+              battle_id: 'battle-42',
+              message: 'Battle underway in Sol',
+              sides: [
+                { side_id: 1, player_count: 2 },
+                { side_id: 2, player_count: 3 },
+              ],
+              participants: stubParticipants,
+            }),
+          ).join('\n'),
+        );
+        expect(output).not.toContain('StubPilot');
+        expectNoNestedJsonDump(output);
+      });
+
+      test('omits sides digest when empty, missing player_count, or non-finite side_id', () => {
+        const empty = formatNotificationPreview(
+          note('battle_alert', { message: 'Fight.', battle_id: 'b1', sides: [], participants: [] }),
+        );
+        expect(empty.details).toEqual(['ID: b1']);
+
+        const missingCount = formatNotificationPreview(
+          note('battle_alert', {
+            message: 'Fight.',
+            battle_id: 'b1',
+            sides: [{ side_id: 1, player_count: 2 }, { side_id: 2 }],
+            participants: [],
+          }),
+        );
+        expect(missingCount.details.join('\n')).not.toContain('v');
+        expect(missingCount.details).toEqual(['ID: b1']);
+
+        const badSideId = formatNotificationPreview(
+          note('battle_alert', {
+            message: 'Fight.',
+            battle_id: 'b1',
+            sides: [
+              { side_id: 1, player_count: 2 },
+              { side_id: Number.NaN, player_count: 3 },
+            ],
+            participants: [],
+          }),
+        );
+        expect(badSideId.details).toEqual(['ID: b1']);
+        expectNoDiagnosticTokens(previewText(badSideId));
+
+        const zeroCount = formatNotificationPreview(
+          note('battle_alert', {
+            message: 'Fight.',
+            sides: [
+              { side_id: 1, player_count: 0 },
+              { side_id: 2, player_count: 3 },
+            ],
+            participants: [],
+          }),
+        );
+        expect(zeroCount.details).toContain('0v3');
+      });
+    });
+
+    describe('drone_scan', () => {
+      test('poi headline, one player digest line, Use: last', () => {
+        const notification = note('drone_scan', {
+          drone_id: 'drone-1',
+          poi_id: 'sol_cloudbank',
+          players: [
+            { id: 'p1', username: 'Ada', faction_id: 'fac_wardens', hull_pct: 72 },
+            { id: 'p2', username: 'Wisp', faction_id: 'fac_raiders', hull_pct: 40 },
+          ],
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('DRONE');
+        expect(preview.severity).toBe('info');
+        expect(preview.headline).toBe('Scout scan at sol_cloudbank');
+        expect(preview.details).toEqual(['Ada (72% hull) · Wisp (40% hull)', 'Use: get_drone drone_id=drone-1']);
+        expect(preview.details[preview.details.length - 1]).toBe('Use: get_drone drone_id=drone-1');
+        const joined = previewText(preview);
+        expect(joined).not.toContain('fac_wardens');
+        expect(joined).not.toContain('faction');
+        expect(formatNotificationMessage(notification)).toBe(
+          'Scout scan at sol_cloudbank; Ada (72% hull) · Wisp (40% hull)',
+        );
+        expect(formatNotificationMessage(notification)).not.toContain('Use:');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[DRONE]');
+        expect(output).not.toContain('[DRONE_SCAN]');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('missing poi_id is Scout scan complete', () => {
+        const preview = formatNotificationPreview(note('drone_scan', { drone_id: 'drone-1' }));
+        expect(preview.headline).toBe('Scout scan complete');
+        expect(preview.details).toEqual(['no ships detected', 'Use: get_drone drone_id=drone-1']);
+      });
+
+      test('empty or missing players is no ships detected', () => {
+        const missing = formatNotificationPreview(note('drone_scan', { drone_id: 'drone-1', poi_id: 'sol_cloudbank' }));
+        expect(missing.details[0]).toBe('no ships detected');
+
+        const empty = formatNotificationPreview(
+          note('drone_scan', { drone_id: 'drone-1', poi_id: 'sol_cloudbank', players: [] }),
+        );
+        expect(empty.details[0]).toBe('no ships detected');
+        expect(empty.details).toHaveLength(2);
+      });
+
+      test('hull omitted when hull_pct is not finite; skip rows with neither username nor id', () => {
+        const preview = formatNotificationPreview(
+          note('drone_scan', {
+            drone_id: 'drone-1',
+            poi_id: 'sol_cloudbank',
+            players: [
+              { username: 'Ada', hull_pct: Number.NaN, faction_id: 'fac_1' },
+              { id: 'p-wisp', hull_pct: 40 },
+              { faction_id: 'fac_skip', hull_pct: 10 },
+              { username: 'Rex', hull_pct: Number.POSITIVE_INFINITY },
+              { username: 'Zero', hull_pct: 0 },
+            ],
+          }),
+        );
+        expect(preview.details[0]).toBe('Ada · p-wisp (40% hull) · Rex · Zero (0% hull)');
+        expect(previewText(preview)).not.toContain('NaN%');
+        expect(previewText(preview)).not.toContain('Infinity');
+        expect(previewText(preview)).not.toContain('fac_skip');
+        expectNoDiagnosticTokens(previewText(preview));
+      });
+
+      test('six-player scan still keeps Use: as the last detail', () => {
+        const players = ['Ada', 'Wisp', 'Rex', 'Ibis', 'Knurl', 'Marlowe'].map((username, index) => ({
+          id: `p${index + 1}`,
+          username,
+          hull_pct: 90 - index * 10,
+        }));
+        const preview = formatNotificationPreview(
+          note('drone_scan', { drone_id: 'drone-1', poi_id: 'sol_cloudbank', players }),
+        );
+        expect(preview.details).toHaveLength(2);
+        expect(preview.details[0]).toBe(
+          'Ada (90% hull) · Wisp (80% hull) · Rex (70% hull) · Ibis (60% hull) · Knurl (50% hull) · Marlowe (40% hull)',
+        );
+        expect(preview.details[1]).toBe('Use: get_drone drone_id=drone-1');
+        expect(preview.details[0]).not.toContain('+');
+      });
+
+      test('seven-player scan truncates to one digest line and still keeps Use:', () => {
+        const players = ['Ada', 'Wisp', 'Rex', 'Ibis', 'Knurl', 'Marlowe', 'Ghost'].map((username, index) => ({
+          username,
+          hull_pct: 10 + index,
+        }));
+        const preview = formatNotificationPreview(
+          note('drone_scan', { drone_id: 'drone-1', poi_id: 'sol_cloudbank', players }),
+        );
+        expect(preview.details).toHaveLength(2);
+        expect(preview.details[0]).toContain(', +1 more');
+        expect(preview.details[0]).not.toContain('Ghost');
+        expect(preview.details[1]).toBe('Use: get_drone drone_id=drone-1');
+      });
+    });
+
+    describe('drone_survey', () => {
+      test('named POI headline, one resource digest, Use: last', () => {
+        const notification = note('drone_survey', {
+          drone_id: 'drone-1',
+          system_id: 'sol',
+          poi_id: 'sol_cloudbank',
+          poi_name: 'Cloudbank',
+          resources: [
+            { resource_id: 'ore_iron', richness: 42, remaining: 750 },
+            { resource_id: 'ice', richness: 10, remaining: -1 },
+          ],
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('DRONE');
+        expect(preview.severity).toBe('info');
+        expect(preview.headline).toBe('Survey of Cloudbank (sol_cloudbank) in sol');
+        expect(preview.details).toEqual([
+          'ore_iron richness 42, 750 left · ice richness 10, unlimited',
+          'Use: get_drone drone_id=drone-1',
+        ]);
+        expect(formatNotificationMessage(notification)).toBe(
+          'Survey of Cloudbank (sol_cloudbank) in sol; ore_iron richness 42, 750 left · ice richness 10, unlimited',
+        );
+        expect(formatNotificationMessage(notification)).not.toContain('Use:');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[DRONE]');
+        expect(output).not.toContain('[DRONE_SURVEY]');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('headline omits missing name or system', () => {
+        const idOnly = formatNotificationPreview(
+          note('drone_survey', { poi_id: 'sol_cloudbank', drone_id: 'drone-1' }),
+        );
+        expect(idOnly.headline).toBe('Survey of sol_cloudbank');
+
+        const systemOnly = formatNotificationPreview(note('drone_survey', { system_id: 'sol' }));
+        expect(systemOnly.headline).toBe('Survey in sol');
+        expect(systemOnly.details).toEqual(['no deposits']);
+      });
+
+      test('remaining -1 is unlimited and 0 is depleted; richness omitted when not finite', () => {
+        const preview = formatNotificationPreview(
+          note('drone_survey', {
+            drone_id: 'drone-1',
+            poi_id: 'sol_cloudbank',
+            resources: [
+              { resource_id: 'ice', richness: 10, remaining: -1 },
+              { resource_id: 'gas', remaining: 0 },
+              { resource_id: 'ore_iron', richness: Number.NaN, remaining: 750 },
+              { resource_id: 'dust' },
+            ],
+          }),
+        );
+        expect(preview.details[0]).toBe('ice richness 10, unlimited · gas, depleted · ore_iron, 750 left · dust');
+        expect(preview.details[0]).not.toContain('-1');
+        expect(preview.details[0]).not.toContain('NaN');
+        expect(preview.details[1]).toBe('Use: get_drone drone_id=drone-1');
+        expectNoDiagnosticTokens(previewText(preview));
+      });
+
+      test('empty or missing resources is no deposits', () => {
+        const missing = formatNotificationPreview(
+          note('drone_survey', { drone_id: 'drone-1', poi_id: 'sol_cloudbank' }),
+        );
+        expect(missing.details[0]).toBe('no deposits');
+
+        const empty = formatNotificationPreview(
+          note('drone_survey', { drone_id: 'drone-1', poi_id: 'sol_cloudbank', resources: [] }),
+        );
+        expect(empty.details[0]).toBe('no deposits');
+        expect(empty.details[1]).toBe('Use: get_drone drone_id=drone-1');
+      });
+
+      test('skips rows without resource_id and does not emit one detail per resource', () => {
+        const preview = formatNotificationPreview(
+          note('drone_survey', {
+            drone_id: 'drone-1',
+            poi_id: 'sol_cloudbank',
+            resources: [
+              { resource_id: 'ore_iron', remaining: 10 },
+              { richness: 4, remaining: 3 },
+              { resource_id: '', remaining: 1 },
+              { resource_id: 'ice', remaining: 2 },
+            ],
+          }),
+        );
+        expect(preview.details).toHaveLength(2);
+        expect(preview.details[0]).toBe('ore_iron, 10 left · ice, 2 left');
       });
     });
   });
@@ -7595,6 +8049,35 @@ describe('notification formatting', () => {
       expect(reclaimed.data.faction_id).toBe('fac_wardens');
       expect(formatNotificationPreview(rent).details).toContain('faction fac_wardens');
       expect(formatNotificationPreview(reclaimed).details).toContain('faction fac_wardens');
+    });
+  });
+
+  describe('battle and drone remainder poll fixture', () => {
+    const rows = getNotificationsBattleDronesFixture.notifications;
+
+    test('every fixture msg_type hits its typed handler', () => {
+      expect(getNotificationsBattleDronesFixture.count).toBe(rows.length);
+      expect(rows.map((notification) => notification.msg_type)).toEqual(['battle_alert', 'drone_scan', 'drone_survey']);
+      expect(rows[0]?.type).toBe('combat');
+      expect(rows[1]?.type).toBe('system');
+      expect(rows[2]?.type).toBe('system');
+      for (const notification of rows) {
+        expect(hasPreviewHandler(notification.msg_type)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(notification.msg_type);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).not.toBe('notification');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      }
+    });
+
+    test('battle_alert fixture includes sides and stub participants that stay off the preview', () => {
+      const alert = rows.find((entry) => entry.msg_type === 'battle_alert');
+      if (!alert) throw new Error('expected battle_alert fixture row');
+      expect(Array.isArray(alert.data.sides)).toBe(true);
+      expect(Array.isArray(alert.data.participants)).toBe(true);
+      const preview = formatNotificationPreview(alert);
+      expect(preview.details).toContain('2v3');
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('StubPilot');
     });
   });
 

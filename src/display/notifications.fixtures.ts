@@ -777,6 +777,62 @@ export const getNotificationsFacilitiesFixture = {
   ],
 };
 
+/** Bystander battle alert and drone scan/survey poll (OpenAPI remainder). */
+export const getNotificationsBattleDronesFixture = {
+  count: 3,
+  current_tick: 902500,
+  remaining: 0,
+  timestamp: 1779567500,
+  notifications: [
+    {
+      id: 'notif-battle-alert-1',
+      type: 'combat',
+      msg_type: 'battle_alert',
+      timestamp: '2026-05-23T19:51:00.000Z',
+      data: {
+        battle_id: 'battle-42',
+        system_id: 'sol',
+        message: 'Battle underway in Sol',
+        sides: [
+          { side_id: 1, player_count: 2 },
+          { side_id: 2, player_count: 3 },
+        ],
+        participants: [{ player_id: 'p-stub', username: 'StubPilot', side_id: 1, zone: 'alpha' }],
+      },
+    },
+    {
+      id: 'notif-drone-scan-1',
+      type: 'system',
+      msg_type: 'drone_scan',
+      timestamp: '2026-05-23T19:51:05.000Z',
+      data: {
+        drone_id: 'drone-1',
+        poi_id: 'sol_cloudbank',
+        players: [
+          { id: 'p1', username: 'Ada', faction_id: 'fac_wardens', hull_pct: 72 },
+          { id: 'p2', username: 'Wisp', faction_id: 'fac_raiders', hull_pct: 40 },
+        ],
+      },
+    },
+    {
+      id: 'notif-drone-survey-1',
+      type: 'system',
+      msg_type: 'drone_survey',
+      timestamp: '2026-05-23T19:51:10.000Z',
+      data: {
+        drone_id: 'drone-1',
+        system_id: 'sol',
+        poi_id: 'sol_cloudbank',
+        poi_name: 'Cloudbank',
+        resources: [
+          { resource_id: 'ore_iron', richness: 42, remaining: 750 },
+          { resource_id: 'ice', richness: 10, remaining: -1 },
+        ],
+      },
+    },
+  ],
+};
+
 /** Mixed 0.597.1 typed-payload poll: cloak, complete_mission, error, fleet, and ok dock. */
 export const getNotificationsTypedPayloadsFixture = {
   count: 6,
@@ -1003,6 +1059,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_facilities: {
     command: 'get_notifications',
     fixture: getNotificationsFacilitiesFixture,
+  },
+  get_notifications_battle_drones: {
+    command: 'get_notifications',
+    fixture: getNotificationsBattleDronesFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {
