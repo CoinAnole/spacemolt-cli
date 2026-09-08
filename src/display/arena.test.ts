@@ -224,9 +224,32 @@ test('battleRulesetFromCategory treats only arena as the arena ruleset', () => {
   expect(battleRulesetFromCategory(true)).toBe('standard');
 });
 
+test('battleRulesetFromCategory treats wildlife and hunt as the hunt ruleset', () => {
+  expect(battleRulesetFromCategory('wildlife')).toBe('hunt');
+  expect(battleRulesetFromCategory(' WILDLIFE ')).toBe('hunt');
+  expect(battleRulesetFromCategory('hunt')).toBe('hunt');
+  expect(battleRulesetFromCategory('Hunt')).toBe('hunt');
+  expect(battleRulesetFromCategory('pvp')).toBe('standard');
+  expect(battleRulesetFromCategory('creature')).toBe('standard');
+  expect(battleRulesetFromCategory('creature_hunt')).toBe('standard');
+  expect(battleRulesetFromCategory(undefined)).toBe('standard');
+  expect(battleRulesetFromCategory(true)).toBe('standard');
+  expect(battleRulesetFromCategory('arena')).toBe('arena');
+});
+
 test('battleRulesetFromLogEntries is arena when any tick is flagged', () => {
   expect(battleRulesetFromLogEntries([{ tick: 1 }, { tick: 2, arena: true }])).toBe('arena');
   expect(battleRulesetFromLogEntries([{ tick: 1, arena: false }])).toBe('standard');
+  expect(battleRulesetFromLogEntries([])).toBe('standard');
+});
+
+test('battleRulesetFromLogEntries prefers arena flag over hunt category', () => {
+  expect(battleRulesetFromLogEntries([{ arena: true, battle_ended: { category: 'wildlife' } }])).toBe('arena');
+});
+
+test('battleRulesetFromLogEntries is hunt when battle_ended or recovered_summary category matches', () => {
+  expect(battleRulesetFromLogEntries([{ arena: false, battle_ended: { category: 'wildlife' } }])).toBe('hunt');
+  expect(battleRulesetFromLogEntries([{ recovered_summary: { category: 'hunt' } }])).toBe('hunt');
   expect(battleRulesetFromLogEntries([])).toBe('standard');
 });
 
@@ -244,6 +267,33 @@ test('battleLabels substitutes knockout wording only for arena', () => {
   expect(arena.shipsDestroyed).toBe('Ships Knocked Out');
   expect(arena.destroyedNames).toBe('Knocked out');
   expect(arena.killsColumn).toBe('KOs');
+});
+
+test('battleLabels hunt copy is real combat not knockout', () => {
+  const hunt = battleLabels('hunt');
+  expect(hunt.note).toBe(
+    'Wildlife hunt: creatures have hull and armor but no shields; kills drop carcass wrecks. Wildlife never dogpiles. Most creatures flee when badly hurt; some apex never flee.',
+  );
+  expect(hunt.note).not.toContain('restore');
+  expect(hunt.note).not.toContain('Knocked');
+  expect(hunt.note).not.toContain('KOs');
+  expect(hunt.shipsDestroyed).toBe('Destroyed');
+  expect(hunt.destroyedNames).toBe('Killed');
+  expect(hunt.killsColumn).toBe('Kills');
+
+  const arena = battleLabels('arena');
+  expect(arena.note).toBe(
+    'Arena match: knockouts restore ships, drones, and personnel on the spot; no kill, loss, capture or casualty stats. Ammo, fuel, and consumables stay spent.',
+  );
+  expect(arena.shipsDestroyed).toBe('Ships Knocked Out');
+  expect(arena.destroyedNames).toBe('Knocked out');
+  expect(arena.killsColumn).toBe('KOs');
+
+  const standard = battleLabels('standard');
+  expect(standard.note).toBeUndefined();
+  expect(standard.shipsDestroyed).toBe('Ships Destroyed');
+  expect(standard.destroyedNames).toBe('Destroyed');
+  expect(standard.killsColumn).toBe('Kills');
 });
 
 test('renders an idle arena lobby without the raw response fallback', () => {

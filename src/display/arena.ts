@@ -613,7 +613,7 @@ export function formatArenaSideSize(maxSideSize: unknown): string {
   return `up to ${size} ships per side`;
 }
 
-export type BattleRuleset = 'standard' | 'arena';
+export type BattleRuleset = 'standard' | 'arena' | 'hunt';
 
 export type BattleLabels = {
   note?: string;
@@ -623,6 +623,9 @@ export type BattleLabels = {
 };
 
 export type ArenaRecord = { wins: number; losses: number; knockouts: number };
+
+// Unconfirmed guesses: OpenAPI does not enum category; docs say wildlife hunts; command is hunt.
+const HUNT_CATEGORIES = new Set(['wildlife', 'hunt']);
 
 const BATTLE_LABELS: Record<BattleRuleset, BattleLabels> = {
   standard: {
@@ -635,6 +638,12 @@ const BATTLE_LABELS: Record<BattleRuleset, BattleLabels> = {
     shipsDestroyed: 'Ships Knocked Out',
     destroyedNames: 'Knocked out',
     killsColumn: 'KOs',
+  },
+  hunt: {
+    note: 'Wildlife hunt: creatures have hull and armor but no shields; kills drop carcass wrecks. Wildlife never dogpiles. Most creatures flee when badly hurt; some apex never flee.',
+    shipsDestroyed: 'Destroyed',
+    destroyedNames: 'Killed',
+    killsColumn: 'Kills',
   },
 };
 
@@ -694,12 +703,36 @@ export function arenaStatLines(stats: Record<string, unknown>, arenaXp: unknown,
   return lines;
 }
 
+function normalizedBattleCategory(category: unknown): string | undefined {
+  if (typeof category !== 'string') return undefined;
+  const token = category.trim().toLowerCase();
+  return token.length > 0 ? token : undefined;
+}
+
 export function battleRulesetFromCategory(category: unknown): BattleRuleset {
-  return typeof category === 'string' && category.trim().toLowerCase() === 'arena' ? 'arena' : 'standard';
+  const token = normalizedBattleCategory(category);
+  if (token === 'arena') return 'arena';
+  if (token !== undefined && HUNT_CATEGORIES.has(token)) return 'hunt';
+  return 'standard';
+}
+
+function logEntryCategories(entry: Record<string, unknown>): unknown[] {
+  const categories: unknown[] = [];
+  if (isRecord(entry.battle_ended)) categories.push(entry.battle_ended.category);
+  if (isRecord(entry.recovered_summary)) categories.push(entry.recovered_summary.category);
+  return categories;
 }
 
 export function battleRulesetFromLogEntries(entries: Array<Record<string, unknown>>): BattleRuleset {
-  return entries.some((entry) => entry.arena === true) ? 'arena' : 'standard';
+  if (entries.some((entry) => entry.arena === true)) return 'arena';
+  if (
+    entries.some((entry) =>
+      logEntryCategories(entry).some((category) => battleRulesetFromCategory(category) === 'hunt'),
+    )
+  ) {
+    return 'hunt';
+  }
+  return 'standard';
 }
 
 export function battleLabels(ruleset: BattleRuleset): BattleLabels {
