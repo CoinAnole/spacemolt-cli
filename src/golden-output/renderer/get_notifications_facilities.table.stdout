@@ -1,0 +1,12 @@
+count 6
+
+=== Notifications ===
+
+  Timestamp           | Type                  | Message                                                              
+  --------------------+-----------------------+----------------------------------------------------------------------
+  2026-05-23 19:50:00 | facility_rent_warning | Rent is overdue on your facilities.; Earth Station (earth_station)   
+  2026-05-23 19:50:05 | facility_rent_warning | Faction facilities are in arrears.; Haven Exchange (haven_exchange)  
+  2026-05-23 19:50:10 | facility_reclaimed    | Unpaid facilities were repossessed.; Earth Station (earth_station)   
+  2026-05-23 19:50:15 | facility_reclaimed    | Faction facilities were repossessed.; Haven Exchange (haven_exchange)
+  2026-05-23 19:50:20 | station_repaired      | Earth Station is back in service; in sol                             
+  2026-05-23 19:50:25 | ranch_poached         | Raider poached space cattle at Ada's Ranch.; herd left 12            

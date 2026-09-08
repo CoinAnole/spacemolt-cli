@@ -77,6 +77,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'RECONNECTED':
     case 'ARRIVAL':
     case 'TRANSIT':
+    case 'STATION':
       return c.green;
     case 'SHIP READY':
     case 'KILL':
@@ -89,6 +90,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'STRANDED':
     case 'ACTION FAILED':
     case 'ERROR':
+    case 'FACILITY':
       return `${c.red}${c.bright}`;
     case 'SYSTEM':
     case 'FACTION':
@@ -110,6 +112,8 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'PRIZE':
     case 'WARP':
     case 'CLOAK':
+    case 'RENT':
+    case 'RANCH':
       return c.yellow;
     case 'SCAN':
     case 'VERSION':

@@ -4,6 +4,25 @@ Notable user-facing changes to the SpaceMolt CLI. For agent/contributor routing 
 
 ## Unreleased
 
+### Untyped notification fallbacks (OpenAPI remainder)
+
+- Human `get_notifications` / `notifications` / inline notifications print
+  `facility_rent_warning` with `[RENT]`: prefers the server `message`, then
+  station / faction / arrears / missed cycles. Missed cycles stay in details,
+  not the headline. Table Type stays raw `facility_rent_warning`. Coarse poll
+  filter is `types=system`. JSON/YAML/jq field names are unchanged.
+- Human previews for `facility_reclaimed` print `[FACILITY]` with the server
+  `message`, station, faction id, and a compact repossessed-name digest.
+  Table Type stays raw `facility_reclaimed`. Coarse poll filter is
+  `types=system`.
+- Human previews for `station_repaired` print `[STATION]` (`{base} is back in
+  service`). Table Type stays raw `station_repaired`. Coarse poll filter is
+  `types=system`.
+- Human previews for `ranch_poached` print `[RANCH]`: prefers the server
+  `message`, then killer / species / ranch fallbacks. Herd remaining (including
+  `0`) and location are details. Table Type stays raw `ranch_poached`. Coarse
+  poll filter is `types=system`. JSON/YAML/jq field names are unchanged.
+
 ### Wildlife hunt battle labels
 
 - Human `get_battle_summary`, `get_battle_log`, and recovered summaries print hunt
