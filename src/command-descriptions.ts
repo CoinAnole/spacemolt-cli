@@ -133,6 +133,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   release_tow: 'Release a towed wreck at your current location',
   recruit_personnel: 'Recruit fit crew and marines at a station personnel service',
   reload: 'Reload a weapon magazine from ammo in cargo. Costs a tick; other battle commands do not.',
+  repair:
+    'Repair hull at a station, with kits, or on another ship (named target=). repaired is hull actually restored.',
   scrap_ship: 'Permanently destroy a stored ship you no longer want.',
   scrap_wreck:
     "Scrap a towed wreck at a salvage yard or your faction's own player station. Recovers cargo and modules into station storage.",

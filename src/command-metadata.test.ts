@@ -485,13 +485,27 @@ describe('command metadata', () => {
 
   test('repair help does not advertise unsupported target positional syntax', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.repair;
-    expect(config?.description).toBe('Repair hull damage using station services, repair kits, or repair equipment.');
-    expect(config?.example).toBe('spacemolt repair');
-    expect(config?.usage).not.toContain('target=');
+    expect(config?.args).toEqual(['id', 'quantity']);
+    expect(config?.usage).toBe('[id] [quantity] [target=player|fleet]  (named target= only)');
+    expect(config?.description).toBe(
+      'Repair hull at a station (credits), in space with repair kits, or on another ship at the same POI (Repair Arm + kits, named target=). target=fleet lists fleet hull and does not repair. repaired is hull actually restored, not kits requested; kits consumed are unchanged. The other pilot receives a repaired_by notification.',
+    );
+    expect(config?.example).toBe(
+      'spacemolt repair; spacemolt repair quantity=3; spacemolt repair target=Alice quantity=2; spacemolt repair id=hull_patch quantity=2',
+    );
+    expect(config?.usage).not.toContain('[target=ship|modules]');
+    expect(CURATED_COMMAND_DESCRIPTIONS.repair).toBe(
+      'Repair hull at a station, with kits, or on another ship (named target=). repaired is hull actually restored.',
+    );
 
     const help = captureHelp('repair');
+    expect(help).toContain('target=');
     expect(help).not.toContain('[target=ship|modules]');
     expect(help).not.toContain('spacemolt repair modules');
+
+    const fullHelp = captureFullHelp();
+    expect(fullHelp).toContain('Repair hull (station, kits, or target=)');
+    expect(fullHelp).not.toContain('Repair at station');
   });
 
   test('refuel help documents station top-off and limited quantity semantics', () => {

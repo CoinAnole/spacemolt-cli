@@ -1570,6 +1570,22 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(COMMANDS.repair_module).toBeUndefined();
   });
 
+  test('repair binds generated id-then-quantity positionals and named target=', () => {
+    expect(parseOk(['repair', 'hull_patch']).payload).toEqual({ id: 'hull_patch' });
+    expect(convertPayloadTypes(parseOk(['repair', 'quantity=3']).payload, 'repair')).toEqual({ quantity: 3 });
+    expect(parseOk(['repair', 'target=Alice']).payload).toEqual({ target: 'Alice' });
+
+    const bareName = parseOk(['repair', 'Alice']).payload;
+    expect(bareName).toEqual({ id: 'Alice' });
+    expect(bareName).not.toHaveProperty('target');
+
+    expect(parseOk(['repair', 'id=hull_patch', 'quantity=2']).payload).toEqual({
+      id: 'hull_patch',
+      quantity: '2',
+    });
+    expect(parseOk(['repair', '3']).payload).toEqual({ id: '3' });
+  });
+
   test('supply_commission - three positional args', () => {
     const { payload } = parseOk(['supply_commission', 'comm_123', 'steel_plate', '10']);
     expect(payload.commission_id).toBe('comm_123');
