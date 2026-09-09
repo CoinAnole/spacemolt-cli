@@ -6,6 +6,7 @@ import {
   getNotificationsFixture,
   getNotificationsObservationFixture,
   getNotificationsPersonnelAchievementsFixture,
+  getNotificationsSupportFixture,
   getNotificationsTypedPayloadsFixture,
 } from './display/notifications.fixtures';
 import { truncateCell } from './display/tables';
@@ -8928,6 +8929,37 @@ describe('notification formatting', () => {
       expect(personalPreview.details[personalPreview.details.length - 1]).toBe('Use: get_achievements');
       expect(factionPreview.headline).toBe('2 faction achievements unlocked');
       expect(factionPreview.details[factionPreview.details.length - 1]).toBe('Use: get_faction_achievements');
+    });
+  });
+
+  describe('support remainder poll fixture', () => {
+    const rows = getNotificationsSupportFixture.notifications;
+
+    test('every fixture msg_type hits its typed handler', () => {
+      expect(getNotificationsSupportFixture.count).toBe(rows.length);
+      expect(rows.map((notification) => notification.msg_type)).toEqual(['refueled_by', 'repaired_by']);
+      for (const notification of rows) {
+        expect(notification.type).toBe('system');
+        expect(hasPreviewHandler(notification.msg_type)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(notification.msg_type);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).not.toBe('notification');
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      }
+    });
+
+    test('table Message is the compact headline with no detail fold', () => {
+      const refueled = rows.find((entry) => entry.id === 'notif-refueled-by-1');
+      const repaired = rows.find((entry) => entry.id === 'notif-repaired-by-1');
+      if (!refueled) throw new Error('expected refueled_by fixture row');
+      if (!repaired) throw new Error('expected repaired_by fixture row');
+      const refueledPreview = formatNotificationPreview(refueled);
+      const repairedPreview = formatNotificationPreview(repaired);
+      expect(refueledPreview.headline).toBe('Alice refueled you +12 (40/50)');
+      expect(repairedPreview.headline).toBe('Alice repaired you +8 (92/100)');
+      expect(tableMessageFromPreview(refueledPreview)).toBe(refueledPreview.headline);
+      expect(tableMessageFromPreview(repairedPreview)).toBe(repairedPreview.headline);
     });
   });
 
