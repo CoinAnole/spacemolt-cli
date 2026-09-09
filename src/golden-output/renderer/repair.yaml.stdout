@@ -1,0 +1,10 @@
+
+action: repair
+source: kits
+repaired: 8
+hull: 92
+max_hull: 100
+kits_used: 1
+item_id: repair_kit
+item_name: "Repair Kit"
+message: "Hull repaired."

@@ -1,0 +1,12 @@
+
+=== Repair Complete ===
+Source: repair_arm
+Has arm: yes
+Fleet hull status.
+
+=== Fleet Hull ===
+
+  Pilot | Class       | Hull | Max | Shield | You | Leader
+  ------+-------------+------+-----+--------+-----+-------
+  Alice | lithosphere | 92   | 100 | 40     | yes | yes   
+  Bob   | prospector  | 40   | 80  | 0      | no  | no    

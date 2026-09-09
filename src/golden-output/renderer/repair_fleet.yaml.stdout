@@ -1,0 +1,26 @@
+
+action: repair
+source: repair_arm
+has_arm: true
+members:
+  - username: Alice
+    player_id: "player-alice"
+    ship_class: lithosphere
+    hull: 92
+    max_hull: 100
+    hull_pct: 92
+    shield: 40
+    max_shield: 50
+    is_you: true
+    is_leader: true
+  - username: Bob
+    player_id: "player-bob"
+    ship_class: prospector
+    hull: 40
+    max_hull: 80
+    hull_pct: 50
+    shield: 0
+    max_shield: 20
+    is_you: false
+    is_leader: false
+message: "Fleet hull status."

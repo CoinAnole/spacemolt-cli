@@ -1,0 +1,11 @@
+{
+  "action": "repair",
+  "source": "kits",
+  "repaired": 8,
+  "kits_used": 1,
+  "target_player_name": "Alice",
+  "target_player_id": "player-id",
+  "target_hull_now": 92,
+  "target_hull_max": 100,
+  "message": "Repaired Alice."
+}

@@ -37,6 +37,10 @@ import {
   nearbyBossFixture,
   nearbyFixture,
   poiInfoFixture,
+  repairFixture,
+  repairFleetFixture,
+  repairStationFixture,
+  repairTargetFixture,
   shipDroneBayFixture,
   shipFixture,
   shipRemoteFixture,
@@ -1870,6 +1874,58 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Market cost: 7,996 cr (2 cr/fuel)');
     expect(stdout).toContain('Fuel tax: 7,996 cr (2 cr/fuel)');
     expect(stdout).toContain('Total spent: 15,992 cr (4 cr/fuel)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats kit repair hull restored without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('repair', repairFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Repair Complete ===');
+    expect(stdout).toContain('Source: kits');
+    expect(stdout).toContain('Hull restored: 8');
+    expect(stdout).toContain('Kits used: 1');
+    expect(stdout).not.toContain('item(s)');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats station repair restored hull when hull is already full', () => {
+    const { stdout, stderr } = captureStructuredOutput('repair', repairStationFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Repair Complete ===');
+    expect(stdout).toContain('Source: station');
+    expect(stdout).toContain('Hull restored: 3');
+    expect(stdout).toContain('Hull: 100/100');
+    expect(stdout).toContain('Cost: 1,200 cr');
+    expect(stdout).not.toContain('Kits used:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats target repair hull without raw JSON fallback', () => {
+    const { stdout, stderr } = captureStructuredOutput('repair', repairTargetFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Repair Complete ===');
+    expect(stdout).toContain('Target: Alice (player-id)');
+    expect(stdout).toContain('Target hull: 92/100');
+    expect(stdout).toContain('Hull restored: 8');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats fleet repair members without hull-restored lines', () => {
+    const { stdout, stderr } = captureStructuredOutput('repair', repairFleetFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Repair Complete ===');
+    expect(stdout).toContain('Source: repair_arm');
+    expect(stdout).toContain('Has arm: yes');
+    expect(stdout).toContain('=== Fleet Hull ===');
+    expect(stdout).toContain('Alice');
+    expect(stdout).toContain('Bob');
+    expect(stdout).not.toContain('Hull restored:');
+    expect(stdout).not.toContain('Kits used:');
+    expect(stdout).not.toContain('item(s)');
     expect(stdout).not.toContain('=== Response ===');
   });
 
