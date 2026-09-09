@@ -699,9 +699,22 @@ describe('help output branches', () => {
     expect(output).toContain('jettison [item_id] [quantity] [items=JSON]');
     expect(output).toContain('storage loot [wreck_id] [item_id] [quantity] [module_id=…]');
     expect(output).toContain('loot_wreck [wreck_id] [item_id] [quantity] [module_id=…]');
-    expect(output).toContain('fit a module onto your ship');
     expect(output).toContain('omit wreck_id while towing');
     expect(output).not.toContain('salvage_wreck <wreck_id>');
+    expect(output).not.toContain('onto your ship');
+    expect(output).not.toContain('fit a module onto your ship');
+
+    const storageLootLine = output.split('\n').find((line) => /^\s+storage loot /.test(line));
+    expect(storageLootLine).toBeDefined();
+    expect(storageLootLine).toContain('unfitted');
+    expect(storageLootLine).toContain('install_mod');
+    expect(storageLootLine).not.toContain('onto your ship');
+
+    const lootWreckLine = output.split('\n').find((line) => /^\s+loot_wreck /.test(line));
+    expect(lootWreckLine).toBeDefined();
+    expect(lootWreckLine).toContain('unfitted');
+    expect(lootWreckLine).toContain('install_mod');
+    expect(lootWreckLine).not.toContain('onto your ship');
   });
 
   test('storage group prefers top-level jettison without duplicating settle-back copy', () => {
@@ -1544,39 +1557,50 @@ describe('help output branches', () => {
     expect(output).not.toContain('--jq');
   });
 
-  test('loot_wreck help documents named module_id= ship fit', () => {
+  test('loot_wreck help documents named module_id= cargo loot', () => {
     const capture = captureWriter();
 
     expect(showCommandHelp('loot_wreck', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('withdrawn');
     expect(output).toContain('[module_id=…]');
     expect(output).toContain('spacemolt loot_wreck wreck-1 module_id=module-1');
-    expect(output).toContain('not cargo');
-    expect(output).toContain('withdrawn types cannot be fitted');
+    expect(output).toContain('unfitted');
+    expect(output).toContain('install_mod');
+    expect(output).toContain('cargo hold');
+    expect(output).not.toContain('onto your ship');
+    expect(output).not.toContain('fit a module onto your ship');
   });
 
-  test('storage loot help documents named module_id= ship fit', () => {
+  test('storage loot help documents named module_id= cargo loot', () => {
     const capture = captureWriter();
 
     expect(showCommandHelp('storage loot', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('fit a module onto your ship');
+    expect(output).toContain('unfitted');
+    expect(output).toContain('install_mod');
     expect(output).not.toContain('from a wreck into cargo via');
     expect(output).toContain('spacemolt storage loot wreck-1 module_id=module-1');
-    expect(output).toContain('withdrawn');
+    expect(output).not.toContain('onto your ship');
+    expect(output).not.toContain('fit a module onto your ship');
   });
 
-  test('help misc documents loot_wreck module_id fit', () => {
+  test('help misc documents loot_wreck module_id cargo loot', () => {
     const capture = captureWriter();
 
     expect(showCommandGroup('misc', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('[module_id=…]');
-    expect(output).toContain('withdrawn types cannot be fitted');
+    expect(output).not.toContain('onto your ship');
+    expect(output).not.toContain('fit a module onto your ship');
+
+    const lootWreckLine = output.split('\n').find((line) => /^\s+loot_wreck /.test(line));
+    expect(lootWreckLine).toBeDefined();
+    expect(lootWreckLine).toContain('unfitted');
+    expect(lootWreckLine).toContain('install_mod');
+    expect(lootWreckLine).not.toContain('onto your ship');
   });
 
   test('help and explain salvage_claim_prize do not resolve as claim_prize', () => {

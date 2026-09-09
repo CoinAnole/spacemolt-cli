@@ -2345,23 +2345,44 @@ describe('command metadata', () => {
     expect(COMMANDS.jump?.description).not.toContain(phrase);
   });
 
-  test('loot_wreck and storage_loot document module_id fit', () => {
+  test('loot_wreck and storage_loot document module_id cargo loot', () => {
     expect(COMMANDS.loot_wreck?.args).toEqual(['wreck_id', 'item_id', 'quantity', 'module_id']);
     expect(COMMANDS.loot_wreck?.usage).toContain('[module_id=…]');
-    expect(COMMANDS.loot_wreck?.description).toContain('fit a module onto your ship');
-    expect(COMMANDS.loot_wreck?.description).toContain('withdrawn');
-    expect(COMMANDS.loot_wreck?.schema?.module_id?.description).toContain('withdrawn');
-    expect(COMMANDS.loot_wreck?.schema?.module_id?.description).toContain('onto your ship');
+    expect(COMMANDS.loot_wreck?.usage).toContain('unfitted');
+    expect(COMMANDS.loot_wreck?.usage).toContain('install_mod');
+    expect(COMMANDS.loot_wreck?.usage).not.toContain('onto your ship');
+    expect(COMMANDS.loot_wreck?.description).toContain('unfitted');
+    expect(COMMANDS.loot_wreck?.description).toContain('install_mod');
+    expect(COMMANDS.loot_wreck?.description).not.toContain('fit a module onto your ship');
+    expect(COMMANDS.loot_wreck?.description).not.toContain('onto your ship');
+    expect(COMMANDS.loot_wreck?.description).not.toContain('withdrawn');
+    expect(COMMANDS.loot_wreck?.schema?.module_id?.description).toEqual(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_salvage/loot']?.schema?.module_id?.description,
+    );
     expect(COMMANDS.loot_wreck?.example).toBe('spacemolt loot_wreck wreck-1 module_id=module-1');
     expect(COMMANDS.loot_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'loot', method: 'POST' });
+    expect(COMMANDS.loot_wreck?.seeAlso).toEqual(['storage_loot', 'get_wrecks', 'install_mod']);
 
     expect(COMMANDS.storage_loot?.args).toEqual(['wreck_id', 'item_id', 'quantity', 'module_id']);
-    expect(COMMANDS.storage_loot?.description).toContain('fit a module onto your ship');
+    expect(COMMANDS.storage_loot?.description).toContain('unfitted');
+    expect(COMMANDS.storage_loot?.description).toContain('install_mod');
     expect(COMMANDS.storage_loot?.description).not.toContain('from a wreck into cargo via');
-    expect(COMMANDS.storage_loot?.schema?.module_id?.description).toContain('onto your ship');
-    expect(COMMANDS.storage_loot?.schema?.module_id?.description).toContain('withdrawn');
+    expect(COMMANDS.storage_loot?.description).not.toContain('fit a module onto your ship');
+    expect(COMMANDS.storage_loot?.description).not.toContain('onto your ship');
+    expect(COMMANDS.storage_loot?.description).not.toContain('withdrawn');
+    expect(COMMANDS.storage_loot?.schema?.module_id?.description).toEqual(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_storage/loot']?.schema?.module_id?.description,
+    );
     expect(COMMANDS.storage_loot?.example).toBe('spacemolt storage_loot wreck-1 module_id=module-1');
     expect(COMMANDS.storage_loot?.route).toEqual({ tool: 'spacemolt_storage', action: 'loot', method: 'POST' });
+    expect(COMMANDS.storage_loot?.seeAlso).toEqual(['loot_wreck', 'get_wrecks', 'storage_view', 'install_mod']);
+
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('unfitted');
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('install_mod');
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).not.toContain('onto your ship');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('unfitted');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('install_mod');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).not.toContain('onto your ship');
   });
 
   test('scrap_wreck documents faction-station scrap', () => {
