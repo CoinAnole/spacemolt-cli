@@ -2268,7 +2268,7 @@ function previewObservationUpdate(
   const tick = finiteNumber(data.tick);
   const suffixes: string[] = [];
   if (data.unknown_signature === true) suffixes.push('unknown signature');
-  if (data.active_scan === true) suffixes.push('active scan');
+  if (typeof data.active_scan === 'boolean') suffixes.push(`active scan: ${data.active_scan}`);
   const suffix = suffixes.length ? `; ${suffixes.join('; ')}` : '';
 
   const details = [

@@ -4791,8 +4791,48 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Creatures (1):');
     expect(stdout).toContain('Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale)');
     expect(stdout).toContain('Unknown cloaked signature detected');
+    expect(stdout).toContain('Active scan: true');
     expect(stdout).not.toContain('Ibis');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('subscribe_observation prints Active scan: true against the schema fixture', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', subscribeObservationFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Nearby ===\nActive scan: true\nUnknown cloaked signature detected. Run: scan');
+  });
+
+  test('subscribe_observation prints Active scan: false against a cloned fixture', () => {
+    const fixture = structuredClone(subscribeObservationFixture) as Record<string, unknown>;
+    fixture.active_scan = false;
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Active scan: false');
+    expect(stdout).not.toContain('Active scan: true');
+  });
+
+  test('subscribe_observation omits Active scan when the field is absent', () => {
+    const fixture = structuredClone(subscribeObservationFixture) as Record<string, unknown>;
+    delete fixture.active_scan;
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Active scan');
+  });
+
+  test('get_nearby stays silent when active_scan is planted true or false', () => {
+    for (const active_scan of [true, false]) {
+      const { stdout, stderr } = captureStructuredOutput('get_nearby', {
+        ...nearbyFixture,
+        active_scan,
+      });
+
+      expect(stderr).toBe('');
+      expect(stdout).toContain('=== Nearby ===');
+      expect(stdout).not.toContain('Active scan');
+    }
   });
 
   test('get_nearby retains an explicit pirate_count', () => {
@@ -4824,6 +4864,7 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('Players (0):');
     expect(stdout).toContain('No other players at this location');
+    expect(stdout).toContain('Active scan: false');
     expect(stdout).not.toContain('Pirates (');
     expect(stdout).not.toContain('Empire NPCs (');
     expect(stdout).not.toContain('Creatures (');

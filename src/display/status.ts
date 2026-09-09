@@ -131,6 +131,12 @@ function emitUnknownSignatureHint(...sources: unknown[]): void {
   emitLine(`${c.yellow}Unknown cloaked signature detected.${c.reset} Run: scan`);
 }
 
+function emitActiveScanLine(result: Record<string, unknown>, command: string | undefined): void {
+  if (!commandNameEquals(command, 'subscribe_observation')) return;
+  if (typeof result.active_scan !== 'boolean') return;
+  emitLine(`Active scan: ${result.active_scan}`);
+}
+
 function emitLocationResources(resources: unknown, options: { indent?: string; leadingNewline?: boolean } = {}): void {
   const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
   if (!rows.length) return; // empty array is silent
@@ -1070,7 +1076,7 @@ export const statusFormatters = [
   namedFormatter(
     'nearby',
     ['nearby', 'prizes'],
-    (r) => {
+    (r, command) => {
       if (r.location && typeof r.location === 'object') return false;
       const playerSource = Array.isArray(r.nearby) ? r.nearby : r.players;
       if (!Array.isArray(playerSource)) return false;
@@ -1096,6 +1102,7 @@ export const statusFormatters = [
       const creatureCount = typeof r.creature_count === 'number' ? r.creature_count : creatures.length;
 
       emitLine(`\n${c.bright}=== Nearby ===${c.reset}`);
+      emitActiveScanLine(r, command);
       emitUnknownSignatureHint(r);
       emitLine(`\n${c.bright}Players (${playerCount}):${c.reset}`);
       if (!players.length) {

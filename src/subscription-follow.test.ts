@@ -167,7 +167,31 @@ describe('subscription follow runner integration', () => {
       payload: { clear: true, limit: 100, types: ['observation'] },
     });
     expect(result.stdout.join('\n')).toContain(
-      'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; active scan',
+      'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; active scan: true',
+    );
+    expect(result.stderr.join('\n')).not.toContain('drains the shared notification queue');
+  });
+
+  test('observation polling prints active scan: false when the sweep is off', async () => {
+    const result = await runFollowHarness({
+      command: 'subscribe_observation',
+      poll: () => ({
+        structuredContent: {
+          notifications: [
+            {
+              id: 'obs-1',
+              type: 'observation',
+              msg_type: 'observation_update',
+              timestamp: '2026-08-15T12:00:10.000Z',
+              data: { poi_id: 'sol_earth', system_id: 'sol', tick: 901501, active_scan: false },
+            },
+          ],
+        },
+      }),
+    });
+
+    expect(result.stdout.join('\n')).toContain(
+      'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; active scan: false',
     );
     expect(result.stderr.join('\n')).not.toContain('drains the shared notification queue');
   });
