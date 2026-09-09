@@ -18,6 +18,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - Mute help names `channels=support` (WebSocket only; HTTP polling is unaffected). `get_notifications` types help lists `refueled_by` / `repaired_by` as system fallbacks.
 - `sell_wreck` table output lists leftover wreck modules deposited to station storage (`modules_stored`).
 - `scrap_wreck` table output expands recovered materials (including wreck modules) instead of `Materials: N item(s)`.
+- `repair` table output labels hull restored vs kits used, target hull, and fleet members.
 - `help sell_wreck` / `help scrap_wreck` note that leftover wreck modules go to station storage.
 - `ship_captured` notifications show prize id and battle-origin location. They recommend `claim_prize prize_id=…` when `prize_id` is present. They no longer recommend `get_nearby` — including arena/historical rows that have no prize fields (headline only).
 - `claim_prize` help notes that the prize sits at the battle origin POI, which can differ from your current POI. `discoverWith` no longer lists `get_nearby`.

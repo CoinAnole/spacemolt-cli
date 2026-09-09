@@ -1,0 +1,9 @@
+{
+  "action": "repair",
+  "source": "station",
+  "repaired": 3,
+  "hull": 100,
+  "max_hull": 100,
+  "cost": 1200,
+  "message": "Station repaired your hull."
+}

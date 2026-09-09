@@ -7,6 +7,10 @@ import {
   cargoOverCapacityFixture,
   factionGaragesFixture,
   listShipsFixture,
+  repairFixture,
+  repairFleetFixture,
+  repairStationFixture,
+  repairTargetFixture,
   scrapWreckFixture,
   sellWreckFixture,
   sellWreckModulesFixture,
@@ -765,6 +769,197 @@ test('scrap_wreck details-only auto_docked does not print a receipt line or bann
     },
   }).stdout.join('\n');
   expect(stdout).toContain('=== Wreck Scrapped ===');
+  expect(stdout).not.toContain('Auto-docked:');
+  expect(stdout).not.toContain('Auto Docked:');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+function renderRepair(fixture: Record<string, unknown>) {
+  return renderStructuredResult('repair', structuredClone(fixture), options, context);
+}
+
+test('repair kits print hull restored and kits used without fallback', () => {
+  const stdout = renderRepair(repairFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
+  expect(stdout).toContain('Source: kits');
+  expect(stdout).toContain('Hull restored: 8');
+  expect(stdout).toContain('Hull: 92/100');
+  expect(stdout).toContain('Kits used: 1');
+  expect(stdout).toContain('Item: Repair Kit (repair_kit)');
+  expect(stdout).toContain('Hull repaired.');
+  expect(stdout).not.toContain('Has arm:');
+  expect(stdout).not.toContain('Cost:');
+  expect(stdout).not.toContain('Target:');
+  expect(stdout).not.toContain('item(s)');
+  expect(stdout).not.toContain('?/?');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair station prints restored hull not an overstated kits number', () => {
+  const stdout = renderRepair(repairStationFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
+  expect(stdout).toContain('Source: station');
+  expect(stdout).toContain('Hull restored: 3');
+  expect(stdout).toContain('Hull: 100/100');
+  expect(stdout).toContain('Cost: 1,200 cr');
+  expect(stdout).not.toContain('Kits used:');
+  expect(stdout).not.toContain('Has arm:');
+  expect(stdout).not.toContain('item(s)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair target prints target hull and restored amount', () => {
+  const stdout = renderRepair(repairTargetFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
+  expect(stdout).toContain('Source: kits');
+  expect(stdout).toContain('Hull restored: 8');
+  expect(stdout).toContain('Target: Alice (player-id)');
+  expect(stdout).toContain('Target hull: 92/100');
+  expect(stdout).toContain('Kits used: 1');
+  expect(stdout).not.toContain('Hull: ');
+  expect(stdout).not.toContain('Has arm:');
+  expect(stdout).not.toContain('Cost:');
+  expect(stdout).not.toContain('item(s)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair fleet prints pilots and omits hull-restored and kits lines', () => {
+  const stdout = renderRepair(repairFleetFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
+  expect(stdout).toContain('Source: repair_arm');
+  expect(stdout).toContain('Has arm: yes');
+  expect(stdout).toContain('Fleet hull status.');
+  expect(stdout).toContain('=== Fleet Hull ===');
+  expect(stdout).toContain('Alice');
+  expect(stdout).toContain('Bob');
+  expect(stdout).toContain('lithosphere');
+  expect(stdout).toContain('prospector');
+  expect(stdout).toContain('yes');
+  expect(stdout).toContain('no');
+  expect(stdout).not.toContain('Hull restored:');
+  expect(stdout).not.toContain('Kits used:');
+  expect(stdout).not.toContain('Hull:');
+  expect(stdout).not.toContain('Cost:');
+  expect(stdout).not.toContain('Item:');
+  expect(stdout).not.toContain('item(s)');
+  expect(stdout).not.toContain('Members:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair omits gated optional lines when fields are absent', () => {
+  const stdout = renderRepair({
+    action: 'repair',
+    source: 'kits',
+    message: 'No optional hull fields.',
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
+  expect(stdout).toContain('Source: kits');
+  expect(stdout).toContain('No optional hull fields.');
+  expect(stdout).not.toContain('Has arm:');
+  expect(stdout).not.toContain('Hull restored:');
+  expect(stdout).not.toContain('Hull:');
+  expect(stdout).not.toContain('Target:');
+  expect(stdout).not.toContain('Target hull:');
+  expect(stdout).not.toContain('Kits used:');
+  expect(stdout).not.toContain('Item:');
+  expect(stdout).not.toContain('Cost:');
+  expect(stdout).not.toContain('?');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair prints Has arm no and omits non-boolean has_arm', () => {
+  const noArm = renderRepair({ action: 'repair', source: 'kits', has_arm: false }).stdout.join('\n');
+  expect(noArm).toContain('Has arm: no');
+  expect(noArm).not.toContain('Has arm: yes');
+
+  const missing = renderRepair({ action: 'repair', source: 'kits' }).stdout.join('\n');
+  expect(missing).not.toContain('Has arm:');
+
+  const invalid = renderRepair({ action: 'repair', source: 'kits', has_arm: 'yes' }).stdout.join('\n');
+  expect(invalid).not.toContain('Has arm:');
+});
+
+test('repair prints a one-sided hull pair without placeholders', () => {
+  const hullOnly = renderRepair({ action: 'repair', source: 'kits', hull: 92 }).stdout.join('\n');
+  expect(hullOnly).toContain('Hull: 92');
+  expect(hullOnly).not.toContain('?');
+  expect(hullOnly).not.toContain('Hull: 92/');
+
+  const maxOnly = renderRepair({ action: 'repair', source: 'kits', max_hull: 100 }).stdout.join('\n');
+  expect(maxOnly).toContain('Hull: 100');
+  expect(maxOnly).not.toContain('?');
+  expect(maxOnly).not.toContain('Hull: /100');
+});
+
+test('repair prints zero restored hull and omits non-finite repaired', () => {
+  const zero = renderRepair({ action: 'repair', source: 'kits', repaired: 0 }).stdout.join('\n');
+  expect(zero).toContain('Hull restored: 0');
+
+  const missing = renderRepair({ action: 'repair', source: 'kits' }).stdout.join('\n');
+  expect(missing).not.toContain('Hull restored:');
+
+  const nan = renderRepair({ action: 'repair', source: 'kits', repaired: Number.NaN }).stdout.join('\n');
+  expect(nan).not.toContain('Hull restored:');
+});
+
+test('repair fleet omits hull-restored even when repaired is present', () => {
+  const stdout = renderRepair({
+    ...repairFleetFixture,
+    repaired: 8,
+    kits_used: 1,
+    hull: 92,
+    max_hull: 100,
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Fleet Hull ===');
+  expect(stdout).toContain('Alice');
+  expect(stdout).not.toContain('Hull restored:');
+  expect(stdout).not.toContain('Kits used:');
+  expect(stdout).not.toContain('Hull: 92/100');
+});
+
+test('repair fleet omits Shield unless a member has it', () => {
+  const fleetHeader = (stdout: string) =>
+    stdout.split('\n').find((line) => line.includes('|') && line.includes('Pilot')) ?? '';
+
+  const withShield = renderRepair(repairFleetFixture).stdout.join('\n');
+  expect(fleetHeader(withShield)).toContain('Shield');
+
+  const noShield = structuredClone(repairFleetFixture) as {
+    members: Array<Record<string, unknown>>;
+  };
+  for (const member of noShield.members) {
+    delete member.shield;
+    delete member.max_shield;
+    delete member.hull_pct;
+  }
+  const withoutShield = renderRepair(noShield).stdout.join('\n');
+  expect(fleetHeader(withoutShield)).not.toContain('Shield');
+  expect(withoutShield).toContain('Alice');
+  expect(withoutShield).toContain('Bob');
+});
+
+test('repair matches command plus source when action is omitted', () => {
+  const stdout = renderRepair({ source: 'kits', repaired: 4 }).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
+  expect(stdout).toContain('Source: kits');
+  expect(stdout).toContain('Hull restored: 4');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair does not match on repaired alone', () => {
+  const stdout = renderRepair({ repaired: 8, hull: 92, max_hull: 100 }).stdout.join('\n');
+  expect(stdout).not.toContain('=== Repair Complete ===');
+  expect(stdout).toContain('=== Response ===');
+});
+
+test('repair details-only auto_docked does not print a receipt line or banner', () => {
+  const stdout = renderRepair({
+    details: {
+      ...repairFixture,
+      auto_docked: true,
+    },
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Repair Complete ===');
   expect(stdout).not.toContain('Auto-docked:');
   expect(stdout).not.toContain('Auto Docked:');
   expect(stdout).not.toContain('[AUTO-DOCKED]');

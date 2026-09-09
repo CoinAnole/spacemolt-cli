@@ -82,6 +82,16 @@ function optionalNumber(value: unknown): number | undefined {
   return finiteNumber(value);
 }
 
+// RepairResponse may omit either side of a hull pair; never invent '?' placeholders.
+function formatCurrentMax(current: unknown, max: unknown): string | undefined {
+  const now = optionalNumber(current);
+  const cap = optionalNumber(max);
+  if (now === undefined && cap === undefined) return undefined;
+  if (now !== undefined && cap !== undefined) return `${now}/${cap}`;
+  if (now !== undefined) return String(now);
+  return String(cap);
+}
+
 function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
@@ -185,6 +195,27 @@ function projectOwnedShipRow(ship: Record<string, unknown>): Record<string, unkn
     active_display: ship.is_active === true ? 'yes' : ship.is_active === false ? 'no' : '',
     listing_price_display: formatOwnedListingPrice(ship.listing_price),
   };
+}
+
+function projectFleetHullRow(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...row,
+    you_display: row.is_you === true ? 'yes' : row.is_you === false ? 'no' : '',
+    leader_display: row.is_leader === true ? 'yes' : row.is_leader === false ? 'no' : '',
+  };
+}
+
+function fleetHullColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Pilot', ['username']],
+    ['Class', ['ship_class']],
+    ['Hull', ['hull']],
+    ['Max', ['max_hull']],
+  ];
+  if (hasAnyField(rows, ['shield'])) columns.push(['Shield', ['shield']]);
+  if (hasAnyField(rows, ['is_you'])) columns.push(['You', ['you_display']]);
+  if (hasAnyField(rows, ['is_leader'])) columns.push(['Leader', ['leader_display']]);
+  return columns;
 }
 
 function ownedShipColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
@@ -580,6 +611,59 @@ export const shipFormatters = [
       return true;
     },
     { commands: ['refuel'] },
+  ),
+
+  formatter(
+    (r, command) => {
+      // RepairResponse requires action; command+source covers receipts that omit it.
+      const source = nonEmptyString(r.source);
+      if (r.action !== 'repair' && !(command === 'repair' && source !== undefined)) return false;
+
+      emitLine(`\n${c.bright}=== Repair Complete ===${c.reset}`);
+      if (source) emitLine(`Source: ${source}`);
+      if (typeof r.has_arm === 'boolean') emitLine(`Has arm: ${r.has_arm === true ? 'yes' : 'no'}`);
+
+      const members = Array.isArray(r.members) ? r.members.filter(isRecord) : undefined;
+      if (members !== undefined) {
+        if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+        if (members.length) {
+          const rows = members.map(projectFleetHullRow);
+          printCompactTable('Fleet Hull', rows, fleetHullColumns(rows));
+        }
+        return true;
+      }
+
+      const repaired = optionalNumber(r.repaired);
+      if (repaired !== undefined) emitLine(`Hull restored: ${repaired}`);
+
+      const hull = formatCurrentMax(r.hull, r.max_hull);
+      if (hull !== undefined) emitLine(`Hull: ${hull}`);
+
+      const targetName = nonEmptyString(r.target_player_name);
+      const targetId = nonEmptyString(r.target_player_id);
+      if (targetName || targetId) {
+        emitLine(`Target: ${targetName && targetId ? `${targetName} (${targetId})` : (targetName ?? targetId)}`);
+      }
+
+      const targetHull = formatCurrentMax(r.target_hull_now, r.target_hull_max);
+      if (targetHull !== undefined) emitLine(`Target hull: ${targetHull}`);
+
+      const kitsUsed = optionalNumber(r.kits_used);
+      if (kitsUsed !== undefined) emitLine(`Kits used: ${kitsUsed}`);
+
+      const itemName = nonEmptyString(r.item_name);
+      const itemId = nonEmptyString(r.item_id);
+      if (itemName || itemId) {
+        emitLine(`Item: ${itemName && itemId ? `${itemName} (${itemId})` : (itemName ?? itemId)}`);
+      }
+
+      const cost = optionalNumber(r.cost);
+      if (cost !== undefined) emitLine(`Cost: ${formatCredits(cost)}`);
+
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['repair'] },
   ),
 
   formatter(

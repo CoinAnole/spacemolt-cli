@@ -576,6 +576,73 @@ export const stationRefuelFixture = {
   cost: 15992,
 };
 
+export const repairFixture = {
+  action: 'repair',
+  source: 'kits',
+  repaired: 8,
+  hull: 92,
+  max_hull: 100,
+  kits_used: 1,
+  item_id: 'repair_kit',
+  item_name: 'Repair Kit',
+  message: 'Hull repaired.',
+};
+
+export const repairStationFixture = {
+  action: 'repair',
+  source: 'station',
+  repaired: 3,
+  hull: 100,
+  max_hull: 100,
+  cost: 1200,
+  message: 'Station repaired your hull.',
+};
+
+export const repairTargetFixture = {
+  action: 'repair',
+  source: 'kits',
+  repaired: 8,
+  kits_used: 1,
+  target_player_name: 'Alice',
+  target_player_id: 'player-id',
+  target_hull_now: 92,
+  target_hull_max: 100,
+  message: 'Repaired Alice.',
+};
+
+export const repairFleetFixture = {
+  action: 'repair',
+  source: 'repair_arm',
+  has_arm: true,
+  members: [
+    {
+      username: 'Alice',
+      player_id: 'player-alice',
+      ship_class: 'lithosphere',
+      hull: 92,
+      max_hull: 100,
+      hull_pct: 92,
+      shield: 40,
+      max_shield: 50,
+      is_you: true,
+      is_leader: true,
+    },
+    {
+      username: 'Bob',
+      player_id: 'player-bob',
+      ship_class: 'prospector',
+      hull: 40,
+      max_hull: 80,
+      hull_pct: 50,
+      shield: 0,
+      max_shield: 20,
+      is_you: false,
+      is_leader: false,
+    },
+  ],
+  message: 'Fleet hull status.',
+};
+
 export const shipDroneBayFixture = {
   ...shipFixture,
   drone_bay: {
@@ -723,6 +790,10 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   sell_wreck_modules: { command: 'sell_wreck', fixture: sellWreckModulesFixture },
   refuel: { command: 'refuel', fixture: refuelFixture, schemaTarget: 'details' },
   refuel_station: { command: 'refuel', fixture: stationRefuelFixture, schemaTarget: 'details' },
+  repair: { command: 'repair', fixture: repairFixture, schemaTarget: 'details' },
+  repair_station: { command: 'repair', fixture: repairStationFixture, schemaTarget: 'details' },
+  repair_target: { command: 'repair', fixture: repairTargetFixture, schemaTarget: 'details' },
+  repair_fleet: { command: 'repair', fixture: repairFleetFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
