@@ -2402,6 +2402,7 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.description).toContain(
       'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
     );
+    expect(COMMANDS.scrap_wreck?.seeAlso).toEqual(['sell_wreck', 'tow_wreck', 'get_wrecks', 'storage_view']);
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
 
@@ -2412,7 +2413,13 @@ describe('command metadata', () => {
     expect(COMMANDS.sell_wreck?.description).toContain(
       'Modules still aboard the wreck are deposited to your storage at this station.',
     );
-    expect(COMMANDS.sell_wreck?.seeAlso).toEqual(['scrap_wreck', 'tow_wreck', 'get_wrecks', 'view_market']);
+    expect(COMMANDS.sell_wreck?.seeAlso).toEqual([
+      'scrap_wreck',
+      'tow_wreck',
+      'get_wrecks',
+      'storage_view',
+      'view_market',
+    ]);
     expect(COMMANDS.sell_wreck?.seeAlso).toContain('view_market');
     expect(COMMANDS.sell_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'sell', method: 'POST' });
   });

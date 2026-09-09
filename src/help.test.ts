@@ -1659,6 +1659,8 @@ describe('help output branches', () => {
     expect(output).toContain(
       'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
     );
+    expect(output).toContain('See also: sell_wreck, tow_wreck, get_wrecks, storage view');
+    expect(output).not.toContain('storage_view');
   });
 
   test('help misc documents scrap_wreck faction-station salvage unlocks', () => {
@@ -1701,6 +1703,8 @@ describe('help output branches', () => {
     expect(output).toContain('Player-owned');
     expect(output).toContain('scrap_wreck');
     expect(output).toContain('Modules still aboard the wreck are deposited to your storage at this station.');
+    expect(output).toContain('See also: scrap_wreck, tow_wreck, get_wrecks, storage view, view_market');
+    expect(output).not.toContain('storage_view');
   });
 
   test('full help get_ship line names current or remote owned/faction-garage ship fit', () => {
