@@ -82,7 +82,7 @@ function optionalNumber(value: unknown): number | undefined {
   return finiteNumber(value);
 }
 
-// RepairResponse may omit either side of a hull pair; never invent '?' placeholders.
+// Either side of a current/max pair may be omitted; never invent '?' placeholders.
 function formatCurrentMax(current: unknown, max: unknown): string | undefined {
   const now = optionalNumber(current);
   const cap = optionalNumber(max);
