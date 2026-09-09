@@ -12,6 +12,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - Observation `--follow` headlines and `subscribe_observation` snapshots now always print `active_scan` as true or false (gameserver 0.599.5). If you subscribed with `active_scan=true`, `active scan: false` on an update is the sweep shutting down.
 
+- `repair` help documents named `target=` and that `repaired` is hull actually restored. Usage is `[id] [quantity] [target=player|fleet]`; kit counts are `quantity=3`. **No parser change.**
 - `loot_wreck` / `storage loot` help: `module_id=` loots a wreck module into cargo unfitted; fit later with `install_mod` (gameserver 0.599.3).
 - Notifications: typed previews for `refueled_by` / `repaired_by` (ally fuel/hull support).
 - Mute help names `channels=support` (WebSocket only; HTTP polling is unaffected). `get_notifications` types help lists `refueled_by` / `repaired_by` as system fallbacks.

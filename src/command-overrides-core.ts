@@ -352,11 +352,13 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['id', 'quantity', 'target'],
   },
   repair: {
-    usage: '[quantity]',
-    description: 'Repair hull damage using station services, repair kits, or repair equipment.',
-    example: 'spacemolt repair',
-    discoverWith: ['get_status', 'get_ship'],
-    seeAlso: ['refuel', 'dock', 'get_ship'],
+    usage: '[id] [quantity] [target=player|fleet]  (named target= only)',
+    description:
+      'Repair hull at a station (credits), in space with repair kits, or on another ship at the same POI (Repair Arm + kits, named target=). target=fleet lists fleet hull and does not repair. repaired is hull actually restored, not kits requested; kits consumed are unchanged. The other pilot receives a repaired_by notification.',
+    example:
+      'spacemolt repair; spacemolt repair quantity=3; spacemolt repair target=Alice quantity=2; spacemolt repair id=hull_patch quantity=2',
+    discoverWith: ['get_status', 'get_ship', 'get_nearby'],
+    seeAlso: ['refuel', 'dock', 'get_ship', 'get_nearby'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt/repair',
   },

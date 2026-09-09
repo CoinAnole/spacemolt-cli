@@ -1095,7 +1095,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     sell <item_id> <qty>      Sell to NPC market
     buy <item_id> [qty]       Buy from market
     refuel [fuel_cell_id]     Refuel at station to full or use fuel cells
-    repair                    Repair at station
+    repair                    Repair hull (station, kits, or target=)
 
   ${c.cyan}Taxes:${c.reset}
     prepay_tax <amount>       Prepay personal tax
