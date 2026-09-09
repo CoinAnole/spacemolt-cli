@@ -128,14 +128,9 @@ describe('fit capacity errors', () => {
     expect(getErrorSuggestion('cargo_capacity_exceeded')).toContain('spacemolt get_ship');
     expect(getErrorSuggestion('cargo_capacity_exceeded')).toContain('spacemolt uninstall_mod');
     expect(getErrorSuggestion('cargo_capacity_exceeded')).toContain('spacemolt install_mod');
-    expect(getErrorSuggestion('cargo_capacity_exceeded')).toContain('spacemolt loot_wreck');
+    expect(getErrorSuggestion('cargo_capacity_exceeded')).not.toContain('loot_wreck');
     expect(getErrorSuggestion('cargo_capacity_exceeded')).not.toContain('storage_loot');
-    expect(getRelatedCommands('cargo_capacity_exceeded')).toEqual([
-      'get_ship',
-      'uninstall_mod',
-      'install_mod',
-      'loot_wreck',
-    ]);
+    expect(getRelatedCommands('cargo_capacity_exceeded')).toEqual(['get_ship', 'uninstall_mod', 'install_mod']);
   });
 
   test('cargo_full is not retryable and is not an authentication error', () => {
@@ -151,5 +146,19 @@ describe('fit capacity errors', () => {
     expect(getErrorSuggestion('cargo_full')).not.toContain('storage_loot');
     expect(getErrorSuggestion('cargo_full')).not.toContain('deliver_to');
     expect(getRelatedCommands('cargo_full')).toEqual(['get_ship', 'sell', 'jettison', 'buy', 'uninstall_mod']);
+  });
+
+  test('no_space is not retryable and is not an authentication error', () => {
+    expect(ERROR_REGISTRY.no_space?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.no_space?.auth).toBe(false);
+    expect(isRetryableError('no_space')).toBe(false);
+    expect(isAuthError('no_space')).toBe(false);
+    expect(getErrorSuggestion('no_space')).toContain('untouched');
+    expect(getErrorSuggestion('no_space')).toContain('loot_wreck');
+    expect(getErrorSuggestion('no_space')).toContain('install_mod');
+    expect(getErrorSuggestion('no_space')).toContain('get_ship');
+    expect(getErrorSuggestion('no_space')).not.toContain('storage_loot');
+    expect(getErrorSuggestion('no_space')).not.toContain('delivery=storage');
+    expect(getRelatedCommands('no_space')).toEqual(['get_ship', 'sell', 'jettison', 'loot_wreck', 'install_mod']);
   });
 });

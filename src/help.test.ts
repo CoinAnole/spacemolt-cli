@@ -2296,7 +2296,7 @@ describe('help output branches', () => {
     };
 
     displayError(
-      'loot_wreck',
+      'install_mod',
       { code: 'cargo_capacity_exceeded', message: 'Need 12 more cargo capacity' },
       { context },
     );
@@ -2308,8 +2308,34 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt get_ship');
     expect(output).toContain('spacemolt uninstall_mod');
     expect(output).toContain('spacemolt install_mod');
-    expect(output).toContain('spacemolt loot_wreck');
+    expect(output).not.toContain('spacemolt loot_wreck');
     expect(output).not.toContain('storage_loot');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError gives no_space a loot hold-full suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('loot_wreck', { code: 'no_space', message: 'No room in the hold.' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [no_space]');
+    expect(output).toContain('No room in the hold.');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('untouched');
+    expect(output).toContain('spacemolt get_ship');
+    expect(output).toContain('spacemolt loot_wreck');
+    expect(output).toContain('spacemolt install_mod');
+    expect(output).not.toContain('storage_loot');
+    expect(output).not.toContain('delivery=storage');
     expect(output).not.toContain('This error may be retryable.');
     expect(output).not.toContain('This is an authentication error.');
   });
