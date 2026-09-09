@@ -6,7 +6,7 @@ function nonEmptyString(value: unknown): string | undefined {
 
 export { nonEmptyString as prizeFieldText };
 
-/** Compact origin for the table Location column. Preposition-free. */
+/** Compact origin. Names-first, preposition-free. */
 export function formatPrizeCaptureLocation(data: Record<string, unknown>): string | undefined {
   const poi = nonEmptyString(data.prize_poi_name) ?? nonEmptyString(data.prize_poi_id);
   const system = nonEmptyString(data.prize_system_name) ?? nonEmptyString(data.prize_system_id);
@@ -15,8 +15,8 @@ export function formatPrizeCaptureLocation(data: Record<string, unknown>): strin
 }
 
 /**
- * First-detail site line for ship_captured. Prepositions match wreckSiteLabel:
- * at {poi}, in {system}. Undefined when there is neither prize_id nor location.
+ * Prize-id site line uses at {poi} / in {system}.
+ * Undefined when there is neither prize_id nor location.
  */
 export function formatPrizeCaptureSite(data: Record<string, unknown>): string | undefined {
   const prizeId = nonEmptyString(data.prize_id);

@@ -13,18 +13,6 @@ test('omits non-strings, whitespace, and numbers', () => {
   expect(prizeFieldText(' prize-1 ')).toBe('prize-1');
 });
 
-test('names beat ids', () => {
-  const data = {
-    prize_id: 'prize-1',
-    prize_poi_id: 'sol_cloudbank',
-    prize_poi_name: 'Cloudbank',
-    prize_system_id: 'sol',
-    prize_system_name: 'Sol',
-  };
-  expect(formatPrizeCaptureSite(data)).toBe('prize prize-1 at Cloudbank (Sol)');
-  expect(formatPrizeCaptureLocation(data)).toBe('Cloudbank (Sol)');
-});
-
 test('full names lock site and location strings', () => {
   const data = {
     prize_id: 'prize-1',
