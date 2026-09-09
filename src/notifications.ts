@@ -120,6 +120,8 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'VERSION':
     case 'XP':
     case 'PERSONNEL':
+    case 'REFUEL':
+    case 'REPAIR':
       return c.cyan;
     case 'DRONE':
       return c.blue;
