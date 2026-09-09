@@ -1,5 +1,6 @@
 import { normalizeCaptorKind } from './display/captor-kind.ts';
 import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
+import { formatPrizeCaptureSite, prizeFieldText } from './display/prize-location.ts';
 import {
   formatMissingMaterialsPreview,
   isMissingMaterialErrorCode,
@@ -717,13 +718,12 @@ function truncateToBudget(value: string, max: number): string {
  * If site.length >= budget, the headline becomes the truncated site (full site
  * stays first in details).
  */
-function attachWreckSite(
+function attachSite(
   headline: string,
   details: string[],
-  data: Record<string, unknown>,
+  site: string | undefined,
   options: ResolvedPreviewOptions,
 ): { headline: string; details: string[] } {
-  const site = wreckSiteLabel(data);
   if (!site) return { headline: truncate(headline, options), details };
 
   const budget = options.maxLineLength;
@@ -743,6 +743,15 @@ function attachWreckSite(
 
   if (canFold) return { headline: kill, details: withSite };
   return { headline: `${kill}${sep}${site}`, details: withSite };
+}
+
+function attachWreckSite(
+  headline: string,
+  details: string[],
+  data: Record<string, unknown>,
+  options: ResolvedPreviewOptions,
+): { headline: string; details: string[] } {
+  return attachSite(headline, details, wreckSiteLabel(data), options);
 }
 
 function combatLogLocationDuplicatesWreck(log: Record<string, unknown>, data: Record<string, unknown>): boolean {
@@ -1440,13 +1449,19 @@ function previewShipCaptured(
   const subject = formatCaptorSubject(username, data.captor_kind);
   const classText = shipClass !== undefined ? String(shipClass) : 'ship';
   const formerText = formerOwner !== undefined ? String(formerOwner) : 'Someone';
+  const headline = `${subject} captured ${classText} from ${formerText}`;
+
+  const prizeId = prizeFieldText(data.prize_id);
+  const details: string[] = [];
+  if (prizeId !== undefined) {
+    details.push(truncate(`Use: claim_prize prize_id=${prizeId}`, options));
+  }
+
+  const attached = attachSite(headline, details, formatPrizeCaptureSite(data), options);
   return {
-    ...detailPreview(
-      'CAPTURE',
-      `${subject} captured ${classText} from ${formerText}`,
-      ['Use: get_nearby then claim_prize'],
-      options,
-    ),
+    tag: 'CAPTURE',
+    headline: attached.headline,
+    details: attached.details,
     severity: 'success',
   };
 }
@@ -3474,7 +3489,7 @@ export function formatNotificationPreview(
   }
 }
 
-/** First-detail fold threshold for table Message. Used by tableMessageFromPreview and attachWreckSite. */
+/** First-detail fold threshold for table Message. Used by tableMessageFromPreview and attachSite. */
 const TABLE_DETAIL_FOLD_LIMIT = 80;
 
 /**

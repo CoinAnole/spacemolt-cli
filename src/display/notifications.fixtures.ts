@@ -326,6 +326,11 @@ export const getNotificationsPrizesFixture = {
         former_owner_username: 'Corsair-7',
         ship_id: 'ship-skiff-1',
         ship_class: 'skiff',
+        prize_id: 'prize-skiff-1',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
       },
     },
     {
@@ -426,9 +431,9 @@ export const getNotificationsPrizesFixture = {
   ],
 };
 
-/** Kind-aware ship_captured poll: player, pirate, npc, and historical omitted-kind rows. */
+/** Kind-aware ship_captured poll: player/pirate with origin, npc/historical without prize fields, hidden/in-transit. */
 export const getNotificationsShipCapturedFixture = {
-  count: 4,
+  count: 5,
   current_tick: 901810,
   remaining: 0,
   timestamp: 1779564100,
@@ -449,6 +454,11 @@ export const getNotificationsShipCapturedFixture = {
         ship_id: 'ship-skiff-1',
         ship_class: 'skiff',
         captor_kind: 'player',
+        prize_id: 'prize-skiff-1',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
       },
     },
     {
@@ -467,6 +477,11 @@ export const getNotificationsShipCapturedFixture = {
         ship_id: 'ship-skiff-2',
         ship_class: 'skiff',
         captor_kind: 'pirate',
+        prize_id: 'prize-skiff-2',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
       },
     },
     {
@@ -502,6 +517,26 @@ export const getNotificationsShipCapturedFixture = {
         former_owner_username: 'Corsair-7',
         ship_id: 'ship-skiff-4',
         ship_class: 'skiff',
+      },
+    },
+    {
+      id: 'notif-ship-captured-hidden-1',
+      type: 'combat',
+      msg_type: 'ship_captured',
+      timestamp: '2026-05-23T19:12:20.000Z',
+      data: {
+        battle_id: 'battle-45',
+        tick: 901804,
+        boarding_operation_id: 'board-5',
+        captor_id: 'player-1',
+        captor_username: 'Marlowe',
+        former_owner_id: 'pirate-1',
+        former_owner_username: 'Corsair-7',
+        ship_id: 'ship-skiff-5',
+        ship_class: 'skiff',
+        prize_id: 'prize-hidden-1',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
       },
     },
   ],

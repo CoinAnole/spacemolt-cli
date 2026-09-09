@@ -13,7 +13,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   captains_log_get: 'Get a specific entry from your captain log.',
   captains_log_list: 'List all entries in your captain log.',
   claim: 'Link your player to your website account using a registration code',
-  claim_prize: 'Assign prize crew and begin recovery of an intact captured ship',
+  claim_prize:
+    'Assign prize crew and begin recovery of an intact captured ship. The prize sits at the battle origin POI, which can differ from your current POI; travel there, then claim.',
   cloak: 'Toggle cloaking device',
   commission_quote: 'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews',
   commission_ship:

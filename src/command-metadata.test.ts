@@ -1559,10 +1559,12 @@ describe('command metadata', () => {
     if (!claim) throw new Error('claim_prize command is missing from COMMANDS');
     expect(claim.usage).toBe('<prize_id> <destination_base_id> [crew_disposition=aboard|faction_reserve]');
     expect(claim.example).toBe('spacemolt claim_prize prize-1 earth_station');
-    expect(claim.discoverWith).toEqual(['get_nearby', 'get_status', 'get_guide']);
+    expect(claim.discoverWith).toEqual(['get_notifications', 'get_system', 'get_status', 'get_guide']);
     expect(claim.seeAlso).toEqual(['service_prize', 'recruit_personnel', 'get_status', 'get_guide']);
     expect(claim.category).toBe('Salvage & Tow');
-    expect(claim.description).toBe('Assign prize crew and begin recovery of an intact captured ship');
+    expect(claim.description).toBe(
+      'Assign prize crew and begin recovery of an intact captured ship. The prize sits at the battle origin POI, which can differ from your current POI; travel there, then claim.',
+    );
     expect(CURATED_COMMAND_DESCRIPTIONS.claim_prize).toBe(claim.description);
     expect(claim.args).toEqual(['prize_id', 'destination_base_id']);
     expect(claim.aliases).toEqual({ prize_id: 'id', destination_base_id: 'target' });

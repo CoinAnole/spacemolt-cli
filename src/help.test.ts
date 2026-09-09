@@ -1629,6 +1629,7 @@ describe('help output branches', () => {
     expect(output).toContain('prize_id -> id');
     expect(output).toContain('destination_base_id -> target');
     expect(output).toContain('Assign prize crew and begin recovery of an intact captured ship');
+    expect(output).toContain('The prize sits at the battle origin POI, which can differ from your current POI');
   });
 
   test('help service_prize documents action alias, enum, and a single service_action argument', () => {

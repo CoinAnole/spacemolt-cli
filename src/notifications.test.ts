@@ -862,7 +862,7 @@ describe('notification formatting', () => {
         ship_id: 'ship-skiff-1',
         ship_class: 'skiff',
       },
-      snippets: ['[CAPTURE]', 'Marlowe captured skiff from Corsair-7', 'get_nearby then claim_prize'],
+      snippets: ['[CAPTURE]', 'Marlowe captured skiff from Corsair-7'],
     },
     {
       // Assumed keys (aligned with ShippingActiveContract / InspectPackageShipment —
@@ -935,6 +935,43 @@ describe('notification formatting', () => {
     for (const snippet of snippets) {
       expect(output).toContain(snippet);
     }
+
+    if (msgType === 'ship_captured') {
+      expect(output).not.toContain('get_nearby');
+      expect(output).not.toContain('claim_prize');
+    }
+  });
+
+  test('formats ship_captured with prize fields as origin plus claim_prize', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'combat',
+        msg_type: 'ship_captured',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          battle_id: 'battle-42',
+          tick: 901800,
+          boarding_operation_id: 'board-1',
+          captor_id: 'player-1',
+          captor_username: 'Marlowe',
+          former_owner_id: 'pirate-1',
+          former_owner_username: 'Corsair-7',
+          ship_id: 'ship-skiff-1',
+          ship_class: 'skiff',
+          prize_id: 'prize-1',
+          prize_poi_id: 'sol_cloudbank',
+          prize_poi_name: 'Cloudbank',
+          prize_system_id: 'sol',
+          prize_system_name: 'Sol',
+        },
+      }).join('\n'),
+    );
+
+    expect(output).toContain('[CAPTURE]');
+    expect(output).toContain('Marlowe captured skiff from Corsair-7');
+    expect(output).toContain('Cloudbank');
+    expect(output).toContain('claim_prize prize_id=');
+    expect(output).not.toContain('get_nearby');
   });
 
   test('malformed ship commission receipt falls back without diagnostic tokens', () => {
@@ -6735,7 +6772,6 @@ describe('notification formatting', () => {
 
   describe('boarding / prize recovery previews', () => {
     const boardingPrizeTypes = ['ship_captured', 'prize_update'] as const;
-    const captureUse = 'Use: get_nearby then claim_prize';
     const prizeIdentity = {
       prize_id: 'prize-1',
       ship_id: 'ship-recover-1',
@@ -6772,7 +6808,7 @@ describe('notification formatting', () => {
       }
     });
 
-    test('full ship_captured names captor, class, and former owner and folds Use:', () => {
+    test('full ship_captured names captor, class, and former owner without Use:', () => {
       const notification = captureNotification({
         battle_id: 'battle-42',
         tick: 901800,
@@ -6788,15 +6824,17 @@ describe('notification formatting', () => {
       expect(preview.tag).toBe('CAPTURE');
       expect(preview.severity).toBe('success');
       expect(preview.headline).toBe('Marlowe captured skiff from Corsair-7');
-      expect(preview.details[0]).toBe(captureUse);
+      expect(preview.details).toEqual([]);
       const fromPreview = tableMessage(notification);
       expect(fromPreview).toBe(formatNotificationMessage(notification));
-      expect(fromPreview).toBe('Marlowe captured skiff from Corsair-7; Use: get_nearby then claim_prize');
+      expect(fromPreview).toBe('Marlowe captured skiff from Corsair-7');
+      expect(fromPreview).not.toContain('Use:');
+      expect(fromPreview).not.toContain('get_nearby');
+      expect(fromPreview).not.toContain('claim_prize');
       expect(fromPreview).not.toContain('captor_id');
       expect(fromPreview).not.toContain('boarding_operation_id');
       expect(fromPreview).not.toContain('player-1');
       expect(fromPreview).not.toContain('You captured');
-      expect(captureUse.length).toBeLessThanOrEqual(80);
     });
 
     test('NPC former owner username is printed as-is', () => {
@@ -6821,12 +6859,12 @@ describe('notification formatting', () => {
       expect(tableMessage(captureNotification({}))).toBe('Ship captured');
     });
 
-    test('class-only capture synthesizes Someone fallbacks and still folds Use:', () => {
+    test('class-only capture synthesizes Someone fallbacks without Use:', () => {
       const notification = captureNotification({ ship_class: 'skiff' });
       const preview = formatNotificationPreview(notification);
       expect(preview.headline).toBe('Someone captured skiff from Someone');
-      expect(preview.details).toEqual([captureUse]);
-      expect(tableMessage(notification)).toBe('Someone captured skiff from Someone; Use: get_nearby then claim_prize');
+      expect(preview.details).toEqual([]);
+      expect(tableMessage(notification)).toBe('Someone captured skiff from Someone');
     });
 
     test('player captor_kind with username is a noop vs omitted kind', () => {
@@ -6934,9 +6972,9 @@ describe('notification formatting', () => {
         expect(preview.tag).toBe('CAPTURE');
         expect(preview.severity).toBe('success');
         expect(preview.headline).toBe(headline);
-        expect(preview.details).toEqual([captureUse]);
+        expect(preview.details).toEqual([]);
         const fromPreview = tableMessage(notification);
-        expect(fromPreview).toBe(`${headline}; ${captureUse}`);
+        expect(fromPreview).toBe(headline);
         expect(fromPreview).not.toContain('captor_id');
         expect(fromPreview).not.toContain('boarding_operation_id');
         expect(fromPreview).not.toContain('You captured');
@@ -6950,6 +6988,154 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
       expect(preview.headline).not.toContain('Someone');
       expect(preview.headline).not.toContain('A pirate');
+    });
+
+    test('empty identity bag ignores stray prize_id', () => {
+      const notification = captureNotification({ prize_id: 'prize-1', prize_poi_name: 'Cloudbank' });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Ship captured');
+      expect(preview.details).toEqual([]);
+      expect(tableMessage(notification)).toBe('Ship captured');
+      expect(stripAnsi(formatNotification(notification).join('\n'))).not.toContain('claim_prize');
+    });
+
+    test('full prize fields fold site not Use: and never mention get_nearby', () => {
+      const notification = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        prize_id: 'prize-1',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Marlowe captured skiff from Corsair-7');
+      expect(preview.details[0]).toBe('prize prize-1 at Cloudbank (Sol)');
+      expect(preview.details[1]).toBe('Use: claim_prize prize_id=prize-1');
+      const fromPreview = tableMessage(notification);
+      expect(fromPreview).toBe('Marlowe captured skiff from Corsair-7; prize prize-1 at Cloudbank (Sol)');
+      expect(fromPreview).not.toContain('Use:');
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).not.toContain('get_nearby');
+    });
+
+    test('prize location without prize_id is compact with no Use:', () => {
+      const names = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
+      });
+      const namesPreview = formatNotificationPreview(names);
+      expect(namesPreview.details[0]).toBe('Cloudbank (Sol)');
+      expect(namesPreview.details).toHaveLength(1);
+      expect(namesPreview.details[0]).not.toMatch(/\bat\b|\bin\b/);
+      expect(namesPreview.details[0]).not.toContain('prize ');
+      const namesOutput = stripAnsi(formatNotification(names).join('\n'));
+      expect(namesOutput).not.toContain('get_nearby');
+      expect(namesOutput).not.toContain('claim_prize prize_id=');
+
+      const ids = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        prize_poi_id: 'sol_cloudbank',
+        prize_system_id: 'sol',
+      });
+      expect(formatNotificationPreview(ids).details[0]).toBe('sol_cloudbank (sol)');
+    });
+
+    test('prize_id plus system-only origin uses in Sol', () => {
+      const notification = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        prize_id: 'prize-1',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toBe('prize prize-1 in Sol');
+      expect(preview.details[1]).toBe('Use: claim_prize prize_id=prize-1');
+      expect(tableMessage(notification)).toBe('Marlowe captured skiff from Corsair-7; prize prize-1 in Sol');
+      expect(stripAnsi(formatNotification(notification).join('\n'))).not.toContain('get_nearby');
+    });
+
+    test('prize_id only has no location preposition', () => {
+      const notification = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        prize_id: 'prize-1',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toBe('prize prize-1');
+      expect(preview.details[1]).toBe('Use: claim_prize prize_id=prize-1');
+      expect(tableMessage(notification)).toBe('Marlowe captured skiff from Corsair-7; prize prize-1');
+    });
+
+    test('pirate kind with prize fields still recommends claim_prize', () => {
+      const notification = captureNotification({
+        captor_kind: 'pirate',
+        captor_username: 'Corsair-7',
+        former_owner_username: 'Marlowe',
+        ship_class: 'skiff',
+        prize_id: 'prize-1',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Pirate Corsair-7 captured skiff from Marlowe');
+      expect(preview.details[0]).toBe('prize prize-1 at Cloudbank (Sol)');
+      expect(preview.details[1]).toBe('Use: claim_prize prize_id=prize-1');
+      expect(tableMessage(notification)).toBe(
+        'Pirate Corsair-7 captured skiff from Marlowe; prize prize-1 at Cloudbank (Sol)',
+      );
+      expect(stripAnsi(formatNotification(notification).join('\n'))).not.toContain('get_nearby');
+    });
+
+    test('npc kind with prize fields still recommends claim_prize', () => {
+      const notification = captureNotification({
+        captor_kind: 'npc',
+        captor_username: 'Sentinel',
+        former_owner_username: 'Marlowe',
+        ship_class: 'barge',
+        prize_id: 'prize-1',
+        prize_poi_id: 'sol_cloudbank',
+        prize_poi_name: 'Cloudbank',
+        prize_system_id: 'sol',
+        prize_system_name: 'Sol',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('NPC Sentinel captured barge from Marlowe');
+      expect(preview.details[0]).toBe('prize prize-1 at Cloudbank (Sol)');
+      expect(preview.details[1]).toBe('Use: claim_prize prize_id=prize-1');
+      expect(tableMessage(notification)).toBe(
+        'NPC Sentinel captured barge from Marlowe; prize prize-1 at Cloudbank (Sol)',
+      );
+      expect(stripAnsi(formatNotification(notification).join('\n'))).not.toContain('get_nearby');
+    });
+
+    test('whitespace prize_id is treated as absent', () => {
+      const notification = captureNotification({
+        captor_username: 'Marlowe',
+        former_owner_username: 'Corsair-7',
+        ship_class: 'skiff',
+        prize_id: '   ',
+        prize_poi_name: 'Cloudbank',
+        prize_system_name: 'Sol',
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.details[0]).toBe('Cloudbank (Sol)');
+      expect(preview.details).toHaveLength(1);
+      expect(preview.details.join('\n')).not.toContain('claim_prize');
     });
 
     test('stall in_transit + no_fuel keeps site in the headline and folds Use: not the server message', () => {
