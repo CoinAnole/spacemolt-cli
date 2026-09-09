@@ -183,10 +183,12 @@ spacemolt subscribe_observation active_scan=true --follow
 ```
 
 Press Ctrl+C to stop; the CLI makes one best-effort unsubscribe request. If cleanup cannot finish,
-run `spacemolt unsubscribe_market` or `spacemolt unsubscribe_observation` manually. Observation
-follow polls `get_notifications` with `types=observation`, the same pattern as market follow
-(`types=market`). Machine-readable streaming is not yet
-supported; automation can use one-shot subscription plus explicit `get_notifications` polling.
+run `spacemolt unsubscribe_market` or `spacemolt unsubscribe_observation` manually. If you subscribed
+with `active_scan=true`, watch follow output for `active scan: false` before re-subscribing; that is
+the sweep shutting down, not a prompt to re-arm. Observation follow polls `get_notifications` with
+`types=observation`, the same pattern as market follow (`types=market`). Machine-readable streaming
+is not yet supported; automation can use one-shot subscription plus explicit `get_notifications`
+polling.
 
 Dry run previews supported mutations without sending them:
 

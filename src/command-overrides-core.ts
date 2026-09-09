@@ -552,8 +552,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   subscribe_observation: {
     category: 'Exploration',
     apiRoute: 'POST /api/v2/spacemolt/subscribe_observation',
+    usage: '[active_scan=true/false]',
     description:
-      'Subscribe once and return the current observation snapshot. Pirate names in the snapshot use crew livery (#RRGGBB) the same way get_nearby does. Add --follow to keep polling observation notifications every 10 seconds until stopped.',
+      'Subscribe once and return the current observation snapshot. Pirate names in the snapshot use crew livery (#RRGGBB) the same way get_nearby does. Add --follow to keep polling observation notifications every 10 seconds until stopped. If you subscribed with active_scan=true, watch those updates for active scan: false — that is the sweep reporting it has stopped, and cloaked contacts it had resolved drop off with it. Re-running with active_scan=true re-arms fuel spend.',
     example: 'spacemolt subscribe_observation active_scan=true --follow',
     discoverWith: ['get_nearby', 'get_system_agents'],
     seeAlso: ['unsubscribe_observation'],
