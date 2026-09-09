@@ -191,9 +191,11 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     positionals: ['wreck_id'],
   },
   claim_prize: {
+    description:
+      'Assign prize crew and begin recovery of an intact captured ship. The prize sits at the battle origin POI, which can differ from your current POI; travel there, then claim.',
     usage: '<prize_id> <destination_base_id> [crew_disposition=aboard|faction_reserve]',
     example: 'spacemolt claim_prize prize-1 earth_station',
-    discoverWith: ['get_nearby', 'get_status', 'get_guide'],
+    discoverWith: ['get_notifications', 'get_system', 'get_status', 'get_guide'],
     seeAlso: ['service_prize', 'recruit_personnel', 'get_status', 'get_guide'],
     category: 'Salvage & Tow',
     apiRoute: 'POST /api/v2/spacemolt_salvage/claim_prize',

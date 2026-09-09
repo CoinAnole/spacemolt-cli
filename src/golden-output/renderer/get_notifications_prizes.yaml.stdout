@@ -8,7 +8,7 @@ notifications:
     type: combat
     msg_type: ship_captured
     timestamp: 2026-05-23T19:12:00.000Z
-    data: {battle_id: "battle-42", tick: 901800, boarding_operation_id: "board-1", captor_id: "player-1", captor_username: Marlowe, former_owner_id: "pirate-1", former_owner_username: "Corsair-7", ship_id: "ship-skiff-1", ship_class: skiff}
+    data: {battle_id: "battle-42", tick: 901800, boarding_operation_id: "board-1", captor_id: "player-1", captor_username: Marlowe, former_owner_id: "pirate-1", former_owner_username: "Corsair-7", ship_id: "ship-skiff-1", ship_class: skiff, prize_id: "prize-skiff-1", prize_poi_id: sol_cloudbank, prize_poi_name: Cloudbank, prize_system_id: sol, prize_system_name: Sol}
   - id: "notif-prize-stall-1"
     type: prize
     msg_type: prize_update
