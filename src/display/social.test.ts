@@ -21,6 +21,7 @@ import {
   battleSummaryArenaFixture,
   battleSummaryCapturesFixture,
   battleSummaryCapturesKindFixture,
+  battleSummaryCapturesPrizeFixture,
   battleSummaryFixture,
   battleSummaryHuntFixture,
   battleSummaryInterruptedFixture,
@@ -106,6 +107,24 @@ function expectCaptorThenKindThenFormerOwner(header: string | undefined): void {
   expect(header).toContain('Kind');
   expect(header?.indexOf('Captor') ?? -1).toBeLessThan(header?.indexOf('Kind') ?? -1);
   expect(header?.indexOf('Kind') ?? -1).toBeLessThan(header?.indexOf('Former owner') ?? -1);
+}
+
+function expectHeaderColumnsInOrder(header: string | undefined, columns: string[]): void {
+  expect(header).toBeDefined();
+  if (header === undefined) return;
+  let last = -1;
+  for (const column of columns) {
+    expect(header).toContain(column);
+    const index = header.indexOf(column);
+    expect(index).toBeGreaterThan(last);
+    last = index;
+  }
+}
+
+function expectNoPrizeOrLocation(header: string | undefined): void {
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Prize');
+  expect(header).not.toContain('Location');
 }
 
 function renderBattleSummary(fixture: Record<string, unknown>): string {
@@ -1604,7 +1623,45 @@ test('get_battle_summary prints Captures identities after Ships Captured', () =>
   expect(stdout).toContain('Corsair-7 (pirate-1)');
   expect(stdout).toContain('board-1');
   expect(stdout).not.toContain('Kind');
+  expectNoPrizeOrLocation(captureHeader(sectionAfter(stdout, 'Captures', 'Sides')));
   expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_summary Captures prints Prize and Location after Boarding for mixed prize rows', () => {
+  const stdout = renderBattleSummary(structuredClone(battleSummaryCapturesPrizeFixture) as Record<string, unknown>);
+  const captures = sectionAfter(stdout, 'Captures', 'Sides');
+  const header = captureHeader(captures);
+
+  expect(stdout).toContain('Ships Captured: 3');
+  expectHeaderColumnsInOrder(header, ['Ship', 'Class', 'Captor', 'Former owner', 'Boarding', 'Prize', 'Location']);
+  expect(header).not.toContain('Kind');
+  expect(captureCell(captures, 'ship-skiff-1', 'Prize')).toBe('prize-1');
+  expect(captureCell(captures, 'ship-skiff-1', 'Location')).toBe('Cloudbank (Sol)');
+  expect(captureCell(captures, 'ship-skiff-2', 'Prize')).toBe('prize-2');
+  expect(captureCell(captures, 'ship-skiff-2', 'Location')).toBe('Sol');
+  expect(captureCell(captures, 'ship-skiff-3', 'Prize')).toBe('');
+  expect(captureCell(captures, 'ship-skiff-3', 'Location')).toBe('');
+  expect(captures).not.toContain(' at ');
+  expect(captures).not.toContain(' in Sol');
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_summary Captures omits Location when prize rows have no poi or system', () => {
+  const stdout = renderBattleSummary(battleSummaryCapturesClone({ prize_id: 'prize-1' }));
+  const captures = sectionAfter(stdout, 'Captures', 'Sides');
+  const header = captureHeader(captures);
+
+  expect(header).toContain('Prize');
+  expect(header).not.toContain('Location');
+  expect(header).not.toContain('Kind');
+  expect(captureCell(captures, 'ship-skiff-1', 'Prize')).toBe('prize-1');
+});
+
+test('get_battle_summary Captures omits Prize for non-string and whitespace prize_id', () => {
+  for (const prize_id of ['   ', 1, true, null]) {
+    const stdout = renderBattleSummary(battleSummaryCapturesClone({ prize_id }));
+    expectNoPrizeOrLocation(captureHeader(sectionAfter(stdout, 'Captures', 'Sides')));
+  }
 });
 
 test('get_battle_summary Captures prints Kind after Captor for mixed captor_kind rows', () => {
@@ -1614,6 +1671,7 @@ test('get_battle_summary Captures prints Kind after Captor for mixed captor_kind
 
   expect(stdout).toContain('Ships Captured: 4');
   expectCaptorThenKindThenFormerOwner(header);
+  expectNoPrizeOrLocation(header);
   expect(captureCell(captures, 'ship-skiff-1', 'Kind')).toBe('player');
   expect(captureCell(captures, 'ship-skiff-2', 'Kind')).toBe('pirate');
   expect(captureCell(captures, 'ship-skiff-3', 'Kind')).toBe('npc');
@@ -1661,6 +1719,7 @@ test('get_battle_summary Captures omits Kind when every row lacks captor_kind', 
   expect(header).toBeDefined();
   expect(header).toContain('Captor');
   expect(header).not.toContain('Kind');
+  expectNoPrizeOrLocation(header);
   expectNoPersonnelCounts(stdout);
 });
 
@@ -2371,6 +2430,7 @@ test('get_battle_log prints boarding detail tables after ticks when there are no
   expect(stdout).not.toContain('converted');
   expect(stdout).toContain('player-1 / ship-marlowe-1');
   expect(stdout).not.toContain('Kind');
+  expectNoPrizeOrLocation(captureHeader(sectionAfter(stdout, 'Captures', 'Personnel casualties')));
   expectNoPersonnelCounts(stdout);
 });
 
@@ -2528,6 +2588,41 @@ test('get_battle_log Captures prints Tick and Kind when a capture has captor_kin
   expectCaptorThenKindThenFormerOwner(header);
   expect(captureCell(section, 'ship-skiff-1', 'Kind')).toBe('pirate');
   expect(captureCell(section, 'ship-skiff-1', 'Captor')).toBe('Marlowe (player-1)');
+  expectNoPrizeOrLocation(header);
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_log Captures keeps Kind after Captor and Prize after Boarding', () => {
+  const fixture = structuredClone(battleLogBoardingFixture) as Record<string, unknown>;
+  const entries = fixture.entries as Array<Record<string, unknown>>;
+  const captures = entries[0]?.captures as Array<Record<string, unknown>>;
+  Object.assign(captureRow(captures), {
+    captor_kind: 'pirate',
+    prize_id: 'prize-1',
+    prize_poi_id: 'sol_cloudbank',
+    prize_poi_name: 'Cloudbank',
+    prize_system_id: 'sol',
+    prize_system_name: 'Sol',
+  });
+  const stdout = renderBattleLog(fixture);
+  const section = sectionAfter(stdout, 'Captures', 'Personnel casualties');
+  const header = captureHeader(section);
+
+  expectHeaderColumnsInOrder(header, [
+    'Tick',
+    'Ship',
+    'Class',
+    'Captor',
+    'Kind',
+    'Former owner',
+    'Boarding',
+    'Prize',
+    'Location',
+  ]);
+  expect(captureCell(section, 'ship-skiff-1', 'Kind')).toBe('pirate');
+  expect(captureCell(section, 'ship-skiff-1', 'Prize')).toBe('prize-1');
+  expect(captureCell(section, 'ship-skiff-1', 'Location')).toBe('Cloudbank (Sol)');
+  expect(section).not.toContain('moving');
   expectNoPersonnelCounts(stdout);
 });
 
@@ -2813,6 +2908,7 @@ test('get_battle_log interrupted with recovered_summary prints recovered block a
   const recoveredCapturesHeader = captureHeader(recoveredCaptures);
   expect(recoveredCapturesHeader).toBeDefined();
   expect(recoveredCapturesHeader).not.toContain('Kind');
+  expectNoPrizeOrLocation(recoveredCapturesHeader);
   expect(recoveredCapturesHeader).toMatch(/Ship\s*\|\s*Class\s*\|\s*Captor\s*\|\s*Former owner\s*\|\s*Boarding/);
   expect(stdout).not.toContain('=== Combatants ===');
   expect(stdout).not.toContain('Players:');
@@ -2831,6 +2927,40 @@ test('get_battle_log recovered Captures prints Kind after Captor when a capture 
   expectCaptorThenKindThenFormerOwner(captureHeader(recoveredCaptures));
   expect(captureCell(recoveredCaptures, 'ship-skiff-1', 'Kind')).toBe('pirate');
   expect(captureCell(recoveredCaptures, 'ship-skiff-1', 'Captor')).toBe('Marlowe (player-1)');
+  expectNoPrizeOrLocation(captureHeader(recoveredCaptures));
+  expectNoPersonnelCounts(stdout);
+});
+
+test('get_battle_log recovered Captures keeps Kind after Captor and Prize after Boarding', () => {
+  const fixture = structuredClone(battleLogInterruptedFixture) as Record<string, unknown>;
+  const captures = recoveredSummaryOf(fixture).captures as Array<Record<string, unknown>>;
+  Object.assign(captureRow(captures), {
+    captor_kind: 'pirate',
+    prize_id: 'prize-1',
+    prize_poi_id: 'sol_cloudbank',
+    prize_poi_name: 'Cloudbank',
+    prize_system_id: 'sol',
+    prize_system_name: 'Sol',
+  });
+  const stdout = renderBattleLog(fixture);
+  const recoveredCaptures = sectionAfter(stdout, 'Recovered Captures');
+  const header = captureHeader(recoveredCaptures);
+
+  expect(header).not.toContain('Tick');
+  expectHeaderColumnsInOrder(header, [
+    'Ship',
+    'Class',
+    'Captor',
+    'Kind',
+    'Former owner',
+    'Boarding',
+    'Prize',
+    'Location',
+  ]);
+  expect(captureCell(recoveredCaptures, 'ship-skiff-1', 'Kind')).toBe('pirate');
+  expect(captureCell(recoveredCaptures, 'ship-skiff-1', 'Prize')).toBe('prize-1');
+  expect(captureCell(recoveredCaptures, 'ship-skiff-1', 'Location')).toBe('Cloudbank (Sol)');
+  expect(recoveredCaptures).not.toContain('moving');
   expectNoPersonnelCounts(stdout);
 });
 

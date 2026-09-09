@@ -20,6 +20,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `help sell_wreck` / `help scrap_wreck` note that leftover wreck modules go to station storage.
 - `ship_captured` notifications show prize id and battle-origin location. They recommend `claim_prize prize_id=…` when `prize_id` is present. They no longer recommend `get_nearby` — including arena/historical rows that have no prize fields (headline only).
 - `claim_prize` help notes that the prize sits at the battle origin POI, which can differ from your current POI. `discoverWith` no longer lists `get_nearby`.
+- `get_battle_summary` / `get_battle_log` capture tables print optional Prize and Location columns when those fields are present.
 
 ## 2.9.0 — 2026-09-08
 

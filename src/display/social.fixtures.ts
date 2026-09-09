@@ -608,6 +608,34 @@ export const battleSummaryCapturesFixture = {
   ],
 };
 
+export const battleSummaryCapturesPrizeFixture = {
+  ...battleSummaryCapturesFixture,
+  ships_captured: 3,
+  captures: [
+    captureLogEntry({
+      prize_id: 'prize-1',
+      prize_poi_id: 'sol_cloudbank',
+      prize_poi_name: 'Cloudbank',
+      prize_system_id: 'sol',
+      prize_system_name: 'Sol',
+      former_owner_username: 'Corsair-7',
+    }),
+    captureLogEntry({
+      ship_id: 'ship-skiff-2',
+      boarding_operation_id: 'board-2',
+      prize_id: 'prize-2',
+      prize_system_id: 'sol',
+      prize_system_name: 'Sol',
+      former_owner_username: 'Corsair-7',
+    }),
+    captureLogEntry({
+      ship_id: 'ship-skiff-3',
+      boarding_operation_id: 'board-3',
+      former_owner_username: 'Corsair-7',
+    }),
+  ],
+};
+
 export const battleSummaryCapturesKindFixture = {
   ...battleSummaryCapturesFixture,
   ships_captured: 4,
@@ -1847,6 +1875,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_summary_hunt: { command: 'get_battle_summary', fixture: battleSummaryHuntFixture },
   get_battle_summary_captures: { command: 'get_battle_summary', fixture: battleSummaryCapturesFixture },
   get_battle_summary_captures_kind: { command: 'get_battle_summary', fixture: battleSummaryCapturesKindFixture },
+  get_battle_summary_captures_prize: { command: 'get_battle_summary', fixture: battleSummaryCapturesPrizeFixture },
   get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_arena: { command: 'get_battle_log', fixture: battleLogArenaFixture },

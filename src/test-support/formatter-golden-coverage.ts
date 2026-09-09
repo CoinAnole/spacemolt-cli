@@ -51,6 +51,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   get_battle_summary_hunt: 'get_battle_summary',
   get_battle_summary_captures: 'get_battle_summary',
   get_battle_summary_captures_kind: 'get_battle_summary',
+  get_battle_summary_captures_prize: 'get_battle_summary',
   get_battle_summary_interrupted: 'get_battle_summary',
   get_active_missions_bounty: 'get_active_missions',
   get_missions_bounty: 'get_missions',
