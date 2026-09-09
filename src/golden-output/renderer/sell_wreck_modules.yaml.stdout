@@ -1,0 +1,17 @@
+
+details:
+  action: sell_wreck
+  wreck_id: "wreck-1"
+  message: "Sold wreck. Leftover modules moved to station storage."
+  new_balance: 2400
+  offer: 500
+  total_payout: 500
+  salvage_value: 400
+  ship_class: skiff
+  modules_stored:
+    - module_type: pulse_laser_i
+      name: "Pulse Laser I"
+    - module_type: cargo_expander_i
+      name: "Cargo Expander I"
+player:
+  credits: 2400

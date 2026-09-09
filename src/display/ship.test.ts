@@ -7,7 +7,9 @@ import {
   cargoOverCapacityFixture,
   factionGaragesFixture,
   listShipsFixture,
+  scrapWreckFixture,
   sellWreckFixture,
+  sellWreckModulesFixture,
   sellWreckPartialPayFixture,
   shipFixture,
   shipIncapacitatedFixture,
@@ -528,6 +530,7 @@ test('sell_wreck prints Offer and Paid when they match', () => {
   expect(stdout).not.toContain('Total Payout');
   expect(stdout).not.toContain('=== Sell Complete ===');
   expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Modules Stored');
 });
 
 test('sell_wreck labels a shortfall when paid is less than offer', () => {
@@ -539,6 +542,7 @@ test('sell_wreck labels a shortfall when paid is less than offer', () => {
   expect(stdout).toContain('Station manager was short on credits and paid what they could.');
   expect(stdout).not.toContain('=== Sell Complete ===');
   expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Modules Stored');
 });
 
 test('sell_wreck declines without an offer pair', () => {
@@ -568,4 +572,200 @@ test('sell_wreck does not claim a market sell shape', () => {
   }).stdout.join('\n');
   expect(stdout).not.toContain('=== Wreck Sold ===');
   expect(stdout).not.toContain('=== Sell Complete ===');
+});
+
+test('sell_wreck prints leftover modules stored at the station', () => {
+  const stdout = renderSellWreck(sellWreckModulesFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Sold ===');
+  expect(stdout).toContain('Offer: 500 cr');
+  expect(stdout).toContain('Paid: 500 cr');
+  expect(stdout).toContain('=== Modules Stored ===');
+  expect(stdout).toContain('Pulse Laser I');
+  expect(stdout).toContain('pulse_laser_i');
+  expect(stdout).toContain('Cargo Expander I');
+  expect(stdout).toContain('cargo_expander_i');
+  expect(stdout).toContain('Sold wreck. Leftover modules moved to station storage.');
+  expect(stdout).toMatch(/cargo_expander_i\s*\nSold wreck\. Leftover modules moved to station storage\./);
+  expect(stdout).not.toMatch(/cargo_expander_i\s*\n\nSold wreck/);
+  expect(stdout).not.toContain('item(s)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('sell_wreck omits the modules table when modules_stored is empty', () => {
+  const fixture = structuredClone(sellWreckFixture) as { details: Record<string, unknown> };
+  fixture.details.modules_stored = [];
+  const stdout = renderSellWreck(fixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Sold ===');
+  expect(stdout).toContain('New balance: 2,400 cr');
+  expect(stdout).not.toContain('=== Modules Stored ===');
+  expect(stdout).not.toContain('(None)');
+});
+
+test('sell_wreck omits the modules table when modules_stored is not an array', () => {
+  const fixture = structuredClone(sellWreckFixture) as { details: Record<string, unknown> };
+  fixture.details.modules_stored = { module_type: 'pulse_laser_i', name: 'Pulse Laser I' };
+  const stdout = renderSellWreck(fixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Sold ===');
+  expect(stdout).not.toContain('=== Modules Stored ===');
+  expect(stdout).not.toContain('Pulse Laser I');
+});
+
+test('sell_wreck skips non-record and empty name/type module entries', () => {
+  const stdout = renderSellWreck({
+    details: {
+      ...sellWreckFixture.details,
+      modules_stored: [
+        { module_type: 'pulse_laser_i', name: 'Pulse Laser I' },
+        'not-a-record',
+        42,
+        null,
+        undefined,
+        { name: '', module_type: '' },
+        {},
+        { module_type: 'cargo_expander_i' },
+        { name: 'Shield Booster I' },
+      ],
+    },
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Modules Stored ===');
+  expect(stdout).toContain('Pulse Laser I');
+  expect(stdout).toContain('pulse_laser_i');
+  expect(stdout).toContain('cargo_expander_i');
+  expect(stdout).toContain('Shield Booster I');
+  expect(stdout).not.toContain('not-a-record');
+  expect(stdout).not.toContain('item(s)');
+});
+
+test('sell_wreck keeps whitespace-only module name and type', () => {
+  const stdout = renderSellWreck({
+    details: {
+      ...sellWreckFixture.details,
+      modules_stored: [{ module_type: '  pulse_type  ', name: '  Pulse  ' }],
+    },
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Modules Stored ===');
+  expect(stdout).toContain('  Pulse  ');
+  expect(stdout).toContain('  pulse_type  ');
+});
+
+test('sell_wreck details-only auto_docked does not print a receipt line or banner', () => {
+  const stdout = renderSellWreck({
+    details: {
+      ...sellWreckFixture.details,
+      auto_docked: true,
+    },
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Sold ===');
+  expect(stdout).not.toContain('Auto-docked:');
+  expect(stdout).not.toContain('Auto Docked:');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+function renderScrapWreck(fixture: Record<string, unknown>) {
+  return renderStructuredResult('scrap_wreck', structuredClone(fixture), options, context);
+}
+
+test('scrap_wreck prints wreck, storage, value, and expanded materials', () => {
+  const stdout = renderScrapWreck(scrapWreckFixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Scrapped ===');
+  expect(stdout).toContain('Wreck: wreck-1 (skiff)');
+  expect(stdout).toContain('Stored at: sol_yard');
+  expect(stdout).toContain('Total value: 1,250 cr');
+  expect(stdout).toContain('=== Materials ===');
+  expect(stdout).toContain('Scrap Metal');
+  expect(stdout).toContain('Pulse Laser I');
+  expect(stdout).toMatch(/Pulse Laser I\s+\|\s+1\s*\nScrapped wreck\./);
+  expect(stdout).not.toMatch(/Pulse Laser I\s+\|\s+1\s*\n\nScrapped wreck\./);
+  expect(stdout).not.toContain('Materials: 1 item(s)');
+  expect(stdout).not.toContain('=== Scrap Wreck ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Action:');
+});
+
+test('scrap_wreck omits the materials table when materials is empty', () => {
+  const fixture = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  fixture.details.materials = [];
+  const stdout = renderScrapWreck(fixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Scrapped ===');
+  expect(stdout).toContain('Wreck: wreck-1 (skiff)');
+  expect(stdout).not.toContain('=== Materials ===');
+  expect(stdout).not.toContain('(None)');
+});
+
+test('scrap_wreck omits the materials table when materials has no records', () => {
+  const fixture = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  fixture.details.materials = ['not-a-record', 4, null];
+  const stdout = renderScrapWreck(fixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Scrapped ===');
+  expect(stdout).not.toContain('=== Materials ===');
+  expect(stdout).not.toContain('(None)');
+});
+
+test('scrap_wreck omits stored_at, class suffix, and message when missing or empty', () => {
+  const fixture = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  fixture.details.stored_at = '';
+  fixture.details.ship_class = '';
+  fixture.details.message = '';
+  const stdout = renderScrapWreck(fixture).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Scrapped ===');
+  expect(stdout).toContain('Wreck: wreck-1');
+  expect(stdout).not.toContain('(skiff)');
+  expect(stdout).not.toContain('Stored at:');
+  expect(stdout).not.toContain('Scrapped wreck.');
+});
+
+test('scrap_wreck omits stored_at when the field is missing or non-string', () => {
+  const missing = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  delete missing.details.stored_at;
+  expect(renderScrapWreck(missing).stdout.join('\n')).not.toContain('Stored at:');
+
+  const nonString = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  nonString.details.stored_at = 12;
+  expect(renderScrapWreck(nonString).stdout.join('\n')).not.toContain('Stored at:');
+});
+
+test('scrap_wreck prints Total value: 0 cr and omits invalid values', () => {
+  const zero = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  zero.details.total_value = 0;
+  expect(renderScrapWreck(zero).stdout.join('\n')).toContain('Total value: 0 cr');
+
+  const missing = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  delete missing.details.total_value;
+  expect(renderScrapWreck(missing).stdout.join('\n')).not.toContain('Total value:');
+
+  const empty = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  empty.details.total_value = '';
+  expect(renderScrapWreck(empty).stdout.join('\n')).not.toContain('Total value:');
+
+  const nulled = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  nulled.details.total_value = null;
+  expect(renderScrapWreck(nulled).stdout.join('\n')).not.toContain('Total value:');
+
+  const nan = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  nan.details.total_value = Number.NaN;
+  expect(renderScrapWreck(nan).stdout.join('\n')).not.toContain('Total value:');
+
+  const infinite = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  infinite.details.total_value = Number.POSITIVE_INFINITY;
+  expect(renderScrapWreck(infinite).stdout.join('\n')).not.toContain('Total value:');
+});
+
+test('scrap_wreck declines when materials is missing', () => {
+  const fixture = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  delete fixture.details.materials;
+  const stdout = renderScrapWreck(fixture).stdout.join('\n');
+  expect(stdout).not.toContain('=== Wreck Scrapped ===');
+});
+
+test('scrap_wreck details-only auto_docked does not print a receipt line or banner', () => {
+  const stdout = renderScrapWreck({
+    details: {
+      ...scrapWreckFixture.details,
+      auto_docked: true,
+    },
+  }).stdout.join('\n');
+  expect(stdout).toContain('=== Wreck Scrapped ===');
+  expect(stdout).not.toContain('Auto-docked:');
+  expect(stdout).not.toContain('Auto Docked:');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
 });
