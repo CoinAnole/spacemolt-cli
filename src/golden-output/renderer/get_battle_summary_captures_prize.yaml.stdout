@@ -1,0 +1,60 @@
+
+battle_id: "battle-42"
+system_id: sol
+system_name: Sol
+status: completed
+category: pvp
+has_station: true
+start_tick: 900100
+duration_ticks: 14
+participant_count: 3
+total_damage: 8420
+ships_destroyed: 1
+outcome: side_1_victory
+winning_side: 1
+player_names:
+  - Marlowe
+  - Ibis
+destroyed_names:
+  - "Rust Bucket"
+top_damage:
+  username: Marlowe
+  damage: 5100
+sides:
+  - side_id: 1
+    faction_id: "faction-smc"
+    faction_tag: SMC
+    participants: [Marlowe, Ibis]
+  - side_id: 2
+    participants: ["Corsair-7"]
+ships_captured: 3
+captures:
+  - ship_id: "ship-skiff-1"
+    ship_class: skiff
+    captor_id: "player-1"
+    captor_username: Marlowe
+    former_owner_id: "pirate-1"
+    former_owner_username: "Corsair-7"
+    boarding_operation_id: "board-1"
+    prize_id: "prize-1"
+    prize_poi_id: sol_cloudbank
+    prize_poi_name: Cloudbank
+    prize_system_id: sol
+    prize_system_name: Sol
+  - ship_id: "ship-skiff-2"
+    ship_class: skiff
+    captor_id: "player-1"
+    captor_username: Marlowe
+    former_owner_id: "pirate-1"
+    former_owner_username: "Corsair-7"
+    boarding_operation_id: "board-2"
+    prize_id: "prize-2"
+    prize_system_id: sol
+    prize_system_name: Sol
+  - ship_id: "ship-skiff-3"
+    ship_class: skiff
+    captor_id: "player-1"
+    captor_username: Marlowe
+    former_owner_id: "pirate-1"
+    former_owner_username: "Corsair-7"
+    boarding_operation_id: "board-3"

@@ -23,6 +23,7 @@ import {
   sumNumericField,
   withPausedRentSuffix,
 } from './helpers.ts';
+import { formatPrizeCaptureLocation, prizeFieldText } from './prize-location.ts';
 import { formatZoneMoveReason } from './zone-move-reason.ts';
 
 function formatTimestampPreview(value: unknown): string {
@@ -206,6 +207,8 @@ function captureIdentityRows(rows: Array<Record<string, unknown>>, tick?: unknow
     captor_display: formatActorIdentity(row.captor_username, row.captor_id),
     former_owner_display: formatActorIdentity(row.former_owner_username, row.former_owner_id),
     captor_kind_display: normalizeCaptorKind(row.captor_kind),
+    prize_id: prizeFieldText(row.prize_id),
+    prize_location_display: formatPrizeCaptureLocation(row),
   }));
 }
 
@@ -217,6 +220,12 @@ function captureTableColumns(includeTick: boolean, rows: Array<Record<string, un
     columns.push(['Kind', ['captor_kind_display']]);
   }
   columns.push(['Former owner', ['former_owner_display']], ['Boarding', ['boarding_operation_id']]);
+  if (hasAnyField(rows, ['prize_id'])) {
+    columns.push(['Prize', ['prize_id']]);
+  }
+  if (hasAnyField(rows, ['prize_location_display'])) {
+    columns.push(['Location', ['prize_location_display']]);
+  }
   return columns;
 }
 
