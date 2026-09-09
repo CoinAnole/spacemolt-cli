@@ -637,6 +637,14 @@ describe('command metadata', () => {
     const observationHelp = captureHelp('subscribe_observation');
     expect(observationHelp).toContain('livery');
     expect(observationHelp).not.toContain('captor_kind');
+    expect(observationHelp).toContain('re-arms fuel spend');
+    expect(observationHelp).toContain('subscribed with active_scan=true');
+    expect(observationHelp).not.toContain('`');
+    expect(observationHelp).toContain('[active_scan=true/false]');
+    expect(observationHelp).not.toContain('<args...>');
+    expect(COMMANDS.subscribe_observation?.description).toContain('re-arms fuel spend');
+    expect(COMMANDS.subscribe_observation?.description).toContain('subscribed with active_scan=true');
+    expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
 
     expect(captureHelp('get_battle_summary')).toContain('captor_kind');
     expect(captureHelp('get_battle_log')).toContain('plundered (cargo taken, hull left)');
@@ -2527,8 +2535,16 @@ describe('command metadata', () => {
     const subscribeHelp = captureHelp('subscribe_observation');
     expect(subscribeHelp).toContain('observation notifications');
     expect(subscribeHelp).not.toContain('shared notification queue');
+    expect(subscribeHelp).toContain('re-arms fuel spend');
+    expect(subscribeHelp).toContain('subscribed with active_scan=true');
+    expect(subscribeHelp).not.toContain('`');
+    expect(subscribeHelp).toContain('[active_scan=true/false]');
+    expect(subscribeHelp).not.toContain('<args...>');
     expect(COMMANDS.subscribe_observation?.description).toContain('observation notifications');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('shared notification queue');
+    expect(COMMANDS.subscribe_observation?.description).toContain('re-arms fuel spend');
+    expect(COMMANDS.subscribe_observation?.description).toContain('subscribed with active_scan=true');
+    expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
   });
 
   test('mute_notifications help names support and HTTP-unaffected polling', () => {
