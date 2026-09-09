@@ -133,10 +133,11 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   recruit_personnel: 'Recruit fit crew and marines at a station personnel service',
   reload: 'Reload a weapon magazine from ammo in cargo. Costs a tick; other battle commands do not.',
   scrap_ship: 'Permanently destroy a stored ship you no longer want.',
-  scrap_wreck: "Scrap a towed wreck at a salvage yard or your faction's own player station.",
+  scrap_wreck:
+    "Scrap a towed wreck at a salvage yard or your faction's own player station. Recovers cargo and modules into station storage.",
   search_systems: 'Search for systems by name',
   self_destruct: 'Destroy your own ship',
-  sell_wreck: 'Sell a towed wreck to an NPC salvage yard for credits',
+  sell_wreck: 'Sell a towed wreck to an NPC salvage yard for credits. Leftover modules go to station storage.',
   service_prize: 'Stop, resume, redirect, refuel, or repair a claimed intact prize',
   set_colors: 'Set your ship colors',
   set_drone_name: 'Set or clear a display name for a drone.',

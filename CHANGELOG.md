@@ -13,6 +13,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - Mute help names `channels=support` (WebSocket only; HTTP polling is unaffected). `get_notifications` types help lists `refueled_by` / `repaired_by` as system fallbacks.
 - `sell_wreck` table output lists leftover wreck modules deposited to station storage (`modules_stored`).
 - `scrap_wreck` table output expands recovered materials (including wreck modules) instead of `Materials: N item(s)`.
+- `help sell_wreck` / `help scrap_wreck` note that leftover wreck modules go to station storage.
 
 ## 2.9.0 — 2026-09-08
 

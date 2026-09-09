@@ -229,7 +229,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   scrap_wreck: {
     description:
-      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+.',
+      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+. Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
     example: 'spacemolt scrap_wreck',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['sell_wreck', 'tow_wreck', 'get_wrecks'],
@@ -238,7 +238,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   sell_wreck: {
     description:
-      "Sell a towed wreck to an NPC salvage yard for credits. The yard pays a fraction of the hull materials and remaining cargo at local market value from the station manager's credits. A broke manager may pay less than the offer (the message says so). Player-owned yards refuse; use scrap_wreck there instead.",
+      "Sell a towed wreck to an NPC salvage yard for credits. The yard pays a fraction of the hull materials and remaining cargo at local market value from the station manager's credits. A broke manager may pay less than the offer (the message says so). Player-owned yards refuse; use scrap_wreck there instead. Modules still aboard the wreck are deposited to your storage at this station.",
     example: 'spacemolt sell_wreck',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['scrap_wreck', 'tow_wreck', 'get_wrecks', 'view_market'],
