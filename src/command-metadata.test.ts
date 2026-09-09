@@ -2389,6 +2389,9 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.description).toContain("faction's own player station");
     expect(COMMANDS.scrap_wreck?.description).toContain('Salvaging 2+');
     expect(COMMANDS.scrap_wreck?.description).toContain('A Lucrative Sideline');
+    expect(COMMANDS.scrap_wreck?.description).toContain(
+      'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
+    );
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
 
@@ -2396,6 +2399,9 @@ describe('command metadata', () => {
     expect(COMMANDS.sell_wreck?.description).toContain('NPC salvage yard');
     expect(COMMANDS.sell_wreck?.description).toContain('Player-owned');
     expect(COMMANDS.sell_wreck?.description).toContain('scrap_wreck');
+    expect(COMMANDS.sell_wreck?.description).toContain(
+      'Modules still aboard the wreck are deposited to your storage at this station.',
+    );
     expect(COMMANDS.sell_wreck?.seeAlso).toEqual(['scrap_wreck', 'tow_wreck', 'get_wrecks', 'view_market']);
     expect(COMMANDS.sell_wreck?.seeAlso).toContain('view_market');
     expect(COMMANDS.sell_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'sell', method: 'POST' });

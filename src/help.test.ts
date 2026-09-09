@@ -1655,6 +1655,9 @@ describe('help output branches', () => {
     expect(output).toContain('Cut It Apart Yourself');
     expect(output).toContain("faction's own player station");
     expect(output).toContain('Salvaging 2+');
+    expect(output).toContain(
+      'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
+    );
   });
 
   test('help misc documents scrap_wreck faction-station salvage unlocks', () => {
@@ -1696,6 +1699,7 @@ describe('help output branches', () => {
     expect(output).toContain('NPC salvage yard');
     expect(output).toContain('Player-owned');
     expect(output).toContain('scrap_wreck');
+    expect(output).toContain('Modules still aboard the wreck are deposited to your storage at this station.');
   });
 
   test('full help get_ship line names current or remote owned/faction-garage ship fit', () => {
