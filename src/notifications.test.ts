@@ -8651,7 +8651,7 @@ describe('notification formatting', () => {
 
       expect(preview.tag).toBe('OBSERVATION');
       expect(preview.headline).toBe(
-        'Observation at sol_cloudbank in sol (tick 901500): 7 changed, 6 departed; unknown signature; active scan',
+        'Observation at sol_cloudbank in sol (tick 901500): 7 changed, 6 departed; unknown signature; active scan: true',
       );
       expect(preview.details).toEqual([
         'Nearby players — changed 1: Marlowe [player-marlowe]; departed 1: player-ibis',
@@ -8704,9 +8704,67 @@ describe('notification formatting', () => {
       });
 
       expect(preview.headline).toBe(
-        'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; unknown signature; active scan',
+        'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; unknown signature; active scan: true',
       );
       expect(preview.details).toEqual([]);
+    });
+
+    test('prints active scan: false when the sweep is off', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 901501,
+          active_scan: false,
+        },
+      });
+
+      expect(preview.headline).toBe(
+        'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; active scan: false',
+      );
+      expect(preview.details).toEqual([]);
+      expectNoDiagnosticTokens(JSON.stringify(preview));
+      expectNoNestedJsonDump(JSON.stringify(preview));
+    });
+
+    test('prints unknown signature then active scan: false', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 901501,
+          unknown_signature: true,
+          active_scan: false,
+        },
+      });
+
+      expect(preview.headline).toBe(
+        'Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed; unknown signature; active scan: false',
+      );
+      expect(preview.details).toEqual([]);
+      expectNoDiagnosticTokens(JSON.stringify(preview));
+      expectNoNestedJsonDump(JSON.stringify(preview));
+    });
+
+    test('omits suffix when active_scan is absent or malformed', () => {
+      for (const active_scan of [undefined, 'false', 0, 1, null]) {
+        const preview = formatNotificationPreview({
+          msg_type: 'observation_update',
+          data: {
+            poi_id: 'sol_earth',
+            system_id: 'sol',
+            tick: 901501,
+            ...(active_scan === undefined ? {} : { active_scan }),
+          },
+        });
+
+        expect(preview.headline).toBe('Observation at sol_earth in sol (tick 901501): 0 changed, 0 departed');
+        expect(preview.details).toEqual([]);
+        expectNoDiagnosticTokens(JSON.stringify(preview));
+        expectNoNestedJsonDump(JSON.stringify(preview));
+      }
     });
 
     test('ignores malformed array members and never emits diagnostic tokens or nested data', () => {

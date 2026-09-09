@@ -991,6 +991,44 @@ test('subscribe_observation omits Arena NPCs when arena fields are absent', () =
   expect(stdout).not.toContain('Arena NPCs');
 });
 
+test('subscribe_observation prints Active scan: true', () => {
+  const stdout = renderStructuredResult(
+    'subscribe_observation',
+    structuredClone(subscribeObservationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Nearby ===\nActive scan: true\nUnknown cloaked signature detected. Run: scan');
+});
+
+test('subscribe_observation prints Active scan: false', () => {
+  const fixture = structuredClone(subscribeObservationFixture) as Record<string, unknown>;
+  fixture.active_scan = false;
+  const stdout = renderStructuredResult('subscribe_observation', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Active scan: false');
+  expect(stdout).not.toContain('Active scan: true');
+});
+
+test('subscribe_observation omits Active scan when the field is absent', () => {
+  const fixture = structuredClone(subscribeObservationFixture) as Record<string, unknown>;
+  delete fixture.active_scan;
+  const stdout = renderStructuredResult('subscribe_observation', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Active scan');
+});
+
+test('get_nearby stays silent when active_scan is planted true or false', () => {
+  for (const active_scan of [true, false]) {
+    const fixture = { ...structuredClone(nearbyFixture), active_scan };
+    const stdout = renderStructuredResult('get_nearby', fixture, options, context).stdout.join('\n');
+
+    expect(stdout).toContain('=== Nearby ===');
+    expect(stdout).not.toContain('Active scan');
+  }
+});
+
 test('get_nearby marks arena NPC runners after ship class only when flees is true', () => {
   const stdout = renderStructuredResult(
     'get_nearby',
