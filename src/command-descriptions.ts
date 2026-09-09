@@ -118,7 +118,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   list_ships:
     'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',
-  loot_wreck: 'Loot wreck cargo into your hold, or fit a module onto your ship with module_id=.',
+  loot_wreck:
+    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod).',
   mine: 'Mine one cycle at the current POI (asteroid, ice, or gas).',
   modify_order: 'Change the price on an existing order',
   name_drone: 'Set or clear a display name for a drone.',
@@ -148,7 +149,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   storage_deposit:
     'Deposit cargo into station/faction storage, gift items/credits/ships to players, donate materials to a docked NPC station (target=station:<id>), or move between faction compartments.',
   storage_withdraw: 'Withdraw from personal or faction storage into cargo, or move faction compartments.',
-  storage_loot: 'Loot wreck cargo into your hold, or fit a module onto your ship, via spacemolt_storage/loot.',
+  storage_loot:
+    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod), via spacemolt_storage/loot.',
   storage_jettison: 'Jettison items via spacemolt_storage/jettison.',
   supply_commission: 'Donate materials directly to a stuck commission.',
   survey_system: 'Scan for hidden deep core deposits in the current system',
