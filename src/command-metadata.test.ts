@@ -2489,7 +2489,10 @@ describe('command metadata', () => {
     expect(COMMANDS.get_notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
     expect(COMMANDS.notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('action_error, error, drone_adrift');
-    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('personnel_update');
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('personnel_update, refueled_by, and repaired_by');
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toBe(
+      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them.',
+    );
     expect(captureHelp('get_notifications')).toContain('action_error, error, drone_adrift');
     expect(captureHelp('notifications')).toContain('action_error, error, drone_adrift');
     for (const command of ['get_notifications', 'notifications']) {
@@ -2507,6 +2510,8 @@ describe('command metadata', () => {
       expect(help).toContain('arena_challenge');
       expect(help).toContain('arena_objective');
       expect(help).toContain('personnel_update');
+      expect(help).toContain('refueled_by');
+      expect(help).toContain('repaired_by');
       expect(help).not.toContain('types=action_result');
       expect(help).not.toContain('types (chat|combat|trade|faction|friend|forum');
     }
@@ -2518,6 +2523,18 @@ describe('command metadata', () => {
     expect(subscribeHelp).not.toContain('shared notification queue');
     expect(COMMANDS.subscribe_observation?.description).toContain('observation notifications');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('shared notification queue');
+  });
+
+  test('mute_notifications help names support and HTTP-unaffected polling', () => {
+    const help = captureHelp('mute_notifications');
+    expect(help).toContain('support');
+    expect(help).toContain('refueled_by');
+    expect(help).toContain('repaired_by');
+    expect(help).toContain('get_notifications');
+    expect(help).toContain('channels=');
+    expect(COMMANDS.mute_notifications?.example).toContain('channels=');
+    expect(COMMANDS.mute_notifications?.example).toContain('support');
+    expect(COMMANDS.mute_notifications?.schema?.channels?.description).toContain('support');
   });
 
   test('get_action_log advertises explicit event arrays and polling cursors', () => {
