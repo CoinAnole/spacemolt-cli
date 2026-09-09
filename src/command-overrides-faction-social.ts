@@ -402,17 +402,25 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   mute_notifications: {
     usage: '<channels>',
-    description: 'Mute one or more notification channels for WebSocket pushes.',
-    example: 'spacemolt mute_notifications channels=chat.system,battle_alerts',
+    description:
+      'Mute WebSocket push channels (HTTP get_notifications is unaffected). support covers ally refueled_by / repaired_by pings. See get_notification_settings for the catalog.',
+    example: 'spacemolt mute_notifications channels=chat.system,support',
     seeAlso: ['get_notification_settings', 'unmute_notifications'],
     category: 'Player settings',
     apiRoute: 'POST /api/v2/spacemolt_social/mute_notifications',
     positionals: ['channels'],
     arrayFields: ['channels'],
+    schemaExtensions: {
+      channels: {
+        description:
+          'WebSocket mute channels (e.g. chat.system, battle_alerts, support). Catalog: get_notification_settings. HTTP polling is unaffected; filter with get_notifications types= instead.',
+      },
+    },
   },
   unmute_notifications: {
     usage: '[channels] [all=true]',
-    description: 'Unmute notification channels, or pass all=true to clear all notification mutes.',
+    description:
+      'Unmute notification channels, or pass all=true to clear all WebSocket mutes. HTTP get_notifications is unaffected.',
     example: 'spacemolt unmute_notifications all=true',
     seeAlso: ['get_notification_settings', 'mute_notifications'],
     category: 'Player settings',

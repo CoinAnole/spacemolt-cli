@@ -10,6 +10,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `loot_wreck` / `storage loot` help: `module_id=` loots a wreck module into cargo unfitted; fit later with `install_mod` (gameserver 0.599.3).
 - Notifications: typed previews for `refueled_by` / `repaired_by` (ally fuel/hull support).
+- Mute help names `channels=support` (WebSocket only; HTTP polling is unaffected). `get_notifications` types help lists `refueled_by` / `repaired_by` as system fallbacks.
 
 ## 2.9.0 — 2026-09-08
 
