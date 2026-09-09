@@ -924,6 +924,42 @@ export const getNotificationsPersonnelAchievementsFixture = {
   ],
 };
 
+/** Support-channel poll: refueled_by and repaired_by (OpenAPI remainder). Coarse type is system. */
+export const getNotificationsSupportFixture = {
+  count: 2,
+  current_tick: 902700,
+  remaining: 0,
+  timestamp: 1779568500,
+  notifications: [
+    {
+      id: 'notif-refueled-by-1',
+      type: 'system',
+      msg_type: 'refueled_by',
+      timestamp: '2026-05-23T19:54:00.000Z',
+      data: {
+        source_player_id: 'player-alice',
+        source_username: 'Alice',
+        fuel: 12,
+        fuel_now: 40,
+        fuel_max: 50,
+      },
+    },
+    {
+      id: 'notif-repaired-by-1',
+      type: 'system',
+      msg_type: 'repaired_by',
+      timestamp: '2026-05-23T19:54:05.000Z',
+      data: {
+        source_player_id: 'player-alice',
+        source_username: 'Alice',
+        repaired: 8,
+        hull: 92,
+        max_hull: 100,
+      },
+    },
+  ],
+};
+
 /** Mixed 0.597.1 typed-payload poll: cloak, complete_mission, error, fleet, and ok dock. */
 export const getNotificationsTypedPayloadsFixture = {
   count: 6,
@@ -1158,6 +1194,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_personnel_achievements: {
     command: 'get_notifications',
     fixture: getNotificationsPersonnelAchievementsFixture,
+  },
+  get_notifications_support: {
+    command: 'get_notifications',
+    fixture: getNotificationsSupportFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {

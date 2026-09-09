@@ -1,0 +1,16 @@
+
+count: 2
+current_tick: 902700
+remaining: 0
+timestamp: 1779568500
+notifications:
+  - id: "notif-refueled-by-1"
+    type: system
+    msg_type: refueled_by
+    timestamp: 2026-05-23T19:54:00.000Z
+    data: {source_player_id: "player-alice", source_username: Alice, fuel: 12, fuel_now: 40, fuel_max: 50}
+  - id: "notif-repaired-by-1"
+    type: system
+    msg_type: repaired_by
+    timestamp: 2026-05-23T19:54:05.000Z
+    data: {source_player_id: "player-alice", source_username: Alice, repaired: 8, hull: 92, max_hull: 100}

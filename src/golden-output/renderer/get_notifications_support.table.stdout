@@ -1,0 +1,8 @@
+count 2
+
+=== Notifications ===
+
+  Timestamp           | Type        | Message                       
+  --------------------+-------------+-------------------------------
+  2026-05-23 19:54:00 | refueled_by | Alice refueled you +12 (40/50)
+  2026-05-23 19:54:05 | repaired_by | Alice repaired you +8 (92/100)
