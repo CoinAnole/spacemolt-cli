@@ -785,6 +785,28 @@ describe('notification formatting', () => {
       snippets: ['[RECONNECTED]', 'Back online', 'recovered with 2 ticks'],
     },
     {
+      msgType: 'refueled_by',
+      data: {
+        source_player_id: 'player-alice',
+        source_username: 'Alice',
+        fuel: 12,
+        fuel_now: 40,
+        fuel_max: 50,
+      },
+      snippets: ['[REFUEL]', 'Alice refueled you +12 (40/50)'],
+    },
+    {
+      msgType: 'repaired_by',
+      data: {
+        source_player_id: 'player-alice',
+        source_username: 'Alice',
+        repaired: 8,
+        hull: 92,
+        max_hull: 100,
+      },
+      snippets: ['[REPAIR]', 'Alice repaired you +8 (92/100)'],
+    },
+    {
       msgType: 'scan_detected',
       data: { scanner_username: 'Marlowe', scanner_ship_class: 'scout', revealed_info: ['hull'] },
       snippets: ['[SCANNED]', 'Marlowe', 'They learned: hull'],
@@ -4096,6 +4118,287 @@ describe('notification formatting', () => {
         expect(preview.details).toEqual(['Use: get_achievements']);
         expect(previewText(preview)).not.toContain('hidden');
         expectNoNestedJsonDump(previewText(preview));
+      });
+    });
+  });
+
+  describe('refueled_by and repaired_by typed previews', () => {
+    const typedTypes = ['refueled_by', 'repaired_by'] as const;
+    const emptyFallback = {
+      refueled_by: { tag: 'REFUEL', headline: 'You were refueled', severity: 'info' },
+      repaired_by: { tag: 'REPAIR', headline: 'You were repaired', severity: 'info' },
+    } as const;
+    const rawTag = {
+      refueled_by: 'REFUELED_BY',
+      repaired_by: 'REPAIRED_BY',
+    } as const;
+
+    function note(
+      msgType: string,
+      data: Record<string, unknown> = {},
+    ): {
+      type: 'system';
+      msg_type: string;
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return {
+        type: 'system',
+        msg_type: msgType,
+        timestamp: '2026-09-07T12:00:00.000Z',
+        data,
+      };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    test('registers never-null handlers for refueled_by and repaired_by', () => {
+      for (const msgType of typedTypes) {
+        expect(hasPreviewHandler(msgType)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(msgType);
+        const preview = formatNotificationPreview(note(msgType, {}));
+        expect(preview.tag).toBe(emptyFallback[msgType].tag);
+        expect(preview.headline).not.toBe('notification');
+      }
+    });
+
+    test.each([...typedTypes])('empty %s bag uses last-resort headline without JSON dump', (msgType) => {
+      const notification = note(msgType, {});
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const expected = emptyFallback[msgType];
+
+      expect(preview.tag).toBe(expected.tag);
+      expect(preview.headline).toBe(expected.headline);
+      expect(preview.severity).toBe(expected.severity);
+      expect(preview.details).toEqual([]);
+      expect(output).toContain(`[${expected.tag}]`);
+      expect(output).toContain(expected.headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('Use:');
+      expect(output).not.toContain('Someone');
+      expect(output).not.toContain('()');
+      expectNoDiagnosticTokens(previewText(preview));
+      expectNoNestedJsonDump(output);
+    });
+
+    test('K13: table Type stays raw msg_type; inline uses REFUEL/REPAIR not REFUELED_BY', () => {
+      for (const msgType of typedTypes) {
+        const notification = note(msgType, {});
+        const message = formatNotificationMessage(notification);
+        expect(message).not.toBe(emptyFallback[msgType].tag);
+        expect(message).toBe(emptyFallback[msgType].headline);
+        expect(message).toBe(tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })));
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain(`[${emptyFallback[msgType].tag}]`);
+        expect(output).not.toContain(`[${rawTag[msgType]}]`);
+      }
+    });
+
+    describe('refueled_by', () => {
+      const full = {
+        source_player_id: 'player-alice',
+        source_username: 'Alice',
+        fuel: 12,
+        fuel_now: 40,
+        fuel_max: 50,
+      };
+
+      test('full bag headline, empty details, no source_player_id', () => {
+        const notification = note('refueled_by', full);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('REFUEL');
+        expect(preview.severity).toBe('info');
+        expect(preview.headline).toBe('Alice refueled you +12 (40/50)');
+        expect(preview.details).toEqual([]);
+        expect(formatNotificationMessage(notification)).toBe('Alice refueled you +12 (40/50)');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[REFUEL]');
+        expect(output).toContain('Alice refueled you +12 (40/50)');
+        expect(output).not.toContain('[REFUELED_BY]');
+        expect(output).not.toContain('player-alice');
+        expect(output).not.toContain('source_player_id');
+        expect(output).not.toContain('fuel=');
+        expect(output).not.toContain('Use:');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('username only', () => {
+        const preview = formatNotificationPreview(note('refueled_by', { source_username: 'Alice' }));
+        expect(preview.headline).toBe('Alice refueled you');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('numbers without username use Someone', () => {
+        const preview = formatNotificationPreview(note('refueled_by', { fuel: 12, fuel_now: 40, fuel_max: 50 }));
+        expect(preview.headline).toBe('Someone refueled you +12 (40/50)');
+        expect(preview.headline).not.toContain('You were refueled');
+      });
+
+      test('delta only', () => {
+        const preview = formatNotificationPreview(note('refueled_by', { source_username: 'Alice', fuel: 12 }));
+        expect(preview.headline).toBe('Alice refueled you +12');
+      });
+
+      test('tank only', () => {
+        const preview = formatNotificationPreview(
+          note('refueled_by', { source_username: 'Alice', fuel_now: 40, fuel_max: 50 }),
+        );
+        expect(preview.headline).toBe('Alice refueled you (40/50)');
+      });
+
+      test('tank requires both now and max', () => {
+        const nowOnly = formatNotificationPreview(note('refueled_by', { source_username: 'Alice', fuel_now: 40 }));
+        expect(nowOnly.headline).toBe('Alice refueled you');
+        expect(nowOnly.headline).not.toContain('(');
+
+        const maxOnly = formatNotificationPreview(note('refueled_by', { source_username: 'Alice', fuel_max: 50 }));
+        expect(maxOnly.headline).toBe('Alice refueled you');
+        expect(maxOnly.headline).not.toContain('(');
+      });
+
+      test('zero delta and tank print', () => {
+        const preview = formatNotificationPreview(
+          note('refueled_by', { source_username: 'Alice', fuel: 0, fuel_now: 0, fuel_max: 50 }),
+        );
+        expect(preview.headline).toBe('Alice refueled you +0 (0/50)');
+      });
+
+      test('negative delta prints without a plus', () => {
+        const preview = formatNotificationPreview(
+          note('refueled_by', { source_username: 'Alice', fuel: -3, fuel_now: 37, fuel_max: 50 }),
+        );
+        expect(preview.headline).toBe('Alice refueled you -3 (37/50)');
+      });
+
+      test('object source_username / NaN fuel / object tank fall back without dump', () => {
+        const unusable = formatNotificationPreview(
+          note('refueled_by', {
+            source_username: { name: 'Alice' },
+            fuel: Number.NaN,
+            fuel_now: { n: 40 },
+            fuel_max: 50,
+            source_player_id: 'player-alice',
+          }),
+        );
+        expect(unusable.headline).toBe('You were refueled');
+        expect(previewText(unusable)).not.toContain('Someone');
+        expect(previewText(unusable)).not.toContain('player-alice');
+        expect(previewText(unusable)).not.toContain('{');
+        expectNoNestedJsonDump(previewText(unusable));
+
+        const partial = formatNotificationPreview(
+          note('refueled_by', {
+            source_username: { name: 'Alice' },
+            fuel: 12,
+            fuel_now: Number.NaN,
+            fuel_max: 50,
+          }),
+        );
+        expect(partial.headline).toBe('Someone refueled you +12');
+        expectNoNestedJsonDump(previewText(partial));
+      });
+    });
+
+    describe('repaired_by', () => {
+      const full = {
+        source_player_id: 'player-alice',
+        source_username: 'Alice',
+        repaired: 8,
+        hull: 92,
+        max_hull: 100,
+      };
+
+      test('full bag headline, empty details, no source_player_id', () => {
+        const notification = note('repaired_by', full);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('REPAIR');
+        expect(preview.severity).toBe('info');
+        expect(preview.headline).toBe('Alice repaired you +8 (92/100)');
+        expect(preview.details).toEqual([]);
+        expect(formatNotificationMessage(notification)).toBe('Alice repaired you +8 (92/100)');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[REPAIR]');
+        expect(output).toContain('Alice repaired you +8 (92/100)');
+        expect(output).not.toContain('[REPAIRED_BY]');
+        expect(output).not.toContain('player-alice');
+        expect(output).not.toContain('source_player_id');
+        expect(output).not.toContain('repaired=');
+        expect(output).not.toContain('Use:');
+        expectNoDiagnosticTokens(output);
+        expectNoNestedJsonDump(output);
+      });
+
+      test('username only', () => {
+        const preview = formatNotificationPreview(note('repaired_by', { source_username: 'Alice' }));
+        expect(preview.headline).toBe('Alice repaired you');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('numbers without username use Someone', () => {
+        const preview = formatNotificationPreview(note('repaired_by', { repaired: 8, hull: 92, max_hull: 100 }));
+        expect(preview.headline).toBe('Someone repaired you +8 (92/100)');
+        expect(preview.headline).not.toContain('You were repaired');
+      });
+
+      test('delta only', () => {
+        const preview = formatNotificationPreview(note('repaired_by', { source_username: 'Alice', repaired: 8 }));
+        expect(preview.headline).toBe('Alice repaired you +8');
+      });
+
+      test('tank only', () => {
+        const preview = formatNotificationPreview(
+          note('repaired_by', { source_username: 'Alice', hull: 92, max_hull: 100 }),
+        );
+        expect(preview.headline).toBe('Alice repaired you (92/100)');
+      });
+
+      test('tank requires both hull and max_hull', () => {
+        const hullOnly = formatNotificationPreview(note('repaired_by', { source_username: 'Alice', hull: 92 }));
+        expect(hullOnly.headline).toBe('Alice repaired you');
+        expect(hullOnly.headline).not.toContain('(');
+
+        const maxOnly = formatNotificationPreview(note('repaired_by', { source_username: 'Alice', max_hull: 100 }));
+        expect(maxOnly.headline).toBe('Alice repaired you');
+        expect(maxOnly.headline).not.toContain('(');
+      });
+
+      test('zero delta and tank print', () => {
+        const preview = formatNotificationPreview(
+          note('repaired_by', { source_username: 'Alice', repaired: 0, hull: 0, max_hull: 100 }),
+        );
+        expect(preview.headline).toBe('Alice repaired you +0 (0/100)');
+      });
+
+      test('object source_username / NaN repaired / object hull fall back without dump', () => {
+        const unusable = formatNotificationPreview(
+          note('repaired_by', {
+            source_username: { name: 'Alice' },
+            repaired: Number.NaN,
+            hull: { n: 1 },
+            max_hull: 100,
+            source_player_id: 'player-alice',
+          }),
+        );
+        expect(unusable.headline).toBe('You were repaired');
+        expect(previewText(unusable)).not.toContain('Someone');
+        expect(previewText(unusable)).not.toContain('player-alice');
+        expect(previewText(unusable)).not.toContain('{');
+        expectNoNestedJsonDump(previewText(unusable));
+
+        const partial = formatNotificationPreview(
+          note('repaired_by', {
+            source_username: { name: 'Alice' },
+            repaired: 8,
+            hull: { n: 1 },
+            max_hull: 100,
+          }),
+        );
+        expect(partial.headline).toBe('Someone repaired you +8');
+        expectNoNestedJsonDump(previewText(partial));
       });
     });
   });
@@ -8634,7 +8937,14 @@ describe('notification formatting', () => {
       expect(types.length).toBeGreaterThan(0);
       expect(new Set(types).size).toBe(types.length);
       expect(types).toEqual(
-        expect.arrayContaining(['cloak', 'battle_alert', 'personnel_update', 'facility_rent_warning']),
+        expect.arrayContaining([
+          'cloak',
+          'battle_alert',
+          'personnel_update',
+          'facility_rent_warning',
+          'refueled_by',
+          'repaired_by',
+        ]),
       );
       expect(types.filter((t) => !hasPreviewHandler(t))).toEqual([]);
     });

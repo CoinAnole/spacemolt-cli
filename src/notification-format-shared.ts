@@ -2993,6 +2993,69 @@ function previewAchievementUnlocked(
   return { ...preview, severity: 'success' };
 }
 
+function supportActor(data: Record<string, unknown>): string | undefined {
+  return nonEmptyString(data.source_username);
+}
+
+function signedDelta(value: unknown): string | undefined {
+  const n = finiteNumber(value);
+  if (n === undefined) return undefined;
+  return n >= 0 ? `+${n}` : String(n);
+}
+
+function tankPair(now: unknown, max: unknown): string | undefined {
+  const nowN = finiteNumber(now);
+  const maxN = finiteNumber(max);
+  if (nowN === undefined || maxN === undefined) return undefined;
+  return `${nowN}/${maxN}`;
+}
+
+function supportHeadline(opts: {
+  actor: string | undefined;
+  verb: 'refueled' | 'repaired';
+  delta: string | undefined;
+  tank: string | undefined;
+  emptyFallback: string;
+}): string {
+  const { actor, verb, delta, tank, emptyFallback } = opts;
+  if (!actor && !delta && !tank) return emptyFallback;
+  const subject = actor ?? 'Someone';
+  let line = `${subject} ${verb} you`;
+  if (delta !== undefined) line += ` ${delta}`;
+  if (tank !== undefined) line += ` (${tank})`;
+  return line;
+}
+
+function previewRefueledBy(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const headline = supportHeadline({
+    actor: supportActor(data),
+    verb: 'refueled',
+    delta: signedDelta(data.fuel),
+    tank: tankPair(data.fuel_now, data.fuel_max),
+    emptyFallback: 'You were refueled',
+  });
+  return { ...headlinePreview('REFUEL', headline, options), severity: 'info' };
+}
+
+function previewRepairedBy(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const headline = supportHeadline({
+    actor: supportActor(data),
+    verb: 'repaired',
+    delta: signedDelta(data.repaired),
+    tank: tankPair(data.hull, data.max_hull),
+    emptyFallback: 'You were repaired',
+  });
+  return { ...headlinePreview('REPAIR', headline, options), severity: 'info' };
+}
+
 /**
  * Typed pure preview handlers — sole known-type registry after PR7c.
  * null → fall through to Policy 5 generic path.
@@ -3128,6 +3191,9 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   drone_survey: previewDroneSurvey,
   personnel_update: previewPersonnelUpdate,
   achievement_unlocked: previewAchievementUnlocked,
+  // 0.599.0 support channel; coarse type is system
+  refueled_by: previewRefueledBy,
+  repaired_by: previewRepairedBy,
 };
 
 /** True when a native pure preview handler is registered for msgType. */
