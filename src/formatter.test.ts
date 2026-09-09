@@ -3570,7 +3570,7 @@ describe('structuredContent formatters', () => {
         cargo: [{ item_id: 'scrap_metal', item_name: 'Scrap Metal', quantity: 4 }],
         skills: { salvaging: { level: 2, xp: 140 } },
       },
-      'Materials: 1 item(s)',
+      '=== Wreck Scrapped ===',
     ],
     [
       'commission_ship',

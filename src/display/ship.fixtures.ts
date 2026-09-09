@@ -474,7 +474,10 @@ export const scrapWreckFixture = {
     action: 'scrap_wreck',
     wreck_id: 'wreck-1',
     message: 'Scrapped wreck.',
-    materials: [{ item: 'scrap_metal', name: 'Scrap Metal', quantity: 4 }],
+    materials: [
+      { item: 'scrap_metal', name: 'Scrap Metal', quantity: 4 },
+      { item: 'pulse_laser_i', name: 'Pulse Laser I', quantity: 1 },
+    ],
     total_value: 1250,
     stored_at: 'sol_yard',
     ship_class: 'skiff',
@@ -509,6 +512,24 @@ export const sellWreckPartialPayFixture = {
     ship_class: 'skiff',
   },
   player: { credits: 2250 },
+};
+
+export const sellWreckModulesFixture = {
+  details: {
+    action: 'sell_wreck',
+    wreck_id: 'wreck-1',
+    message: 'Sold wreck. Leftover modules moved to station storage.',
+    new_balance: 2400,
+    offer: 500,
+    total_payout: 500,
+    salvage_value: 400,
+    ship_class: 'skiff',
+    modules_stored: [
+      { module_type: 'pulse_laser_i', name: 'Pulse Laser I' },
+      { module_type: 'cargo_expander_i', name: 'Cargo Expander I' },
+    ],
+  },
+  player: { credits: 2400 },
 };
 
 export const reloadFixture = {
@@ -699,6 +720,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   scrap_wreck: { command: 'scrap_wreck', fixture: scrapWreckFixture },
   sell_wreck: { command: 'sell_wreck', fixture: sellWreckFixture },
   sell_wreck_partial: { command: 'sell_wreck', fixture: sellWreckPartialPayFixture },
+  sell_wreck_modules: { command: 'sell_wreck', fixture: sellWreckModulesFixture },
   refuel: { command: 'refuel', fixture: refuelFixture, schemaTarget: 'details' },
   refuel_station: { command: 'refuel', fixture: stationRefuelFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },

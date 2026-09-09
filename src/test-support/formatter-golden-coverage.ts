@@ -61,6 +61,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   get_nearby_livery: 'get_nearby',
   get_nearby_arena: 'get_nearby',
   sell_wreck_partial: 'sell_wreck',
+  sell_wreck_modules: 'sell_wreck',
   scan_creature: 'scan',
   view_completed_mission_bounty: 'view_completed_mission',
 };

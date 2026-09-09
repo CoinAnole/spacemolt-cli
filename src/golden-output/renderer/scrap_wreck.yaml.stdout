@@ -7,6 +7,9 @@ details:
     - item: scrap_metal
       name: "Scrap Metal"
       quantity: 4
+    - item: pulse_laser_i
+      name: "Pulse Laser I"
+      quantity: 1
   total_value: 1250
   stored_at: sol_yard
   ship_class: skiff

@@ -86,6 +86,15 @@ function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
 
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+type SoldModuleRow = {
+  module_type: string;
+  name: string;
+};
+
 type SellWreckReceipt = {
   wreckId: string;
   offer: number;
@@ -94,7 +103,25 @@ type SellWreckReceipt = {
   salvageValue?: number;
   shipClass?: string;
   message?: string;
+  modulesStored: SoldModuleRow[];
 };
+
+function readSoldModules(value: unknown): SoldModuleRow[] {
+  if (!Array.isArray(value)) return [];
+  const rows: SoldModuleRow[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    // No trim: '' is empty; whitespace-only is kept.
+    const moduleType = nonEmptyString(entry.module_type) ?? '';
+    const name = nonEmptyString(entry.name) ?? '';
+    if (!moduleType && !name) continue;
+    rows.push({
+      module_type: moduleType,
+      name: name || moduleType || '?',
+    });
+  }
+  return rows;
+}
 
 function readSellWreckReceipt(r: Record<string, unknown>): SellWreckReceipt | undefined {
   if (r.action !== 'sell_wreck') return undefined;
@@ -105,8 +132,8 @@ function readSellWreckReceipt(r: Record<string, unknown>): SellWreckReceipt | un
   const newBalance = finiteNumber(r.new_balance);
   if (offer === undefined || paid === undefined || newBalance === undefined) return undefined;
   const salvageValue = finiteNumber(r.salvage_value);
-  const shipClass = typeof r.ship_class === 'string' && r.ship_class !== '' ? r.ship_class : undefined;
-  const message = typeof r.message === 'string' && r.message !== '' ? r.message : undefined;
+  const shipClass = nonEmptyString(r.ship_class);
+  const message = nonEmptyString(r.message);
   return {
     wreckId: r.wreck_id,
     offer,
@@ -115,6 +142,7 @@ function readSellWreckReceipt(r: Record<string, unknown>): SellWreckReceipt | un
     salvageValue,
     shipClass,
     message,
+    modulesStored: readSoldModules(r.modules_stored),
   };
 }
 
@@ -123,6 +151,16 @@ function formatPaidVersusOffer(offer: number, paid: number): string {
     return `Paid: ${formatCredits(paid)} (${formatCredits(offer - paid)} less than offer)`;
   }
   return `Paid: ${formatCredits(paid)}`;
+}
+
+function printSalvageMaterials(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows = value.filter(isRecord);
+  if (!rows.length) return;
+  printCompactTable('Materials', rows, [
+    ['Item', ['name', 'item']],
+    ['Qty', ['quantity']],
+  ]);
 }
 
 function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
@@ -619,10 +657,38 @@ export const shipFormatters = [
       emitLine(formatPaidVersusOffer(receipt.offer, receipt.paid));
       if (receipt.salvageValue !== undefined) emitLine(`Salvage value: ${formatCredits(receipt.salvageValue)}`);
       emitLine(`New balance: ${formatCredits(receipt.newBalance)}`);
+      if (receipt.modulesStored.length > 0) {
+        printCompactTable('Modules Stored', receipt.modulesStored, [
+          ['Name', ['name']],
+          ['Type', ['module_type']],
+        ]);
+      }
       if (receipt.message) emitLine(`${c.dim}${receipt.message}${c.reset}`);
       return true;
     },
     { commands: ['sell_wreck'], shapeFallback: true },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.action !== 'scrap_wreck') return false;
+      if (typeof r.wreck_id !== 'string' || r.wreck_id === '') return false;
+      if (!Array.isArray(r.materials)) return false;
+
+      const shipClass = nonEmptyString(r.ship_class);
+      const storedAt = nonEmptyString(r.stored_at);
+      const totalValue = optionalNumber(r.total_value);
+      const message = nonEmptyString(r.message);
+
+      emitLine(`\n${c.bright}=== Wreck Scrapped ===${c.reset}`);
+      emitLine(`Wreck: ${r.wreck_id}${shipClass ? ` (${shipClass})` : ''}`);
+      if (storedAt) emitLine(`Stored at: ${storedAt}`);
+      if (totalValue !== undefined) emitLine(`Total value: ${formatCredits(totalValue)}`);
+      printSalvageMaterials(r.materials);
+      if (message) emitLine(`${c.dim}${message}${c.reset}`);
+      return true;
+    },
+    { commands: ['scrap_wreck'], shapeFallback: true },
   ),
 
   // Drones
