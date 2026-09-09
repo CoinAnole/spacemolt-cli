@@ -631,7 +631,7 @@ function formatAnalyzeMarket(r: Record<string, unknown>): boolean {
 
 function projectSupplyMaterialRow(row: Record<string, unknown>): Record<string, unknown> {
   return {
-    item: row.name ?? row.item_id,
+    item: scalarDisplayString(row.name) ?? row.item_id,
     needed_display: formatDisplayNumber(row.needed),
     gathered_display: formatDisplayNumber(row.gathered),
     done_display: formatYesNoBoolean(row.complete) ?? '',

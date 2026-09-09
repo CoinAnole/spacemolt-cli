@@ -111,16 +111,18 @@ test('supply_commission omits the materials table when materials has no records'
   expect(stdout).not.toContain('(None)');
 });
 
-test('supply_commission falls back to item_id when material name is missing', () => {
-  const stdout = renderSupplyCommission({
-    ...supplyCommissionFixture,
-    materials: [{ item_id: 'steel_plate', needed: 12, gathered: 8, complete: false }],
-  }).stdout.join('\n');
+test('supply_commission falls back to item_id when material name is missing or empty', () => {
+  for (const name of [undefined, '', null]) {
+    const stdout = renderSupplyCommission({
+      ...supplyCommissionFixture,
+      materials: [{ item_id: 'steel_plate', name, needed: 12, gathered: 8, complete: false }],
+    }).stdout.join('\n');
 
-  expect(stdout).toContain('=== Materials ===');
-  expect(stdout).toContain('steel_plate');
-  expect(stdout).toMatch(/steel_plate\s+\|\s+12\s+\|\s+8\s+\|\s+no/);
-  expect(stdout).not.toContain('Steel Plate');
+    expect(stdout).toContain('=== Materials ===');
+    expect(stdout).toContain('steel_plate');
+    expect(stdout).toMatch(/steel_plate\s+\|\s+12\s+\|\s+8\s+\|\s+no/);
+    expect(stdout).not.toContain('Steel Plate');
+  }
 });
 
 test('supply_commission omits credits when absent and prints all sourced yes', () => {
