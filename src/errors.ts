@@ -345,10 +345,10 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     code: 'cargo_capacity_exceeded',
     message: 'Hold carries more than the cargo capacity this change would leave.',
     suggestion:
-      'This change would leave cargo capacity below what the hold carries (the error names the shortfall). Run "spacemolt get_ship" to inspect cargo. If fitting via "spacemolt install_mod" or "spacemolt loot_wreck", sell or jettison first; if removing a cargo expander, "spacemolt uninstall_mod" a consumer first.',
+      'This change would leave cargo capacity below what the hold carries (the error names the shortfall). Run "spacemolt get_ship" to inspect cargo. If fitting via "spacemolt install_mod", sell or jettison first; if removing a cargo expander, "spacemolt uninstall_mod" a consumer first.',
     retryable: false,
     auth: false,
-    relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod', 'loot_wreck'],
+    relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod'],
   },
   cargo_full: {
     code: 'cargo_full',
@@ -358,6 +358,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     retryable: false,
     auth: false,
     relatedCommands: ['get_ship', 'sell', 'jettison', 'buy', 'uninstall_mod'],
+  },
+  no_space: {
+    code: 'no_space',
+    message: 'No room in the hold.',
+    suggestion:
+      'No room in the hold; the wreck was left untouched. Run "spacemolt get_ship" to inspect cargo, then "spacemolt sell" or "spacemolt jettison". Retry "spacemolt loot_wreck". module_id= loots into cargo unfitted; fit later with "spacemolt install_mod".',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_ship', 'sell', 'jettison', 'loot_wreck', 'install_mod'],
   },
 };
 
