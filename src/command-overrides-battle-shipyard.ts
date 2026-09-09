@@ -287,6 +287,8 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   supply_commission: {
     usage: '<commission_id> <item_id> <quantity>  (donate materials to a stuck commission)',
+    description:
+      'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
     category: 'Shipyard',
     apiRoute: 'POST /api/v2/spacemolt_ship/supply_commission',
     positionals: ['commission_id', 'item_id', 'quantity'],

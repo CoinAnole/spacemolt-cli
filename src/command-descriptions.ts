@@ -156,7 +156,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   storage_loot:
     'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod), via spacemolt_storage/loot.',
   storage_jettison: 'Jettison items via spacemolt_storage/jettison.',
-  supply_commission: 'Donate materials directly to a stuck commission.',
+  supply_commission:
+    'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
   survey_system: 'Scan for hidden deep core deposits in the current system',
   switch_ship: 'Switch to a different ship stored at this station',
   tow_wreck: 'Attach a tow line to a wreck for hauling',
