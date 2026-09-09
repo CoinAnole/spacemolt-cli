@@ -629,6 +629,56 @@ function formatAnalyzeMarket(r: Record<string, unknown>): boolean {
   return true;
 }
 
+function projectSupplyMaterialRow(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    item: row.name ?? row.item_id,
+    needed_display: formatDisplayNumber(row.needed),
+    gathered_display: formatDisplayNumber(row.gathered),
+    done_display: formatYesNoBoolean(row.complete) ?? '',
+  };
+}
+
+function printSupplyCommissionMaterials(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows = value.filter(isRecord);
+  if (!rows.length) return;
+  printCompactTable('Materials', rows.map(projectSupplyMaterialRow), [
+    ['Item', ['item']],
+    ['Needed', ['needed_display']],
+    ['Gathered', ['gathered_display']],
+    ['Done', ['done_display']],
+  ]);
+}
+
+function formatDonatedSupplyItem(r: Record<string, unknown>): string | undefined {
+  const name = scalarDisplayString(r.item_name);
+  const id = scalarDisplayString(r.item_id);
+  const item = name && id && name !== id ? `${name} (${id})` : (name ?? id);
+  if (!item) return undefined;
+  const supplied = formatDisplayNumber(r.supplied);
+  return supplied ? `${item} x${supplied}` : item;
+}
+
+function formatSupplyCommission(r: Record<string, unknown>): boolean {
+  if (r.commission_id === undefined) return false;
+  if (!Array.isArray(r.materials) && (r.item_id === undefined || r.supplied === undefined)) return false;
+
+  emitLine(`\n${c.bright}=== Commission Supplied ===${c.reset}`);
+  if (typeof r.message === 'string' && r.message) emitLine(r.message);
+  const commissionId = scalarDisplayString(r.commission_id);
+  if (commissionId) emitLine(`ID: ${commissionId}`);
+  const donated = formatDonatedSupplyItem(r);
+  if (donated) emitLine(`Donated: ${donated}`);
+  if (typeof r.commission_status === 'string' && r.commission_status) {
+    emitLine(`Status: ${r.commission_status}`);
+  }
+  const allSourced = formatYesNoBoolean(r.all_sourced);
+  if (allSourced) emitLine(`All sourced: ${allSourced}`);
+  emitCommissionCredit('Credits', r.credits);
+  printSupplyCommissionMaterials(r.materials);
+  return true;
+}
+
 function formatCommissionQuote(r: Record<string, unknown>): boolean {
   if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
     return false;
@@ -1110,6 +1160,10 @@ export const marketFormatters = [
 
   namedFormatter('commission_quote', ['ship_class', 'credits_only_total'], formatCommissionQuote, {
     commands: ['commission_quote'],
+  }),
+
+  namedFormatter('supply_commission', ['commission_id', 'materials'], formatSupplyCommission, {
+    commands: ['supply_commission'],
   }),
 
   // Insurance quote

@@ -554,6 +554,21 @@ export const commissionShipCreditsOnlyFixture = {
   player: { username: 'Marlowe', credits: 5000 },
 };
 
+export const supplyCommissionFixture = {
+  message: 'Materials supplied.',
+  commission_id: 'commission-1',
+  commission_status: 'pending',
+  item_id: 'nanite_hull_coating',
+  item_name: 'Nanite Hull Coating',
+  supplied: 1,
+  all_sourced: false,
+  credits: 5000,
+  materials: [
+    { item_id: 'steel_plate', name: 'Steel Plate', needed: 12, gathered: 12, complete: true },
+    { item_id: 'nanite_hull_coating', name: 'Nanite Hull Coating', needed: 1, gathered: 0, complete: false },
+  ],
+};
+
 export const insuranceQuoteFixture = {
   message: 'Quote calculated from galaxy-wide loss statistics.',
   notice: 'Recent deaths dominate pricing.',
@@ -761,6 +776,7 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     fixture: commissionShipCreditsOnlyFixture,
     schemaTarget: 'details',
   },
+  supply_commission: { command: 'supply_commission', fixture: supplyCommissionFixture, schemaTarget: 'details' },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
   // Explicit storage_view case exercises gifts/messages empty arrays (schema parity).

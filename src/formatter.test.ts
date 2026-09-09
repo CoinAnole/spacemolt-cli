@@ -68,6 +68,7 @@ import {
   commissionStatusSourcingFixture,
   emptyAnalyzeMarketFixture,
   emptyCommissionStatusFixture,
+  supplyCommissionFixture,
 } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture, factionScanPoiFixture } from './display/social.fixtures';
 import { renderResponse } from './main';
@@ -135,6 +136,10 @@ const namedFormatterFixtureCases = {
   commission_ship: {
     command: 'commission_ship',
     fixture: commissionShipFixture,
+  },
+  supply_commission: {
+    command: 'supply_commission',
+    fixture: supplyCommissionFixture,
   },
   create_market_order: createMarketOrderFixtureCase,
   faction_bulk_orders: {
@@ -3664,21 +3669,11 @@ describe('structuredContent formatters', () => {
     [
       'supply_commission',
       {
-        details: {
-          commission_id: 'commission-1',
-          commission_status: 'pending',
-          item_id: 'steel_plate',
-          item_name: 'Steel Plate',
-          supplied: 12,
-          materials: [{ item_id: 'steel_plate', required: 12, supplied: 12 }],
-          all_sourced: true,
-          credits: 5000,
-          message: 'Materials supplied.',
-        },
+        details: supplyCommissionFixture,
         player: { credits: 5000 },
         cargo: [],
       },
-      'Commission Id: commission-1',
+      'Nanite Hull Coating',
     ],
     [
       'list_ship_for_sale',
@@ -3716,6 +3711,20 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain(expected);
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats supply_commission materials by name with needed and gathered', () => {
+    const { stdout, stderr } = captureStructuredOutput('supply_commission', {
+      details: supplyCommissionFixture,
+      player: { credits: 5000 },
+      cargo: [],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Nanite Hull Coating');
+    expect(stdout).toContain('=== Materials ===');
+    expect(stdout).not.toContain('Materials: 2 item(s)');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -7209,12 +7218,14 @@ describe('structuredContent formatters', () => {
     expect(outputs.create_market_order).toContain('=== Sell Order Created ===');
     expect(outputs.commission_quote).toContain('=== Commission Quote ===');
     expect(outputs.commission_ship).toContain('=== Commission Created ===');
+    expect(outputs.supply_commission).toContain('=== Commission Supplied ===');
     expect(outputs.direct_buy).toContain('=== Buy Complete ===');
     expect(outputs.direct_sell).toContain('=== Sell Complete ===');
     expect(outputs.faction_bulk_orders).toContain('=== Faction Buy Orders ===');
     delete outputs.create_market_order;
     delete outputs.commission_quote;
     delete outputs.commission_ship;
+    delete outputs.supply_commission;
     delete outputs.direct_buy;
     delete outputs.direct_sell;
     delete outputs.faction_bulk_orders;
