@@ -170,7 +170,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   trade_offer: 'Offer a trade to another player',
   uninstall_mod: 'Uninstall a module from your ship',
   unload_drone: 'Return a drone from your bay back to cargo',
-  use_item: 'Use a consumable item from cargo',
+  use_item:
+    'Use a consumable from cargo. Works in battle and mid-flight. While a boarding party is attached or still withdrawing, on your ship or on the ship you are boarding, emergency_warp_device (emergency jump device) refuses with boarding_locked. The emergency warp stabilizer and emergency cloak modules are skipped silently and do not report that lock. Flee makes no progress until the latch clears.',
   view_completed_mission: 'View full details of a completed mission.',
   view_insurance: 'View your active insurance policies',
   view_ship_buy_orders: 'View your open ship buy orders across all stations',

@@ -2792,4 +2792,18 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
     expect(quiet.stderr.join('\n')).not.toContain('Next:');
   });
+
+  test('command search for boarding_locked finds use_item', () => {
+    const capture = captureWriter();
+    showCommandSearch('boarding_locked', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}use_item /m);
+  });
+
+  test('command search for emergency jump finds use_item', () => {
+    const capture = captureWriter();
+    showCommandSearch('emergency jump', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}use_item /m);
+  });
 });

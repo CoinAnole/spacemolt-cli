@@ -365,10 +365,20 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt/repair',
   },
   use_item: {
-    usage: '<item_id> [quantity]  (consumables: repair_kit, shield_cell, emergency_warp, etc.)',
+    usage: '<item_id> [quantity]  (consumables: repair_kit, shield_charge, emergency_warp_device, etc.)',
+    description:
+      'Use a consumable from cargo. Works in battle and mid-flight. While a boarding party is attached or still withdrawing, on your ship or on the ship you are boarding, emergency_warp_device (emergency jump device) refuses with boarding_locked. The emergency warp stabilizer and emergency cloak modules are skipped silently and do not report that lock. Flee makes no progress until the latch clears.',
+    example: 'spacemolt use_item repair_kit; spacemolt use_item emergency_warp_device',
+    discoverWith: ['get_cargo'],
+    seeAlso: ['get_cargo', 'get_battle_status', 'battle_stance'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt/use_item',
     positionals: ['item_id', 'quantity'],
+    schemaExtensions: {
+      id: {
+        description: 'ID of the consumable item to use (e.g., repair_kit, shield_charge, emergency_warp_device)',
+      },
+    },
   },
   set_home_base: {
     usage: '<base_id>  (set respawn point, requires cloning service)',
