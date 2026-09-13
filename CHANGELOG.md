@@ -30,6 +30,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**
 
+### Query
+
+- `get_system_agents` table output lists optional Docked (`true`/`false`) when the server reports `NearbyPlayer.docked` (gameserver 0.601.1). That is the same boolean `get_nearby` already surfaces as `[DOCKED]`; this table does not use that marker. Docked pilots cannot be attacked, scanned, or traded with until they undock.
+
 ## 2.9.0 — 2026-09-08
 
 Large release since **2.8.0** (2026-08-02). Bundled OpenAPI metadata tracks gameserver through **v0.598.3**.

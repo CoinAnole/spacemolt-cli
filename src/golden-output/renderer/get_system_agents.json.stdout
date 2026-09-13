@@ -11,7 +11,8 @@
       "faction_tag": "SMC",
       "status_message": "surveying routes",
       "offline": false,
-      "in_combat": false
+      "in_combat": false,
+      "docked": false
     },
     {
       "username": "Ibis",
@@ -21,7 +22,8 @@
       "faction_tag": "SMC",
       "status_message": "hauling ore",
       "offline": true,
-      "in_combat": true
+      "in_combat": true,
+      "docked": true
     }
   ]
 }

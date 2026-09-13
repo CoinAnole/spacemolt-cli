@@ -12,6 +12,7 @@ import {
   getStatusFixture,
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
+  getSystemAgentsFixture,
   nearbyArenaFixture,
   nearbyArenaFleesFixture,
   nearbyBossFixture,
@@ -2274,4 +2275,90 @@ test('get_system omits [deep core] when false or non-boolean', () => {
     expect(stdout).not.toContain('[deep core]');
     expect(stdout).not.toContain('Deep core:');
   }
+});
+
+function agentsHeader(stdout: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes('|') && line.includes('Name') && line.includes('Combat'));
+}
+
+function agentsCell(stdout: string, rowNeedle: string, column: string): string | undefined {
+  const header = agentsHeader(stdout);
+  const row = stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes(rowNeedle) && !line.includes('---'));
+  if (!header || !row) return undefined;
+  const headers = header.split('|').map((part) => part.trim());
+  const cells = row.split('|').map((part) => part.trim());
+  const index = headers.indexOf(column);
+  return index >= 0 ? cells[index] : undefined;
+}
+
+function renderSystemAgents(fixture: Record<string, unknown>) {
+  const rendered = renderStructuredResult('get_system_agents', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  expect(stdout).not.toContain('=== Response ===');
+  return stdout;
+}
+
+function cloneSystemAgents() {
+  return structuredClone(getSystemAgentsFixture) as Record<string, unknown> & {
+    agents: Array<Record<string, unknown>>;
+  };
+}
+
+test('get_system_agents table lists mixed Docked true/false from the golden fixture', () => {
+  const stdout = renderSystemAgents(cloneSystemAgents());
+
+  expect(stdout).toContain('Combat | Docked | Offline');
+  expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('false');
+  expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('true');
+  expect(stdout).not.toContain('[DOCKED]');
+});
+
+test('get_system_agents omits Docked when every agent omits the field', () => {
+  const fixture = cloneSystemAgents();
+  for (const agent of fixture.agents) delete agent.docked;
+  const stdout = renderSystemAgents(fixture);
+  const header = agentsHeader(stdout);
+
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Docked');
+  expect(header).toContain('Combat');
+  expect(header).toContain('Offline');
+  expect(header).toContain('Status');
+});
+
+test('get_system_agents shows Docked when every agent is undocked', () => {
+  const fixture = cloneSystemAgents();
+  for (const agent of fixture.agents) agent.docked = false;
+  const stdout = renderSystemAgents(fixture);
+
+  expect(agentsHeader(stdout)).toContain('Docked');
+  expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('false');
+  expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('false');
+});
+
+test('get_system_agents shows Docked when every agent is docked', () => {
+  const fixture = cloneSystemAgents();
+  for (const agent of fixture.agents) agent.docked = true;
+  const stdout = renderSystemAgents(fixture);
+
+  expect(agentsHeader(stdout)).toContain('Docked');
+  expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('true');
+  expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('true');
+});
+
+test('get_system_agents leaves Docked blank when only some agents report it', () => {
+  const fixture = cloneSystemAgents();
+  const marlowe = fixture.agents[0] as Record<string, unknown>;
+  const ibis = fixture.agents[1] as Record<string, unknown>;
+  delete marlowe.docked;
+  ibis.docked = true;
+  const stdout = renderSystemAgents(fixture);
+
+  expect(agentsHeader(stdout)).toContain('Docked');
+  expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('true');
+  expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('');
 });

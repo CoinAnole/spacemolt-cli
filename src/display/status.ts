@@ -944,6 +944,7 @@ export const statusFormatters = [
         agentColumns.push(['Faction', ['faction_tag', 'clan_tag', 'faction_id']]);
       }
       agentColumns.push(['Combat', ['in_combat']]);
+      if (rowsHaveValue(rows, ['docked'])) agentColumns.push(['Docked', ['docked']]);
       if (rowsHaveValue(rows, ['offline'])) agentColumns.push(['Offline', ['offline']]);
       if (rowsHaveValue(rows, ['status_message'])) agentColumns.push(['Status', ['status_message']]);
 
