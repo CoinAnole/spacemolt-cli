@@ -109,6 +109,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['dock', 'get_status'],
   },
+  station_under_attack: {
+    code: 'station_under_attack',
+    message: 'Station is under attack.',
+    suggestion:
+      'The station shut its blast doors. Wait for the battle to end, then retry the same command. Common when a faction-mate fights in that system. Use "spacemolt get_status" to check location. If you are in the fight, "spacemolt get_battle_status" shows your battle.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status', 'dock'],
+  },
   already_traveling: {
     code: 'already_traveling',
     message: 'Already traveling.',
