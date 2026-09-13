@@ -1608,10 +1608,16 @@ describe('command metadata', () => {
     );
     expect(service.example).toBe('spacemolt service_prize prize-1 refuel');
     expect(service.discoverWith).toEqual(['get_nearby', 'get_status']);
-    expect(service.seeAlso).toEqual(['claim_prize', 'refuel', 'repair', 'get_guide']);
+    expect(service.seeAlso).toEqual(['claim_prize', 'refuel', 'repair', 'faction_facility_owned', 'get_guide']);
     expect(service.category).toBe('Salvage & Tow');
-    expect(service.description).toBe('Stop, resume, redirect, refuel, or repair a claimed intact prize');
+    expect(service.description).toBe(
+      'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel and repair consume fuel or repair kits from your own ship.',
+    );
     expect(CURATED_COMMAND_DESCRIPTIONS.service_prize).toBe(service.description);
+    expect(service.schema?.service_action?.description).toBe(
+      'Physical recovery action. stop, resume, and redirect are claimant-only; refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station. A yard under construction or damaged does not unlock it.',
+    );
+    expect(service.schema?.service_action?.enum).toEqual(['stop', 'resume', 'redirect', 'refuel', 'repair']);
     expect(service.args).toEqual(['prize_id', 'service_action']);
     expect(service.required).toEqual(['prize_id', 'service_action']);
     expect(getArgNames(service)).toEqual(['prize_id', 'service_action']);
@@ -1652,7 +1658,12 @@ describe('command metadata', () => {
       id: 'prize-1',
       service_action: 'refuel',
     });
-    expect(serviceDryRun.result).toContain('refuel/repair consume ship fuel or repair kits');
+    expect(serviceDryRun.result).toContain(
+      'refuel/repair consume fuel or repair kits from your own ship; redirect changes destination; stop/resume do not rewind transit.',
+    );
+    expect(serviceDryRun.result).toContain('claimant-only');
+    expect(serviceDryRun.result).toContain('Prize Recovery Yard');
+    expect(serviceDryRun.result).toContain('under construction or damaged');
   });
 
   test('facility repair help documents auto-rebuild, faction permissions, accounting, and completion discovery', () => {

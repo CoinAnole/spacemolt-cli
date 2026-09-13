@@ -206,10 +206,12 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   service_prize: {
+    description:
+      'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel and repair consume fuel or repair kits from your own ship.',
     usage: '<prize_id> <service_action> [quantity=N] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
     example: 'spacemolt service_prize prize-1 refuel',
     discoverWith: ['get_nearby', 'get_status'],
-    seeAlso: ['claim_prize', 'refuel', 'repair', 'get_guide'],
+    seeAlso: ['claim_prize', 'refuel', 'repair', 'faction_facility_owned', 'get_guide'],
     category: 'Salvage & Tow',
     apiRoute: 'POST /api/v2/spacemolt_salvage/service_prize',
     positionals: ['prize_id', 'service_action'],
@@ -218,6 +220,12 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       prize_id: 'id',
       action: 'service_action',
       destination_base_id: 'target',
+    },
+    schemaExtensions: {
+      service_action: {
+        description:
+          'Physical recovery action. stop, resume, and redirect are claimant-only; refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station. A yard under construction or damaged does not unlock it.',
+      },
     },
   },
   release_tow: {
