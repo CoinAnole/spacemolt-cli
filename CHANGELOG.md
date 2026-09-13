@@ -49,10 +49,15 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.
 - `attack` help notes that an armed faction station may join a member's fight in the same system. `hunt` help notes that a leviathan hunt may pull an armed faction station in-system (gameserver 0.604.0).
 
+### Breaking
+
+- HTTP 429 `--json` output is now `{ error: { code, message, retry_after?, limit?, scope? } }` instead of a string `error` with leftover top-level `limit` / `message`.
+
 ### Errors
 
 - `station_under_attack` now has a local suggestion: wait for the battle to end, then retry the same command. Common when a faction-mate fights in that system (gameserver 0.604.0).
 - `boarding_locked` now has a local suggestion: wait for the boarding latch to clear, then retry the emergency jump device. Flee makes no progress; the emergency warp stabilizer and emergency cloak are skipped silently (gameserver 0.601.2).
+- Commands and session create auto-retry `rate_limited` waits of at most 60 seconds from `retry_after`, `details.retry_after`, and the HTTP `Retry-After` header. `action_pending` and `ip_timed_out` are not auto-retried.
 
 ## 2.9.0 — 2026-09-08
 

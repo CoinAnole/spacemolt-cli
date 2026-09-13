@@ -1,3 +1,4 @@
+import { normalizeRateLimitError } from './rate-limit.ts';
 import { DEFAULT_USER_AGENT, FETCH_TIMEOUT_MS } from './runtime.ts';
 import type { APIResponse, JsonRequestOptions, JsonResponse } from './types.ts';
 
@@ -67,10 +68,11 @@ export async function requestJson<T = APIResponse>(
   }
 
   try {
-    return withRetryAfterHeader(
-      { status: response.status, ok: response.ok, data: (await response.json()) as T },
+    const data = normalizeRateLimitError((await response.json()) as APIResponse, {
+      status: response.status,
       retryAfterHeader,
-    );
+    }) as T;
+    return withRetryAfterHeader({ status: response.status, ok: response.ok, data }, retryAfterHeader);
   } catch {
     if (response.status === 503) return synthesizedServiceUnavailable(retryAfterHeader);
     throw new Error(`Server returned invalid JSON response (${response.status})`);

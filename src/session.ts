@@ -5,12 +5,14 @@ import * as path from 'node:path';
 import type { CliWriter } from './cli-context.ts';
 import { ServiceUnavailableError } from './errors.ts';
 import { colorsForPlain } from './output-style.ts';
+import { isRateLimitAutoRetryWait, normalizeRateLimitError } from './rate-limit.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { requestWithServiceUnavailableRetry } from './retry-after.ts';
 import {
   API_BASE,
   DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS,
   DEFAULT_USER_AGENT,
+  MAX_RATE_LIMIT_RETRIES,
   userAgentFromConfigValue,
 } from './runtime.ts';
 import { requestJson } from './transport.ts';
@@ -388,6 +390,7 @@ export interface SessionManagerOptions {
   clock?: () => number;
   sleep?: (ms: number) => Promise<void>;
   onRetryWait?: (seconds: number) => void;
+  onRateLimitWait?: (seconds: number) => void;
   env?: EnvLike;
 }
 
@@ -404,6 +407,7 @@ export class SessionManager {
   private readonly _clock: () => number;
   private readonly _sleep: (ms: number) => Promise<void>;
   private readonly _onRetryWait?: (seconds: number) => void;
+  private readonly _onRateLimitWait?: (seconds: number) => void;
   private readonly _env: EnvLike;
 
   constructor(options?: SessionManagerOptions) {
@@ -419,6 +423,7 @@ export class SessionManager {
     this._clock = options?.clock ?? Date.now;
     this._sleep = options?.sleep ?? ((ms) => Bun.sleep(ms));
     this._onRetryWait = options?.onRetryWait;
+    this._onRateLimitWait = options?.onRateLimitWait;
     this._env = options?.env ?? process.env;
   }
 
@@ -540,30 +545,50 @@ export class SessionManager {
   async createTransientSession(savedCredentials?: Pick<Session, 'username' | 'password'>): Promise<Session> {
     const colors = colorsForPlain(this._plain);
     if (this.debug) this._logger.log(`${colors.dim}[DEBUG] Creating new session...${colors.reset}`);
-    const response = await requestWithServiceUnavailableRetry(
-      async () =>
-        this.asRetryResponse(
-          await this._transport<APIResponse>(`${trimTrailingSlash(this.apiBase)}/session`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
-          }),
-        ),
-      this.serviceUnavailableRetryOpts(),
-    );
-    const data = response.data;
-    if (response.status === 503 || data.error?.code === 'service_unavailable') {
-      throw this.exhaustedServiceUnavailableError(response);
-    }
-    if (data.error) throw new Error(`Failed to create session: ${data.error.message}`);
-    if (!data.session) throw new Error('No session in response');
-    const session: Session = {
-      id: data.session.id,
-      created_at: data.session.created_at,
-      expires_at: data.session.expires_at,
-      ...savedCredentials,
+    const url = `${trimTrailingSlash(this.apiBase)}/session`;
+    const requestOpts = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      userAgent: this._userAgent ?? DEFAULT_USER_AGENT,
     };
-    return session;
+
+    let rateLimitRetries = 0;
+    while (true) {
+      const response = await requestWithServiceUnavailableRetry(
+        async () => this.asRetryResponse(await this._transport<APIResponse>(url, requestOpts)),
+        this.serviceUnavailableRetryOpts(),
+      );
+      const data = normalizeRateLimitError(response.data, {
+        status: response.status,
+        retryAfterHeader: response.retryAfterHeader,
+        nowMs: this._clock(),
+      });
+      if (response.status === 503 || data.error?.code === 'service_unavailable') {
+        throw this.exhaustedServiceUnavailableError({ ...response, data });
+      }
+      const retryAfter = isRateLimitAutoRetryWait(data.error);
+      if (retryAfter !== undefined) {
+        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) {
+          throw new Error(`Failed to create session: ${data.error?.message ?? 'Rate limited.'}`);
+        }
+        rateLimitRetries += 1;
+        const waitCeil = Math.ceil(retryAfter);
+        this._onRateLimitWait?.(waitCeil);
+        await this._sleep(waitCeil * 1000);
+        continue;
+      }
+      if (data.error) {
+        const message = data.error.message || data.error.code || 'unknown error';
+        throw new Error(`Failed to create session: ${message}`);
+      }
+      if (!data.session) throw new Error('No session in response');
+      return {
+        id: data.session.id,
+        created_at: data.session.created_at,
+        expires_at: data.session.expires_at,
+        ...savedCredentials,
+      };
+    }
   }
 
   isSessionExpired(session: Session): boolean {

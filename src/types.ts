@@ -20,8 +20,12 @@ export interface APIResponse {
   error?: {
     code: string;
     message: string;
+    /** Legacy alias. Gameserver 0.601.6: never sent. Kept as a parse fallback. */
     wait_seconds?: number;
     retry_after?: number;
+    limit?: string;
+    scope?: string;
+    pending_command?: string;
     details?: { [key: string]: JsonValue };
   };
 }
