@@ -88,6 +88,29 @@ function objectivesSummary(objectives: unknown): string {
   return Array.isArray(objectives) ? objectives.map(summarizeObjective).filter(Boolean).join('; ') : '';
 }
 
+function summarizeCommunityProgressMap(value: unknown): string {
+  if (!isRecord(value)) return '';
+  return Object.entries(value)
+    .filter(
+      ([, entry]) => entry !== undefined && entry !== null && entry !== '' && !isRecord(entry) && !Array.isArray(entry),
+    )
+    .map(([item, entry]) => `${item}: ${entry}`)
+    .join(', ');
+}
+
+function summarizeCommunityStatus(mission: Record<string, unknown>): string {
+  if (mission.community === false) return '';
+  const parts: string[] = [];
+  if (typeof mission.community_percent === 'number' && Number.isFinite(mission.community_percent)) {
+    parts.push(`${mission.community_percent}%`);
+  }
+  const progress = summarizeCommunityProgressMap(mission.community_progress);
+  if (progress) parts.push(progress);
+  if (parts.length) return parts.join(' ');
+  if (mission.community === true) return 'yes';
+  return '';
+}
+
 function summarizeRewards(rewards: unknown): string {
   if (!isRecord(rewards)) return '';
   const parts: string[] = [];
@@ -265,6 +288,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Title', ['title', 'name']],
     ['ID', ['mission_id', 'id', 'template_id']],
     ['Type', ['type']],
+    ['Community', ['community_summary']],
     ['Objectives', ['objectives_summary']],
     ['Difficulty', ['difficulty']],
     ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
@@ -1156,6 +1180,7 @@ export const genericFormatters = [
         ...mission,
         objectives_summary: objectivesSummary(mission.objectives),
         rewards_summary: summarizeRewards(mission.rewards),
+        community_summary: summarizeCommunityStatus(mission),
       }));
 
       const columns: Array<[string, string[]]> = [
@@ -1167,8 +1192,13 @@ export const genericFormatters = [
         ['Rewards', ['rewards_summary']],
         ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
       ];
+      insertOptionalColumn(columns, rows, 'Community', ['community_summary'], 'Type');
       if (rows.some((mission) => hasScalarValue(mission, ['issuing_base', 'issuing_base_id']))) {
-        columns.splice(4, 0, ['Issuing Base', ['issuing_base', 'issuing_base_id']]);
+        const objectivesIndex = columns.findIndex(([label]) => label === 'Objectives');
+        // Fail closed: splice(-1) would insert before Expires. Skip rather than invent a third order.
+        if (objectivesIndex >= 0) {
+          columns.splice(objectivesIndex, 0, ['Issuing Base', ['issuing_base', 'issuing_base_id']]);
+        }
       }
 
       printCompactTable('Active Missions', rows, columns, { maxCellWidth: 64 });
@@ -1344,6 +1374,7 @@ export const genericFormatters = [
             ...row,
             rewards_summary: summarizeRewards(row.rewards),
             objectives_summary: objectivesSummary(row.objectives),
+            community_summary: summarizeCommunityStatus(row),
           };
         }
         return row;

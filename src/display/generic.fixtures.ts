@@ -251,6 +251,33 @@ export const missionsFixture = {
   ],
 };
 
+export const missionsCommunityFixture = {
+  base_id: 'earth_station',
+  base_name: 'Earth Station',
+  missions: [
+    {
+      difficulty: 2,
+      mission_id: 'community_ore_drive',
+      title: 'Community Ore Drive',
+      type: 'delivery',
+      description: 'Contribute iron ore to the faction stockpile.',
+      expires_in_ticks: 72,
+      community: true,
+      community_percent: 12.5,
+      community_progress: { ore_iron: '90/720' },
+      rewards: { credits: 100 },
+      objectives: [
+        {
+          type: 'deliver_item',
+          description: 'Deliver 50 iron ore',
+          item_id: 'ore_iron',
+          quantity: 50,
+        },
+      ],
+    },
+  ],
+};
+
 export const missionsBountyFixture = {
   base_id: 'earth_station',
   base_name: 'Earth Station',
@@ -421,6 +448,40 @@ export const activeMissionsFixture = {
         },
         title: 'Faction Supply Delivery',
         type: 'delivery',
+      },
+    ],
+    max_missions: 5,
+  },
+};
+
+export const activeMissionsCommunityFixture = {
+  message: 'Active missions',
+  missions: {
+    active: [
+      {
+        accepted_at: '2026-09-12T18:00:00Z',
+        community: true,
+        community_percent: 12.5,
+        community_progress: { ore_iron: '90/720' },
+        description: 'Contribute iron ore to the faction stockpile.',
+        difficulty: 2,
+        expires_in_ticks: 40,
+        issuing_base: 'Earth Station',
+        mission_id: 'mission-community-ore-1',
+        percent_complete: 12.5,
+        title: 'Community Ore Drive',
+        type: 'delivery',
+        rewards: { credits: 100, reputation: 1 },
+        objectives: [
+          {
+            type: 'deliver_item',
+            description: 'Deliver Iron Ore',
+            item_id: 'ore_iron',
+            current: 40,
+            required: 40,
+            completed: true,
+          },
+        ],
       },
     ],
     max_missions: 5,
@@ -1112,6 +1173,7 @@ export const genericFixtureCases = {};
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   get_active_missions_bounty: { command: 'get_active_missions', fixture: activeMissionsBountyFixture },
+  get_active_missions_community: { command: 'get_active_missions', fixture: activeMissionsCommunityFixture },
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
@@ -1129,6 +1191,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   get_missions_bounty: { command: 'get_missions', fixture: missionsBountyFixture },
+  get_missions_community: { command: 'get_missions', fixture: missionsCommunityFixture },
   faction_list_missions: { command: 'faction_list_missions', fixture: factionListMissionsFixture },
   faction_list_missions_empty: { command: 'faction_list_missions', fixture: factionListMissionsEmptyFixture },
   get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },
