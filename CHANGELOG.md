@@ -8,6 +8,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+### Navigation
+
+- `dock` help names `station_under_attack` and the 0.604.0 join rules (armed join; unarmed/wrecked stay out; wildlife hunts unless leviathan).
+
 ### Observation
 
 - Observation `--follow` headlines and `subscribe_observation` snapshots now always print `active_scan` as true or false (gameserver 0.599.5). If you subscribed with `active_scan=true`, `active scan: false` on an update is the sweep shutting down.

@@ -929,6 +929,13 @@ describe('help output branches', () => {
     );
   });
 
+  test('command search for station_under_attack finds dock', () => {
+    const capture = captureWriter();
+    showCommandSearch('station_under_attack', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}dock /m);
+  });
+
   test('command search for prize finds attack, get_nearby, and scan', () => {
     const capture = captureWriter();
     showCommandSearch('prize', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });

@@ -535,6 +535,30 @@ describe('command metadata', () => {
     expect(help).toContain('intact prize');
   });
 
+  test('dock help names station_under_attack and faction-station join rules', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.dock;
+    expect(config?.usage).toBe('');
+    expect(config?.description).toContain('station_under_attack');
+    expect(config?.description).toContain('armed faction station');
+    expect(config?.description).toMatch(/unarmed outposts and wrecked stations stay out/i);
+    expect(config?.description).toContain(
+      'Faction stations also stay out of wildlife hunts unless the creature is a leviathan',
+    );
+    expect(config?.description).toMatch(/wait for the battle/i);
+    expect(config?.description).not.toMatch(/wildlife hunts except leviathans/i);
+    expect(config?.seeAlso).toEqual(
+      expect.arrayContaining(['undock', 'get_status', 'view_market', 'get_battle_status']),
+    );
+    expect(config?.discoverWith).toEqual(['get_status', 'get_system']);
+
+    const help = captureHelp('dock');
+    expect(help).toContain('station_under_attack');
+    expect(help).toContain('armed faction station');
+    expect(help).toContain('get_battle_status');
+    expect(help).toContain('spacemolt dock');
+    expect(help).not.toContain('spacemolt dock <args...>');
+  });
+
   test('attack help documents persistent battle semantics and repeat-attack risks', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.attack;
     expect(config?.usage).toMatch(/player.*pirate.*empire NPC.*wildlife.*intact prize.*station/i);

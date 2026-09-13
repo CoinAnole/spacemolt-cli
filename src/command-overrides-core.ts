@@ -76,10 +76,11 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   dock: {
     usage: '',
-    description: 'Dock at the current station.',
+    description:
+      'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end.',
     example: 'spacemolt dock',
     discoverWith: ['get_status', 'get_system'],
-    seeAlso: ['undock', 'get_status', 'view_market'],
+    seeAlso: ['undock', 'get_status', 'view_market', 'get_battle_status'],
     category: 'Navigation',
     apiRoute: 'POST /api/v2/spacemolt/dock',
   },
