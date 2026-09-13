@@ -907,6 +907,7 @@ export const getSystemAgentsFixture = {
       status_message: 'surveying routes',
       offline: false,
       in_combat: false,
+      docked: false,
     },
     {
       username: 'Ibis',
@@ -917,6 +918,7 @@ export const getSystemAgentsFixture = {
       status_message: 'hauling ore',
       offline: true,
       in_combat: true,
+      docked: true,
     },
   ],
 };

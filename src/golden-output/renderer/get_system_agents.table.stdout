@@ -3,9 +3,9 @@
 
 === Agents ===
 
-  Name    | ID       | Ship      | Faction | Combat | Offline | Status          
-  --------+----------+-----------+---------+--------+---------+-----------------
-  Marlowe | player-1 | Surveyor  | SMC     | false  | false   | surveying routes
-  Ibis    | player-2 | Long Haul | SMC     | true   | true    | hauling ore     
+  Name    | ID       | Ship      | Faction | Combat | Docked | Offline | Status          
+  --------+----------+-----------+---------+--------+--------+---------+-----------------
+  Marlowe | player-1 | Surveyor  | SMC     | false  | false  | false   | surveying routes
+  Ibis    | player-2 | Long Haul | SMC     | true   | true   | true    | hauling ore     
 count 2
 offline collapsed 4
