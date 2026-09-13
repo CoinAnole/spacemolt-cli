@@ -2752,4 +2752,44 @@ describe('help output branches', () => {
     expect(output).toContain('"faction" is a help group.');
     expect(output).not.toContain('"faction" is a command group.');
   });
+
+  test('displayError gives boarding_locked a wait-then-retry suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError(
+      'use_item',
+      { code: 'boarding_locked', message: 'Boarding party attached; emergency jump refused.' },
+      { context },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [boarding_locked]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('emergency_warp_device');
+    expect(output).toContain('spacemolt get_battle_status');
+    expect(output).toContain('spacemolt battle_stance fire');
+    expect(output).toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('spacemolt flee');
+
+    const quiet = captureWriter();
+    displayError(
+      'use_item',
+      { code: 'boarding_locked', message: 'Boarding party attached; emergency jump refused.' },
+      {
+        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
+      },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [boarding_locked]:');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+    expect(quiet.stderr.join('\n')).not.toContain('Next:');
+  });
 });

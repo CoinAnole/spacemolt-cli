@@ -323,6 +323,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['arena_challenges', 'use_item'],
   },
+  boarding_locked: {
+    code: 'boarding_locked',
+    message: 'Boarding party attached; emergency jump refused.',
+    suggestion:
+      'Marines are attached to your ship or to the ship you are boarding. emergency_warp_device cannot jump until the latch clears. Flee makes no progress; the emergency warp stabilizer and emergency cloak are skipped silently. Run "spacemolt get_battle_status" to inspect boarding. If you are the boarder, "spacemolt battle_stance fire" starts a non-instant withdrawal. Retry "spacemolt use_item" after the latch clears.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_battle_status', 'battle_stance', 'use_item'],
+  },
   deposit_too_sparse: {
     code: 'deposit_too_sparse',
     message: 'Deposit is too sparse for this mining array.',

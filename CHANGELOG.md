@@ -51,6 +51,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Errors
 
 - `station_under_attack` now has a local suggestion: wait for the battle to end, then retry the same command. Common when a faction-mate fights in that system (gameserver 0.604.0).
+- `boarding_locked` now has a local suggestion: wait for the boarding latch to clear, then retry the emergency jump device. Flee makes no progress; the emergency warp stabilizer and emergency cloak are skipped silently (gameserver 0.601.2).
 
 ## 2.9.0 — 2026-09-08
 
