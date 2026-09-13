@@ -662,6 +662,12 @@ export const subscribeObservationFixture = {
   unknown_signature: true,
 };
 
+/** Running NPC challenge snapshot; copies arena_npcs only (arena_npc_count is nearby-only). */
+export const subscribeObservationArenaFixture = {
+  ...subscribeObservationFixture,
+  arena_npcs: nearbyArenaFixture.arena_npcs,
+};
+
 export const arrivalFixture = {
   details: {
     action: 'travel',
@@ -1017,6 +1023,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_nearby_arena: { command: 'get_nearby', fixture: nearbyArenaFixture },
   get_nearby_arena_flees: { command: 'get_nearby', fixture: nearbyArenaFleesFixture },
   subscribe_observation: { command: 'subscribe_observation', fixture: subscribeObservationFixture },
+  subscribe_observation_arena: { command: 'subscribe_observation', fixture: subscribeObservationArenaFixture },
   get_skills: { command: 'get_skills', fixture: skillsFixture },
   get_map: { command: 'get_map', fixture: getMapFixture },
   get_map_starless: { command: 'get_map', fixture: getMapStarlessFixture },
