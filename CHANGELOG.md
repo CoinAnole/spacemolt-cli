@@ -42,6 +42,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_system_agents` table output lists optional Docked (`true`/`false`) when the server reports `NearbyPlayer.docked` (gameserver 0.601.1). That is the same boolean `get_nearby` already surfaces as `[DOCKED]`; this table does not use that marker. Docked pilots cannot be attacked, scanned, or traded with until they undock.
 
+### Combat
+
+- `attack` help notes that an armed faction station may join a member's fight in the same system. `hunt` help notes that a leviathan hunt may pull an armed faction station in-system (gameserver 0.604.0).
+
 ### Errors
 
 - `station_under_attack` now has a local suggestion: wait for the battle to end, then retry the same command. Common when a faction-mate fights in that system (gameserver 0.604.0).
