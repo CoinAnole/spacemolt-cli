@@ -99,6 +99,44 @@ describe('deposit_too_sparse', () => {
   });
 });
 
+describe('rate_limited', () => {
+  test('suggestion names session 30/300 limits and is not query-only', () => {
+    expect(ERROR_REGISTRY.rate_limited?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.rate_limited?.auth).toBe(false);
+    expect(isRetryableError('rate_limited')).toBe(true);
+    expect(isAuthError('rate_limited')).toBe(false);
+    expect(getErrorSuggestion('rate_limited')).toContain('30');
+    expect(getErrorSuggestion('rate_limited')).toContain('300');
+    expect(getErrorSuggestion('rate_limited')).not.toContain('Query rate limited');
+  });
+});
+
+describe('action_pending', () => {
+  test('is retryable, related to get_status, and forbids immediate resubmit', () => {
+    expect(ERROR_REGISTRY.action_pending?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.action_pending?.auth).toBe(false);
+    expect(isRetryableError('action_pending')).toBe(true);
+    expect(isAuthError('action_pending')).toBe(false);
+    expect(isKnownErrorCode('action_pending')).toBe(true);
+    expect(ERROR_CODES).toContain('action_pending');
+    expect(getRelatedCommands('action_pending')).toEqual(['get_status']);
+    expect(getErrorSuggestion('action_pending')).toContain('Do not resubmit immediately');
+  });
+});
+
+describe('ip_timed_out', () => {
+  test('is not retryable, is not an authentication error, and tells the user to stop', () => {
+    expect(ERROR_REGISTRY.ip_timed_out?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.ip_timed_out?.auth).toBe(false);
+    expect(isRetryableError('ip_timed_out')).toBe(false);
+    expect(isAuthError('ip_timed_out')).toBe(false);
+    expect(isKnownErrorCode('ip_timed_out')).toBe(true);
+    expect(ERROR_CODES).toContain('ip_timed_out');
+    expect(getErrorSuggestion('ip_timed_out')).toContain('do not keep retrying');
+    expect(getRelatedCommands('ip_timed_out')).toEqual([]);
+  });
+});
+
 describe('station_under_attack', () => {
   test('is retryable and is not an authentication error', () => {
     expect(ERROR_REGISTRY.station_under_attack?.retryable).toBe(true);

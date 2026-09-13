@@ -58,6 +58,9 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `station_under_attack` now has a local suggestion: wait for the battle to end, then retry the same command. Common when a faction-mate fights in that system (gameserver 0.604.0).
 - `boarding_locked` now has a local suggestion: wait for the boarding latch to clear, then retry the emergency jump device. Flee makes no progress; the emergency warp stabilizer and emergency cloak are skipped silently (gameserver 0.601.2).
 - Commands and session create auto-retry `rate_limited` waits of at most 60 seconds from `retry_after`, `details.retry_after`, and the HTTP `Retry-After` header. `action_pending` and `ip_timed_out` are not auto-retried.
+- `rate_limited` suggestion now names 30 mutations and 300 queries per session, plus the IP-wide timeout after 50 rejections/min.
+- Human API errors print `Limit:` / `Scope:` when present, and `Pending command:` for `action_pending`.
+- Local suggestions for `action_pending` (one mutation per tick; do not resubmit immediately) and `ip_timed_out` (do not keep retrying). `ip_timed_out` is not retryable.
 
 ## 2.9.0 — 2026-09-08
 
