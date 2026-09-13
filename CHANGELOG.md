@@ -16,6 +16,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - Observation `--follow` headlines and `subscribe_observation` snapshots now always print `active_scan` as true or false (gameserver 0.599.5). If you subscribed with `active_scan=true`, `active scan: false` on an update is the sweep shutting down.
 - Observation `--follow` headlines now count arena challenge enemies and intact prizes (`arena_npcs_changed` / `arena_npcs_departed`, `prizes_changed` / `prizes_departed`; gameserver 0.601.0). A knocked-out arena enemy is a hull 0 change, not a departure — enemies leave the feed only when the match ends. Help documents the live arena watch.
+- `subscribe_observation` snapshots of a running NPC challenge are golden'd (`subscribe_observation_arena`).
 
 - `repair` help documents named `target=` and that `repaired` is hull actually restored. Usage is `[id] [quantity] [target=player|fleet]`; kit counts are `quantity=3`. **No parser change.**
 - `no_space` suggests a full hold on loot left the wreck untouched. `cargo_capacity_exceeded` no longer names `loot_wreck`.

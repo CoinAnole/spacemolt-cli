@@ -25,6 +25,7 @@ import {
   poiWorkabilityFixture,
   scanCreatureFixture,
   stationPoiInfoFixture,
+  subscribeObservationArenaFixture,
   subscribeObservationFixture,
   systemInfoFixture,
 } from './status.fixtures.ts';
@@ -990,6 +991,30 @@ test('subscribe_observation omits Arena NPCs when arena fields are absent', () =
   ).stdout.join('\n');
 
   expect(stdout).not.toContain('Arena NPCs');
+});
+
+test('subscribe_observation prints Arena NPCs after Pirates and before Empire NPCs', () => {
+  expect(subscribeObservationArenaFixture).not.toHaveProperty('arena_npc_count');
+  const stdout = renderStructuredResult(
+    'subscribe_observation',
+    structuredClone(subscribeObservationArenaFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const pirates = stdout.indexOf('Pirates (1):');
+  const arena = stdout.indexOf('Arena NPCs (2):');
+  const empire = stdout.indexOf('Empire NPCs (1):');
+
+  expect(pirates).toBeGreaterThan(-1);
+  expect(arena).toBeGreaterThan(pirates);
+  expect(empire).toBeGreaterThan(arena);
+  expect(stdout).toContain('  (in-match only; cannot be attacked from outside — see: arena status)');
+  expect(stdout).toContain(
+    '  Ring Cleaver [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-first-blood - ready',
+  );
+  expect(stdout).toContain(
+    '  Boss Trial Master [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding',
+  );
 });
 
 test('subscribe_observation prints Active scan: true', () => {

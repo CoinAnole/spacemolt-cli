@@ -46,6 +46,8 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('get_nearby_livery');
     expect(report.requiredCoverageKeys).toContain('get_nearby_arena');
     expect(report.highValueFixtureLabels).toContain('get_nearby_arena');
+    expect(report.requiredCoverageKeys).toContain('subscribe_observation_arena');
+    expect(report.highValueFixtureLabels).toContain('subscribe_observation_arena');
     expect(report.requiredCoverageKeys).toContain('sell_wreck_partial');
     expect(report.highValueFixtureLabels).toContain('sell_wreck_partial');
     expect(report.requiredCoverageKeys).toContain('sell_wreck_modules');

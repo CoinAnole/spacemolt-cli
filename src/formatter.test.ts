@@ -47,6 +47,7 @@ import {
   storageFixture,
   storageViewUndockedFixture,
   subscribeMarketFixture,
+  subscribeObservationArenaFixture,
   subscribeObservationFixture,
   systemInfoFixture,
   unloadPassengerBulkFixture,
@@ -4841,6 +4842,21 @@ describe('structuredContent formatters', () => {
     expect(neither.stdout).toContain('Raider (skiff) - hostile');
     expect(neither.stdout).not.toContain('pirate_');
     expect(whitespaceName.stdout).toContain('Raider (skiff) - pirate_voss - hostile');
+  });
+
+  test('subscribe_observation prints Arena NPCs from subscribeObservationArenaFixture', () => {
+    expect(subscribeObservationArenaFixture).not.toHaveProperty('arena_npc_count');
+    const { stdout, stderr } = captureStructuredOutput('subscribe_observation', subscribeObservationArenaFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arena NPCs (2):');
+    expect(stdout).toContain(
+      'Ring Cleaver [arena-cleaver-1] (Fighter) - hull 180/180 - shield 60/60 - battle btl-first-blood - ready',
+    );
+    expect(stdout).toContain(
+      'Boss Trial Master [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding',
+    );
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('subscribe_observation formats v0.554 NPC arrays without pirate_count', () => {
