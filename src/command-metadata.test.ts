@@ -3246,4 +3246,44 @@ describe('command metadata', () => {
     });
     expect(errors).toEqual([]);
   });
+
+  test('use_item help names boarding_locked on emergency_warp_device', () => {
+    const config = COMMANDS.use_item;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('use_item command is missing from COMMANDS');
+
+    expect(config.description).toContain('boarding_locked');
+    expect(config.description).toContain('emergency_warp_device');
+    expect(config.description).toContain('emergency jump');
+    expect(config.description).toContain('skipped');
+    expect(config.description).toMatch(/withdrawing/i);
+    expect(config.description).toMatch(/Flee makes no progress/);
+    expect(config.description).not.toContain('spacemolt flee');
+    expect(config.description).not.toContain('`');
+    expect(CURATED_COMMAND_DESCRIPTIONS.use_item).toBe(config.description);
+
+    expect(config.usage).toContain('emergency_warp_device');
+    expect(config.usage).toContain('shield_charge');
+    expect(config.usage).not.toContain('emergency_warp,');
+    expect(config.usage).not.toContain('shield_cell');
+
+    expect(config.schema?.id?.description).toContain('emergency_warp_device');
+    expect(config.schema?.id?.description).toContain('shield_charge');
+    expect(config.schema?.id?.description).not.toContain('emergency_warp)');
+    expect(config.schema?.id?.description).not.toContain('shield_cell');
+
+    expect(config.discoverWith).toEqual(['get_cargo']);
+    expect(config.seeAlso).toEqual(['get_cargo', 'get_battle_status', 'battle_stance']);
+    for (const related of [...(config.discoverWith ?? []), ...(config.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `use_item related command "${related}"`).toBe(true);
+    }
+
+    const help = captureHelp('use_item');
+    expect(help).toContain('boarding_locked');
+    expect(help).toContain('emergency_warp_device');
+    expect(help).toContain('emergency jump');
+    expect(help).toContain('get_battle_status');
+    expect(help).toContain('battle_stance');
+    expect(help).not.toContain('`');
+  });
 });

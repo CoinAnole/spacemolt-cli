@@ -46,6 +46,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### Combat
 
+- `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.
 - `attack` help notes that an armed faction station may join a member's fight in the same system. `hunt` help notes that a leviathan hunt may pull an armed faction station in-system (gameserver 0.604.0).
 
 ### Errors
