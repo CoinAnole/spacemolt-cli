@@ -1,0 +1,19 @@
+
+message: "Active missions"
+missions:
+  active:
+    - accepted_at: 2026-09-12T18:00:00Z
+      community: true
+      community_percent: 12.5
+      community_progress: {ore_iron: 90/720}
+      description: "Contribute iron ore to the faction stockpile."
+      difficulty: 2
+      expires_in_ticks: 40
+      issuing_base: "Earth Station"
+      mission_id: "mission-community-ore-1"
+      percent_complete: 12.5
+      title: "Community Ore Drive"
+      type: delivery
+      rewards: {credits: 100, reputation: 1}
+      objectives: [{type: deliver_item, description: "Deliver Iron Ore", item_id: ore_iron, current: 40, required: 40, completed: true}]
+  max_missions: 5

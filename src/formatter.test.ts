@@ -3,6 +3,7 @@ import type { CliRuntimeContext } from './cli-context';
 import { displayStructuredResult } from './client';
 import { renderResult, renderStructuredResult } from './display';
 import {
+  activeMissionsCommunityFixture,
   activeMissionsFixture,
   baseFixture,
   baseRepairsFixture,
@@ -33,6 +34,7 @@ import {
   listStationPassengersWithLoungeFixture,
   loadPassengerConnectingFixture,
   missionsBountyFixture,
+  missionsCommunityFixture,
   missionsFixture,
   nearbyBossFixture,
   nearbyFixture,
@@ -5510,6 +5512,302 @@ describe('structuredContent formatters', () => {
     expect(withBase.stdout).not.toContain('ore_iron');
   });
 
+  test('get_active_missions shows community percent and progress in an optional Community column', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', activeMissionsCommunityFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community Ore Drive'));
+    const communityIndex = cells(header ?? '').indexOf('Community');
+
+    expect(stderr).toBe('');
+    expect(header).toBeDefined();
+    expect(cells(row ?? '')[communityIndex]).toContain('12.5%');
+    expect(cells(row ?? '')[communityIndex]).toContain('ore_iron: 90/720');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_active_missions Community cell is yes when only the boolean is set', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-community-yes',
+            title: 'Community Flag',
+            type: 'delivery',
+            community: true,
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community Flag'));
+    const communityIndex = cells(header ?? '').indexOf('Community');
+
+    expect(stderr).toBe('');
+    expect(header).toBeDefined();
+    expect(cells(row ?? '')[communityIndex]).toBe('yes');
+    expect(cells(row ?? '')[communityIndex]).not.toContain('no');
+    expect(cells(row ?? '')[communityIndex]).not.toContain('false');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions hides Community when every row is false or omitted', () => {
+    const omitted = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-plain',
+            title: 'Ordinary Delivery',
+            type: 'delivery',
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const falseOnly = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-not-community',
+            title: 'Private Delivery',
+            type: 'delivery',
+            community: false,
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(omitted.stderr).toBe('');
+    expect(omitted.stdout).not.toContain('Community');
+    expect(falseOnly.stdout).not.toContain('Community');
+    expect(omitted.stdout).not.toContain('=== Response ===');
+    expect(falseOnly.stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions hides Community when community is false even with percent and progress', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-openapi-false',
+            title: 'Dumped False',
+            type: 'delivery',
+            community: false,
+            community_percent: 1,
+            community_progress: { ore_iron: '90/720' },
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Community');
+    expect(stdout).not.toContain('1%');
+    expect(stdout).not.toContain('ore_iron: 90/720');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions shows Community when boolean is omitted but percent or progress is present', () => {
+    const both = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-omitted-progress',
+            title: 'Omitted Boolean',
+            type: 'delivery',
+            community_percent: 12.5,
+            community_progress: { ore_iron: '90/720' },
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const zeroPercent = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-zero-percent',
+            title: 'Zero Percent',
+            type: 'delivery',
+            community_percent: 0,
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const bothHeader = both.stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const bothRow = both.stdout.split('\n').find((line) => line.includes('|') && line.includes('Omitted Boolean'));
+    const zeroHeader = zeroPercent.stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const zeroRow = zeroPercent.stdout.split('\n').find((line) => line.includes('|') && line.includes('Zero Percent'));
+
+    expect(both.stderr).toBe('');
+    expect(cells(bothRow ?? '')[cells(bothHeader ?? '').indexOf('Community')]).toBe('12.5% ore_iron: 90/720');
+    expect(zeroPercent.stderr).toBe('');
+    expect(cells(zeroRow ?? '')[cells(zeroHeader ?? '').indexOf('Community')]).toBe('0%');
+    expect(both.stdout).not.toContain('=== Response ===');
+    expect(both.stdout).not.toContain('[object Object]');
+  });
+
+  test('get_active_missions mixed community and ordinary rows leave ordinary Community cells blank', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-community-ore-1',
+            title: 'Community Ore Drive',
+            type: 'delivery',
+            community: true,
+            community_percent: 12.5,
+            community_progress: { ore_iron: '90/720' },
+            issuing_base: 'Earth Station',
+            rewards: {},
+          },
+          {
+            mission_id: 'mission-distress-combatdummy6',
+            title: 'Distress Call: CombatDummy6',
+            type: 'distress',
+            issuing_base: 'Markab Rescue Station',
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const headerCells = cells(header ?? '');
+    const communityIndex = headerCells.indexOf('Community');
+    const communityRow = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community Ore Drive'));
+    const distressRow = stdout.split('\n').find((line) => line.includes('|') && line.includes('CombatDummy6'));
+
+    expect(stderr).toBe('');
+    expect(headerCells.slice(headerCells.indexOf('Type'), headerCells.indexOf('Objectives') + 1)).toEqual([
+      'Type',
+      'Community',
+      'Difficulty',
+      'Issuing Base',
+      'Objectives',
+    ]);
+    expect(cells(communityRow ?? '')[communityIndex]).toBe('12.5% ore_iron: 90/720');
+    expect(cells(distressRow ?? '')[communityIndex]).toBe('');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_active_missions no-community header stays Type | Difficulty | Issuing Base | Objectives', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', activeMissionsFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Issuing Base'));
+
+    expect(stderr).toBe('');
+    const headerCells = cells(header ?? '');
+    expect(headerCells.slice(headerCells.indexOf('Type'), headerCells.indexOf('Objectives') + 1)).toEqual([
+      'Type',
+      'Difficulty',
+      'Issuing Base',
+      'Objectives',
+    ]);
+    expect(header).not.toContain('Community');
+  });
+
+  test('get_active_missions skips nested community_progress objects', () => {
+    const omitted = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-nested-progress',
+            title: 'Nested Progress',
+            type: 'delivery',
+            community_progress: { ore_iron: { current: 1 } },
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const flagged = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-nested-yes',
+            title: 'Nested Yes',
+            type: 'delivery',
+            community: true,
+            community_progress: { ore_iron: { current: 1 } },
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const flaggedHeader = flagged.stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const flaggedRow = flagged.stdout.split('\n').find((line) => line.includes('|') && line.includes('Nested Yes'));
+
+    expect(omitted.stderr).toBe('');
+    expect(omitted.stdout).not.toContain('Community');
+    expect(omitted.stdout).not.toContain('[object Object]');
+    expect(flagged.stderr).toBe('');
+    expect(cells(flaggedRow ?? '')[cells(flaggedHeader ?? '').indexOf('Community')]).toBe('yes');
+    expect(flagged.stdout).not.toContain('[object Object]');
+    expect(omitted.stdout).not.toContain('=== Response ===');
+    expect(flagged.stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions shows Community and inventory suffix together', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-community-inventory',
+            title: 'Community Inventory',
+            type: 'delivery',
+            community: true,
+            community_percent: 12.5,
+            community_progress: { ore_iron: '90/720' },
+            objectives: [
+              {
+                description: 'Deliver Iron Ore',
+                item_id: 'ore_iron',
+                current: 40,
+                required: 40,
+                in_cargo: 2,
+                in_storage: 3,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community Inventory'));
+    const headerCells = cells(header ?? '');
+
+    expect(stderr).toBe('');
+    expect(header).toBeDefined();
+    expect(cells(row ?? '')[headerCells.indexOf('Community')]).toBe('12.5% ore_iron: 90/720');
+    expect(cells(row ?? '')[headerCells.indexOf('Objectives')]).toContain('cargo:2');
+    expect(cells(row ?? '')[headerCells.indexOf('Objectives')]).toContain('storage:3');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
   test('get_missions mixed board shows bounty objectives beside existing combat rows', () => {
     const { stdout, stderr } = captureStructuredOutput('get_missions', missionsBountyFixture);
 
@@ -5518,7 +5816,76 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Hunt Kestrel');
     expect(stdout).toContain('bounty');
     expect(stdout).toContain('Destroy Kestrel');
+    expect(stdout).not.toContain('Community');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_missions community board shows Community between Type and Objectives', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', missionsCommunityFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community Ore Drive'));
+    const headerCells = cells(header ?? '');
+
+    expect(stderr).toBe('');
+    expect(headerCells.slice(headerCells.indexOf('Type'), headerCells.indexOf('Difficulty') + 1)).toEqual([
+      'Type',
+      'Community',
+      'Objectives',
+      'Difficulty',
+    ]);
+    expect(cells(row ?? '')[headerCells.indexOf('Community')]).toBe('12.5% ore_iron: 90/720');
+    expect(cells(row ?? '')[headerCells.indexOf('Objectives')]).toBe('Deliver 50 iron ore ore_iron');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_missions one-off community row keeps Type | Community | Objectives | Difficulty', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', {
+      missions: [
+        {
+          mission_id: 'community_one_off',
+          title: 'Community One Off',
+          type: 'delivery',
+          difficulty: 2,
+          community: true,
+          community_percent: 12.5,
+          community_progress: { ore_iron: '90/720' },
+          objectives: [
+            {
+              type: 'deliver_item',
+              description: 'Deliver 50 iron ore',
+              item_id: 'ore_iron',
+              quantity: 50,
+            },
+          ],
+        },
+      ],
+    });
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community'));
+    const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Community One Off'));
+    const headerCells = cells(header ?? '');
+
+    expect(stderr).toBe('');
+    expect(headerCells.slice(headerCells.indexOf('Type'), headerCells.indexOf('Difficulty') + 1)).toEqual([
+      'Type',
+      'Community',
+      'Objectives',
+      'Difficulty',
+    ]);
+    expect(cells(row ?? '')[headerCells.indexOf('Community')]).toBe('12.5% ore_iron: 90/720');
+    expect(cells(row ?? '')[headerCells.indexOf('Objectives')]).toBe('Deliver 50 iron ore ore_iron');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_missions ordinary board omits Community', () => {
+    const ordinary = captureStructuredOutput('get_missions', missionsFixture);
+
+    expect(ordinary.stderr).toBe('');
+    expect(ordinary.stdout).not.toContain('Community');
+    expect(ordinary.stdout).not.toContain('=== Response ===');
   });
 
   test('faction_list_missions mixed board prints officer columns and bounty targets', () => {
@@ -5527,12 +5894,16 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Faction Missions ===');
     expect(stdout).toContain('Deliver Iron Ore');
+    expect(stdout).toContain('Deliver 50 iron ore iron_ore');
     expect(stdout).toContain('bounty');
     expect(stdout).toContain('Kestrel');
     expect(stdout).toContain('player_unresolved_bounty');
     expect(stdout).not.toContain('9c8913b2cf825728a2404c9e4c4d7afb');
     expect(stdout).toContain('posted 3/3');
     expect(stdout).toContain('Posted by');
+    expect(stdout).not.toContain('Community');
+    expect(stdout).not.toContain('cargo:');
+    expect(stdout).not.toContain('storage:');
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('=== Missions ===');
   });
