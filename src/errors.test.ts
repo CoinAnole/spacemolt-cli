@@ -179,3 +179,24 @@ describe('fit capacity errors', () => {
     expect(getRelatedCommands('no_space')).toEqual(['get_ship', 'sell', 'jettison', 'loot_wreck', 'install_mod']);
   });
 });
+
+describe('boarding_locked', () => {
+  test('is retryable and is not an authentication error', () => {
+    expect(ERROR_REGISTRY.boarding_locked?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.boarding_locked?.auth).toBe(false);
+    expect(isRetryableError('boarding_locked')).toBe(true);
+    expect(isAuthError('boarding_locked')).toBe(false);
+    expect(isKnownErrorCode('boarding_locked')).toBe(true);
+    expect(ERROR_CODES).toContain('boarding_locked');
+    expect(getErrorSuggestion('boarding_locked')).toContain('emergency_warp_device');
+    expect(getErrorSuggestion('boarding_locked')).toContain('spacemolt get_battle_status');
+    expect(getErrorSuggestion('boarding_locked')).toContain('spacemolt battle_stance fire');
+    expect(getErrorSuggestion('boarding_locked')).toContain('spacemolt use_item');
+    expect(getErrorSuggestion('boarding_locked')).toMatch(/latch clears|wait/i);
+    expect(getErrorSuggestion('boarding_locked')).toMatch(/Flee makes no progress/);
+    expect(getErrorSuggestion('boarding_locked')).not.toContain('spacemolt flee');
+    expect(getErrorSuggestion('boarding_locked')).not.toMatch(/retry .*flee|flee as a workaround/i);
+    expect(getErrorSuggestion('boarding_locked')).not.toContain('closing_stalled');
+    expect(getRelatedCommands('boarding_locked')).toEqual(['get_battle_status', 'battle_stance', 'use_item']);
+  });
+});
