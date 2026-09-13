@@ -569,6 +569,8 @@ describe('command metadata', () => {
     expect(config?.description).toContain('resummons available pirate combatants');
     expect(config?.description).toContain('Wildlife stays single-target');
     expect(config?.description).toContain('station attacks start sieges');
+    expect(config?.description).toContain('armed faction station');
+    expect(config?.description).toContain("join a member's fight");
     expect(config?.description).toContain('get_battle_status');
     expect(config?.description).toContain('intact prize');
     expect(config?.description).toContain('get_nearby');
@@ -586,6 +588,8 @@ describe('command metadata', () => {
     expect(help).toContain('never fires an extra volley');
     expect(help).toContain('resummons available pirate combatants');
     expect(help).toContain('station attacks start sieges');
+    expect(help).toContain('armed faction station');
+    expect(help).toContain("join a member's fight");
     expect(help).toContain('get_battle_status');
     expect(help).toContain('intact prize');
     expect(help).toContain('Prize actor IDs come from get_nearby');
@@ -639,6 +643,8 @@ describe('command metadata', () => {
     expect(hunt?.required).toEqual(['creature_id']);
     expect(hunt?.usage).toContain('<creature_id>');
     expect(hunt?.description).toContain('wildlife creature');
+    expect(hunt?.description).toContain('leviathan');
+    expect(hunt?.description).toContain('armed faction station');
     expect(hunt?.example).toBe('spacemolt hunt <creature_id>');
     expect(hunt?.seeAlso).toEqual(expect.arrayContaining(['get_nearby', 'scan', 'get_battle_status']));
 
@@ -651,6 +657,7 @@ describe('command metadata', () => {
     const help = captureHelp('hunt');
     expect(help).toContain('spacemolt hunt <creature_id>');
     expect(help).toContain('wildlife creature');
+    expect(help).toContain('leviathan');
     expect(help).toContain('get_nearby');
   });
 

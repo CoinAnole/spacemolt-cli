@@ -123,7 +123,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   attack: {
     usage: '<target_id>  (player, pirate, empire NPC, wildlife, intact prize, or station/base)',
     description:
-      'Attack a nearby player, pirate, empire NPC, wildlife creature, intact prize, or station/base. Intact-prize actor IDs come from get_nearby; the prize must be at your current POI, while other targets only need to be in the same system. Attacking an intact prize intercepts the physical captured hull during recovery. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Wildlife stays single-target, while station attacks start sieges.',
+      "Attack a nearby player, pirate, empire NPC, wildlife creature, intact prize, or station/base. Intact-prize actor IDs come from get_nearby; the prize must be at your current POI, while other targets only need to be in the same system. Attacking an intact prize intercepts the physical captured hull during recovery. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Wildlife stays single-target, while station attacks start sieges. An armed faction station may join a member's fight in the same system.",
     example: 'spacemolt attack <target_id>',
     discoverWith: ['get_nearby', 'get_status'],
     seeAlso: ['get_nearby', 'hunt', 'scan', 'get_battle_status', 'battle_target', 'battle_stance'],
@@ -136,7 +136,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   hunt: {
     usage: '<creature_id>',
-    description: 'Hunt a wildlife creature from get_nearby and start a battle with that single creature.',
+    description:
+      'Hunt a wildlife creature from get_nearby and start a battle with that single creature. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not.',
     example: 'spacemolt hunt <creature_id>',
     discoverWith: ['get_nearby', 'survey_system'],
     seeAlso: ['get_nearby', 'scan', 'get_battle_status'],
