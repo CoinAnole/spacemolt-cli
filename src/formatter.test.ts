@@ -5083,11 +5083,35 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Rescue WealthyMiner2023 WealthyMiner2023 0/1');
     expect(stdout).toContain('Issuing Base');
     expect(stdout).toContain('Earth Station');
-    expect(stdout).toContain('Deliver Food Rations earth_station 0/5');
+    expect(stdout).toContain('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
     expect(stdout).toContain('piloting XP +50');
     expect(stdout).toContain('missions 3/5');
     expect(stdout).not.toContain('OK: Active missions');
     expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Issuing Base'));
+    expect(header).toBeDefined();
+    expect(cells(header ?? '')).toEqual([
+      'Title',
+      'ID',
+      'Type',
+      'Difficulty',
+      'Issuing Base',
+      'Objectives',
+      'Rewards',
+      'Expires',
+    ]);
+    expect(header).not.toContain('Community');
+
+    const objectivesIndex = cells(header ?? '').indexOf('Objectives');
+    const delivery = stdout.split('\n').find((line) => line.includes('|') && line.includes('Faction Supply Delivery'));
+    const distress = stdout.split('\n').find((line) => line.includes('|') && line.includes('CombatDummy6'));
+    expect(cells(delivery ?? '')[objectivesIndex]).toBe('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
+    expect(cells(distress ?? '')[objectivesIndex]).toBe('Rescue CombatDummy6 CombatDummy6 0/1');
+    expect(cells(distress ?? '')[objectivesIndex]).not.toContain('cargo:');
+    expect(cells(distress ?? '')[objectivesIndex]).not.toContain('storage:');
   });
 
   test('get_active_missions prefers destination names and falls back to IDs', () => {
@@ -5205,8 +5229,285 @@ describe('structuredContent formatters', () => {
     expect(named.stdout).toContain('Destroy Kestrel Kestrel 0/1');
     expect(named.stdout).not.toContain('9c8913b2cf825728a2404c9e4c4d7afb');
     expect(named.stdout).toContain('Deliver Food Rations earth_station 0/5');
+    expect(named.stdout).not.toContain('cargo:');
+    expect(named.stdout).not.toContain('storage:');
     expect(idOnly.stderr).toBe('');
     expect(idOnly.stdout).toContain('9c8913b2cf825728a2404c9e4c4d7afb');
+  });
+
+  test('get_active_missions appends cargo and storage counts when present', () => {
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const capture = (objectives: Record<string, unknown>[]) =>
+      captureStructuredOutput('get_active_missions', {
+        missions: {
+          active: [
+            {
+              mission_id: 'mission-inventory-1',
+              title: 'Inventory Check',
+              type: 'delivery',
+              objectives,
+              rewards: {},
+            },
+          ],
+          max_missions: 5,
+        },
+      });
+    const objectivesCell = (stdout: string) => {
+      const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Objectives'));
+      const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('Inventory Check'));
+      const index = cells(header ?? '').indexOf('Objectives');
+      return cells(row ?? '')[index];
+    };
+
+    const both = capture([
+      {
+        description: 'Deliver Food Rations',
+        item_id: 'food_rations',
+        current: 0,
+        required: 5,
+        target_base: 'earth_station',
+        type: 'deliver_item',
+        in_cargo: 2,
+        in_storage: 3,
+      },
+    ]);
+    expect(both.stderr).toBe('');
+    expect(objectivesCell(both.stdout)).toBe('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
+    expect(both.stdout).not.toContain('=== Response ===');
+    expect(both.stdout).not.toContain('[object Object]');
+
+    const cargoOnly = capture([
+      {
+        description: 'Deliver Food Rations',
+        current: 0,
+        required: 5,
+        in_cargo: 2,
+      },
+    ]);
+    expect(objectivesCell(cargoOnly.stdout)).toBe('Deliver Food Rations 0/5 cargo:2');
+    expect(cargoOnly.stdout).not.toContain('storage:');
+
+    const storageOnly = capture([
+      {
+        description: 'Deliver Food Rations',
+        current: 0,
+        required: 5,
+        in_storage: 3,
+      },
+    ]);
+    expect(objectivesCell(storageOnly.stdout)).toBe('Deliver Food Rations 0/5 storage:3');
+    expect(storageOnly.stdout).not.toContain('cargo:');
+
+    const zeros = capture([
+      {
+        description: 'Deliver Food Rations',
+        current: 0,
+        required: 5,
+        in_cargo: 0,
+        in_storage: 0,
+      },
+    ]);
+    expect(objectivesCell(zeros.stdout)).toBe('Deliver Food Rations 0/5 cargo:0 storage:0');
+  });
+
+  test('get_active_missions omits cargo/storage tokens that are not finite numbers', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-inventory-invalid',
+            title: 'Invalid Inventory',
+            type: 'delivery',
+            objectives: [
+              {
+                description: 'Deliver cargo',
+                current: 0,
+                required: 5,
+                in_cargo: Number.NaN,
+                in_storage: Number.POSITIVE_INFINITY,
+              },
+              {
+                description: 'Pickup cargo',
+                current: 1,
+                required: 2,
+                in_cargo: '2',
+                in_storage: { count: 1 },
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Deliver cargo 0/5');
+    expect(stdout).toContain('Pickup cargo 1/2');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('cargo:');
+    expect(stdout).not.toContain('storage:');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions reads inventory from the objective, including nested progress', () => {
+    const nested = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-distress-nested',
+            title: 'Distress Nested',
+            type: 'distress',
+            objectives: [
+              {
+                description: 'Rescue CombatDummy6',
+                progress: { current: 0, required: 1 },
+                target: { name: 'CombatDummy6', system_id: 'markab' },
+                type: 'distress_rescue',
+                in_cargo: 2,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    expect(nested.stderr).toBe('');
+    expect(nested.stdout).toContain('Rescue CombatDummy6 CombatDummy6 0/1 cargo:2');
+    expect(nested.stdout).not.toContain('storage:');
+    expect(nested.stdout).not.toContain('=== Response ===');
+    expect(nested.stdout).not.toContain('[object Object]');
+
+    const scalar = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-scalar-progress',
+            title: 'Scalar Progress',
+            type: 'delivery',
+            objectives: [
+              {
+                description: 'Deliver cargo',
+                progress: 'halfway',
+                in_storage: 4,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    expect(scalar.stdout).toContain('Deliver cargo halfway storage:4');
+
+    const inventoryOnly = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-inventory-only',
+            title: 'Inventory Only',
+            type: 'delivery',
+            objectives: [
+              {
+                description: 'Deliver cargo',
+                in_cargo: 2,
+                in_storage: 3,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    expect(inventoryOnly.stdout).toContain('Deliver cargo cargo:2 storage:3');
+
+    const mixed = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-multi-objective',
+            title: 'Multi Objective',
+            type: 'delivery',
+            objectives: [
+              {
+                description: 'Deliver Food Rations',
+                current: 0,
+                required: 5,
+                in_cargo: 2,
+              },
+              {
+                description: 'Rescue CombatDummy6',
+                current: 1,
+                required: 1,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    expect(mixed.stdout).toContain('Deliver Food Rations 0/5 cargo:2; Rescue CombatDummy6 1/1');
+  });
+
+  test('get_active_missions prefers item_name over item_id when no location target is present', () => {
+    const named = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-craft-item-name',
+            title: 'Craft Pickup',
+            type: 'crafting',
+            objectives: [
+              {
+                description: 'Deliver cargo',
+                item_name: 'Iron Ore',
+                item_id: 'ore_iron',
+                current: 0,
+                required: 4,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    expect(named.stderr).toBe('');
+    expect(named.stdout).toContain('Deliver cargo Iron Ore 0/4');
+    expect(named.stdout).not.toContain('ore_iron');
+    expect(named.stdout).not.toContain('=== Response ===');
+    expect(named.stdout).not.toContain('[object Object]');
+
+    const withBase = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-deliver-item-name',
+            title: 'Named Delivery',
+            type: 'delivery',
+            objectives: [
+              {
+                description: 'Deliver cargo',
+                item_name: 'Iron Ore',
+                item_id: 'ore_iron',
+                target_base: 'earth_station',
+                current: 0,
+                required: 4,
+              },
+            ],
+            rewards: {},
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    expect(withBase.stdout).toContain('Deliver cargo earth_station 0/4');
+    expect(withBase.stdout).not.toContain('Iron Ore');
+    expect(withBase.stdout).not.toContain('ore_iron');
   });
 
   test('get_missions mixed board shows bounty objectives beside existing combat rows', () => {

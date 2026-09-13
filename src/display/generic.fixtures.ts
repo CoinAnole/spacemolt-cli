@@ -410,6 +410,8 @@ export const activeMissionsFixture = {
             required: 5,
             target_base: 'earth_station',
             type: 'deliver_item',
+            in_cargo: 2,
+            in_storage: 3,
           },
         ],
         percent_complete: 0,

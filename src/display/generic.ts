@@ -28,12 +28,24 @@ function formatRecordEntries(value: Record<string, unknown>, suffix = ''): strin
     .join(', ');
 }
 
+function inventorySuffix(objective: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (typeof objective.in_cargo === 'number' && Number.isFinite(objective.in_cargo)) {
+    parts.push(`cargo:${objective.in_cargo}`);
+  }
+  if (typeof objective.in_storage === 'number' && Number.isFinite(objective.in_storage)) {
+    parts.push(`storage:${objective.in_storage}`);
+  }
+  return parts.length ? ` ${parts.join(' ')}` : '';
+}
+
 function summarizeProgress(objective: Record<string, unknown>): string {
+  const suffix = inventorySuffix(objective);
   const progress = objective.progress;
   if (isRecord(progress)) {
     const current = progress.current ?? progress.completed ?? progress.amount ?? progress.count ?? progress.progress;
     const target = progress.required ?? progress.target ?? progress.total ?? progress.quantity;
-    if (current !== undefined && target !== undefined) return `${current}/${target}`;
+    if (current !== undefined && target !== undefined) return `${current}/${target}${suffix}`;
   }
 
   const current =
@@ -45,10 +57,11 @@ function summarizeProgress(objective: Record<string, unknown>): string {
     objective.delivered;
   const target =
     objective.required ?? objective.target_quantity ?? objective.target_count ?? objective.total ?? objective.quantity;
-  if (current !== undefined && target !== undefined) return `${current}/${target}`;
-  if (typeof progress === 'string' || typeof progress === 'number' || typeof progress === 'boolean')
-    return String(progress);
-  return '';
+  if (current !== undefined && target !== undefined) return `${current}/${target}${suffix}`;
+  if (typeof progress === 'string' || typeof progress === 'number' || typeof progress === 'boolean') {
+    return `${progress}${suffix}`;
+  }
+  return suffix.trim();
 }
 
 function summarizeObjective(objective: unknown): string {
@@ -62,6 +75,7 @@ function summarizeObjective(objective: unknown): string {
     objective.target_base_name ??
     objective.target_base ??
     objective.system_name ??
+    objective.item_name ??
     objective.item_id ??
     objective.target_player_id;
   const parts = [description, isRecord(target) ? (target.name ?? target.id) : target, summarizeProgress(objective)]

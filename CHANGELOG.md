@@ -44,6 +44,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_system_agents` table output lists optional Docked (`true`/`false`) when the server reports `NearbyPlayer.docked` (gameserver 0.601.1). That is the same boolean `get_nearby` already surfaces as `[DOCKED]`; this table does not use that marker. Docked pilots cannot be attacked, scanned, or traded with until they undock.
 
+### Missions
+
+- `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) now append `cargo:N` and `storage:M` to an objective's `current/required` when the server sends `ObjectiveProgressInfo.in_cargo` / `in_storage` (gameserver 0.604.1). That is the same on-hand stock that delivery, pickup, and crafting consult. Progress stays `current/required`; the suffix is on-hand stock, not a substitute for it.
+
 ### Combat
 
 - `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.
