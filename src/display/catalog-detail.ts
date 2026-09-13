@@ -81,7 +81,6 @@ function stringIdList(value: unknown): string[] | undefined {
 export function classifyRecipeVenue(recipe: Record<string, unknown>, options: { passive?: boolean } = {}): RecipeVenue {
   if (options.passive === true) return 'ship passive';
   if (recipe.ship_passive === true || recipe.passive === true) return 'ship passive';
-  // Category match is exact.
   if (recipe.category === SHIP_PASSIVE_CATEGORY) return 'ship passive';
 
   const hand = recipe.hand_craftable;
@@ -91,14 +90,12 @@ export function classifyRecipeVenue(recipe: Record<string, unknown>, options: { 
   if (hand === false) {
     if (facilityIds && facilityIds.length > 0) return 'facility only';
     if (facilityIds && facilityIds.length === 0) return 'no venue';
-    // hand_craftable false, produced_by_facility_ids absent (partial object)
     if (recipe.category === FACILITY_ONLY_CATEGORY || recipe.facility_only === true) {
       return 'facility only';
     }
     return 'no venue';
   }
 
-  // hand_craftable absent
   if (recipe.category === FACILITY_ONLY_CATEGORY || recipe.facility_only === true) {
     return 'facility only';
   }
