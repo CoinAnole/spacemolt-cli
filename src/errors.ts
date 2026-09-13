@@ -53,8 +53,27 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
   rate_limited: {
     code: 'rate_limited',
     message: 'Rate limited.',
-    suggestion: 'Query rate limited. Wait a moment and retry.',
+    suggestion:
+      'Session limits are 30 mutations and 300 queries per minute. Wait the stated time, then retry. 50 rejections/min from this IP (all accounts) trigger an IP-wide timeout starting at 2 minutes.',
     retryable: true,
+    auth: false,
+    relatedCommands: [],
+  },
+  action_pending: {
+    code: 'action_pending',
+    message: 'An action is already queued for this tick.',
+    suggestion:
+      'One mutation per tick (~10 seconds). Wait for the queued action to finish, then retry. Do not resubmit immediately — that queues a second action after the current one.',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status'],
+  },
+  ip_timed_out: {
+    code: 'ip_timed_out',
+    message: 'This IP is temporarily blocked.',
+    suggestion:
+      'This IP hit timeout after repeated rate-limit rejections (50/min, pooled across every account on the IP). Timeouts start at 2 minutes and double to 30. Wait for the time in the error message; do not keep retrying.',
+    retryable: false,
     auth: false,
     relatedCommands: [],
   },

@@ -354,7 +354,7 @@ bun run src/client.ts dock
 bun run src/client.ts sell item_id=ore_iron quantity=50
 ```
 
-Game mutations are limited by the server tick; query commands are not.
+Game mutations are one per tick (~10s) and 30/min per session; queries are 300/min per session. HTTP 429 carries `retry_after` (and `limit`/`scope`); a second mutation in the same tick returns `action_pending`.
 
 ## Environment
 

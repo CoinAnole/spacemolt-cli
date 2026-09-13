@@ -67,7 +67,7 @@ function missingMaterialsError(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function missingMaterialsContext(
+function displayErrorContext(
   writer: CliWriter,
   output: { quiet?: boolean; plain?: boolean } = { quiet: false, plain: true },
 ): CliRuntimeContext {
@@ -78,6 +78,13 @@ function missingMaterialsContext(
     sleep: () => Promise.resolve(),
     output: { quiet: output.quiet ?? false, plain: output.plain ?? true },
   };
+}
+
+function missingMaterialsContext(
+  writer: CliWriter,
+  output: { quiet?: boolean; plain?: boolean } = { quiet: false, plain: true },
+): CliRuntimeContext {
+  return displayErrorContext(writer, output);
 }
 
 function fakeContext(stdout: string[], stderr: string[], env: Record<string, string>): CliRuntimeContext {
@@ -2791,6 +2798,267 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
     expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
     expect(quiet.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError rate_limited suggestion names 30/300 and is not query-only', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      { code: 'rate_limited', message: 'Too many requests in the current window' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [rate_limited]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('30');
+    expect(output).toContain('300');
+    expect(output).not.toContain('Query rate limited');
+  });
+
+  test('displayError prints Limit from top-level limit and scope', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        limit: 'game_query',
+        scope: 'per_session',
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    expect(capture.stderr.join('\n')).toContain('Limit: game_query (per_session)');
+    expect(capture.stderr.join('\n')).not.toContain('Scope:');
+  });
+
+  test('displayError prints Limit from details.limit and details.scope', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        details: { limit: 'game_query', scope: 'per_session' },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    expect(capture.stderr.join('\n')).toContain('Limit: game_query (per_session)');
+    expect(capture.stderr.join('\n')).not.toContain('Scope:');
+  });
+
+  test('displayError prints Limit without parentheses when only limit is set', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      { code: 'rate_limited', message: 'Too many requests in the current window', limit: 'game_query' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Limit: game_query');
+    expect(output).not.toContain('Limit: game_query (');
+    expect(output).not.toContain('Scope:');
+  });
+
+  test('displayError prints Scope when only scope is set', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      { code: 'rate_limited', message: 'Too many requests in the current window', scope: 'per_session' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Scope: per_session');
+    expect(output).not.toContain('Limit:');
+  });
+
+  test('displayError prints Pending command from top-level pending_command', () => {
+    const capture = captureWriter();
+    displayError(
+      'mine',
+      {
+        code: 'action_pending',
+        message: 'Another action is already pending (mine). Wait for it to complete.',
+        pending_command: 'mine',
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Pending command: mine');
+    expect(output).not.toContain('seconds before retrying.');
+  });
+
+  test('displayError prints Pending command from details.pending_command', () => {
+    const capture = captureWriter();
+    displayError(
+      'mine',
+      {
+        code: 'action_pending',
+        message: 'Another action is already pending (mine). Wait for it to complete.',
+        details: { pending_command: 'mine' },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    expect(capture.stderr.join('\n')).toContain('Pending command: mine');
+  });
+
+  test('displayError omits Pending command unless the code is action_pending', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        pending_command: 'mine',
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    expect(capture.stderr.join('\n')).not.toContain('Pending command:');
+  });
+
+  test('displayError quiet mode still prints Wait, Limit, and Pending and omits suggestion lines', () => {
+    const rateLimited = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        retry_after: 54,
+        limit: 'game_query',
+        scope: 'per_session',
+      },
+      { context: displayErrorContext(rateLimited.writer, { quiet: true, plain: true }) },
+    );
+
+    const rateOutput = rateLimited.stderr.join('\n');
+    expect(rateLimited.stdout).toEqual([]);
+    expect(rateOutput).toContain('Error [rate_limited]:');
+    expect(rateOutput).toContain('Wait 54.0 seconds before retrying.');
+    expect(rateOutput).toContain('Limit: game_query (per_session)');
+    expect(rateOutput).not.toContain('Suggestion:');
+    expect(rateOutput).not.toContain('This error may be retryable.');
+    expect(rateOutput).not.toContain('This is an authentication error.');
+    expect(rateOutput).not.toContain('Next:');
+
+    const pending = captureWriter();
+    displayError(
+      'mine',
+      {
+        code: 'action_pending',
+        message: 'Another action is already pending (mine). Wait for it to complete.',
+        pending_command: 'mine',
+      },
+      { context: displayErrorContext(pending.writer, { quiet: true, plain: true }) },
+    );
+
+    const pendingOutput = pending.stderr.join('\n');
+    expect(pending.stdout).toEqual([]);
+    expect(pendingOutput).toContain('Pending command: mine');
+    expect(pendingOutput).not.toContain('seconds before retrying.');
+    expect(pendingOutput).not.toContain('Suggestion:');
+    expect(pendingOutput).not.toContain('This error may be retryable.');
+    expect(pendingOutput).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError prints Wait from details.retry_after when top-level retry_after is absent', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        details: { retry_after: 54 },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Wait 54.0 seconds before retrying.');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError prints Wait from an ip_timed_out integer-plus-unit message', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      { code: 'ip_timed_out', message: 'IP timed out for 120 seconds' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [ip_timed_out]: IP timed out for 120 seconds');
+    expect(output).toContain('Wait 120.0 seconds before retrying.');
+    expect(output).toContain('do not keep retrying');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError omits Wait and retryable for fail-closed ip_timed_out messages', () => {
+    for (const message of ['timeout expires at 12:04:00Z', '2-30 minutes', '2–30 minutes']) {
+      const capture = captureWriter();
+      displayError('get_status', { code: 'ip_timed_out', message }, { context: displayErrorContext(capture.writer) });
+
+      const output = capture.stderr.join('\n');
+      expect(output).toContain(`Error [ip_timed_out]: ${message}`);
+      expect(output).not.toContain('seconds before retrying.');
+      expect(output).not.toContain('This error may be retryable.');
+      expect(output).not.toContain('This is an authentication error.');
+      expect(output).toContain('do not keep retrying');
+    }
+  });
+
+  test('displayError action_pending without a wait prints suggestion and retryable, not Wait', () => {
+    const capture = captureWriter();
+    displayError(
+      'mine',
+      { code: 'action_pending', message: 'Another action is already pending (mine). Wait for it to complete.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [action_pending]');
+    expect(output).not.toContain('seconds before retrying.');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('One mutation per tick');
+    expect(output).toContain('Do not resubmit immediately');
+    expect(output).toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
+  test('displayError prints Limit and Pending command in dim', () => {
+    const colors = colorsForPlain(false);
+
+    const limit = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        limit: 'game_query',
+        scope: 'per_session',
+      },
+      { context: displayErrorContext(limit.writer, { quiet: false, plain: false }) },
+    );
+    expect(limit.stderr).toContain(`${colors.dim}Limit: game_query (per_session)${colors.reset}`);
+
+    const pending = captureWriter();
+    displayError(
+      'mine',
+      {
+        code: 'action_pending',
+        message: 'Another action is already pending (mine). Wait for it to complete.',
+        pending_command: 'mine',
+      },
+      { context: displayErrorContext(pending.writer, { quiet: false, plain: false }) },
+    );
+    expect(pending.stderr).toContain(`${colors.dim}Pending command: mine${colors.reset}`);
   });
 
   test('command search for boarding_locked finds use_item', () => {

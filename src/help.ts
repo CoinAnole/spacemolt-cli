@@ -16,6 +16,7 @@ import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
 import { schemaAllowsType } from './openapi-metadata.ts';
 import { colorsForPlain } from './output-style.ts';
+import { extractErrorWaitSeconds, extractRateLimitMeta } from './rate-limit.ts';
 import { getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { API_BASE, VERSION } from './runtime.ts';
 import { loadSession } from './session.ts';
@@ -1322,6 +1323,13 @@ ${c.bright}Documentation:${c.reset}
 // Error Display
 // =============================================================================
 
+function formatRateLimitLine(meta: { limit?: string; scope?: string }): string | undefined {
+  if (meta.limit && meta.scope) return `Limit: ${meta.limit} (${meta.scope})`;
+  if (meta.limit) return `Limit: ${meta.limit}`;
+  if (meta.scope) return `Scope: ${meta.scope}`;
+  return undefined;
+}
+
 export function displayError(
   command: string,
   error: {
@@ -1332,6 +1340,9 @@ export function displayError(
     error?: unknown;
     wait_seconds?: unknown;
     retry_after?: unknown;
+    limit?: unknown;
+    scope?: unknown;
+    pending_command?: unknown;
   },
   options?: { noTimestamp?: boolean; context?: CliRuntimeContext },
 ): void {
@@ -1353,17 +1364,18 @@ export function displayError(
         : typeof error.error === 'string' && error.error.trim()
           ? error.error
           : 'The API returned an error without details.';
-  const retryAfter =
-    typeof error.retry_after === 'number' && Number.isFinite(error.retry_after)
-      ? error.retry_after
-      : typeof error.wait_seconds === 'number' && Number.isFinite(error.wait_seconds)
-        ? error.wait_seconds
-        : undefined;
+  const retryAfter = extractErrorWaitSeconds(error);
+  const meta = extractRateLimitMeta(error);
   const hasServerCode = typeof error.code === 'string' && error.code.trim() !== '';
 
   err(`${colors.red}Error [${code}]:${colors.reset} ${message}`);
   if (retryAfter !== undefined) {
     err(`${colors.yellow}Wait ${retryAfter.toFixed(1)} seconds before retrying.${colors.reset}`);
+  }
+  const limitLine = formatRateLimitLine(meta);
+  if (limitLine) err(`${colors.dim}${limitLine}${colors.reset}`);
+  if (code === 'action_pending' && meta.pendingCommand) {
+    err(`${colors.dim}Pending command: ${meta.pendingCommand}${colors.reset}`);
   }
   if (isMissingMaterialErrorCode(code)) {
     const rows = parseMissingMaterialRows(error.details);
