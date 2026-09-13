@@ -1263,6 +1263,127 @@ describe('SpaceMoltClient', () => {
     expect(sleeps).toEqual([4000]);
   });
 
+  test('retries rate-limited waits of 60 seconds but not 61 or 120', async () => {
+    const atCap = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 60 } }),
+      response({ structuredContent: { ok: true } }),
+    ]);
+    expect((await atCap.client.execute('mine')).error).toBeUndefined();
+    expect(atCap.calls).toHaveLength(2);
+    expect(atCap.sleeps).toEqual([60000]);
+
+    const overCap = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 61 } }),
+    ]);
+    const overResult = await overCap.client.execute('mine');
+    expect(overResult.error?.code).toBe('rate_limited');
+    expect(overCap.calls).toHaveLength(1);
+    expect(overCap.sleeps).toEqual([]);
+
+    const ipTimeout = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 120 } }),
+    ]);
+    const ipResult = await ipTimeout.client.execute('mine');
+    expect(ipResult.error?.retry_after).toBe(120);
+    expect(ipTimeout.calls).toHaveLength(1);
+    expect(ipTimeout.sleeps).toEqual([]);
+  });
+
+  test('retries wait 0 three times and does not retry a missing wait', async () => {
+    const zeroWait = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 0 } }),
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 0 } }),
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 0 } }),
+      response({ error: { code: 'rate_limited', message: 'slow down', retry_after: 0 } }),
+    ]);
+    const zeroResult = await zeroWait.client.execute('mine');
+    expect(zeroResult.error?.code).toBe('rate_limited');
+    expect(zeroWait.calls).toHaveLength(4);
+    expect(zeroWait.sleeps).toEqual([0, 0, 0]);
+
+    const missingWait = createClient([response({ error: { code: 'rate_limited', message: 'slow down' } })]);
+    const missingResult = await missingWait.client.execute('mine');
+    expect(missingResult.error?.code).toBe('rate_limited');
+    expect(missingWait.calls).toHaveLength(1);
+    expect(missingWait.sleeps).toEqual([]);
+  });
+
+  test('does not auto-retry action_pending or ip_timed_out even with retry_after', async () => {
+    const pending = createClient([
+      response({
+        error: { code: 'action_pending', message: 'queued', retry_after: 5, pending_command: 'mine' },
+      }),
+    ]);
+    const pendingResult = await pending.client.execute('mine');
+    expect(pendingResult.error?.code).toBe('action_pending');
+    expect(pending.calls).toHaveLength(1);
+    expect(pending.sleeps).toEqual([]);
+
+    const timedOut = createClient([
+      response({
+        error: { code: 'ip_timed_out', message: 'IP timed out for 120 seconds', retry_after: 120 },
+      }),
+    ]);
+    const timedOutResult = await timedOut.client.execute('mine');
+    expect(timedOutResult.error?.code).toBe('ip_timed_out');
+    expect(timedOut.calls).toHaveLength(1);
+    expect(timedOut.sleeps).toEqual([]);
+  });
+
+  test('retries details.retry_after and header-only integer Retry-After', async () => {
+    const details = createClient([
+      response({ error: { code: 'rate_limited', message: 'slow down', details: { retry_after: 2 } } }),
+      response({ structuredContent: { ok: true } }),
+    ]);
+    expect((await details.client.execute('mine')).error).toBeUndefined();
+    expect(details.calls).toHaveLength(2);
+    expect(details.sleeps).toEqual([2000]);
+
+    const headerOnly = createClient([
+      queuedHttp(response({ error: { code: 'rate_limited', message: 'slow down' } }), {
+        retryAfterHeader: '2',
+      }),
+      response({ structuredContent: { ok: true } }),
+    ]);
+    expect((await headerOnly.client.execute('mine')).error).toBeUndefined();
+    expect(headerOnly.calls).toHaveLength(2);
+    expect(headerOnly.sleeps).toEqual([2000]);
+  });
+
+  test('public bareResponse HTTP 429 flat bodies auto-retry and keep retry_after', async () => {
+    const retried = createClient([
+      queuedHttp({ error: 'rate_limited', message: 'slow down', retry_after: 1 } as unknown as APIResponse, {
+        status: 429,
+      }),
+      response({ structuredContent: { ok: true } }),
+    ]);
+    expect((await retried.client.execute('get_mobile_base')).error).toBeUndefined();
+    expect(retried.calls).toHaveLength(2);
+    expect(retried.sleeps).toEqual([1000]);
+
+    const kept = createClient([
+      queuedHttp({ error: 'rate_limited', message: 'slow down', retry_after: 61 } as unknown as APIResponse, {
+        status: 429,
+      }),
+    ]);
+    const keptResult = await kept.client.execute('get_mobile_base');
+    expect(kept.calls).toHaveLength(1);
+    expect(kept.sleeps).toEqual([]);
+    expect(keptResult.error).toEqual({
+      code: 'rate_limited',
+      message: 'slow down',
+      retry_after: 61,
+    });
+  });
+
+  test('leaves 200 ok:true bodies with Retry-After unchanged', async () => {
+    const body = { ok: true } as unknown as APIResponse;
+    const { client, sleeps } = createClient([queuedHttp(body, { status: 200, retryAfterHeader: '8' })]);
+    const result = await client.execute('mine');
+    expect(result).toEqual(body);
+    expect(sleeps).toEqual([]);
+  });
+
   test('login skips profile auto-auth', async () => {
     const store = createStore();
     store.authError = response({ error: { code: 'invalid_credentials', message: 'bad profile' } });

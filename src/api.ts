@@ -1,6 +1,7 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
 import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { getErrorSuggestion, ServiceUnavailableError } from './errors.ts';
+import { isRateLimitAutoRetryWait, normalizeRateLimitError } from './rate-limit.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { requestWithServiceUnavailableRetry } from './retry-after.ts';
 import {
@@ -170,6 +171,9 @@ export class SpaceMoltClient {
               this.logger.warn(
                 `[UNAVAILABLE] Authentication provider unreachable. Waiting ${Math.ceil(seconds)} seconds before retry...`,
               ),
+        onRateLimitWait: this.jsonOutput
+          ? undefined
+          : (seconds) => this.logger.warn(`[RATE LIMITED] Waiting ${Math.ceil(seconds)} seconds before retry...`),
       });
     this.maxSessionRecoveryAttempts = MAX_SESSION_RECOVERY_ATTEMPTS;
     this.maxRateLimitRetries = MAX_RATE_LIMIT_RETRIES;
@@ -268,7 +272,11 @@ export class SpaceMoltClient {
         if (authError) return authError;
       }
 
-      const { status, data: rawData } = await requestWithServiceUnavailableRetry(
+      const {
+        status,
+        data: rawData,
+        retryAfterHeader,
+      } = await requestWithServiceUnavailableRetry(
         () =>
           this.sendRequest(session, url, method, residualPayload, sessionProfile, {
             persistSession: !transientSession && !fullyUnauth,
@@ -276,7 +284,16 @@ export class SpaceMoltClient {
           }),
         this.serviceUnavailableRetryOpts(),
       );
-      const data = normalizeBareResponse(rawData, mapping, fullyUnauth, status);
+      const data = normalizeBareResponse(
+        normalizeRateLimitError(rawData, {
+          status,
+          retryAfterHeader,
+          nowMs: this.clock.now(),
+        }),
+        mapping,
+        fullyUnauth,
+        status,
+      );
 
       if (!fullyUnauth && data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
         if (
@@ -303,8 +320,8 @@ export class SpaceMoltClient {
         continue;
       }
 
-      const retryAfter = data.error?.retry_after ?? data.error?.wait_seconds;
-      if (data.error?.code === 'rate_limited' && retryAfter !== undefined) {
+      const retryAfter = isRateLimitAutoRetryWait(data.error);
+      if (retryAfter !== undefined) {
         if (rateLimitRetries >= this.maxRateLimitRetries) return data;
         rateLimitRetries += 1;
         const waitMs = Math.ceil(retryAfter) * 1000;

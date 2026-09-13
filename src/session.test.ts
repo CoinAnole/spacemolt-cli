@@ -721,6 +721,307 @@ describe('SessionManager', () => {
     expect(waits).toEqual([2, 2, 2]);
   });
 
+  test('createTransientSession retries rate_limited then succeeds', async () => {
+    const waits: number[] = [];
+    const rateLimitWaits: number[] = [];
+    const sleeps: number[] = [];
+    let calls = 0;
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      onRetryWait: (seconds) => {
+        waits.push(seconds);
+      },
+      onRateLimitWait: (seconds) => {
+        rateLimitWaits.push(seconds);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        if (calls === 1) {
+          return {
+            status: 429,
+            ok: false,
+            data: { error: { code: 'rate_limited', message: 'slow down', retry_after: 2 } },
+          };
+        }
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_after_429',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    const session = await manager.createTransientSession();
+    expect(session.id).toBe('sess_after_429');
+    expect(calls).toBe(2);
+    expect(sleeps).toEqual([2000]);
+    expect(rateLimitWaits).toEqual([2]);
+    expect(waits).toEqual([]);
+  });
+
+  test('createTransientSession retries details.retry_after and header-only integer Retry-After', async () => {
+    const detailsSleeps: number[] = [];
+    let detailsCalls = 0;
+    const detailsManager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        detailsSleeps.push(ms);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        detailsCalls += 1;
+        if (detailsCalls === 1) {
+          return {
+            status: 429,
+            ok: false,
+            data: { error: { code: 'rate_limited', message: 'slow down', details: { retry_after: 2 } } },
+          };
+        }
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_details',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+    expect((await detailsManager.createTransientSession()).id).toBe('sess_details');
+    expect(detailsCalls).toBe(2);
+    expect(detailsSleeps).toEqual([2000]);
+
+    const headerSleeps: number[] = [];
+    let headerCalls = 0;
+    const headerManager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        headerSleeps.push(ms);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        headerCalls += 1;
+        if (headerCalls === 1) {
+          return {
+            status: 429,
+            ok: false,
+            retryAfterHeader: '2',
+            data: { error: { code: 'rate_limited', message: 'slow down' } },
+          };
+        }
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_header',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+    expect((await headerManager.createTransientSession()).id).toBe('sess_header');
+    expect(headerCalls).toBe(2);
+    expect(headerSleeps).toEqual([2000]);
+  });
+
+  test('createTransientSession hydrates a flat 429 string error then retries', async () => {
+    const sleeps: number[] = [];
+    let calls = 0;
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        if (calls === 1) {
+          return {
+            status: 429,
+            ok: false,
+            data: { error: 'rate_limited', message: 'slow down', retry_after: 2 } as unknown as APIResponse,
+          };
+        }
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_flat_429',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    const session = await manager.createTransientSession();
+    expect(session.id).toBe('sess_flat_429');
+    expect(calls).toBe(2);
+    expect(sleeps).toEqual([2000]);
+  });
+
+  test('createTransientSession exhausts four rate_limited responses without ServiceUnavailableError', async () => {
+    let calls = 0;
+    const sleeps: number[] = [];
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        return {
+          status: 429,
+          ok: false,
+          data: { error: { code: 'rate_limited', message: 'slow down', retry_after: 1 } },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    try {
+      await manager.createTransientSession();
+      throw new Error('expected session create failure');
+    } catch (error) {
+      expect(error).not.toBeInstanceOf(ServiceUnavailableError);
+      expect((error as Error).message).toBe('Failed to create session: slow down');
+    }
+    expect(calls).toBe(4);
+    expect(sleeps).toEqual([1000, 1000, 1000]);
+  });
+
+  test('createTransientSession does not retry wait 61, ip_timed_out, or action_pending', async () => {
+    async function rejectOnce(
+      data: APIResponse,
+      status = 429,
+    ): Promise<{
+      calls: number;
+      sleeps: number[];
+      message: string;
+    }> {
+      let calls = 0;
+      const sleeps: number[] = [];
+      const manager = new SessionManager({
+        profile: 'test_profile',
+        apiBase: 'https://api.spacemolt.test/api/v2',
+        env: testEnv,
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+        transport: (async (): Promise<JsonResponse<APIResponse>> => {
+          calls += 1;
+          return { status, ok: false, data };
+        }) as unknown as typeof requestJson,
+      });
+      try {
+        await manager.createTransientSession();
+        throw new Error('expected session create failure');
+      } catch (error) {
+        expect(error).not.toBeInstanceOf(ServiceUnavailableError);
+        return { calls, sleeps, message: (error as Error).message };
+      }
+    }
+
+    const tooLong = await rejectOnce({ error: { code: 'rate_limited', message: 'too long', retry_after: 61 } });
+    expect(tooLong.calls).toBe(1);
+    expect(tooLong.sleeps).toEqual([]);
+    expect(tooLong.message).toBe('Failed to create session: too long');
+
+    const timedOut = await rejectOnce({
+      error: { code: 'ip_timed_out', message: 'IP timed out for 120 seconds', retry_after: 120 },
+    });
+    expect(timedOut.calls).toBe(1);
+    expect(timedOut.sleeps).toEqual([]);
+    expect(timedOut.message).toBe('Failed to create session: IP timed out for 120 seconds');
+
+    const pending = await rejectOnce({
+      error: { code: 'action_pending', message: 'queued', retry_after: 10, pending_command: 'mine' },
+    });
+    expect(pending.calls).toBe(1);
+    expect(pending.sleeps).toEqual([]);
+    expect(pending.message).toBe('Failed to create session: queued');
+  });
+
+  test('createTransientSession keeps 503 and rate-limit retry budgets independent', async () => {
+    const unavailableWaits: number[] = [];
+    const rateLimitWaits: number[] = [];
+    const sleeps: number[] = [];
+    let calls = 0;
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      onRetryWait: (seconds) => {
+        unavailableWaits.push(seconds);
+      },
+      onRateLimitWait: (seconds) => {
+        rateLimitWaits.push(seconds);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        if (calls === 1) {
+          return {
+            status: 503,
+            ok: false,
+            retryAfterHeader: '2',
+            data: { error: { code: 'invalid_credentials', message: 'invalid token' } },
+          };
+        }
+        if (calls === 2) {
+          return {
+            status: 429,
+            ok: false,
+            data: { error: { code: 'rate_limited', message: 'slow down', retry_after: 3 } },
+          };
+        }
+        return {
+          status: 200,
+          ok: true,
+          data: {
+            session: {
+              id: 'sess_mixed',
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    const session = await manager.createTransientSession();
+    expect(session.id).toBe('sess_mixed');
+    expect(calls).toBe(3);
+    expect(sleeps).toEqual([2000, 3000]);
+    expect(unavailableWaits).toEqual([2]);
+    expect(rateLimitWaits).toEqual([3]);
+  });
+
   test('authenticateProfileSession returns service_unavailable after four 503s', async () => {
     let calls = 0;
     const waits: number[] = [];

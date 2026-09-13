@@ -9,23 +9,39 @@ import type { APIResponse, JsonResponse } from './types.ts';
 const SERVICE_UNAVAILABLE_MESSAGE =
   'The authentication provider is temporarily unreachable. Wait and retry; do not change your password.';
 
-/** Wait seconds in [0, MAX], never NaN. `nowMs` is the injectable clock. */
-export function retryAfterWaitSeconds(header: string | null | undefined, nowMs: number): number {
+export type ParsedRetryAfter = { kind: 'delta'; seconds: number } | { kind: 'date'; seconds: number };
+
+/** Tagged parse so 503 and rate-limit wrappers can disagree on past dates and missing headers. */
+export function parseRetryAfterHeaderRaw(
+  header: string | null | undefined,
+  nowMs: number,
+): ParsedRetryAfter | undefined {
   const trimmed = header?.trim();
-  if (!trimmed) return DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS;
+  if (!trimmed) return undefined;
 
   if (/^\d+$/.test(trimmed)) {
     const seconds = Number(trimmed);
-    if (!Number.isFinite(seconds)) return DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS;
-    return Math.min(MAX_SERVICE_UNAVAILABLE_WAIT_SECONDS, Math.max(0, seconds));
+    if (!Number.isFinite(seconds) || seconds < 0) return undefined;
+    return { kind: 'delta', seconds };
   }
 
-  const dateMs = Date.parse(trimmed);
-  if (!Number.isFinite(dateMs)) return DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS;
+  // "54.5" / "54s" are not HTTP-dates; Date.parse accepts some of them.
+  if (/^\d/.test(trimmed)) return undefined;
 
-  const raw = (dateMs - nowMs) / 1000;
-  if (raw <= 0) return MIN_SERVICE_UNAVAILABLE_WAIT_SECONDS;
-  return Math.min(MAX_SERVICE_UNAVAILABLE_WAIT_SECONDS, Math.max(MIN_SERVICE_UNAVAILABLE_WAIT_SECONDS, raw));
+  const dateMs = Date.parse(trimmed);
+  if (!Number.isFinite(dateMs)) return undefined;
+  return { kind: 'date', seconds: (dateMs - nowMs) / 1000 };
+}
+
+/** Wait seconds in [0, MAX], never NaN. `nowMs` is the injectable clock. */
+export function retryAfterWaitSeconds(header: string | null | undefined, nowMs: number): number {
+  const parsed = parseRetryAfterHeaderRaw(header, nowMs);
+  if (!parsed) return DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS;
+  if (parsed.kind === 'delta') {
+    return Math.min(MAX_SERVICE_UNAVAILABLE_WAIT_SECONDS, Math.max(0, parsed.seconds));
+  }
+  if (parsed.seconds <= 0) return MIN_SERVICE_UNAVAILABLE_WAIT_SECONDS;
+  return Math.min(MAX_SERVICE_UNAVAILABLE_WAIT_SECONDS, Math.max(MIN_SERVICE_UNAVAILABLE_WAIT_SECONDS, parsed.seconds));
 }
 
 export async function requestWithServiceUnavailableRetry(

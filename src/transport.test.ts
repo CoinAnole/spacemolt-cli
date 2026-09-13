@@ -111,6 +111,25 @@ describe('requestJson', () => {
     expect(response.retryAfterHeader).toBe('8');
   });
 
+  test('hydrates an integer Retry-After onto a 429 object error', async () => {
+    globalThis.fetch = (async () => {
+      return new Response(JSON.stringify({ error: { code: 'rate_limited', message: 'slow down' } }), {
+        status: 429,
+        headers: { 'content-type': 'application/json', 'Retry-After': '54' },
+      });
+    }) as unknown as typeof fetch;
+
+    const response = await requestJson('https://example.test/api');
+
+    expect(response.status).toBe(429);
+    expect(response.retryAfterHeader).toBe('54');
+    expect(response.data.error).toEqual({
+      code: 'rate_limited',
+      message: 'slow down',
+      retry_after: 54,
+    });
+  });
+
   test('returns JSON 503 with the raw Retry-After header and does not rewrite data.error', async () => {
     const body = { error: { code: 'provider_down', message: 'auth provider timeout' } };
     globalThis.fetch = (async () => {
