@@ -2089,6 +2089,50 @@ describe('help output branches', () => {
     expect(output).toContain('spacemolt fleet leave');
   });
 
+  test('displayError gives station_under_attack a wait-then-retry suggestion', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('dock', { code: 'station_under_attack', message: 'Station is under attack.' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [station_under_attack]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('faction-mate');
+    expect(output).toContain('same command');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toMatch(/wait|blast doors/i);
+    expect(output).toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+
+    const quiet = captureWriter();
+    displayError(
+      'dock',
+      { code: 'station_under_attack', message: 'Station is under attack.' },
+      {
+        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
+      },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [station_under_attack]:');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+
+    const grouped = captureWriter();
+    displayError(
+      'storage deposit',
+      { code: 'station_under_attack', message: 'Station is under attack.' },
+      { context: { ...context, writer: grouped.writer } },
+    );
+    expect(grouped.stderr.join('\n')).toContain('Suggestion:');
+    expect(grouped.stderr.join('\n')).not.toContain('Next:');
+  });
+
   test('displayError gives challenge_locked a READY-trial suggestion', () => {
     const capture = captureWriter();
     const context: CliRuntimeContext = {

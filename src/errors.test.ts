@@ -99,6 +99,23 @@ describe('deposit_too_sparse', () => {
   });
 });
 
+describe('station_under_attack', () => {
+  test('is retryable and is not an authentication error', () => {
+    expect(ERROR_REGISTRY.station_under_attack?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.station_under_attack?.auth).toBe(false);
+    expect(isRetryableError('station_under_attack')).toBe(true);
+    expect(isAuthError('station_under_attack')).toBe(false);
+    expect(isKnownErrorCode('station_under_attack')).toBe(true);
+    expect(ERROR_CODES).toContain('station_under_attack');
+    expect(getErrorSuggestion('station_under_attack')).toContain('spacemolt get_status');
+    expect(getErrorSuggestion('station_under_attack')).toContain('faction-mate');
+    expect(getErrorSuggestion('station_under_attack')).toContain('same command');
+    expect(getErrorSuggestion('station_under_attack')).toMatch(/wait|blast doors/i);
+    expect(getErrorSuggestion('station_under_attack')).not.toContain('retry dock');
+    expect(getRelatedCommands('station_under_attack')).toEqual(['get_status', 'dock']);
+  });
+});
+
 describe('fit capacity errors', () => {
   test('cpu_exceeded is not retryable and is not an authentication error', () => {
     expect(ERROR_REGISTRY.cpu_exceeded?.retryable).toBe(false);
