@@ -70,7 +70,7 @@ export const getNotificationsFixture = {
   timestamp: 1779562982,
 };
 
-/** One schema-complete mixed observation_update poll response (v0.554 contact domains). */
+/** Mixed observation_update poll: players, agents, pirates, arena NPCs, empire NPCs, creatures, prizes, cloaked. */
 export const getNotificationsObservationFixture = {
   count: 1,
   current_tick: 901500,
@@ -170,6 +170,41 @@ export const getNotificationsObservationFixture = {
           },
         ],
         pirates_departed: ['pirate-raider-6'],
+        arena_npcs_changed: [
+          {
+            npc_id: 'arena-cleaver-1',
+            name: 'Ring Cleaver',
+            primary_color: '#c45a2a',
+            secondary_color: '#1a1a1a',
+            is_boss: false,
+            flees: false,
+            ship_class: 'fighter',
+            ship_class_name: 'Fighter',
+            hull: 140,
+            max_hull: 180,
+            shield: 40,
+            max_shield: 60,
+            battle_id: 'btl-first-blood',
+            status: 'ready',
+          },
+        ],
+        arena_npcs_departed: ['arena-cleaver-old'],
+        prizes_changed: [
+          {
+            prize_id: 'prize-dust-1',
+            actor_id: 'actor-prize-1',
+            ship_id: 'ship-prize-1',
+            ship_class: 'frigate',
+            ship_name: 'Dust Devil',
+            status: 'available',
+            hull: 40,
+            max_hull: 80,
+            shield: 10,
+            max_shield: 20,
+            in_combat: false,
+          },
+        ],
+        prizes_departed: ['prize-old-1'],
         poi_id: 'sol_cloudbank',
         system_changed: [
           {
