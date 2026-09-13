@@ -2218,7 +2218,6 @@ function observationIdentity(record: Record<string, unknown>, domain: Observatio
   if (domain === 'arena NPC') {
     const hull = finiteNumber(record.hull);
     identity += observationRatioSuffix('hull', record.hull, record.max_hull);
-    // Knockout omits sh so the detail stays ≤ 80 characters.
     if (hull !== 0) identity += observationRatioSuffix('sh', record.shield, record.max_shield);
     if (hull === 0) identity += ' knocked out';
     if (record.flees === true) identity += ' flees';

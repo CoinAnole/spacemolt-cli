@@ -9100,6 +9100,25 @@ describe('notification formatting', () => {
       ]);
     });
 
+    test('prize identity prefers ship_name over name and falls back to name', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_cloudbank',
+          system_id: 'sol',
+          tick: 901606,
+          prizes_changed: [
+            { prize_id: 'prize-both-1', ship_name: 'Dust Devil', name: 'Should Lose', status: 'available' },
+            { prize_id: 'prize-named-1', name: 'Named Prize', status: 'claimed' },
+          ],
+        },
+      });
+
+      expect(preview.details[0]).toContain('Dust Devil [prize-both-1] (available)');
+      expect(preview.details[0]).toContain('Named Prize [prize-named-1] (claimed)');
+      expect(preview.details[0]).not.toContain('Should Lose');
+    });
+
     test('id-only arena rows use npc_id rather than cloaked target_id keys', () => {
       const preview = formatNotificationPreview({
         msg_type: 'observation_update',
