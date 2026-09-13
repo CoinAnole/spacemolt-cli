@@ -684,11 +684,17 @@ describe('command metadata', () => {
     expect(observationHelp).not.toContain('captor_kind');
     expect(observationHelp).toContain('re-arms fuel spend');
     expect(observationHelp).toContain('subscribed with active_scan=true');
+    expect(observationHelp).toContain('arena');
+    expect(observationHelp).toContain('hull 0');
+    expect(observationHelp).toContain('prizes');
     expect(observationHelp).not.toContain('`');
     expect(observationHelp).toContain('[active_scan=true/false]');
     expect(observationHelp).not.toContain('<args...>');
     expect(COMMANDS.subscribe_observation?.description).toContain('re-arms fuel spend');
     expect(COMMANDS.subscribe_observation?.description).toContain('subscribed with active_scan=true');
+    expect(COMMANDS.subscribe_observation?.description).toContain('arena');
+    expect(COMMANDS.subscribe_observation?.description).toContain('hull 0');
+    expect(COMMANDS.subscribe_observation?.description).toContain('prizes');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
 
     expect(captureHelp('get_battle_summary')).toContain('captor_kind');
@@ -2624,6 +2630,9 @@ describe('command metadata', () => {
     expect(COMMANDS.subscribe_observation?.description).not.toContain('shared notification queue');
     expect(COMMANDS.subscribe_observation?.description).toContain('re-arms fuel spend');
     expect(COMMANDS.subscribe_observation?.description).toContain('subscribed with active_scan=true');
+    expect(COMMANDS.subscribe_observation?.description).toContain('arena');
+    expect(COMMANDS.subscribe_observation?.description).toContain('hull 0');
+    expect(COMMANDS.subscribe_observation?.description).toContain('prizes');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
   });
 

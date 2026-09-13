@@ -8832,19 +8832,21 @@ describe('notification formatting', () => {
       expect(NOTIFICATION_TYPES).toContain('observation_update');
     });
 
-    test('summarizes all six contact domains in stable order', () => {
+    test('summarizes all eight contact domains in stable order', () => {
       const preview = formatNotificationPreview(observationNotification);
 
       expect(preview.tag).toBe('OBSERVATION');
       expect(preview.headline).toBe(
-        'Observation at sol_cloudbank in sol (tick 901500): 7 changed, 6 departed; unknown signature; active scan: true',
+        'Observation at sol_cloudbank in sol (tick 901500): 9 changed, 8 departed; unknown signature; active scan: true',
       );
       expect(preview.details).toEqual([
         'Nearby players — changed 1: Marlowe [player-marlowe]; departed 1: player-ibis',
         'System agents — changed 1: Oriole [player-oriole]; departed 1: player-wren',
         'Pirates — changed 2: Corsair [pirate-corsair-7] (Admiral Kael), Raider [pirate-raider-8] (Captain Voss); departed 1: pirate-raider-6',
+        'Arena NPCs — changed 1: Ring Cleaver [arena-cleaver-1] hull 140/180 sh 40/60; departed 1: arena-cleaver-old',
         'Empire NPCs — changed 1: Solarian Patrol [npc-patrol-7]; departed 1: npc-freighter-2',
         'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7]; departed 1: creature-starfish-2',
+        'Prizes — changed 1: Dust Devil [prize-dust-1] (available); departed 1: prize-old-1',
         'Cloaked contacts — changed 1: Wisp [player-cloaked-1]; departed 1: player-cloaked-old',
       ]);
       expectNoDiagnosticTokens(JSON.stringify(preview));
@@ -8982,11 +8984,209 @@ describe('notification formatting', () => {
       expectNoNestedJsonDump(output);
     });
 
+    test('arena knockout is a hull-0 change that folds into the table Message', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 901600,
+          arena_npcs_changed: [
+            {
+              npc_id: 'arena-cleaver-1',
+              name: 'Ring Cleaver',
+              hull: 0,
+              max_hull: 180,
+              shield: 0,
+              max_shield: 60,
+            },
+          ],
+        },
+      });
+
+      expect(preview.headline).toContain('1 changed, 0 departed');
+      expect(preview.details).toHaveLength(1);
+      expect(preview.details[0]).toContain('Arena NPCs — changed 1:');
+      expect(preview.details[0]).toContain('Ring Cleaver [arena-cleaver-1] hull 0/180 knocked out');
+      expect(preview.details[0]).not.toContain(' sh');
+      expect(preview.details[0]?.length).toBeLessThanOrEqual(80);
+      const tableMessage = tableMessageFromPreview(preview);
+      expect(tableMessage).toContain('hull 0');
+      expect(tableMessage).toContain('knocked out');
+      expectNoDiagnosticTokens(JSON.stringify(preview));
+    });
+
+    test('arena match end is a departure, not a hull-0 change', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 901601,
+          arena_npcs_departed: ['arena-cleaver-1'],
+        },
+      });
+
+      expect(preview.headline).toContain('0 changed, 1 departed');
+      expect(preview.details).toEqual(['Arena NPCs — departed 1: arena-cleaver-1']);
+      expect(preview.details[0]).not.toContain('knocked out');
+    });
+
+    test('arena flees token is independent of knockout', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 901602,
+          arena_npcs_changed: [
+            {
+              npc_id: 'arena-runner-1',
+              name: 'Ring Runner',
+              hull: 180,
+              max_hull: 180,
+              shield: 60,
+              max_shield: 60,
+              flees: true,
+            },
+          ],
+        },
+      });
+
+      expect(preview.details[0]).toContain('Ring Runner [arena-runner-1] hull 180/180 sh 60/60 flees');
+      expect(preview.details[0]).not.toContain('knocked out');
+    });
+
+    test('limits arena identities to three and still reports every count', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 42,
+          arena_npcs_changed: [
+            { npc_id: 'a1', name: 'Cleaver' },
+            { npc_id: 'a2', name: 'Master' },
+            { npc_id: 'a3', name: 'Runner' },
+            { npc_id: 'a4', name: 'Warden' },
+          ],
+          arena_npcs_departed: ['a5'],
+        },
+      });
+
+      expect(preview.headline).toContain('4 changed, 1 departed');
+      expect(preview.details).toEqual([
+        'Arena NPCs — changed 4: Cleaver [a1], Master [a2], Runner [a3]; departed 1; +2 more',
+      ]);
+      expect(preview.details[0]).not.toContain('Warden');
+      expect(preview.details[0]).not.toContain('a5');
+    });
+
+    test('prizes-only frames use ship_name then prize_id', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_cloudbank',
+          system_id: 'sol',
+          tick: 901603,
+          prizes_changed: [{ prize_id: 'prize-dust-1', ship_name: 'Dust Devil', status: 'available' }],
+          prizes_departed: ['prize-old-1'],
+        },
+      });
+
+      expect(preview.headline).toContain('1 changed, 1 departed');
+      expect(preview.details).toEqual([
+        'Prizes — changed 1: Dust Devil [prize-dust-1] (available); departed 1: prize-old-1',
+      ]);
+    });
+
+    test('id-only arena rows use npc_id rather than cloaked target_id keys', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 901604,
+          arena_npcs_changed: [
+            { npc_id: 'arena-cleaver-1' },
+            { name: 'Ring Cleaver', npc_id: 'arena-cleaver-1' },
+            { npc_id: 'arena-ignored', target_id: 'cloaked-should-not-win', player_id: 'player-should-not-win' },
+          ],
+        },
+      });
+
+      expect(preview.details[0]).toContain('changed 3: arena-cleaver-1, Ring Cleaver [arena-cleaver-1], arena-ignored');
+      expect(preview.details[0]).not.toContain('cloaked-should-not-win');
+      expect(preview.details[0]).not.toContain('player-should-not-win');
+    });
+
+    test('living arena identities differ when only shield changes', () => {
+      const living = (shield: number) =>
+        formatNotificationPreview({
+          msg_type: 'observation_update',
+          data: {
+            poi_id: 'sol_arena',
+            system_id: 'sol',
+            tick: 901605,
+            arena_npcs_changed: [
+              {
+                npc_id: 'arena-cleaver-1',
+                name: 'Ring Cleaver',
+                hull: 180,
+                max_hull: 180,
+                shield,
+                max_shield: 60,
+              },
+            ],
+          },
+        });
+
+      const full = living(60);
+      const damaged = living(40);
+      expect(full.details[0]).toContain('hull 180/180 sh 60/60');
+      expect(damaged.details[0]).toContain('hull 180/180 sh 40/60');
+      expect(full.details[0]).not.toBe(damaged.details[0]);
+    });
+
+    test('ignores malformed arena and prize members without dumping nested data', () => {
+      const objectChanged = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 1,
+          arena_npcs_changed: { nested: true },
+          prizes_changed: { nested: true },
+        },
+      });
+      expect(objectChanged.headline).toContain('0 changed, 0 departed');
+      expect(objectChanged.details).toEqual([]);
+      expectNoDiagnosticTokens(JSON.stringify(objectChanged));
+      expectNoNestedJsonDump(JSON.stringify(objectChanged));
+
+      const badMembers = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 1,
+          arena_npcs_changed: [{ hull: Number.NaN, name: { nested: true }, ship: { id: 'hidden' } }],
+        },
+      });
+      expect(badMembers.headline).toContain('1 changed, 0 departed');
+      expect(badMembers.details).toEqual(['Arena NPCs — changed 1: arena NPC']);
+      expect(JSON.stringify(badMembers)).not.toContain('hidden');
+      expectNoDiagnosticTokens(JSON.stringify(badMembers));
+      expectNoNestedJsonDump(JSON.stringify(badMembers));
+    });
+
     test('inline and notification-table layouts consume the same typed preview', () => {
       const inline = stripAnsi(formatNotification(observationNotification).join('\n'));
       expect(inline).toContain('[OBSERVATION]');
-      expect(inline).toContain('Observation at sol_cloudbank in sol (tick 901500): 7 changed, 6 departed');
+      expect(inline).toContain('Observation at sol_cloudbank in sol (tick 901500): 9 changed, 8 departed');
       expect(inline).toContain('Nearby players — changed 1');
+      expect(inline).toContain('Arena NPCs — changed 1');
+      expect(inline).toContain('Prizes — changed 1');
       expect(inline).toContain('Cloaked contacts — changed 1');
 
       const compactNotification = {

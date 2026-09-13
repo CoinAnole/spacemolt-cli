@@ -2167,7 +2167,9 @@ type ObservationIdentityDomain =
   | 'pirate'
   | 'empire NPC'
   | 'creature'
-  | 'cloaked contact';
+  | 'cloaked contact'
+  | 'arena NPC'
+  | 'prize';
 
 function observationText(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -2176,23 +2178,35 @@ function observationText(value: unknown): string | undefined {
   return text;
 }
 
+/** Empty when current is not a finite number. */
+function observationRatioSuffix(label: string, current: unknown, max: unknown): string {
+  const n = finiteNumber(current);
+  if (n === undefined) return '';
+  const cap = finiteNumber(max);
+  return cap === undefined ? ` ${label} ${n}` : ` ${label} ${n}/${cap}`;
+}
+
 function observationIdentity(record: Record<string, unknown>, domain: ObservationIdentityDomain): string {
   const nameKeys =
     domain === 'nearby player' || domain === 'system agent' || domain === 'cloaked contact'
       ? (['username', 'name', 'ship_name'] as const)
       : domain === 'creature'
         ? (['name', 'species'] as const)
-        : (['name', 'ship_name'] as const);
+        : domain === 'prize'
+          ? (['ship_name', 'name'] as const)
+          : (['name', 'ship_name'] as const);
   const idKeys =
     domain === 'nearby player' || domain === 'system agent'
       ? (['player_id', 'id'] as const)
       : domain === 'pirate'
         ? (['pirate_id', 'id'] as const)
-        : domain === 'empire NPC'
+        : domain === 'empire NPC' || domain === 'arena NPC'
           ? (['npc_id', 'id'] as const)
           : domain === 'creature'
             ? (['creature_id', 'id'] as const)
-            : (['target_id', 'player_id', 'id'] as const);
+            : domain === 'prize'
+              ? (['prize_id', 'id'] as const)
+              : (['target_id', 'player_id', 'id'] as const);
   const name = nameKeys.map((key) => observationText(record[key])).find(Boolean);
   const id = idKeys.map((key) => observationText(record[key])).find(Boolean);
   let identity = name && id && name !== id ? `${name} [${id}]` : (name ?? id ?? domain);
@@ -2200,6 +2214,18 @@ function observationIdentity(record: Record<string, unknown>, domain: Observatio
   if (domain === 'pirate') {
     const crew = observationText(record.faction_name) ?? observationText(record.faction);
     if (crew) identity += ` (${crew})`;
+  }
+  if (domain === 'arena NPC') {
+    const hull = finiteNumber(record.hull);
+    identity += observationRatioSuffix('hull', record.hull, record.max_hull);
+    // Knockout omits sh so the detail stays ≤ 80 characters.
+    if (hull !== 0) identity += observationRatioSuffix('sh', record.shield, record.max_shield);
+    if (hull === 0) identity += ' knocked out';
+    if (record.flees === true) identity += ' flees';
+  }
+  if (domain === 'prize') {
+    const status = observationText(record.status);
+    if (status) identity += ` (${status})`;
   }
   return identity;
 }
@@ -2256,10 +2282,14 @@ function previewObservationUpdate(
   const systemDeparted = observationDepartures(data.system_departed);
   const piratesChanged = records(data.pirates_changed);
   const piratesDeparted = observationDepartures(data.pirates_departed);
+  const arenaNpcsChanged = records(data.arena_npcs_changed);
+  const arenaNpcsDeparted = observationDepartures(data.arena_npcs_departed);
   const empireNpcsChanged = records(data.empire_npcs_changed);
   const empireNpcsDeparted = observationDepartures(data.empire_npcs_departed);
   const creaturesChanged = records(data.creatures_changed);
   const creaturesDeparted = observationDepartures(data.creatures_departed);
+  const prizesChanged = records(data.prizes_changed);
+  const prizesDeparted = observationDepartures(data.prizes_departed);
   const cloakedResolved = records(data.cloaked_resolved);
   const cloakedLost = observationDepartures(data.cloaked_lost);
 
@@ -2267,15 +2297,19 @@ function previewObservationUpdate(
     nearbyChanged.length +
     systemChanged.length +
     piratesChanged.length +
+    arenaNpcsChanged.length +
     empireNpcsChanged.length +
     creaturesChanged.length +
+    prizesChanged.length +
     cloakedResolved.length;
   const departedCount =
     nearbyDeparted.length +
     systemDeparted.length +
     piratesDeparted.length +
+    arenaNpcsDeparted.length +
     empireNpcsDeparted.length +
     creaturesDeparted.length +
+    prizesDeparted.length +
     cloakedLost.length;
 
   const poi = observationText(data.poi_id) ?? 'current POI';
@@ -2290,12 +2324,12 @@ function previewObservationUpdate(
     observationDomainDetail('Nearby players', 'nearby player', nearbyChanged, nearbyDeparted, options),
     observationDomainDetail('System agents', 'system agent', systemChanged, systemDeparted, options),
     observationDomainDetail('Pirates', 'pirate', piratesChanged, piratesDeparted, options),
+    observationDomainDetail('Arena NPCs', 'arena NPC', arenaNpcsChanged, arenaNpcsDeparted, options),
     observationDomainDetail('Empire NPCs', 'empire NPC', empireNpcsChanged, empireNpcsDeparted, options),
     observationDomainDetail('Creatures', 'creature', creaturesChanged, creaturesDeparted, options),
+    observationDomainDetail('Prizes', 'prize', prizesChanged, prizesDeparted, options),
     observationDomainDetail('Cloaked contacts', 'cloaked contact', cloakedResolved, cloakedLost, options),
-  ]
-    .filter((detail): detail is string => detail !== undefined)
-    .slice(0, options.maxDetails);
+  ].filter((detail): detail is string => detail !== undefined);
 
   return {
     tag: 'OBSERVATION',

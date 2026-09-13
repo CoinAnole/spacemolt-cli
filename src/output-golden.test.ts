@@ -8,6 +8,7 @@ import { renderStructuredResult } from './display';
 import { getStatusFixture, highValueCommandFixtures, viewMarketFixture } from './display/formatter-fixtures';
 import { subscribeMarketFixture } from './display/market.fixtures';
 import { getNotificationsFixture } from './display/notifications.fixtures';
+import { subscribeObservationFixture } from './display/status.fixtures';
 import type { GeneratedApiRoute } from './openapi-metadata';
 import { type RunnerDependencies, runInvocation } from './runner';
 import { ACTIVE_PROFILE, setActiveProfile } from './session';
@@ -461,6 +462,56 @@ const cliCases: CliGoldenCase[] = [
         },
       ],
       unsubscribe_market: [{ structuredContent: { action: 'unsubscribe_market', message: 'Unsubscribed.' } }],
+    },
+  },
+  {
+    name: 'subscribe-observation-follow.table',
+    argv: ['--plain', '--no-timestamp', 'subscribe_observation', '--follow'],
+    stopFollowAfterPoll: true,
+    responsesByCommand: {
+      subscribe_observation: [{ structuredContent: subscribeObservationFixture }],
+      get_notifications: [
+        {
+          structuredContent: {
+            count: 1,
+            notifications: [
+              {
+                id: 'notif-observation-follow-1',
+                type: 'observation',
+                msg_type: 'observation_update',
+                timestamp: '2026-05-23T19:05:02.000Z',
+                data: {
+                  active_scan: false,
+                  arena_npcs_changed: [
+                    {
+                      npc_id: 'arena-cleaver-1',
+                      name: 'Ring Cleaver',
+                      primary_color: '#c45a2a',
+                      secondary_color: '#1a1a1a',
+                      is_boss: false,
+                      flees: false,
+                      ship_class: 'fighter',
+                      ship_class_name: 'Fighter',
+                      hull: 0,
+                      max_hull: 180,
+                      shield: 0,
+                      max_shield: 60,
+                      battle_id: 'btl-first-blood',
+                      status: 'ready',
+                    },
+                  ],
+                  poi_id: 'sol_arena',
+                  system_id: 'sol',
+                  tick: 901600,
+                  unknown_signature: false,
+                },
+              },
+            ],
+            remaining: 0,
+          },
+        },
+      ],
+      unsubscribe_observation: [{ structuredContent: { action: 'unsubscribe_observation', message: 'Unsubscribed.' } }],
     },
   },
 ];

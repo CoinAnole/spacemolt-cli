@@ -172,6 +172,48 @@ describe('subscription follow runner integration', () => {
     expect(result.stderr.join('\n')).not.toContain('drains the shared notification queue');
   });
 
+  test('observation polling prints arena knockout as a hull-0 change, not a departure', async () => {
+    const result = await runFollowHarness({
+      command: 'subscribe_observation',
+      poll: () => ({
+        structuredContent: {
+          notifications: [
+            {
+              id: 'obs-knockout-1',
+              type: 'observation',
+              msg_type: 'observation_update',
+              timestamp: '2026-08-15T12:00:10.000Z',
+              data: {
+                poi_id: 'sol_arena',
+                system_id: 'sol',
+                tick: 901600,
+                unknown_signature: false,
+                active_scan: false,
+                arena_npcs_changed: [
+                  {
+                    npc_id: 'arena-cleaver-1',
+                    name: 'Ring Cleaver',
+                    hull: 0,
+                    max_hull: 180,
+                    shield: 0,
+                    max_shield: 60,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    });
+    const output = result.stdout.join('\n');
+
+    expect(output).toContain('1 changed, 0 departed');
+    expect(output).toContain('Arena NPCs');
+    expect(output).toContain('knocked out');
+    expect(output).toContain('hull 0');
+    expect(output).not.toContain('1 departed');
+  });
+
   test('observation polling prints active scan: false when the sweep is off', async () => {
     const result = await runFollowHarness({
       command: 'subscribe_observation',

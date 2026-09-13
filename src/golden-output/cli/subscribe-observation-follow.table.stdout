@@ -1,0 +1,27 @@
+
+=== Nearby ===
+Active scan: true
+Unknown cloaked signature detected. Run: scan
+
+Players (1):
+  Marlowe [SMC] (prospector) - "mapping Cloudbank"
+
+Pirates (1):
+  Corsair (skiff) - Admiral Kael - hostile
+
+Empire NPCs (1):
+  Solarian Patrol (interceptor)
+
+Creatures (1):
+  Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale) - grazer - hull 80/120
+
+Prizes (1):
+
+=== Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+-----------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
+[following observation notifications every 10s — Ctrl+C to stop]
+[OBSERVATION] Observation at sol_arena in sol (tick 901600): 1 changed, 0 departed; active scan: false
+  Arena NPCs — changed 1: Ring Cleaver [arena-cleaver-1] hull 0/180 knocked out
