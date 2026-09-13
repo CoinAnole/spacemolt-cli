@@ -20,7 +20,8 @@ const RISK_NOTES: Record<string, string[]> = {
     'Assigns minimum crew from the active ship (must keep one fit crew); starts interceptable autonomous recovery.',
   ],
   service_prize: [
-    'refuel/repair consume ship fuel or repair kits; redirect changes destination; stop/resume do not rewind transit.',
+    'refuel/repair consume fuel or repair kits from your own ship; redirect changes destination; stop/resume do not rewind transit.',
+    'stop/resume/redirect are claimant-only; refuel/repair also accept a faction-mate once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it.',
   ],
   facility_build: [
     'Builds a facility at the current base and spends required resources/credits; faction facility types are accepted by the server.',

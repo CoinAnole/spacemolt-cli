@@ -26,6 +26,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `claim_prize` help notes that the prize sits at the battle origin POI, which can differ from your current POI. `discoverWith` no longer lists `get_nearby`.
 - `get_battle_summary` / `get_battle_log` capture tables print optional Prize and Location columns when those fields are present.
 
+### Salvage & Tow
+
+- `service_prize` help now documents that stop, resume, and redirect remain claimant-only, while refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station (gameserver 0.603.0). A yard under construction or damaged does not unlock it. Both ships must still be out of combat at the same POI. **No parser change.**
+
 ### Crafting
 
 - `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**

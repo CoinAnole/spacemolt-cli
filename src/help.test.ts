@@ -1644,6 +1644,16 @@ describe('help output branches', () => {
     expect(output).toContain('destination_base_id -> target');
     expect(output).toContain('service_action (stop|resume|redirect|refuel|repair)');
     expect(output).toContain('Stop, resume, redirect, refuel, or repair a claimed intact prize');
+    expect(output).toContain('claimant-only');
+    expect(output).toContain('Prize Recovery Yard');
+    expect(output).toContain('under construction or damaged');
+    expect(output).toContain('same POI');
+    expect(output).toContain('from your own ship');
+    expect(output).toContain('service_action (stop|resume|redirect|refuel|repair) - Physical recovery action.');
+    expect(output).not.toContain('Physical recovery action to perform');
+    expect(output).toContain('faction facility_owned');
+    expect(output).not.toContain('faction_facility_owned');
+    expect(output).not.toContain('`');
   });
 
   test('scrap_wreck help documents faction-station salvage unlocks', () => {
