@@ -42,6 +42,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### Query
 
+- `catalog type=recipes` Use column prefers dump venue fields when present and treats `"Facility Only"` / `"Ship Passive"` as load-bearing (not `facility_only` alone). Ship Passive is never shown as craftable.
 - `get_system_agents` table output lists optional Docked (`true`/`false`) when the server reports `NearbyPlayer.docked` (gameserver 0.601.1). That is the same boolean `get_nearby` already surfaces as `[DOCKED]`; this table does not use that marker. Docked pilots cannot be attacked, scanned, or traded with until they undock.
 
 ### Missions
