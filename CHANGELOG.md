@@ -26,6 +26,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `claim_prize` help notes that the prize sits at the battle origin POI, which can differ from your current POI. `discoverWith` no longer lists `get_nearby`.
 - `get_battle_summary` / `get_battle_log` capture tables print optional Prize and Location columns when those fields are present.
 
+### Crafting
+
+- `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**
+
 ## 2.9.0 — 2026-09-08
 
 Large release since **2.8.0** (2026-08-02). Bundled OpenAPI metadata tracks gameserver through **v0.598.3**.
