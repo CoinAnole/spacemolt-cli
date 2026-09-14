@@ -1,7 +1,11 @@
 import {
+  classifyRecipeVenue,
   emitCatalogItemDetail,
   emitCatalogModuleDetail,
   emitCatalogShipDetail,
+  formatCatalogYesNo,
+  formatProducedByFacilities,
+  formatProducedByFacilityIds,
   packageOperationLabel,
 } from './catalog-detail.ts';
 import {
@@ -367,7 +371,7 @@ function emitBase(basePayload: Record<string, unknown>): void {
   }
 }
 
-function emitCatalogRecipeDetail(recipe: Record<string, unknown>): void {
+function emitCatalogRecipeDetail(recipe: Record<string, unknown>, catalog: Record<string, unknown>): void {
   emitLine(`\n${c.bright}Details${c.reset}`);
   const description = text(recipe.description);
   if (description) emitLine(description);
@@ -377,7 +381,18 @@ function emitCatalogRecipeDetail(recipe: Record<string, unknown>): void {
   const outputs = summarizeItemQuantities(recipe.outputs);
   if (outputs) emitLine(`Outputs: ${outputs}`);
   emitOptionalLine('Crafting time', recipe.crafting_time);
-  if (recipe.facility_only === true) emitLine('Facility only: yes');
+
+  const venue = classifyRecipeVenue(recipe);
+  emitLine(`Venue: ${venue}`);
+  const handCraftable = formatCatalogYesNo(recipe.hand_craftable);
+  if (handCraftable) emitLine(`Hand-craftable: ${handCraftable}`);
+  if (venue !== 'ship passive' && venue !== 'no venue') {
+    const producedBy =
+      formatProducedByFacilities(catalog.produced_by_facilities) ??
+      formatProducedByFacilityIds(recipe.produced_by_facility_ids);
+    if (producedBy) emitLine(`Produced by: ${producedBy}`);
+  }
+
   const packageOperation = packageOperationLabel(recipe.package_operation);
   if (packageOperation) emitLine(`Package operation: ${packageOperation}`);
 }
@@ -431,7 +446,7 @@ function emitCatalog(catalog: Record<string, unknown>): void {
       ],
       { maxCellWidth: 48 },
     );
-    if (recipes.length === 1 && recipes[0]) emitCatalogRecipeDetail(recipes[0]);
+    if (recipes.length === 1 && recipes[0]) emitCatalogRecipeDetail(recipes[0], catalog);
   }
 
   if (isRecord(catalog.analysis)) {

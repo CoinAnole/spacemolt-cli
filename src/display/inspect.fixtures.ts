@@ -239,6 +239,14 @@ export const inspectCatalogRecipeFixture = {
   },
 };
 
+export const inspectCatalogRecipeVenuesFixture = {
+  ...structuredClone(inspectCatalogRecipeFixture),
+  catalog: {
+    ...structuredClone(inspectCatalogRecipeFixture.catalog),
+    produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+  },
+};
+
 export const inspectBaseFixture = {
   id: 'earth_station',
   kind: 'base',
@@ -340,6 +348,7 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_catalog_ship: { command: 'inspect', fixture: inspectCatalogShipFixture },
   inspect_catalog_boarding_module: { command: 'inspect', fixture: inspectCatalogBoardingModuleFixture },
   inspect_catalog_recipe: { command: 'inspect', fixture: inspectCatalogRecipeFixture },
+  inspect_catalog_recipe_venues: { command: 'inspect', fixture: inspectCatalogRecipeVenuesFixture },
   inspect_base: { command: 'inspect', fixture: inspectBaseFixture },
   inspect_base_repairs: { command: 'inspect', fixture: inspectBaseRepairsFixture },
   inspect_base_sovereign_mint_inputs: { command: 'inspect', fixture: inspectBaseSovereignMintInputsFixture },

@@ -4,6 +4,7 @@ import {
   countRecipeVenues,
   emitCatalogItemDetail,
   emitCatalogShipDetail,
+  formatProducedByFacilities,
   formatShipAvailability,
   joinStringIds,
   summarizeNamedItemQuantities as summarizeShipRequiredItems,
@@ -1347,6 +1348,15 @@ export const genericFormatters = [
       const recipes = firstArray(r, r.type === 'recipes' ? ['recipes', 'items'] : ['recipes']);
       if (!recipes) return false;
       printRecipeRows('Recipes', recipes);
+      const recipe = recipes[0];
+      // produced_by_facilities is response-level; only unambiguous for a single recipe
+      if (recipes.length === 1 && recipe && isRecord(recipe)) {
+        const venue = classifyRecipeVenue(recipe);
+        if (venue !== 'ship passive' && venue !== 'no venue') {
+          const producedBy = formatProducedByFacilities(r.produced_by_facilities);
+          if (producedBy) emitLine(`Produced by: ${producedBy}`);
+        }
+      }
       printMetadata(r);
       printCatalogTruncationWarning('catalog', r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
