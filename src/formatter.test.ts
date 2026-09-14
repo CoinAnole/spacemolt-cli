@@ -6618,6 +6618,33 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('catalog recipe Ship Passive category is ship passive without facility_only', () => {
+    const { stdout, stderr } = captureStructuredOutput('catalog', {
+      recipes: [
+        {
+          id: 'passive_refine_iron_ore',
+          name: 'Passive Iron Refining',
+          category: 'Ship Passive',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          crafting_time: 0,
+        },
+      ],
+      message: 'Recipes: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'recipes',
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Recipes ===');
+    expect(stdout).toContain('ship passive');
+    expect(stdout).not.toContain('craftable');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('catalog ship lookups show passive recipe details', () => {
     const { stdout, stderr } = captureStructuredOutput('catalog', {
       type: 'ships',

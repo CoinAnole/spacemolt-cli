@@ -67,6 +67,81 @@ export function formatShipAvailability(ship: Record<string, unknown>): string {
   return parts.join(', ');
 }
 
+const SHIP_PASSIVE_CATEGORY = 'Ship Passive';
+const FACILITY_ONLY_CATEGORY = 'Facility Only';
+
+export type RecipeVenue = 'ship passive' | 'craftable' | 'facility only' | 'no venue';
+
+/** Empty array is present; non-array is absent. */
+function stringIdList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((id): id is string => typeof id === 'string');
+}
+
+export function classifyRecipeVenue(recipe: Record<string, unknown>, options: { passive?: boolean } = {}): RecipeVenue {
+  if (options.passive === true) return 'ship passive';
+  if (recipe.ship_passive === true || recipe.passive === true) return 'ship passive';
+  if (recipe.category === SHIP_PASSIVE_CATEGORY) return 'ship passive';
+
+  const hand = recipe.hand_craftable;
+  const facilityIds = stringIdList(recipe.produced_by_facility_ids);
+
+  if (hand === true) return 'craftable';
+  if (hand === false) {
+    if (facilityIds && facilityIds.length > 0) return 'facility only';
+    if (facilityIds && facilityIds.length === 0) return 'no venue';
+    if (recipe.category === FACILITY_ONLY_CATEGORY || recipe.facility_only === true) {
+      return 'facility only';
+    }
+    return 'no venue';
+  }
+
+  if (recipe.category === FACILITY_ONLY_CATEGORY || recipe.facility_only === true) {
+    return 'facility only';
+  }
+  return 'craftable';
+}
+
+export function formatProducedByFacilities(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts: string[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const id = entry.definition_id;
+    const name = entry.name;
+    if (typeof id !== 'string' || id === '' || typeof name !== 'string' || name === '') continue;
+    const level = typeof entry.level === 'number' && Number.isFinite(entry.level) ? entry.level : undefined;
+    parts.push(level === undefined ? `${name} (${id})` : `${name} (${id}, L${level})`);
+  }
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+export function formatProducedByFacilityIds(value: unknown): string | undefined {
+  const ids = stringIdList(value);
+  if (!ids) return undefined;
+  const remaining = ids.filter((id) => id.length > 0);
+  return remaining.length ? remaining.join(', ') : undefined;
+}
+
+export function formatCatalogYesNo(value: unknown): string | undefined {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return undefined;
+}
+
+export function countRecipeVenues(recipes: unknown): Partial<Record<RecipeVenue, number>> | undefined {
+  if (!Array.isArray(recipes)) return undefined;
+  const counts: Partial<Record<RecipeVenue, number>> = {};
+  let counted = 0;
+  for (const recipe of recipes) {
+    if (!isRecord(recipe)) continue;
+    const venue = classifyRecipeVenue(recipe);
+    counts[venue] = (counts[venue] ?? 0) + 1;
+    counted += 1;
+  }
+  return counted === 0 ? undefined : counts;
+}
+
 function text(value: unknown): string | undefined {
   if (typeof value === 'string' && value.trim()) return value;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);

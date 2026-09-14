@@ -1,5 +1,6 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
 import {
+  classifyRecipeVenue,
   emitCatalogItemDetail,
   emitCatalogShipDetail,
   formatShipAvailability,
@@ -381,13 +382,6 @@ function summarizePassiveRecipes(value: unknown): string {
   return value.filter((recipe) => typeof recipe === 'string').join(', ');
 }
 
-function recipeAvailability(recipe: Record<string, unknown>, passive = false): string {
-  if (passive) return 'ship passive';
-  if (recipe.ship_passive === true || recipe.passive === true) return 'ship passive';
-  if (recipe.facility_only === true) return 'facility only';
-  return 'craftable';
-}
-
 function printRecipeRows(
   title: string,
   recipes: Array<Record<string, unknown>>,
@@ -397,7 +391,7 @@ function printRecipeRows(
     ...recipe,
     inputs_summary: summarizeItemQuantities(recipe.inputs),
     outputs_summary: summarizeItemQuantities(recipe.outputs),
-    availability: recipeAvailability(recipe, options.passive),
+    availability: classifyRecipeVenue(recipe, options),
   }));
   printCompactTable(
     title,

@@ -1410,6 +1410,38 @@ test('renders catalog recipe items with recipe availability', () => {
   expect(stdout).toContain('craftable');
 });
 
+test('renders paginated Ship Passive category as ship passive without facility_only', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Ship Passive',
+          crafting_time: 0,
+          id: 'passive_refine_iron_ore',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          name: 'Passive Iron Refining',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+        },
+      ],
+      message: 'Recipes: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recipes ===');
+  expect(stdout).toContain('ship passive');
+  expect(stdout).not.toContain('craftable');
+});
+
 test('renders craft dry-run details without raw response fallback', () => {
   const rendered = renderStructuredResult(
     'craft',
