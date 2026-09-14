@@ -1,0 +1,1 @@
+[{"id":"refine_iron_plates","hand_craftable":true,"produced_by_facility_ids":[]},{"id":"refine_copper_wire","hand_craftable":true,"produced_by_facility_ids":["ore_refinery"]},{"id":"pack_package","hand_craftable":false,"produced_by_facility_ids":["nano_fab"]},{"id":"passive_refine_iron_ore","hand_craftable":false,"produced_by_facility_ids":[]}]

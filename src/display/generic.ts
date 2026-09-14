@@ -1,6 +1,7 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
 import {
   classifyRecipeVenue,
+  countRecipeVenues,
   emitCatalogItemDetail,
   emitCatalogShipDetail,
   formatShipAvailability,
@@ -857,6 +858,20 @@ export const genericFormatters = [
       emitCatalogDumpArrayCount('faction_achievements', r.faction_achievements);
       emitCatalogDumpHiddenCount('hidden achievements', r.hidden_achievement_count);
       emitCatalogDumpHiddenCount('hidden faction achievements', r.hidden_faction_achievement_count);
+
+      const venueCounts = countRecipeVenues(r.recipes);
+      // Pre-0.600.0 caches omit hand_craftable; keep those dumps counts-only.
+      const hasHandCraftable =
+        Array.isArray(r.recipes) &&
+        r.recipes.some((recipe) => isRecord(recipe) && typeof recipe.hand_craftable === 'boolean');
+      if (venueCounts && hasHandCraftable) {
+        emitLine('');
+        emitLine('Recipe venues');
+        for (const token of ['craftable', 'facility only', 'ship passive', 'no venue'] as const) {
+          const count = venueCounts[token];
+          if (count !== undefined && count > 0) emitLine(`  ${token}: ${count}`);
+        }
+      }
       return true;
     },
     { commands: ['catalog_dump'] },

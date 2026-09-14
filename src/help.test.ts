@@ -1841,6 +1841,9 @@ describe('help output branches', () => {
     expect(showCommandHelp('catalog', capture.writer)).toBe(true);
     const output = capture.stdout.join('\n');
     expect(output).toContain('Mining lock/selection constants are on catalog_dump (GET /api/catalog.json)');
+    expect(output).toContain(
+      'Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
+    );
     expect(output).toContain('commissionable');
     expect(output).toContain('(ships|skills|recipes|items|facilities)');
     expect(output).not.toContain('type=mining');
@@ -1857,6 +1860,8 @@ describe('help output branches', () => {
     expect(output).toContain('get_guide miner');
     expect(output).toContain('rare_ore_access');
     expect(output).toContain('deep_core_access');
+    expect(output).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(output).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
   });
 
   test('showFullHelp includes cache sections near command discovery', () => {

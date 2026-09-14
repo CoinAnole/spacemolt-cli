@@ -1022,6 +1022,9 @@ describe('command metadata', () => {
     expect(catalog?.description).toContain(
       'Mining lock/selection constants are on catalog_dump (GET /api/catalog.json), not on this paginated command.',
     );
+    expect(catalog?.description).toContain(
+      'Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
+    );
     expect(catalog?.schema?.commissionable?.type).toBe('boolean');
     expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');
     expect(catalog?.schema?.commissionable?.description).toContain("your faction's own station");
@@ -1064,11 +1067,15 @@ describe('command metadata', () => {
     expect(config?.description).toContain('get_guide miner');
     expect(config?.description).toContain('rare_ore_access');
     expect(config?.description).toContain('deep_core_access');
+    expect(config?.description).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(config?.example).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
 
     const help = captureHelp('catalog_dump');
     expect(help).toContain('1 request/minute/IP');
     expect(help).toContain('refresh');
     expect(help).toContain('Public endpoint');
+    expect(help).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(help).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
     expect(help).not.toContain('type=mining');
   });
 
