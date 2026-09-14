@@ -16,4 +16,5 @@ Inputs: 1× Cargo Container, 20× Iron Ore
 Outputs: 1× Package
 Crafting time: 10
 Venue: facility only
+Produced by: Packager (packager, L1)
 Package operation: pack

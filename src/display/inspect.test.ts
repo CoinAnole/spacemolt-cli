@@ -412,7 +412,10 @@ test('renders single recipe catalog inspect with inputs and outputs', () => {
   expect(stdout).toContain('Inputs:');
   expect(stdout).toContain('Cargo Container');
   expect(stdout).toContain('Outputs:');
-  expect(stdout).toContain('Facility only: yes');
+  expect(stdout).toContain('Venue: facility only');
+  expect(stdout).not.toContain('Facility only: yes');
+  expect(stdout).not.toContain('Hand-craftable:');
+  expect(stdout).not.toContain('Produced by:');
   expect(stdout).toContain('Package operation: pack');
   expect(stdout).not.toContain('=== Response ===');
 });
@@ -443,6 +446,9 @@ test('renders unpack recipe package_operation string', () => {
 
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Venue: craftable');
+  expect(stdout).not.toContain('Facility only:');
+  expect(stdout).not.toContain('Produced by:');
   expect(stdout).toContain('Package operation: unpack');
   expect(stdout).not.toContain('Package operation: yes');
 });
@@ -464,6 +470,144 @@ function renderCatalogInspect(catalog: Record<string, unknown>, id = 'entry'): s
   expect(rendered.success).toBe(true);
   return rendered.stdout.join('\n');
 }
+
+test('inspect catalog recipe prints Produced by from catalog produced_by_facilities', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'pack_package',
+          name: 'Pack Package',
+          category: 'logistics',
+          crafting_time: 10,
+          facility_only: true,
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+    },
+    'pack_package',
+  );
+
+  expect(stdout).toContain('Venue: facility only');
+  expect(stdout).toContain('Produced by: Packager (packager, L1)');
+  expect(stdout).not.toContain('Facility only: yes');
+});
+
+test('inspect catalog recipe dump fields print Hand-craftable and facility ids', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'refine_iron_plates',
+          name: 'Refine Iron Plates',
+          category: 'refining',
+          crafting_time: 3,
+          hand_craftable: false,
+          produced_by_facility_ids: ['ore_refinery', 'nano_fab'],
+        },
+      ],
+    },
+    'refine_iron_plates',
+  );
+
+  expect(stdout).toContain('Venue: facility only');
+  expect(stdout).toContain('Hand-craftable: no');
+  expect(stdout).toContain('Produced by: ore_refinery, nano_fab');
+  expect(stdout).not.toContain('Facility only: yes');
+});
+
+test('inspect dump hand_craftable true prints Hand-craftable yes and extra facilities', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'refine_iron_plates',
+          name: 'Refine Iron Plates',
+          category: 'refining',
+          crafting_time: 3,
+          hand_craftable: true,
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+    },
+    'refine_iron_plates',
+  );
+
+  expect(stdout).toContain('Venue: craftable');
+  expect(stdout).toContain('Hand-craftable: yes');
+  expect(stdout).toContain('Produced by: ore_refinery');
+});
+
+test('inspect catalog recipe prefers catalog produced_by_facilities over dump ids', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'pack_package',
+          name: 'Pack Package',
+          category: 'logistics',
+          crafting_time: 10,
+          facility_only: true,
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+    },
+    'pack_package',
+  );
+
+  expect(stdout).toContain('Produced by: Packager (packager, L1)');
+  expect(stdout).not.toContain('ore_refinery');
+});
+
+test('inspect ship-passive recipe does not print Produced by', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'passive_refine_iron_ore',
+          name: 'Passive Iron Refining',
+          category: 'Ship Passive',
+          crafting_time: 0,
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'ore_refinery', name: 'Frontier Smelter', level: 3 }],
+    },
+    'passive_refine_iron_ore',
+  );
+
+  expect(stdout).toContain('Venue: ship passive');
+  expect(stdout).not.toContain('Produced by:');
+});
+
+test('inspect no-venue recipe does not print Produced by', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'lost_recipe',
+          name: 'Lost Recipe',
+          category: 'refining',
+          crafting_time: 1,
+          hand_craftable: false,
+          produced_by_facility_ids: [],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+    },
+    'lost_recipe',
+  );
+
+  expect(stdout).toContain('Venue: no venue');
+  expect(stdout).not.toContain('Produced by:');
+});
 
 test('module inspect prints scramble, reach, CPU 0, and omits empty Combat', () => {
   const stdout = renderCatalogInspect({

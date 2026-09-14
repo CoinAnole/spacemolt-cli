@@ -1443,6 +1443,124 @@ test('renders paginated Ship Passive category as ship passive without facility_o
   expect(stdout).not.toContain('craftable');
 });
 
+test('prints Produced by for a single catalog recipe with produced_by_facilities', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      recipes: [
+        {
+          category: 'refining',
+          crafting_time: 3,
+          id: 'refine_iron_plates',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Refine Iron Plates',
+          outputs: [{ item_id: 'iron_plate', quantity: 2 }],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recipes ===');
+  expect(stdout).toContain('Produced by: Packager (packager, L1)');
+});
+
+test('omits Produced by when catalog recipes page has more than one recipe', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      recipes: [
+        {
+          category: 'refining',
+          crafting_time: 3,
+          id: 'refine_iron_plates',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Refine Iron Plates',
+          outputs: [{ item_id: 'iron_plate', quantity: 2 }],
+        },
+        {
+          category: 'Components',
+          crafting_time: 6.75,
+          id: 'build_power_cell',
+          inputs: [{ item_id: 'energy_crystal', quantity: 3 }],
+          name: 'Build Power Cell',
+          outputs: [{ item_id: 'power_cell', quantity: 1 }],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recipes ===');
+  expect(stdout).not.toContain('Produced by:');
+});
+
+test('omits Produced by for a single ship-passive catalog recipe', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      recipes: [
+        {
+          category: 'Ship Passive',
+          crafting_time: 0,
+          id: 'passive_refine_iron_ore',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          name: 'Passive Iron Refining',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'ore_refinery', name: 'Frontier Smelter', level: 3 }],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('ship passive');
+  expect(stdout).not.toContain('Produced by:');
+});
+
+test('omits Produced by for a single no-venue catalog recipe', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      recipes: [
+        {
+          category: 'refining',
+          crafting_time: 1,
+          hand_craftable: false,
+          id: 'lost_recipe',
+          inputs: [{ item_id: 'ore_iron', quantity: 1 }],
+          name: 'Lost Recipe',
+          outputs: [{ item_id: 'iron_plate', quantity: 1 }],
+          produced_by_facility_ids: [],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('no venue');
+  expect(stdout).not.toContain('Produced by:');
+});
+
 test('renders craft dry-run details without raw response fallback', () => {
   const rendered = renderStructuredResult(
     'craft',
