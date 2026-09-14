@@ -5,7 +5,12 @@ import * as path from 'node:path';
 import type { SpaceMoltClient } from './api';
 import type { CliRuntimeContext } from './cli-context';
 import { renderStructuredResult } from './display';
-import { getStatusFixture, highValueCommandFixtures, viewMarketFixture } from './display/formatter-fixtures';
+import {
+  catalogDumpRecipeVenuesFixture,
+  getStatusFixture,
+  highValueCommandFixtures,
+  viewMarketFixture,
+} from './display/formatter-fixtures';
 import { subscribeMarketFixture } from './display/market.fixtures';
 import { getNotificationsFixture } from './display/notifications.fixtures';
 import { subscribeObservationFixture } from './display/status.fixtures';
@@ -287,6 +292,13 @@ const rendererProjectionCases: RendererGoldenCase[] = [
     fixture: viewMarketFixture,
     options: { jq: '.items | length' },
     stdoutFormat: 'text',
+  },
+  {
+    name: 'catalog_dump.jq-recipe-venues',
+    command: 'catalog_dump',
+    fixture: catalogDumpRecipeVenuesFixture,
+    options: { jq: '.recipes[] | {id,hand_craftable,produced_by_facility_ids}', format: 'json', compact: true },
+    stdoutFormat: 'json',
   },
 ];
 

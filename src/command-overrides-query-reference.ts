@@ -463,7 +463,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     usage:
       '<type> [id] [category] [search] [page] [page_size] [class=...] [empire=...] [tier=...] [commissionable=true/false]  (ships: class/empire/tier/commissionable filters; types: ships, items, skills, recipes, facilities)',
     description:
-      'Browse reference data such as ships, items, skills, recipes, and facilities. Mining lock/selection constants are on catalog_dump (GET /api/catalog.json), not on this paginated command.',
+      'Browse reference data such as ships, items, skills, recipes, and facilities. Mining lock/selection constants are on catalog_dump (GET /api/catalog.json), not on this paginated command. Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
     example: 'spacemolt catalog type=ships empire=solarian tier=3; spacemolt catalog type=ships commissionable=true',
     seeAlso: ['catalog_dump', 'get_guide', 'get_commands', 'commission_ship', 'buy_ship_license'],
     category: 'Reference & Help',
@@ -479,8 +479,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   catalog_dump: {
     usage: '[refresh=true/false]',
     description:
-      'Download the full static game catalog (ships, skills, recipes, items, facilities, achievements) and print mining constants. Public endpoint — no login. Rate-limited to 1 request/minute/IP; cached locally for one hour. Fetch once per gameserver version (get_version); do not poll. Use refresh=true to revalidate. Formulas: get_guide miner. Use catalog for paginated lookups. Gameserver 0.595.0 renamed module special rare_ore_access to deep_core_access; the old token still works on the server, but catalog modules no longer report it.',
-    example: 'spacemolt catalog_dump; spacemolt catalog_dump --jq .mining',
+      'Download the full static game catalog (ships, skills, recipes, items, facilities, achievements) and print mining constants. Public endpoint — no login. Rate-limited to 1 request/minute/IP; cached locally for one hour. Fetch once per gameserver version (get_version); do not poll. Use refresh=true to revalidate. Formulas: get_guide miner. Use catalog for paginated lookups. Gameserver 0.595.0 renamed module special rare_ore_access to deep_core_access; the old token still works on the server, but catalog modules no longer report it. Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.',
+    example:
+      "spacemolt catalog_dump; spacemolt catalog_dump --jq .mining; spacemolt catalog_dump --jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'",
     seeAlso: ['catalog', 'get_guide', 'get_version'],
     category: 'Reference & Help',
     route: {

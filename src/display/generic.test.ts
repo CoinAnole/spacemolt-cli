@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import {
   catalogDumpFixture,
+  catalogDumpRecipeVenuesFixture,
   catalogItemsFixture,
   catalogItemsMiningGroupFixture,
   catalogItemsModulesFixture,
@@ -2552,6 +2553,7 @@ test('catalog_dump prints version, mining constants, counts, and guide pointer',
   expect(stdout).toContain('hidden faction achievements: 2');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('run catalog_dump refresh=true');
+  expect(stdout).not.toContain('Recipe venues');
 });
 
 test('catalog_dump omits mining keys that are not finite numbers', () => {
@@ -2566,6 +2568,7 @@ test('catalog_dump omits mining keys that are not finite numbers', () => {
   expect(stdout).not.toContain('overkill_ratio');
   expect(stdout).not.toContain('depletion_floor');
   expect(stdout).not.toContain('rare_ore_rarity_weight_per_level');
+  expect(stdout).not.toContain('Recipe venues');
 });
 
 test('catalog_dump still claims when mining is missing and does not table items', () => {
@@ -2590,6 +2593,7 @@ test('catalog_dump still claims when mining is missing and does not table items'
   expect(stdout).not.toContain('Energy Crystal');
   expect(stdout).toContain('items: 2');
   expect(stdout).toContain('ships: 1');
+  expect(stdout).not.toContain('Recipe venues');
 });
 
 test('catalog_dump omits missing array and hidden-count lines', () => {
@@ -2603,6 +2607,62 @@ test('catalog_dump omits missing array and hidden-count lines', () => {
   expect(stdout).not.toContain('skills:');
   expect(stdout).not.toContain('hidden achievements:');
   expect(stdout).not.toContain('hidden faction achievements:');
+  expect(stdout).not.toContain('Recipe venues');
+});
+
+test('catalog_dump prints Recipe venues census for dump recipes with hand_craftable', () => {
+  const stdout = renderStructuredResult(
+    'catalog_dump',
+    structuredClone(catalogDumpRecipeVenuesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Version: 0.600.0');
+  expect(stdout).toContain('recipes: 4');
+  expect(stdout).toContain('\n\nRecipe venues\n  craftable: 2\n  facility only: 1\n  ship passive: 1');
+  expect(stdout).not.toContain('no venue');
+  expect(stdout).not.toContain('Refine Iron Plates');
+  expect(stdout).not.toContain('Refine Copper Wire');
+  expect(stdout).not.toContain('Pack Package');
+  expect(stdout).not.toContain('Passive Iron Refining');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('catalog_dump omits Recipe venues when recipes lack hand_craftable', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.recipes = [{}];
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('recipes: 1');
+  expect(stdout).not.toContain('Recipe venues');
+});
+
+test('catalog_dump omits Recipe venues when recipes are not records', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.recipes = [1, 'x'];
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('recipes: 2');
+  expect(stdout).not.toContain('Recipe venues');
+});
+
+test('catalog_dump Recipe venues includes no venue when dump recipes have empty facilities', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.recipes = [
+    {
+      id: 'orphaned_recipe',
+      name: 'Orphaned Recipe',
+      description: 'No reachable venue.',
+      category: 'refining',
+      inputs: [{ item_id: 'ore_iron', quantity: 1 }],
+      outputs: [{ item_id: 'iron_plate', quantity: 1 }],
+      crafting_time: 1,
+      hand_craftable: false,
+      produced_by_facility_ids: [],
+    },
+  ];
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('\n\nRecipe venues\n  no venue: 1');
+  expect(stdout).not.toContain('craftable:');
+  expect(stdout).not.toContain('Orphaned Recipe');
 });
 
 test('catalog_dump declines dry-run route previews', () => {

@@ -1021,6 +1021,61 @@ export const catalogDumpFixture = {
   hidden_faction_achievement_count: 2,
 };
 
+export const catalogDumpRecipeVenuesFixture = {
+  ...structuredClone(catalogDumpFixture),
+  version: '0.600.0',
+  recipes: [
+    {
+      id: 'refine_iron_plates',
+      name: 'Refine Iron Plates',
+      description: 'Smelt iron ore into reinforced plates.',
+      category: 'refining',
+      inputs: [
+        { item_id: 'ore_iron', quantity: 4 },
+        { item_id: 'fuel_cell', quantity: 1 },
+      ],
+      outputs: [{ item_id: 'iron_plate', quantity: 2 }],
+      crafting_time: 3,
+      hand_craftable: true,
+      produced_by_facility_ids: [],
+    },
+    {
+      id: 'refine_copper_wire',
+      name: 'Refine Copper Wire',
+      description: 'Draw copper at the workshop or an ore refinery.',
+      category: 'refining',
+      inputs: [{ item_id: 'ore_copper', quantity: 2 }],
+      outputs: [{ item_id: 'copper_wire', quantity: 1 }],
+      crafting_time: 2,
+      hand_craftable: true,
+      produced_by_facility_ids: ['ore_refinery'],
+    },
+    {
+      id: 'pack_package',
+      name: 'Pack Package',
+      description: 'Seal cargo at a nano fab.',
+      category: 'Facility Only',
+      inputs: [{ item_id: 'cargo_container', quantity: 1 }],
+      outputs: [{ item_id: 'packed_goods', quantity: 1 }],
+      crafting_time: 5,
+      hand_craftable: false,
+      produced_by_facility_ids: ['nano_fab'],
+      facility_only: true,
+    },
+    {
+      id: 'passive_refine_iron_ore',
+      name: 'Passive Iron Refining',
+      description: 'A fitted ship refines ore while underway.',
+      category: 'Ship Passive',
+      inputs: [{ item_id: 'ore_iron', quantity: 10 }],
+      outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+      crafting_time: 0,
+      hand_craftable: false,
+      produced_by_facility_ids: [],
+    },
+  ],
+};
+
 export const facilityDismantleFixture = {
   action: 'dismantle',
   facility_id: 'fac-1',
@@ -1198,6 +1253,11 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   catalog_dump: {
     command: 'catalog_dump',
     fixture: catalogDumpFixture,
+    apiRoute: 'GET /api/catalog.json',
+  },
+  catalog_dump_recipe_venues: {
+    command: 'catalog_dump',
+    fixture: catalogDumpRecipeVenuesFixture,
     apiRoute: 'GET /api/catalog.json',
   },
   faction_list: { command: 'faction_list', fixture: factionsFixture },
