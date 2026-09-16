@@ -1220,7 +1220,8 @@ export const statusFormatters = [
       const connections = Array.isArray(loc.connections) ? loc.connections : [];
       const nearbyPlayers = Array.isArray(loc.nearby_players) ? loc.nearby_players.filter(isRecord) : [];
       const nearbyPlayerCount = numberOrDefault(loc.nearby_player_count, nearbyPlayers.length);
-      const nearbyPirateCount = numberOrDefault(loc.nearby_pirate_count, 0);
+      const nearbyPirates = Array.isArray(loc.nearby_pirates) ? loc.nearby_pirates.filter(isRecord) : [];
+      const nearbyPirateCount = numberOrDefault(loc.nearby_pirate_count, nearbyPirates.length);
       const nearbyEmpireNpcCount = numberOrDefault(loc.nearby_empire_npc_count, 0);
 
       emitLine(`\n${c.bright}=== Location ===${c.reset}`);
@@ -1260,7 +1261,13 @@ export const statusFormatters = [
         title: 'Nearby Prizes',
       });
       if (nearbyPirateCount > 0) {
-        emitLine(`\n${c.red}Nearby Pirates: ${nearbyPirateCount}${c.reset}`);
+        emitLine(`\n${c.red}Nearby Pirates (${nearbyPirateCount}):${c.reset}`);
+        for (const pirate of nearbyPirates.slice(0, NEARBY_TABLE_LIMIT)) {
+          emitLine(`  ${formatNearbyPirateLine(pirate)}`);
+        }
+        if (nearbyPirateCount > NEARBY_TABLE_LIMIT) {
+          emitLine(`  ... and ${nearbyPirateCount - NEARBY_TABLE_LIMIT} more`);
+        }
       }
       if (nearbyEmpireNpcCount > 0) {
         emitLine(`\n${c.dim}Nearby NPCs: ${nearbyEmpireNpcCount}${c.reset}`);
