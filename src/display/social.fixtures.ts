@@ -1675,6 +1675,47 @@ export const actionLogPersonnelCaptureFixture = {
   ],
 };
 
+export const actionLogFactionRefuelFixture = {
+  category: 'faction',
+  faction_id: 'fac_smc',
+  event_type: 'faction.refuel',
+  has_more: false,
+  page: 1,
+  page_size: 50,
+  total: 2,
+  total_pages: 1,
+  entries: [
+    {
+      id: 301,
+      created_at: '2026-09-14T08:00:00.000Z',
+      summary: 'Marlowe drew 120 fuel from the bunker at Earth Station.',
+      category: 'faction',
+      event_type: 'faction.refuel',
+      data: {
+        username: 'Marlowe',
+        player_id: 'player-1',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        fuel: 120,
+      },
+    },
+    {
+      id: 302,
+      created_at: '2026-09-14T08:05:00.000Z',
+      summary: 'Ibis drew 45 fuel from the bunker at Cinder Outpost.',
+      category: 'faction',
+      event_type: 'faction.refuel',
+      data: {
+        username: 'Ibis',
+        player_id: 'player-2',
+        base_id: 'cinder_outpost',
+        base_name: 'Cinder Outpost',
+        fuel: 45,
+      },
+    },
+  ],
+};
+
 export const actionLogCursorFixture = {
   event_types: ['faction.production_cycle', 'ship.buy_order_filled'],
   since_id: 100,
@@ -1900,6 +1941,10 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_action_log_personnel_capture: {
     command: 'get_action_log',
     fixture: actionLogPersonnelCaptureFixture,
+  },
+  get_action_log_faction_refuel: {
+    command: 'get_action_log',
+    fixture: actionLogFactionRefuelFixture,
   },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },

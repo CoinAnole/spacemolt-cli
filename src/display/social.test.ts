@@ -5,6 +5,7 @@ import { facilityBillingPaused, withPausedRentSuffix } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import {
   actionLogCursorFixture,
+  actionLogFactionRefuelFixture,
   actionLogFixture,
   actionLogPersonnelCaptureFixture,
   battleLogArenaFixture,
@@ -119,6 +120,33 @@ function expectHeaderColumnsInOrder(header: string | undefined, columns: string[
     expect(index).toBeGreaterThan(last);
     last = index;
   }
+}
+
+function actionLogHeader(stdout: string): string | undefined {
+  return stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Timestamp') && line.includes('Summary'));
+}
+
+function actionLogHeaderColumns(stdout: string): string[] {
+  const header = actionLogHeader(stdout);
+  expect(header).toBeDefined();
+  return (header ?? '')
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function actionLogCell(stdout: string, rowNeedle: string, column: string): string | undefined {
+  const header = actionLogHeader(stdout);
+  const row = stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes(rowNeedle) && !line.includes('---'));
+  if (!header || !row) return undefined;
+  const headers = header.split('|').map((part) => part.trim());
+  const cells = row.split('|').map((part) => part.trim());
+  const index = headers.indexOf(column);
+  return index >= 0 ? cells[index] : undefined;
 }
 
 function expectNoPrizeOrLocation(header: string | undefined): void {
@@ -256,6 +284,125 @@ test('renders recruit/treat costs and capture insurance from action-log data', (
   expect(lostRow).toMatch(/\byes\b/);
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+});
+
+test('renders faction.refuel pilot, base, and fuel from action-log data', () => {
+  const rendered = renderStructuredResult(
+    'get_action_log',
+    structuredClone(actionLogFactionRefuelFixture),
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Event', 'Pilot', 'Base', 'Fuel']);
+  expect(actionLogCell(stdout, 'Marlowe', 'Pilot')).toBe('Marlowe (player-1)');
+  expect(actionLogCell(stdout, 'Marlowe', 'Fuel')).toBe('120');
+  expect(actionLogCell(stdout, 'Marlowe', 'Base')).toBe('Earth Station');
+  expect(actionLogCell(stdout, 'Ibis', 'Fuel')).toBe('45');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+});
+
+test('omits Pilot and Fuel columns when existing action-log fixtures lack those data fields', () => {
+  for (const fixture of [actionLogFixture, actionLogCursorFixture, actionLogPersonnelCaptureFixture]) {
+    const stdout = renderStructuredResult('get_action_log', structuredClone(fixture), options, context).stdout.join(
+      '\n',
+    );
+    const columns = actionLogHeaderColumns(stdout);
+    expect(columns).not.toContain('Pilot');
+    expect(columns).not.toContain('Fuel');
+  }
+
+  const personnel = renderStructuredResult(
+    'get_action_log',
+    structuredClone(actionLogPersonnelCaptureFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const personnelColumns = actionLogHeaderColumns(personnel);
+  expect(personnelColumns).toContain('Base');
+  expect(personnelColumns).toContain('Cost');
+  expect(personnelColumns).toContain('Insurance');
+});
+
+test('omits Pilot, Fuel, and Base when faction.refuel data has no those keys', () => {
+  const fixture = structuredClone(actionLogFactionRefuelFixture);
+  for (const entry of fixture.entries) {
+    const data = entry.data as Record<string, unknown>;
+    delete data.username;
+    delete data.player_id;
+    delete data.fuel;
+    delete data.base_id;
+    delete data.base_name;
+  }
+  const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).not.toContain('Pilot');
+  expect(columns).not.toContain('Fuel');
+  expect(columns).not.toContain('Base');
+  expect(actionLogCell(stdout, 'Marlowe', 'Event')).toBe('faction.refuel');
+});
+
+test('renders id-only Pilot when faction.refuel data has player_id without username', () => {
+  const fixture = structuredClone(actionLogFactionRefuelFixture);
+  for (const entry of fixture.entries) {
+    delete (entry.data as Record<string, unknown>).username;
+  }
+  const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+  expect(actionLogHeaderColumns(stdout)).toContain('Pilot');
+  expect(actionLogCell(stdout, 'player-1', 'Pilot')).toBe('player-1');
+});
+
+test('renders Fuel 0 when faction.refuel data has fuel zero', () => {
+  const fixture = structuredClone(actionLogFactionRefuelFixture);
+  for (const entry of fixture.entries) {
+    (entry.data as Record<string, unknown>).fuel = 0;
+  }
+  const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+  expect(actionLogHeaderColumns(stdout)).toContain('Fuel');
+  expect(actionLogCell(stdout, 'Marlowe', 'Fuel')).toBe('0');
+});
+
+test('renders Fuel from faction_fuel when fuel is absent', () => {
+  const fixture = structuredClone(actionLogFactionRefuelFixture);
+  for (const entry of fixture.entries) {
+    const data = entry.data as Record<string, unknown>;
+    delete data.fuel;
+    data.faction_fuel = 80;
+  }
+  const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+  expect(actionLogHeaderColumns(stdout)).toContain('Fuel');
+  expect(actionLogCell(stdout, 'Marlowe', 'Fuel')).toBe('80');
+});
+
+test('keeps Pilot and Fuel columns on mixed action-log pages', () => {
+  const fixture = structuredClone(actionLogFactionRefuelFixture);
+  const mixed = {
+    ...fixture,
+    entries: [
+      fixture.entries[0],
+      {
+        id: 1,
+        created_at: '2026-05-23T15:04:05.000Z',
+        summary: 'Completed basic iron smelting.',
+        category: 'crafting',
+        event_type: 'crafting.completed',
+        data: {
+          job_id: 'job-craft-1',
+          mode: 'craft',
+          storage: 'faction',
+        },
+      },
+    ],
+  };
+  const stdout = renderStructuredResult('get_action_log', mixed, options, context).stdout.join('\n');
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Pilot');
+  expect(columns).toContain('Fuel');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Pilot')?.trim()).toBe('');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Fuel')?.trim()).toBe('');
 });
 
 test('renders ranch status as a dashboard with feed and production tables', () => {

@@ -1277,6 +1277,10 @@ export const socialFormatters = [
         const marinesRecruited = scalarFrom('marines_recruited');
         const marinesTreated = scalarFrom('marines_treated');
         const insuranceVoided = scalarFrom('insurance_voided');
+        // faction.refuel data (untyped ActionLogData): username/player_id, fuel, base_id/base_name
+        const username = scalarFrom('username');
+        const playerId = scalarFrom('player_id');
+        const fuelAmount = scalarFrom('fuel') ?? scalarFrom('faction_fuel') ?? scalarFrom('ally_fuel');
         return {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
@@ -1303,6 +1307,8 @@ export const socialFormatters = [
           base_display: identifierText(scalarFrom('base_name')) ?? identifierText(scalarFrom('base_id')),
           insurance_voided_display: formatYesNo(insuranceVoided),
           cost_display: formatCredits(scalarFrom('cost')) ?? formatNumber(scalarFrom('cost')),
+          pilot_display: formatActorIdentity(username, playerId),
+          fuel_display: formatNumber(fuelAmount),
         };
       });
       const columns: Array<[string, string[]]> = [
@@ -1311,6 +1317,7 @@ export const socialFormatters = [
         ['Category', ['category']],
       ];
       if (hasAnyField(rows, ['event_type', 'type'])) columns.push(['Event', ['event_type', 'type']]);
+      if (hasAnyField(rows, ['pilot_display'])) columns.push(['Pilot', ['pilot_display']]);
       if (hasAnyField(rows, ['commission_id'])) columns.push(['Commission', ['commission_id']]);
       if (hasAnyField(rows, ['ship_id'])) columns.push(['Ship', ['ship_id']]);
       if (hasAnyField(rows, ['ship_class'])) columns.push(['Class', ['ship_class']]);
@@ -1329,6 +1336,7 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
         columns.push(['Base', ['base_display', 'base_name', 'base_id']]);
       }
+      if (hasAnyField(rows, ['fuel_display'])) columns.push(['Fuel', ['fuel_display']]);
       if (hasAnyField(rows, ['source'])) columns.push(['Source', ['source']]);
       if (hasAnyField(rows, ['insurance_voided_display', 'insurance_voided'])) {
         columns.push(['Insurance', ['insurance_voided_display', 'insurance_voided']]);

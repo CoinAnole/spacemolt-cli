@@ -1,0 +1,8 @@
+category faction
+
+=== Entries ===
+
+  Timestamp           | Summary                                                 | Category | Event          | Pilot              | Base           | Fuel
+  --------------------+---------------------------------------------------------+----------+----------------+--------------------+----------------+-----
+  2026-09-14 08:00:00 | Marlowe drew 120 fuel from the bunker at Earth Station. | faction  | faction.refuel | Marlowe (player-1) | Earth Station  | 120 
+  2026-09-14 08:05:00 | Ibis drew 45 fuel from the bunker at Cinder Outpost.    | faction  | faction.refuel | Ibis (player-2)    | Cinder Outpost | 45  
