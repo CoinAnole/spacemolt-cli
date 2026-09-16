@@ -333,7 +333,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_action_log: {
     usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
     description:
-      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost). Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll.",
+      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost); event_type=faction.refuel with faction_id= for faction bunker fuel withdrawals by members and allies (pilot, station, amount). Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll.",
     example:
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     category: 'Query commands',
@@ -343,7 +343,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     schemaExtensions: {
       event_type: {
         description:
-          'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; other.jettison_dispersed for jettison-container despawn receipts). Comma-separated on the CLI or --payload-json.',
+          'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; faction.refuel for faction bunker fuel withdrawals — pass faction_id=; other.jettison_dispersed for jettison-container despawn receipts). Comma-separated on the CLI or --payload-json.',
       },
     },
   },

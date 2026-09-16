@@ -47,6 +47,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `catalog_dump` human output adds a Recipe venues census when dump recipes carry `hand_craftable`. `--jq` example projects `hand_craftable` / `produced_by_facility_ids` (dump-only, gameserver 0.600.0). Census `no venue` means not workshop, not ship-passive, empty facility ids.
 - `inspect` of a catalog recipe, and `catalog type=recipes` when the page has a single recipe, print `Venue:` and `Produced by:` from `produced_by_facilities`.
 - `get_system_agents` table output lists optional Docked (`true`/`false`) when the server reports `NearbyPlayer.docked` (gameserver 0.601.1). That is the same boolean `get_nearby` already surfaces as `[DOCKED]`; this table does not use that marker. Docked pilots cannot be attacked, scanned, or traded with until they undock.
+- `get_action_log` help names `event_type=faction.refuel` with `faction_id=` for faction bunker withdrawals by members and allies (gameserver 0.605.1). **No parser change.**
 
 ### Taxes
 
