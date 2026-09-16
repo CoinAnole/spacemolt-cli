@@ -801,6 +801,31 @@ function nearbyWithPirateColors(
   return fixture;
 }
 
+function locationWithPirateColors(
+  colors: Record<string, unknown>,
+  pirateIndex = 0,
+): { location: { nearby_pirates: Array<Record<string, unknown>> } } {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirates: Array<Record<string, unknown>> };
+  };
+  const pirate = { ...fixture.location.nearby_pirates[pirateIndex] };
+  delete pirate.primary_color;
+  delete pirate.secondary_color;
+  fixture.location.nearby_pirates[pirateIndex] = { ...pirate, ...colors };
+  return fixture;
+}
+
+function locationBossFixture(): {
+  location: { nearby_pirates: Array<Record<string, unknown>>; nearby_pirate_count: number };
+} {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirates: Array<Record<string, unknown>>; nearby_pirate_count: number };
+  };
+  fixture.location.nearby_pirate_count = nearbyBossFixture.pirate_count;
+  fixture.location.nearby_pirates = structuredClone(nearbyBossFixture.pirates);
+  return fixture;
+}
+
 test('get_nearby colors pirate names with both crew hex colors', () => {
   const stdout = renderStructuredResult(
     'get_nearby',
@@ -918,6 +943,234 @@ test('get_nearby prefixes Boss only on pirates with is_boss true', () => {
   expect(stdout).toContain('Pirates (2):');
   expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
   expect(stdout).toContain('Boss Dreadnought (battleship) - Admiral Kael - hostile');
+});
+
+test('get_location lists nearby pirates with the get_nearby livery line', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    structuredClone(getLocationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Pirates (1):');
+  expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
+  expect(stdout).not.toContain('Nearby Pirates: 1');
+});
+
+test('get_location colors pirate names with both crew hex colors', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({ primary_color: pirateFg, secondary_color: pirateBg }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe(`  ${hexColor('Raider', pirateFg, pirateBg)} (skiff) - Admiral Kael - hostile`);
+  expect(line).toContain('\x1b[38;2');
+  expect(line).toContain('\x1b[48;2');
+  expect(line?.endsWith('\x1b[0m (skiff) - Admiral Kael - hostile')).toBe(true);
+});
+
+test('get_location colors pirate names with primary color only', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({ primary_color: pirateFg }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe(`  ${hexColor('Raider', pirateFg)} (skiff) - Admiral Kael - hostile`);
+  expect(nearbyPirateLine(stdout, 'Raider')).toContain('\x1b[38;2');
+  expect(nearbyPirateLine(stdout, 'Raider')).not.toContain('\x1b[48;2');
+});
+
+test('get_location colors pirate names with secondary color only', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({ secondary_color: pirateBg }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', undefined, pirateBg)} (skiff) - Admiral Kael - hostile`,
+  );
+  expect(nearbyPirateLine(stdout, 'Raider')).toContain('\x1b[48;2');
+  expect(nearbyPirateLine(stdout, 'Raider')).not.toContain('\x1b[38;2');
+});
+
+test('get_location leaves pirate names uncolored for invalid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({ primary_color: 'red', secondary_color: '#fff' }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - Admiral Kael - hostile');
+  expect(line).not.toContain('\x1b');
+});
+
+test('get_location colors only the valid pirate livery channel when mixed with invalid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({ primary_color: pirateFg, secondary_color: 'red' }),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe(
+    `  ${hexColor('Raider', pirateFg, 'red')} (skiff) - Admiral Kael - hostile`,
+  );
+});
+
+test('get_location leaves pirate names uncolored when livery colors are missing', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({}),
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - Admiral Kael - hostile');
+  expect(line).not.toContain('\x1b');
+});
+
+test('get_location --plain leaves pirate names uncolored even with valid hex', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    locationWithPirateColors({ primary_color: pirateFg, secondary_color: pirateBg }),
+    { ...options, plain: true },
+    context,
+  ).stdout.join('\n');
+  const line = nearbyPirateLine(stdout, 'Raider');
+
+  expect(line).toBe('  Raider (skiff) - Admiral Kael - hostile');
+  expect(line).not.toContain('\x1b');
+});
+
+test('get_location colors boss pirate names after an uncolored Boss prefix', () => {
+  const fixture = locationBossFixture();
+  fixture.location.nearby_pirates[1] = {
+    ...fixture.location.nearby_pirates[1],
+    primary_color: pirateFg,
+    secondary_color: pirateBg,
+  };
+  const stdout = renderStructuredResult('get_location', fixture, colorOptions, context).stdout.join('\n');
+  const bossLine = nearbyPirateLine(stdout, 'Dreadnought');
+
+  expect(bossLine).toBe(`  Boss ${hexColor('Dreadnought', pirateFg, pirateBg)} (battleship) - Admiral Kael - hostile`);
+  expect(bossLine?.startsWith('  Boss \x1b')).toBe(true);
+  expect(nearbyPirateLine(stdout, 'Raider')).toBe('  Raider (skiff) - Admiral Kael - hostile');
+});
+
+test('get_location prefixes Boss only on pirates with is_boss true', () => {
+  const stdout = renderStructuredResult('get_location', locationBossFixture(), options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Pirates (2):');
+  expect(stdout).toContain('Raider (skiff) - Admiral Kael - hostile');
+  expect(stdout).toContain('Boss Dreadnought (battleship) - Admiral Kael - hostile');
+});
+
+test('get_location omits the pirate section when count is 0', () => {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirate_count: number; nearby_pirates: unknown[] };
+  };
+  fixture.location.nearby_pirate_count = 0;
+  fixture.location.nearby_pirates = [];
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Nearby Pirates');
+});
+
+test('get_location prints a pirate heading with no rows when count is set and the array is empty', () => {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirate_count: number; nearby_pirates: unknown[] };
+  };
+  fixture.location.nearby_pirate_count = 3;
+  fixture.location.nearby_pirates = [];
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Pirates (3):');
+  expect(stdout).not.toContain('Raider');
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_location falls back to nearby_pirates.length when nearby_pirate_count is omitted', () => {
+  const fixture = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  delete fixture.location.nearby_pirate_count;
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Pirates (1):');
+  expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
+});
+
+test('get_location caps pirate rows at NEARBY_TABLE_LIMIT', () => {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirate_count: number; nearby_pirates: Array<Record<string, unknown>> };
+  };
+  fixture.location.nearby_pirate_count = 12;
+  fixture.location.nearby_pirates = Array.from({ length: 12 }, (_, index) => ({
+    name: `P${index + 1}`,
+    tier: 'skiff',
+  }));
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+  const pirateLines = stdout.split('\n').filter((line) => /^ {2}P\d+ \(skiff\)$/.test(line));
+
+  expect(stdout).toContain('Nearby Pirates (12):');
+  expect(pirateLines).toHaveLength(10);
+  expect(stdout).toContain('  P1 (skiff)');
+  expect(stdout).toContain('  P10 (skiff)');
+  expect(stdout).not.toContain('P11');
+  expect(stdout).toContain('  ... and 2 more');
+});
+
+test('get_location still overflows when count exceeds the cap and the array is already 10', () => {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirate_count: number; nearby_pirates: Array<Record<string, unknown>> };
+  };
+  fixture.location.nearby_pirate_count = 12;
+  fixture.location.nearby_pirates = Array.from({ length: 10 }, (_, index) => ({
+    name: `P${index + 1}`,
+    tier: 'skiff',
+  }));
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+  const pirateLines = stdout.split('\n').filter((line) => /^ {2}P\d+ \(skiff\)$/.test(line));
+
+  expect(stdout).toContain('Nearby Pirates (12):');
+  expect(pirateLines).toHaveLength(10);
+  expect(stdout).toContain('  P10 (skiff)');
+  expect(stdout).not.toContain('P11');
+  expect(stdout).not.toContain('P12');
+  expect(stdout).toContain('  ... and 2 more');
+});
+
+test('get_location does not overflow when count is 2 and the array has 1 pirate', () => {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirate_count: number };
+  };
+  fixture.location.nearby_pirate_count = 2;
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Pirates (2):');
+  expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_location uses faction when faction_name is missing', () => {
+  const fixture = structuredClone(getLocationFixture) as {
+    location: { nearby_pirates: Array<Record<string, unknown>> };
+  };
+  const pirate = fixture.location.nearby_pirates[0];
+  if (!pirate) throw new Error('expected nearby pirate');
+  delete pirate.faction_name;
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('  Raider (skiff) - pirate_kael - hostile');
 });
 
 test('get_nearby prints Arena NPCs after Pirates and before Empire NPCs', () => {
@@ -1141,7 +1394,7 @@ test('subscribe_observation prints prizes without prize_count', () => {
   expect(stdout).not.toContain('prize_count');
 });
 
-test('get_location prints nearby prizes after players and before pirate counts', () => {
+test('get_location prints nearby prizes after players and before pirate rows', () => {
   const stdout = renderStructuredResult(
     'get_location',
     structuredClone(getLocationFixture),

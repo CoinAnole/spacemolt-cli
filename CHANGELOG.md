@@ -42,6 +42,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### Query
 
+- `get_location` table output lists nearby pirates with the same livery line as `get_nearby` (`Boss` prefix, crew name, status, optional `#RRGGBB` name colors). The heading is `Nearby Pirates (N):` instead of `Nearby Pirates: N`. Colors stay omitted when the server omits them (gameserver 0.602.0). **No parser change.**
 - `get_base` / docked-base `inspect` shortage rows now print `buy order: yes` or `buy order: no` from gameserver 0.605.2 `buy_order_available`. Sell only `yes` rows through the public market; check current prices and order depth. `no` means the station must arrange procurement. Availability is a snapshot and does not guarantee enough order depth to cover the missing quantity. Help documents the split. **No parser change.**
 - `catalog type=recipes` Use column prefers dump venue fields when present and treats `"Facility Only"` / `"Ship Passive"` as load-bearing (not `facility_only` alone). Ship Passive is never shown as craftable.
 - `catalog_dump` human output adds a Recipe venues census when dump recipes carry `hand_craftable`. `--jq` example projects `hand_craftable` / `produced_by_facility_ids` (dump-only, gameserver 0.600.0). Census `no venue` means not workshop, not ship-passive, empty facility ids.
