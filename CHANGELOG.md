@@ -63,6 +63,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.
 - `attack` help notes that an armed faction station may join a member's fight in the same system. `hunt` help notes that a leviathan hunt may pull an armed faction station in-system (gameserver 0.604.0).
+- `get_battle_status` help names `flee_required` as a speed-adjusted baseline (floor 1), not a hard minimum of 3, and that the field is omitted while warp-disrupted or boarding-intercepted (gameserver 0.601.4). **No parser change.**
 
 ### Breaking
 
