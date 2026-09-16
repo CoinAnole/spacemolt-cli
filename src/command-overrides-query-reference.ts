@@ -51,7 +51,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   inspect: {
     usage: '<id>  (package:<id>, item, module, ship class, system, POI, or docked base)',
     description:
-      'Look up a visible package, catalog entry, module, ship class, known system, current-system POI, or docked base by ID. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint shortage report as get_base.',
+      'Look up a visible package, catalog entry, module, ship class, known system, current-system POI, or docked base by ID. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint shortage report as get_base, including per-input buy order: yes or no. Sell only buy order: yes rows through the public market; check view_market for depth.',
     example: 'spacemolt inspect iron_ore',
     discoverWith: ['get_cargo', 'get_system', 'catalog', 'get_base'],
     seeAlso: ['get_cargo', 'get_system', 'get_poi', 'get_base', 'catalog', 'craft'],
