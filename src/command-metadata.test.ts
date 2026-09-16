@@ -2581,12 +2581,23 @@ describe('command metadata', () => {
     });
     expect(config.route.defaults).toBeUndefined();
     expect(config.example).toBe('spacemolt pay_bounty solarian faction');
-    expect(config.seeAlso).toEqual(['get_status', 'get_empire_info', 'prepay_tax']);
-    expect(config.discoverWith).toEqual(['get_status', 'get_empire_info']);
+    expect(config.seeAlso).toEqual(['get_tax_estimate', 'get_status', 'get_empire_info', 'prepay_tax']);
+    expect(config.discoverWith).toEqual(['get_tax_estimate', 'get_status', 'get_empire_info']);
     expect(COMMANDS.prepay_tax?.seeAlso).toContain('pay_bounty');
     expect(COMMANDS.get_empire_info?.seeAlso).toContain('pay_bounty');
     expect(COMMANDS.get_player?.seeAlso).toContain('pay_bounty');
     expect(COMMANDS.get_status?.seeAlso).not.toContain('pay_bounty');
+  });
+
+  test('get_tax_estimate help names weekly statement, exemption, and pay_bounty', () => {
+    const config = COMMANDS.get_tax_estimate;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_tax_estimate command is missing from COMMANDS');
+    expect(config.description).toContain('weekly statement');
+    expect(config.description).toContain('inactivity_exempt');
+    expect(config.description).toContain('pay_bounty');
+    expect(config.seeAlso).toEqual(expect.arrayContaining(['pay_bounty', 'prepay_tax']));
+    expect(config.example).toBe('spacemolt get_tax_estimate');
   });
 
   test('notification commands expose exactly the server-emitted type choices', () => {

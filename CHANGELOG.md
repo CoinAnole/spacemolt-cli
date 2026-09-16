@@ -47,6 +47,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `inspect` of a catalog recipe, and `catalog type=recipes` when the page has a single recipe, print `Venue:` and `Produced by:` from `produced_by_facilities`.
 - `get_system_agents` table output lists optional Docked (`true`/`false`) when the server reports `NearbyPlayer.docked` (gameserver 0.601.1). That is the same boolean `get_nearby` already surfaces as `[DOCKED]`; this table does not use that marker. Docked pilots cannot be attacked, scanned, or traded with until they undock.
 
+### Taxes
+
+- `get_tax_estimate` table output shows inactivity exemption, outstanding empire bounties, server payment guidance, and the latest weekly statement when present (gameserver 0.605.0). Current estimate, current debt, and the historical statement stay in separate blocks. `pay_bounty` help See also and Discover-with now point at `get_tax_estimate`. **No parser change.**
+
 ### Missions
 
 - `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) now append `cargo:N` and `storage:M` to an objective's `current/required` when the server sends `ObjectiveProgressInfo.in_cargo` / `in_storage` (gameserver 0.604.1). That is the same on-hand stock that delivery, pickup, and crafting consult. Progress stays `current/required`; the suffix is on-hand stock, not a substitute for it.

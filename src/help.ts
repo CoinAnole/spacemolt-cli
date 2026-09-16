@@ -1067,7 +1067,7 @@ ${c.bright}Information Commands (unlimited):${c.reset}
   get_wrecks          Wrecks and jettison containers at POI
   get_map             Galaxy map (all systems, or one system)
   get_empire_info     Empire policy snapshots
-  get_tax_estimate    Preview taxes owed
+  get_tax_estimate    Estimate, missed taxes, weekly statement
   get_notifications   Poll queued game events
   get_battle_status   Current battle state
   get_battle_summary  Aggregate battle result by ID

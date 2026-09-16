@@ -154,7 +154,19 @@ function formatTaxEntries(value: unknown, kind: 'income' | 'property'): string |
               brackets ? `brackets ${brackets}` : undefined,
             ]);
 
-      const label = [empire, owed === undefined ? undefined : `owed ${owed}`].filter(Boolean).join(' ') || 'entry';
+      const paid = formatCredits(entry.paid);
+      const unpaid = formatCredits(entry.unpaid);
+      const head = [empire, owed === undefined ? undefined : `owed ${owed}`]
+        .filter((part): part is string => Boolean(part))
+        .join(' ');
+      const label =
+        [
+          head || undefined,
+          paid === undefined ? undefined : `paid ${paid}`,
+          unpaid === undefined ? undefined : `unpaid ${unpaid}`,
+        ]
+          .filter((part): part is string => Boolean(part))
+          .join(', ') || 'entry';
       return details ? `${label} (${details})` : label;
     })
     .filter(Boolean);
@@ -217,6 +229,95 @@ function formatAssessedPropertySources(value: unknown): string | undefined {
     .filter(Boolean);
 
   return sources.length ? sources.join(', ') : undefined;
+}
+
+function formatStatementTimestamp(value: unknown): string | undefined {
+  if (typeof value === 'number') return formatPolicyTimestamp(value);
+  if (typeof value !== 'string') return undefined;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  const date = new Date(parsed);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return `${date.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+}
+
+function formatCreditMap(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value)
+    .map(([key, fieldValue]) => {
+      const amount = formatCredits(fieldValue);
+      return amount === undefined ? undefined : `${key} ${amount}`;
+    })
+    .filter((part): part is string => Boolean(part));
+  return entries.length ? entries.join(', ') : undefined;
+}
+
+function emitStatement(statement: Record<string, unknown>): void {
+  emitLine(`\n${c.bright}=== Latest Weekly Statement ===${c.reset}`);
+
+  const periodStarted = formatStatementTimestamp(statement.period_started_at);
+  if (periodStarted !== undefined) {
+    const zeroTime =
+      statement.period_started_at === 0 ||
+      statement.period_started_at === '1970-01-01T00:00:00Z' ||
+      (typeof statement.period_started_at === 'string' && Date.parse(statement.period_started_at) === 0);
+    emitLine(`Period started: ${zeroTime ? 'none' : periodStarted}`);
+  }
+
+  const assessedAt = formatStatementTimestamp(statement.assessed_at);
+  if (assessedAt !== undefined) emitLine(`Assessed at: ${assessedAt}`);
+  if (statement.tick !== undefined) emitLine(`Tick: ${formatNumber(statement.tick) ?? statement.tick}`);
+  if (statement.preview !== undefined) emitLine(`Preview: ${statement.preview}`);
+  if (statement.inactivity_exempt !== undefined) emitLine(`Inactivity exempt: ${statement.inactivity_exempt}`);
+  if (statement.income_gross !== undefined) {
+    emitLine(`Income gross: ${formatCredits(statement.income_gross) ?? statement.income_gross}`);
+  }
+  const incomeByCategory = formatCreditMap(statement.income_by_category);
+  if (incomeByCategory) emitLine(`Income by category: ${incomeByCategory}`);
+  if (statement.market_purchases !== undefined) {
+    emitLine(`Market purchases: ${formatCredits(statement.market_purchases) ?? statement.market_purchases}`);
+  }
+  if (statement.loss_carryforward_previous !== undefined) {
+    emitLine(
+      `Previous loss carryforward: ${formatCredits(statement.loss_carryforward_previous) ?? statement.loss_carryforward_previous}`,
+    );
+  }
+  if (statement.market_deduction !== undefined) {
+    emitLine(`Market deduction: ${formatCredits(statement.market_deduction) ?? statement.market_deduction}`);
+  }
+  if (statement.loss_carryforward_next !== undefined) {
+    emitLine(
+      `Next loss carryforward: ${formatCredits(statement.loss_carryforward_next) ?? statement.loss_carryforward_next}`,
+    );
+  }
+  if (statement.taxable_income !== undefined) {
+    emitLine(`Taxable income: ${formatCredits(statement.taxable_income) ?? statement.taxable_income}`);
+  }
+  if (statement.property_value !== undefined) {
+    emitLine(`Property value: ${formatCredits(statement.property_value) ?? statement.property_value}`);
+  }
+  const ships = formatAssessedPropertySources(statement.ships);
+  if (ships) emitLine(`Ships: ${ships}`);
+  const income = formatTaxEntries(statement.income, 'income');
+  if (income) emitLine(`Income: ${income}`);
+  const property = formatTaxEntries(statement.property, 'property');
+  if (property) emitLine(`Property: ${property}`);
+  if (statement.paid_from_prepaid !== undefined) {
+    emitLine(`Paid from prepaid: ${formatCredits(statement.paid_from_prepaid) ?? statement.paid_from_prepaid}`);
+  }
+  if (statement.paid_from_wallet !== undefined) {
+    emitLine(`Paid from wallet: ${formatCredits(statement.paid_from_wallet) ?? statement.paid_from_wallet}`);
+  }
+  if (statement.refund !== undefined) emitLine(`Refund: ${formatCredits(statement.refund) ?? statement.refund}`);
+  if (statement.total_owed !== undefined) {
+    emitLine(`Total owed: ${formatCredits(statement.total_owed) ?? statement.total_owed}`);
+  }
+  if (statement.total_paid !== undefined) {
+    emitLine(`Total paid: ${formatCredits(statement.total_paid) ?? statement.total_paid}`);
+  }
+  if (statement.total_unpaid !== undefined) {
+    emitLine(`Total unpaid: ${formatCredits(statement.total_unpaid) ?? statement.total_unpaid}`);
+  }
 }
 
 function formatFees(policy: Record<string, unknown>): string {
@@ -319,6 +420,23 @@ export const empireFormatters = [
       if (r.income_tax === undefined && r.property_tax === undefined && r.sales_tax_rates === undefined) return false;
       emitLine(`\n${c.bright}=== Tax Estimate ===${c.reset}`);
       if (r.tax_collection_active !== undefined) emitLine(`Collection active: ${r.tax_collection_active}`);
+      if (r.inactivity_exempt !== undefined) emitLine(`Inactivity exempt: ${r.inactivity_exempt}`);
+      if (Array.isArray(r.outstanding_bounties)) {
+        const rows = r.outstanding_bounties.filter(isRecord);
+        if (rows.length === 0) {
+          emitLine('Outstanding bounties: none');
+        } else {
+          emitLine('Outstanding bounties:');
+          for (const row of rows) {
+            const empire = row.empire === undefined ? 'unknown' : String(row.empire);
+            const bounty = formatNumber(row.bounty);
+            emitLine(`  ${empire}: ${bounty === undefined ? 'unknown' : `${bounty} cr`}`);
+          }
+        }
+      }
+      if (typeof r.payment_guidance === 'string' && r.payment_guidance !== '') {
+        emitLine(`Payment guidance: ${r.payment_guidance}`);
+      }
       if (r.taxable_income_to_date !== undefined)
         emitLine(`Taxable income: ${formatCredits(r.taxable_income_to_date) ?? r.taxable_income_to_date}`);
       if (r.market_sales_to_date !== undefined)
@@ -357,6 +475,7 @@ export const empireFormatters = [
       if (r.next_assessment_approx_seconds !== undefined)
         emitLine(`Next assessment approx: ${r.next_assessment_approx_seconds}s`);
       if (r.note) emitLine(`${c.dim}${r.note}${c.reset}`);
+      if (isRecord(r.latest_statement)) emitStatement(r.latest_statement);
       return true;
     },
     { commands: ['get_tax_estimate'] },
