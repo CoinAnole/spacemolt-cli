@@ -1412,6 +1412,9 @@ describe('command metadata', () => {
     );
     expect(actionLogHelp).toContain('other.jettison_dispersed');
     expect(actionLogHelp).toContain('faction.refuel');
+    expect(actionLogHelp).toContain('Pilot');
+    expect(actionLogHelp).toContain('Base');
+    expect(actionLogHelp).toContain('Fuel');
   });
 
   test('view_market help teaches Company Store narrowing', () => {
@@ -2681,6 +2684,9 @@ describe('command metadata', () => {
     expect(COMMANDS.get_action_log?.description).toContain('other.jettison_dispersed');
     expect(COMMANDS.get_action_log?.description).toContain('faction.refuel');
     expect(COMMANDS.get_action_log?.description).toContain('faction_id');
+    expect(COMMANDS.get_action_log?.description).toContain('Pilot');
+    expect(COMMANDS.get_action_log?.description).toContain('Base');
+    expect(COMMANDS.get_action_log?.description).toContain('Fuel');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
     const eventTypeSchema = COMMANDS.get_action_log?.schema?.event_type as { description?: string } | undefined;

@@ -859,6 +859,9 @@ describe('help output branches', () => {
     expect(output).toContain('session.daily_balance');
     expect(output).toContain('other.jettison_dispersed');
     expect(output).toContain('faction.refuel');
+    expect(output).toContain('Pilot');
+    expect(output).toContain('Base');
+    expect(output).toContain('Fuel');
     expect(output).toContain(
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
