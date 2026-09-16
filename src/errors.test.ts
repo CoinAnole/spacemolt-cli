@@ -238,3 +238,116 @@ describe('boarding_locked', () => {
     expect(getRelatedCommands('boarding_locked')).toEqual(['get_battle_status', 'battle_stance', 'use_item']);
   });
 });
+
+describe('insufficient_credits', () => {
+  test('is retryable, is not an authentication error, and has command overlays', () => {
+    expect(ERROR_REGISTRY.insufficient_credits?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.insufficient_credits?.auth).toBe(false);
+    expect(isRetryableError('insufficient_credits')).toBe(true);
+    expect(isAuthError('insufficient_credits')).toBe(false);
+    expect(isKnownErrorCode('insufficient_credits')).toBe(true);
+    expect(ERROR_CODES).toContain('insufficient_credits');
+    expect(ERROR_REGISTRY.insufficient_credits?.message).toBe('Not enough credits for this action.');
+    expect(ERROR_REGISTRY.no_credits?.message).toBe('Insufficient credits.');
+    expect(Object.keys(ERROR_REGISTRY.insufficient_credits?.commandSuggestions ?? {})).toEqual([
+      'craft',
+      'faction_declare_war',
+      'citizenship_apply',
+    ]);
+    expect(ERROR_REGISTRY.no_credits?.commandSuggestions).toBeUndefined();
+    expect(ERROR_REGISTRY.boarding_locked?.commandSuggestions).toBeUndefined();
+  });
+
+  test('generic suggestion is wallet-agnostic and does not invent a craft or war story', () => {
+    const suggestion = getErrorSuggestion('insufficient_credits');
+    expect(suggestion).toContain('Check the server message');
+    expect(suggestion).toContain('spacemolt get_status');
+    expect(suggestion).toContain('If the server message names the faction treasury');
+    expect(suggestion).toContain('spacemolt faction_deposit_credits');
+    expect(suggestion).toContain('missing_materials');
+    expect(suggestion).toContain('missing_faction_materials');
+    expect(suggestion).not.toContain('dry_run');
+    expect(suggestion).not.toContain('recipe inputs');
+    expect(suggestion).not.toContain('job stayed');
+    expect(suggestion).not.toContain('already held');
+    expect(suggestion).not.toContain('spacemolt storage deposit');
+    expect(suggestion).not.toContain('The server message names which wallet');
+    expect(suggestion).not.toContain('50,000');
+    expect(suggestion).not.toContain('50000');
+  });
+
+  test('craft overlay treats a credit miss as labor or rental, not materials', () => {
+    const suggestion = getErrorSuggestion('insufficient_credits', 'craft');
+    expect(suggestion).toContain('labor');
+    expect(suggestion).toContain('rental');
+    expect(suggestion).toContain('missing_materials');
+    expect(suggestion).toContain('missing_faction_materials');
+    expect(suggestion).toContain('Do not deposit items');
+    expect(suggestion).toContain('If the server message names the faction treasury');
+    expect(suggestion).toContain('spacemolt faction_deposit_credits');
+    expect(suggestion).toContain('spacemolt get_status');
+    expect(suggestion).toContain('dry_run=true');
+    expect(suggestion).toContain('preset=cheap');
+    expect(suggestion).toContain('preset=prefer_own');
+    expect(suggestion).toContain('still rents');
+    expect(suggestion).not.toContain('already held');
+    expect(suggestion).not.toContain('job stayed');
+    expect(suggestion).not.toContain('spacemolt storage deposit');
+    expect(suggestion).not.toMatch(/retry .*storage deposit|deposit .*to faction storage/i);
+    expect(suggestion).not.toContain('50,000');
+    expect(suggestion).not.toContain('50000');
+  });
+
+  test('war overlay uses the player wallet for grouped and underscore names', () => {
+    const underscore = getErrorSuggestion('insufficient_credits', 'faction_declare_war');
+    const grouped = getErrorSuggestion('insufficient_credits', 'faction declare_war');
+    expect(underscore).toBe(grouped);
+    expect(underscore).toContain('50,000');
+    expect(underscore).toContain('wallet');
+    expect(underscore).toContain('spacemolt get_status');
+    expect(underscore).toContain('Do not run "spacemolt faction_deposit_credits"');
+    expect(underscore).not.toContain('If the server message names the faction treasury');
+    expect(underscore).not.toContain('dry_run');
+    expect(underscore).not.toContain('labor');
+    expect(underscore).not.toContain('missing_materials');
+    expect(underscore).not.toContain('already held');
+    expect(underscore).not.toContain('job stayed');
+  });
+
+  test('citizenship overlay uses the player wallet for grouped and underscore names', () => {
+    const underscore = getErrorSuggestion('insufficient_credits', 'citizenship_apply');
+    const grouped = getErrorSuggestion('insufficient_credits', 'citizenship apply');
+    expect(underscore).toBe(grouped);
+    expect(underscore).toContain('fee');
+    expect(underscore).toContain('balance');
+    expect(underscore).toContain('spacemolt get_status');
+    expect(underscore).toContain('Do not run "spacemolt faction_deposit_credits"');
+    expect(underscore).not.toContain('If the server message names the faction treasury');
+    expect(underscore).not.toContain('dry_run');
+    expect(underscore).not.toContain('labor');
+    expect(underscore).not.toContain('50,000');
+    expect(underscore).not.toContain('already held');
+    expect(underscore).not.toContain('job stayed');
+  });
+
+  test('recycle and buy stay on the generic suggestion', () => {
+    const generic = getErrorSuggestion('insufficient_credits');
+    expect(getErrorSuggestion('insufficient_credits', 'recycle')).toBe(generic);
+    expect(getErrorSuggestion('insufficient_credits', 'buy')).toBe(generic);
+    const recycle = getErrorSuggestion('insufficient_credits', 'recycle');
+    expect(recycle).not.toContain('dry_run');
+    expect(recycle).not.toContain('preset=cheap');
+    expect(recycle).not.toContain('50,000');
+    expect(recycle).not.toContain('balance plus the fee');
+  });
+
+  test('related commands stay generic', () => {
+    expect(getRelatedCommands('insufficient_credits')).toEqual(['get_status', 'faction_deposit_credits']);
+  });
+
+  test('no_credits is unchanged and has no craft overlay', () => {
+    expect(getErrorSuggestion('no_credits')).toContain('Mine and sell');
+    expect(getErrorSuggestion('insufficient_credits')).not.toContain('Mine and sell');
+    expect(getErrorSuggestion('no_credits', 'craft')).toBe(getErrorSuggestion('no_credits'));
+  });
+});

@@ -7,6 +7,7 @@ export interface ErrorCodeEntry {
   retryable: boolean;
   auth: boolean;
   relatedCommands: string[];
+  commandSuggestions?: Record<string, string>;
 }
 
 export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
@@ -228,6 +229,23 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['mine', 'sell', 'get_cargo'],
   },
+  insufficient_credits: {
+    code: 'insufficient_credits',
+    message: 'Not enough credits for this action.',
+    suggestion:
+      'Not enough credits for this action. Check the server message for which wallet was short (your credits or a faction treasury). This is not a materials shortage — do not deposit items unless the error code is missing_materials or missing_faction_materials. Check "spacemolt get_status" for your wallet. If the server message names the faction treasury, fund it with "spacemolt faction_deposit_credits".',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['get_status', 'faction_deposit_credits'],
+    commandSuggestions: {
+      craft:
+        'Credits (labor or a rental fee) blocked this craft, not missing recipe inputs. Do not deposit items unless the error code is missing_materials or missing_faction_materials. If the server message names the faction treasury, fund it with "spacemolt faction_deposit_credits"; otherwise check "spacemolt get_status" for your wallet. Quote first with "spacemolt craft … dry_run=true". preset=cheap picks the lowest fee you would actually pay (own and faction facilities are free to you); preset=prefer_own keeps ownership-order routing and still rents a public facility when no own/faction/ally venue can run the job.',
+      faction_declare_war:
+        'Declaring war costs 50,000 credits from your wallet, not the faction treasury. Check "spacemolt get_status" for your credits. Earn credits, then retry, or do not declare. Do not run "spacemolt faction_deposit_credits" — that moves credits out of the wallet that is short.',
+      citizenship_apply:
+        'Applying for citizenship deducts the fee from your player wallet (you must hold the minimum balance plus the fee). Check "spacemolt get_status" for your credits. Do not run "spacemolt faction_deposit_credits" — that moves credits out of the wallet that is short.',
+    },
+  },
   no_cargo_space: {
     code: 'no_cargo_space',
     message: 'Cargo hold is full.',
@@ -442,8 +460,22 @@ export function isAuthError(code: string): boolean {
   return lookupError(code)?.auth ?? false;
 }
 
-export function getErrorSuggestion(code: string): string | undefined {
-  return lookupError(code)?.suggestion;
+// Grouped displayCommand uses spaces (e.g. "faction declare_war").
+function errorCommandKey(command: string | undefined): string | undefined {
+  if (!command) return undefined;
+  const key = command.trim().replace(/\s+/g, '_');
+  return key || undefined;
+}
+
+export function getErrorSuggestion(code: string, command?: string): string | undefined {
+  const entry = lookupError(code);
+  if (!entry) return undefined;
+  const key = errorCommandKey(command);
+  if (key) {
+    const overlay = entry.commandSuggestions?.[key];
+    if (overlay) return overlay;
+  }
+  return entry.suggestion;
 }
 
 export function getRelatedCommands(code: string): string[] {

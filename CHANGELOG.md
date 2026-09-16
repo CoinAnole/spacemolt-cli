@@ -76,6 +76,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `rate_limited` suggestion now names 30 mutations and 300 queries per session, plus the IP-wide timeout after 50 rejections/min.
 - Human API errors print `Limit:` / `Scope:` when present, and `Pending command:` for `action_pending`.
 - Local suggestions for `action_pending` (one mutation per tick; do not resubmit immediately) and `ip_timed_out` (do not keep retrying). `ip_timed_out` is not retryable.
+- `insufficient_credits` now has a local suggestion. On `craft`, it treats the miss as credits (labor/rental), not materials — do not deposit items unless the code is `missing_materials` / `missing_faction_materials` — and points at `dry_run=true` plus `preset=cheap` / `prefer_own` (gameserver 0.601.5 recategorized a treasury miss that used to look like missing materials; the server message still names that path when it applies). On `faction declare_war`, war costs 50,000 from your wallet — check `get_status`; do not `faction_deposit_credits`. On `citizenship apply`, the fee comes from your player balance (balance+fee) — check `get_status`; do not `faction_deposit_credits`. Other commands get a generic credits-wallet suggestion; `faction_deposit_credits` is suggested only if the server names the faction treasury.
 
 ## 2.9.0 — 2026-09-08
 
