@@ -2828,6 +2828,144 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('Next:');
   });
 
+  test('displayError gives insufficient_credits a craft overlay', () => {
+    const capture = captureWriter();
+    const context = displayErrorContext(capture.writer);
+
+    displayError('craft', { code: 'insufficient_credits', message: 'Insufficient credits.' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [insufficient_credits]');
+    expect(output).toContain('Insufficient credits.');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('labor');
+    expect(output).toContain('rental');
+    expect(output).toContain('dry_run=true');
+    expect(output).toContain('If the server message names the faction treasury');
+    expect(output).toContain('spacemolt faction_deposit_credits');
+    expect(output).toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('already held');
+    expect(output).not.toContain('job stayed');
+
+    const nextLine = capture.stderr.find((line) => line.includes('Next:'));
+    expect(nextLine).toBeDefined();
+    expect(nextLine).toContain('spacemolt catalog');
+    expect(nextLine).toContain('spacemolt storage');
+    expect(nextLine).not.toContain('faction_deposit_credits');
+
+    const quiet = captureWriter();
+    displayError(
+      'craft',
+      { code: 'insufficient_credits', message: 'Insufficient credits.' },
+      { context: displayErrorContext(quiet.writer, { quiet: true, plain: true }) },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [insufficient_credits]:');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+    expect(quiet.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError gives insufficient_credits a generic suggestion on buy', () => {
+    const capture = captureWriter();
+    displayError(
+      'buy',
+      { code: 'insufficient_credits', message: 'Insufficient credits.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [insufficient_credits]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('If the server message names the faction treasury');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).not.toContain('dry_run');
+    expect(output).not.toContain('50,000');
+    expect(output).not.toContain('already held');
+    expect(output).not.toContain('job stayed');
+  });
+
+  test('displayError gives insufficient_credits a war overlay on faction declare_war', () => {
+    const grouped = captureWriter();
+    displayError(
+      'faction declare_war',
+      { code: 'insufficient_credits', message: 'Insufficient credits.' },
+      { context: displayErrorContext(grouped.writer) },
+    );
+
+    const groupedOutput = grouped.stderr.join('\n');
+    expect(groupedOutput).toContain('Error [insufficient_credits]');
+    expect(groupedOutput).toContain('Suggestion:');
+    expect(groupedOutput).toContain('50,000');
+    expect(groupedOutput).toContain('wallet');
+    expect(groupedOutput).toContain('spacemolt get_status');
+    expect(groupedOutput).toContain('Do not run "spacemolt faction_deposit_credits"');
+    expect(groupedOutput).not.toContain('If the server message names the faction treasury');
+    expect(groupedOutput).not.toContain('dry_run');
+    expect(groupedOutput).not.toContain('labor');
+    expect(groupedOutput).not.toContain('Next:');
+
+    const flat = captureWriter();
+    displayError(
+      'faction_declare_war',
+      { code: 'insufficient_credits', message: 'Insufficient credits.' },
+      { context: displayErrorContext(flat.writer) },
+    );
+    const groupedSuggestion = grouped.stderr.find((line) => line.includes('Suggestion:'));
+    const flatSuggestion = flat.stderr.find((line) => line.includes('Suggestion:'));
+    expect(groupedSuggestion).toBe(flatSuggestion);
+  });
+
+  test('displayError gives insufficient_credits a citizenship overlay on citizenship apply', () => {
+    const grouped = captureWriter();
+    displayError(
+      'citizenship apply',
+      { code: 'insufficient_credits', message: 'Insufficient credits.' },
+      { context: displayErrorContext(grouped.writer) },
+    );
+
+    const groupedOutput = grouped.stderr.join('\n');
+    expect(groupedOutput).toContain('Error [insufficient_credits]');
+    expect(groupedOutput).toContain('Suggestion:');
+    expect(groupedOutput).toContain('fee');
+    expect(groupedOutput).toContain('balance');
+    expect(groupedOutput).toContain('spacemolt get_status');
+    expect(groupedOutput).toContain('Do not run "spacemolt faction_deposit_credits"');
+    expect(groupedOutput).not.toContain('If the server message names the faction treasury');
+    expect(groupedOutput).not.toContain('dry_run');
+    expect(groupedOutput).not.toContain('labor');
+    expect(groupedOutput).not.toContain('50,000');
+    expect(groupedOutput).not.toContain('Next:');
+
+    const flat = captureWriter();
+    displayError(
+      'citizenship_apply',
+      { code: 'insufficient_credits', message: 'Insufficient credits.' },
+      { context: displayErrorContext(flat.writer) },
+    );
+    const groupedSuggestion = grouped.stderr.find((line) => line.includes('Suggestion:'));
+    const flatSuggestion = flat.stderr.find((line) => line.includes('Suggestion:'));
+    expect(groupedSuggestion).toBe(flatSuggestion);
+  });
+
+  test('displayError keeps ambiguous bucket guidance over insufficient_credits overlays', () => {
+    const capture = captureWriter();
+    displayError(
+      'craft',
+      {
+        code: 'insufficient_credits',
+        message: 'Storage Extension bucket name "Reserve" is ambiguous; pass the bucket id instead.',
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Storage Extension bucket name is ambiguous');
+    expect(output).toContain('spacemolt storage view target=faction');
+    expect(output).not.toContain('dry_run');
+    expect(output).not.toContain('labor');
+  });
+
   test('displayError rate_limited suggestion names 30/300 and is not query-only', () => {
     const capture = captureWriter();
     displayError(

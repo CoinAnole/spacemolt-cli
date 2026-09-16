@@ -1386,7 +1386,7 @@ export function displayError(
     }
   }
   if (!quiet) {
-    const help = hasServerCode ? getContextualErrorSuggestion(code, message) : undefined;
+    const help = hasServerCode ? getContextualErrorSuggestion(code, message, command) : undefined;
     if (help) err(`\n${colors.cyan}Suggestion:${colors.reset} ${help}`);
     if (hasServerCode && isRetryableError(code) && retryAfter === undefined) {
       err(`${colors.dim}This error may be retryable.${colors.reset}`);
@@ -1400,11 +1400,11 @@ export function displayError(
   }
 }
 
-function getContextualErrorSuggestion(code: string, message: string): string | undefined {
+function getContextualErrorSuggestion(code: string, message: string, command?: string): string | undefined {
   if (isAmbiguousStorageBucketError(message)) {
     return 'Storage Extension bucket name is ambiguous. Run "spacemolt storage view target=faction" to see bucket IDs, then pass the bucket id.';
   }
-  return getErrorSuggestion(code);
+  return getErrorSuggestion(code, command);
 }
 
 function isAmbiguousStorageBucketError(message: string): boolean {
