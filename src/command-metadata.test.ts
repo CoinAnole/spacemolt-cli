@@ -1411,6 +1411,7 @@ describe('command metadata', () => {
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
     expect(actionLogHelp).toContain('other.jettison_dispersed');
+    expect(actionLogHelp).toContain('faction.refuel');
   });
 
   test('view_market help teaches Company Store narrowing', () => {
@@ -2678,11 +2679,14 @@ describe('command metadata', () => {
     });
     expect(COMMANDS.get_action_log?.description).toContain('session.daily_balance');
     expect(COMMANDS.get_action_log?.description).toContain('other.jettison_dispersed');
+    expect(COMMANDS.get_action_log?.description).toContain('faction.refuel');
+    expect(COMMANDS.get_action_log?.description).toContain('faction_id');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
     const eventTypeSchema = COMMANDS.get_action_log?.schema?.event_type as { description?: string } | undefined;
     expect(eventTypeSchema?.description).toContain('session.daily_balance');
     expect(eventTypeSchema?.description).toContain('other.jettison_dispersed');
+    expect(eventTypeSchema?.description).toContain('faction.refuel');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {
