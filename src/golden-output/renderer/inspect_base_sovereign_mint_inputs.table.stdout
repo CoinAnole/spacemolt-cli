@@ -47,8 +47,8 @@ Facilities: 3
 Status: blocked_inputs
 Output: Trade Authenticator (trade_authenticator)
 Shortages:
-  Trade Crystal: 2/10, 8 missing
+  Trade Crystal: 2/10, 8 missing, buy order: yes
 
-Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.
+Sell listed inputs with buy_order_available=true to the station through its public market. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.
 
 A busy trade station.

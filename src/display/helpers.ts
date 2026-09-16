@@ -772,12 +772,25 @@ function formatMintNameId(name: unknown, id: unknown): string | undefined {
   return displayName ?? displayId;
 }
 
+function formatBuyOrderAvailable(value: unknown): string | undefined {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return undefined;
+}
+
+function formatMintShortage(row: Record<string, unknown>): string | undefined {
+  const formatted = formatStationMaterial(row);
+  if (!formatted) return undefined;
+  const buyOrder = formatBuyOrderAvailable(row.buy_order_available);
+  return buyOrder ? `${formatted}, buy order: ${buyOrder}` : formatted;
+}
+
 function printableMintShortages(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const lines: string[] = [];
   for (const row of value) {
     if (!isRecord(row)) continue;
-    const formatted = formatStationMaterial(row);
+    const formatted = formatMintShortage(row);
     if (formatted) lines.push(formatted);
   }
   return lines;

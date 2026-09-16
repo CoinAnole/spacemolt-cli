@@ -45,12 +45,99 @@ describe('emitSovereignMint', () => {
         'Status: blocked_inputs',
         'Output: Trade Authenticator (trade_authenticator)',
         'Shortages:',
-        '  Trade Crystal: 2/10, 8 missing',
+        '  Trade Crystal: 2/10, 8 missing, buy order: yes',
         '',
-        'Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.',
+        'Sell listed inputs with buy_order_available=true to the station through its public market. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.',
       ].join('\n'),
     );
-    expect(stdout).not.toContain('  Mine or otherwise');
+    expect(stdout).not.toContain('  Sell listed inputs');
+  });
+
+  test('buy_order_available false prints buy order: no', () => {
+    const { printed, stdout } = renderMint({
+      status: 'blocked_inputs',
+      output_item_id: 'trade_authenticator',
+      shortages: [
+        {
+          buy_order_available: false,
+          item_id: 'steel_plate',
+          name: 'Steel Plate',
+          quantity_in_storage: 1,
+          quantity_missing: 4,
+          quantity_required: 5,
+        },
+      ],
+    });
+    expect(printed).toBe(true);
+    expect(stdout.split('\n')).toContain('  Steel Plate: 1/5, 4 missing, buy order: no');
+  });
+
+  test('mixed buy_order_available rows keep yes before no', () => {
+    const { printed, stdout } = renderMint({
+      status: 'blocked_inputs',
+      output_item_id: 'trade_authenticator',
+      shortages: [
+        {
+          buy_order_available: true,
+          item_id: 'trade_crystal',
+          name: 'Trade Crystal',
+          quantity_in_storage: 2,
+          quantity_missing: 8,
+          quantity_required: 10,
+        },
+        {
+          buy_order_available: false,
+          item_id: 'steel_plate',
+          name: 'Steel Plate',
+          quantity_in_storage: 1,
+          quantity_missing: 4,
+          quantity_required: 5,
+        },
+      ],
+    });
+    expect(printed).toBe(true);
+    const yesLine = '  Trade Crystal: 2/10, 8 missing, buy order: yes';
+    const noLine = '  Steel Plate: 1/5, 4 missing, buy order: no';
+    expect(stdout.split('\n')).toContain(yesLine);
+    expect(stdout.split('\n')).toContain(noLine);
+    expect(stdout.indexOf(yesLine)).toBeGreaterThan(-1);
+    expect(stdout.indexOf(noLine)).toBeGreaterThan(stdout.indexOf(yesLine));
+  });
+
+  test('omitted buy_order_available prints quantity line only', () => {
+    const { printed, stdout } = renderMint({
+      status: 'blocked_inputs',
+      output_item_id: 'trade_authenticator',
+      shortages: [crystalShortage],
+    });
+    expect(printed).toBe(true);
+    expect(stdout.split('\n')).toContain('  Trade Crystal: 2/10, 8 missing');
+    expect(stdout).not.toContain('buy order:');
+  });
+
+  test('non-boolean buy_order_available omits the suffix', () => {
+    for (const buy_order_available of ['true', 1, null]) {
+      const { printed, stdout } = renderMint({
+        status: 'blocked_inputs',
+        output_item_id: 'trade_authenticator',
+        shortages: [
+          {
+            buy_order_available,
+            item_id: 'trade_crystal',
+            name: 'Trade Crystal',
+            quantity_in_storage: 2,
+            quantity_missing: 8,
+            quantity_required: 10,
+          },
+        ],
+      });
+      expect(printed).toBe(true);
+      expect(stdout.split('\n')).toContain('  Trade Crystal: 2/10, 8 missing');
+      expect(stdout).not.toContain('buy order:');
+      expect(stdout).not.toContain('undefined');
+      expect(stdout).not.toContain('NaN');
+      expect(stdout).not.toContain('[object Object]');
+    }
   });
 
   test('prints blocked_internal with Facility and Facility ID on separate lines', () => {
@@ -160,7 +247,8 @@ describe('emitSovereignMint', () => {
     });
     expect(printed).toBe(true);
     expect(stdout).toContain('Shortages:');
-    expect(stdout).toContain('Trade Crystal: 2/10, 8 missing');
+    expect(stdout.split('\n')).toContain('  Trade Crystal: 2/10, 8 missing');
+    expect(stdout).not.toContain('buy order:');
     expect(
       stdout
         .split('Shortages:')[1]
@@ -194,7 +282,8 @@ describe('emitSovereignMint', () => {
       ],
     });
     expect(printed).toBe(true);
-    expect(stdout).toContain('Trade Crystal: 10/10, 0 missing');
+    expect(stdout.split('\n')).toContain('  Trade Crystal: 10/10, 0 missing');
+    expect(stdout).not.toContain('buy order:');
   });
 
   test('preserves shortage order for two items', () => {

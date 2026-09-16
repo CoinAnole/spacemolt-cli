@@ -7036,11 +7036,11 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Sovereign Mint ===');
     expect(stdout).toContain('Status: blocked_inputs');
     expect(stdout).toContain('Output: Trade Authenticator (trade_authenticator)');
-    expect(stdout).toContain('Trade Crystal: 2/10, 8 missing');
+    expect(stdout).toContain('Trade Crystal: 2/10, 8 missing, buy order: yes');
     expect(stdout).toContain(
-      'Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.',
+      'Sell listed inputs with buy_order_available=true to the station through its public market. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.',
     );
-    expect(stdout).not.toContain('  Mine or otherwise acquire');
+    expect(stdout).not.toContain('  Sell listed inputs');
     expect(stdout).not.toContain('=== Response ===');
   });
 
