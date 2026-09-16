@@ -296,6 +296,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   get_tax_estimate: {
+    example: 'spacemolt get_tax_estimate',
+    seeAlso: ['pay_bounty', 'prepay_tax', 'get_empire_info', 'get_guide'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_tax_estimate',
   },

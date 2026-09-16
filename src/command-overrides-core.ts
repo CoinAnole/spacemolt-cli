@@ -401,8 +401,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     description:
       'Settle outstanding bounty with one empire from anywhere, including unpaid income and property tax. Pays from your wallet by default, or from the faction treasury with ManageTreasury. Releases detention only for that empire.',
     example: 'spacemolt pay_bounty solarian faction',
-    discoverWith: ['get_status', 'get_empire_info'],
-    seeAlso: ['get_status', 'get_empire_info', 'prepay_tax'],
+    discoverWith: ['get_tax_estimate', 'get_status', 'get_empire_info'],
+    seeAlso: ['get_tax_estimate', 'get_status', 'get_empire_info', 'prepay_tax'],
     category: 'Taxes',
     apiRoute: 'POST /api/v2/spacemolt/pay_bounty',
     positionals: ['id', 'source'],

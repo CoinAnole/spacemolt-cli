@@ -1486,6 +1486,9 @@ describe('help output branches', () => {
     expect(commandOutput).toContain('empire -> id');
     expect(commandOutput).toContain('empire_id -> id');
     expect(commandOutput).toContain('spacemolt pay_bounty solarian faction');
+    expect(commandOutput).toContain('See also: get_tax_estimate, get_status, get_empire_info, prepay_tax');
+    expect(commandOutput).toContain('Discover valid IDs/state with:');
+    expect(commandOutput).toContain('spacemolt get_tax_estimate');
     expect(explanation.stdout.join('\n')).toContain('Category: Taxes');
 
     const misc = captureWriter();
@@ -1499,10 +1502,10 @@ describe('help output branches', () => {
     const query = captureWriter();
     expect(showCommandGroup('info', info.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
     expect(showCommandGroup('query', query.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
-    expect(info.stdout.join('\n')).not.toContain('pay_bounty');
-    expect(info.stdout.join('\n')).not.toContain('prepay_tax');
-    expect(query.stdout.join('\n')).not.toContain('pay_bounty');
-    expect(query.stdout.join('\n')).not.toContain('prepay_tax');
+    expect(info.stdout.join('\n')).not.toMatch(/^\s+pay_bounty\b/m);
+    expect(info.stdout.join('\n')).not.toMatch(/^\s+prepay_tax\b/m);
+    expect(query.stdout.join('\n')).not.toMatch(/^\s+pay_bounty\b/m);
+    expect(query.stdout.join('\n')).not.toMatch(/^\s+prepay_tax\b/m);
 
     const full = captureWriter();
     showFullHelp(full.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
@@ -1516,6 +1519,22 @@ describe('help output branches', () => {
     expect(fullOutput.slice(infoIndex, actionIndex)).not.toContain('pay_bounty');
     const generatedSection = generatedIndex === -1 ? '' : fullOutput.slice(generatedIndex);
     expect(generatedSection).not.toContain('pay_bounty');
+  });
+
+  test('showFullHelp tax estimate index names missed taxes and weekly statement', () => {
+    const capture = captureWriter();
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Estimate, missed taxes, weekly statement');
+    expect(output).not.toContain('Preview taxes owed');
+  });
+
+  test('get_tax_estimate command help includes exemption copy and pay_bounty', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('get_tax_estimate', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('inactivity_exempt');
+    expect(output).toContain('See also: pay_bounty');
   });
 
   test('generated ship_* personnel names do not resolve as curated personnel help', () => {
