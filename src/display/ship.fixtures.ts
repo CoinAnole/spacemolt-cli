@@ -218,6 +218,7 @@ export const sovereignMintBlockedInputs = {
   output_name: 'Trade Authenticator',
   shortages: [
     {
+      buy_order_available: true,
       item_id: 'trade_crystal',
       name: 'Trade Crystal',
       quantity_in_storage: 2,
@@ -226,7 +227,7 @@ export const sovereignMintBlockedInputs = {
     },
   ],
   remediation:
-    'Mine or otherwise acquire the listed root inputs, principally Trade Crystals, and sell them to this station through its public market. Check the ordinary market listings for current prices and available order depth.',
+    'Sell listed inputs with buy_order_available=true to the station through its public market. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.',
 };
 
 export const sovereignMintBlockedInternal = {
