@@ -65,6 +65,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `attack` help notes that an armed faction station may join a member's fight in the same system. `hunt` help notes that a leviathan hunt may pull an armed faction station in-system (gameserver 0.604.0).
 - `get_battle_status` help names `flee_required` as a speed-adjusted baseline (floor 1), not a hard minimum of 3, and that the field is omitted while warp-disrupted or boarding-intercepted (gameserver 0.601.4). **No parser change.**
 
+### Personnel
+
+- `treat_personnel` help distinguishes active out-of-combat field treatment (`provider=field`) from automatic fleet triage, and names station, Shipboard Sickbay, and Field/Fleet Hospital sources for own-ship vs same-location allied treatment (gameserver 0.603.1). Omit `id` for your ship or faction reserve; pass an allied player at the same POI for remote field treatment; `provider=faction` plus `reserve=true` treats the faction reserve (ManageTreasury). Module names are not CLI grammar: `get_ship` lists the fitted Type id; `inspect` shows Remote medical on the module, or `Capabilities: remote_medical_treatment` on the ship class. **No parser change.**
+
 ### Breaking
 
 - HTTP 429 `--json` output is now `{ error: { code, message, retry_after?, limit?, scope? } }` instead of a string `error` with leftover top-level `limit` / `message`.

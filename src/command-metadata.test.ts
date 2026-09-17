@@ -2246,10 +2246,12 @@ describe('command metadata', () => {
     }
     expect(COMMANDS.treat_personnel).toMatchObject({
       category: 'Ship management',
-      usage: '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]',
-      example: 'spacemolt treat_personnel provider=station',
-      discoverWith: ['get_ship', 'get_status'],
-      seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'faction_personnel', 'get_guide'],
+      usage:
+        '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]  (omit target for self/reserve; allied at same POI for remote field; field is out of combat)',
+      example:
+        'spacemolt treat_personnel provider=station; spacemolt treat_personnel provider=field; spacemolt treat_personnel ally provider=field; spacemolt treat_personnel provider=faction reserve=true',
+      discoverWith: ['get_status', 'get_ship', 'get_base'],
+      seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'faction_personnel', 'inspect', 'get_guide'],
       aliases: { target: 'id' },
       route: { tool: 'spacemolt_ship', action: 'treat_personnel', method: 'POST' },
     });
@@ -3316,6 +3318,110 @@ describe('command metadata', () => {
     expect(help).toContain('get_battle_status');
     expect(help).toContain('battle_stance');
     expect(help).not.toContain('`');
+  });
+
+  test('treat_personnel help names active field treatment vs fleet triage', () => {
+    const config = COMMANDS.treat_personnel;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('treat_personnel command is missing from COMMANDS');
+
+    expect(config.category).toBe('Ship management');
+    expect(config.aliases).toEqual({ target: 'id' });
+    expect(config.route).toEqual({ tool: 'spacemolt_ship', action: 'treat_personnel', method: 'POST' });
+    expect(config.args).toEqual(['target', 'crew', 'marines', 'provider', 'reserve']);
+    expect(config.required ?? []).toEqual([]);
+    expect(config.schema?.provider?.enum).toEqual(['station', 'field', 'faction']);
+    expect(config.schema?.reserve?.type).toBe('boolean');
+    expect(config.schema?.crew?.description).toBe(
+      'Injured crew to treat. Omit or use zero to treat as many as possible.',
+    );
+    expect(config.schema?.marines?.description).toBe(
+      'Injured marines to treat. Omit or use zero to treat as many as possible.',
+    );
+
+    expect(config.usage).toBe(
+      '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]  (omit target for self/reserve; allied at same POI for remote field; field is out of combat)',
+    );
+    expect(config.example).toBe(
+      'spacemolt treat_personnel provider=station; spacemolt treat_personnel provider=field; spacemolt treat_personnel ally provider=field; spacemolt treat_personnel provider=faction reserve=true',
+    );
+    expect(config.discoverWith).toEqual(['get_status', 'get_ship', 'get_base']);
+    expect(config.seeAlso).toEqual([
+      'recruit_personnel',
+      'transfer_personnel',
+      'repair',
+      'faction_personnel',
+      'inspect',
+      'get_guide',
+    ]);
+    expect(config.seeAlso).toContain('inspect');
+    expect(config.seeAlso).toContain('get_guide');
+    expect(CURATED_COMMAND_DESCRIPTIONS.treat_personnel).toBe(config.description);
+    expect(CORE_COMMAND_OVERRIDES.treat_personnel?.description).toBe(config.description);
+
+    expect(config.description).toContain('provider=field');
+    expect(config.description).toContain('out of combat');
+    expect(config.description).toContain('omit target to treat this ship');
+    expect(config.description).toContain('same location');
+    expect(config.description).toContain('fleet triage');
+    expect(config.description).toContain('does not run treat_personnel');
+    expect(config.description).toContain('ManageTreasury');
+    expect(config.description).toContain('reserve=true');
+    expect(config.description).toContain('Remote field');
+    expect(config.description).toContain('same POI');
+    expect(config.description).toContain('Field Hospital');
+    expect(config.description).toContain('Shipboard Sickbay');
+    expect(config.description).toContain('Module names are not CLI grammar');
+    expect(config.description).toContain('inspect');
+    expect(config.description).toContain('Capabilities: remote_medical_treatment');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toContain('OpenAPI');
+    expect(config.description).not.toContain('ship_treat_personnel');
+    expect(config.description).not.toContain('v1');
+    expect(config.description).not.toMatch(/get_ship (reports|prints|lists) (the )?Remote medical/);
+    expect(config.description).not.toContain('inspect, get_ship, and catalog report');
+    expect(config.schema?.id?.description).not.toMatch(/get_ship (reports|prints|lists) (the )?Remote medical/);
+    expect(config.schema?.id?.description).not.toContain('inspect, get_ship, and catalog report');
+
+    expect(config.schema?.provider?.description).toMatch(/out[- ]of[- ]combat/);
+    expect(config.schema?.provider?.description).toContain('fleet triage');
+    expect(config.schema?.provider?.description).toContain('medical_supplies');
+    expect(config.schema?.provider?.description).not.toContain('docked');
+    expect(config.schema?.id?.description).toContain('same location');
+    expect(config.schema?.id?.description).toContain('out of combat');
+    expect(config.schema?.id?.description).toContain('Remote medical');
+    expect(config.schema?.id?.description).toContain('Capabilities: remote_medical_treatment');
+    expect(config.schema?.id?.description).toContain('Omit to treat');
+    expect(config.schema?.reserve?.description).toContain('ManageTreasury');
+    expect(config.schema?.reserve?.description).toContain('not teleportation');
+
+    for (const related of [...(config.discoverWith ?? []), ...(config.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `treat_personnel related command "${related}"`).toBe(true);
+    }
+
+    const help = captureHelp('treat_personnel');
+    expect(help).toContain('provider=field');
+    expect(help).toContain('out of combat');
+    expect(help).toContain('omit target to treat this ship');
+    expect(help).toContain('same location');
+    expect(help).toContain('fleet triage');
+    expect(help).toContain('does not run treat_personnel');
+    expect(help).toContain('ManageTreasury');
+    expect(help).toContain('reserve=true');
+    expect(help).toContain('Remote field');
+    expect(help).toContain('same POI');
+    expect(help).toContain('Field Hospital');
+    expect(help).toContain('Shipboard Sickbay');
+    expect(help).toContain('Module names are not CLI grammar');
+    expect(help).toContain('inspect');
+    expect(help).toContain('Capabilities: remote_medical_treatment');
+    expect(help).toContain('target -> id');
+    expect(help).toContain('provider (station|field|faction)');
+    expect(help).toContain('spacemolt get_base');
+    expect(help).toContain('faction personnel');
+    expect(help).not.toContain('faction_personnel');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('OpenAPI');
   });
 
   test('get_battle_status help names speed-adjusted flee_required', () => {

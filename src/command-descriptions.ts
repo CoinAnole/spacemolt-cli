@@ -165,7 +165,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   switch_ship: 'Switch to a different ship stored at this station',
   tow_wreck: 'Attach a tow line to a wreck for hauling',
   transfer_personnel: 'Transfer fit or injured crew and marines to an allied ship at the same POI',
-  treat_personnel: 'Treat injured crew and marines at a station or with an onboard medical module',
+  treat_personnel:
+    "Treat injured crew and marines through a station medical service, a faction hospital, or an onboard medical module. provider=field is active and out of combat: omit target to treat this ship, or name a target for an allied ship at the same location; it consumes medical_supplies. Automatic fleet triage during battle is a separate passive benefit and does not run treat_personnel. Omit counts to treat as many as possible. Omit target to treat your active ship, or the local faction reserve with provider=faction reserve=true (ManageTreasury). Remote field treatment means same POI, out of combat; pass id/target. Field Hospital and Fleet Hospital can treat an allied ship at the same location; Shipboard Sickbay can treat an ally only when the hull has remote medical treatment. Module names are not CLI grammar: inspect the fitted module type from get_ship's Type column (Remote medical on the module), and for Sickbay inspect the ship class (Capabilities: remote_medical_treatment). Station treatment costs 25 credits per crew and 50 per marine from the shared pool at the station; provider=faction uses the faction hospital pool at the station with no personal charge. Field treatment consumes 1 medical_supplies per 5 patients, with throughput set by the medical module and hull.",
   trade_accept: 'Accept a trade offer',
   trade_cancel: 'Cancel your trade offer',
   trade_decline: 'Decline a trade offer',

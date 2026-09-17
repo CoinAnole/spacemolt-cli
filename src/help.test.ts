@@ -1693,6 +1693,48 @@ describe('help output branches', () => {
     expect(output).not.toContain('`');
   });
 
+  test('help treat_personnel documents active field treatment vs fleet triage', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('treat_personnel', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('provider=field');
+    expect(output).toContain('out of combat');
+    expect(output).toContain('omit target to treat this ship');
+    expect(output).toContain('same location');
+    expect(output).toContain('fleet triage');
+    expect(output).toContain('does not run treat_personnel');
+    expect(output).toContain('ManageTreasury');
+    expect(output).toContain('reserve=true');
+    expect(output).toContain('Remote field');
+    expect(output).toContain('same POI');
+    expect(output).toContain('Field Hospital');
+    expect(output).toContain('Shipboard Sickbay');
+    expect(output).toContain('Module names are not CLI grammar');
+    expect(output).toContain('inspect');
+    expect(output).toContain('Capabilities: remote_medical_treatment');
+    expect(output).toContain('Fields:');
+    expect(output).toContain('target -> id');
+    expect(output).toContain('provider (station|field|faction)');
+    expect(output).toContain(
+      'provider (station|field|faction) - Treatment source. Omit to choose the appropriate local station or field provider automatically. station is the station medical pool (25 credits per crew, 50 per marine). field is active out-of-combat onboard treatment with medical_supplies; it is not automatic fleet triage. faction is the faction hospital pool at the station with no personal charge.',
+    );
+    expect(output).toContain(
+      'id - Optional allied player ID or username for remote field treatment. The ally must be at the same location; the action is out of combat. Omit to treat your active ship or faction reserve.',
+    );
+    expect(output).toContain(
+      'reserve - Treat personnel in the local faction reserve. Requires provider=faction and ManageTreasury. The reserve is station-local logistics, not teleportation.',
+    );
+    expect(output).toContain('spacemolt get_base');
+    expect(output).toContain('Discover valid IDs/state with:');
+    expect(output).toContain('faction personnel');
+    expect(output).not.toContain('faction_personnel');
+    expect(output).not.toContain('`');
+    expect(output).not.toContain('OpenAPI');
+    expect(output).not.toMatch(/get_ship (reports|prints|lists) (the )?Remote medical/);
+    expect(output).not.toContain('inspect, get_ship, and catalog report');
+  });
+
   test('scrap_wreck help documents faction-station salvage unlocks', () => {
     const capture = captureWriter();
 
@@ -3239,5 +3281,19 @@ describe('help output branches', () => {
     showCommandSearch('emergency jump', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
     const output = capture.stdout.join('\n');
     expect(output).toMatch(/^ {2}use_item /m);
+  });
+
+  test('command search for fleet triage finds treat_personnel', () => {
+    const capture = captureWriter();
+    showCommandSearch('fleet triage', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}treat_personnel /m);
+  });
+
+  test('command search for provider=field finds treat_personnel', () => {
+    const capture = captureWriter();
+    showCommandSearch('provider=field', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}treat_personnel /m);
   });
 });
