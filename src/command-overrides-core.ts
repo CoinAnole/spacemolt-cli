@@ -285,15 +285,33 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt_ship/recruit_personnel',
   },
   treat_personnel: {
-    usage: '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]',
-    example: 'spacemolt treat_personnel provider=station',
-    discoverWith: ['get_ship', 'get_status'],
-    seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'faction_personnel', 'get_guide'],
+    usage:
+      '[target] [crew=N] [marines=N] [provider=station|field|faction] [reserve=true/false]  (omit target for self/reserve; allied at same POI for remote field; field is out of combat)',
+    description:
+      "Treat injured crew and marines through a station medical service, a faction hospital, or an onboard medical module. provider=field is active and out of combat: omit target to treat this ship, or name a target for an allied ship at the same location; it consumes medical_supplies. Automatic fleet triage during battle is a separate passive benefit and does not run treat_personnel. Omit counts to treat as many as possible. Omit target to treat your active ship, or the local faction reserve with provider=faction reserve=true (ManageTreasury). Remote field treatment means same POI, out of combat; pass id/target. Field Hospital and Fleet Hospital can treat an allied ship at the same location; Shipboard Sickbay can treat an ally only when the hull has remote medical treatment. Module names are not CLI grammar: inspect the fitted module type from get_ship's Type column (Remote medical on the module), and for Sickbay inspect the ship class (Capabilities: remote_medical_treatment). Station treatment costs 25 credits per crew and 50 per marine from the shared pool at the station; provider=faction uses the faction hospital pool at the station with no personal charge. Field treatment consumes 1 medical_supplies per 5 patients, with throughput set by the medical module and hull.",
+    example:
+      'spacemolt treat_personnel provider=station; spacemolt treat_personnel provider=field; spacemolt treat_personnel ally provider=field; spacemolt treat_personnel provider=faction reserve=true',
+    discoverWith: ['get_status', 'get_ship', 'get_base'],
+    seeAlso: ['recruit_personnel', 'transfer_personnel', 'repair', 'faction_personnel', 'inspect', 'get_guide'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt_ship/treat_personnel',
     positionals: ['target', 'crew', 'marines', 'provider', 'reserve'],
     aliases: {
       target: 'id',
+    },
+    schemaExtensions: {
+      provider: {
+        description:
+          'Treatment source. Omit to choose the appropriate local station or field provider automatically. station is the station medical pool (25 credits per crew, 50 per marine). field is active out-of-combat onboard treatment with medical_supplies; it is not automatic fleet triage. faction is the faction hospital pool at the station with no personal charge.',
+      },
+      id: {
+        description:
+          'Optional allied player ID or username for remote field treatment. The ally must be at the same location; the action is out of combat. Omit to treat your active ship or faction reserve. Field Hospital and Fleet Hospital can treat an ally; Shipboard Sickbay can treat an ally only when the hull has remote medical treatment. Confirm with inspect of the fitted module (Remote medical) or, for Sickbay, inspect of the ship class (Capabilities: remote_medical_treatment). get_ship Type column identifies the fitted module.',
+      },
+      reserve: {
+        description:
+          'Treat personnel in the local faction reserve. Requires provider=faction and ManageTreasury. The reserve is station-local logistics, not teleportation.',
+      },
     },
   },
   transfer_personnel: {
