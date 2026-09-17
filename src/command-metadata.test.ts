@@ -3317,4 +3317,40 @@ describe('command metadata', () => {
     expect(help).toContain('battle_stance');
     expect(help).not.toContain('`');
   });
+
+  test('get_battle_status help names speed-adjusted flee_required', () => {
+    const config = COMMANDS.get_battle_status;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_battle_status command is missing from COMMANDS');
+
+    expect(config.description).toContain('flee_required');
+    expect(config.description).toContain('baseline');
+    expect(config.description).toContain('floor 1');
+    expect(config.description).toContain('1 or 2');
+    expect(config.description).toContain('omitted');
+    expect(config.description).toContain('warp_disrupted');
+    expect(config.description).toContain('intercepted');
+    expect(config.description).toContain('Flee Progress');
+    expect(config.description).toContain('counter/required');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toContain('boarding_locked');
+    expect(config.description).not.toContain('emergency_warp_device');
+    expect(config.description).not.toContain('plundered (cargo taken, hull left)');
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_battle_status).toBe(config.description);
+
+    const help = captureHelp('get_battle_status');
+    expect(help).toContain('flee_required');
+    expect(help).toContain('baseline');
+    expect(help).toContain('floor 1');
+    expect(help).toContain('1 or 2');
+    expect(help).toContain('omitted');
+    expect(help).toContain('warp_disrupted');
+    expect(help).toContain('intercepted');
+    expect(help).toContain('Flee Progress');
+    expect(help).toContain('counter/required');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('boarding_locked');
+    expect(help).not.toContain('emergency_warp_device');
+    expect(help).not.toContain('plundered (cargo taken, hull left)');
+  });
 });

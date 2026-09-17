@@ -92,7 +92,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_active_missions: 'View your active missions and progress.',
   get_base:
     'Get docked station details. When facilities are damaged, table output shows the repair queue, hull recovery, combined supply shortages that count shared stock once, missing supplies, and how to deliver them. When authenticator production is blocked, table output shows the sovereign mint shortage report: missing Trade Crystals with buy order: yes or no per input, or an internal mint-stage blocker. Sell only buy order: yes rows through the public market; check view_market for depth.',
-  get_battle_status: 'View current battle status',
+  get_battle_status:
+    'View current battle status. flee_required is a speed-adjusted escape baseline of 3 ticks from the outer zone, not a hard minimum of 3: faster than the fastest enemy ship chasing you can drop it to 1 or 2 (floor 1); slower or webbed raises it. Table output prints Flee Progress as counter/required when flee_required is present, and the counter alone when it is omitted. The field is omitted while warp-disrupted or boarding-intercepted, so its absence does not identify which; read warp_disrupted and intercepted.',
   get_battle_summary: 'View the aggregate result of a battle by ID',
   get_battle_log:
     'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages.',
