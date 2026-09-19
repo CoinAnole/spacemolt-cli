@@ -60,6 +60,8 @@ test('citizenship list prints origin, remaining grants, empires, and pending pet
   expect(stdout).toContain('pet-crimson-1');
   expect(stdout).not.toContain('player-1');
   expect(stdout).not.toContain('Marlowe');
+  expect(stdout).not.toContain('Held');
+  expect(stdout).not.toContain('=== Recent Decisions ===');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -115,6 +117,7 @@ test('citizenship apply pending prints remaining grants and a petition block', (
   expect(stdout).toContain('Fee paid: 1,000 cr');
   expect(stdout).not.toContain('Renounced:');
   expect(stdout).not.toContain('player-1');
+  expect(stdout).not.toContain('Petition ID:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -156,4 +159,107 @@ test('citizenship list prints a comma remaining line for defensive string ids', 
 
   expect(stdout).toContain('Citizenships: solarian, nebula');
   expect(stdout).not.toContain('=== Citizenships ===');
+});
+
+test('citizenship list prints a Held column when a pending row has held_citizenships', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    pending_petitions: [
+      {
+        id: 'pet-crimson-1',
+        empire_id: 'crimson',
+        fee_paid: 1000,
+        status: 'pending',
+        held_citizenships: ['solarian'],
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Pending Petitions ===');
+  expect(stdout).toContain('Held');
+  expect(stdout).toContain('solarian');
+});
+
+test('citizenship list prints recent decisions with a Decision column', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    recent_decisions: [
+      {
+        id: 'pet-void-1',
+        empire_id: 'voidborn',
+        status: 'rejected',
+        fee_paid: 500,
+        decision: 'denied',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Recent Decisions ===');
+  expect(stdout).toContain('Decision');
+  expect(stdout).toContain('denied');
+});
+
+test('citizenship list prints petition_id only when petition is absent', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    petition_id: 'pet-solo-1',
+  });
+
+  expect(stdout).toContain('Petition ID: pet-solo-1');
+  expect(stdout).not.toContain('Petition:');
+});
+
+test('citizenship list prints non-empty rules as lines', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    rules: ['Zero citizenships is allowed.', 'Origin is unchanged.'],
+  });
+
+  expect(stdout).toContain('Zero citizenships is allowed.');
+  expect(stdout).toContain('Origin is unchanged.');
+});
+
+test('citizenship renounce prints Renounced: none for a present empty array', () => {
+  const stdout = stdoutOf('citizenship_renounce', {
+    origin: 'nebula',
+    citizenships: [],
+    renounced: [],
+  });
+
+  expect(stdout).toContain('Renounced: none');
+});
+
+test('citizenship apply treats a singular citizenship grant as remaining', () => {
+  const stdout = stdoutOf('citizenship_apply', {
+    origin: 'nebula',
+    citizenship: { empire_id: 'solarian', granted_at: '2026-01-15T00:00:00Z' },
+  });
+
+  expect(stdout).toContain('=== Citizenships ===');
+  expect(stdout).toContain('solarian');
+  expect(stdout).not.toContain('Citizenships: none');
+});
+
+test('citizenship renounce of a non-last grant prints remaining and Renounced', () => {
+  const stdout = stdoutOf('citizenship_renounce', {
+    origin: 'nebula',
+    citizenships: [{ empire_id: 'nebula', granted_at: '2025-06-01T00:00:00Z' }],
+    renounced: ['solarian'],
+  });
+
+  expect(stdout).toContain('=== Citizenships ===');
+  expect(stdout).toContain('nebula');
+  expect(stdout).toContain('Renounced: solarian');
+  expect(stdout).not.toContain('Citizenships: none');
+});
+
+test('citizenship withdraw omits Citizenships: none when remaining is omitted', () => {
+  const stdout = stdoutOf('citizenship_withdraw', {
+    origin: 'nebula',
+    fee_refunded: 1000,
+    empire_id: 'solarian',
+  });
+
+  expect(stdout).toContain('=== Application Withdrawn ===');
+  expect(stdout).not.toContain('Citizenships: none');
 });
