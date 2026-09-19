@@ -11,6 +11,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Navigation
 
 - `dock` help names `station_under_attack` and the 0.604.0 join rules (armed join; unarmed/wrecked stay out; wildlife hunts unless leviathan).
+- `dock` table output now prints envelope `cargo` when present, so mission cargo handed on arrival is visible without `get_cargo`.
 
 ### Observation
 
@@ -67,6 +68,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) now append `cargo:N` and `storage:M` to an objective's `current/required` when the server sends `ObjectiveProgressInfo.in_cargo` / `in_storage` (gameserver 0.604.1). That is the same on-hand stock that delivery, pickup, and crafting consult. Progress stays `current/required`; the suffix is on-hand stock, not a substitute for it.
 - `get_active_missions` / `accept_mission` / `abandon_mission` and the `get_missions` board show an optional Community column (`12.5% ore_iron: 90/720`, or `yes` when only the boolean is set) for community/faction-wide missions. `complete_mission` already printed contribution on completion; this is the in-progress view. Ordinary missions omit the column.
+- Table output for `jump`, `dock`, `mine`, `buy`, `sell`, `create_buy_order`, `create_sell_order`, `sell_wreck`, `scrap_wreck`, `survey_system`, and `complete_mission` now prints the Active Missions table when the server includes envelope `missions` (gameserver 0.605.3; `complete_mission` remaining-list is the same envelope). The section is omitted when unchanged, and snapshot commands such as `get_status` do not reprint it. Survey stops count in any order. Already parked in a survey mission's final system still needs a jump out and back. Kill and crafting still require `get_active_missions`. **No parser change.**
+- `dock` table output also prints envelope `cargo` when present, so mission cargo handed on arrival is visible without `get_cargo`. An explicit empty array means the hold emptied; an absent key means unchanged.
 - Table output for `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) and the `get_missions` station board now prints the server-issued description in full after the list (gameserver 0.606.3). The truncated board Description column is replaced by those follow-on lines. Missing descriptions are omitted; present strings print in full.
 
 ### Combat

@@ -18,6 +18,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt/get_missions',
   },
   get_active_missions: {
+    description:
+      'View your active missions, progress, and the server-issued mission description. jump, dock, mine, buy, sell, create_buy_order, create_sell_order, sell_wreck, scrap_wreck, survey_system, and complete_mission already re-print this table when the server includes envelope missions on that command. Keep using get_active_missions for kill and crafting, and whenever the last mutation omitted missions. complete_mission prints remaining actives after the rewards block.',
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt/get_active_missions',
   },
