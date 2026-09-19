@@ -1,8 +1,10 @@
 import {
+  catalogSkillTableColumns,
   classifyRecipeVenue,
   emitCatalogItemDetail,
   emitCatalogModuleDetail,
   emitCatalogShipDetail,
+  emitCatalogSkillDetail,
   formatCatalogYesNo,
   formatProducedByFacilities,
   formatProducedByFacilityIds,
@@ -415,20 +417,23 @@ function emitCatalog(catalog: Record<string, unknown>): void {
             ['Tier', ['tier']],
             ['Empire', ['empire', 'faction']],
           ]
-        : [
-            ['Name', ['name', 'class_name', 'id']],
-            ['ID', ['id', 'item_id', 'recipe_id']],
-            ['Category', ['category', 'type']],
-            ['Size', ['size']],
-            ['Value', ['base_value']],
-          ];
-    if (catalogType !== 'ships' && items.length === 1 && typeof items[0]?.slot === 'string') {
+        : catalogType === 'skills'
+          ? catalogSkillTableColumns(items)
+          : [
+              ['Name', ['name', 'class_name', 'id']],
+              ['ID', ['id', 'item_id', 'recipe_id']],
+              ['Category', ['category', 'type']],
+              ['Size', ['size']],
+              ['Value', ['base_value']],
+            ];
+    if (catalogType === 'items' && items.length === 1 && typeof items[0]?.slot === 'string') {
       columns.push(['Slot', ['slot']]);
     }
     printCompactTable(items.length === 1 ? 'Entry' : 'Entries', items, columns, { maxCellWidth: 48 });
     const entry = items.length === 1 ? items[0] : undefined;
     if (entry) {
       if (catalogType === 'ships') emitCatalogShipDetail(entry, catalog);
+      else if (catalogType === 'skills') emitCatalogSkillDetail(entry);
       else if (catalogType === 'items' && typeof entry.slot === 'string') emitCatalogModuleDetail(entry, catalog);
       else emitCatalogItemDetail(entry, catalog);
     }
