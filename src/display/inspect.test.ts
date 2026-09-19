@@ -11,6 +11,7 @@ import {
   inspectCatalogBoardingModuleFixture,
   inspectCatalogModuleFixture,
   inspectCatalogShipFixture,
+  inspectCatalogSkillFixture,
   inspectPoiFixture,
 } from './inspect.fixtures.ts';
 
@@ -332,8 +333,14 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).toContain('Catalog (items)');
   expect(stdout).toContain('Iron Ore');
   expect(stdout).toContain('iron_ore');
+  const entryHeader = stdout.split('\n').find((line) => line.includes('Name') && line.includes('Category'));
+  expect(entryHeader).toBeDefined();
+  expect(entryHeader).toContain('Size');
+  expect(entryHeader).toContain('Value');
   expect(stdout).toContain('Details');
   expect(stdout).toContain('Raw iron-bearing rock.');
+  expect(stdout).toContain('Size: 1');
+  expect(stdout).toContain('Base value: 2');
   expect(stdout).toContain('Page 1/1');
   expect(stdout).not.toContain('Mining group');
   expect(stdout).not.toContain('=== Response ===');
@@ -470,6 +477,130 @@ function renderCatalogInspect(catalog: Record<string, unknown>, id = 'entry'): s
   expect(rendered.success).toBe(true);
   return rendered.stdout.join('\n');
 }
+
+function inspectEntryHeader(stdout: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes('Name') && line.includes('ID'));
+}
+
+const craftingSkillDescription =
+  "Manufacturing expertise. Your higher of Crafting and Refining sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.";
+
+test('inspect catalog skill uses the skill table and untruncated Details', () => {
+  const rendered = renderStructuredResult('inspect', inspectCatalogSkillFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  const header = inspectEntryHeader(stdout);
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: crafting ===');
+  expect(stdout).toContain('Kind: catalog');
+  expect(stdout).toContain('Source: catalog');
+  expect(stdout).toContain('Catalog (skills)');
+  expect(header).toBeDefined();
+  expect(header).toContain('Name');
+  expect(header).toContain('ID');
+  expect(header).toContain('Category');
+  expect(header).toContain('Max');
+  expect(header).not.toContain('Empire');
+  expect(header).not.toContain('Size');
+  expect(header).not.toContain('Value');
+  expect(header).not.toContain('Slot');
+  expect(stdout).toContain('Details');
+  expect(stdout).toContain(craftingSkillDescription);
+  expect(stdout).toContain('Training: Craft items at a station.');
+  expect(stdout).not.toContain('Bonuses:');
+  expect(stdout).not.toContain('Max level:');
+  expect(stdout).not.toContain('Size:');
+  expect(stdout).not.toContain('Base value:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('inspect catalog skill omits Slot even when a one-row skill has slot', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'skills',
+      items: [
+        {
+          id: 'crafting',
+          name: 'Crafting',
+          category: 'Industry',
+          max_level: 100,
+          slot: 'utility',
+          description: 'Manufacturing expertise.',
+          training_source: 'Craft items at a station.',
+        },
+      ],
+    },
+    'crafting',
+  );
+  const header = inspectEntryHeader(stdout);
+
+  expect(stdout).toContain('Catalog (skills)');
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Slot');
+  expect(header).toContain('Max');
+  expect(stdout).toContain('Training: Craft items at a station.');
+  expect(stdout).not.toContain('Slot: utility');
+});
+
+test('inspect catalog items with skill-shaped fields still uses the item path', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'items',
+      items: [
+        {
+          id: 'crafting',
+          name: 'Crafting',
+          category: 'Industry',
+          max_level: 100,
+          xp_per_level: [60, 165, 340],
+          description: 'Manufacturing expertise.',
+          training_source: 'Craft items at a station.',
+        },
+      ],
+    },
+    'crafting',
+  );
+  const header = inspectEntryHeader(stdout);
+
+  expect(stdout).toContain('Catalog (items)');
+  expect(header).toBeDefined();
+  expect(header).toContain('Size');
+  expect(header).toContain('Value');
+  expect(header).not.toContain('Max');
+  expect(stdout).toContain('Manufacturing expertise.');
+  expect(stdout).not.toContain('Training:');
+});
+
+test('inspect catalog skill prints Empire and Bonuses when present', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'skills',
+      items: [
+        {
+          id: 'solarian_doctrine',
+          name: 'Solarian Doctrine',
+          description: 'Solarian scientific discipline. Increases accuracy by 1% per level.',
+          category: 'Empire',
+          max_level: 100,
+          bonus_per_level: { accuracy: 1 },
+          xp_per_level: [60, 165, 340],
+          empire_restriction: 'solarian',
+          training_source: 'Earned by completing Solarian empire missions (Solarian empire only).',
+        },
+      ],
+    },
+    'solarian_doctrine',
+  );
+  const header = inspectEntryHeader(stdout);
+
+  expect(header).toBeDefined();
+  expect(header).toContain('Empire');
+  expect(header).not.toContain('Size');
+  expect(stdout).toContain('Details');
+  expect(stdout).toContain('Bonuses: accuracy 1');
+  expect(stdout).toContain('Empire: solarian');
+  expect(stdout).not.toContain('Max level:');
+});
 
 test('inspect catalog recipe prints Produced by from catalog produced_by_facilities', () => {
   const stdout = renderCatalogInspect(
@@ -632,6 +763,11 @@ test('module inspect prints scramble, reach, CPU 0, and omits empty Combat', () 
     ],
   });
 
+  const header = inspectEntryHeader(stdout);
+  expect(header).toBeDefined();
+  expect(header).toContain('Slot');
+  expect(header).toContain('Size');
+  expect(header).toContain('Value');
   expect(stdout).toContain('Slot: utility');
   expect(stdout).toContain('CPU: 0');
   expect(stdout).toContain('Reach: 3');

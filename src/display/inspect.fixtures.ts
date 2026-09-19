@@ -175,6 +175,32 @@ export const inspectCatalogShipFixture = {
   },
 };
 
+export const inspectCatalogSkillFixture = {
+  id: 'crafting',
+  kind: 'catalog',
+  source: 'catalog',
+  catalog: {
+    type: 'skills',
+    items: [
+      {
+        id: 'crafting',
+        name: 'Crafting',
+        description:
+          "Manufacturing expertise. Your higher of Crafting and Refining sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.",
+        category: 'Industry',
+        max_level: 100,
+        xp_per_level: [60, 165, 340],
+        training_source: 'Craft items at a station.',
+      },
+    ],
+    page: 1,
+    page_size: 20,
+    total: 1,
+    total_pages: 1,
+    message: 'Skills: showing 1 of 1',
+  },
+};
+
 export const inspectCatalogBoardingModuleFixture = {
   id: 'boarding_claws_ii',
   kind: 'catalog',
@@ -346,6 +372,7 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_package_shipment: { command: 'inspect', fixture: inspectPackageShipmentFixture },
   inspect_catalog_module: { command: 'inspect', fixture: inspectCatalogModuleFixture },
   inspect_catalog_ship: { command: 'inspect', fixture: inspectCatalogShipFixture },
+  inspect_catalog_skill: { command: 'inspect', fixture: inspectCatalogSkillFixture },
   inspect_catalog_boarding_module: { command: 'inspect', fixture: inspectCatalogBoardingModuleFixture },
   inspect_catalog_recipe: { command: 'inspect', fixture: inspectCatalogRecipeFixture },
   inspect_catalog_recipe_venues: { command: 'inspect', fixture: inspectCatalogRecipeVenuesFixture },

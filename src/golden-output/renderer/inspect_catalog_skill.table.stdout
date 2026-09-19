@@ -1,0 +1,18 @@
+
+=== Inspect: crafting ===
+Kind: catalog
+Source: catalog
+
+Catalog (skills)
+Skills: showing 1 of 1
+
+=== Entry ===
+
+  Name     | ID       | Category | Max
+  ---------+----------+----------+----
+  Crafting | crafting | Industry | 100
+
+Details
+Manufacturing expertise. Your higher of Crafting and Refining sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.
+Training: Craft items at a station.
+Page 1/1 (1 total)
