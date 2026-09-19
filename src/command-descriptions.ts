@@ -89,7 +89,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   forum_reply: 'Reply to a forum thread',
   forum_upvote: 'Upvote a thread or reply',
   get_action_log: 'Retrieve your or your faction persistent action history.',
-  get_active_missions: 'View your active missions and progress.',
+  get_active_missions: 'View your active missions, progress, and the server-issued mission description.',
   get_base:
     'Get docked station details. When facilities are damaged, table output shows the repair queue, hull recovery, combined supply shortages that count shared stock once, missing supplies, and how to deliver them. When authenticator production is blocked, table output shows the sovereign mint shortage report: missing Trade Crystals with buy order: yes or no per input, or an internal mint-stage blocker. Sell only buy order: yes rows through the public market; check view_market for depth.',
   get_battle_status:
@@ -101,7 +101,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_insurance_quote: 'Get a risk-based insurance quote for your current ship',
   get_map:
     "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
-  get_missions: 'Get available missions at your current station',
+  get_missions: 'Get available missions at your current station, including the server-issued description.',
   get_nearby: 'Show visible nearby players, NPCs, creatures, and intact prizes',
   get_notes: 'List all your note documents',
   get_poi: 'Get your current POI details',

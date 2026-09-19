@@ -65,6 +65,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) now append `cargo:N` and `storage:M` to an objective's `current/required` when the server sends `ObjectiveProgressInfo.in_cargo` / `in_storage` (gameserver 0.604.1). That is the same on-hand stock that delivery, pickup, and crafting consult. Progress stays `current/required`; the suffix is on-hand stock, not a substitute for it.
 - `get_active_missions` / `accept_mission` / `abandon_mission` and the `get_missions` board show an optional Community column (`12.5% ore_iron: 90/720`, or `yes` when only the boolean is set) for community/faction-wide missions. `complete_mission` already printed contribution on completion; this is the in-progress view. Ordinary missions omit the column.
+- Table output for `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) and the `get_missions` station board now prints the server-issued description in full after the list (gameserver 0.606.3). The truncated board Description column is replaced by those follow-on lines. Missing descriptions are omitted; present strings print in full.
 
 ### Combat
 
