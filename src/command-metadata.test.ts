@@ -1800,6 +1800,27 @@ describe('command metadata', () => {
     expect(help).not.toContain('`');
   });
 
+  test('get_active_missions and get_missions help mention server-issued description', () => {
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_active_missions).toContain('description');
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_missions).toContain('description');
+
+    for (const command of ['get_active_missions', 'get_missions'] as const) {
+      const description = CURATED_COMMAND_DESCRIPTIONS[command];
+      expect(description).not.toContain('escrow');
+      expect(description).not.toContain('counterparty fills');
+      expect(description).not.toContain('not when you place');
+      expect(description).not.toContain('`');
+      expect(COMMANDS[command]?.description).toBe(description);
+
+      const help = captureHelp(command);
+      expect(help).toContain('description');
+      expect(help).not.toContain('escrow');
+      expect(help).not.toContain('counterparty fills');
+      expect(help).not.toContain('not when you place');
+      expect(help).not.toContain('`');
+    }
+  });
+
   test('faction post_mission help documents item_id validation and objective-type rules', () => {
     const postMission = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.post_mission?.config;
     expect(postMission?.description).toContain('invalid_item');
