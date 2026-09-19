@@ -1,0 +1,11 @@
+
+origin: nebula
+citizenships:
+  - empire_id: solarian
+    granted_at: 2026-01-15T00:00:00Z
+    granted_by: council
+  - empire_id: nebula
+    granted_at: 2025-06-01T00:00:00Z
+fee_refunded: 1000
+empire_id: solarian
+message: "Application withdrawn."

@@ -1,0 +1,23 @@
+
+=== Citizenship ===
+Origin: nebula
+
+=== Citizenships ===
+
+  Empire   | Granted              | By     
+  ---------+----------------------+--------
+  solarian | 2026-01-15T00:00:00Z | council
+  nebula   | 2025-06-01T00:00:00Z |        
+
+=== Pending Petitions ===
+
+  Empire  | Status  | Fee      | ID           
+  --------+---------+----------+--------------
+  crimson | pending | 1,000 cr | pet-crimson-1
+
+=== Empires ===
+
+  Empire   | ID       | Citizen | Open | Exclusive | Auto | Fee      | Min bal   | Min rep | Your rep | Eligible | Reason            
+  ---------+----------+---------+------+-----------+------+----------+-----------+---------+----------+----------+-------------------
+  Solarian | solarian | yes     | yes  | no        | no   | 1,000 cr | 5,000 cr  | 10      | 12       | yes      |                   
+  Crimson  | crimson  | no      | yes  | yes       | no   | 2,500 cr | 10,000 cr | 20      | 8        | no       | reputation too low

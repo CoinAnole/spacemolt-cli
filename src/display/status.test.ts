@@ -330,6 +330,65 @@ test('get_state uses the status formatter and prints Standings', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+function withoutCitizenships<T extends { player: Record<string, unknown> }>(fixture: T): T {
+  const clone = structuredClone(fixture);
+  delete clone.player.citizenships;
+  delete clone.player.held_citizenships;
+  delete clone.player.citizenship;
+  return clone;
+}
+
+test.each([
+  'get_status',
+  'get_state',
+  'get_player',
+] as const)('%s prints Citizenships: none when the snapshot omits citizenships', (command) => {
+  const fixture =
+    command === 'get_player' ? withoutCitizenships(playerProfileFixture) : withoutCitizenships(getStatusFixture);
+  const stdout = renderStructuredResult(command, fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Citizenships: none');
+  expect(stdout).not.toContain('Citizenships: stateless');
+});
+
+test('get_status prints Citizenships: none for a present empty array', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({ citizenships: [] }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Citizenships: none');
+});
+
+test('get_status still prints populated citizenships', () => {
+  const stdout = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('Citizenships: solarian, nebula');
+  expect(stdout).not.toContain('Citizenships: none');
+});
+
+test('player-shaped buy shapeFallback omits Citizenships when the key is absent', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    { player: { username: 'Marlowe', empire: 'Terran' } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout).not.toContain('Citizenships:');
+});
+
+test('player-shaped buy shapeFallback prints Citizenships: none for a present empty array', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    { player: { username: 'Marlowe', empire: 'Terran', citizenships: [] } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Citizenships: none');
+});
+
 function statusWithPlayer(player: Record<string, unknown>) {
   const fixture = structuredClone(getStatusFixture) as {
     player: Record<string, unknown>;
