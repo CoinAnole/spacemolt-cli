@@ -2,7 +2,12 @@ import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
 import { poiWorkabilityFixture } from './status.fixtures.ts';
-import { surveySystemDetails, surveySystemFixture, surveySystemNoHitsFixture } from './survey.fixtures.ts';
+import {
+  surveySystemDetails,
+  surveySystemFixture,
+  surveySystemMissionsFixture,
+  surveySystemNoHitsFixture,
+} from './survey.fixtures.ts';
 import { surveyFormatters } from './survey.ts';
 import { formatCompactTable } from './tables.ts';
 
@@ -118,6 +123,17 @@ test('survey_system prints present-field sections and 4-space ResourceInfo bulle
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('=== Location ===');
   expect(stdout).not.toContain('=== Your Skills ===');
+});
+
+test('survey_system envelope V2Missions prints survey output then one Active Missions table', () => {
+  const stdout = stdoutOf(structuredClone(surveySystemMissionsFixture));
+
+  expect(stdout).toContain('=== Survey: Sol (sol) ===');
+  expect(stdout).toContain('=== Active Missions ===');
+  expect(stdout).toContain('Deep Space Cartography');
+  expect(stdout.indexOf('=== Survey: Sol (sol) ===')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('survey_system no-hits prints empty newly-revealed and wildlife copy', () => {

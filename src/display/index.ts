@@ -26,7 +26,9 @@ import {
   rememberOriginalDetailKeys,
 } from './dock-state.ts';
 import { commandNameEquals, commandScopedFormatters, resultFormatters, shapeFallbackFormatters } from './formatters.ts';
+import { emitActiveMissionsTable, isV2MissionsEnvelope } from './generic.ts';
 import { c, type DisplayRenderBuffer, emitError, emitLine, withDisplayRenderBuffer } from './helpers.ts';
+import { emitCargoHold } from './ship.ts';
 
 export interface RenderedDisplay {
   success: boolean;
@@ -473,7 +475,10 @@ function displayStructuredResultInternal(
 
   emitMutationDockState(viewModel, detailsViewModel, command);
 
-  if (formatted) return true;
+  if (formatted) {
+    emitPostActionEnvelopeAppendix(viewModel, command);
+    return true;
+  }
 
   const resultKeys = Object.keys(detailsViewModel ?? viewModel);
   const nearMisses = resultFormatters.filter(
@@ -509,6 +514,34 @@ const MUTATION_DOCK_STATE_QUERY_COMMANDS = [
   'get_skills',
   'player_profile',
 ] as const;
+
+/** Snapshots like get_status also carry V2Missions; print only on these mutations. */
+const POST_ACTION_MISSIONS_COMMANDS = [
+  'jump',
+  'dock',
+  'mine',
+  'buy',
+  'sell',
+  'create_buy_order',
+  'create_sell_order',
+  'sell_wreck',
+  'scrap_wreck',
+  'survey_system',
+  'complete_mission',
+] as const;
+
+function emitPostActionEnvelopeAppendix(viewModel: Record<string, unknown>, command: string): void {
+  if (
+    POST_ACTION_MISSIONS_COMMANDS.some((name) => commandNameEquals(command, name)) &&
+    isV2MissionsEnvelope(viewModel.missions)
+  ) {
+    emitActiveMissionsTable(viewModel);
+  }
+
+  if (commandNameEquals(command, 'dock') && Object.hasOwn(viewModel, 'cargo') && Array.isArray(viewModel.cargo)) {
+    emitCargoHold(viewModel);
+  }
+}
 
 function emitMutationDockState(
   viewModel: Record<string, unknown>,

@@ -13,6 +13,7 @@ import {
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   getSystemAgentsFixture,
+  jumpSurveyMissionsEnvelope,
   nearbyArenaFixture,
   nearbyArenaFleesFixture,
   nearbyBossFixture,
@@ -236,6 +237,23 @@ test('get_status prints Standings when player.standings is present including pir
   expect(stdout).toContain('bounty 500');
   expect(stdout).not.toContain('outstanding_bounty');
   expect(stdout).not.toContain('baseline');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+] as const)('%s with V2Missions still prints status and omits Active Missions', (command) => {
+  const stdout = renderStructuredResult(
+    command,
+    { ...structuredClone(getStatusFixture), missions: jumpSurveyMissionsEnvelope },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Standings:');
+  expect(stdout).toContain('Location:');
+  expect(stdout).not.toContain('=== Active Missions ===');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('get_status omits Standings when standings are absent or empty', () => {

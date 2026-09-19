@@ -9,16 +9,19 @@ import {
   activeMissionsCommunityFixture,
   activeMissionsExchangeFixture,
   activeMissionsFixture,
+  arrivalFixture,
   baseFixture,
   baseRepairsFixture,
   baseSovereignMintInputsFixture,
   baseSovereignMintInternalFixture,
   browseShipsFixture,
+  buyFixture,
   cargoFixture,
   catalogItemsFixture,
   completedMissionBountyFixture,
   completedMissionDetailFixture,
   completedMissionsFixture,
+  completeMissionFixture,
   createSellOrderFixture,
   declineMissionFixture,
   distressSignalFixture,
@@ -34,10 +37,13 @@ import {
   getNotificationsFixture,
   getStatusFixture,
   highValueCommandFixtures,
+  jumpFixture,
+  jumpSurveyMissionsEnvelope,
   listPassengersFixture,
   listStationPassengersFixture,
   listStationPassengersWithLoungeFixture,
   loadPassengerConnectingFixture,
+  mineYieldFixture,
   missionsBountyFixture,
   missionsCommunityFixture,
   missionsExchangeFixture,
@@ -49,6 +55,8 @@ import {
   repairFleetFixture,
   repairStationFixture,
   repairTargetFixture,
+  scrapWreckFixture,
+  sellFixture,
   shipDroneBayFixture,
   shipFixture,
   shipRemoteFixture,
@@ -3504,6 +3512,205 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('Credits earned:');
     expect(stdout).not.toContain('promised');
     expect(stdout).not.toContain('shortfall');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('jump envelope V2Missions prints Active Missions after arrival', () => {
+    const { stdout, stderr } = captureStructuredOutput('jump', {
+      ...jumpFixture,
+      missions: jumpSurveyMissionsEnvelope,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arrived at Procyon A');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout).toContain('Local Sector Survey');
+    expect(stdout).toContain('2/3');
+    expect(stdout.indexOf('Arrived at Procyon A')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('jump without missions omits Active Missions', () => {
+    const { stdout, stderr } = captureStructuredOutput('jump', jumpFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arrived at Procyon A');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('jump empty active missions still prints (None)', () => {
+    const withCapacity = captureStructuredOutput('jump', {
+      ...jumpFixture,
+      missions: { active: [], max_missions: 5 },
+    });
+    const withoutCapacity = captureStructuredOutput('jump', {
+      ...jumpFixture,
+      missions: { active: [] },
+    });
+
+    expect(withCapacity.stderr).toBe('');
+    expect(withoutCapacity.stderr).toBe('');
+    expect(withCapacity.stdout).toContain('Arrived at Procyon A');
+    expect(withCapacity.stdout).toContain('=== Active Missions ===');
+    expect(withCapacity.stdout).toContain('(None)');
+    expect(withCapacity.stdout).toContain('missions 0/5');
+    expect(withoutCapacity.stdout).toContain('=== Active Missions ===');
+    expect(withoutCapacity.stdout).toContain('(None)');
+    expect(withoutCapacity.stdout).not.toContain('missions 0/');
+    expect(withCapacity.stdout).not.toContain('=== Response ===');
+  });
+
+  test('jump malformed missions object does not dump [object Object]', () => {
+    const { stdout, stderr } = captureStructuredOutput('jump', {
+      ...jumpFixture,
+      missions: { title: 'x' },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arrived at Procyon A');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('jump board-style missions array does not print Active Missions', () => {
+    const { stdout, stderr } = captureStructuredOutput('jump', {
+      ...jumpFixture,
+      missions: [{ title: 'Board listing' }],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arrived at Procyon A');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('travel envelope V2Missions does not print Active Missions', () => {
+    const { stdout, stderr } = captureStructuredOutput('travel', {
+      ...arrivalFixture,
+      missions: jumpSurveyMissionsEnvelope,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Arrived at Earth');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('accept_mission envelope prints one Active Missions table and no cargo hold', () => {
+    const { stdout, stderr } = captureStructuredOutput('accept_mission', acceptMissionPostActionFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).not.toContain('=== Cargo ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('abandon_mission envelope prints one Active Missions table', () => {
+    const { stdout, stderr } = captureStructuredOutput('abandon_mission', abandonMissionPostActionFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).not.toContain('=== Cargo ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_list_missions and get_missions keep board tables without Active Missions', () => {
+    const faction = captureStructuredOutput('faction_list_missions', factionListMissionsFixture);
+    const board = captureStructuredOutput('get_missions', missionsFixture);
+
+    expect(faction.stderr).toBe('');
+    expect(board.stderr).toBe('');
+    expect(faction.stdout).toContain('=== Faction Missions ===');
+    expect(board.stdout).toContain('=== Missions ===');
+    expect(faction.stdout).not.toContain('=== Active Missions ===');
+    expect(board.stdout).not.toContain('=== Active Missions ===');
+  });
+
+  test('get_status and get_state with V2Missions omit the Active Missions appendix', () => {
+    const fixture = { ...getStatusFixture, missions: jumpSurveyMissionsEnvelope };
+    const status = captureStructuredOutput('get_status', fixture);
+    const state = captureStructuredOutput('get_state', fixture);
+
+    expect(status.stderr).toBe('');
+    expect(state.stderr).toBe('');
+    expect(status.stdout).toContain('Standings:');
+    expect(state.stdout).toContain('Standings:');
+    expect(status.stdout).not.toContain('=== Active Missions ===');
+    expect(state.stdout).not.toContain('=== Active Missions ===');
+  });
+
+  test('scrap_wreck envelope cargo does not print a cargo hold', () => {
+    const { stdout, stderr } = captureStructuredOutput('scrap_wreck', scrapWreckFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Wreck Scrapped ===');
+    expect(stdout).not.toContain('=== Cargo ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_create_buy_order bulk envelope does not print cargo hold stats', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_create_buy_order', factionCreateBuyOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Cargo ===');
+    expect(stdout).not.toContain('Used: 0/500');
+    expect(stdout).not.toContain('=== Active Missions ===');
+  });
+
+  test('buy and sell envelope cargo arrays do not print a cargo hold', () => {
+    const cargo = [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 7, size: 1 }];
+    const buy = captureStructuredOutput('buy', { ...buyFixture, cargo });
+    const sell = captureStructuredOutput('sell', { ...sellFixture, cargo });
+
+    expect(buy.stderr).toBe('');
+    expect(sell.stderr).toBe('');
+    expect(buy.stdout).toContain('=== Buy Complete ===');
+    expect(sell.stdout).toContain('=== Sell Complete ===');
+    expect(buy.stdout).not.toContain('=== Cargo ===');
+    expect(sell.stdout).not.toContain('=== Cargo ===');
+  });
+
+  test('complete_mission remaining V2Missions prints after Mission Complete', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      ...completeMissionFixture,
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-survey-2',
+            title: 'Survey Run',
+            type: 'survey',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Mission Complete: Food Delivery ===');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout).toContain('Survey Run');
+    expect(stdout.indexOf('=== Mission Complete: Food Delivery ===')).toBeLessThan(
+      stdout.indexOf('=== Active Missions ==='),
+    );
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('mine envelope V2Missions prints yield then one Active Missions table', () => {
+    const { stdout, stderr } = captureStructuredOutput('mine', {
+      ...mineYieldFixture,
+      missions: jumpSurveyMissionsEnvelope,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Mine ===');
+    expect(stdout).toContain('Mined 42 Iron Ore');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout.indexOf('=== Mine ===')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
     expect(stdout).not.toContain('=== Response ===');
   });
 

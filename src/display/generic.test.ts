@@ -9,7 +9,9 @@ import {
   catalogShipsFixture,
   catalogSkillsFixture,
   catalogSkillsOneFixture,
+  dockDeliveryMissionsEnvelope,
   dockFixture,
+  dockMissionCargoItems,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
   storageDepositStationGiftFixture,
@@ -52,6 +54,18 @@ function earthStationLocation(dockedAt: string | null): Record<string, unknown> 
     ...(storageDepositAutoDockedFixture.location as Record<string, unknown>),
     docked_at: dockedAt,
   });
+}
+
+function headingCount(stdout: string, heading: string): number {
+  return stdout.split(`=== ${heading} ===`).length - 1;
+}
+
+function dockEnvelope(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    details: structuredClone(dockFixture),
+    location: earthStationLocation('earth_station'),
+    ...extra,
+  };
 }
 
 test('renders dock facility_note and your_facilities with paused vs billable rent', () => {
@@ -152,6 +166,85 @@ test('--quiet still prints compact dock state when auto_docked is top-level', ()
   );
   expect(stdout).toContain('=== Deposit Items ===');
   expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+test('dock envelope missions and cargo print after Docked at without a second docked line', () => {
+  const stdout = renderStructuredResult(
+    'dock',
+    dockEnvelope({
+      missions: structuredClone(dockDeliveryMissionsEnvelope),
+      cargo: structuredClone(dockMissionCargoItems),
+    }),
+    options,
+    context,
+  ).stdout.join('\n');
+  const dockedAt = 'Docked at: Earth Station (earth_station)';
+  expect(stdout).toContain(dockedAt);
+  expect(stdout).toContain('=== Active Missions ===');
+  expect(stdout).toContain('Faction Supply Delivery');
+  expect(stdout).toContain('cargo:5');
+  expect(stdout).toContain('=== Cargo ===');
+  expect(stdout).toContain('Cargo (1):');
+  expect(stdout).toContain('Food Rations');
+  expect(stdout).not.toContain('Credits:');
+  expect(stdout).not.toContain('Used:');
+  expect(stdout.indexOf(dockedAt)).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+  expect(stdout.indexOf('=== Active Missions ===')).toBeLessThan(stdout.indexOf('=== Cargo ==='));
+  expect(stdout.split(dockedAt).length - 1).toBe(1);
+  expect(headingCount(stdout, 'Active Missions')).toBe(1);
+  expect(headingCount(stdout, 'Cargo')).toBe(1);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('dock envelope missions without cargo print missions only', () => {
+  const stdout = renderStructuredResult(
+    'dock',
+    dockEnvelope({ missions: structuredClone(dockDeliveryMissionsEnvelope) }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).toContain('=== Active Missions ===');
+  expect(stdout).not.toContain('=== Cargo ===');
+  expect(stdout).not.toContain('Cargo (');
+});
+
+test('dock empty cargo array prints Empty and omits hold stats', () => {
+  const stdout = renderStructuredResult('dock', dockEnvelope({ cargo: [] }), options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Cargo ===');
+  expect(stdout).toContain('Cargo (0):');
+  expect(stdout).toContain('(Empty)');
+  expect(stdout).not.toContain('Credits:');
+  expect(stdout).not.toContain('Used:');
+  expect(stdout).not.toContain('=== Active Missions ===');
+});
+
+test('dock non-array cargo is silent', () => {
+  const stdout = renderStructuredResult(
+    'dock',
+    dockEnvelope({ cargo: { items: structuredClone(dockMissionCargoItems) } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).not.toContain('=== Cargo ===');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('--quiet dock still prints missions, cargo, and Docked at', () => {
+  const stdout = renderStructuredResult(
+    'dock',
+    dockEnvelope({
+      missions: structuredClone(dockDeliveryMissionsEnvelope),
+      cargo: structuredClone(dockMissionCargoItems),
+    }),
+    { ...options, quiet: true },
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+  expect(stdout).toContain('=== Active Missions ===');
+  expect(stdout).toContain('=== Cargo ===');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
 });
 

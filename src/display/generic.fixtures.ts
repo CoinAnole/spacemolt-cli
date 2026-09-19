@@ -1157,6 +1157,42 @@ export const dockFixture = {
   ],
 };
 
+export const dockDeliveryMissionsEnvelope = {
+  active: [
+    {
+      accepted_at: '2026-06-18T21:15:00Z',
+      description: 'Deliver faction supplies to the contract issuer.',
+      difficulty: 2,
+      expires_in_ticks: 31,
+      issuing_base: 'Earth Station',
+      issuing_base_id: 'earth_station',
+      mission_id: 'mission-faction-delivery-1',
+      objectives: [
+        {
+          completed: false,
+          current: 0,
+          description: 'Deliver Food Rations',
+          item_id: 'food_rations',
+          required: 5,
+          target_base: 'earth_station',
+          type: 'deliver_item',
+          in_cargo: 5,
+        },
+      ],
+      percent_complete: 0,
+      rewards: {
+        credits: 1200,
+        reputation: 2,
+      },
+      title: 'Faction Supply Delivery',
+      type: 'delivery',
+    },
+  ],
+  max_missions: 5,
+};
+
+export const dockMissionCargoItems = [{ item_id: 'food_rations', item_name: 'Food Rations', quantity: 5, size: 1 }];
+
 export const mobileBaseFixture = {
   system: 'frontier_outpost',
 };
@@ -1439,6 +1475,17 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     fixture: { details: dockFixture, location: earthStationLocationDocked },
     apiRoute: 'POST /api/v2/spacemolt/dock',
     schemaTarget: 'details',
+  },
+  dock_missions_cargo: {
+    command: 'dock',
+    fixture: {
+      details: dockFixture,
+      location: earthStationLocationDocked,
+      missions: dockDeliveryMissionsEnvelope,
+      cargo: dockMissionCargoItems,
+    },
+    apiRoute: 'POST /api/v2/spacemolt/dock',
+    schemaTarget: 'structuredContent',
   },
   facility_dismantle: { command: 'facility_dismantle', fixture: facilityDismantleFixture },
   faction_dismantle: { command: 'faction_dismantle', fixture: factionDismantleFixture },

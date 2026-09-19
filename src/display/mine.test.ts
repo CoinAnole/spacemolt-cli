@@ -72,6 +72,30 @@ test('mine prints present-field yield name, remaining, depletion, and XP', () =>
   expect(stdout).not.toContain('Kind:');
 });
 
+test('mine envelope V2Missions prints yield then one Active Missions table', () => {
+  const stdout = stdoutOf({
+    ...structuredClone(mineYieldFixture),
+    missions: {
+      active: [
+        {
+          title: 'Local Sector Survey',
+          type: 'survey',
+          mission_id: 'mission-survey-local-1',
+          objectives: [{ description: 'Visit listed systems in any order', progress: { current: 2, required: 3 } }],
+        },
+      ],
+      max_missions: 5,
+    },
+  });
+
+  expect(stdout).toContain('=== Mine ===');
+  expect(stdout).toContain('Mined 42 Iron Ore');
+  expect(stdout).toContain('=== Active Missions ===');
+  expect(stdout.indexOf('=== Mine ===')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('mine filtered prints no-yield framing and the server message', () => {
   const stdout = stdoutOf(structuredClone(mineFilteredFixture));
 
