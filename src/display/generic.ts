@@ -154,7 +154,6 @@ function activeMissionRows(result: Record<string, unknown>): Array<Record<string
   return undefined;
 }
 
-/** `max_missions` is optional; missing capacity just omits the count line. */
 export function isV2MissionsEnvelope(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && Array.isArray(value.active);
 }
