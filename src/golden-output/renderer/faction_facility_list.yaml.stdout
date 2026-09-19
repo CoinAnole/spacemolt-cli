@@ -36,6 +36,12 @@ faction_facilities:
     faction_service: hangar
     rent_per_cycle: 600
     status: dismantling
+faction_rent:
+  facilities: 4
+  total_rent_per_cycle: 1200
+  est_rent_per_day: 7200
+  grace_cycles: 1
+  note: "Faction facilities pay rent from the treasury each cycle."
 faction_storage:
   credits: 50000
   item_types: 14

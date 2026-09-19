@@ -703,27 +703,26 @@ function battleParticipantColumns(rows: Array<Record<string, unknown>>): Array<[
 function emitRentSummary(title: string, arrearsLabel: string, source: unknown): void {
   if (!isRecord(source)) return;
   const totalRent = formatCredits(source.total_rent_per_cycle);
+  const facilityCount = formatNumber(source.facilities);
   const arrears = formatCredits(source.arrears_owed);
   const grace = formatCycles(source.grace_cycles);
   const estRentPerDay = formatCredits(source.est_rent_per_day);
   if (totalRent !== undefined) emitLine(`\n${title}: ${totalRent}/cycle`);
+  if (facilityCount !== undefined) emitLine(`Facilities: ${facilityCount}`);
   if (arrears !== undefined) emitLine(`${arrearsLabel}: ${arrears}`);
   if (grace !== undefined) emitLine(`Grace remaining: ${grace}`);
   if (estRentPerDay !== undefined) emitLine(`Estimated rent/day: ${estRentPerDay}`);
   if (source.note) emitLine(String(source.note));
-  if (source.hint) emitLine(String(source.hint));
 }
 
 function emitFacilityRentSummaries(result: Record<string, unknown>): void {
   if (isRecord(result.player_rent)) {
     emitRentSummary('Personal rent bill', 'Arrears', result.player_rent);
+  } else if (isRecord(result.rent)) {
+    emitRentSummary('Personal rent bill', 'Arrears', result.rent);
   }
   if (isRecord(result.faction_rent)) {
     emitRentSummary('Faction rent bill', 'Faction arrears', result.faction_rent);
-  } else if (isRecord(result.rent)) {
-    emitRentSummary('Faction rent bill', 'Faction arrears', result.rent);
-  } else if (!isRecord(result.player_rent)) {
-    emitRentSummary('Faction rent bill', 'Faction arrears', result);
   }
 }
 
@@ -1592,6 +1591,7 @@ export const socialFormatters = [
       printCompactTable('Faction Facilities', rows, columns);
 
       emitFacilityRentSummaries(r);
+      if (typeof r.hint === 'string' && r.hint) emitLine(r.hint);
       return true;
     },
     { commands: ['faction_facility_owned'], shapeFallback: true },
@@ -1660,6 +1660,7 @@ export const socialFormatters = [
         if (s.rooms !== undefined) parts.push(`${s.rooms} rooms`);
         if (parts.length) emitLine(`\nFaction storage: ${parts.join(', ')}`);
       }
+      emitFacilityRentSummaries(r);
       if (typeof r.hint === 'string' && r.hint) emitLine(`\n${r.hint}`);
       return true;
     },
@@ -1688,9 +1689,13 @@ export const socialFormatters = [
         rows,
         facilityColumns(rows, { includeType: commandNameEquals(command, 'facility_owned') }),
       );
+      if (commandNameEquals(command, 'facility_owned')) {
+        emitFacilityRentSummaries(r);
+        if (typeof r.hint === 'string' && r.hint) emitLine(r.hint);
+      }
       return true;
     },
-    { commands: ['facility_list'], shapeFallback: true },
+    { commands: ['facility_list', 'facility_owned'], shapeFallback: true },
   ),
 
   // Facility List

@@ -490,14 +490,41 @@ test('renders faction-owned facility rent summary and delinquency fields', () =>
     options,
     context,
   );
+  const stdout = rendered.stdout.join('\n');
+  const rentIdx = stdout.indexOf('Faction rent bill:');
+  const header = stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Name') && line.includes('Type'));
 
   expect(rendered.success).toBe(true);
-  expect(rendered.stdout.join('\n')).toContain('Faction rent bill: 1,200cr/cycle');
-  expect(rendered.stdout.join('\n')).toContain('Faction arrears: 2,400cr');
-  expect(rendered.stdout.join('\n')).toContain('Grace remaining: 1 cycle');
-  expect(rendered.stdout.join('\n')).toContain('Missed');
-  expect(rendered.stdout.join('\n')).toContain('Arrears');
-  expect(rendered.stdout.join('\n')).toContain('2,400cr');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).toContain('Facilities: 1');
+  expect(stdout).toContain('Faction arrears: 2,400cr');
+  expect(stdout).toContain('Grace remaining: 1 cycle');
+  expect(stdout).toContain('Estimated rent/day: 7,200cr');
+  expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+  expect(stdout).toContain("Use action 'faction_list' while docked for full per-facility detail at that station.");
+  expect(stdout).toContain('Missed');
+  expect(stdout).toContain('Arrears');
+  expect(stdout).toContain('2,400cr');
+  expect(rentIdx).toBeGreaterThan(-1);
+  expect(stdout.slice(rentIdx)).toContain('Facilities: 1');
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Facilities: 1');
+});
+
+test('faction_facility_owned ignores legacy top-level rent fields', () => {
+  const fixture = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
+  delete fixture.faction_rent;
+  fixture.total_rent_per_cycle = 1200;
+  fixture.arrears_owed = 2400;
+  fixture.grace_cycles = 1;
+  fixture.note = 'Faction facilities pay rent from the treasury each cycle.';
+
+  const stdout = renderStructuredResult('faction_facility_owned', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Faction rent bill');
+  expect(stdout).toContain("Use action 'faction_list' while docked for full per-facility detail at that station.");
 });
 
 test('renders station service pools after construction and before facility tables', () => {
@@ -857,6 +884,7 @@ test('renders facility list faction rent summary', () => {
 
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).toContain('Facilities: 2');
   expect(stdout).toContain('Faction arrears: 2,400cr');
   expect(stdout).toContain('Grace remaining: 1 cycle');
   expect(stdout).toContain('Estimated rent/day: 7,200cr');
@@ -881,7 +909,9 @@ test('facility_list prints personal and faction rent bills from separate sources
   expect(factionIdx).toBeGreaterThan(personalIdx);
   expect(factionArrearsIdx).toBeGreaterThan(factionIdx);
   expect(bothStdout.slice(personalIdx, factionIdx)).toContain('Arrears: 100cr');
+  expect(bothStdout.slice(personalIdx, factionIdx)).toContain('Facilities:');
   expect(bothStdout.slice(personalIdx, factionIdx)).not.toContain('Faction arrears');
+  expect(bothStdout.slice(factionIdx)).toContain('Facilities:');
   expect(bothStdout).toContain('Personal rent bill: 400cr/cycle');
   expect(bothStdout).toContain('Faction rent bill: 1,200cr/cycle');
 
@@ -900,7 +930,7 @@ test('facility_list prints personal and faction rent bills from separate sources
   expect(personalStdout).not.toContain('Faction arrears');
 });
 
-test('facility_owned does not print a rent bill', () => {
+test('facility_owned prints a personal rent bill', () => {
   const stdout = renderStructuredResult(
     'facility_owned',
     structuredClone(facilityOwnedFixture),
@@ -908,9 +938,19 @@ test('facility_owned does not print a rent bill', () => {
     context,
   ).stdout.join('\n');
   expect(stdout).toContain('Ore Refinery');
+  expect(stdout).toContain('Personal rent bill: 120cr/cycle');
+  expect(stdout).toContain('Facilities: 1');
+  expect(stdout).toContain('Estimated rent/day: 720cr');
   expect(stdout).not.toContain('Faction rent bill');
-  expect(stdout).not.toContain('Personal rent bill');
   expect(stdout).not.toContain('Faction arrears');
+});
+
+test('facility_owned prints optional hint after the personal rent bill', () => {
+  const fixture = structuredClone(facilityOwnedFixture) as Record<string, unknown>;
+  fixture.hint = 'Dock at a station to manage these facilities.';
+  const stdout = renderStructuredResult('facility_owned', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Personal rent bill: 120cr/cycle');
+  expect(stdout).toContain('Dock at a station to manage these facilities.');
 });
 
 test('renders facility metadata when all required facility groups are empty', () => {
@@ -1009,6 +1049,9 @@ test('owned facility tables separate display names from build type keys', () => 
   expect(owned.stdout.join('\n')).toMatch(/Name\s+\|\s+Type\s+\|\s+ID/);
   expect(owned.stdout.join('\n')).toContain('Frontier Smelter (Ore Refinery)');
   expect(owned.stdout.join('\n')).toContain('ore_refinery');
+  expect(owned.stdout.join('\n')).toContain('Personal rent bill: 10cr/cycle');
+  expect(owned.stdout.join('\n')).not.toContain('Faction rent bill');
+  expect(owned.stdout.join('\n')).not.toContain('Faction arrears');
   expect(faction.stdout.join('\n')).toMatch(/Name\s+\|\s+Type\s+\|\s+ID\s+\|\s+Station/);
   expect(faction.stdout.join('\n')).toContain('faction_shipyard_berth');
 });
@@ -3331,6 +3374,12 @@ test('faction_facility_list renders status, damaged yes/no, and custom names', (
   expect(tableCell(section, 'faction-hangar', 'Status')).toBe('dismantling');
   expect(tableCell(section, 'faction-hangar', 'Rent')).toBe('600cr (paused)');
   expect(stdout).toContain('Faction storage:');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).toContain('Facilities: 4');
+  expect(stdout).toContain('Estimated rent/day: 7,200cr');
+  expect(stdout).toContain('Grace remaining: 1 cycle');
+  expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+  expect(stdout).not.toContain('Faction arrears');
   expect(stdout).toContain('Damaged facilities produce nothing.');
   expect(stdout).toContain('rebuilds its own faction');
   expect(stdout).toContain('facility repair');
@@ -3354,7 +3403,24 @@ test('faction_facility_list empty array still claims response with (None)', () =
   expect(stdout).toContain('Faction: faction-1');
   expect(stdout).toContain('(None)');
   expect(stdout).toContain('No faction facilities at this station.');
+  expect(stdout).not.toContain('Faction rent bill');
+  expect(stdout).not.toContain('Facilities:');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_facility_list prints zero recurring rent when billing is paused', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [] as Array<Record<string, unknown>>,
+    faction_rent: { facilities: 2, total_rent_per_cycle: 0, est_rent_per_day: 0 },
+    hint: 'No faction facilities at this station.',
+  };
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Faction rent bill: 0cr/cycle');
+  expect(stdout).toContain('Facilities: 2');
 });
 
 test('faction_facility_list does not claim grouped facility_list payloads', () => {

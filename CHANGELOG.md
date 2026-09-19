@@ -40,6 +40,13 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**
 
+### Facilities
+
+- `faction_facility_owned` table output reads `faction_rent` instead of top-level rent fields, prints `Facilities: N`, and still prints the top-level `hint` (gameserver 0.606.2). **No parser change.**
+- `faction_facility_list` table output prints the same `faction_rent` summary when the server includes it. Omitted when the faction owns no facilities at that station — no second `faction_facility_owned` call required to see the bill (gameserver 0.606.2). **No parser change.**
+- Rent summaries (`facility_list` personal/faction bills included) print the required `facilities` count.
+- `facility_owned` (`spacemolt facility owned`) table output prints `Personal rent bill` / `Arrears` from `rent`. **No parser change.** Not a JSON break — `rent` was already nested.
+
 ### Query
 
 - `get_location` table output lists nearby pirates with the same livery line as `get_nearby` (`Boss` prefix, crew name, status, optional `#RRGGBB` name colors). The heading is `Nearby Pirates (N):` instead of `Nearby Pirates: N`. Colors stay omitted when the server omits them (gameserver 0.602.0). **No parser change.**
@@ -72,6 +79,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Breaking
 
 - HTTP 429 `--json` output is now `{ error: { code, message, retry_after?, limit?, scope? } }` instead of a string `error` with leftover top-level `limit` / `message`.
+- `faction_facility_owned` (`POST /api/v2/spacemolt_facility/faction_owned`, gameserver 0.606.2): `total_rent_per_cycle`, `arrears_owed`, and `note` moved into `faction_rent`. Scripts reading `--json` / `--yaml` must use `faction_rent.total_rent_per_cycle` (and so on). Nothing was removed, only relocated. The object also has required `facilities` and `est_rent_per_day`, plus optional `grace_cycles`.
 
 ### Errors
 
