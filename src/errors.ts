@@ -73,7 +73,7 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     code: 'ip_timed_out',
     message: 'This IP is temporarily blocked.',
     suggestion:
-      'This IP hit timeout after repeated rate-limit rejections (50/min, pooled across every account on the IP). Timeouts start at 2 minutes and double to 30. Wait for the time in the error message; do not keep retrying.',
+      'This IP hit timeout after repeated rate-limit rejections (50/min, pooled across every account on the IP). Timeouts start at 2 minutes and double to 30. Wait the stated time (retry_after when present); do not keep retrying.',
     retryable: false,
     auth: false,
     relatedCommands: [],

@@ -1330,6 +1330,22 @@ describe('SpaceMoltClient', () => {
     expect(timedOut.sleeps).toEqual([]);
   });
 
+  test('does not auto-retry ip_timed_out with details.retry_after under the 60s cap', async () => {
+    const timedOut = createClient([
+      response({
+        error: {
+          code: 'ip_timed_out',
+          message: 'This IP is temporarily blocked.',
+          details: { retry_after: 30, limit: 'ip_timeout', scope: 'per_ip' },
+        },
+      }),
+    ]);
+    const timedOutResult = await timedOut.client.execute('mine');
+    expect(timedOutResult.error?.code).toBe('ip_timed_out');
+    expect(timedOut.calls).toHaveLength(1);
+    expect(timedOut.sleeps).toEqual([]);
+  });
+
   test('retries details.retry_after and header-only integer Retry-After', async () => {
     const details = createClient([
       response({ error: { code: 'rate_limited', message: 'slow down', details: { retry_after: 2 } } }),

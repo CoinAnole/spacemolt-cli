@@ -132,7 +132,9 @@ describe('ip_timed_out', () => {
     expect(isAuthError('ip_timed_out')).toBe(false);
     expect(isKnownErrorCode('ip_timed_out')).toBe(true);
     expect(ERROR_CODES).toContain('ip_timed_out');
+    expect(getErrorSuggestion('ip_timed_out')).toContain('retry_after');
     expect(getErrorSuggestion('ip_timed_out')).toContain('do not keep retrying');
+    expect(getErrorSuggestion('ip_timed_out')).not.toContain('Wait for the time in the error message');
     expect(getRelatedCommands('ip_timed_out')).toEqual([]);
   });
 });

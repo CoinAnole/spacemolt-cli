@@ -75,7 +75,28 @@ describe('extractErrorWaitSeconds', () => {
     expect(extractErrorWaitSeconds({ code: 'rate_limited', message: 'slow down' })).toBeUndefined();
   });
 
-  test('parses ip_timed_out waits from the message only', () => {
+  test('prefers details.retry_after on ip_timed_out over a conflicting integer-plus-unit message', () => {
+    expect(
+      extractErrorWaitSeconds({
+        code: 'ip_timed_out',
+        message: 'IP timed out for 999 seconds',
+        details: { retry_after: 120 },
+      }),
+    ).toBe(120);
+  });
+
+  test('prefers envelope retry_after over details.retry_after on ip_timed_out', () => {
+    expect(
+      extractErrorWaitSeconds({
+        code: 'ip_timed_out',
+        message: 'IP timed out for 999 seconds',
+        retry_after: 54,
+        details: { retry_after: 120 },
+      }),
+    ).toBe(54);
+  });
+
+  test('falls back to the ip_timed_out message when no structured wait is present', () => {
     expect(
       extractErrorWaitSeconds({
         code: 'ip_timed_out',
@@ -102,6 +123,13 @@ describe('isRateLimitAutoRetryWait', () => {
         code: 'ip_timed_out',
         message: 'IP timed out for 120 seconds',
         retry_after: 30,
+      }),
+    ).toBeUndefined();
+    expect(
+      isRateLimitAutoRetryWait({
+        code: 'ip_timed_out',
+        message: 'This IP is temporarily blocked.',
+        details: { retry_after: 30 },
       }),
     ).toBeUndefined();
   });
@@ -220,6 +248,46 @@ describe('normalizeRateLimitError', () => {
       message: 'IP timed out for 120 seconds',
       retry_after: 120,
     });
+  });
+
+  test('hydrates ip_timed_out object envelope retry_after from details without dropping nested limit/scope', () => {
+    const normalized = normalizeRateLimitError(
+      {
+        error: {
+          code: 'ip_timed_out',
+          message: 'This IP is temporarily blocked.',
+          details: { retry_after: 120, limit: 'ip_timeout', scope: 'per_ip' },
+        },
+      },
+      { status: 429 },
+    );
+    expect(normalized.error).toEqual({
+      code: 'ip_timed_out',
+      message: 'This IP is temporarily blocked.',
+      retry_after: 120,
+      details: { retry_after: 120, limit: 'ip_timeout', scope: 'per_ip' },
+    });
+    expect(normalized.error).not.toHaveProperty('limit');
+    expect(normalized.error).not.toHaveProperty('scope');
+  });
+
+  test('hydrates ip_timed_out details on a flat 429 without lifting nested limit/scope', () => {
+    const normalized = normalizeRateLimitError(
+      {
+        error: 'ip_timed_out',
+        message: 'This IP is temporarily blocked.',
+        details: { retry_after: 120, limit: 'ip_timeout', scope: 'per_ip' },
+      } as unknown as APIResponse,
+      { status: 429 },
+    );
+    expect(normalized.error).toEqual({
+      code: 'ip_timed_out',
+      message: 'This IP is temporarily blocked.',
+      retry_after: 120,
+      details: { retry_after: 120, limit: 'ip_timeout', scope: 'per_ip' },
+    });
+    expect(normalized.error).not.toHaveProperty('limit');
+    expect(normalized.error).not.toHaveProperty('scope');
   });
 
   test('no-ops when the body has no error field', () => {

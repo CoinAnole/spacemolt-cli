@@ -3201,6 +3201,27 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError prints Wait and Limit from ip_timed_out details without envelope retry_after', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_status',
+      {
+        code: 'ip_timed_out',
+        message: 'This IP is temporarily blocked.',
+        details: { retry_after: 120, limit: 'ip_timeout', scope: 'per_ip' },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [ip_timed_out]: This IP is temporarily blocked.');
+    expect(output).toContain('Wait 120.0 seconds before retrying.');
+    expect(output).toContain('Limit: ip_timeout (per_ip)');
+    expect(output).toContain('do not keep retrying');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+  });
+
   test('displayError prints Wait from an ip_timed_out integer-plus-unit message', () => {
     const capture = captureWriter();
     displayError(
