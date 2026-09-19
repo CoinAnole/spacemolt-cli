@@ -369,3 +369,37 @@ export function emitCatalogShipDetail(entry: Record<string, unknown>, _catalog: 
   const materials = summarizeBuildMaterials(entry.build_materials);
   if (materials) emitLine(`Build materials: ${materials}`);
 }
+
+export function summarizeBonusPerLevel(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const parts: string[] = [];
+  for (const [key, raw] of Object.entries(value)) {
+    const n = finiteNumber(raw);
+    if (n === undefined) continue;
+    parts.push(`${key} ${n}`);
+  }
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+export function catalogSkillTableColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['name']],
+    ['ID', ['id']],
+    ['Category', ['category']],
+    ['Max', ['max_level']],
+  ];
+  if (rows.some((row) => typeof row.empire_restriction === 'string' && row.empire_restriction.trim())) {
+    columns.push(['Empire', ['empire_restriction']]);
+  }
+  return columns;
+}
+
+export function emitCatalogSkillDetail(entry: Record<string, unknown>): void {
+  emitDetailsHeader();
+  const description = text(entry.description);
+  if (description) emitLine(description);
+  emitCatalogOptional('Training', entry.training_source);
+  const bonuses = summarizeBonusPerLevel(entry.bonus_per_level);
+  if (bonuses) emitLine(`Bonuses: ${bonuses}`);
+  emitCatalogOptional('Empire', entry.empire_restriction);
+}

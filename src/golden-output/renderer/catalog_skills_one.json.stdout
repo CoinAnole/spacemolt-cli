@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": "refining",
+      "name": "Refining",
+      "description": "Material processing and refinement. Your higher of Refining and Crafting sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.",
+      "category": "Industry",
+      "max_level": 100,
+      "xp_per_level": [
+        60,
+        165,
+        340
+      ],
+      "training_source": "Refine ores, process gases, or refine ice at a station."
+    }
+  ],
+  "message": "Skills: showing 1 of 1",
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1,
+  "type": "skills"
+}

@@ -184,6 +184,70 @@ export const catalogRecipesFixture = {
   type: 'recipes',
 };
 
+export const catalogSkillsFixture = {
+  items: [
+    {
+      id: 'crafting',
+      name: 'Crafting',
+      description:
+        "Manufacturing expertise. Your higher of Crafting and Refining sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.",
+      category: 'Industry',
+      max_level: 100,
+      xp_per_level: [60, 165, 340],
+      training_source: 'Craft items at a station.',
+    },
+    {
+      id: 'mining',
+      name: 'Mining',
+      description:
+        'Ore extraction and resource harvesting. Increases mining yield by 1% per level across all resource types, and biases which deposit a mining cycle selects toward rarer ores as the skill grows — see mining.rare_ore_rarity_weight_per_level in the catalog for the exact weighting.',
+      category: 'Industry',
+      max_level: 100,
+      bonus_per_level: { miningYield: 1 },
+      xp_per_level: [60, 165, 340],
+      training_source: 'Mine at asteroid belts, ice fields, or gas clouds.',
+    },
+    {
+      id: 'solarian_doctrine',
+      name: 'Solarian Doctrine',
+      description: 'Solarian scientific discipline. Increases accuracy by 1% per level.',
+      category: 'Empire',
+      max_level: 100,
+      bonus_per_level: { accuracy: 1 },
+      xp_per_level: [60, 165, 340],
+      empire_restriction: 'solarian',
+      training_source: 'Earned by completing Solarian empire missions (Solarian empire only).',
+    },
+  ],
+  message: 'Skills: showing 3 of 30',
+  page: 1,
+  page_size: 20,
+  total: 30,
+  total_pages: 2,
+  type: 'skills',
+};
+
+export const catalogSkillsOneFixture = {
+  items: [
+    {
+      id: 'refining',
+      name: 'Refining',
+      description:
+        "Material processing and refinement. Your higher of Refining and Crafting sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.",
+      category: 'Industry',
+      max_level: 100,
+      xp_per_level: [60, 165, 340],
+      training_source: 'Refine ores, process gases, or refine ice at a station.',
+    },
+  ],
+  message: 'Skills: showing 1 of 1',
+  page: 1,
+  page_size: 20,
+  total: 1,
+  total_pages: 1,
+  type: 'skills',
+};
+
 export const catalogShipsFixture = {
   items: [
     {
@@ -1340,6 +1404,8 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   catalog_items_modules: { command: 'catalog', fixture: catalogItemsModulesFixture },
   catalog_recipes: { command: 'catalog', fixture: catalogRecipesFixture },
   catalog_ships: { command: 'catalog', fixture: catalogShipsFixture },
+  catalog_skills: { command: 'catalog', fixture: catalogSkillsFixture },
+  catalog_skills_one: { command: 'catalog', fixture: catalogSkillsOneFixture },
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   get_missions_bounty: { command: 'get_missions', fixture: missionsBountyFixture },
   get_missions_community: { command: 'get_missions', fixture: missionsCommunityFixture },

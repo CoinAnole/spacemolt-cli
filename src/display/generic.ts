@@ -1,9 +1,11 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
 import {
+  catalogSkillTableColumns,
   classifyRecipeVenue,
   countRecipeVenues,
   emitCatalogItemDetail,
   emitCatalogShipDetail,
+  emitCatalogSkillDetail,
   formatProducedByFacilities,
   formatShipAvailability,
   joinStringIds,
@@ -1368,6 +1370,21 @@ export const genericFormatters = [
             : 'Level',
       );
       printCompactTable('Facilities', rows, columns, { maxCellWidth: 72 });
+      printMetadata(r);
+      printCatalogTruncationWarning('catalog', r);
+      if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      return true;
+    },
+    { commands: ['catalog'] },
+  ),
+
+  // Recipes firstArray treats recipes: [] as a hit.
+  formatter(
+    (r) => {
+      if (r.type !== 'skills' || !Array.isArray(r.items) || !r.items.every(isRecord)) return false;
+      const items = r.items as Array<Record<string, unknown>>;
+      printCompactTable('Skills', items, catalogSkillTableColumns(items), { maxCellWidth: 72 });
+      if (items.length === 1 && items[0]) emitCatalogSkillDetail(items[0]);
       printMetadata(r);
       printCatalogTruncationWarning('catalog', r);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);

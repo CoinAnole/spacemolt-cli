@@ -7,6 +7,8 @@ import {
   catalogItemsMiningGroupFixture,
   catalogItemsModulesFixture,
   catalogShipsFixture,
+  catalogSkillsFixture,
+  catalogSkillsOneFixture,
   dockFixture,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
@@ -1367,6 +1369,201 @@ test('renders catalog facilities with maintenance_fuel and maintenance_inputs re
   expect(stdout).toContain('3 Steel Plate');
   expect(stdout).toContain('2 durasteel_plate');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+function catalogSkillsHeader(stdout: string): string | undefined {
+  return stdout.split('\n').find((line) => line.includes('Name') && line.includes('ID') && line.includes('Max'));
+}
+
+const workshopSkillSentence = "Facility jobs run at the facility's tier speed and ignore skill.";
+
+test('renders catalog skills list without Details or full descriptions', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogSkillsFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+  const header = catalogSkillsHeader(stdout);
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Skills ===');
+  expect(header).toBeDefined();
+  expect(header).toContain('Name');
+  expect(header).toContain('ID');
+  expect(header).toContain('Category');
+  expect(header).toContain('Max');
+  expect(header).toContain('Empire');
+  expect(stdout).toContain('Crafting');
+  expect(stdout).toContain('crafting');
+  expect(stdout).toContain('Mining');
+  expect(stdout).toContain('mining');
+  expect(stdout).toContain('Solarian Doctrine');
+  expect(stdout).toContain('solarian_doctrine');
+  expect(stdout).toContain('solarian');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain(workshopSkillSentence);
+  expect(stdout).not.toContain('Bonuses:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits catalog skill Empire column when no row has empire_restriction', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Industry',
+          description: 'Manufacturing expertise.',
+          id: 'crafting',
+          max_level: 100,
+          name: 'Crafting',
+          xp_per_level: [60, 165],
+        },
+        {
+          category: 'Industry',
+          description: 'Ore extraction.',
+          id: 'mining',
+          max_level: 100,
+          name: 'Mining',
+          xp_per_level: [60, 165],
+        },
+      ],
+      type: 'skills',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogSkillsHeader(stdout)).not.toContain('Empire');
+  expect(stdout).not.toContain('Details');
+});
+
+test('renders catalog skill Details with the full untruncated description for a one-row list', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogSkillsOneFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Skills ===');
+  expect(stdout).toContain('Details');
+  expect(stdout.indexOf('=== Skills ===')).toBeLessThan(stdout.indexOf('Details'));
+  expect(stdout).toContain(workshopSkillSentence);
+  expect(stdout).toContain(
+    "Material processing and refinement. Your higher of Refining and Crafting sets Station Workshop speed: x1 at level 0 up to x5 at level 100. Facility jobs run at the facility's tier speed and ignore skill.",
+  );
+  expect(stdout).toContain('Training: Refine ores, process gases, or refine ice at a station.');
+  expect(stdout).not.toContain('Bonuses:');
+  expect(stdout).not.toContain('Category:');
+  expect(stdout).not.toContain('Max level:');
+  expect(stdout).not.toContain('xp_per_level');
+  expect(stdout).not.toContain('Size');
+  expect(stdout).not.toContain('Base value');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders catalog skill Bonuses without a percent sign on a one-row list', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          bonus_per_level: { miningYield: 1 },
+          category: 'Industry',
+          description: 'Ore extraction and resource harvesting.',
+          id: 'mining',
+          max_level: 100,
+          name: 'Mining',
+          training_source: 'Mine at asteroid belts, ice fields, or gas clouds.',
+          xp_per_level: [60, 165],
+        },
+      ],
+      type: 'skills',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Details');
+  expect(stdout).toContain('Bonuses: miningYield 1');
+  expect(stdout).not.toContain('%');
+  expect(stdout).not.toContain('Bonuses: none');
+});
+
+test('renders catalog skill Empire in Details when empire_restriction is set', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          bonus_per_level: { accuracy: 1 },
+          category: 'Empire',
+          description: 'Solarian scientific discipline.',
+          empire_restriction: 'solarian',
+          id: 'solarian_doctrine',
+          max_level: 100,
+          name: 'Solarian Doctrine',
+          training_source: 'Earned by completing Solarian empire missions (Solarian empire only).',
+          xp_per_level: [60, 165],
+        },
+      ],
+      type: 'skills',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(catalogSkillsHeader(stdout)).toContain('Empire');
+  expect(stdout).toContain('Details');
+  expect(stdout).toContain('Empire: solarian');
+  expect(stdout).toContain('Bonuses: accuracy 1');
+});
+
+test('renders empty catalog skills as Skills (None) instead of Response fallback', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [],
+      message: 'Skills: showing 0 of 0',
+      page: 1,
+      page_size: 20,
+      total: 0,
+      total_pages: 0,
+      type: 'skills',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Skills ===');
+  expect(stdout).toContain('(None)');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Items ===');
+});
+
+test('renders catalog skills even when recipes is an empty array', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      ...structuredClone(catalogSkillsFixture),
+      recipes: [],
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Skills ===');
+  expect(stdout).toContain('Crafting');
+  expect(stdout).not.toContain('=== Recipes ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('does not treat catalog items as skills', () => {
+  const rendered = renderStructuredResult('catalog', structuredClone(catalogItemsFixture), options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Items ===');
+  expect(stdout).not.toContain('=== Skills ===');
 });
 
 test('renders catalog recipe items with recipe availability', () => {
