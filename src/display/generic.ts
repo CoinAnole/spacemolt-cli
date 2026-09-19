@@ -154,6 +154,11 @@ function activeMissionRows(result: Record<string, unknown>): Array<Record<string
   return undefined;
 }
 
+/** `max_missions` is optional; missing capacity just omits the count line. */
+export function isV2MissionsEnvelope(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && Array.isArray(value.active);
+}
+
 function activeMissionCapacity(result: Record<string, unknown>, missionCount: number): string | undefined {
   const missions = result.missions;
   const maxMissions = isRecord(missions) ? missions.max_missions : result.max_missions;
@@ -847,6 +852,43 @@ function insertOptionalColumn(
   columns.splice(index + 1, 0, entry);
 }
 
+export function emitActiveMissionsTable(result: Record<string, unknown>): boolean {
+  const missions = activeMissionRows(result);
+  if (!missions) return false;
+
+  const rows = missions.map((mission) => ({
+    ...mission,
+    objectives_summary: objectivesSummary(mission.objectives),
+    rewards_summary: summarizeRewards(mission.rewards),
+    community_summary: summarizeCommunityStatus(mission),
+  }));
+
+  const columns: Array<[string, string[]]> = [
+    ['Title', ['title', 'name']],
+    ['ID', ['mission_id', 'id']],
+    ['Type', ['type']],
+    ['Difficulty', ['difficulty']],
+    ['Objectives', ['objectives_summary']],
+    ['Rewards', ['rewards_summary']],
+    ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
+  ];
+  insertOptionalColumn(columns, rows, 'Community', ['community_summary'], 'Type');
+  if (rows.some((mission) => hasScalarValue(mission, ['issuing_base', 'issuing_base_id']))) {
+    const objectivesIndex = columns.findIndex(([label]) => label === 'Objectives');
+    // Fail closed: splice(-1) would insert before Expires. Skip rather than invent a third order.
+    if (objectivesIndex >= 0) {
+      columns.splice(objectivesIndex, 0, ['Issuing Base', ['issuing_base', 'issuing_base_id']]);
+    }
+  }
+
+  printCompactTable('Active Missions', rows, columns, { maxCellWidth: 64 });
+  emitIssuedMissionText(missions);
+
+  const capacity = activeMissionCapacity(result, missions.length);
+  if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);
+  return true;
+}
+
 export const genericFormatters = [
   // Simple public endpoint for the Frontier mobile capital
   formatter(
@@ -1215,45 +1257,9 @@ export const genericFormatters = [
     { commands: ['faction_list_missions'] },
   ),
 
-  formatter(
-    (r) => {
-      const missions = activeMissionRows(r);
-      if (!missions) return false;
-
-      const rows = missions.map((mission) => ({
-        ...mission,
-        objectives_summary: objectivesSummary(mission.objectives),
-        rewards_summary: summarizeRewards(mission.rewards),
-        community_summary: summarizeCommunityStatus(mission),
-      }));
-
-      const columns: Array<[string, string[]]> = [
-        ['Title', ['title', 'name']],
-        ['ID', ['mission_id', 'id']],
-        ['Type', ['type']],
-        ['Difficulty', ['difficulty']],
-        ['Objectives', ['objectives_summary']],
-        ['Rewards', ['rewards_summary']],
-        ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
-      ];
-      insertOptionalColumn(columns, rows, 'Community', ['community_summary'], 'Type');
-      if (rows.some((mission) => hasScalarValue(mission, ['issuing_base', 'issuing_base_id']))) {
-        const objectivesIndex = columns.findIndex(([label]) => label === 'Objectives');
-        // Fail closed: splice(-1) would insert before Expires. Skip rather than invent a third order.
-        if (objectivesIndex >= 0) {
-          columns.splice(objectivesIndex, 0, ['Issuing Base', ['issuing_base', 'issuing_base_id']]);
-        }
-      }
-
-      printCompactTable('Active Missions', rows, columns, { maxCellWidth: 64 });
-      emitIssuedMissionText(missions);
-
-      const capacity = activeMissionCapacity(r, missions.length);
-      if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);
-      return true;
-    },
-    { commands: ['get_active_missions', 'accept_mission', 'abandon_mission'] },
-  ),
+  formatter((r) => emitActiveMissionsTable(r), {
+    commands: ['get_active_missions', 'accept_mission', 'abandon_mission'],
+  }),
 
   // Distress signal broadcast (details unwrapped by postActionDetailsViewModel)
   formatter(

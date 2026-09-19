@@ -322,6 +322,33 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
   return columns;
 }
 
+export function emitCargoHold(result: Record<string, unknown>): boolean {
+  const cargo = Array.isArray(result.cargo) ? (result.cargo as Array<Record<string, unknown>>) : [];
+  emitLine(`\n${c.bright}=== Cargo ===${c.reset}`);
+  emitCreditBalance(result);
+  const used = result.used ?? result.cargo_used ?? (result.ship as Record<string, unknown> | undefined)?.cargo_used;
+  const capacity =
+    result.capacity ?? result.cargo_capacity ?? (result.ship as Record<string, unknown> | undefined)?.cargo_capacity;
+  const available = result.available ?? result.cargo_available;
+  if (used !== undefined || capacity !== undefined) {
+    const suffix = available !== undefined ? ` (${available} available)` : '';
+    emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${overCapacitySuffix(used, capacity)}${suffix}\n`);
+  }
+  if (result.bay_used !== undefined || result.bay_capacity !== undefined) {
+    emitLine(`Carrier bay: ${result.bay_used ?? '?'}/${result.bay_capacity ?? '?'}`);
+  }
+  const carriedShips = firstArray(result, ['carried_ships']);
+  if (carriedShips) {
+    printCompactTable('Carried Ships', carriedShips, [
+      ['Name', ['name', 'custom_name', 'ship_name', 'class_name']],
+      ['Class', ['class_id', 'class_name']],
+      ['ID', ['ship_id', 'id']],
+    ]);
+  }
+  printItemTable(cargo, '  ', 'Cargo');
+  return true;
+}
+
 export const shipFormatters = [
   formatter(
     (r) => {
@@ -346,33 +373,8 @@ export const shipFormatters = [
     (r, command) => {
       const isCargoCommand = command === 'get_cargo';
       if (r.cargo === undefined && !isCargoCommand) return false;
-      if (!isCargoCommand && r.used === undefined && r.cargo_used === undefined) {
-        return false;
-      }
-      const cargo = Array.isArray(r.cargo) ? (r.cargo as Array<Record<string, unknown>>) : [];
-      emitLine(`\n${c.bright}=== Cargo ===${c.reset}`);
-      emitCreditBalance(r);
-      const used = r.used ?? r.cargo_used ?? (r.ship as Record<string, unknown> | undefined)?.cargo_used;
-      const capacity =
-        r.capacity ?? r.cargo_capacity ?? (r.ship as Record<string, unknown> | undefined)?.cargo_capacity;
-      const available = r.available ?? r.cargo_available;
-      if (used !== undefined || capacity !== undefined) {
-        const suffix = available !== undefined ? ` (${available} available)` : '';
-        emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${overCapacitySuffix(used, capacity)}${suffix}\n`);
-      }
-      if (r.bay_used !== undefined || r.bay_capacity !== undefined) {
-        emitLine(`Carrier bay: ${r.bay_used ?? '?'}/${r.bay_capacity ?? '?'}`);
-      }
-      const carriedShips = firstArray(r, ['carried_ships']);
-      if (carriedShips) {
-        printCompactTable('Carried Ships', carriedShips, [
-          ['Name', ['name', 'custom_name', 'ship_name', 'class_name']],
-          ['Class', ['class_id', 'class_name']],
-          ['ID', ['ship_id', 'id']],
-        ]);
-      }
-      printItemTable(cargo, '  ', 'Cargo');
-      return true;
+      if (!isCargoCommand && r.used === undefined && r.cargo_used === undefined) return false;
+      return emitCargoHold(r);
     },
     { commands: ['get_cargo'], shapeFallback: true },
   ),

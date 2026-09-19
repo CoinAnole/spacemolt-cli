@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import {
   catalogDumpFixture,
@@ -16,6 +16,7 @@ import {
   storageWithdrawAutoDockedFixture,
   undockFixture,
 } from './generic.fixtures.ts';
+import { isV2MissionsEnvelope } from './generic.ts';
 import { renderStructuredResult } from './index.ts';
 import { towWreckFixture } from './ship.fixtures.ts';
 import { getLocationFixture, getStatusFixture } from './status.fixtures.ts';
@@ -2994,4 +2995,26 @@ test('catalog_dump declines dry-run route previews', () => {
     context,
   ).stdout.join('\n');
   expect(stdout).not.toContain('=== Catalog dump ===');
+});
+
+describe('isV2MissionsEnvelope', () => {
+  test('accepts nested active array with max_missions', () => {
+    expect(isV2MissionsEnvelope({ active: [{ title: 'Survey' }], max_missions: 5 })).toBe(true);
+  });
+
+  test('accepts empty active array without max_missions', () => {
+    expect(isV2MissionsEnvelope({ active: [] })).toBe(true);
+  });
+
+  test('rejects board-style mission arrays', () => {
+    expect(isV2MissionsEnvelope([{ title: 'Board listing' }])).toBe(false);
+  });
+
+  test('rejects objects without active', () => {
+    expect(isV2MissionsEnvelope({ max_missions: 5 })).toBe(false);
+  });
+
+  test('rejects non-array active', () => {
+    expect(isV2MissionsEnvelope({ active: { count: 1 } })).toBe(false);
+  });
 });
