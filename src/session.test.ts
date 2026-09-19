@@ -965,6 +965,43 @@ describe('SessionManager', () => {
     expect(pending.message).toBe('Failed to create session: queued');
   });
 
+  test('createTransientSession does not retry ip_timed_out with details.retry_after under the 60s cap', async () => {
+    let calls = 0;
+    const sleeps: number[] = [];
+    const manager = new SessionManager({
+      profile: 'test_profile',
+      apiBase: 'https://api.spacemolt.test/api/v2',
+      env: testEnv,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      transport: (async (): Promise<JsonResponse<APIResponse>> => {
+        calls += 1;
+        return {
+          status: 429,
+          ok: false,
+          data: {
+            error: {
+              code: 'ip_timed_out',
+              message: 'This IP is temporarily blocked.',
+              details: { retry_after: 30, limit: 'ip_timeout', scope: 'per_ip' },
+            },
+          },
+        };
+      }) as unknown as typeof requestJson,
+    });
+
+    try {
+      await manager.createTransientSession();
+      throw new Error('expected session create failure');
+    } catch (error) {
+      expect(error).not.toBeInstanceOf(ServiceUnavailableError);
+      expect((error as Error).message).toBe('Failed to create session: This IP is temporarily blocked.');
+    }
+    expect(calls).toBe(1);
+    expect(sleeps).toEqual([]);
+  });
+
   test('createTransientSession keeps 503 and rate-limit retry budgets independent', async () => {
     const unavailableWaits: number[] = [];
     const rateLimitWaits: number[] = [];
