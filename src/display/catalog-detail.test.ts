@@ -1,11 +1,13 @@
 import { expect, test } from 'bun:test';
 import {
+  catalogSkillTableColumns,
   classifyRecipeVenue,
   countRecipeVenues,
   formatCatalogYesNo,
   formatProducedByFacilities,
   formatProducedByFacilityIds,
   type RecipeVenue,
+  summarizeBonusPerLevel,
 } from './catalog-detail.ts';
 
 const classifyCases: Array<{
@@ -168,4 +170,36 @@ test('formatCatalogYesNo maps booleans only', () => {
   expect(formatCatalogYesNo(true)).toBe('yes');
   expect(formatCatalogYesNo(false)).toBe('no');
   expect(formatCatalogYesNo(undefined)).toBeUndefined();
+});
+
+test('summarizeBonusPerLevel joins finite numeric entries as key n parts', () => {
+  expect(summarizeBonusPerLevel({ miningYield: 1, accuracy: 2 })).toBe('miningYield 1, accuracy 2');
+});
+
+test('summarizeBonusPerLevel returns undefined for empty objects, arrays, and strings', () => {
+  expect(summarizeBonusPerLevel({})).toBeUndefined();
+  expect(summarizeBonusPerLevel([])).toBeUndefined();
+  expect(summarizeBonusPerLevel('miningYield 1')).toBeUndefined();
+});
+
+test('summarizeBonusPerLevel skips non-finite values', () => {
+  expect(summarizeBonusPerLevel({ miningYield: 1, skip: Number.NaN })).toBe('miningYield 1');
+  expect(summarizeBonusPerLevel({ skip: Number.POSITIVE_INFINITY })).toBeUndefined();
+  expect(summarizeBonusPerLevel({ nested: { miningYield: 1 } })).toBeUndefined();
+});
+
+test('catalogSkillTableColumns adds Empire only when empire_restriction is a non-empty string', () => {
+  const labels = (rows: Array<Record<string, unknown>>) => catalogSkillTableColumns(rows).map(([label]) => label);
+  expect(labels([{ name: 'Mining' }])).toEqual(['Name', 'ID', 'Category', 'Max']);
+  expect(labels([{ empire_restriction: '' }])).toEqual(['Name', 'ID', 'Category', 'Max']);
+  expect(labels([{ empire_restriction: '   ' }])).toEqual(['Name', 'ID', 'Category', 'Max']);
+  expect(labels([{ empire_restriction: 1 }])).toEqual(['Name', 'ID', 'Category', 'Max']);
+  expect(labels([{ empire_restriction: 'solarian' }])).toEqual(['Name', 'ID', 'Category', 'Max', 'Empire']);
+  expect(labels([{ empire_restriction: '' }, { empire_restriction: 'solarian' }])).toEqual([
+    'Name',
+    'ID',
+    'Category',
+    'Max',
+    'Empire',
+  ]);
 });
