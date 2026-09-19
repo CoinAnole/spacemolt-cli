@@ -546,8 +546,20 @@ describe('command metadata', () => {
     );
     expect(config?.description).toMatch(/wait for the battle/i);
     expect(config?.description).not.toMatch(/wildlife hunts except leviathans/i);
+    expect(config?.description).toContain('Active Missions');
+    expect(config?.description).toContain('When the server includes cargo');
+    expect(config?.description).toContain('mission cargo handed on arrival');
+    expect(config?.description).toContain('Absent missions or cargo means unchanged');
+    expect(config?.description).not.toContain('`');
     expect(config?.seeAlso).toEqual(
-      expect.arrayContaining(['undock', 'get_status', 'view_market', 'get_battle_status']),
+      expect.arrayContaining([
+        'undock',
+        'get_status',
+        'view_market',
+        'get_battle_status',
+        'get_active_missions',
+        'get_cargo',
+      ]),
     );
     expect(config?.discoverWith).toEqual(['get_status', 'get_system']);
 
@@ -555,8 +567,75 @@ describe('command metadata', () => {
     expect(help).toContain('station_under_attack');
     expect(help).toContain('armed faction station');
     expect(help).toContain('get_battle_status');
+    expect(help).toContain('Active Missions');
+    expect(help).toContain('mission cargo handed on arrival');
+    expect(help).toContain('Absent missions or cargo means unchanged');
+    expect(help).toContain('get_active_missions');
+    expect(help).toContain('get_cargo');
     expect(help).toContain('spacemolt dock');
     expect(help).not.toContain('spacemolt dock <args...>');
+    expect(help).not.toContain('`');
+  });
+
+  test('jump help documents post-action missions, any-order survey stops, and parked-system jump-out', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.jump;
+    expect(config?.description).toContain('Active Missions');
+    expect(config?.description).toContain('no extra get_active_missions call');
+    expect(config?.description).toContain('Survey stops count in any order');
+    expect(config?.description).toContain('jump out and back');
+    expect(config?.description).toContain('no sweep of the system you are sitting in');
+    expect(config?.description).toContain('Kill and crafting still need get_active_missions');
+    expect(config?.description).not.toContain('`');
+    expect(config?.description).not.toMatch(/\btravel\b/);
+    expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_active_missions']));
+
+    const help = captureHelp('jump');
+    expect(help).toContain('Active Missions');
+    expect(help).toContain('Survey stops count in any order');
+    expect(help).toContain('jump out and back');
+    expect(help).toContain('Kill and crafting still need get_active_missions');
+    expect(help).toContain('get_active_missions');
+    expect(help).not.toContain('`');
+  });
+
+  test('survey_system help documents any-order survey stops and parked-system jump-out', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.allCommands.survey_system;
+    expect(config?.description).toContain('wildlife');
+    expect(config?.description).toContain('Survey mission stops count in any order');
+    expect(config?.description).toContain('jump out and back');
+    expect(config?.description).toContain('no sweep of the system you are sitting in');
+    expect(config?.description).not.toContain('`');
+    expect(config?.description).not.toMatch(/\btravel\b/);
+    expect(config?.seeAlso).toEqual(
+      expect.arrayContaining(['get_nearby', 'hunt', 'get_system', 'get_active_missions']),
+    );
+
+    const help = captureHelp('survey_system');
+    expect(help).toContain('Survey mission stops count in any order');
+    expect(help).toContain('jump out and back');
+    expect(help).toContain('get_active_missions');
+    expect(help).not.toContain('`');
+  });
+
+  test('get_active_missions help names post-action reprints including complete_mission', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.get_active_missions;
+    expect(config?.description).toContain(
+      'jump, dock, mine, buy, sell, create_buy_order, create_sell_order, sell_wreck, scrap_wreck, survey_system, and complete_mission',
+    );
+    expect(config?.description).toContain('envelope missions');
+    expect(config?.description).toContain('Keep using get_active_missions for kill and crafting');
+    expect(config?.description).toContain('whenever the last mutation omitted missions');
+    expect(config?.description).toContain('complete_mission prints remaining actives after the rewards block');
+    expect(config?.description).not.toContain('`');
+    expect(config?.description).not.toMatch(/\btravel\b/);
+
+    const help = captureHelp('get_active_missions');
+    expect(help).toContain('create_buy_order');
+    expect(help).toContain('complete_mission');
+    expect(help).toContain('remaining actives after the rewards block');
+    expect(help).toContain('kill and crafting');
+    expect(help).not.toContain('`');
+    expect(help).not.toMatch(/\btravel\b/);
   });
 
   test('attack help documents persistent battle semantics and repeat-attack risks', () => {

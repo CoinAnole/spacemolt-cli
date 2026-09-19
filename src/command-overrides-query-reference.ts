@@ -310,9 +310,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_faction/tax_estimate',
   },
   survey_system: {
-    description: 'Scan the current system for hidden POIs plus a wildlife species census and bloom status.',
+    description:
+      "Scan the current system for hidden POIs plus a wildlife species census and bloom status. Survey mission stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in.",
     example: 'spacemolt survey_system',
-    seeAlso: ['get_nearby', 'hunt', 'get_system'],
+    seeAlso: ['get_nearby', 'hunt', 'get_system', 'get_active_missions'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/survey_system',
   },

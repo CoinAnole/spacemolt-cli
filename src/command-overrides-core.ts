@@ -63,10 +63,10 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   jump: {
     usage: '<system_id_or_bearing>  (connected system ID/name, or numeric Pathfinder bearing)',
     description:
-      'Move to a connected system, or plot a numeric compass bearing with a Pathfinder Drive. Use get_system for lane jumps and get_map/get_location for coordinates.',
+      "Move to a connected system, or plot a numeric compass bearing with a Pathfinder Drive. Use get_system for lane jumps and get_map/get_location for coordinates. When a visit or survey objective advances, table output prints the Active Missions block from the response (no extra get_active_missions call). Survey stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in. Kill and crafting still need get_active_missions.",
     example: 'spacemolt jump 90',
     discoverWith: ['get_system', 'get_map', 'get_location', 'find_route'],
-    seeAlso: ['get_system', 'get_map', 'get_location', 'travel', 'refuel'],
+    seeAlso: ['get_system', 'get_map', 'get_location', 'travel', 'refuel', 'get_active_missions'],
     category: 'Navigation',
     apiRoute: 'POST /api/v2/spacemolt/jump',
     positionals: ['target_system'],
@@ -77,10 +77,10 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   dock: {
     usage: '',
     description:
-      'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end.',
+      'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end. When an objective advances, table output prints the Active Missions table from the response. When the server includes cargo, the hold is printed so mission cargo handed on arrival is visible immediately. Absent missions or cargo means unchanged.',
     example: 'spacemolt dock',
     discoverWith: ['get_status', 'get_system'],
-    seeAlso: ['undock', 'get_status', 'view_market', 'get_battle_status'],
+    seeAlso: ['undock', 'get_status', 'view_market', 'get_battle_status', 'get_active_missions', 'get_cargo'],
     category: 'Navigation',
     apiRoute: 'POST /api/v2/spacemolt/dock',
   },
