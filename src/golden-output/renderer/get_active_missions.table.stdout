@@ -6,4 +6,8 @@
   Distress Call: CombatDummy6     | mission-distress-combatdummy6     | distress | 2          | Markab Rescue Station  | Rescue CombatDummy6 CombatDummy6 0/1                     | piloting XP +25 | 17     
   Distress Call: WealthyMiner2023 | mission-distress-wealthyminer2023 | distress | 3          | Electra Rescue Station | Rescue WealthyMiner2023 WealthyMiner2023 0/1             | piloting XP +50 | 22     
   Faction Supply Delivery         | mission-faction-delivery-1        | delivery | 2          | Earth Station          | Deliver Food Rations earth_station 0/5 cargo:2 storage:3 | 1200 cr; rep +2 | 31     
+
+Distress Call: CombatDummy6 (mission-distress-combatdummy6): Rescue CombatDummy6 in Markab before the distress signal expires.
+Distress Call: WealthyMiner2023 (mission-distress-wealthyminer2023): Rescue WealthyMiner2023 in Electra before the distress signal expires.
+Faction Supply Delivery (mission-faction-delivery-1): Deliver faction supplies to the contract issuer.
 missions 3/5

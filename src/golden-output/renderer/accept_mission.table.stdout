@@ -4,4 +4,6 @@
   Title         | ID                 | Type     | Difficulty | Objectives                        | Rewards | Expires
   --------------+--------------------+----------+------------+-----------------------------------+---------+--------
   Food Delivery | mission-delivery-1 | delivery |            | Deliver Food Rations food_rations |         |        
+
+Food Delivery (mission-delivery-1): Deliver Food Rations to the contract issuer.
 missions 1/5

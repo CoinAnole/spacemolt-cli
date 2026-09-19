@@ -9,7 +9,8 @@
       {
         "mission_id": "mission-survey-2",
         "title": "Survey Run",
-        "type": "survey"
+        "type": "survey",
+        "description": "Chart the listed survey systems."
       }
     ],
     "max_missions": 5

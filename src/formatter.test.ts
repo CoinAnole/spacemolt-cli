@@ -3,7 +3,11 @@ import type { CliRuntimeContext } from './cli-context';
 import { displayStructuredResult } from './client';
 import { renderResult, renderStructuredResult } from './display';
 import {
+  abandonMissionPostActionFixture,
+  acceptMissionPostActionFixture,
+  activeMissionsBountyFixture,
   activeMissionsCommunityFixture,
+  activeMissionsExchangeFixture,
   activeMissionsFixture,
   baseFixture,
   baseRepairsFixture,
@@ -18,6 +22,7 @@ import {
   createSellOrderFixture,
   declineMissionFixture,
   distressSignalFixture,
+  EXCHANGE_MISSION_DESCRIPTION,
   empireInfoFixture,
   factionCreateBuyOrderBulkFixture,
   factionCreateSellOrderBulkFixture,
@@ -35,6 +40,7 @@ import {
   loadPassengerConnectingFixture,
   missionsBountyFixture,
   missionsCommunityFixture,
+  missionsExchangeFixture,
   missionsFixture,
   nearbyBossFixture,
   nearbyFixture,
@@ -3250,61 +3256,26 @@ describe('structuredContent formatters', () => {
   });
 
   test('formats post-action accept mission envelopes from returned mission state', () => {
-    const { stdout, stderr } = captureStructuredOutput('accept_mission', {
-      details: {
-        mission_id: 'mission-delivery-1',
-        template_id: 'delivery-food',
-        title: 'Food Delivery',
-        type: 'delivery',
-        expires_at: '2026-06-16T18:00:00Z',
-        message: 'Mission accepted.',
-      },
-      player: { credits: 975 },
-      cargo: [{ item_id: 'food_rations', item_name: 'Food Rations', quantity: 5 }],
-      missions: {
-        active: [
-          {
-            mission_id: 'mission-delivery-1',
-            title: 'Food Delivery',
-            type: 'delivery',
-            objectives: [{ description: 'Deliver Food Rations', item_id: 'food_rations', quantity: 5 }],
-          },
-        ],
-        max_missions: 5,
-      },
-    });
+    const { stdout, stderr } = captureStructuredOutput('accept_mission', acceptMissionPostActionFixture);
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Active Missions ===');
     expect(stdout).toContain('mission-delivery-1');
+    expect(stdout).toContain('Food Delivery (mission-delivery-1): Deliver Food Rations to the contract issuer.');
     expect(stdout).toContain('missions 1/5');
+    expect(stdout.indexOf('Food Delivery (mission-delivery-1):')).toBeLessThan(stdout.indexOf('missions 1/5'));
     expect(stdout).not.toContain('=== Response ===');
   });
 
   test('formats post-action abandon mission envelopes from returned mission state', () => {
-    const { stdout, stderr } = captureStructuredOutput('abandon_mission', {
-      details: {
-        mission_id: 'mission-delivery-1',
-        title: 'Food Delivery',
-        message: 'Mission abandoned.',
-      },
-      missions: {
-        active: [
-          {
-            mission_id: 'mission-survey-2',
-            title: 'Survey Run',
-            type: 'survey',
-          },
-        ],
-        max_missions: 5,
-      },
-      queue: { has_pending: false },
-    });
+    const { stdout, stderr } = captureStructuredOutput('abandon_mission', abandonMissionPostActionFixture);
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Active Missions ===');
     expect(stdout).toContain('mission-survey-2');
+    expect(stdout).toContain('Survey Run (mission-survey-2): Chart the listed survey systems.');
     expect(stdout).toContain('missions 1/5');
+    expect(stdout.indexOf('Survey Run (mission-survey-2):')).toBeLessThan(stdout.indexOf('missions 1/5'));
     expect(stdout).not.toContain('mission-delivery-1');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -4754,12 +4725,20 @@ describe('structuredContent formatters', () => {
 
   test('generic list fallback formats list-shaped responses', () => {
     const { stdout, stderr } = captureStructuredOutput('get_missions', missionsFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Title'));
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Missions ===');
     expect(stdout).toContain('Pirate Sweep');
     // Slim pirate_sweep rewards: full parenthetical must fit maxCellWidth 32 (no truncation).
     expect(stdout).toContain('pirate rep +5 (pirate_kael)');
+    expect(header).toBeDefined();
+    expect(cells(header ?? '')).not.toContain('Description');
+    expect(stdout).toContain('Pirate Sweep (pirate_sweep): Clear pirate contacts harassing local shipping lanes.');
+    expect(stdout).toContain(
+      'Deep Core Prospecting (deep_core_prospecting): Survey deep-core deposits and return ore samples.',
+    );
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -5088,7 +5067,21 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Earth Station');
     expect(stdout).toContain('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
     expect(stdout).toContain('piloting XP +50');
+    expect(stdout).toContain(
+      'Distress Call: CombatDummy6 (mission-distress-combatdummy6): Rescue CombatDummy6 in Markab before the distress signal expires.',
+    );
+    expect(stdout).toContain(
+      'Distress Call: WealthyMiner2023 (mission-distress-wealthyminer2023): Rescue WealthyMiner2023 in Electra before the distress signal expires.',
+    );
+    expect(stdout).toContain(
+      'Faction Supply Delivery (mission-faction-delivery-1): Deliver faction supplies to the contract issuer.',
+    );
     expect(stdout).toContain('missions 3/5');
+    expect(
+      stdout.indexOf(
+        'Faction Supply Delivery (mission-faction-delivery-1): Deliver faction supplies to the contract issuer.',
+      ),
+    ).toBeLessThan(stdout.indexOf('missions 3/5'));
     expect(stdout).not.toContain('OK: Active missions');
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('[object Object]');
@@ -5107,6 +5100,7 @@ describe('structuredContent formatters', () => {
       'Expires',
     ]);
     expect(header).not.toContain('Community');
+    expect(header).not.toContain('Description');
 
     const objectivesIndex = cells(header ?? '').indexOf('Objectives');
     const delivery = stdout.split('\n').find((line) => line.includes('|') && line.includes('Faction Supply Delivery'));
@@ -5524,6 +5518,9 @@ describe('structuredContent formatters', () => {
     expect(header).toBeDefined();
     expect(cells(row ?? '')[communityIndex]).toContain('12.5%');
     expect(cells(row ?? '')[communityIndex]).toContain('ore_iron: 90/720');
+    expect(stdout).toContain(
+      'Community Ore Drive (mission-community-ore-1): Contribute iron ore to the faction stockpile.',
+    );
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('[object Object]');
   });
@@ -5722,6 +5719,135 @@ describe('structuredContent formatters', () => {
       'Objectives',
     ]);
     expect(header).not.toContain('Community');
+    expect(header).not.toContain('Description');
+  });
+
+  test('get_active_missions prints bounty follow-on from mission description', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', activeMissionsBountyFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain("Hunt Kestrel (mission-bounty-kestrel-1): Destroy Kestrel's ship.");
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_active_missions omits follow-on when description is missing', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [{ mission_id: 'mission-omit-1', title: 'Omit Mission', type: 'delivery' }],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout).toContain('Omit Mission');
+    expect(stdout).not.toContain('Omit Mission (mission-omit-1):');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_active_missions omits follow-on when description is empty', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [{ mission_id: 'mission-omit-empty', title: 'Empty Description', type: 'delivery', description: '' }],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Empty Description (mission-omit-empty):');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_active_missions omits follow-on when description is whitespace', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-omit-ws',
+            title: 'Whitespace Description',
+            type: 'delivery',
+            description: ' \n\t  ',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Whitespace Description (mission-omit-ws):');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_active_missions omits follow-on when description is a non-string', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-omit-object',
+            title: 'Object Description',
+            type: 'delivery',
+            description: { text: 'nope' },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Object Description (mission-omit-object):');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('nope');
+  });
+
+  test('get_active_missions flattens issued description whitespace onto one follow-on', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-flatten-1',
+            title: 'Exchange Fill',
+            type: 'exchange',
+            description: 'Fill, not place.\nEscrow is not cargo.',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const followOns = stdout.split('\n').filter((line) => line.includes('Fill, not place'));
+
+    expect(stderr).toBe('');
+    expect(followOns).toEqual(['Exchange Fill (mission-flatten-1): Fill, not place. Escrow is not cargo.']);
+    expect(stdout).not.toContain('Fill, not place.\nEscrow is not cargo.');
+  });
+
+  test('get_active_missions follow-on uses name when title is absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-named-1',
+            name: 'Named Contract',
+            type: 'delivery',
+            description: 'Deliver named cargo to the issuer.',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Named Contract (mission-named-1): Deliver named cargo to the issuer.');
+  });
+
+  test('get_active_missions_exchange keeps the full issued description past 64 characters', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', activeMissionsExchangeFixture);
+
+    expect(stderr).toBe('');
+    expect(EXCHANGE_MISSION_DESCRIPTION.length).toBeGreaterThan(64);
+    expect(stdout).toContain(EXCHANGE_MISSION_DESCRIPTION.slice(64));
+    expect(stdout).toContain(`Station Buy Order (mission-exchange-buy-1): ${EXCHANGE_MISSION_DESCRIPTION}`);
+    expect(stdout).not.toContain(`${EXCHANGE_MISSION_DESCRIPTION.slice(0, 61)}...`);
+    expect(stdout).not.toContain('...');
   });
 
   test('get_active_missions skips nested community_progress objects', () => {
@@ -5817,6 +5943,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Hunt Kestrel');
     expect(stdout).toContain('bounty');
     expect(stdout).toContain('Destroy Kestrel');
+    expect(stdout).toContain("Hunt Kestrel (bounty-kestrel-1): Destroy Kestrel's ship.");
     expect(stdout).not.toContain('Community');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -5837,6 +5964,10 @@ describe('structuredContent formatters', () => {
     ]);
     expect(cells(row ?? '')[headerCells.indexOf('Community')]).toBe('12.5% ore_iron: 90/720');
     expect(cells(row ?? '')[headerCells.indexOf('Objectives')]).toBe('Deliver 50 iron ore ore_iron');
+    expect(headerCells).not.toContain('Description');
+    expect(stdout).toContain(
+      'Community Ore Drive (community_ore_drive): Contribute iron ore to the faction stockpile.',
+    );
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('[object Object]');
   });
@@ -5883,10 +6014,47 @@ describe('structuredContent formatters', () => {
 
   test('get_missions ordinary board omits Community', () => {
     const ordinary = captureStructuredOutput('get_missions', missionsFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = ordinary.stdout.split('\n').find((line) => line.includes('|') && line.includes('Title'));
 
     expect(ordinary.stderr).toBe('');
     expect(ordinary.stdout).not.toContain('Community');
+    expect(cells(header ?? '')).not.toContain('Description');
+    expect(ordinary.stdout).toContain(
+      'Pirate Sweep (pirate_sweep): Clear pirate contacts harassing local shipping lanes.',
+    );
     expect(ordinary.stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_missions follow-on uses template_id when mission_id and id are absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', {
+      missions: [
+        {
+          template_id: 'template-board-1',
+          title: 'Board Template',
+          type: 'delivery',
+          description: 'Deliver template cargo to the issuer.',
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Board Template (template-board-1): Deliver template cargo to the issuer.');
+  });
+
+  test('get_missions_exchange keeps the full issued description past 64 characters', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', missionsExchangeFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Title'));
+
+    expect(stderr).toBe('');
+    expect(cells(header ?? '')).not.toContain('Description');
+    expect(EXCHANGE_MISSION_DESCRIPTION.length).toBeGreaterThan(64);
+    expect(stdout).toContain(EXCHANGE_MISSION_DESCRIPTION.slice(64));
+    expect(stdout).toContain(`Station Buy Order (mission-exchange-buy-1): ${EXCHANGE_MISSION_DESCRIPTION}`);
+    expect(stdout).not.toContain(`${EXCHANGE_MISSION_DESCRIPTION.slice(0, 29)}...`);
+    expect(stdout).not.toContain(`${EXCHANGE_MISSION_DESCRIPTION.slice(0, 61)}...`);
+    expect(stdout).not.toContain('...');
   });
 
   test('faction_list_missions mixed board prints officer columns and bounty targets', () => {

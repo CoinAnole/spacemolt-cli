@@ -1,6 +1,8 @@
 
 === Missions ===
 
-  Title               | ID                  | Type     | Community              | Objectives                   | Difficulty | Expires | Rewards | Description                     
-  --------------------+---------------------+----------+------------------------+------------------------------+------------+---------+---------+---------------------------------
-  Community Ore Drive | community_ore_drive | delivery | 12.5% ore_iron: 90/720 | Deliver 50 iron ore ore_iron | 2          | 72      | 100 cr  | Contribute iron ore to the fa...
+  Title               | ID                  | Type     | Community              | Objectives                   | Difficulty | Expires | Rewards
+  --------------------+---------------------+----------+------------------------+------------------------------+------------+---------+--------
+  Community Ore Drive | community_ore_drive | delivery | 12.5% ore_iron: 90/720 | Deliver 50 iron ore ore_iron | 2          | 72      | 100 cr 
+
+Community Ore Drive (community_ore_drive): Contribute iron ore to the faction stockpile.

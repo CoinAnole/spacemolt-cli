@@ -6,6 +6,7 @@ missions:
       expires_in_ticks: 17
       issuing_base: "Markab Rescue Station"
       mission_id: "mission-distress-combatdummy6"
+      description: "Rescue CombatDummy6 in Markab before the distress signal expires."
       objectives: [{description: "Rescue CombatDummy6", progress: {current: 0, required: 1}, target: {name: CombatDummy6, system_id: markab}, type: distress_rescue}]
       rewards: {credits: 0, skill_xp: {piloting: 25}}
       title: "Distress Call: CombatDummy6"
@@ -14,6 +15,7 @@ missions:
       expires_in_ticks: 22
       issuing_base: "Electra Rescue Station"
       mission_id: "mission-distress-wealthyminer2023"
+      description: "Rescue WealthyMiner2023 in Electra before the distress signal expires."
       objectives: [{description: "Rescue WealthyMiner2023", progress: {current: 0, required: 1}, target: {name: WealthyMiner2023, system_id: electra}, type: distress_rescue}]
       rewards: {skill_xp: {piloting: 50}}
       title: "Distress Call: WealthyMiner2023"

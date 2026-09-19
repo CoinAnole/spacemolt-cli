@@ -1,0 +1,9 @@
+
+=== Active Missions ===
+
+  Title             | ID                     | Type     | Difficulty | Issuing Base  | Objectives                   | Rewards | Expires
+  ------------------+------------------------+----------+------------+---------------+------------------------------+---------+--------
+  Station Buy Order | mission-exchange-buy-1 | exchange | 1          | Earth Station | Place buy order ore_iron 0/1 | 250 cr  | 20     
+
+Station Buy Order (mission-exchange-buy-1): Your order counts toward this mission only after a counterparty fills it, not when you place it. Credits held in escrow for a buy order are not cargo.
+missions 1/5

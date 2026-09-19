@@ -17,5 +17,6 @@ missions:
     - mission_id: "mission-delivery-1"
       title: "Food Delivery"
       type: delivery
+      description: "Deliver Food Rations to the contract issuer."
       objectives: [{description: "Deliver Food Rations", item_id: food_rations, quantity: 5}]
   max_missions: 5

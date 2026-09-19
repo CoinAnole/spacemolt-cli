@@ -386,6 +386,7 @@ export const activeMissionsFixture = {
         expires_in_ticks: 17,
         issuing_base: 'Markab Rescue Station',
         mission_id: 'mission-distress-combatdummy6',
+        description: 'Rescue CombatDummy6 in Markab before the distress signal expires.',
         objectives: [
           {
             description: 'Rescue CombatDummy6',
@@ -406,6 +407,7 @@ export const activeMissionsFixture = {
         expires_in_ticks: 22,
         issuing_base: 'Electra Rescue Station',
         mission_id: 'mission-distress-wealthyminer2023',
+        description: 'Rescue WealthyMiner2023 in Electra before the distress signal expires.',
         objectives: [
           {
             description: 'Rescue WealthyMiner2023',
@@ -520,6 +522,56 @@ export const activeMissionsBountyFixture = {
   },
 };
 
+export const EXCHANGE_MISSION_DESCRIPTION =
+  'Your order counts toward this mission only after a counterparty fills it, not when you place it. Credits held in escrow for a buy order are not cargo.';
+
+export const activeMissionsExchangeFixture = {
+  message: 'Active missions',
+  missions: {
+    active: [
+      {
+        mission_id: 'mission-exchange-buy-1',
+        type: 'exchange',
+        title: 'Station Buy Order',
+        description: EXCHANGE_MISSION_DESCRIPTION,
+        difficulty: 1,
+        percent_complete: 0,
+        rewards: { credits: 250 },
+        expires_in_ticks: 20,
+        accepted_at: '2026-09-18T18:00:00Z',
+        issuing_base: 'Earth Station',
+        objectives: [
+          {
+            type: 'place_buy_order',
+            description: 'Place buy order',
+            item_id: 'ore_iron',
+            current: 0,
+            required: 1,
+            completed: false,
+          },
+        ],
+      },
+    ],
+    max_missions: 5,
+  },
+};
+
+export const missionsExchangeFixture = {
+  base_id: 'earth_station',
+  base_name: 'Earth Station',
+  missions: [
+    {
+      mission_id: 'mission-exchange-buy-1',
+      type: 'exchange',
+      title: 'Station Buy Order',
+      description: EXCHANGE_MISSION_DESCRIPTION,
+      difficulty: 1,
+      rewards: { credits: 250 },
+      expires_in_ticks: 20,
+    },
+  ],
+};
+
 export const acceptMissionPostActionFixture = {
   details: {
     mission_id: 'mission-delivery-1',
@@ -537,6 +589,7 @@ export const acceptMissionPostActionFixture = {
         mission_id: 'mission-delivery-1',
         title: 'Food Delivery',
         type: 'delivery',
+        description: 'Deliver Food Rations to the contract issuer.',
         objectives: [{ description: 'Deliver Food Rations', item_id: 'food_rations', quantity: 5 }],
       },
     ],
@@ -556,6 +609,7 @@ export const abandonMissionPostActionFixture = {
         mission_id: 'mission-survey-2',
         title: 'Survey Run',
         type: 'survey',
+        description: 'Chart the listed survey systems.',
       },
     ],
     max_missions: 5,
@@ -1270,6 +1324,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_active_missions: { command: 'get_active_missions', fixture: activeMissionsFixture },
   get_active_missions_bounty: { command: 'get_active_missions', fixture: activeMissionsBountyFixture },
   get_active_missions_community: { command: 'get_active_missions', fixture: activeMissionsCommunityFixture },
+  get_active_missions_exchange: { command: 'get_active_missions', fixture: activeMissionsExchangeFixture },
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
@@ -1288,6 +1343,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_missions: { command: 'get_missions', fixture: missionsFixture },
   get_missions_bounty: { command: 'get_missions', fixture: missionsBountyFixture },
   get_missions_community: { command: 'get_missions', fixture: missionsCommunityFixture },
+  get_missions_exchange: { command: 'get_missions', fixture: missionsExchangeFixture },
   faction_list_missions: { command: 'faction_list_missions', fixture: factionListMissionsFixture },
   faction_list_missions_empty: { command: 'faction_list_missions', fixture: factionListMissionsEmptyFixture },
   get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },

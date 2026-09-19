@@ -158,6 +158,39 @@ function activeMissionCapacity(result: Record<string, unknown>, missionCount: nu
   return maxMissions === undefined ? undefined : `${missionCount}/${maxMissions}`;
 }
 
+function issuedMissionText(mission: Record<string, unknown>): string | undefined {
+  if (typeof mission.description !== 'string') return undefined;
+  const text = mission.description.replace(/\s+/g, ' ').trim();
+  return text || undefined;
+}
+
+function issuedMissionLabel(mission: Record<string, unknown>): string {
+  const title =
+    (typeof mission.title === 'string' && mission.title.trim()) ||
+    (typeof mission.name === 'string' && mission.name.trim()) ||
+    '';
+  const id =
+    (typeof mission.mission_id === 'string' && mission.mission_id) ||
+    (typeof mission.id === 'string' && mission.id) ||
+    (typeof mission.template_id === 'string' && mission.template_id) ||
+    '';
+  if (title && id) return `${title} (${id})`;
+  return title || id || 'Mission';
+}
+
+function emitIssuedMissionText(missions: Array<Record<string, unknown>>): void {
+  const lines = missions
+    .map((mission) => {
+      const text = issuedMissionText(mission);
+      if (!text) return undefined;
+      return `${issuedMissionLabel(mission)}: ${text}`;
+    })
+    .filter((line): line is string => line !== undefined);
+  if (!lines.length) return;
+  emitLine('');
+  for (const line of lines) emitLine(line);
+}
+
 function formatCount(value: unknown): string | undefined {
   const number = finiteNumber(value);
   if (number === undefined) return undefined;
@@ -296,7 +329,6 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Difficulty', ['difficulty']],
     ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
     ['Rewards', ['rewards_summary']],
-    ['Description', ['description']],
   ],
 };
 
@@ -1212,6 +1244,7 @@ export const genericFormatters = [
       }
 
       printCompactTable('Active Missions', rows, columns, { maxCellWidth: 64 });
+      emitIssuedMissionText(missions);
 
       const capacity = activeMissionCapacity(r, missions.length);
       if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);
@@ -1406,6 +1439,7 @@ export const genericFormatters = [
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
         maxCellWidth: key === 'items' ? 80 : undefined,
       });
+      if (key === 'missions') emitIssuedMissionText(recordRows);
       const onlyItem = key === 'items' && recordRows.length === 1 ? recordRows[0] : undefined;
       if (
         onlyItem &&

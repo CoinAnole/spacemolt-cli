@@ -7,6 +7,7 @@
         "expires_in_ticks": 17,
         "issuing_base": "Markab Rescue Station",
         "mission_id": "mission-distress-combatdummy6",
+        "description": "Rescue CombatDummy6 in Markab before the distress signal expires.",
         "objectives": [
           {
             "description": "Rescue CombatDummy6",
@@ -35,6 +36,7 @@
         "expires_in_ticks": 22,
         "issuing_base": "Electra Rescue Station",
         "mission_id": "mission-distress-wealthyminer2023",
+        "description": "Rescue WealthyMiner2023 in Electra before the distress signal expires.",
         "objectives": [
           {
             "description": "Rescue WealthyMiner2023",
