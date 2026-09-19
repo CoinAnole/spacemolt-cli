@@ -1,0 +1,8 @@
+
+=== Missions ===
+
+  Title             | ID                     | Type     | Difficulty | Expires | Rewards
+  ------------------+------------------------+----------+------------+---------+--------
+  Station Buy Order | mission-exchange-buy-1 | exchange | 1          | 20      | 250 cr 
+
+Station Buy Order (mission-exchange-buy-1): Your order counts toward this mission only after a counterparty fills it, not when you place it. Credits held in escrow for a buy order are not cargo.

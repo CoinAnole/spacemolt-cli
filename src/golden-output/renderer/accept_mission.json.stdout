@@ -23,6 +23,7 @@
         "mission_id": "mission-delivery-1",
         "title": "Food Delivery",
         "type": "delivery",
+        "description": "Deliver Food Rations to the contract issuer.",
         "objectives": [
           {
             "description": "Deliver Food Rations",

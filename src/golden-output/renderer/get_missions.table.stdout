@@ -1,7 +1,10 @@
 
 === Missions ===
 
-  Title                 | ID                    | Type   | Difficulty | Expires | Rewards                          | Description                     
-  ----------------------+-----------------------+--------+------------+---------+----------------------------------+---------------------------------
-  Pirate Sweep          | pirate_sweep          | combat | 3          | 48      | pirate rep +5 (pirate_kael)      | Clear pirate contacts harassi...
-  Deep Core Prospecting | deep_core_prospecting | mining | 5          | 96      | 1800 cr; mining XP +55; ore_i... | Survey deep-core deposits and...
+  Title                 | ID                    | Type   | Difficulty | Expires | Rewards                         
+  ----------------------+-----------------------+--------+------------+---------+---------------------------------
+  Pirate Sweep          | pirate_sweep          | combat | 3          | 48      | pirate rep +5 (pirate_kael)     
+  Deep Core Prospecting | deep_core_prospecting | mining | 5          | 96      | 1800 cr; mining XP +55; ore_i...
+
+Pirate Sweep (pirate_sweep): Clear pirate contacts harassing local shipping lanes.
+Deep Core Prospecting (deep_core_prospecting): Survey deep-core deposits and return ore samples.

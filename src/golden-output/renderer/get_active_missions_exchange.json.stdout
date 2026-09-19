@@ -1,0 +1,32 @@
+{
+  "message": "Active missions",
+  "missions": {
+    "active": [
+      {
+        "mission_id": "mission-exchange-buy-1",
+        "type": "exchange",
+        "title": "Station Buy Order",
+        "description": "Your order counts toward this mission only after a counterparty fills it, not when you place it. Credits held in escrow for a buy order are not cargo.",
+        "difficulty": 1,
+        "percent_complete": 0,
+        "rewards": {
+          "credits": 250
+        },
+        "expires_in_ticks": 20,
+        "accepted_at": "2026-09-18T18:00:00Z",
+        "issuing_base": "Earth Station",
+        "objectives": [
+          {
+            "type": "place_buy_order",
+            "description": "Place buy order",
+            "item_id": "ore_iron",
+            "current": 0,
+            "required": 1,
+            "completed": false
+          }
+        ]
+      }
+    ],
+    "max_missions": 5
+  }
+}
