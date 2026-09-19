@@ -50,6 +50,7 @@ Service pools:
   Alloy Smelter | faction-smelter | 1     | production | true  | 0cr        | 1200       |      
 
 Faction rent bill: 1,200cr/cycle
+Facilities: 1
 Faction arrears: 2,400cr
 Grace remaining: 1 cycle
 Estimated rent/day: 7,200cr

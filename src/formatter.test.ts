@@ -8232,6 +8232,7 @@ describe('structuredContent formatters', () => {
         Alloy Smelter | faction-smelter | 1     | production | true  | 0cr        | 1200       |
 
       Faction rent bill: 1,200cr/cycle
+      Facilities: 1
       Faction arrears: 2,400cr
       Grace remaining: 1 cycle
       Estimated rent/day: 7,200cr
@@ -8275,6 +8276,12 @@ describe('structuredContent formatters', () => {
 
       Faction storage: 50,000cr, 14 types, 3 rooms
 
+      Faction rent bill: 1,200cr/cycle
+      Facilities: 4
+      Grace remaining: 1 cycle
+      Estimated rent/day: 7,200cr
+      Faction facilities pay rent from the treasury each cycle.
+
       Damaged facilities produce nothing. A station rebuilds its own faction's facilities automatically from that faction's storage at the station; use facility repair for a facility it will not rebuild, or to jump the queue."
       ,
         "faction_facility_owned": 
@@ -8286,8 +8293,10 @@ describe('structuredContent formatters', () => {
         Faction Shipyard Berth | faction_shipyard_berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr
 
       Faction rent bill: 1,200cr/cycle
+      Facilities: 1
       Faction arrears: 2,400cr
       Grace remaining: 1 cycle
+      Estimated rent/day: 7,200cr
       Faction facilities pay rent from the treasury each cycle.
       Use action 'faction_list' while docked for full per-facility detail at that station."
       ,

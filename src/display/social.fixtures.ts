@@ -306,10 +306,14 @@ export const factionFacilityOwnedFixture = {
       labor_per_run: 60,
     },
   ],
-  total_rent_per_cycle: 1200,
-  arrears_owed: 2400,
-  grace_cycles: 1,
-  note: 'Faction facilities pay rent from the treasury each cycle.',
+  faction_rent: {
+    facilities: 1,
+    total_rent_per_cycle: 1200,
+    arrears_owed: 2400,
+    grace_cycles: 1,
+    est_rent_per_day: 7200,
+    note: 'Faction facilities pay rent from the treasury each cycle.',
+  },
   hint: "Use action 'faction_list' while docked for full per-facility detail at that station.",
 };
 
@@ -361,6 +365,13 @@ export const factionFacilityListFixture = {
       status: 'dismantling',
     },
   ],
+  faction_rent: {
+    facilities: 4,
+    total_rent_per_cycle: 1200,
+    est_rent_per_day: 7200,
+    grace_cycles: 1,
+    note: 'Faction facilities pay rent from the treasury each cycle.',
+  },
   faction_storage: {
     credits: 50_000,
     item_types: 14,

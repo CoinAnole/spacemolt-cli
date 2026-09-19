@@ -11,4 +11,10 @@ Faction: faction-1
 
 Faction storage: 50,000cr, 14 types, 3 rooms
 
+Faction rent bill: 1,200cr/cycle
+Facilities: 4
+Grace remaining: 1 cycle
+Estimated rent/day: 7,200cr
+Faction facilities pay rent from the treasury each cycle.
+
 Damaged facilities produce nothing. A station rebuilds its own faction's facilities automatically from that faction's storage at the station; use facility repair for a facility it will not rebuild, or to jump the queue.

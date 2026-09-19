@@ -6,7 +6,9 @@
   Faction Shipyard Berth | faction_shipyard_berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr     
 
 Faction rent bill: 1,200cr/cycle
+Facilities: 1
 Faction arrears: 2,400cr
 Grace remaining: 1 cycle
+Estimated rent/day: 7,200cr
 Faction facilities pay rent from the treasury each cycle.
 Use action 'faction_list' while docked for full per-facility detail at that station.
