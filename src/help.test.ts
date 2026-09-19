@@ -1911,7 +1911,15 @@ describe('help output branches', () => {
     );
     expect(output).toContain('commissionable');
     expect(output).toContain('(ships|skills|recipes|items|facilities)');
+    expect(output).toContain('type=skills id=refining');
     expect(output).not.toContain('type=mining');
+  });
+
+  test('help get_skills points at catalog', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('get_skills', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('catalog');
   });
 
   test('help catalog_dump documents the public dump cache and mining formulas', () => {
@@ -1927,6 +1935,7 @@ describe('help output branches', () => {
     expect(output).toContain('deep_core_access');
     expect(output).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
     expect(output).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
+    expect(output).toContain("--jq '.skills[] | {id,name,description}'");
   });
 
   test('showFullHelp includes cache sections near command discovery', () => {

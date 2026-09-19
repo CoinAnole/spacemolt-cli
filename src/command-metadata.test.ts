@@ -1031,6 +1031,7 @@ describe('command metadata', () => {
     expect(catalog?.schema?.commissionable?.description).toContain('reputation waived');
     expect(catalog?.schema?.commissionable?.description).toContain('Piloting and yard tier still apply');
     expect(catalog?.example).toContain('commissionable=true');
+    expect(catalog?.example).toContain('type=skills id=refining');
     expect(catalog?.seeAlso).toEqual([
       'catalog_dump',
       'get_guide',
@@ -1038,6 +1039,7 @@ describe('command metadata', () => {
       'commission_ship',
       'buy_ship_license',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.get_skills?.seeAlso).toEqual(['catalog']);
 
     const help = captureHelp('catalog');
     expect(help).toContain('licensed with buy_ship_license');
@@ -1069,6 +1071,7 @@ describe('command metadata', () => {
     expect(config?.description).toContain('deep_core_access');
     expect(config?.description).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
     expect(config?.example).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
+    expect(config?.example).toContain("--jq '.skills[] | {id,name,description}'");
 
     const help = captureHelp('catalog_dump');
     expect(help).toContain('1 request/minute/IP');
@@ -1076,6 +1079,7 @@ describe('command metadata', () => {
     expect(help).toContain('Public endpoint');
     expect(help).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
     expect(help).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
+    expect(help).toContain("--jq '.skills[] | {id,name,description}'");
     expect(help).not.toContain('type=mining');
   });
 
