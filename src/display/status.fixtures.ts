@@ -734,6 +734,38 @@ export const jumpFixture = {
   },
 };
 
+/** Last-listed survey stop counted first (any-order progress). */
+export const jumpSurveyMissionsEnvelope = {
+  active: [
+    {
+      difficulty: 2,
+      expires_in_ticks: 28,
+      issuing_base: 'Earth Station',
+      mission_id: 'mission-survey-local-1',
+      objectives: [
+        {
+          description: 'Visit listed systems in any order',
+          progress: { current: 2, required: 3 },
+          target: { name: 'Procyon', system_id: 'procyon' },
+          type: 'visit_system',
+        },
+      ],
+      rewards: {
+        credits: 800,
+        skill_xp: { scanning: 15 },
+      },
+      title: 'Local Sector Survey',
+      type: 'survey',
+    },
+  ],
+  max_missions: 5,
+};
+
+export const jumpMissionsFixture = {
+  ...jumpFixture,
+  missions: jumpSurveyMissionsEnvelope,
+};
+
 export const scanFixture = {
   success: true,
   target_id: 'player-2',
@@ -1058,5 +1090,10 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   decline_mission: { command: 'decline_mission', fixture: declineMissionFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
   jump: { command: 'jump', fixture: jumpFixture },
+  jump_missions: {
+    command: 'jump',
+    fixture: jumpMissionsFixture,
+    schemaTarget: 'structuredContent',
+  },
   register: { command: 'register', fixture: { password: 's3cret', player_id: 'player-1' } },
 };

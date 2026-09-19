@@ -1,0 +1,33 @@
+
+=== Docked: Earth Station ===
+You dock at Earth Station.
+
+The berth clamps engage and the station traffic board scrolls your name.
+Station condition: Most systems operational. (82%)
+Rent is paused on damaged and dismantling facilities until they return to service.
+
+=== Your facilities ===
+
+  Name              | ID              | Type              | Status      | Rent/cycle    
+  ------------------+-----------------+-------------------+-------------+---------------
+  Ore Refinery      | player-refinery | ore_refinery      | enabled     | 1,200cr       
+  Personal Quarters | player-quarters | personal_quarters | disabled    | 100cr         
+  Personal Hangar   | player-hangar   | personal_hangar   | dismantling | 800cr (paused)
+  Workshop          | player-workshop | workshop          | damaged     | 400cr (paused)
+Docked at: Earth Station (earth_station)
+
+=== Active Missions ===
+
+  Title                   | ID                         | Type     | Difficulty | Issuing Base  | Objectives                                     | Rewards         | Expires
+  ------------------------+----------------------------+----------+------------+---------------+------------------------------------------------+-----------------+--------
+  Faction Supply Delivery | mission-faction-delivery-1 | delivery | 2          | Earth Station | Deliver Food Rations earth_station 0/5 cargo:5 | 1200 cr; rep +2 | 31     
+
+Faction Supply Delivery (mission-faction-delivery-1): Deliver faction supplies to the contract issuer.
+missions 1/5
+
+=== Cargo ===
+Cargo (1):
+
+  Name         | ID           | Qty | Unit Size
+  -------------+--------------+-----+----------
+  Food Rations | food_rations |   5 |         1

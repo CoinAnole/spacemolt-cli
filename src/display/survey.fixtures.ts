@@ -82,6 +82,39 @@ export const surveySystemFixture = {
   },
 };
 
+export const surveySystemMissionsEnvelope = {
+  active: [
+    {
+      difficulty: 3,
+      expires_in_ticks: 25,
+      issuing_base: 'Earth Station',
+      mission_id: 'mission-survey-cartography-1',
+      objectives: [
+        {
+          completed: true,
+          current: 1,
+          description: 'Survey Sol',
+          required: 1,
+          target: { name: 'Sol', system_id: 'sol' },
+          type: 'survey_system',
+        },
+      ],
+      rewards: {
+        credits: 1500,
+        skill_xp: { scanning: 20 },
+      },
+      title: 'Deep Space Cartography',
+      type: 'survey',
+    },
+  ],
+  max_missions: 5,
+};
+
+export const surveySystemMissionsFixture = {
+  ...surveySystemFixture,
+  missions: surveySystemMissionsEnvelope,
+};
+
 export const surveySystemNoHitsFixture = {
   details: {
     system_id: 'sol',
@@ -112,5 +145,10 @@ export const surveyHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     command: 'survey_system',
     fixture: surveySystemNoHitsFixture,
     schemaTarget: 'details',
+  },
+  survey_system_missions: {
+    command: 'survey_system',
+    fixture: surveySystemMissionsFixture,
+    schemaTarget: 'structuredContent',
   },
 };
