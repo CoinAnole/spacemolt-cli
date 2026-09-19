@@ -1,5 +1,6 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
+import { withDisplayRenderBuffer } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import { formatCrewRatio } from './personnel.ts';
 import {
@@ -19,6 +20,7 @@ import {
   shipIncapacitatedFixture,
   shipOverCapacityFixture,
 } from './ship.fixtures.ts';
+import { emitCargoHold } from './ship.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -963,4 +965,49 @@ test('repair details-only auto_docked does not print a receipt line or banner', 
   expect(stdout).not.toContain('Auto-docked:');
   expect(stdout).not.toContain('Auto Docked:');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+function renderCargoHold(result: Record<string, unknown>): { printed: boolean; stdout: string } {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  const printed = withDisplayRenderBuffer(buffer, () => emitCargoHold(result), { plain: true });
+  return { printed, stdout: buffer.stdout.join('\n') };
+}
+
+describe('emitCargoHold', () => {
+  test('item array without hold stats prints the table and omits Used/Credits/bay', () => {
+    const { printed, stdout } = renderCargoHold({
+      cargo: [{ item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 50, size: 1 }],
+    });
+    expect(printed).toBe(true);
+    expect(stdout).toContain('=== Cargo ===');
+    expect(stdout).toContain('Cargo (1):');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).not.toContain('Credits:');
+    expect(stdout).not.toContain('Used:');
+    expect(stdout).not.toContain('?/');
+    expect(stdout).not.toContain('Carrier bay:');
+    expect(stdout).not.toContain('Carried Ships');
+  });
+
+  test('empty cargo array prints Empty and still omits hold stats', () => {
+    const { printed, stdout } = renderCargoHold({ cargo: [] });
+    expect(printed).toBe(true);
+    expect(stdout).toContain('=== Cargo ===');
+    expect(stdout).toContain('Cargo (0):');
+    expect(stdout).toContain('(Empty)');
+    expect(stdout).not.toContain('Credits:');
+    expect(stdout).not.toContain('Used:');
+    expect(stdout).not.toContain('?/');
+  });
+
+  test('present sibling stats still print Credits, Used, and bay', () => {
+    const { printed, stdout } = renderCargoHold(structuredClone(cargoFixture) as Record<string, unknown>);
+    expect(printed).toBe(true);
+    expect(stdout).toContain('Credits:');
+    expect(stdout).toContain('Used: 50/100');
+    expect(stdout).toContain('Carrier bay: 1/2');
+    expect(stdout).toContain('=== Carried Ships ===');
+    expect(stdout).toContain('Rock Skipper');
+    expect(stdout).not.toContain('?/');
+  });
 });
