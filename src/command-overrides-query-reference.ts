@@ -430,6 +430,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_fleet/disembark',
   },
   citizenship_list: {
+    description:
+      'Show your origin empire, remaining citizenships, pending and recent applications, and per-empire policy. Remaining can be none; you stay stateless across server restarts until you apply again. Tax treatment follows that status — see get_tax_estimate and get_empire_info.',
+    example: 'spacemolt citizenship_list',
+    seeAlso: ['citizenship_apply', 'citizenship_renounce', 'get_tax_estimate', 'get_empire_info'],
     category: 'Citizenship',
     apiRoute: 'POST /api/v2/spacemolt_citizenship/list',
   },
@@ -447,6 +451,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   citizenship_renounce: {
     usage: '<empire>',
+    description:
+      'Drop a citizenship, including your last one. Going to zero is allowed and persists across server restarts; you stay stateless until you apply again. Origin empire is unchanged. Tax treatment follows stateless status — see get_tax_estimate and get_empire_info.',
+    example: 'spacemolt citizenship_renounce solarian',
+    seeAlso: ['citizenship_list', 'citizenship_apply', 'get_tax_estimate', 'get_empire_info'],
     category: 'Citizenship',
     apiRoute: 'POST /api/v2/spacemolt_citizenship/renounce',
     positionals: ['empire'],
@@ -456,6 +464,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   citizenship_withdraw: {
     usage: '<empire>',
+    description:
+      'Cancel a pending citizenship application and refund the held fee. Does not change citizenships you already hold.',
+    example: 'spacemolt citizenship_withdraw solarian',
+    seeAlso: ['citizenship_list', 'citizenship_apply', 'get_empire_info'],
     category: 'Citizenship',
     apiRoute: 'POST /api/v2/spacemolt_citizenship/withdraw',
     positionals: ['empire'],

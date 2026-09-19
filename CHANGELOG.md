@@ -64,6 +64,12 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_tax_estimate` table output shows inactivity exemption, outstanding empire bounties, server payment guidance, and the latest weekly statement when present (gameserver 0.605.0). Current estimate, current debt, and the historical statement stay in separate blocks. `pay_bounty` help See also and Discover-with now point at `get_tax_estimate`. **No parser change.**
 
+### Citizenship
+
+- `citizenship list` / `renounce` / `withdraw` help is curated so the group no longer shares the generic citizenship-tool blurb. Renounce documents that the last citizenship can be dropped, that you stay stateless across server restarts until you apply again, and that tax treatment follows that status (gameserver 0.605.4). See also `get_tax_estimate` and `get_empire_info`. **No parser change.**
+- `citizenship list` / `apply` / `renounce` / `withdraw` table output uses a dedicated Citizenship view: origin vs remaining citizenships, `Citizenships: none` when remaining is empty, petitions when present, and `Renounced:` after a drop.
+- `get_status` / `get_state` / `get_player` table output prints `Citizenships: none` when you hold none (`get_status` is an alias of `get_state`; snapshot omits the key when empty; an explicit empty array also prints none). Player-shaped payloads on other commands still omit the line when the key is absent.
+
 ### Missions
 
 - `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) now append `cargo:N` and `storage:M` to an objective's `current/required` when the server sends `ObjectiveProgressInfo.in_cargo` / `in_storage` (gameserver 0.604.1). That is the same on-hand stock that delivery, pickup, and crafting consult. Progress stays `current/required`; the suffix is on-hand stock, not a substitute for it.

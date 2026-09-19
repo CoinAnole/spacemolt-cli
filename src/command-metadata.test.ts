@@ -2713,6 +2713,100 @@ describe('command metadata', () => {
     expect(config.example).toBe('spacemolt get_tax_estimate');
   });
 
+  test('citizenship list help documents origin, remaining none, and tax commands', () => {
+    const config = COMMANDS.citizenship_list;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('citizenship_list command is missing from COMMANDS');
+    expect(config.usage).toBeUndefined();
+    expect(config.args).toEqual([]);
+    expect(config.aliases).toEqual({});
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.citizenship_list?.positionals).toBeUndefined();
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.citizenship_list?.usage).toBeUndefined();
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.citizenship_list?.aliases).toBeUndefined();
+    expect(config.description).toContain('origin');
+    expect(config.description).toContain('remaining');
+    expect(config.description).toMatch(/none|stateless/);
+    expect(config.description).toContain('restarts');
+    expect(config.description).toContain('get_tax_estimate');
+    expect(config.description).not.toContain('`');
+    expect(config.example).toBe('spacemolt citizenship_list');
+    expect(config.seeAlso).toEqual([
+      'citizenship_apply',
+      'citizenship_renounce',
+      'get_tax_estimate',
+      'get_empire_info',
+    ]);
+
+    const help = captureHelp('citizenship list');
+    expect(help).toContain('citizenship list');
+    expect(help).toContain('origin');
+    expect(help).toContain('remaining');
+    expect(help).toContain('get_tax_estimate');
+    expect(help).toContain('spacemolt citizenship list');
+    expect(help).toContain('See also: citizenship apply, citizenship renounce, get_tax_estimate, get_empire_info');
+    expect(help).not.toContain('spacemolt citizenship_list');
+    expect(help).not.toContain('`');
+  });
+
+  test('citizenship renounce help documents last-citizenship drop and unchanged origin', () => {
+    const config = COMMANDS.citizenship_renounce;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('citizenship_renounce command is missing from COMMANDS');
+    expect(config.usage).toBe('<empire>');
+    expect(config.args).toEqual(['empire']);
+    expect(config.aliases).toEqual({ empire: 'target' });
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.citizenship_renounce?.positionals).toEqual(['empire']);
+    expect(config.route).toEqual({ tool: 'spacemolt_citizenship', action: 'renounce', method: 'POST' });
+    expect(config.description).toContain('last');
+    expect(config.description).toContain('zero');
+    expect(config.description).toContain('restarts');
+    expect(config.description).toContain('Origin empire is unchanged');
+    expect(config.description).toContain('get_tax_estimate');
+    expect(config.description).toContain('get_empire_info');
+    expect(config.description).not.toContain('`');
+    expect(config.example).toBe('spacemolt citizenship_renounce solarian');
+    expect(config.seeAlso).toEqual(['citizenship_list', 'citizenship_apply', 'get_tax_estimate', 'get_empire_info']);
+
+    const help = captureHelp('citizenship renounce');
+    expect(help).toContain('citizenship renounce');
+    expect(help).toContain('last');
+    expect(help).toContain('zero');
+    expect(help).toContain('restarts');
+    expect(help).toContain('Origin empire is unchanged');
+    expect(help).toContain('spacemolt citizenship renounce solarian');
+    expect(help).toContain('See also: citizenship list, citizenship apply, get_tax_estimate, get_empire_info');
+    expect(help).toContain('empire -> target');
+    expect(help).not.toContain('spacemolt citizenship_renounce');
+    expect(help).not.toContain('`');
+  });
+
+  test('citizenship withdraw help documents pending refund without changing held citizenships', () => {
+    const config = COMMANDS.citizenship_withdraw;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('citizenship_withdraw command is missing from COMMANDS');
+    expect(config.usage).toBe('<empire>');
+    expect(config.args).toEqual(['empire']);
+    expect(config.aliases).toEqual({ empire: 'target' });
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.citizenship_withdraw?.positionals).toEqual(['empire']);
+    expect(config.route).toEqual({ tool: 'spacemolt_citizenship', action: 'withdraw', method: 'POST' });
+    expect(config.description).toContain('pending');
+    expect(config.description).toContain('refund');
+    expect(config.description).toContain('Does not change citizenships you already hold');
+    expect(config.description).not.toContain('`');
+    expect(config.example).toBe('spacemolt citizenship_withdraw solarian');
+    expect(config.seeAlso).toEqual(['citizenship_list', 'citizenship_apply', 'get_empire_info']);
+
+    const help = captureHelp('citizenship withdraw');
+    expect(help).toContain('citizenship withdraw');
+    expect(help).toContain('pending');
+    expect(help).toContain('refund');
+    expect(help).toContain('Does not change citizenships you already hold');
+    expect(help).toContain('spacemolt citizenship withdraw solarian');
+    expect(help).toContain('See also: citizenship list, citizenship apply, get_empire_info');
+    expect(help).not.toContain('spacemolt citizenship_withdraw');
+    expect(help).not.toContain('`');
+  });
+
   test('notification commands expose exactly the server-emitted type choices', () => {
     const emittedTypes = [...NOTIFICATION_TYPE_ENUM];
     expect(COMMANDS.notifications?.schema?.types?.enum).toEqual(emittedTypes);

@@ -76,6 +76,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   sell_wreck_modules: 'sell_wreck',
   scan_creature: 'scan',
   view_completed_mission_bounty: 'view_completed_mission',
+  citizenship_list_stateless: 'citizenship_list',
 };
 
 export interface FormatterGoldenCoverageReport {
