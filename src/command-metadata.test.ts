@@ -3022,16 +3022,57 @@ describe('command metadata', () => {
     expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
   });
 
-  test('mute_notifications help names support and HTTP-unaffected polling', () => {
+  test('mute_notifications help names support, chat.emergency opt-out, and HTTP-unaffected polling', () => {
+    const config = COMMANDS.mute_notifications;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('mute_notifications command is missing from COMMANDS');
+
+    expect(config.description).toContain('support');
+    expect(config.description).toContain('refueled_by');
+    expect(config.description).toContain('repaired_by');
+    expect(config.description).toContain('HTTP get_notifications is unaffected');
+    expect(config.description).toContain('chat.emergency');
+    expect(config.description).toContain('mission_id');
+    expect(config.description).toContain('nothing is assigned');
+    expect(config.description).toContain('hides the distress ping');
+    expect(config.description).toContain('gameserver 0.608.0');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toContain('auto-assign');
+    expect(config.description).not.toContain('still assigned');
+    expect(config.description).not.toContain('accept_mission');
+    expect(config.description).not.toContain('distress_signal');
+
+    expect(config.example).toContain('channels=');
+    expect(config.example).toContain('support');
+    expect(config.example).not.toContain('chat.emergency');
+
+    expect(config.schema?.channels?.description).toContain('support');
+    expect(config.schema?.channels?.description).toContain('chat.emergency');
+    expect(config.schema?.channels?.description).toContain('mission_id');
+    expect(config.schema?.channels?.description).toContain('nothing is assigned');
+    expect(config.schema?.channels?.description).toContain('hides the distress ping');
+    expect(config.schema?.channels?.description).toContain('HTTP polling is unaffected');
+    expect(config.schema?.channels?.description).not.toContain('`');
+    expect(config.schema?.channels?.description).not.toContain('still assigned');
+    expect(config.schema?.channels?.description).not.toContain('accept_mission');
+    expect(config.schema?.channels?.description).not.toContain('distress_signal');
+
     const help = captureHelp('mute_notifications');
     expect(help).toContain('support');
     expect(help).toContain('refueled_by');
     expect(help).toContain('repaired_by');
-    expect(help).toContain('get_notifications');
+    expect(help).toContain('HTTP get_notifications is unaffected');
+    expect(help).toContain('HTTP polling is unaffected');
     expect(help).toContain('channels=');
-    expect(COMMANDS.mute_notifications?.example).toContain('channels=');
-    expect(COMMANDS.mute_notifications?.example).toContain('support');
-    expect(COMMANDS.mute_notifications?.schema?.channels?.description).toContain('support');
+    expect(help).toContain('chat.emergency');
+    expect(help).toContain('mission_id');
+    expect(help).toContain('nothing is assigned');
+    expect(help).toContain('hides the distress ping');
+    expect(help).toContain('gameserver 0.608.0');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('still assigned');
+    expect(help).not.toContain('accept_mission');
+    expect(help).not.toContain('distress_signal');
   });
 
   test('get_action_log advertises explicit event arrays and polling cursors', () => {
