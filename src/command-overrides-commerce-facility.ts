@@ -24,11 +24,23 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt/get_active_missions',
   },
   accept_mission: {
+    usage: '<mission_id>  (board: docked at issuing base, or template_id=; distress rescue: from anywhere)',
+    description:
+      "Accept a mission from the station board, or claim a distress-response rescue (gameserver 0.608.0). Board contracts require docking at the issuing base. A distress rescue has no issuing base: pass the mission_id from the emergency broadcast or from the caller's distress_signal response, from anywhere, docked or not. First claim wins. A claimed rescue counts toward the 5-mission cap. Server-generated calls expire after 30 minutes; player calls expire in 3 hours.",
+    example: 'spacemolt accept_mission a3f9c21e8b04',
+    discoverWith: ['get_missions'],
+    seeAlso: ['get_missions', 'get_active_missions', 'distress_signal'],
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt/accept_mission',
     positionals: ['mission_id'],
     aliases: {
       mission_id: 'id',
+    },
+    schemaExtensions: {
+      id: {
+        description:
+          'Mission ID or template ID to accept (one of id/template_id required). For a distress rescue, this is the mission_id from the emergency broadcast or distress_signal response; claim from anywhere, docked or not.',
+      },
     },
   },
   complete_mission: {
@@ -60,12 +72,23 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt/completed_missions',
   },
   distress_signal: {
-    usage: '[fuel|repair|combat]  (broadcast emergency, 1hr cooldown)',
+    usage: '[fuel|repair|combat]  (claimable rescue, 1hr cooldown)',
+    description:
+      'Broadcast a fuel, repair, or combat emergency and post one claimable rescue (gameserver 0.608.0). Nobody is assigned it. The response carries mission_id; the first pilot to call accept_mission with that id takes the rescue, docked or not. mission_id is empty when responders_reached is 0 (nobody in range heard you). responders_reached is how many online pilots within 5 jumps heard the call, not how many are coming. Cannot be used while docked. One active distress at a time; 1-hour cooldown. Unclaimed player-call rescues expire in 3 hours (expires_seconds 10800), or earlier if you travel away under your own power. Omit type to default to fuel.',
+    example: 'spacemolt distress_signal fuel',
+    discoverWith: ['get_status'],
+    seeAlso: ['accept_mission', 'get_active_missions'],
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt/distress_signal',
     positionals: ['type'],
     aliases: {
       type: 'distress_type',
+    },
+    schemaExtensions: {
+      distress_type: {
+        description:
+          'Type of distress: fuel (out of fuel), repair (hull critically damaged), combat (under attack). Omit to default to fuel.',
+      },
     },
   },
   view_completed_mission: {

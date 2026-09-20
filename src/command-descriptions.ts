@@ -1,6 +1,7 @@
 export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   abandon_mission: 'Abandon an active mission',
-  accept_mission: 'Accept a mission from the mission board',
+  accept_mission:
+    "Accept a mission from the station board, or claim a distress-response rescue (gameserver 0.608.0). Board contracts require docking at the issuing base. A distress rescue has no issuing base: pass the mission_id from the emergency broadcast or from the caller's distress_signal response, from anywhere, docked or not. First claim wins. A claimed rescue counts toward the 5-mission cap. Server-generated calls expire after 30 minutes; player calls expire in 3 hours.",
   analyze_market: 'Get actionable trading insights at your current station',
   browse_ships: 'Browse ships listed for sale at a station',
   buy_insurance: 'Purchase ship insurance',
@@ -30,7 +31,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   decline_mission: 'Decline a mission and hear the NPC response.',
   delete_note: 'Permanently delete a note document you own',
   deploy_drone: 'Deploy a drone from your bay into space',
-  distress_signal: 'Broadcast a distress signal to nearby players for emergency rescue',
+  distress_signal:
+    'Broadcast a fuel, repair, or combat emergency and post one claimable rescue (gameserver 0.608.0). Nobody is assigned it. The response carries mission_id; the first pilot to call accept_mission with that id takes the rescue, docked or not. mission_id is empty when responders_reached is 0 (nobody in range heard you). responders_reached is how many online pilots within 5 jumps heard the call, not how many are coming. Cannot be used while docked. One active distress at a time; 1-hour cooldown. Unclaimed player-call rescues expire in 3 hours (expires_seconds 10800), or earlier if you travel away under your own power. Omit type to default to fuel.',
   estimate_purchase: 'Preview what buying would cost without executing',
   faction_accept_invite: 'Accept a faction invitation.',
   faction_accept_peace: 'Accept a peace proposal',
