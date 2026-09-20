@@ -1030,6 +1030,56 @@ export const getNotificationsSupportFixture = {
   ],
 };
 
+/** Emergency-channel chat poll: claimable rescue, empty mission_id, omitted optional fields. */
+export const getNotificationsEmergencyChatFixture = {
+  count: 3,
+  current_tick: 902800,
+  remaining: 0,
+  timestamp: 1779569000,
+  notifications: [
+    {
+      id: 'notif-emergency-1',
+      type: 'chat',
+      msg_type: 'chat_message',
+      timestamp: '2026-05-23T19:56:00.000Z',
+      data: {
+        channel: 'emergency',
+        sender: 'Phoenix',
+        content:
+          'MAYDAY: Phoenix is stranded at Sol Asteroid Belt in Sol with 0/120 fuel! Any pilots nearby, please help!',
+        distress_type: 'fuel',
+        mission_id: 'a3f9c21e8b04',
+        system: 'Sol',
+      },
+    },
+    {
+      id: 'notif-emergency-empty-id-1',
+      type: 'chat',
+      msg_type: 'chat_message',
+      timestamp: '2026-05-23T19:56:05.000Z',
+      data: {
+        channel: 'emergency',
+        sender: 'Phoenix',
+        content: 'MAYDAY: hull critical at Alfirk Gate.',
+        distress_type: 'repair',
+        mission_id: '',
+        system: 'Alfirk',
+      },
+    },
+    {
+      id: 'notif-emergency-omitted-1',
+      type: 'chat',
+      msg_type: 'chat_message',
+      timestamp: '2026-05-23T19:56:10.000Z',
+      data: {
+        channel: 'emergency',
+        sender: 'Marlowe',
+        content: 'MAYDAY: need fuel.',
+      },
+    },
+  ],
+};
+
 /** Mixed 0.597.1 typed-payload poll: cloak, complete_mission, error, fleet, and ok dock. */
 export const getNotificationsTypedPayloadsFixture = {
   count: 6,
@@ -1268,6 +1318,10 @@ export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntr
   get_notifications_support: {
     command: 'get_notifications',
     fixture: getNotificationsSupportFixture,
+  },
+  get_notifications_emergency_chat: {
+    command: 'get_notifications',
+    fixture: getNotificationsEmergencyChatFixture,
   },
   // Covers the GET /notifications alias command + empty poll path (shared formatter).
   notifications: {

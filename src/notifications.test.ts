@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { formatNotificationMessage } from './display/notifications';
 import {
   getNotificationsBattleDronesFixture,
+  getNotificationsEmergencyChatFixture,
   getNotificationsFacilitiesFixture,
   getNotificationsFixture,
   getNotificationsObservationFixture,
@@ -52,6 +53,30 @@ describe('notification formatting', () => {
         data: { channel: 'local', sender: 'Marlowe', content: 'Fuel rescue inbound.' },
       },
       snippets: ['[CHAT:local]', 'Marlowe: Fuel rescue inbound.'],
+    },
+    {
+      name: 'emergency chat message',
+      notification: {
+        type: 'chat',
+        msg_type: 'chat_message',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          channel: 'emergency',
+          sender: 'Phoenix',
+          content:
+            'MAYDAY: Phoenix is stranded at Sol Asteroid Belt in Sol with 0/120 fuel! Any pilots nearby, please help!',
+          distress_type: 'fuel',
+          mission_id: 'a3f9c21e8b04',
+          system: 'Sol',
+        },
+      },
+      snippets: [
+        '[CHAT:emergency]',
+        'fuel in Sol',
+        'mission_id=a3f9c21e8b04',
+        'Phoenix: MAYDAY:',
+        'Use: accept_mission id=a3f9c21e8b04',
+      ],
     },
     {
       name: 'combat update',
@@ -7979,6 +8004,204 @@ describe('notification formatting', () => {
       expect(JSON.stringify(verbose)).not.toContain('Dust Devil');
     });
 
+    test('chat_message emergency preview prints distress fields and accept_mission', () => {
+      const notification = {
+        type: 'chat',
+        msg_type: 'chat_message',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data: {
+          channel: 'emergency',
+          sender: 'Phoenix',
+          content:
+            'MAYDAY: Phoenix is stranded at Sol Asteroid Belt in Sol with 0/120 fuel! Any pilots nearby, please help!',
+          distress_type: 'fuel',
+          mission_id: 'a3f9c21e8b04',
+          system: 'Sol',
+        },
+      };
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('CHAT:emergency');
+      expect(preview.headline.startsWith('fuel in Sol · mission_id=a3f9c21e8b04 — Phoenix:')).toBe(true);
+      expect(preview.details).toEqual(['Use: accept_mission id=a3f9c21e8b04']);
+      const tableMessage = formatNotificationMessage(notification);
+      expect(tableMessage).toContain('fuel in Sol');
+      expect(tableMessage).toContain('mission_id=a3f9c21e8b04');
+      expect(tableMessageFromPreview(preview)).toContain('fuel in Sol');
+      expect(tableMessageFromPreview(preview)).toContain('mission_id=a3f9c21e8b04');
+      const inline = stripAnsi(formatNotification(notification).join('\n'));
+      expect(inline).toContain('[CHAT:emergency]');
+      expect(inline).toContain('Use: accept_mission id=a3f9c21e8b04');
+    });
+
+    test('chat_message emergency empty mission_id omits Use line', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'emergency',
+          sender: 'Phoenix',
+          content: 'MAYDAY: hull critical at Alfirk Gate.',
+          distress_type: 'repair',
+          mission_id: '',
+          system: 'Alfirk',
+        },
+      });
+      expect(preview.tag).toBe('CHAT:emergency');
+      expect(preview.headline).toBe('repair in Alfirk — Phoenix: MAYDAY: hull critical at Alfirk Gate.');
+      expect(preview.details).toEqual([]);
+      const output = `${preview.headline}\n${preview.details.join('\n')}`;
+      expect(output).not.toContain('accept_mission');
+      expect(output).not.toContain('mission_id=');
+    });
+
+    test('chat_message emergency omitted optional fields stays sender:content', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'emergency',
+          sender: 'Marlowe',
+          content: 'MAYDAY: need fuel.',
+        },
+      });
+      expect(preview.tag).toBe('CHAT:emergency');
+      expect(preview.headline).toBe('Marlowe: MAYDAY: need fuel.');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('chat_message local with emergency-shaped extra fields stays ordinary', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'local',
+          sender: 'Ibis',
+          content: 'Clear skies over Sol today.',
+          distress_type: 'fuel',
+          mission_id: 'a3f9c21e8b04',
+          system: 'Sol',
+        },
+      });
+      expect(preview.tag).toBe('CHAT:local');
+      expect(preview.headline).toBe('Ibis: Clear skies over Sol today.');
+      expect(preview.details).toEqual([]);
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('accept_mission');
+    });
+
+    test('chat_message Emergency capitalization stays ordinary chat', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'Emergency',
+          sender: 'Phoenix',
+          content: 'MAYDAY: need fuel.',
+          distress_type: 'fuel',
+          mission_id: 'a3f9c21e8b04',
+          system: 'Sol',
+        },
+      });
+      expect(preview.tag).toBe('CHAT:Emergency');
+      expect(preview.headline).toBe('Phoenix: MAYDAY: need fuel.');
+      expect(preview.details).toEqual([]);
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('accept_mission');
+    });
+
+    test('chat_message emergency malformed scalars omit identity fragments', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'emergency',
+          sender: 'Phoenix',
+          content: 'MAYDAY: need fuel.',
+          distress_type: null,
+          mission_id: { bad: true },
+          system: '   ',
+        },
+      });
+      expect(preview.tag).toBe('CHAT:emergency');
+      expect(preview.headline).toBe('Phoenix: MAYDAY: need fuel.');
+      expect(preview.details).toEqual([]);
+      expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      expectNoNestedJsonDump(JSON.stringify(preview));
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('Use:');
+      expect(`${preview.headline}\n${preview.details.join('\n')}`).not.toContain('accept_mission');
+
+      const numericId = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'emergency',
+          sender: 'Phoenix',
+          content: 'MAYDAY: need fuel.',
+          mission_id: 12,
+        },
+      });
+      expect(numericId.headline).toBe('Phoenix: MAYDAY: need fuel.');
+      expect(numericId.details).toEqual([]);
+      expectNoDiagnosticTokens(`${numericId.headline}\n${numericId.details.join('\n')}`);
+    });
+
+    test.each([
+      {
+        name: 'distress_type only',
+        data: { distress_type: 'combat' },
+        prefix: 'combat',
+        useLine: undefined,
+      },
+      {
+        name: 'system only',
+        data: { system: 'Sol' },
+        prefix: 'Sol',
+        useLine: undefined,
+      },
+      {
+        name: 'mission_id only',
+        data: { mission_id: 'abc' },
+        prefix: 'mission_id=abc',
+        useLine: 'Use: accept_mission id=abc',
+      },
+      {
+        name: 'distress_type with empty system and mission_id',
+        data: { distress_type: 'fuel', system: '', mission_id: '' },
+        prefix: 'fuel',
+        useLine: undefined,
+      },
+    ])('chat_message emergency partial identity: $name', ({ data, prefix, useLine }) => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: 'emergency',
+          sender: 'Phoenix',
+          content: 'MAYDAY: need fuel.',
+          ...data,
+        },
+      });
+      expect(preview.tag).toBe('CHAT:emergency');
+      expect(preview.headline).toBe(`${prefix} — Phoenix: MAYDAY: need fuel.`);
+      expect(preview.details).toEqual(useLine ? [useLine] : []);
+    });
+
+    test('chat_message emergency channel is trimmed for gate and tag', () => {
+      const preview = formatNotificationPreview({
+        type: 'chat',
+        msg_type: 'chat_message',
+        data: {
+          channel: ' emergency',
+          sender: 'Phoenix',
+          content: 'MAYDAY: need fuel.',
+          distress_type: 'fuel',
+          mission_id: 'abc',
+          system: 'Sol',
+        },
+      });
+      expect(preview.tag).toBe('CHAT:emergency');
+      expect(preview.headline).toBe('fuel in Sol · mission_id=abc — Phoenix: MAYDAY: need fuel.');
+      expect(preview.details).toEqual(['Use: accept_mission id=abc']);
+    });
+
     test('trade_offer_received pure preview includes prompts and credits details', () => {
       const preview = formatNotificationPreview({
         type: 'trade',
@@ -9423,6 +9646,55 @@ describe('notification formatting', () => {
       expect(repairedPreview.headline).toBe('Alice repaired you +8 (92/100)');
       expect(tableMessageFromPreview(refueledPreview)).toBe(refueledPreview.headline);
       expect(tableMessageFromPreview(repairedPreview)).toBe(repairedPreview.headline);
+    });
+  });
+
+  describe('0.608.0 emergency chat remainder poll fixture', () => {
+    const rows = getNotificationsEmergencyChatFixture.notifications;
+
+    test('every fixture msg_type hits its typed handler', () => {
+      expect(getNotificationsEmergencyChatFixture.count).toBe(rows.length);
+      expect(rows.map((notification) => notification.msg_type)).toEqual([
+        'chat_message',
+        'chat_message',
+        'chat_message',
+      ]);
+      for (const notification of rows) {
+        expect(notification.type).toBe('chat');
+        expect(hasPreviewHandler(notification.msg_type)).toBe(true);
+        expect(NOTIFICATION_TYPES).toContain(notification.msg_type);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).not.toBe('notification');
+        expectNoDiagnosticTokens(`${preview.headline}\n${preview.details.join('\n')}`);
+      }
+    });
+
+    test('claimable row table Message keeps mission_id in the prefix', () => {
+      const row = rows.find((entry) => entry.id === 'notif-emergency-1');
+      if (!row) throw new Error('expected emergency claimable fixture row');
+      const preview = formatNotificationPreview(row);
+      const message = formatNotificationMessage(row);
+      expect(message).toContain('fuel in Sol');
+      expect(message).toContain('mission_id=a3f9c21e8b04');
+      expect(preview.details).toContain('Use: accept_mission id=a3f9c21e8b04');
+      const cell = truncateCell(message, 120);
+      expect(cell).toContain('mission_id=a3f9c21e8b04');
+      expect(cell).not.toContain('Use:');
+    });
+
+    test('empty mission_id row does not suggest accept_mission', () => {
+      const row = rows.find((entry) => entry.id === 'notif-emergency-empty-id-1');
+      if (!row) throw new Error('expected emergency empty-id fixture row');
+      const preview = formatNotificationPreview(row);
+      expect(preview.headline).toContain('repair in Alfirk');
+      expect(preview.details).toEqual([]);
+      expect(formatNotificationMessage(row)).not.toContain('accept_mission');
+    });
+
+    test('omitted-fields row is sender:content', () => {
+      const row = rows.find((entry) => entry.id === 'notif-emergency-omitted-1');
+      if (!row) throw new Error('expected emergency omitted-fields fixture row');
+      expect(formatNotificationMessage(row)).toBe('Marlowe: MAYDAY: need fuel.');
     });
   });
 

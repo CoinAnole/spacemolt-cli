@@ -79,6 +79,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - Table output for `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) and the `get_missions` station board now prints the server-issued description in full after the list (gameserver 0.606.3). The truncated board Description column is replaced by those follow-on lines. Missing descriptions are omitted; present strings print in full.
 - `distress_signal` / `accept_mission` help documents the gameserver 0.608.0 claimable rescue: one mission_id, first accept_mission wins (docked or not), counts toward the 5-mission cap. mission_id is empty when nobody heard the call. **No parser change.**
 - `distress_signal` table output prints `Mission ID` and `Responders reached` instead of `Missions sent` (gameserver 0.608.0). `Responders reached` is how many online pilots within 5 jumps heard the broadcast, not how many are coming. Empty `mission_id` (nobody in range; no rescue posted) prints `Mission ID: none`. `Expires in:` still prints when the server sends `expires_seconds`, including that 0-heard path. **No parser change.**
+- `chat_message` previews on `channel=emergency` print `distress_type`, `system`, and `mission_id` when present, and suggest `accept_mission id=…` when `mission_id` is non-empty (gameserver 0.608.0 claimable rescue). Empty `mission_id` omits the claim prompt. Non-emergency chat is unchanged. **No parser change.**
 
 ### Combat
 
