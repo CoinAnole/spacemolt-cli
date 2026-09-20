@@ -99,6 +99,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - HTTP 429 `--json` output is now `{ error: { code, message, retry_after?, limit?, scope? } }` instead of a string `error` with leftover top-level `limit` / `message`.
 - `faction_facility_owned` (`POST /api/v2/spacemolt_facility/faction_owned`, gameserver 0.606.2): `total_rent_per_cycle`, `arrears_owed`, and `note` moved into `faction_rent`. Scripts reading `--json` / `--yaml` must use `faction_rent.total_rent_per_cycle` (and so on). Nothing was removed, only relocated. The object also has required `facilities` and `est_rent_per_day`, plus optional `grace_cycles`.
+- Gameserver 0.608.2 reordered JSON keys inside `structuredContent` on the v2 HTTP API. Field names, values, and types are unchanged. `--field` / `--fields` / `--jq` already read by name. Live `--json` / `--yaml` / `--structured` / `--keys` / `--search-keys` re-emit keys in the server's new insertion order; human map-line order (for example Standings) may follow that order too. Scripts must read `--json` by name, not by position. This CLI still parses HTTP JSON with `response.json()` (IEEE 754 `Number`); whole numbers larger than 2^53 still round at the client.
 
 ### Errors
 
