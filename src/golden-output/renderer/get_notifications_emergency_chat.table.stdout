@@ -1,0 +1,9 @@
+count 3
+
+=== Notifications ===
+
+  Timestamp           | Type         | Message                                                                                                                 
+  --------------------+--------------+-------------------------------------------------------------------------------------------------------------------------
+  2026-05-23 19:56:00 | chat_message | fuel in Sol · mission_id=a3f9c21e8b04 — Phoenix: MAYDAY: Phoenix is stranded at Sol Asteroid Belt in Sol with 0/120 f...
+  2026-05-23 19:56:05 | chat_message | repair in Alfirk — Phoenix: MAYDAY: hull critical at Alfirk Gate.                                                       
+  2026-05-23 19:56:10 | chat_message | Marlowe: MAYDAY: need fuel.                                                                                             

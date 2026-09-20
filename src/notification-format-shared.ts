@@ -1619,10 +1619,30 @@ function previewChatMessage(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  const channel = scalarOr(data.channel, 'local');
+  const channel = scalarOr(data.channel, 'local').trim();
   const sender = scalarOr(data.sender, 'Unknown');
   const content = data.content === undefined || data.content === null ? '' : String(data.content);
-  return headlinePreview(`CHAT:${channel}`, `${sender}: ${content}`, options);
+  const body = `${sender}: ${content}`;
+  const tag = `CHAT:${channel}`;
+
+  if (channel !== 'emergency') {
+    return headlinePreview(tag, body, options);
+  }
+
+  // Emergency-only OpenAPI fields; empty mission_id omits the claim prompt.
+  const distressType = nonEmptyString(data.distress_type);
+  const system = nonEmptyString(data.system);
+  const missionId = nonEmptyString(data.mission_id);
+
+  const identity: string[] = [];
+  if (distressType !== undefined && system !== undefined) identity.push(`${distressType} in ${system}`);
+  else if (distressType !== undefined) identity.push(distressType);
+  else if (system !== undefined) identity.push(system);
+  if (missionId !== undefined) identity.push(`mission_id=${missionId}`);
+
+  const headline = identity.length > 0 ? `${identity.join(' · ')} — ${body}` : body;
+  const details = missionId !== undefined ? [`Use: accept_mission id=${missionId}`] : [];
+  return details.length > 0 ? detailPreview(tag, headline, details, options) : headlinePreview(tag, headline, options);
 }
 
 function previewTradeOfferReceived(
