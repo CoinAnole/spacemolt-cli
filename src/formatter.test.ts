@@ -8963,3 +8963,28 @@ describe('structuredContent formatters', () => {
     expect(failures).toEqual([]);
   });
 });
+
+describe('get_status top-level structuredContent key order', () => {
+  test('table output and --fields projection ignore top-level source insertion order', () => {
+    const original = getStatusFixture;
+    // Standings joins Object.entries in insertion order; only permute top-level keys.
+    const shuffled = Object.fromEntries(Object.entries(original).reverse()) as typeof original;
+
+    expect(JSON.stringify(shuffled)).not.toBe(JSON.stringify(original));
+
+    const tableOptions = globalOptions({ plain: true, noTimestamp: true });
+    const originalTable = renderStructuredResult('get_status', original, tableOptions);
+    const shuffledTable = renderStructuredResult('get_status', shuffled, tableOptions);
+
+    expect(shuffledTable.stdout).toEqual(originalTable.stdout);
+    expect(shuffledTable.stderr).toEqual(originalTable.stderr);
+
+    const fieldOptions = globalOptions({ fields: ['player.username', 'ship.fuel'] });
+    const originalProjected = renderStructuredResult('get_status', original, fieldOptions);
+    const shuffledProjected = renderStructuredResult('get_status', shuffled, fieldOptions);
+    const expectedProjection = '{"player.username":"Marlowe","ship.fuel":80}';
+
+    expect(originalProjected.stdout.join('\n')).toBe(expectedProjection);
+    expect(shuffledProjected.stdout.join('\n')).toBe(expectedProjection);
+  });
+});
