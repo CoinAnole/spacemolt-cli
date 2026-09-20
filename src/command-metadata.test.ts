@@ -638,6 +638,167 @@ describe('command metadata', () => {
     expect(help).not.toMatch(/\btravel\b/);
   });
 
+  test('distress_signal help documents the 0.608.0 claimable rescue', () => {
+    const config = COMMANDS.distress_signal;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('distress_signal command is missing from COMMANDS');
+
+    expect(config.args).toEqual(['type']);
+    expect(config.aliases).toEqual({ type: 'distress_type' });
+    expect(config.route).toEqual({ tool: 'spacemolt', action: 'distress_signal', method: 'POST' });
+    expect(config.required ?? []).toEqual([]);
+    expect(Object.keys(config.schema ?? {}).sort()).toEqual(['distress_type']);
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.distress_signal?.positionals).toEqual(['type']);
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.distress_signal?.aliases).toEqual({ type: 'distress_type' });
+
+    expect(config.description).toContain('gameserver 0.608.0');
+    expect(config.description).toContain('claimable');
+    expect(config.description).toContain('mission_id');
+    expect(config.description).toContain('accept_mission');
+    expect(config.description).toContain('docked or not');
+    expect(config.description).toContain('responders_reached');
+    expect(config.description).toContain('0');
+    expect(config.description).toContain('within 5 jumps');
+    expect(config.description).toContain('Cannot be used while docked');
+    expect(config.description).toContain('1-hour');
+    expect(config.description).toMatch(/Unclaimed|unclaimed/);
+    expect(config.description).toContain('3 hours');
+    expect(config.description).toContain('10800');
+    expect(config.description).toContain('Omit type');
+    expect(config.description).toContain('fuel');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toContain('auto-assign');
+    expect(config.description).not.toContain('missions_sent');
+    expect(config.description).not.toContain('Missions sent');
+    expect(config.description).not.toContain('get_chat_history');
+    expect(config.description).not.toContain('must reach this POI');
+    expect(config.description).not.toContain('mute_notifications');
+    expect(config.description).not.toContain('chat.emergency');
+    expect(CURATED_COMMAND_DESCRIPTIONS.distress_signal).toBe(config.description);
+
+    expect(config.usage).toContain('[fuel|repair|combat]');
+    expect(config.usage).toContain('claimable rescue');
+    expect(config.example).toBe('spacemolt distress_signal fuel');
+    expect(config.discoverWith).toEqual(['get_status']);
+    expect(config.seeAlso).toEqual(['accept_mission', 'get_active_missions']);
+    expect(config.schema?.distress_type?.description).toContain('Omit to default to fuel');
+
+    for (const related of [...(config.discoverWith ?? []), ...(config.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `distress_signal related command "${related}"`).toBe(true);
+    }
+
+    const help = captureHelp('distress_signal');
+    expect(help).toContain('gameserver 0.608.0');
+    expect(help).toContain('claimable');
+    expect(help).toContain('mission_id');
+    expect(help).toContain('accept_mission');
+    expect(help).toContain('docked or not');
+    expect(help).toContain('responders_reached');
+    expect(help).toContain('within 5 jumps');
+    expect(help).toContain('Cannot be used while docked');
+    expect(help).toContain('1-hour');
+    expect(help).toMatch(/Unclaimed|unclaimed/);
+    expect(help).toContain('3 hours');
+    expect(help).toContain('10800');
+    expect(help).toContain('Omit type');
+    expect(help).toContain('[fuel|repair|combat]');
+    expect(help).toContain('claimable rescue');
+    expect(help).toContain('spacemolt distress_signal fuel');
+    expect(help).toContain('Fields:');
+    expect(help).toContain('Omit to default to fuel');
+    expect(help).toContain('See also: accept_mission');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('auto-assign');
+    expect(help).not.toContain('missions_sent');
+    expect(help).not.toContain('Missions sent');
+    expect(help).not.toContain('get_chat_history');
+    expect(help).not.toContain('must reach this POI');
+    expect(help).not.toContain('mute_notifications');
+    expect(help).not.toContain('chat.emergency');
+  });
+
+  test('accept_mission help documents claiming a distress rescue from anywhere', () => {
+    const config = COMMANDS.accept_mission;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('accept_mission command is missing from COMMANDS');
+
+    expect(config.args).toEqual(['mission_id']);
+    expect(config.aliases).toEqual({ mission_id: 'id' });
+    expect(config.route).toEqual({ tool: 'spacemolt', action: 'accept_mission', method: 'POST' });
+    expect(config.required ?? []).toEqual([]);
+    expect(Object.keys(config.schema ?? {}).sort()).toEqual(['id', 'template_id']);
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.accept_mission?.positionals).toEqual(['mission_id']);
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.accept_mission?.aliases).toEqual({ mission_id: 'id' });
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.accept_mission?.required).toBeUndefined();
+
+    expect(config.description).toContain('gameserver 0.608.0');
+    expect(config.description).toContain('issuing base');
+    expect(config.description).toContain('distress');
+    expect(config.description).toContain('mission_id');
+    expect(config.description).toContain('emergency broadcast');
+    expect(config.description).toContain('distress_signal');
+    expect(config.description).toContain('docked or not');
+    expect(config.description).toContain('First claim');
+    expect(config.description).toContain('5-mission');
+    expect(config.description).toContain('30 minutes');
+    expect(config.description).toContain('3 hours');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toContain('auto-assign');
+    expect(config.description).not.toContain('get_chat_history');
+    expect(config.description).not.toContain('<args...>');
+    expect(config.description).not.toContain('must reach this POI');
+    expect(config.description).not.toContain('travelling to any point of interest');
+    expect(config.description).not.toContain('template_id');
+    expect(CURATED_COMMAND_DESCRIPTIONS.accept_mission).toBe(config.description);
+
+    expect(config.usage).toBe(
+      '<mission_id>  (board: docked at issuing base, or template_id=; distress rescue: from anywhere)',
+    );
+    expect(config.usage).toContain('<mission_id>');
+    expect(config.usage).toContain('template_id=');
+    expect(config.example).toBe('spacemolt accept_mission a3f9c21e8b04');
+    expect(config.discoverWith).toEqual(['get_missions']);
+    expect(config.seeAlso).toEqual(['get_missions', 'get_active_missions', 'distress_signal']);
+    expect(config.seeAlso).not.toContain('travel');
+    expect(config.schema?.id?.description).toContain('distress');
+    expect(config.schema?.id?.description).toContain('mission_id from the emergency broadcast');
+    expect(config.schema?.id?.description).toContain('docked or not');
+    expect(config.schema?.template_id?.description).toBe(
+      'Mission template ID to accept (takes priority over mission_id)',
+    );
+    expect(config.schema?.template_id?.description).not.toMatch(/distress/i);
+
+    for (const related of [...(config.discoverWith ?? []), ...(config.seeAlso ?? [])]) {
+      expect(registryHasRelatedCommand(related), `accept_mission related command "${related}"`).toBe(true);
+    }
+
+    const help = captureHelp('accept_mission');
+    expect(help).toContain('gameserver 0.608.0');
+    expect(help).toContain('issuing base');
+    expect(help).toContain('distress');
+    expect(help).toContain('mission_id');
+    expect(help).toContain('emergency broadcast');
+    expect(help).toContain('distress_signal');
+    expect(help).toContain('docked or not');
+    expect(help).toContain('First claim');
+    expect(help).toContain('5-mission');
+    expect(help).toContain('30 minutes');
+    expect(help).toContain('3 hours');
+    expect(help).toContain('<mission_id>');
+    expect(help).toContain('template_id=');
+    expect(help).toContain('spacemolt accept_mission a3f9c21e8b04');
+    expect(help).toContain('Fields:');
+    expect(help).toContain('id - Mission ID or template ID to accept');
+    expect(help).toContain('For a distress rescue');
+    expect(help).toContain('See also: get_missions, get_active_missions, distress_signal');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('auto-assign');
+    expect(help).not.toContain('get_chat_history');
+    expect(help).not.toContain('<args...>');
+    expect(help).not.toContain('must reach this POI');
+    expect(help).not.toContain('travelling to any point of interest');
+  });
+
   test('attack help documents persistent battle semantics and repeat-attack risks', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.attack;
     expect(config?.usage).toMatch(/player.*pirate.*empire NPC.*wildlife.*intact prize.*station/i);

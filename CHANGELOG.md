@@ -77,6 +77,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - Table output for `jump`, `dock`, `mine`, `buy`, `sell`, `create_buy_order`, `create_sell_order`, `sell_wreck`, `scrap_wreck`, `survey_system`, and `complete_mission` now prints the Active Missions table when the server includes envelope `missions` (gameserver 0.605.3; `complete_mission` remaining-list is the same envelope). The section is omitted when unchanged, and snapshot commands such as `get_status` do not reprint it. Survey stops count in any order. Already parked in a survey mission's final system still needs a jump out and back. Kill and crafting still require `get_active_missions`. **No parser change.**
 - `dock` table output also prints envelope `cargo` when present, so mission cargo handed on arrival is visible without `get_cargo`. An explicit empty array means the hold emptied; an absent key means unchanged.
 - Table output for `get_active_missions` (and the post-action `accept_mission` / `abandon_mission` re-list) and the `get_missions` station board now prints the server-issued description in full after the list (gameserver 0.606.3). The truncated board Description column is replaced by those follow-on lines. Missing descriptions are omitted; present strings print in full.
+- `distress_signal` / `accept_mission` help documents the gameserver 0.608.0 claimable rescue: one mission_id, first accept_mission wins (docked or not), counts toward the 5-mission cap. mission_id is empty when nobody heard the call. **No parser change.**
 
 ### Combat
 
