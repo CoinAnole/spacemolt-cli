@@ -81,6 +81,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `distress_signal` table output prints `Mission ID` and `Responders reached` instead of `Missions sent` (gameserver 0.608.0). `Responders reached` is how many online pilots within 5 jumps heard the broadcast, not how many are coming. Empty `mission_id` (nobody in range; no rescue posted) prints `Mission ID: none`. `Expires in:` still prints when the server sends `expires_seconds`, including that 0-heard path. **No parser change.**
 - `chat_message` previews on `channel=emergency` print `distress_type`, `system`, and `mission_id` when present, and suggest `accept_mission id=…` when `mission_id` is non-empty (gameserver 0.608.0 claimable rescue). Empty `mission_id` omits the claim prompt. Non-emergency chat is unchanged. **No parser change.**
 
+### Chat
+
+- `get_chat_history` help lists `emergency` as read-only MAYDAY history (gameserver 0.608.0). Use it to reread distress text. The `mission_id` for `accept_mission` comes from the live emergency broadcast, not from history. **No parser change.**
+
 ### Combat
 
 - `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.

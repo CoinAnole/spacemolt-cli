@@ -3313,6 +3313,13 @@ describe('help output branches', () => {
     expect(output).toMatch(/^ {2}use_item /m);
   });
 
+  test('command search for MAYDAY finds get_chat_history', () => {
+    const capture = captureWriter();
+    showCommandSearch('MAYDAY', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}get_chat_history /m);
+  });
+
   test('command search for fleet triage finds treat_personnel', () => {
     const capture = captureWriter();
     showCommandSearch('fleet triage', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
