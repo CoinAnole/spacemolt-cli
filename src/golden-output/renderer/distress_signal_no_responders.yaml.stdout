@@ -6,7 +6,7 @@ details:
   system_name: Sol
   poi: earth_station
   poi_name: "Earth Station"
-  mission_id: a3f9c21e8b04
-  responders_reached: 3
+  mission_id: ""
+  responders_reached: 0
   expires_seconds: 10800
   message: "MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!"

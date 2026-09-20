@@ -68,6 +68,8 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('get_missions_community');
     expect(report.requiredCoverageKeys).toContain('faction_list_missions_empty');
     expect(report.highValueFixtureLabels).toContain('faction_list_missions_empty');
+    expect(report.requiredCoverageKeys).toContain('distress_signal_no_responders');
+    expect(report.highValueFixtureLabels).toContain('distress_signal_no_responders');
     expect(report.requiredCoverageKeys).toContain('get_active_missions_bounty');
     expect(report.highValueFixtureLabels).toContain('get_active_missions_bounty');
     expect(report.requiredCoverageKeys).toContain('get_active_missions_community');

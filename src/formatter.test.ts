@@ -25,6 +25,7 @@ import {
   createSellOrderFixture,
   declineMissionFixture,
   distressSignalFixture,
+  distressSignalNoRespondersFixture,
   EXCHANGE_MISSION_DESCRIPTION,
   empireInfoFixture,
   factionCreateBuyOrderBulkFixture,
@@ -6554,9 +6555,31 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Distress Signal ===');
     expect(stdout).toContain('Type: fuel');
     expect(stdout).toContain('Location: Earth Station (earth_station) @ Sol (sol)');
-    expect(stdout).toContain('Missions sent: 3');
+    expect(stdout).toContain('Mission ID: a3f9c21e8b04');
+    expect(stdout).toContain('Responders reached: 3');
     expect(stdout).toContain('Expires in: 10800s');
-    expect(stdout).toContain('Distress signal broadcast. Nearby captains may receive rescue missions.');
+    expect(stdout).toContain(
+      'MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!',
+    );
+    expect(stdout).not.toContain('Missions sent');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('distress_signal formats 0-heard empty mission_id without raw dump', () => {
+    // Expires in: still prints when no rescue was posted; expires_seconds is required.
+    const { stdout, stderr } = captureStructuredOutput('distress_signal', distressSignalNoRespondersFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Distress Signal ===');
+    expect(stdout).toContain('Type: fuel');
+    expect(stdout).toContain('Location: Earth Station (earth_station) @ Sol (sol)');
+    expect(stdout).toContain('Mission ID: none');
+    expect(stdout).toContain('Responders reached: 0');
+    expect(stdout).toContain('Expires in: 10800s');
+    expect(stdout).toContain(
+      'MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!',
+    );
+    expect(stdout).not.toContain('Missions sent');
     expect(stdout).not.toContain('=== Response ===');
   });
 

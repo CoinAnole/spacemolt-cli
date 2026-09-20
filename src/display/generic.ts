@@ -1264,7 +1264,9 @@ export const genericFormatters = [
   formatter(
     (r) => {
       if (r.action !== 'distress_signal' && r.distress_type === undefined) return false;
-      if (r.distress_type === undefined && r.missions_sent === undefined) return false;
+      if (r.distress_type === undefined && r.mission_id === undefined && r.responders_reached === undefined) {
+        return false;
+      }
 
       emitLine(`\n${c.bright}=== Distress Signal ===${c.reset}`);
       if (r.distress_type !== undefined) emitLine(`Type: ${r.distress_type}`);
@@ -1277,7 +1279,10 @@ export const genericFormatters = [
         const location = poiLabel && systemLabel ? `${poiLabel} @ ${systemLabel}` : (poiLabel ?? systemLabel);
         emitLine(`Location: ${location}`);
       }
-      if (r.missions_sent !== undefined) emitLine(`Missions sent: ${r.missions_sent}`);
+      if (r.mission_id !== undefined) {
+        emitLine(`Mission ID: ${r.mission_id === '' ? 'none' : r.mission_id}`);
+      }
+      if (r.responders_reached !== undefined) emitLine(`Responders reached: ${r.responders_reached}`);
       if (r.expires_seconds !== undefined) emitLine(`Expires in: ${r.expires_seconds}s`);
       if (typeof r.message === 'string' && r.message) emitLine(r.message);
       return true;
