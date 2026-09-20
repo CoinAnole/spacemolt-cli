@@ -690,9 +690,25 @@ export const distressSignalFixture = {
     system_name: 'Sol',
     poi: 'earth_station',
     poi_name: 'Earth Station',
-    missions_sent: 3,
+    mission_id: 'a3f9c21e8b04',
+    responders_reached: 3,
     expires_seconds: 10800,
-    message: 'Distress signal broadcast. Nearby captains may receive rescue missions.',
+    message: 'MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!',
+  },
+};
+
+export const distressSignalNoRespondersFixture = {
+  details: {
+    action: 'distress_signal',
+    distress_type: 'fuel',
+    system: 'sol',
+    system_name: 'Sol',
+    poi: 'earth_station',
+    poi_name: 'Earth Station',
+    mission_id: '',
+    responders_reached: 0,
+    expires_seconds: 10800,
+    message: 'MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!',
   },
 };
 
@@ -1428,6 +1444,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   accept_mission: { command: 'accept_mission', fixture: acceptMissionPostActionFixture },
   abandon_mission: { command: 'abandon_mission', fixture: abandonMissionPostActionFixture },
   distress_signal: { command: 'distress_signal', fixture: distressSignalFixture },
+  distress_signal_no_responders: { command: 'distress_signal', fixture: distressSignalNoRespondersFixture },
   craft: { command: 'craft', fixture: craftQueuedFixture },
   craft_retarget: { command: 'craft', fixture: craftRetargetFixture },
   craft_queue: { command: 'craft', fixture: craftQueueFixture },
