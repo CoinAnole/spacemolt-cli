@@ -403,7 +403,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   mute_notifications: {
     usage: '<channels>',
     description:
-      'Mute WebSocket push channels (HTTP get_notifications is unaffected). support covers ally refueled_by / repaired_by pings. See get_notification_settings for the catalog.',
+      'Mute WebSocket push channels (HTTP get_notifications is unaffected). support covers ally refueled_by / repaired_by pings. Muting chat.emergency opts you out of distress calls entirely (gameserver 0.608.0): it hides the distress ping and the mission_id needed to claim the rescue; nothing is assigned either way; HTTP get_notifications is unaffected. See get_notification_settings for the catalog.',
     example: 'spacemolt mute_notifications channels=chat.system,support',
     seeAlso: ['get_notification_settings', 'unmute_notifications'],
     category: 'Player settings',
@@ -413,7 +413,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     schemaExtensions: {
       channels: {
         description:
-          'WebSocket mute channels (e.g. chat.system, battle_alerts, support). Catalog: get_notification_settings. HTTP polling is unaffected; filter with get_notifications types= instead.',
+          'WebSocket mute channels (e.g. chat.system, battle_alerts, support, chat.emergency). Muting chat.emergency hides the distress ping and the mission_id needed to claim the rescue; nothing is assigned either way. Catalog: get_notification_settings. HTTP polling is unaffected; filter with get_notifications types= instead.',
       },
     },
   },
