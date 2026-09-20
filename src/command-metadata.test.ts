@@ -799,6 +799,88 @@ describe('command metadata', () => {
     expect(help).not.toContain('travelling to any point of interest');
   });
 
+  test('get_chat_history help lists emergency as read-only MAYDAY history', () => {
+    const config = COMMANDS.get_chat_history;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_chat_history command is missing from COMMANDS');
+
+    expect(config.args).toEqual(['channel', 'limit', 'before']);
+    expect(config.aliases).toEqual({ channel: 'target' });
+    expect(config.route).toEqual({
+      tool: 'spacemolt_social',
+      action: 'get_chat_history',
+      method: 'POST',
+    });
+    expect(config.seeAlso).toEqual(['chat']);
+    expect(config.schema?.target?.enum).toEqual(['system', 'local', 'faction', 'private', 'emergency']);
+    expect(Object.keys(config.schema ?? {}).sort()).toEqual(['after', 'before', 'limit', 'target', 'target_id']);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.get_chat_history?.positionals).toEqual(['channel', 'limit', 'before']);
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_chat_history).toBeUndefined();
+
+    expect(config.description).toContain('emergency');
+    expect(config.description).toContain('read-only');
+    expect(config.description).toContain('MAYDAY');
+    expect(config.description).toContain('mission_id');
+    expect(config.description).toContain('accept_mission');
+    expect(config.description).toContain('live emergency broadcast');
+    expect(config.description).toContain('not from this history');
+    expect(config.description).toContain('gameserver 0.608.0');
+    expect(config.description).not.toContain('\n');
+
+    expect(config.usage).toContain('emergency');
+    expect(config.usage).toContain('read-only MAYDAY history');
+    expect(config.usage).toContain('(channels: local, system, faction, private, emergency');
+    expect(config.usage).not.toContain('mission_id');
+    expect(config.usage).not.toContain('accept_mission');
+    expect(config.usage).not.toContain('live emergency broadcast');
+    expect(config.usage).not.toContain('not from this history');
+    expect(config.usage).not.toContain('gameserver 0.608.0');
+
+    expect(config.example).toBe('spacemolt get_chat_history local 20; spacemolt get_chat_history emergency');
+    expect(config.example).not.toContain('mission_id');
+    expect(config.example).not.toContain('accept_mission');
+    expect(config.example).not.toContain('live emergency broadcast');
+    expect(config.example).not.toContain('not from this history');
+    expect(config.example).not.toContain('gameserver 0.608.0');
+
+    const forbidden = [
+      '`',
+      'auto-assign',
+      'mute_notifications',
+      'chat.emergency',
+      'get_notifications',
+      'distress_signal',
+      'distress_type',
+      'missions_sent',
+      'Missions sent',
+      '<args...>',
+    ];
+    for (const phrase of forbidden) {
+      expect(config.description).not.toContain(phrase);
+      expect(config.usage).not.toContain(phrase);
+      expect(config.example).not.toContain(phrase);
+    }
+
+    const help = captureHelp('get_chat_history');
+    expect(help).toContain('emergency');
+    expect(help).toContain('read-only');
+    expect(help).toContain('MAYDAY');
+    expect(help).toContain('mission_id');
+    expect(help).toContain('accept_mission');
+    expect(help).toContain('live emergency broadcast');
+    expect(help).toContain('not from this history');
+    expect(help).toContain('gameserver 0.608.0');
+    expect(help).toContain('read-only MAYDAY history');
+    expect(help).toContain('(channels: local, system, faction, private, emergency');
+    expect(help).toContain('spacemolt get_chat_history local 20; spacemolt get_chat_history emergency');
+    expect(help).toContain('target (system|local|faction|private|emergency)');
+    expect(help).toContain('Chat channel to get history for');
+    expect(help).toContain('See also: chat');
+    for (const phrase of forbidden) {
+      expect(help).not.toContain(phrase);
+    }
+  });
+
   test('attack help documents persistent battle semantics and repeat-attack risks', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.attack;
     expect(config?.usage).toMatch(/player.*pirate.*empire NPC.*wildlife.*intact prize.*station/i);
