@@ -137,7 +137,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   refit_ship: 'Refit your active ship to its latest class specifications',
   release_tow: 'Release a towed wreck at your current location',
   recruit_personnel: 'Recruit fit crew and marines at a station personnel service',
-  reload: 'Reload a weapon magazine from ammo in cargo. Costs a tick; other battle commands do not.',
+  reload:
+    'Reload one magazine, or up to 50 weapons with weapons=JSON, in one tick. Ammo names inside the array resolve; weapon instance ids do not. Other battle commands do not cost a tick.',
   repair:
     'Repair hull at a station, with kits, or on another ship (named target=). repaired is hull actually restored.',
   scrap_ship: 'Permanently destroy a stored ship you no longer want.',

@@ -168,9 +168,13 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     },
   },
   reload: {
-    usage: '<weapon_instance_id> <ammo_item_id>',
+    usage:
+      '[weapon_instance_id] [ammo_item_id] [weapons=JSON]  (bulk: pass weapons=[{weapon_instance_id, ammo_item_id?}, ...] and omit weapon_instance_id and ammo_item_id; max 50; one tick)',
     description:
-      'Reload a weapon magazine from ammo in cargo. This is the only battle command that costs a tick; advance, retreat, stance, target, and engage do not.',
+      'Reload one weapon magazine from ammo in cargo, or pass weapons=JSON to reload up to 50 weapons in one action. Each entry is {weapon_instance_id, ammo_item_id?}; an entry may omit ammo_item_id for ammo_from_cargo weapons (junk auto-select). Entries are independent — each succeeds or fails on its own. Omit weapon_instance_id and ammo_item_id when using weapons (those are the single-weapon arguments, sent as id and target). Inside the array the keys stay weapon_instance_id and ammo_item_id. ammo_item_id accepts an item id or a cached display name, same as the top-level ammo argument. weapon_instance_id is not resolved. This is the only battle command that costs a tick — one tick for a single reload or for the whole batch; advance, retreat, stance, target, and engage do not.',
+    example:
+      'spacemolt reload weapon-1 ammo_kinetic_small; bulk: spacemolt reload weapons=\'[{"weapon_instance_id":"weapon-1","ammo_item_id":"ammo_kinetic_small"},{"weapon_instance_id":"weapon-2"}]\'',
+    discoverWith: ['get_ship', 'get_cargo'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/reload',
     positionals: ['weapon_instance_id', 'ammo_item_id'],

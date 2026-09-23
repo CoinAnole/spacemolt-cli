@@ -93,6 +93,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `get_battle_status` table output prints `Latch` from `combat_state.latch_status` while you are latching onto a target (gameserver 0.609.4). `shields_holding` means keep the target's shields down; `out_of_range` means close to point-blank first. When both gates are shut the field is `out_of_range`. Omitted once marines are aboard, omitted for the ship being boarded, and omitted when you are not latching. Not the Boarding table Progress column. Help names the same answers. **No parser change.**
 - `reload` table output shows per-weapon success and failure for a bulk reload (gameserver 0.609.0). Mixed batches stay exit 0. Single-weapon text is unchanged. **No parser change.**
 - `reload` ammo display names inside `weapons` resolve like the top-level ammo argument. Weapon instance ids stay literal. **No parser change.**
+- `help reload` documents `weapons=[{weapon_instance_id, ammo_item_id?}]`, max 50, one tick for the batch, omit the single-weapon arguments, ammo display names inside the array resolve, weapon instance ids do not. **No parser change.**
 
 ### Personnel
 
