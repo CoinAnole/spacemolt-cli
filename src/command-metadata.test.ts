@@ -957,7 +957,57 @@ describe('command metadata', () => {
     expect(fullHelp).toContain('Retreat from battle (no tick)');
     expect(fullHelp).toContain('Set stance (fire/evade/brace/flee/board; no tick)');
     expect(fullHelp).toContain('Focus by ID or name (any combatant; no tick)');
-    expect(fullHelp).toContain('Reload weapon with ammo (costs a tick)');
+    expect(fullHelp).toContain('Reload one magazine, or weapons=JSON (costs a tick)');
+  });
+
+  test('reload help documents weapons=JSON without a third positional or --weapons', () => {
+    const usage =
+      '[weapon_instance_id] [ammo_item_id] [weapons=JSON]  (bulk: pass weapons=[{weapon_instance_id, ammo_item_id?}, ...] and omit weapon_instance_id and ammo_item_id; max 50; one tick)';
+    const example =
+      'spacemolt reload weapon-1 ammo_kinetic_small; bulk: spacemolt reload weapons=\'[{"weapon_instance_id":"weapon-1","ammo_item_id":"ammo_kinetic_small"},{"weapon_instance_id":"weapon-2"}]\'';
+    const reload = BUNDLED_COMMAND_REGISTRY.allCommands.reload;
+    expect(reload).toBeDefined();
+    if (!reload) throw new Error('reload command is missing');
+
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.reload?.positionals).toEqual(['weapon_instance_id', 'ammo_item_id']);
+    expect(reload.args).toEqual(['weapon_instance_id', 'ammo_item_id']);
+    expect(getArgNames(reload)).toEqual(['weapon_instance_id', 'ammo_item_id']);
+    expect(reload.usage).toBe(usage);
+    expect(reload.example).toBe(example);
+    expect(reload.usage).not.toContain('`');
+    expect(reload.example).not.toContain('`');
+    expect(reload.description).toContain('only battle command that costs a tick');
+    expect(reload.discoverWith).toEqual(['get_ship', 'get_cargo']);
+    expect(reload.seeAlso).toBeUndefined();
+    expect(reload.aliases).toEqual({ weapon_instance_id: 'id', ammo_item_id: 'target' });
+    expect(CURATED_COMMAND_DESCRIPTIONS.reload).toContain('weapons=JSON');
+    expect(CURATED_COMMAND_DESCRIPTIONS.reload).toBe(
+      'Reload one magazine, or up to 50 weapons with weapons=JSON, in one tick. Ammo names inside the array resolve; weapon instance ids do not. Other battle commands do not cost a tick.',
+    );
+    for (const related of reload.discoverWith ?? []) {
+      expect(registryHasRelatedCommand(related), `reload related command "${related}"`).toBe(true);
+    }
+
+    const help = captureHelp('reload');
+    expect(help).toContain('weapons=JSON');
+    expect(help).toContain('omit weapon_instance_id');
+    expect(help).toContain('max 50');
+    expect(help).toContain('only battle command that costs a tick');
+    expect(help).toContain('{"weapon_instance_id":"weapon-1","ammo_item_id":"ammo_kinetic_small"}');
+    expect(help).toContain('{"weapon_instance_id":"weapon-2"}');
+    expect(help).toMatch(/Arguments:\n {2}weapon_instance_id, ammo_item_id\n/);
+
+    const acceptedBlock = help.split('Accepted forms:\n')[1]?.split('\n\n')[0] ?? '';
+    const lines = acceptedBlock.split('\n');
+    expect(lines).toEqual([
+      `  spacemolt reload ${usage}`,
+      '  spacemolt reload weapon_instance_id=... ammo_item_id=...',
+      '  spacemolt reload --weapon-instance-id ... --ammo-item-id ...',
+    ]);
+    expect(lines[0]).toContain('[weapons=JSON]');
+    expect(lines[1]?.match(/=\.\.\./g)).toHaveLength(2);
+    expect(lines[2]?.match(/--/g)).toHaveLength(2);
+    expect(lines[2]).not.toContain('--weapons');
   });
 
   test('wildlife hunt command is bundled with creature-focused help', () => {
