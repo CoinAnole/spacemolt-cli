@@ -108,17 +108,7 @@ export function preparePayload(
     displayCommand,
   );
   if (resolvedPayload.type === 'ambiguous') {
-    if (wantsMachineReadableErrorOutput(options)) {
-      printJsonError('ambiguous_cached_id', cachedIdAmbiguityMessage(resolvedPayload.result), writer);
-      return { type: 'exit', exitCode: 1 };
-    }
-    const writeErr = writer?.err.bind(writer) ?? console.error;
-    for (const line of formatCachedIdAmbiguity(displayCommand, resolvedPayload.field, resolvedPayload.result, {
-      plain: options.plain,
-    })) {
-      writeErr(line);
-    }
-    return { type: 'exit', exitCode: 1 };
+    return rejectAmbiguousCachedId(displayCommand, resolvedPayload, options, writer);
   }
 
   // Always materialize defaults — even for empty payloads. Bare `storage view` must still
@@ -127,8 +117,38 @@ export function preparePayload(
     Object.keys(resolvedPayload.payload).length > 0
       ? convertPayloadTypes(resolvedPayload.payload, command, registry)
       : {};
-  const payload = materializePayloadDefaults(command, converted);
+  const convertedPayload: PayloadResolveResult =
+    command === 'reload'
+      ? resolveReloadWeaponsAmmo(converted, sessionPath, options, writer, displayCommand)
+      : { type: 'payload', payload: converted };
+  if (convertedPayload.type === 'ambiguous') {
+    return rejectAmbiguousCachedId(displayCommand, convertedPayload, options, writer);
+  }
+  const payload = materializePayloadDefaults(command, convertedPayload.payload);
   return { type: 'payload', payload };
+}
+
+function rejectAmbiguousCachedId(
+  displayCommand: string,
+  resolved: Extract<PayloadResolveResult, { type: 'ambiguous' }>,
+  options: GlobalOptions,
+  writer?: CliWriter,
+): PreparedPayload {
+  if (wantsMachineReadableErrorOutput(options)) {
+    printJsonError(
+      'ambiguous_cached_id',
+      `${displayCommand}.${resolved.field} ${cachedIdAmbiguityMessage(resolved.result)}`,
+      writer,
+    );
+    return { type: 'exit', exitCode: 1 };
+  }
+  const writeErr = writer?.err.bind(writer) ?? console.error;
+  for (const line of formatCachedIdAmbiguity(displayCommand, resolved.field, resolved.result, {
+    plain: options.plain,
+  })) {
+    writeErr(line);
+  }
+  return { type: 'exit', exitCode: 1 };
 }
 
 function materializePayloadDefaults(command: string, payload: Record<string, unknown>): Record<string, unknown> {
@@ -225,6 +245,56 @@ function resolveCachedIdsForPayload(
   }
 
   return { type: 'payload', payload: resolvedPayload };
+}
+
+function resolveReloadWeaponsAmmo(
+  payload: Record<string, unknown>,
+  sessionPath: string | undefined,
+  options: GlobalOptions,
+  writer: CliWriter | undefined,
+  displayCommand: string,
+): PayloadResolveResult {
+  const weapons = payload.weapons;
+  if (!Array.isArray(weapons)) return { type: 'payload', payload };
+
+  const hints = loadIdCacheSync(sessionPath);
+  const fuzzyIds = Boolean(options.fuzzyIds);
+  const policy = fuzzyIds ? softIdResolutionPolicy('item') : STRICT_ID_RESOLUTION_POLICY;
+  const resolvedWeapons: unknown[] = [];
+  for (let index = 0; index < weapons.length; index++) {
+    const entry = weapons[index];
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      resolvedWeapons.push(entry);
+      continue;
+    }
+    const record = entry as Record<string, unknown>;
+    const ammoItemId = record.ammo_item_id;
+    if (typeof ammoItemId !== 'string') {
+      resolvedWeapons.push(entry);
+      continue;
+    }
+
+    const field = `weapons[${index}].ammo_item_id`;
+    const reservedValue = reservedIdValue('reload', 'ammo_item_id', ammoItemId, 'item');
+    if (reservedValue !== undefined) {
+      resolvedWeapons.push({ ...record, ammo_item_id: reservedValue });
+      continue;
+    }
+
+    const resolved = resolveCachedId('item', ammoItemId, hints, policy);
+    if (resolved.type === 'ambiguous') return { type: 'ambiguous', field, result: resolved };
+    if (resolved.type === 'resolved') {
+      if (!options.quiet && resolved.match !== 'exact') {
+        const writeErr = writer?.err.bind(writer) ?? console.error;
+        writeErr(formatCachedIdResolution(displayCommand, field, ammoItemId, resolved, { plain: options.plain }));
+      }
+      resolvedWeapons.push({ ...record, ammo_item_id: resolved.value });
+      continue;
+    }
+    resolvedWeapons.push(resolved.value !== ammoItemId ? { ...record, ammo_item_id: resolved.value } : entry);
+  }
+
+  return { type: 'payload', payload: { ...payload, weapons: resolvedWeapons } };
 }
 
 function resolvedStationBaseId(
