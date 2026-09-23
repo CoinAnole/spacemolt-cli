@@ -2028,16 +2028,29 @@ describe('command metadata', () => {
     expect(service).toBeDefined();
     if (!service) throw new Error('service_prize command is missing from COMMANDS');
     expect(service.usage).toBe(
-      '<prize_id> <service_action> [quantity=N] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
+      '<prize_id> <service_action> [quantity=N] [item_id=...] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
     );
     expect(service.example).toBe('spacemolt service_prize prize-1 refuel');
     expect(service.discoverWith).toEqual(['get_nearby', 'get_status']);
     expect(service.seeAlso).toEqual(['claim_prize', 'refuel', 'repair', 'faction_facility_owned', 'get_guide']);
     expect(service.category).toBe('Salvage & Tow');
     expect(service.description).toBe(
-      'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel and repair consume fuel or repair kits from your own ship.',
+      'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel spends fuel from your own ship. Repair spends any repair item from your cargo. Omit item_id to use the cheapest repair item in your cargo; pass item_id=<id> to choose one. On refuel, omit quantity or pass 0 to transfer the safe maximum fuel. On repair, omit quantity or pass 0 to spend one repair item.',
     );
     expect(CURATED_COMMAND_DESCRIPTIONS.service_prize).toBe(service.description);
+    expect(service.description).toContain('any repair item');
+    expect(service.description).toContain('cheapest repair item');
+    expect(service.description).toContain('item_id=');
+    expect(service.description).toContain('claimant-only');
+    expect(service.description).toContain('Prize Recovery Yard');
+    expect(service.description).toContain('under construction or damaged');
+    expect(service.description).toContain('same POI');
+    expect(service.description).toContain('from your own ship');
+    expect(service.description).toContain('On refuel, omit quantity or pass 0 to transfer the safe maximum fuel.');
+    expect(service.description).toContain('On repair, omit quantity or pass 0 to spend one repair item.');
+    expect(service.description).toContain('pass item_id=<id> to choose one');
+    expect(service.description).not.toContain('repair kit');
+    expect(service.description).not.toContain('or to spend one repair item');
     expect(service.schema?.service_action?.description).toBe(
       'Physical recovery action. stop, resume, and redirect are claimant-only; refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station. A yard under construction or damaged does not unlock it.',
     );
@@ -2072,6 +2085,14 @@ describe('command metadata', () => {
     expect(serviceHelp).toMatch(/Arguments:\n {2}prize_id, service_action\n/);
     expect(serviceHelp).not.toMatch(/Arguments:\n {2}prize_id, service_action, action\n/);
     expect(serviceHelp).toContain('action -> service_action');
+    expect(serviceHelp).toContain('item_id=');
+    expect(serviceHelp).toContain(
+      'Optional repair item to spend on repair. Omit to use the cheapest repair item in your cargo.',
+    );
+    expect(serviceHelp).toContain(
+      'Optional quantity. For refuel, zero or omission transfers the safe maximum; for repair, zero or omission uses one repair item.',
+    );
+    expect(serviceHelp).not.toContain('repair kit');
 
     const claimDryRun = createCommandConfigDryRunResponse('claim_prize', claim, {
       id: 'prize-1',
@@ -2083,7 +2104,7 @@ describe('command metadata', () => {
       service_action: 'refuel',
     });
     expect(serviceDryRun.result).toContain(
-      'refuel/repair consume fuel or repair kits from your own ship; redirect changes destination; stop/resume do not rewind transit.',
+      'refuel spends fuel from your own ship (omit quantity or 0 = safe maximum); repair spends any repair item from your cargo (omit item_id = cheapest; omit quantity or 0 = one item); redirect changes destination; stop/resume do not rewind transit.',
     );
     expect(serviceDryRun.result).toContain('claimant-only');
     expect(serviceDryRun.result).toContain('Prize Recovery Yard');

@@ -148,7 +148,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   self_destruct: 'Destroy your own ship',
   sell_wreck: 'Sell a towed wreck to an NPC salvage yard for credits. Leftover modules go to station storage.',
   service_prize:
-    'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel and repair consume fuel or repair kits from your own ship.',
+    'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel spends fuel from your own ship. Repair spends any repair item from your cargo. Omit item_id to use the cheapest repair item in your cargo; pass item_id=<id> to choose one. On refuel, omit quantity or pass 0 to transfer the safe maximum fuel. On repair, omit quantity or pass 0 to spend one repair item.',
   set_colors: 'Set your ship colors',
   set_drone_name: 'Set or clear a display name for a drone.',
   place_ship_buy_order: 'Place a standing buy order for a ship class at this station',

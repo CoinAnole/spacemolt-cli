@@ -1691,6 +1691,16 @@ describe('help output branches', () => {
     expect(output).toContain('faction facility_owned');
     expect(output).not.toContain('faction_facility_owned');
     expect(output).not.toContain('`');
+    expect(output).toContain('item_id=');
+    expect(output).toContain('any repair item');
+    expect(output).toContain('cheapest repair item');
+    expect(output).toContain('pass item_id=<id> to choose one');
+    expect(output).toContain('On refuel, omit quantity or pass 0 to transfer the safe maximum fuel.');
+    expect(output).toContain('On repair, omit quantity or pass 0 to spend one repair item.');
+    expect(output).toContain(
+      'Optional repair item to spend on repair. Omit to use the cheapest repair item in your cargo.',
+    );
+    expect(output).not.toContain('repair kit');
   });
 
   test('help treat_personnel documents active field treatment vs fleet triage', () => {
