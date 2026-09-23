@@ -3941,4 +3941,36 @@ describe('command metadata', () => {
     expect(help).not.toContain('emergency_warp_device');
     expect(help).not.toContain('plundered (cargo taken, hull left)');
   });
+
+  test('get_battle_status help names latch_status', () => {
+    const config = COMMANDS.get_battle_status;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_battle_status command is missing from COMMANDS');
+
+    expect(config.description).toContain('latch_status');
+    expect(config.description).toContain('accruing');
+    expect(config.description).toContain('shields_holding');
+    expect(config.description).toContain('out_of_range');
+    expect(config.description).toContain("keep the target's shields down");
+    expect(config.description).toContain('close to point-blank first');
+    expect(config.description).toContain('both gates');
+    expect(config.description).toContain('marines are aboard');
+    expect(config.description).toContain('ship being boarded');
+    expect(config.description).toContain('Boarding table Progress');
+    expect(config.description).not.toContain('`');
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_battle_status).toBe(config.description);
+
+    const help = captureHelp('get_battle_status');
+    expect(help).toContain('latch_status');
+    expect(help).toContain('accruing');
+    expect(help).toContain('shields_holding');
+    expect(help).toContain('out_of_range');
+    expect(help).toContain("keep the target's shields down");
+    expect(help).toContain('close to point-blank first');
+    expect(help).toContain('both gates');
+    expect(help).toContain('marines are aboard');
+    expect(help).toContain('ship being boarded');
+    expect(help).toContain('Boarding table Progress');
+    expect(help).not.toContain('`');
+  });
 });
