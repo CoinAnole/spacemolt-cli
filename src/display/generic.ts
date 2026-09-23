@@ -21,6 +21,7 @@ import {
   finiteNumber,
   firstArray,
   formatFacilityMaintenanceUpkeep,
+  formatIntegerText,
   formatter,
   isRecord,
   printCompactTable,
@@ -34,14 +35,18 @@ function formatRecordEntries(value: Record<string, unknown>, suffix = ''): strin
     .join(', ');
 }
 
+function inventoryCount(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'bigint') return formatIntegerText(value);
+  return undefined;
+}
+
 function inventorySuffix(objective: Record<string, unknown>): string {
   const parts: string[] = [];
-  if (typeof objective.in_cargo === 'number' && Number.isFinite(objective.in_cargo)) {
-    parts.push(`cargo:${objective.in_cargo}`);
-  }
-  if (typeof objective.in_storage === 'number' && Number.isFinite(objective.in_storage)) {
-    parts.push(`storage:${objective.in_storage}`);
-  }
+  const cargo = inventoryCount(objective.in_cargo);
+  if (cargo !== undefined) parts.push(`cargo:${cargo}`);
+  const storage = inventoryCount(objective.in_storage);
+  if (storage !== undefined) parts.push(`storage:${storage}`);
   return parts.length ? ` ${parts.join(' ')}` : '';
 }
 
@@ -199,15 +204,17 @@ function emitIssuedMissionText(missions: Array<Record<string, unknown>>): void {
 }
 
 function formatCount(value: unknown): string | undefined {
+  const text = formatIntegerText(value);
+  if (text !== undefined) return text;
   const number = finiteNumber(value);
   if (number === undefined) return undefined;
   return number.toLocaleString();
 }
 
 function formatFactionRewardCredits(value: unknown): string | undefined {
-  const amount = finiteNumber(value);
+  const amount = formatCount(value);
   if (amount === undefined) return undefined;
-  return `${formatCount(amount) ?? amount} cr`;
+  return `${amount} cr`;
 }
 
 function countFromFieldOrArray(
@@ -654,9 +661,9 @@ function emitCatalogDumpHiddenCount(label: string, value: unknown): void {
 }
 
 function formatCreditsAmount(value: unknown): string | undefined {
-  const number = finiteNumber(value);
-  if (number === undefined) return undefined;
-  return `${formatCount(number) ?? number}cr`;
+  const count = formatCount(value);
+  if (count === undefined) return undefined;
+  return `${count}cr`;
 }
 
 function craftEscrowCredits(record: Record<string, unknown>): unknown {
@@ -1000,11 +1007,15 @@ export const genericFormatters = [
         printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 64 });
         if (r.total_jobs !== undefined && r.total_jobs !== null && r.total_jobs !== '') {
           const shown = jobs.length;
-          const total = Number(r.total_jobs);
-          if (Number.isFinite(total) && shown < total) {
-            emitLine(`Total jobs: ${total} (showing ${shown})`);
+          if (typeof r.total_jobs === 'bigint') {
+            emitLine(`Total jobs: ${formatIntegerText(r.total_jobs)}`);
           } else {
-            emitLine(`Total jobs: ${r.total_jobs}`);
+            const total = Number(r.total_jobs);
+            if (Number.isFinite(total) && shown < total) {
+              emitLine(`Total jobs: ${total} (showing ${shown})`);
+            } else {
+              emitLine(`Total jobs: ${r.total_jobs}`);
+            }
           }
         }
         if (r.message) emitLine(String(r.message));

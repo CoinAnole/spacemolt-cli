@@ -1,4 +1,4 @@
-import { c, emitLine, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { c, emitLine, formatIntegerText, formatter, isRecord, printCompactTable } from './helpers.ts';
 
 type ValueFormatter = (value: unknown) => string | undefined;
 
@@ -9,8 +9,8 @@ function text(value: unknown): string | undefined {
 }
 
 function formatCredits(value: unknown): string | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
-  return `${value.toLocaleString()} cr`;
+  const text = formatIntegerText(value);
+  return text === undefined ? undefined : `${text} cr`;
 }
 
 function formatTicks(value: unknown): string | undefined {
@@ -454,8 +454,7 @@ function renderDebtPayment(result: Record<string, unknown>): boolean {
     !isRecord(result.progression) ||
     updated === undefined ||
     outstanding === undefined ||
-    typeof result.amount_paid !== 'number' ||
-    !Number.isFinite(result.amount_paid)
+    formatIntegerText(result.amount_paid) === undefined
   ) {
     return false;
   }

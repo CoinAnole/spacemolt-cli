@@ -22,6 +22,7 @@ import {
   emitStationPower,
   emitStationRepairs,
   formatDeepCoreLine,
+  formatIntegerText,
   formatter,
   isRecord,
   printCompactTable,
@@ -87,8 +88,8 @@ function emitOptionalLine(label: string, value: unknown): void {
 
 // byte-identical to shipping.ts formatCredits / formatTicks / formatBoolean
 function formatCredits(value: unknown): string | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
-  return `${value.toLocaleString()} cr`;
+  const text = formatIntegerText(value);
+  return text === undefined ? undefined : `${text} cr`;
 }
 
 function formatTicks(value: unknown): string | undefined {

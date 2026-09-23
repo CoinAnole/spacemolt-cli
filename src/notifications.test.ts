@@ -5279,8 +5279,13 @@ describe('notification formatting', () => {
           },
         },
       });
-      expect(hugeTotal.details.join('\n')).not.toContain('Damage taken');
-      expect(hugeTotal.details.join('\n')).not.toContain('0 shield');
+      const hugeTotalText = hugeTotal.details.join('\n');
+      const hugeDamage = hugeTotal.details.find((line) => line.includes('Damage taken'));
+      expect(hugeDamage).toBeDefined();
+      expect(hugeDamage?.replace(/\D/g, '')).toContain('9007199254740993');
+      expect(hugeTotalText).not.toContain('9007199254740992');
+      expect(hugeTotalText).not.toContain('0 total');
+      expect(hugeTotalText).not.toContain('0 shield');
       expect(preview.details.some((line) => line.includes('Location: Gate Alpha in Alfirk'))).toBe(true);
       expect(preview.details.some((line) => line.includes('Ship lost: Dust Devil'))).toBe(true);
       expect(preview.details.some((line) => line.includes('Clone cost: 500 credits'))).toBe(true);
@@ -6211,6 +6216,21 @@ describe('notification formatting', () => {
       expect(zeroCredits.details).toEqual(['Role: raider']);
       expect(zeroCredits.details.join('\n')).not.toContain('Credits:');
       expect(zeroCredits.details.join('\n')).not.toContain('Weapons XP:');
+
+      const hugeCredits = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'pirate_destroyed',
+        data: {
+          pirate_name: 'Corsair',
+          pirate_role: 'raider',
+          credits_earned: 9007199254740993n,
+        },
+      });
+      const creditLine = hugeCredits.details.find((line) => line.includes('Credits:'));
+      expect(creditLine).toBeDefined();
+      expect(creditLine?.replace(/\D/g, '')).toContain('9007199254740993');
+      expect(creditLine).not.toContain('9007199254740992');
+      expect(creditLine).not.toContain('Credits: 0');
       expect(tableMessageFromPreview(zeroCredits)).toBe('Corsair destroyed!');
       expect(tableMessageFromPreview(zeroCredits)).not.toContain('Role:');
     });

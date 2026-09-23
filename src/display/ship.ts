@@ -92,8 +92,20 @@ function formatCurrentMax(current: unknown, max: unknown): string | undefined {
   return String(cap);
 }
 
-function formatCredits(value: number): string {
+function formatCredits(value: number | bigint): string {
   return `${value.toLocaleString()} cr`;
+}
+
+function formatOptionalCredits(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'bigint') return formatCredits(value);
+  const amount = finiteNumber(value);
+  return amount === undefined ? undefined : formatCredits(amount);
+}
+
+function creditAmount(value: unknown): number | bigint | undefined {
+  if (typeof value === 'bigint') return value;
+  return finiteNumber(value);
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -107,10 +119,10 @@ type SoldModuleRow = {
 
 type SellWreckReceipt = {
   wreckId: string;
-  offer: number;
-  paid: number;
-  newBalance: number;
-  salvageValue?: number;
+  offer: number | bigint;
+  paid: number | bigint;
+  newBalance: number | bigint;
+  salvageValue?: number | bigint;
   shipClass?: string;
   message?: string;
   modulesStored: SoldModuleRow[];
@@ -137,11 +149,11 @@ function readSellWreckReceipt(r: Record<string, unknown>): SellWreckReceipt | un
   if (r.action !== 'sell_wreck') return undefined;
   if (r.fills !== undefined || r.quantity_sold !== undefined || r.item !== undefined) return undefined;
   if (typeof r.wreck_id !== 'string' || r.wreck_id === '') return undefined;
-  const offer = finiteNumber(r.offer);
-  const paid = finiteNumber(r.total_payout);
-  const newBalance = finiteNumber(r.new_balance);
+  const offer = creditAmount(r.offer);
+  const paid = creditAmount(r.total_payout);
+  const newBalance = creditAmount(r.new_balance);
   if (offer === undefined || paid === undefined || newBalance === undefined) return undefined;
-  const salvageValue = finiteNumber(r.salvage_value);
+  const salvageValue = creditAmount(r.salvage_value);
   const shipClass = nonEmptyString(r.ship_class);
   const message = nonEmptyString(r.message);
   return {
@@ -156,8 +168,8 @@ function readSellWreckReceipt(r: Record<string, unknown>): SellWreckReceipt | un
   };
 }
 
-function formatPaidVersusOffer(offer: number, paid: number): string {
-  if (paid < offer) {
+function formatPaidVersusOffer(offer: number | bigint, paid: number | bigint): string {
+  if (typeof offer === 'number' && typeof paid === 'number' && paid < offer) {
     return `Paid: ${formatCredits(paid)} (${formatCredits(offer - paid)} less than offer)`;
   }
   return `Paid: ${formatCredits(paid)}`;
@@ -184,6 +196,7 @@ function ownedShipName(ship: Record<string, unknown>): string {
 }
 
 function formatOwnedListingPrice(value: unknown): string {
+  if (typeof value === 'bigint') return formatCredits(value);
   const amount = finiteNumber(value);
   return amount === undefined ? '' : formatCredits(amount);
 }
@@ -688,23 +701,37 @@ export const shipFormatters = [
       const isStationRefuel = r.source === 'station';
       const perFuelText = (amount: number) =>
         fuelAmount !== undefined && fuelAmount > 0 ? ` (${formatPerFuel(amount / fuelAmount)} cr/fuel)` : '';
+      const costText = typeof r.cost === 'bigint' ? formatCredits(r.cost) : undefined;
+      const marketCostText = typeof r.market_cost === 'bigint' ? formatCredits(r.market_cost) : undefined;
+      const fuelTaxText = typeof r.tax_amount === 'bigint' ? formatCredits(r.tax_amount) : undefined;
       if (isStationRefuel && fuelAmount !== undefined && fuelAmount > 0)
         emitLine(`Fuel added: ${fuelAmount.toLocaleString()}`);
       if (isStationRefuel) {
-        const displayedMarketCost = marketCost ?? (fuelTax === undefined ? totalCost : undefined);
-        if (displayedMarketCost !== undefined)
-          emitLine(`Market cost: ${formatCredits(displayedMarketCost)}${perFuelText(displayedMarketCost)}`);
+        if (marketCostText !== undefined) {
+          emitLine(`Market cost: ${marketCostText}`);
+        } else if (marketCost !== undefined) {
+          emitLine(`Market cost: ${formatCredits(marketCost)}${perFuelText(marketCost)}`);
+        } else if (fuelTax === undefined && fuelTaxText === undefined) {
+          if (costText !== undefined) emitLine(`Market cost: ${costText}`);
+          else if (totalCost !== undefined) {
+            emitLine(`Market cost: ${formatCredits(totalCost)}${perFuelText(totalCost)}`);
+          }
+        }
+      } else if (costText !== undefined) {
+        emitLine(`Fuel cost: ${costText}`);
       } else if (totalCost !== undefined) {
         emitLine(`Fuel cost: ${formatCredits(totalCost)}${perFuelText(totalCost)}`);
       }
-      if (fuelTax !== undefined) emitLine(`Fuel tax: ${formatCredits(fuelTax)}${perFuelText(fuelTax)}`);
-      const rawCreditIsBigint =
-        typeof r.cost === 'bigint' || typeof r.market_cost === 'bigint' || typeof r.tax_amount === 'bigint';
+      if (fuelTaxText !== undefined) emitLine(`Fuel tax: ${fuelTaxText}`);
+      else if (fuelTax !== undefined) emitLine(`Fuel tax: ${formatCredits(fuelTax)}${perFuelText(fuelTax)}`);
+      const rawCreditIsBigint = costText !== undefined || marketCostText !== undefined || fuelTaxText !== undefined;
       let totalSpent = totalCost;
       if (totalSpent === undefined && !rawCreditIsBigint && (marketCost !== undefined || fuelTax !== undefined)) {
         totalSpent = (marketCost ?? 0) + (fuelTax ?? 0);
       }
-      if (totalSpent !== undefined) {
+      if (costText !== undefined) {
+        emitLine(`Total spent: ${costText}`);
+      } else if (totalSpent !== undefined) {
         const unitText =
           fuelAmount !== undefined && fuelAmount > 0 ? ` (${formatPerFuel(totalSpent / fuelAmount)} cr/fuel)` : '';
         emitLine(`Total spent: ${formatCredits(totalSpent)}${unitText}`);
@@ -760,8 +787,8 @@ export const shipFormatters = [
         emitLine(`Item: ${itemName && itemId ? `${itemName} (${itemId})` : (itemName ?? itemId)}`);
       }
 
-      const cost = optionalNumber(r.cost);
-      if (cost !== undefined) emitLine(`Cost: ${formatCredits(cost)}`);
+      const cost = formatOptionalCredits(r.cost);
+      if (cost !== undefined) emitLine(`Cost: ${cost}`);
 
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
@@ -868,13 +895,13 @@ export const shipFormatters = [
 
       const shipClass = nonEmptyString(r.ship_class);
       const storedAt = nonEmptyString(r.stored_at);
-      const totalValue = optionalNumber(r.total_value);
+      const totalValue = formatOptionalCredits(r.total_value);
       const message = nonEmptyString(r.message);
 
       emitLine(`\n${c.bright}=== Wreck Scrapped ===${c.reset}`);
       emitLine(`Wreck: ${r.wreck_id}${shipClass ? ` (${shipClass})` : ''}`);
       if (storedAt) emitLine(`Stored at: ${storedAt}`);
-      if (totalValue !== undefined) emitLine(`Total value: ${formatCredits(totalValue)}`);
+      if (totalValue !== undefined) emitLine(`Total value: ${totalValue}`);
       printSalvageMaterials(r.materials);
       if (message) emitLine(`${c.dim}${message}${c.reset}`);
       return true;

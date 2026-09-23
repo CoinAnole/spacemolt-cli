@@ -5,6 +5,7 @@ import {
   firstArray,
   formatDeepCoreMark,
   formatDepletionRemainingSuffix,
+  formatIntegerText,
   formatter,
   isRecord,
   namedFormatter,
@@ -21,11 +22,13 @@ interface BestPriceDepth {
 }
 
 function orderPrice(order: Record<string, unknown>): number | undefined {
+  if (typeof order.price_each === 'bigint') return undefined;
   const price = Number(order.price_each);
   return Number.isFinite(price) ? price : undefined;
 }
 
-function orderQuantity(order: Record<string, unknown>): number {
+function orderQuantity(order: Record<string, unknown>): number | undefined {
+  if (typeof order.quantity === 'bigint') return undefined;
   const quantity = Number(order.quantity);
   return Number.isFinite(quantity) ? quantity : 0;
 }
@@ -39,9 +42,10 @@ function bestPriceDepth(
   if (!prices.length) return undefined;
   const bestPrice = side === 'buy' ? Math.max(...prices) : Math.min(...prices);
   const ordersAtBest = orders.filter((order) => orderPrice(order) === bestPrice);
+  if (ordersAtBest.some((order) => orderQuantity(order) === undefined)) return undefined;
   return {
     price: bestPrice,
-    quantity: ordersAtBest.reduce((total, order) => total + orderQuantity(order), 0),
+    quantity: ordersAtBest.reduce((total, order) => total + (orderQuantity(order) ?? 0), 0),
     orders: ordersAtBest.length,
   };
 }
@@ -109,18 +113,30 @@ function createOrderSide(result: Record<string, unknown>, command?: string): Ord
   return undefined;
 }
 
-function formatCredits(value: number): string {
+function formatCredits(value: number | bigint): string {
   return `${value.toLocaleString()} cr`;
 }
 
-function finiteOrFillSum(primary: unknown, fills: unknown, field: string): number | undefined {
-  if (typeof primary === 'bigint') return undefined;
+function finiteOrFillSum(primary: unknown, fills: unknown, field: string): number | bigint | undefined {
+  if (typeof primary === 'bigint') return primary;
   return finiteNumber(primary) ?? sumNumericField(fills, field);
 }
 
-function formatCreditWords(value: unknown): string | undefined {
+function displayCount(value: unknown): string | undefined {
+  const text = formatIntegerText(value);
+  if (text !== undefined) return text;
   const amount = finiteNumber(value);
-  return amount === undefined ? undefined : `${amount.toLocaleString()} credits`;
+  return amount === undefined ? undefined : amount.toLocaleString();
+}
+
+function formatCreditsValue(value: unknown): string | undefined {
+  const text = displayCount(value);
+  return text === undefined ? undefined : `${text} cr`;
+}
+
+function formatCreditWords(value: unknown): string | undefined {
+  const text = displayCount(value);
+  return text === undefined ? undefined : `${text} credits`;
 }
 
 function firstDisplayValue(row: Record<string, unknown>, keys: string[]): unknown {
@@ -144,8 +160,8 @@ function formatDisplayNumber(value: unknown): string {
 
 function formatCreditCell(value: unknown): string {
   if (isMissingDisplayValue(value)) return '';
-  const number = finiteNumber(value);
-  if (number !== undefined) return formatCredits(number);
+  const credits = formatCreditsValue(value);
+  if (credits !== undefined) return credits;
   return String(value);
 }
 
@@ -170,6 +186,10 @@ function formatTimestampPreview(value: unknown): string {
 
 function formatOrderCount(value: unknown): string {
   if (isMissingDisplayValue(value)) return '';
+  if (typeof value === 'bigint') {
+    const text = formatIntegerText(value);
+    return text === undefined ? '' : `${text} ${value === 1n ? 'order' : 'orders'}`;
+  }
   const number = finiteNumber(value);
   if (number === undefined) return '';
   return `${number.toLocaleString()} ${number === 1 ? 'order' : 'orders'}`;
@@ -229,14 +249,17 @@ function formatTradeItems(items: unknown): string[] {
 
 function formatTradeTerms(items: unknown, credits: unknown): string {
   const parts = formatTradeItems(items);
-  const creditValue = finiteNumber(credits);
-  if (creditValue !== undefined && creditValue !== 0) parts.push(formatCredits(creditValue));
+  if (typeof credits === 'bigint') {
+    if (credits !== 0n) parts.push(formatCredits(credits));
+  } else {
+    const creditValue = finiteNumber(credits);
+    if (creditValue !== undefined && creditValue !== 0) parts.push(formatCredits(creditValue));
+  }
   return parts.join(', ') || 'nothing';
 }
 
 function formatOptionalNumber(value: unknown): string {
-  const number = finiteNumber(value);
-  return number === undefined ? '?' : number.toLocaleString();
+  return displayCount(value) ?? '?';
 }
 
 function formatFillCounterparties(fills: unknown): string {
@@ -260,18 +283,18 @@ function autoListedOrder(value: unknown): Record<string, unknown> | undefined {
 function emitAutoListed(value: unknown): void {
   const order = autoListedOrder(value);
   if (!order) return;
-  const quantity = finiteNumber(order.quantity);
-  const priceEach = finiteNumber(order.price_each);
-  const listingFee = finiteNumber(order.listing_fee);
-  const escrow = finiteNumber(order.escrow);
+  const quantity = displayCount(order.quantity);
+  const priceEach = formatCreditsValue(order.price_each);
+  const listingFee = formatCreditsValue(order.listing_fee);
+  const escrow = formatCreditsValue(order.escrow);
 
   if (quantity !== undefined && priceEach !== undefined) {
-    emitLine(`Auto-listed: ${quantity.toLocaleString()} @ ${formatCredits(priceEach)}`);
+    emitLine(`Auto-listed: ${quantity} @ ${priceEach}`);
   } else if (quantity !== undefined) {
-    emitLine(`Auto-listed: ${quantity.toLocaleString()}`);
+    emitLine(`Auto-listed: ${quantity}`);
   }
-  if (escrow !== undefined) emitLine(`Escrow: ${formatCredits(escrow)}`);
-  if (listingFee !== undefined) emitLine(`Listing fee: ${formatCredits(listingFee)}`);
+  if (escrow !== undefined) emitLine(`Escrow: ${escrow}`);
+  if (listingFee !== undefined) emitLine(`Listing fee: ${listingFee}`);
   if (order.order_id) emitLine(`Order ID: ${order.order_id}`);
 }
 
@@ -342,6 +365,10 @@ function bulkBucket(result: Record<string, unknown>): string {
 function bulkFinancial(result: Record<string, unknown>, side: OrderSide): string {
   const parts: string[] = [];
   const add = (label: string, value: unknown) => {
+    if (typeof value === 'bigint') {
+      parts.push(`${label} ${formatCredits(value)}`);
+      return;
+    }
     const amount = bulkNumber(value);
     if (amount !== undefined) parts.push(`${label} ${formatCredits(amount)}`);
   };
@@ -403,7 +430,12 @@ function renderFactionBulkOrders(result: Record<string, unknown>, command?: stri
     item_display: bulkItem(entry),
     quantity_display: bulkInteger(entry.quantity)?.toLocaleString() ?? '',
     filled_listed: bulkFilledListed(entry),
-    price_display: bulkNumber(entry.price_each) === undefined ? '' : formatCredits(entry.price_each as number),
+    price_display:
+      typeof entry.price_each === 'bigint'
+        ? formatCredits(entry.price_each)
+        : bulkNumber(entry.price_each) === undefined
+          ? ''
+          : formatCredits(entry.price_each as number),
     bucket_display: bulkBucket(entry),
     financial_display: bulkFinancial(entry, side),
     outcome_display: bulkOrderOrError(entry),
@@ -948,49 +980,54 @@ export const marketFormatters = [
 
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
+      const requestedText = displayCount(r.quantity);
       const requested = finiteNumber(r.quantity);
       const filled = finiteOrFillSum(r.quantity_filled, r.fills, 'quantity');
-      const remaining =
-        finiteNumber(r.quantity_listed) ??
-        (requested !== undefined && filled !== undefined ? Math.max(0, requested - filled) : undefined);
+      const filledText = filled === undefined ? undefined : displayCount(filled);
+      const listedMissing = isMissingDisplayValue(r.quantity_listed);
+      const listedText = listedMissing ? undefined : displayCount(r.quantity_listed);
+      const derivedRemaining =
+        listedMissing && requested !== undefined && typeof filled === 'number'
+          ? Math.max(0, requested - filled)
+          : undefined;
       const fillTotal =
         side === 'buy'
           ? finiteOrFillSum(r.total_spent, r.fills, 'subtotal')
           : finiteOrFillSum(r.total_earned, r.fills, 'subtotal');
-      const priceEach = finiteNumber(r.price_each);
-      const listingFee = finiteNumber(r.listing_fee);
-      const totalEscrowed = finiteNumber(r.total_escrowed);
-      const remainingEscrowed = finiteNumber(r.remaining_escrowed);
-      const escrowRefunded = finiteNumber(r.escrow_refunded);
-      const notListed = finiteNumber(r.quantity_not_listed);
-      const deliveredToCargo = finiteNumber(r.delivered_to_cargo);
-      const deliveredToStorage = finiteNumber(r.delivered_to_storage);
-      const selfCleared = finiteNumber(r.self_cleared);
-      const selfClearRefund = finiteNumber(r.self_clear_refund);
-      const selfClearReturned = finiteNumber(r.self_clear_returned);
+      const priceEach = formatCreditsValue(r.price_each);
+      const listingFee = formatCreditsValue(r.listing_fee);
+      const totalEscrowed = formatCreditsValue(r.total_escrowed);
+      const remainingEscrowed = formatCreditsValue(r.remaining_escrowed);
+      const escrowRefunded = formatCreditsValue(r.escrow_refunded);
+      const notListed = displayCount(r.quantity_not_listed);
+      const deliveredToCargo = displayCount(r.delivered_to_cargo);
+      const deliveredToStorage = displayCount(r.delivered_to_storage);
+      const selfCleared = displayCount(r.self_cleared);
+      const selfClearRefund = formatCreditsValue(r.self_clear_refund);
+      const selfClearReturned = displayCount(r.self_clear_returned);
 
       emitLine(`\n${c.bright}=== ${side === 'buy' ? 'Buy' : 'Sell'} Order Created ===${c.reset}`);
       emitLine(`Item: ${itemName}${itemId}`);
-      if (requested !== undefined) emitLine(`Requested: ${requested.toLocaleString()}`);
-      if (filled !== undefined) {
+      if (requestedText !== undefined) emitLine(`Requested: ${requestedText}`);
+      if (filledText !== undefined) {
         const totalLabel = side === 'buy' ? 'spent' : 'earned';
-        const totalText = fillTotal !== undefined ? ` (${totalLabel}: ${formatCredits(fillTotal)})` : '';
-        emitLine(`Instant fills: ${filled.toLocaleString()}${totalText}${formatFillCounterparties(r.fills)}`);
+        const totalText = fillTotal === undefined ? '' : ` (${totalLabel}: ${formatCredits(fillTotal)})`;
+        emitLine(`Instant fills: ${filledText}${totalText}${formatFillCounterparties(r.fills)}`);
       }
-      if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo.toLocaleString()}`);
-      if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage.toLocaleString()}`);
-      if (remaining !== undefined)
-        emitLine(`${side === 'buy' ? 'Remaining open' : 'Remaining listed'}: ${remaining.toLocaleString()}`);
-      if (notListed !== undefined) emitLine(`Not listed: ${notListed.toLocaleString()}`);
-      if (selfCleared !== undefined) emitLine(`Self-cleared own crossing order(s): ${selfCleared.toLocaleString()}`);
-      if (selfClearRefund !== undefined) emitLine(`Self-clear refund: ${formatCredits(selfClearRefund)}`);
-      if (selfClearReturned !== undefined)
-        emitLine(`Self-clear returned to storage: ${selfClearReturned.toLocaleString()}`);
-      if (priceEach !== undefined) emitLine(`Price each: ${formatCredits(priceEach)}`);
-      if (totalEscrowed !== undefined) emitLine(`Total escrowed: ${formatCredits(totalEscrowed)}`);
-      if (remainingEscrowed !== undefined) emitLine(`Remaining escrowed: ${formatCredits(remainingEscrowed)}`);
-      if (escrowRefunded !== undefined) emitLine(`Escrow refunded: ${formatCredits(escrowRefunded)}`);
-      if (listingFee !== undefined) emitLine(`Listing fee: ${formatCredits(listingFee)}`);
+      if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo}`);
+      if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage}`);
+      const remainingLabel = side === 'buy' ? 'Remaining open' : 'Remaining listed';
+      if (listedText !== undefined) emitLine(`${remainingLabel}: ${listedText}`);
+      else if (derivedRemaining !== undefined) emitLine(`${remainingLabel}: ${derivedRemaining.toLocaleString()}`);
+      if (notListed !== undefined) emitLine(`Not listed: ${notListed}`);
+      if (selfCleared !== undefined) emitLine(`Self-cleared own crossing order(s): ${selfCleared}`);
+      if (selfClearRefund !== undefined) emitLine(`Self-clear refund: ${selfClearRefund}`);
+      if (selfClearReturned !== undefined) emitLine(`Self-clear returned to storage: ${selfClearReturned}`);
+      if (priceEach !== undefined) emitLine(`Price each: ${priceEach}`);
+      if (totalEscrowed !== undefined) emitLine(`Total escrowed: ${totalEscrowed}`);
+      if (remainingEscrowed !== undefined) emitLine(`Remaining escrowed: ${remainingEscrowed}`);
+      if (escrowRefunded !== undefined) emitLine(`Escrow refunded: ${escrowRefunded}`);
+      if (listingFee !== undefined) emitLine(`Listing fee: ${listingFee}`);
       if (r.order_id) emitLine(`Order ID: ${r.order_id}`);
       return true;
     },
@@ -1074,19 +1111,20 @@ export const marketFormatters = [
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
       const sold = finiteOrFillSum(r.quantity_sold, r.fills, 'quantity');
+      const soldText = sold === undefined ? undefined : formatIntegerText(sold);
       const earned = finiteOrFillSum(r.total_earned, r.fills, 'subtotal');
-      const unsold = finiteNumber(r.unsold);
+      const unsold = displayCount(r.unsold);
 
       emitLine(`\n${c.bright}=== Sell Complete ===${c.reset}`);
       emitLine(`Item: ${itemName}${itemId}`);
-      if (sold !== undefined) emitLine(`Sold: ${sold.toLocaleString()}`);
-      if (sold !== undefined) {
-        const earnedText = earned !== undefined ? ` (earned: ${formatCredits(earned)})` : '';
-        emitLine(`Instant fills: ${sold.toLocaleString()}${earnedText}${formatFillCounterparties(r.fills)}`);
+      if (soldText !== undefined) emitLine(`Sold: ${soldText}`);
+      if (soldText !== undefined) {
+        const earnedText = earned === undefined ? '' : ` (earned: ${formatCredits(earned)})`;
+        emitLine(`Instant fills: ${soldText}${earnedText}${formatFillCounterparties(r.fills)}`);
       } else if (earned !== undefined) {
         emitLine(`Total earned: ${formatCredits(earned)}`);
       }
-      if (unsold !== undefined) emitLine(`Unsold: ${unsold.toLocaleString()}`);
+      if (unsold !== undefined) emitLine(`Unsold: ${unsold}`);
       emitAutoListed(r.auto_listed);
       return true;
     },
@@ -1101,28 +1139,30 @@ export const marketFormatters = [
       if ((command !== 'buy' && r.action !== 'buy') || !isDirectMarketBuyShape(r)) return false;
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
+      const requestedText = displayCount(r.quantity);
       const requested = finiteNumber(r.quantity);
+      const unfilledText = displayCount(r.unfilled);
       const unfilled = finiteNumber(r.unfilled);
       const filled =
         sumNumericField(r.fills, 'quantity') ??
         (requested !== undefined && unfilled !== undefined ? Math.max(0, requested - unfilled) : undefined);
       const spent = finiteOrFillSum(r.total_cost, r.fills, 'subtotal');
-      const deliveredToCargo = finiteNumber(r.delivered_to_cargo);
-      const deliveredToStorage = finiteNumber(r.delivered_to_storage);
+      const deliveredToCargo = displayCount(r.delivered_to_cargo);
+      const deliveredToStorage = displayCount(r.delivered_to_storage);
 
       emitLine(`\n${c.bright}=== Buy Complete ===${c.reset}`);
       emitLine(`Item: ${itemName}${itemId}`);
-      if (requested !== undefined) emitLine(`Requested: ${requested.toLocaleString()}`);
+      if (requestedText !== undefined) emitLine(`Requested: ${requestedText}`);
       if (filled !== undefined) emitLine(`Filled: ${filled.toLocaleString()}`);
       if (filled !== undefined) {
-        const spentText = spent !== undefined ? ` (spent: ${formatCredits(spent)})` : '';
+        const spentText = spent === undefined ? '' : ` (spent: ${formatCredits(spent)})`;
         emitLine(`Instant fills: ${filled.toLocaleString()}${spentText}${formatFillCounterparties(r.fills)}`);
       } else if (spent !== undefined) {
         emitLine(`Total cost: ${formatCredits(spent)}`);
       }
-      if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo.toLocaleString()}`);
-      if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage.toLocaleString()}`);
-      if (unfilled !== undefined) emitLine(`Unfilled: ${unfilled.toLocaleString()}`);
+      if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo}`);
+      if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage}`);
+      if (unfilledText !== undefined) emitLine(`Unfilled: ${unfilledText}`);
       emitAutoListed(r.auto_listed);
       return true;
     },
@@ -1314,7 +1354,9 @@ export const marketFormatters = [
         if (entry.submitted_at_tick !== undefined) {
           const submitter = entry.submitter_name ?? entry.submitted_by;
           const age =
-            r.current_tick !== undefined
+            r.current_tick !== undefined &&
+            typeof r.current_tick !== 'bigint' &&
+            typeof entry.submitted_at_tick !== 'bigint'
               ? `, age ${Number(r.current_tick) - Number(entry.submitted_at_tick)} ticks`
               : '';
           emitLine(`Intel tick: ${entry.submitted_at_tick}${submitter ? ` by ${submitter}` : ''}${age}`);

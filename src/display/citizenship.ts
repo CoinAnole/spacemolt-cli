@@ -2,6 +2,7 @@ import {
   c,
   commandNameEquals,
   emitLine,
+  formatIntegerText,
   formatter,
   isRecord,
   printCompactTable,
@@ -152,8 +153,16 @@ function emitScalar(label: string, value: unknown): void {
   emitLine(`${label}: ${value}`);
 }
 
-function emitFee(label: string, value: unknown): void {
+function feeCredits(value: unknown): string | undefined {
   const formatted = formatCredits(value);
+  if (formatted !== undefined) return formatted;
+  if (typeof value !== 'bigint') return undefined;
+  const text = formatIntegerText(value);
+  return text === undefined ? undefined : `${text} cr`;
+}
+
+function emitFee(label: string, value: unknown): void {
+  const formatted = feeCredits(value);
   if (!formatted) return;
   emitLine(`${label}: ${formatted}`);
 }
@@ -165,7 +174,7 @@ function emitPetition(petition: Record<string, unknown>): void {
   if (petition.status !== undefined && petition.status !== null && petition.status !== '') {
     emitLine(`  Status: ${petition.status}`);
   }
-  const fee = formatCredits(petition.fee_paid);
+  const fee = feeCredits(petition.fee_paid);
   if (fee) emitLine(`  Fee: ${fee}`);
   if (petition.id !== undefined && petition.id !== null && petition.id !== '') {
     emitLine(`  ID: ${petition.id}`);

@@ -14,6 +14,7 @@ import {
   finiteNumber,
   firstArray,
   formatFacilityMaintenanceUpkeep,
+  formatIntegerText,
   formatLiveryName,
   formatter,
   isRecord,
@@ -84,6 +85,8 @@ function formatNumber(value: unknown): string | undefined {
 }
 
 function formatCredits(value: unknown): string | undefined {
+  const text = formatIntegerText(value);
+  if (text !== undefined) return `${text}cr`;
   const number = formatNumber(value);
   return number === undefined ? undefined : `${number}cr`;
 }
@@ -152,6 +155,8 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
 
 /** Omit the no-winner sentinel so this side-id label is not printed as -1. */
 function formatWinningSide(value: unknown): unknown {
+  if (value === -1n) return undefined;
+  if (typeof value === 'bigint') return value;
   const n = Number(value);
   if (Number.isFinite(n) && n === -1) return undefined;
   return value;
@@ -445,6 +450,10 @@ function formatPercentValue(value: unknown): string | undefined {
 }
 
 function formatZoneCount(value: unknown): string | undefined {
+  if (typeof value === 'bigint') {
+    const text = formatIntegerText(value);
+    return text === undefined ? undefined : `${text} ${value === 1n ? 'zone' : 'zones'}`;
+  }
   const number = Number(value);
   if (!Number.isFinite(number)) return undefined;
   return `${number.toLocaleString()} ${number === 1 ? 'zone' : 'zones'}`;
@@ -2009,7 +2018,12 @@ export const socialFormatters = [
         const rows = entries.map((entry, index) => {
           const attacks = Array.isArray(entry.attacks) ? entry.attacks.filter(isRecord) : [];
           const nonMissAttacks = attacks.filter((attack) => attack.hit_success !== false);
+          let damageSkipped = false;
           const totalDamage = attacks.reduce((sum, attack) => {
+            if (typeof attack.final_damage === 'bigint') {
+              damageSkipped = true;
+              return sum;
+            }
             const dmg = typeof attack.final_damage === 'number' ? attack.final_damage : 0;
             return sum + dmg;
           }, 0);
@@ -2021,7 +2035,7 @@ export const socialFormatters = [
             tick: entry.tick ?? entry.battle_tick ?? index,
             attacks: attacks.length,
             hits,
-            damage: totalDamage || undefined,
+            damage: damageSkipped ? undefined : totalDamage || undefined,
             shield: sumNumericField(nonMissAttacks, 'shield_damage'),
             hull: sumNumericField(nonMissAttacks, 'hull_damage'),
             burns: burns || undefined,
