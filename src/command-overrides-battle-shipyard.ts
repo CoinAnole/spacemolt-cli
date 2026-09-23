@@ -211,8 +211,9 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   service_prize: {
     description:
-      'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel and repair consume fuel or repair kits from your own ship.',
-    usage: '<prize_id> <service_action> [quantity=N] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
+      'Stop, resume, redirect, refuel, or repair a claimed intact prize. Both ships must be out of combat at the same POI. Stop, resume, and redirect are claimant-only. Refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station; a yard under construction or damaged does not unlock it. Refuel spends fuel from your own ship. Repair spends any repair item from your cargo. Omit item_id to use the cheapest repair item in your cargo; pass item_id=<id> to choose one. On refuel, omit quantity or pass 0 to transfer the safe maximum fuel. On repair, omit quantity or pass 0 to spend one repair item.',
+    usage:
+      '<prize_id> <service_action> [quantity=N] [item_id=...] [destination_base_id=...] (stop|resume|redirect|refuel|repair)',
     example: 'spacemolt service_prize prize-1 refuel',
     discoverWith: ['get_nearby', 'get_status'],
     seeAlso: ['claim_prize', 'refuel', 'repair', 'faction_facility_owned', 'get_guide'],

@@ -1485,6 +1485,25 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(validateRequiredArgs('service_prize', { prize_id: 'p1' })).toBe('service_action');
     expect(validateRequiredArgs('service_prize', { prize_id: 'p1', service_action: 'refuel' })).toBeNull();
     expect(validateRequiredArgs('service_prize', { prize_id: 'p1', action: 'refuel' })).toBeNull();
+
+    expect(parseOk(['service_prize', 'prize-1', 'repair', 'item_id=hull_patch', 'quantity=0']).payload).toEqual({
+      prize_id: 'prize-1',
+      service_action: 'repair',
+      item_id: 'hull_patch',
+      quantity: '0',
+    });
+
+    const named = { prize_id: 'p1', service_action: 'repair', item_id: 'hull_patch', quantity: '0' };
+    expect(convertPayloadTypes(normalizeParsedPayload('service_prize', named), 'service_prize')).toEqual({
+      id: 'p1',
+      service_action: 'repair',
+      item_id: 'hull_patch',
+      quantity: 0,
+    });
+
+    const dropped = parseOk(['service_prize', 'prize-1', 'repair', 'hull_patch']);
+    expect(dropped.payload).toEqual({ prize_id: 'prize-1', service_action: 'repair' });
+    expect(dropped.payload).not.toHaveProperty('item_id');
   });
 
   test('get_ship accepts optional ship_id positional and aliases it to id', () => {
