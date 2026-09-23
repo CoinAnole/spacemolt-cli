@@ -797,6 +797,8 @@ test('station refuel omits a reconstructed total when market_cost is a bigint', 
 
   expect(stdout).toContain('=== Refuel Complete ===');
   expect(stdout).toContain('Fuel tax: 10 cr');
+  expect(stdout).toContain('Market cost:');
+  expect(stdout.replace(/\D/g, '')).toContain('9007199254740993');
   expect(stdout).not.toContain('Total spent:');
   expect(stdout).not.toContain('9007199254740992');
 });

@@ -1,5 +1,6 @@
 import { normalizeCaptorKind } from './display/captor-kind.ts';
 import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
+import { formatIntegerText } from './display/helpers.ts';
 import { formatPrizeCaptureSite, prizeFieldText } from './display/prize-location.ts';
 import {
   formatMissingMaterialsPreview,
@@ -20,6 +21,25 @@ function finiteNumber(value: unknown): number | undefined {
 
 function exactIntegerDigits(value: unknown): string | undefined {
   return typeof value === 'bigint' ? value.toString() : undefined;
+}
+
+function summaryCount(value: unknown): { text: string; one: boolean } {
+  if (typeof value === 'bigint') {
+    return { text: formatIntegerText(value) ?? value.toString(), one: value === 1n };
+  }
+  const n = finiteNumber(value) ?? 0;
+  return { text: String(n), one: n === 1 };
+}
+
+function optionalCount(value: unknown): { text: string; one: boolean } | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'bigint') {
+    const text = formatIntegerText(value);
+    return text === undefined ? undefined : { text, one: value === 1n };
+  }
+  const n = finiteNumber(value);
+  if (n === undefined) return undefined;
+  return { text: String(n), one: n === 1 };
 }
 
 const DEFAULT_COUNT_MAP_LIMIT = 6;
@@ -355,9 +375,9 @@ function formatMarketUpdateMessage(data: Record<string, unknown>): string {
 }
 
 function formatCreditsAmount(value: unknown): string | undefined {
-  const number = finiteNumber(value);
-  if (number === undefined) return undefined;
-  return `${number.toLocaleString()}cr`;
+  const text = formatIntegerText(value);
+  if (text === undefined) return undefined;
+  return `${text}cr`;
 }
 
 function formatOutputPackagePreview(job: Record<string, unknown>): string | undefined {
@@ -374,8 +394,11 @@ function formatCraftingJobPreview(job: Record<string, unknown>): string {
   if (job.external === true) parts.push('rental');
   const escrow = formatCreditsAmount(job.escrowed_credits);
   if (escrow !== undefined) parts.push(`${escrow} escrowed`);
-  const remaining = finiteNumber(job.runs_remaining);
-  if (remaining !== undefined) parts.push(`${remaining.toLocaleString()} run${remaining === 1 ? '' : 's'} left`);
+  const remainingText = formatIntegerText(job.runs_remaining);
+  if (remainingText !== undefined) {
+    const oneRun = typeof job.runs_remaining === 'bigint' ? job.runs_remaining === 1n : job.runs_remaining === 1;
+    parts.push(`${remainingText} run${oneRun ? '' : 's'} left`);
+  }
   if (job.completed === true) parts.push('completed');
   const outPackage = formatOutputPackagePreview(job);
   if (outPackage !== undefined) parts.push(outPackage);
@@ -404,18 +427,18 @@ function formatCraftingUpdateMessage(data: Record<string, unknown>): string {
 }
 
 function formatCraftingSummaryMessage(data: Record<string, unknown>): string {
-  const count = finiteNumber(data.count) ?? 0;
-  const updateWord = count === 1 ? 'update' : 'updates';
-  const parts = [`${count} crafting progress ${updateWord} summarized`];
+  const count = summaryCount(data.count);
+  const updateWord = count.one ? 'update' : 'updates';
+  const parts = [`${count.text} crafting progress ${updateWord} summarized`];
   const latestTick = safeScalar(data.latest_tick);
-  const jobs = finiteNumber(data.jobs);
-  const rentalJobs = finiteNumber(data.rental_jobs);
+  const jobs = optionalCount(data.jobs);
+  const rentalJobs = optionalCount(data.rental_jobs);
   const escrow = formatCreditsAmount(data.escrowed_credits);
   const latestMessage = safeScalar(data.latest_message);
   if (latestTick !== undefined) parts.push(`latest tick ${latestTick}`);
-  if (jobs !== undefined) parts.push(`${jobs} active ${jobs === 1 ? 'job' : 'jobs'}`);
+  if (jobs !== undefined) parts.push(`${jobs.text} active ${jobs.one ? 'job' : 'jobs'}`);
   if (rentalJobs !== undefined) {
-    parts.push(`${rentalJobs} on rented ${rentalJobs === 1 ? 'facility' : 'facilities'}`);
+    parts.push(`${rentalJobs.text} on rented ${rentalJobs.one ? 'facility' : 'facilities'}`);
   }
   if (escrow !== undefined) parts.push(`${escrow} still escrowed`);
   if (latestMessage !== undefined) parts.push(`latest: ${latestMessage}`);
@@ -423,8 +446,8 @@ function formatCraftingSummaryMessage(data: Record<string, unknown>): string {
 }
 
 function formatActionResultSummaryMessage(data: Record<string, unknown>): string {
-  const count = finiteNumber(data.count) ?? 0;
-  const parts = [`${count} action result${count === 1 ? '' : 's'} summarized`];
+  const count = summaryCount(data.count);
+  const parts = [`${count.text} action result${count.one ? '' : 's'} summarized`];
   const commands = formatCountMap(data.commands);
   if (commands) parts.push(commands);
   const latestTick = safeScalar(data.latest_tick);
@@ -437,8 +460,8 @@ function formatActionResultSummaryMessage(data: Record<string, unknown>): string
 }
 
 function formatSystemProgressSummaryMessage(data: Record<string, unknown>): string {
-  const count = finiteNumber(data.count) ?? 0;
-  const parts = [`${count} travel progress update${count === 1 ? '' : 's'} summarized`];
+  const count = summaryCount(data.count);
+  const parts = [`${count.text} travel progress update${count.one ? '' : 's'} summarized`];
   const actions = formatCountMap(data.actions);
   if (actions) parts.push(actions);
   const latestAction = safeScalar(data.latest_action);
@@ -487,8 +510,8 @@ export function formatActionResultDetails(details: Record<string, unknown>): str
   if (poi !== undefined) bits.push(`@ ${poi}`);
   const item = safeScalar(details.item_name) ?? safeScalar(details.item_id);
   if (item !== undefined) {
-    const quantity = finiteNumber(details.quantity);
-    bits.push(quantity !== undefined ? `${quantity}× ${item}` : String(item));
+    const quantity = optionalCount(details.quantity);
+    bits.push(quantity !== undefined ? `${quantity.text}× ${item}` : String(item));
   }
   for (const key of ['module_id', 'storage_total', 'cargo_remaining'] as const) {
     const value = safeScalar(details[key]);
@@ -831,15 +854,17 @@ function previewPlayerDied(
       const weapons = Object.entries(log.weapons_used)
         .map(([weapon, count]) => {
           const n = finiteNumber(count);
-          if (n === undefined) return undefined;
-          return `${weapon} (x${n})`;
+          if (n !== undefined) return `${weapon} (x${n})`;
+          if (typeof count !== 'bigint') return undefined;
+          const digits = formatIntegerText(count);
+          return digits === undefined ? undefined : `${weapon} (x${digits})`;
         })
         .filter((entry): entry is string => Boolean(entry));
       if (weapons.length) details.push(truncate(`Weapons: ${weapons.join(', ')}`, options));
     }
 
-    const totalDamage = finiteNumber(log.total_damage);
-    if (totalDamage !== undefined && totalDamage > 0) {
+    const totalDamage = positiveNumber(log.total_damage);
+    if (totalDamage !== undefined) {
       const shield = finiteNumber(log.shield_damage) ?? exactIntegerDigits(log.shield_damage) ?? 0;
       const hull = finiteNumber(log.hull_damage) ?? exactIntegerDigits(log.hull_damage) ?? 0;
       const rounds = finiteNumber(log.combat_rounds) ?? exactIntegerDigits(log.combat_rounds) ?? 0;
@@ -860,18 +885,18 @@ function previewPlayerDied(
   const shipLost = safeScalar(data.ship_lost);
   if (shipLost !== undefined) details.push(truncate(`Ship lost: ${shipLost}`, options));
 
-  const cloneCost = finiteNumber(data.clone_cost);
-  if (cloneCost !== undefined && cloneCost > 0) {
+  const cloneCost = positiveNumber(data.clone_cost);
+  if (cloneCost !== undefined) {
     details.push(truncate(`Clone cost: ${cloneCost} credits`, options));
   }
 
-  const selfDestructFee = finiteNumber(data.self_destruct_fee);
-  if (selfDestructFee !== undefined && selfDestructFee > 0) {
+  const selfDestructFee = positiveNumber(data.self_destruct_fee);
+  if (selfDestructFee !== undefined) {
     details.push(truncate(`Self-destruct fee: ${selfDestructFee} credits`, options));
   }
 
-  const insurance = finiteNumber(data.insurance_payout);
-  if (insurance !== undefined && insurance > 0) {
+  const insurance = positiveNumber(data.insurance_payout);
+  if (insurance !== undefined) {
     details.push(truncate(`Insurance payout: ${insurance} credits`, options));
   }
 
@@ -894,10 +919,10 @@ function previewPlayerKill(
   const victim = rawVictim !== undefined ? String(rawVictim) : 'unknown';
   const details: string[] = [];
   // Match legacy writeLine: truthy bounty only (0 / empty omitted).
-  const bountyN = finiteNumber(data.bounty);
-  if (bountyN !== undefined && bountyN > 0) {
+  const bountyN = positiveNumber(data.bounty);
+  if (bountyN !== undefined) {
     details.push(truncate(`Bounty: ${bountyN} credits`, options));
-  } else {
+  } else if (typeof data.bounty !== 'bigint') {
     const bountyScalar = safeScalar(data.bounty);
     if (bountyScalar !== undefined && bountyScalar !== 0 && bountyScalar !== false) {
       details.push(truncate(`Bounty: ${bountyScalar} credits`, options));
@@ -1391,9 +1416,11 @@ function previewBattleEnded(
   }
 
   const details: string[] = [];
-  const winningSide = Number(data.winning_side);
-  if (Number.isFinite(winningSide) && winningSide === -1) {
+  if (data.winning_side === -1 || data.winning_side === -1n) {
     details.push('no winning side');
+  } else if (typeof data.winning_side !== 'bigint') {
+    const winningSide = Number(data.winning_side);
+    if (Number.isFinite(winningSide) && winningSide === -1) details.push('no winning side');
   }
   if (reasonToken && messageLine && messageLine !== reasonToken && !headline.includes(messageLine)) {
     details.push(messageLine);
@@ -1592,7 +1619,8 @@ function scalarOr(value: unknown, fallback: string): string {
   return scalar !== undefined ? String(scalar) : fallback;
 }
 
-function positiveNumber(value: unknown): number | undefined {
+function positiveNumber(value: unknown): string | number | undefined {
+  if (typeof value === 'bigint') return value > 0n ? formatIntegerText(value) : undefined;
   const n = finiteNumber(value);
   return n !== undefined && n > 0 ? n : undefined;
 }
@@ -2163,13 +2191,13 @@ function previewShipmentOverdue(
     finiteNumber(data.ticks_to_deadline) ??
     finiteNumber(data.ticks_left) ??
     finiteNumber(data.ticks_remaining);
-  const lateFee = finiteNumber(data.late_fee_if_delivered_now) ?? finiteNumber(data.late_fee);
+  const lateFee = formatIntegerText(data.late_fee_if_delivered_now) ?? formatIntegerText(data.late_fee);
 
   const parts: string[] = [];
   if (shipment !== undefined) parts.push(`shipment ${shipment}`);
   if (destination !== undefined) parts.push(`→ ${destination}`);
   if (ticksLeft !== undefined) parts.push(`${ticksLeft.toLocaleString()} ticks left`);
-  if (lateFee !== undefined) parts.push(`late fee ${lateFee.toLocaleString()} cr`);
+  if (lateFee !== undefined) parts.push(`late fee ${lateFee} cr`);
 
   const message = safeScalar(data.message);
   const headline =
@@ -2474,8 +2502,8 @@ function previewCloak(
 function formatMissionAutoCompleteRewards(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   const bits: string[] = [];
-  const credits = finiteNumber(value.credits);
-  if (credits !== undefined) bits.push(`${credits.toLocaleString()} cr`);
+  const credits = formatIntegerText(value.credits);
+  if (credits !== undefined) bits.push(`${credits} cr`);
   const xp = formatCountMap(value.skill_xp);
   if (xp) bits.push(`XP: ${xp}`);
   return bits.length ? bits.join(', ') : undefined;

@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { rawColors } from './ansi.ts';
-import { finiteNumber, formatResourceWorkabilitySuffix, sumNumericField, withDisplayRenderBuffer } from './helpers.ts';
+import {
+  finiteNumber,
+  formatIntegerText,
+  formatResourceWorkabilitySuffix,
+  sumNumericField,
+  withDisplayRenderBuffer,
+} from './helpers.ts';
 
 function formatPlain(res: Record<string, unknown>): string {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
@@ -50,6 +56,17 @@ describe('formatResourceWorkabilitySuffix', () => {
     expect(finiteNumber(9007199254740993n)).toBeUndefined();
     expect(finiteNumber(42)).toBe(42);
     expect(finiteNumber('42')).toBe(42);
+  });
+
+  test('formatIntegerText prints exact bigint digits with the number locale', () => {
+    const value = 9007199254740993n;
+    expect(formatIntegerText(value)).toBe(value.toLocaleString());
+    expect(formatIntegerText(value)?.replace(/\D/g, '')).toContain('9007199254740993');
+    expect(formatIntegerText(value)).not.toContain('9007199254740992');
+    expect(formatIntegerText(12500)).toBe((12500).toLocaleString());
+    expect(formatIntegerText(Number.NaN)).toBeUndefined();
+    expect(formatIntegerText('12500')).toBeUndefined();
+    expect(formatIntegerText(undefined)).toBeUndefined();
   });
 
   test('sumNumericField returns undefined when any addend is bigint', () => {

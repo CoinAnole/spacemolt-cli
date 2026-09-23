@@ -81,6 +81,13 @@ export function finiteNumber(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
+export function formatIntegerText(value: unknown): string | undefined {
+  if (typeof value === 'bigint' || (typeof value === 'number' && Number.isFinite(value))) {
+    return value.toLocaleString();
+  }
+  return undefined;
+}
+
 /** Format API reputation-change maps consistently across human-readable output. */
 export function formatReputationChangesSummary(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;

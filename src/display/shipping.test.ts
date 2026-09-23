@@ -71,6 +71,22 @@ const contract = {
   latest_beacon_at: '2026-07-17T10:10:00Z',
 };
 
+test('freight quote prints exact digits for an out-of-range base reward', () => {
+  const reward = 9007199254740993n;
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      origin_base_id: 'earth_station',
+      destination_base_id: 'nova_central',
+      base_reward: reward,
+    },
+  });
+  expect(stdout).toContain(`Base reward: ${reward.toLocaleString()} cr`);
+  expect(stdout.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 test('renders freight quotes with route, actors, costs, liability, and appraisal lines', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
