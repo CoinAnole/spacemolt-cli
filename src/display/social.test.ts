@@ -1536,6 +1536,12 @@ test('get_battle_status prints known latch statuses and omits unrecognized value
     true,
     { status: 'accruing' },
     ['accruing'],
+    'constructor',
+    '__proto__',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    'toLocaleString',
   ]) {
     expect(renderLatchStatus(latchStatus)).not.toContain('Latch:');
   }
@@ -1561,16 +1567,27 @@ test('get_battle_status prints combat state when latch status is the only recogn
 });
 
 test('get_battle_status omits combat state when latch status is unrecognized', () => {
-  const stdout = renderBattleStatus({
-    battle_id: 'battle-1',
-    system_id: 'sol',
-    is_participant: true,
-    combat_state: { latch_status: 'nope' },
-  });
+  for (const latchStatus of [
+    'nope',
+    'constructor',
+    '__proto__',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    'toLocaleString',
+  ]) {
+    const stdout = renderBattleStatus({
+      battle_id: 'battle-1',
+      system_id: 'sol',
+      is_participant: true,
+      combat_state: { latch_status: latchStatus },
+    });
 
-  expect(stdout).toContain('=== Battle ===');
-  expect(stdout).toContain('ID: battle-1');
-  expect(stdout).not.toContain('Combat State:');
+    expect(stdout).toContain('=== Battle ===');
+    expect(stdout).toContain('ID: battle-1');
+    expect(stdout).not.toContain('Combat State:');
+    expect(stdout).not.toContain('Latch:');
+  }
 });
 
 test('get_battle_status prints latch status nested under battle', () => {

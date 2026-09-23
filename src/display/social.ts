@@ -595,11 +595,11 @@ const LATCH_STATUS_LINES = {
   out_of_range: 'out_of_range (close to point-blank)',
 } as const satisfies Record<string, string>;
 
-// Unknown tokens stay omitted.
+// Unknown tokens stay omitted. Indexing the map also hits Object.prototype.
 function formatLatchStatus(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const text = value.trim();
-  if (!text) return undefined;
+  if (!Object.hasOwn(LATCH_STATUS_LINES, text)) return undefined;
   return LATCH_STATUS_LINES[text as keyof typeof LATCH_STATUS_LINES];
 }
 
