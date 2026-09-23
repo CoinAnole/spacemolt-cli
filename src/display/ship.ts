@@ -408,18 +408,13 @@ function bulkReloadRow(entry: unknown): Record<string, unknown> {
   return row;
 }
 
-// Present means non-null and not ''. 0 stays.
 function appendOptionalColumn(
   columns: Array<[string, string[]]>,
   rows: Array<Record<string, unknown>>,
   label: string,
   fields: string[],
 ): void {
-  if (
-    !rows.some((row) => fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''))
-  ) {
-    return;
-  }
+  if (!hasAnyField(rows, fields)) return;
   columns.push([label, fields]);
 }
 
@@ -446,6 +441,7 @@ function renderBulkReload(r: Record<string, unknown>): void {
   ];
   appendOptionalColumn(columns, rows, 'Ammo', ['ammo_display']);
   appendOptionalColumn(columns, rows, 'Magazine', ['magazine_display']);
+  // 0 stays, so an all-zero Discarded column is kept.
   appendOptionalColumn(columns, rows, 'Discarded', ['discarded_display']);
   appendOptionalColumn(columns, rows, 'Detail', ['detail_display']);
   printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
