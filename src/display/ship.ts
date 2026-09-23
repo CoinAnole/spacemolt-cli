@@ -698,9 +698,12 @@ export const shipFormatters = [
         emitLine(`Fuel cost: ${formatCredits(totalCost)}${perFuelText(totalCost)}`);
       }
       if (fuelTax !== undefined) emitLine(`Fuel tax: ${formatCredits(fuelTax)}${perFuelText(fuelTax)}`);
-      const totalSpent =
-        totalCost ??
-        (marketCost !== undefined || fuelTax !== undefined ? (marketCost ?? 0) + (fuelTax ?? 0) : undefined);
+      const rawCreditIsBigint =
+        typeof r.cost === 'bigint' || typeof r.market_cost === 'bigint' || typeof r.tax_amount === 'bigint';
+      let totalSpent = totalCost;
+      if (totalSpent === undefined && !rawCreditIsBigint && (marketCost !== undefined || fuelTax !== undefined)) {
+        totalSpent = (marketCost ?? 0) + (fuelTax ?? 0);
+      }
       if (totalSpent !== undefined) {
         const unitText =
           fuelAmount !== undefined && fuelAmount > 0 ? ` (${formatPerFuel(totalSpent / fuelAmount)} cr/fuel)` : '';

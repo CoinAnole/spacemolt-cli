@@ -579,7 +579,6 @@ function schemaMinimumErrorMessage(field: string, minimum: number, received: unk
 }
 
 function formatReceivedValue(value: unknown): string {
-  if (typeof value === 'bigint') return value.toString();
   const encoded = stringifyApiJson(value);
   return encoded === undefined ? String(value) : encoded;
 }

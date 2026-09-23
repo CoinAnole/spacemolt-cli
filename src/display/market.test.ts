@@ -29,6 +29,105 @@ const context = {
   },
 };
 
+test('sell omits a bigint total instead of a rounded fill sum', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity_sold: 2,
+      total_earned: 9007199254740993n,
+      fills: [
+        { quantity: 1, subtotal: 9007199254740991 },
+        { quantity: 1, subtotal: 2 },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const rounded = (9007199254740991 + 2).toLocaleString();
+
+  expect(stdout).toContain('Sold: 2');
+  expect(stdout).not.toContain('earned:');
+  expect(stdout).not.toContain('Total earned:');
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain(rounded);
+});
+
+test('sell omits a bigint quantity_sold instead of summing fills', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity_sold: 9007199254740993n,
+      total_earned: 10,
+      fills: [{ quantity: 9007199254740991 }, { quantity: 2 }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Total earned: 10 cr');
+  expect(stdout).not.toContain('Sold:');
+  expect(stdout).not.toContain('Instant fills:');
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain((9007199254740991 + 2).toLocaleString());
+});
+
+test('buy omits a bigint total_cost instead of a rounded fill sum', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 2,
+      total_cost: 9007199254740993n,
+      fills: [
+        { quantity: 1, subtotal: 9007199254740991 },
+        { quantity: 1, subtotal: 2 },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Requested: 2');
+  expect(stdout).not.toContain('spent:');
+  expect(stdout).not.toContain('Total cost:');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
+test('create_sell_order omits bigint quantity_filled and total_earned', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity: 4,
+      quantity_filled: 9007199254740993n,
+      total_earned: 9007199254740993n,
+      order_id: 'order-1',
+      fills: [
+        { quantity: 9007199254740991, subtotal: 9007199254740991 },
+        { quantity: 2, subtotal: 2 },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Requested: 4');
+  expect(stdout).toContain('Order ID: order-1');
+  expect(stdout).not.toContain('Instant fills:');
+  expect(stdout).not.toContain('earned:');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 test('faction_query_intel appends [deep core] when the POI is tagged', () => {
   const stdout = renderStructuredResult(
     'faction_query_intel',

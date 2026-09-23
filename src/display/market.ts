@@ -113,6 +113,11 @@ function formatCredits(value: number): string {
   return `${value.toLocaleString()} cr`;
 }
 
+function finiteOrFillSum(primary: unknown, fills: unknown, field: string): number | undefined {
+  if (typeof primary === 'bigint') return undefined;
+  return finiteNumber(primary) ?? sumNumericField(fills, field);
+}
+
 function formatCreditWords(value: unknown): string | undefined {
   const amount = finiteNumber(value);
   return amount === undefined ? undefined : `${amount.toLocaleString()} credits`;
@@ -944,14 +949,14 @@ export const marketFormatters = [
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
       const requested = finiteNumber(r.quantity);
-      const filled = finiteNumber(r.quantity_filled) ?? sumNumericField(r.fills, 'quantity');
+      const filled = finiteOrFillSum(r.quantity_filled, r.fills, 'quantity');
       const remaining =
         finiteNumber(r.quantity_listed) ??
         (requested !== undefined && filled !== undefined ? Math.max(0, requested - filled) : undefined);
       const fillTotal =
         side === 'buy'
-          ? (finiteNumber(r.total_spent) ?? sumNumericField(r.fills, 'subtotal'))
-          : (finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal'));
+          ? finiteOrFillSum(r.total_spent, r.fills, 'subtotal')
+          : finiteOrFillSum(r.total_earned, r.fills, 'subtotal');
       const priceEach = finiteNumber(r.price_each);
       const listingFee = finiteNumber(r.listing_fee);
       const totalEscrowed = finiteNumber(r.total_escrowed);
@@ -1068,8 +1073,8 @@ export const marketFormatters = [
       if ((command !== 'sell' && r.action !== 'sell') || !isDirectMarketSellShape(r)) return false;
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
-      const sold = finiteNumber(r.quantity_sold) ?? sumNumericField(r.fills, 'quantity');
-      const earned = finiteNumber(r.total_earned) ?? sumNumericField(r.fills, 'subtotal');
+      const sold = finiteOrFillSum(r.quantity_sold, r.fills, 'quantity');
+      const earned = finiteOrFillSum(r.total_earned, r.fills, 'subtotal');
       const unsold = finiteNumber(r.unsold);
 
       emitLine(`\n${c.bright}=== Sell Complete ===${c.reset}`);
@@ -1101,7 +1106,7 @@ export const marketFormatters = [
       const filled =
         sumNumericField(r.fills, 'quantity') ??
         (requested !== undefined && unfilled !== undefined ? Math.max(0, requested - unfilled) : undefined);
-      const spent = finiteNumber(r.total_cost) ?? sumNumericField(r.fills, 'subtotal');
+      const spent = finiteOrFillSum(r.total_cost, r.fills, 'subtotal');
       const deliveredToCargo = finiteNumber(r.delivered_to_cargo);
       const deliveredToStorage = finiteNumber(r.delivered_to_storage);
 
