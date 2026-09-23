@@ -8,6 +8,9 @@ import {
   cargoOverCapacityFixture,
   factionGaragesFixture,
   listShipsFixture,
+  reloadBulkFixture,
+  reloadBulkMixedFixture,
+  reloadFixture,
   repairFixture,
   repairFleetFixture,
   repairStationFixture,
@@ -965,6 +968,578 @@ test('repair details-only auto_docked does not print a receipt line or banner', 
   expect(stdout).not.toContain('Auto-docked:');
   expect(stdout).not.toContain('Auto Docked:');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+function renderReload(fixture: Record<string, unknown>, extraOptions: Partial<GlobalOptions> = {}) {
+  return renderStructuredResult('reload', structuredClone(fixture), { ...options, ...extraOptions }, context);
+}
+
+function renderReloadDetails(details: Record<string, unknown>, extraOptions: Partial<GlobalOptions> = {}) {
+  return renderReload({ details }, extraOptions);
+}
+
+function nestedReload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    action: 'reload',
+    weapon_name: 'Pulse Laser',
+    weapon_id: 'weapon-1',
+    ammo_name: 'Laser Cell',
+    ammo_id: 'ammo-cell',
+    current_ammo: 8,
+    magazine_size: 8,
+    ...overrides,
+  };
+}
+
+function pipeCells(line: string): string[] {
+  return line.split('|').map((cell) => cell.trim());
+}
+
+function resultsTable(stdout: string): { header: string[]; rows: string[][] } {
+  const lines = stdout.split('\n');
+  const headerIndex = lines.findIndex(
+    (line) => line.includes('|') && line.includes('Index') && line.includes('Weapon'),
+  );
+  expect(headerIndex).toBeGreaterThanOrEqual(0);
+  const header = pipeCells(lines[headerIndex] ?? '');
+  const rows: string[][] = [];
+  for (const line of lines.slice(headerIndex + 1)) {
+    if (!line.includes('|')) continue;
+    rows.push(pipeCells(line));
+  }
+  return { header, rows };
+}
+
+test('single-weapon reload keeps the magazine lines and skips the bulk table', () => {
+  const rendered = renderReload(reloadFixture);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr.join('')).toBe('');
+  expect(stdout).toContain('Weapon: Pulse Laser (weapon-1)');
+  expect(stdout).toContain('Rounds discarded: 0');
+  expect(stdout).not.toContain('total |');
+  expect(stdout).not.toContain('=== Results ===');
+});
+
+test('all-success bulk reload prints summary, magazines, and discarded counts', () => {
+  const rendered = renderReload(reloadBulkFixture);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('2 total | 2 succeeded | 0 failed');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Previous');
+  expect(stdout).not.toContain('Reloaded 1 of 2');
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toEqual(['Index', 'Weapon', 'OK', 'Ammo', 'Magazine', 'Discarded']);
+  expect(rows[0]).toEqual(['0', 'Pulse Laser (weapon-1)', 'yes', 'Laser Cell (ammo-cell)', '8/8', '2']);
+  expect(rows[1]).toEqual(['1', 'Scrapgun (weapon-2)', 'yes', 'Scrap (scrap_metal)', '1/1', '0']);
+});
+
+test('mixed bulk reload prints per-weapon success and failure and stays successful', () => {
+  const rendered = renderReload(reloadBulkMixedFixture);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr.join('')).toBe('');
+  expect(stdout).toContain('2 total | 1 succeeded | 1 failed');
+  expect(stdout).toContain('Reloaded 1 of 2 weapons.');
+  expect(stdout.indexOf('Reloaded 1 of 2 weapons.')).toBeGreaterThan(
+    stdout.indexOf('2 total | 1 succeeded | 1 failed'),
+  );
+  expect(stdout.indexOf('=== Results ===')).toBeGreaterThan(stdout.indexOf('Reloaded 1 of 2 weapons.'));
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toEqual(['Index', 'Weapon', 'OK', 'Ammo', 'Magazine', 'Discarded', 'Detail']);
+  expect(rows[0]).toEqual(['0', 'Pulse Laser (weapon-1)', 'yes', 'Laser Cell (ammo-cell)', '8/8', '0', '']);
+  expect(rows[1]).toEqual(['1', 'weapon-2', 'no', '', '', '', 'incompatible_ammo: Ammo does not match this weapon.']);
+});
+
+const bulkMarkers = [
+  ['mode bulk', { mode: 'bulk' }],
+  ['action reload', { action: 'reload' }],
+] as const;
+
+for (const [label, marker] of bulkMarkers) {
+  test(`empty results with a zero summary via ${label} prints No results`, () => {
+    const stdout = renderReloadDetails({
+      ...marker,
+      summary: { total: 0, succeeded: 0, failed: 0 },
+      results: [],
+    }).stdout.join('\n');
+    expect(stdout).toContain('=== Reloaded ===');
+    expect(stdout).toContain('0 total | 0 succeeded | 0 failed');
+    expect(stdout).toContain('No results.');
+    expect(stdout).not.toContain('=== Results ===');
+  });
+
+  test(`empty results keep a non-zero summary via ${label}`, () => {
+    const stdout = renderReloadDetails({
+      ...marker,
+      summary: { total: 2, succeeded: 0, failed: 0 },
+      results: [],
+    }).stdout.join('\n');
+    expect(stdout).toContain('2 total | 0 succeeded | 0 failed');
+    expect(stdout).toContain('No results.');
+    expect(stdout).not.toContain('0 total | 0 succeeded | 0 failed');
+    expect(stdout).not.toContain('=== Results ===');
+  });
+
+  test(`empty results with no summary via ${label} print question marks`, () => {
+    const stdout = renderReloadDetails({
+      ...marker,
+      results: [],
+    }).stdout.join('\n');
+    expect(stdout).toContain('? total | ? succeeded | ? failed');
+    expect(stdout).toContain('No results.');
+    expect(stdout).not.toContain('0 total |');
+  });
+}
+
+test('results without mode or action reload are not a bulk reload', () => {
+  const stdout = renderReloadDetails({
+    results: [],
+    summary: { total: 2, succeeded: 0, failed: 0 },
+  }).stdout.join('\n');
+  expect(stdout).not.toContain('=== Reloaded ===');
+  expect(stdout).not.toContain('2 total |');
+});
+
+test('action reload with an empty results array takes the bulk summary path', () => {
+  const stdout = renderReloadDetails({ action: 'reload', results: [] }).stdout.join('\n');
+  expect(stdout).toContain('=== Reloaded ===');
+  expect(stdout).toContain('? total | ? succeeded | ? failed');
+  expect(stdout).toContain('No results.');
+  expect(stdout).not.toContain('=== Results ===');
+});
+
+test('action reload alone stays heading-only', () => {
+  const stdout = renderReloadDetails({ action: 'reload' }).stdout.join('\n');
+  expect(stdout).toContain('=== Reloaded ===');
+  expect(stdout).not.toContain('total |');
+  expect(stdout).not.toContain('No results.');
+  expect(stdout).not.toContain('=== Results ===');
+  expect(stdout).not.toContain('Weapon:');
+});
+
+for (const withMode of [false, true]) {
+  test(`top-level weapon fields plus results stay on the bulk table (mode ${withMode})`, () => {
+    const stdout = renderReloadDetails({
+      action: 'reload',
+      ...(withMode ? { mode: 'bulk' } : {}),
+      weapon_id: 'weapon-top',
+      weapon_name: 'Top Laser',
+      current_ammo: 3,
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [{ index: 0, weapon_id: 'weapon-1', success: true, result: nestedReload() }],
+    }).stdout.join('\n');
+    expect(stdout).toContain('=== Results ===');
+    expect(stdout).toContain('Pulse Laser (weapon-1)');
+    expect(stdout).not.toContain('Weapon: ');
+    expect(stdout).not.toContain('Current ammo:');
+    expect(stdout).not.toContain('weapon-top');
+    expect(stdout).not.toContain('Top Laser');
+  });
+}
+
+test('copied location and fuel keys are not bulk signals', () => {
+  const single = renderReloadDetails({
+    action: 'reload',
+    weapon_name: 'Pulse Laser',
+    weapon_id: 'weapon-1',
+    current_ammo: 4,
+    fuel_now: 80,
+    fuel_max: 100,
+    system_id: 'sol',
+    station_id: 'earth',
+  }).stdout.join('\n');
+  expect(single).toContain('Weapon: Pulse Laser (weapon-1)');
+  expect(single).toContain('Current ammo: 4');
+  expect(single).not.toContain('total |');
+  expect(single).not.toContain('=== Results ===');
+
+  const copiesOnly = renderReloadDetails({
+    fuel_now: 80,
+    system_id: 'sol',
+    station_name: 'Earth',
+  }).stdout.join('\n');
+  expect(copiesOnly).not.toContain('=== Reloaded ===');
+  expect(copiesOnly).not.toContain('total |');
+
+  const bulkWithCopies = renderReloadDetails({
+    mode: 'bulk',
+    fuel_now: 80,
+    system_id: 'sol',
+    summary: { total: 0, succeeded: 0, failed: 0 },
+  }).stdout.join('\n');
+  expect(bulkWithCopies).toContain('0 total | 0 succeeded | 0 failed');
+  expect(bulkWithCopies).toContain('No results.');
+  expect(bulkWithCopies).not.toContain('Weapon:');
+});
+
+test('non-array results on a bulk body still print the summary and No results', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    results: { index: 0 },
+    summary: { total: 4, succeeded: 4, failed: 0 },
+  }).stdout.join('\n');
+  expect(stdout).toContain('4 total | 4 succeeded | 0 failed');
+  expect(stdout).toContain('No results.');
+  expect(stdout).not.toContain('=== Results ===');
+});
+
+test('all-failure rows with errors and no nested result omit ammo columns', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 0, failed: 1 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-2',
+        success: false,
+        error_code: 'incompatible_ammo',
+        error: 'Ammo does not match this weapon.',
+      },
+    ],
+  }).stdout.join('\n');
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toEqual(['Index', 'Weapon', 'OK', 'Detail']);
+  expect(header).not.toContain('Ammo');
+  expect(header).not.toContain('Magazine');
+  expect(header).not.toContain('Discarded');
+  expect(rows[0]).toEqual(['0', 'weapon-2', 'no', 'incompatible_ammo: Ammo does not match this weapon.']);
+});
+
+test('missing success leaves the OK cell blank', () => {
+  const rendered = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 0, failed: 0 },
+    results: [{ index: 0, weapon_id: 'weapon-1' }],
+  });
+  const stdout = rendered.stdout.join('\n');
+  const rowLine = stdout.split('\n').find((line) => line.includes('weapon-1') && line.includes('|'));
+  expect(rowLine).toBeDefined();
+  expect(rowLine ?? '').not.toContain('| no |');
+  expect(rowLine ?? '').not.toContain('| yes |');
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toContain('OK');
+  expect(rows[0]?.[2]).toBe('');
+});
+
+test('success true with no result and no error says no reload detail', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [{ index: 0, weapon_id: 'weapon-9', success: true }],
+  }).stdout.join('\n');
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toEqual(['Index', 'Weapon', 'OK', 'Detail']);
+  expect(rows[0]).toEqual(['0', 'weapon-9', 'yes', 'no reload detail']);
+});
+
+test('success true with an error does not say no reload detail', () => {
+  const absent = renderReloadDetails({
+    action: 'reload',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [{ index: 0, weapon_id: 'weapon-9', success: true, error: 'magazine jammed' }],
+  }).stdout.join('\n');
+  expect(absent).toContain('magazine jammed');
+  expect(absent).not.toContain('no reload detail');
+  expect(resultsTable(absent).rows[0]?.[1]).toBe('weapon-9');
+
+  const arrayResult = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [{ index: 0, weapon_id: 'weapon-9', success: true, result: [], error_code: 'partial' }],
+  }).stdout.join('\n');
+  expect(arrayResult).toContain('partial');
+  expect(arrayResult).not.toContain('no reload detail');
+  expect(resultsTable(arrayResult).header).not.toContain('Ammo');
+});
+
+test('a nested result still prints when an error is set', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 2, succeeded: 1, failed: 1 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-entry',
+        success: true,
+        error: 'kept a warning',
+        result: nestedReload({ rounds_discarded: 0 }),
+      },
+      {
+        index: 1,
+        weapon_id: 'weapon-2',
+        success: false,
+        error_code: 'warn_false',
+        result: nestedReload({ weapon_name: 'Scrapgun', weapon_id: 'weapon-2', rounds_discarded: 1 }),
+      },
+    ],
+  }).stdout.join('\n');
+  const { rows } = resultsTable(stdout);
+  expect(rows[0]?.[1]).toBe('Pulse Laser (weapon-1)');
+  expect(rows[0]?.[3]).toBe('Laser Cell (ammo-cell)');
+  expect(rows[0]?.[5]).toBe('0');
+  expect(rows[0]?.[6]).toBe('kept a warning');
+  expect(rows[0]?.join(' ')).not.toContain('weapon-entry');
+  expect(rows[1]?.[2]).toBe('no');
+  expect(rows[1]?.[3]).toBe('Laser Cell (ammo-cell)');
+  expect(rows[1]?.[6]).toBe('warn_false');
+});
+
+test('success false without a result prints the error and no ammo', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 0, failed: 1 },
+    results: [
+      {
+        index: 1,
+        weapon_id: 'weapon-2',
+        success: false,
+        error: 'magazine empty',
+        ammo_name: 'Decoy Ammo',
+        ammo_id: 'decoy',
+        current_ammo: 8,
+        magazine_size: 8,
+        rounds_discarded: 5,
+      },
+    ],
+  }).stdout.join('\n');
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toEqual(['Index', 'Weapon', 'OK', 'Detail']);
+  expect(rows[0]).toEqual(['1', 'weapon-2', 'no', 'magazine empty']);
+  expect(stdout).not.toContain('Decoy Ammo');
+  expect(stdout).not.toContain('decoy');
+  expect(stdout).not.toContain('8/8');
+  expect(stdout).not.toContain('no reload detail');
+});
+
+test('a string summary count prints ? and the same body without mode is not bulk', () => {
+  const payload = {
+    summary: { total: '2', succeeded: true, failed: 0 },
+    results: [] as unknown[],
+  };
+  const bulk = renderReloadDetails({ mode: 'bulk', ...payload }).stdout.join('\n');
+  expect(bulk).toContain('? total | ? succeeded | 0 failed');
+  expect(bulk).not.toContain('2 total');
+  expect(bulk).not.toContain('1 succeeded');
+
+  const notBulk = renderReloadDetails(payload).stdout.join('\n');
+  expect(notBulk).not.toContain('=== Reloaded ===');
+  expect(notBulk).not.toContain('2 total');
+  expect(notBulk).not.toContain('? total');
+});
+
+test('non-record summary and a missing summary field print ?', () => {
+  const nonRecord = renderReloadDetails({
+    mode: 'bulk',
+    summary: ['2'],
+    results: [],
+  }).stdout.join('\n');
+  expect(nonRecord).toContain('? total | ? succeeded | ? failed');
+
+  const missingField = renderReloadDetails({
+    action: 'reload',
+    summary: { total: 2, failed: 0 },
+    results: [],
+  }).stdout.join('\n');
+  expect(missingField).toContain('2 total | ? succeeded | 0 failed');
+});
+
+test('non-record results elements stay rows labeled invalid result', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 4, succeeded: 0, failed: 0 },
+    results: ['bad', null, 1, ['nested']],
+  }).stdout.join('\n');
+  const { header, rows } = resultsTable(stdout);
+  expect(header).toEqual(['Index', 'Weapon', 'OK', 'Detail']);
+  expect(rows).toEqual([
+    ['', '', '', 'invalid result'],
+    ['', '', '', 'invalid result'],
+    ['', '', '', 'invalid result'],
+    ['', '', '', 'invalid result'],
+  ]);
+});
+
+test('detail text prefers one error string, both strings, or a blank failure', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 5, succeeded: 1, failed: 4 },
+    results: [
+      { index: 0, weapon_id: 'w0', success: false, error_code: 'code_only' },
+      { index: 1, weapon_id: 'w1', success: false, error: 'error only' },
+      { index: 2, weapon_id: 'w2', success: false, error_code: 'both_code', error: 'both error' },
+      { index: 3, weapon_id: 'w3', success: true },
+      { index: 4, weapon_id: 'w4', success: false },
+    ],
+  }).stdout.join('\n');
+  const { rows } = resultsTable(stdout);
+  expect(rows.map((row) => row[3])).toEqual([
+    'code_only',
+    'error only',
+    'both_code: both error',
+    'no reload detail',
+    '',
+  ]);
+  expect(rows.map((row) => row[2])).toEqual(['no', 'no', 'no', 'yes', 'no']);
+});
+
+test('bulk rows stay in server order and the summary is not recounted', () => {
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 9, succeeded: 8, failed: 1 },
+    results: [
+      { index: 1, weapon_id: 'second', success: false, error: 'late' },
+      { index: 0, weapon_id: 'first', success: true, result: nestedReload() },
+    ],
+  }).stdout.join('\n');
+  expect(stdout).toContain('9 total | 8 succeeded | 1 failed');
+  expect(stdout).not.toContain('2 total |');
+  const { rows } = resultsTable(stdout);
+  expect(rows[0]?.[1]).toBe('second');
+  expect(rows[1]?.[1]).toBe('Pulse Laser (weapon-1)');
+  expect(rows[0]?.[0]).toBe('1');
+  expect(rows[1]?.[0]).toBe('0');
+});
+
+test('weapon and ammo cells follow the name and id pattern', () => {
+  const differed = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-entry',
+        success: true,
+        result: nestedReload({ weapon_id: 'weapon-nested' }),
+      },
+    ],
+  }).stdout.join('\n');
+  expect(resultsTable(differed).rows[0]?.[1]).toBe('Pulse Laser (weapon-nested)');
+  expect(differed).not.toContain('weapon-entry');
+
+  const nameOnly = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [{ index: 0, success: true, result: nestedReload({ weapon_id: undefined, ammo_id: undefined }) }],
+  }).stdout.join('\n');
+  const nameRow = resultsTable(nameOnly).rows[0] ?? [];
+  expect(nameRow[1]).toBe('Pulse Laser');
+  expect(nameRow[3]).toBe('Laser Cell');
+
+  const idOnly = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-entry',
+        success: true,
+        result: nestedReload({ weapon_name: undefined, ammo_name: undefined }),
+      },
+    ],
+  }).stdout.join('\n');
+  const idRow = resultsTable(idOnly).rows[0] ?? [];
+  expect(idRow[1]).toBe('weapon-1');
+  expect(idRow[3]).toBe('ammo-cell');
+  expect(idOnly).not.toContain('weapon-entry');
+
+  const fallbackId = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-entry',
+        success: true,
+        result: nestedReload({ weapon_name: undefined, weapon_id: undefined }),
+      },
+    ],
+  }).stdout.join('\n');
+  expect(resultsTable(fallbackId).rows[0]?.[1]).toBe('weapon-entry');
+});
+
+test('magazine and discarded cells accept only strict finite numbers', () => {
+  const oneSided = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [
+      {
+        index: true,
+        weapon_id: 'weapon-1',
+        success: true,
+        result: nestedReload({ current_ammo: '8', magazine_size: 9, rounds_discarded: '2' }),
+      },
+    ],
+  }).stdout.join('\n');
+  const skewed = resultsTable(oneSided);
+  expect(skewed.header).not.toContain('Discarded');
+  expect(skewed.rows[0]?.[0]).toBe('');
+  expect(skewed.rows[0]?.[4]).toBe('9');
+  expect(oneSided).not.toContain('8/9');
+  expect(oneSided).not.toContain('?/9');
+
+  const currentOnly = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-1',
+        success: true,
+        result: nestedReload({ magazine_size: undefined, rounds_discarded: 0 }),
+      },
+    ],
+  }).stdout.join('\n');
+  const currentRow = resultsTable(currentOnly);
+  expect(currentRow.header).toEqual(['Index', 'Weapon', 'OK', 'Ammo', 'Magazine', 'Discarded']);
+  expect(currentRow.rows[0]?.[4]).toBe('8');
+  expect(currentRow.rows[0]?.[5]).toBe('0');
+
+  const sizeOnly = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    results: [
+      {
+        index: '0',
+        weapon_id: 'weapon-1',
+        success: true,
+        result: nestedReload({ current_ammo: undefined, magazine_size: 4, rounds_discarded: false }),
+      },
+    ],
+  }).stdout.join('\n');
+  const sizeRow = resultsTable(sizeOnly);
+  expect(sizeRow.header).not.toContain('Discarded');
+  expect(sizeRow.rows[0]?.[0]).toBe('');
+  expect(sizeRow.rows[0]?.[4]).toBe('4');
+  expect(sizeOnly).not.toContain('?/4');
+});
+
+test('a message that restates the summary is still printed', () => {
+  const summaryLine = '1 total | 1 succeeded | 0 failed';
+  const stdout = renderReloadDetails({
+    mode: 'bulk',
+    summary: { total: 1, succeeded: 1, failed: 0 },
+    message: summaryLine,
+    results: [{ index: 0, weapon_id: 'weapon-1', success: true, result: nestedReload() }],
+  }).stdout.join('\n');
+  expect(stdout.split(summaryLine).length - 1).toBe(2);
+});
+
+test('quiet does not hide the bulk reload summary or results', () => {
+  const rendered = renderReload(reloadBulkFixture, { quiet: true });
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('2 total | 2 succeeded | 0 failed');
+  expect(stdout).toContain('=== Results ===');
+  expect(rendered.stderr.join('')).toBe('');
+});
+
+test('repair does not render a bulk reload results table', () => {
+  const stdout = renderStructuredResult('repair', structuredClone(reloadBulkFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).not.toContain('=== Results ===');
+  expect(stdout).not.toContain('=== Reloaded ===');
 });
 
 function renderCargoHold(result: Record<string, unknown>): { printed: boolean; stdout: string } {

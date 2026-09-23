@@ -1,0 +1,10 @@
+
+=== Reloaded ===
+2 total | 2 succeeded | 0 failed
+
+=== Results ===
+
+  Index | Weapon                 | OK  | Ammo                   | Magazine | Discarded
+  ------+------------------------+-----+------------------------+----------+----------
+  0     | Pulse Laser (weapon-1) | yes | Laser Cell (ammo-cell) | 8/8      | 2        
+  1     | Scrapgun (weapon-2)    | yes | Scrap (scrap_metal)    | 1/1      | 0        

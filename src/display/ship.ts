@@ -349,6 +349,104 @@ export function emitCargoHold(result: Record<string, unknown>): boolean {
   return true;
 }
 
+function isStrictFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isBulkReloadDetails(r: Record<string, unknown>): boolean {
+  if (r.mode === 'bulk') return true;
+  // Results is the batch even when mode is omitted. Summary is not required.
+  return r.action === 'reload' && Array.isArray(r.results);
+}
+
+function formatNameAndId(name: unknown, id: unknown): string {
+  const nameText = nonEmptyString(name);
+  const idText = nonEmptyString(id);
+  if (nameText && idText) return `${nameText} (${idText})`;
+  return nameText ?? idText ?? '';
+}
+
+function bulkSummaryCount(summary: unknown, key: string): string {
+  if (!isRecord(summary)) return '?';
+  const value = summary[key];
+  return isStrictFiniteNumber(value) ? String(value) : '?';
+}
+
+function bulkReloadRow(entry: unknown): Record<string, unknown> {
+  if (!isRecord(entry)) return { detail_display: 'invalid result' };
+
+  const nested = isRecord(entry.result) ? entry.result : undefined;
+  const row: Record<string, unknown> = {};
+  if (isStrictFiniteNumber(entry.index)) row.index_display = entry.index;
+
+  const weaponId = nested ? (nonEmptyString(nested.weapon_id) ?? nonEmptyString(entry.weapon_id)) : undefined;
+  const weapon = nested ? formatNameAndId(nested.weapon_name, weaponId) : (nonEmptyString(entry.weapon_id) ?? '');
+  if (weapon) row.weapon_display = weapon;
+
+  if (entry.success === true) row.ok_display = 'yes';
+  else if (entry.success === false) row.ok_display = 'no';
+
+  if (nested) {
+    const ammo = formatNameAndId(nested.ammo_name, nested.ammo_id);
+    if (ammo) row.ammo_display = ammo;
+    const current = isStrictFiniteNumber(nested.current_ammo) ? String(nested.current_ammo) : undefined;
+    const size = isStrictFiniteNumber(nested.magazine_size) ? String(nested.magazine_size) : undefined;
+    if (current !== undefined && size !== undefined) row.magazine_display = `${current}/${size}`;
+    else if (current !== undefined) row.magazine_display = current;
+    else if (size !== undefined) row.magazine_display = size;
+    if (isStrictFiniteNumber(nested.rounds_discarded)) row.discarded_display = nested.rounds_discarded;
+  }
+
+  const errorCode = nonEmptyString(entry.error_code);
+  const error = nonEmptyString(entry.error);
+  let detail: string | undefined;
+  if (errorCode && error) detail = `${errorCode}: ${error}`;
+  else if (errorCode) detail = errorCode;
+  else if (error) detail = error;
+  else if (entry.success === true && nested === undefined) detail = 'no reload detail';
+  if (detail) row.detail_display = detail;
+  return row;
+}
+
+function appendOptionalColumn(
+  columns: Array<[string, string[]]>,
+  rows: Array<Record<string, unknown>>,
+  label: string,
+  fields: string[],
+): void {
+  if (!hasAnyField(rows, fields)) return;
+  columns.push([label, fields]);
+}
+
+function renderBulkReload(r: Record<string, unknown>): void {
+  emitLine(`\n${c.bright}=== Reloaded ===${c.reset}`);
+  const total = bulkSummaryCount(r.summary, 'total');
+  const succeeded = bulkSummaryCount(r.summary, 'succeeded');
+  const failed = bulkSummaryCount(r.summary, 'failed');
+  emitLine(`${total} total | ${succeeded} succeeded | ${failed} failed`);
+  const message = nonEmptyString(r.message);
+  if (message) emitLine(`${c.dim}${message}${c.reset}`);
+
+  const results = Array.isArray(r.results) ? r.results : [];
+  if (results.length === 0) {
+    emitLine('No results.');
+    return;
+  }
+
+  const rows = results.map((entry) => bulkReloadRow(entry));
+  const columns: Array<[string, string[]]> = [
+    ['Index', ['index_display']],
+    ['Weapon', ['weapon_display']],
+    ['OK', ['ok_display']],
+  ];
+  appendOptionalColumn(columns, rows, 'Ammo', ['ammo_display']);
+  appendOptionalColumn(columns, rows, 'Magazine', ['magazine_display']);
+  // 0 stays, so an all-zero Discarded column is kept.
+  appendOptionalColumn(columns, rows, 'Discarded', ['discarded_display']);
+  appendOptionalColumn(columns, rows, 'Detail', ['detail_display']);
+  printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
+}
+
 export const shipFormatters = [
   formatter(
     (r) => {
@@ -670,6 +768,10 @@ export const shipFormatters = [
 
   formatter(
     (r) => {
+      if (isBulkReloadDetails(r)) {
+        renderBulkReload(r);
+        return true;
+      }
       if (r.action !== 'reload' && r.weapon_id === undefined && r.current_ammo === undefined) return false;
       emitLine(`\n${c.bright}=== Reloaded ===${c.reset}`);
       if (r.weapon_name || r.weapon_id)
