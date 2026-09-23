@@ -19,6 +19,7 @@ import {
   battleStatusBoardingFixture,
   battleStatusCombatStateFixture,
   battleStatusFixture,
+  battleStatusLatchStatusFixture,
   battleSummaryArenaFixture,
   battleSummaryCapturesFixture,
   battleSummaryCapturesKindFixture,
@@ -1485,6 +1486,98 @@ test('get_battle_status prints intercept combat state that blocks escape', () =>
   expect(stdout).toContain('Incapacitated: no');
   expect(stdout).toContain('Intercepting: no');
   expect(stdout).toContain('Warp Disrupted: no');
+  expect(stdout).not.toContain('Latch:');
+});
+
+function renderLatchStatus(latchStatus: unknown): string {
+  const fixture = structuredClone(battleStatusLatchStatusFixture);
+  const combatState = fixture.combat_state as Record<string, unknown>;
+  combatState.latch_status = latchStatus;
+  return renderBattleStatus(fixture);
+}
+
+test('get_battle_status prints latch status after intercepting and before webbed', () => {
+  const stdout = renderBattleStatus(structuredClone(battleStatusLatchStatusFixture));
+  const lines = stdout.split('\n');
+  const latchLine = 'Latch: shields_holding (keep shields down)';
+  const intercepting = lines.findIndex((line) => line.startsWith('Intercepting:'));
+  const latch = lines.indexOf(latchLine);
+  const webbed = lines.findIndex((line) => line.startsWith('Webbed:'));
+  const participants = sectionAfter(stdout, 'Participants', 'Boarding');
+  const boarding = sectionAfter(stdout, 'Boarding');
+
+  expect(intercepting).toBeGreaterThanOrEqual(0);
+  expect(latch).toBeGreaterThan(intercepting);
+  expect(webbed).toBeGreaterThan(latch);
+  expect(boarding).toContain('closing');
+  expect(boarding).toContain('latching');
+  expect(boarding).not.toContain('shields_holding');
+  expect(boarding).not.toContain('Latch:');
+  expect(tableCell(participants, 'Marlowe', 'Stance')).toBe('board');
+  expect(tableCell(participants, 'Pirate Skiff', 'Distance')).toBe('0');
+});
+
+test('get_battle_status prints known latch statuses and omits unrecognized values', () => {
+  const accruing = renderLatchStatus('accruing');
+  expect(accruing.split('\n')).toContain('Latch: accruing');
+  expect(accruing).not.toContain('keep shields down');
+  expect(accruing).not.toContain('close to point-blank');
+
+  expect(renderLatchStatus('out_of_range').split('\n')).toContain('Latch: out_of_range (close to point-blank)');
+  expect(renderLatchStatus('  shields_holding  ').split('\n')).toContain('Latch: shields_holding (keep shields down)');
+
+  for (const latchStatus of [
+    'OUT_OF_RANGE',
+    'out-of-range',
+    '',
+    '   ',
+    null,
+    1,
+    true,
+    { status: 'accruing' },
+    ['accruing'],
+  ]) {
+    expect(renderLatchStatus(latchStatus)).not.toContain('Latch:');
+  }
+
+  const omitted = structuredClone(battleStatusLatchStatusFixture);
+  delete (omitted.combat_state as Record<string, unknown>).latch_status;
+  const omittedStdout = renderBattleStatus(omitted);
+  expect(omittedStdout).not.toContain('Latch:');
+  expect(omittedStdout).toContain('Combat State:');
+});
+
+test('get_battle_status prints combat state when latch status is the only recognized field', () => {
+  const stdout = renderBattleStatus({
+    battle_id: 'battle-1',
+    system_id: 'sol',
+    is_participant: true,
+    combat_state: { latch_status: 'accruing' },
+  });
+
+  expect(stdout).toContain('Combat State:');
+  expect(stdout.split('\n')).toContain('Latch: accruing');
+  expect(stdout).not.toContain('Can Escape:');
+});
+
+test('get_battle_status omits combat state when latch status is unrecognized', () => {
+  const stdout = renderBattleStatus({
+    battle_id: 'battle-1',
+    system_id: 'sol',
+    is_participant: true,
+    combat_state: { latch_status: 'nope' },
+  });
+
+  expect(stdout).toContain('=== Battle ===');
+  expect(stdout).toContain('ID: battle-1');
+  expect(stdout).not.toContain('Combat State:');
+});
+
+test('get_battle_status prints latch status nested under battle', () => {
+  const clone = structuredClone(battleStatusLatchStatusFixture);
+  const stdout = renderBattleStatus({ battle: { ...clone } });
+
+  expect(stdout.split('\n')).toContain('Latch: shields_holding (keep shields down)');
 });
 
 test('get_battle_status ignores a synthetic boarding event and still has no Event column', () => {

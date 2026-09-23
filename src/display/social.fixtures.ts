@@ -603,6 +603,47 @@ export const battleStatusCombatStateFixture = {
   },
 };
 
+export const battleStatusLatchStatusFixture: Record<string, unknown> = (() => {
+  const fixture = structuredClone(battleStatusFixture) as Record<string, unknown>;
+  const participants = fixture.participants as Array<Record<string, unknown>>;
+  const marlowe = participants.find((row) => row.player_id === 'player-1');
+  const pirate = participants.find((row) => row.player_id === 'pirate-1');
+  if (!marlowe || !pirate) {
+    throw new Error('battleStatusFixture is missing Marlowe or the pirate.');
+  }
+  marlowe.stance = 'board';
+  marlowe.target_id = 'pirate-1';
+  marlowe.zone = 'engaged';
+  marlowe.zone_distance = 0;
+  pirate.zone = 'engaged';
+  pirate.zone_distance = 0;
+  pirate.shield_pct = 55;
+  fixture.combat_state = {
+    flee_counter: 0,
+    flee_required: 3,
+    can_escape: true,
+    warp_disrupted: false,
+    intercepted: false,
+    intercepting: false,
+    incapacitated: false,
+    webbed: false,
+    em_disrupted: false,
+    effective_speed: 40,
+    max_weapon_reach: 1,
+    latch_status: 'shields_holding',
+  };
+  fixture.boarding = [
+    {
+      operation_id: 'board-latch',
+      phase: 'latching',
+      progress: 'closing',
+      attacker_id: 'player-1',
+      target_id: 'pirate-1',
+    },
+  ];
+  return fixture;
+})();
+
 export const battleSummaryCapturesFixture = {
   ...battleSummaryFixture,
   ships_captured: 1,
@@ -1922,6 +1963,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_status: { command: 'get_battle_status', fixture: battleStatusFixture },
   get_battle_status_boarding: { command: 'get_battle_status', fixture: battleStatusBoardingFixture },
   get_battle_status_combat_state: { command: 'get_battle_status', fixture: battleStatusCombatStateFixture },
+  get_battle_status_latch_status: { command: 'get_battle_status', fixture: battleStatusLatchStatusFixture },
   get_battle_summary: { command: 'get_battle_summary', fixture: battleSummaryFixture },
   get_battle_summary_arena: { command: 'get_battle_summary', fixture: battleSummaryArenaFixture },
   get_battle_summary_hunt: { command: 'get_battle_summary', fixture: battleSummaryHuntFixture },
