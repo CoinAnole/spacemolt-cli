@@ -132,6 +132,28 @@ test('create_sell_order prints bigint quantity_filled and total_earned', () => {
   expect(stdout).not.toContain((9007199254740991 + 2).toLocaleString());
 });
 
+test('create_sell_order prints a bigint quantity_listed instead of a zero remainder', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity: 4,
+      quantity_filled: 4,
+      quantity_listed: 9007199254740993n,
+      order_id: 'order-1',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Remaining listed:');
+  expect(stdout.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain('Remaining listed: 0');
+});
+
 test('faction_query_intel appends [deep core] when the POI is tagged', () => {
   const stdout = renderStructuredResult(
     'faction_query_intel',

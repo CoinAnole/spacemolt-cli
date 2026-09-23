@@ -23,23 +23,16 @@ function exactIntegerDigits(value: unknown): string | undefined {
   return typeof value === 'bigint' ? value.toString() : undefined;
 }
 
-function summaryCount(value: unknown): { text: string; one: boolean } {
-  if (typeof value === 'bigint') {
-    return { text: formatIntegerText(value) ?? value.toString(), one: value === 1n };
-  }
-  const n = finiteNumber(value) ?? 0;
-  return { text: String(n), one: n === 1 };
-}
-
 function optionalCount(value: unknown): { text: string; one: boolean } | undefined {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === 'bigint') {
-    const text = formatIntegerText(value);
-    return text === undefined ? undefined : { text, one: value === 1n };
-  }
+  if (typeof value === 'bigint') return { text: formatIntegerText(value) as string, one: value === 1n };
   const n = finiteNumber(value);
   if (n === undefined) return undefined;
   return { text: String(n), one: n === 1 };
+}
+
+function summaryCount(value: unknown): { text: string; one: boolean } {
+  return optionalCount(value) ?? { text: '0', one: false };
 }
 
 const DEFAULT_COUNT_MAP_LIMIT = 6;

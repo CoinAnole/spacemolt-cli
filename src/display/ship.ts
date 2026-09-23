@@ -15,7 +15,6 @@ import {
   emitStationRepairs,
   finiteNumber,
   firstArray,
-  formatIntegerText,
   formatter,
   isRecord,
   namedFormatter,
@@ -94,8 +93,7 @@ function formatCurrentMax(current: unknown, max: unknown): string | undefined {
 }
 
 function formatCredits(value: number | bigint): string {
-  const text = formatIntegerText(value);
-  return `${text ?? value.toLocaleString()} cr`;
+  return `${value.toLocaleString()} cr`;
 }
 
 function formatOptionalCredits(value: unknown): string | undefined {

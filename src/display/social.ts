@@ -155,6 +155,7 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
 
 /** Omit the no-winner sentinel so this side-id label is not printed as -1. */
 function formatWinningSide(value: unknown): unknown {
+  if (value === -1n) return undefined;
   if (typeof value === 'bigint') return value;
   const n = Number(value);
   if (Number.isFinite(n) && n === -1) return undefined;

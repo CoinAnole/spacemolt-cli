@@ -464,7 +464,6 @@ function emitOptionalValue(label: string, value: unknown): void {
 function formatRunCount(value: unknown): string | undefined {
   const count = formatCount(value);
   if (count === undefined) return undefined;
-  if (typeof value === 'bigint') return count;
   return `${count}${Number(value) === 1 ? '' : ''}`;
 }
 

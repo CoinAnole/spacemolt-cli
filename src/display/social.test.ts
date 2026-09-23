@@ -1832,6 +1832,20 @@ test('get_battle_summary omits Winning Side on stalemate winning_side -1', () =>
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_battle_summary omits Winning Side when winning_side is -1n', () => {
+  const fixture = structuredClone(battleSummaryFixture) as Record<string, unknown>;
+  fixture.outcome = 'stalemate';
+  fixture.winning_side = -1n;
+  fixture.ships_destroyed = 0;
+  delete fixture.destroyed_names;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Outcome: stalemate');
+  expect(stdout).not.toContain('Winning Side:');
+  expect(stdout).not.toContain('-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('get_battle_summary still prints Winning Side: 1 on victory', () => {
   const stdout = renderStructuredResult(
     'get_battle_summary',

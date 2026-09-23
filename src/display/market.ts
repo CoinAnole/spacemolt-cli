@@ -114,14 +114,7 @@ function createOrderSide(result: Record<string, unknown>, command?: string): Ord
 }
 
 function formatCredits(value: number | bigint): string {
-  const text = formatIntegerText(value);
-  return `${text ?? value.toLocaleString()} cr`;
-}
-
-function formatCreditsValue(value: unknown): string | undefined {
-  if (typeof value === 'bigint' || (typeof value === 'number' && Number.isFinite(value))) return formatCredits(value);
-  const amount = finiteNumber(value);
-  return amount === undefined ? undefined : formatCredits(amount);
+  return `${value.toLocaleString()} cr`;
 }
 
 function finiteOrFillSum(primary: unknown, fills: unknown, field: string): number | bigint | undefined {
@@ -136,11 +129,14 @@ function displayCount(value: unknown): string | undefined {
   return amount === undefined ? undefined : amount.toLocaleString();
 }
 
+function formatCreditsValue(value: unknown): string | undefined {
+  const text = displayCount(value);
+  return text === undefined ? undefined : `${text} cr`;
+}
+
 function formatCreditWords(value: unknown): string | undefined {
-  const text = formatIntegerText(value);
-  if (text !== undefined) return `${text} credits`;
-  const amount = finiteNumber(value);
-  return amount === undefined ? undefined : `${amount.toLocaleString()} credits`;
+  const text = displayCount(value);
+  return text === undefined ? undefined : `${text} credits`;
 }
 
 function firstDisplayValue(row: Record<string, unknown>, keys: string[]): unknown {
@@ -987,10 +983,13 @@ export const marketFormatters = [
       const requestedText = displayCount(r.quantity);
       const requested = finiteNumber(r.quantity);
       const filled = finiteOrFillSum(r.quantity_filled, r.fills, 'quantity');
-      const filledText = filled === undefined ? undefined : formatIntegerText(filled);
-      const remaining =
-        finiteNumber(r.quantity_listed) ??
-        (requested !== undefined && typeof filled === 'number' ? Math.max(0, requested - filled) : undefined);
+      const filledText = filled === undefined ? undefined : displayCount(filled);
+      const listedMissing = isMissingDisplayValue(r.quantity_listed);
+      const listedText = listedMissing ? undefined : displayCount(r.quantity_listed);
+      const derivedRemaining =
+        listedMissing && requested !== undefined && typeof filled === 'number'
+          ? Math.max(0, requested - filled)
+          : undefined;
       const fillTotal =
         side === 'buy'
           ? finiteOrFillSum(r.total_spent, r.fills, 'subtotal')
@@ -1017,8 +1016,9 @@ export const marketFormatters = [
       }
       if (deliveredToCargo !== undefined) emitLine(`Delivered to cargo: ${deliveredToCargo}`);
       if (deliveredToStorage !== undefined) emitLine(`Delivered to storage: ${deliveredToStorage}`);
-      if (remaining !== undefined)
-        emitLine(`${side === 'buy' ? 'Remaining open' : 'Remaining listed'}: ${remaining.toLocaleString()}`);
+      const remainingLabel = side === 'buy' ? 'Remaining open' : 'Remaining listed';
+      if (listedText !== undefined) emitLine(`${remainingLabel}: ${listedText}`);
+      else if (derivedRemaining !== undefined) emitLine(`${remainingLabel}: ${derivedRemaining.toLocaleString()}`);
       if (notListed !== undefined) emitLine(`Not listed: ${notListed}`);
       if (selfCleared !== undefined) emitLine(`Self-cleared own crossing order(s): ${selfCleared}`);
       if (selfClearRefund !== undefined) emitLine(`Self-clear refund: ${selfClearRefund}`);
