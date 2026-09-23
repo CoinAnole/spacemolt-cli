@@ -1,0 +1,37 @@
+{
+  "details": {
+    "action": "reload",
+    "mode": "bulk",
+    "summary": {
+      "total": 2,
+      "succeeded": 1,
+      "failed": 1
+    },
+    "message": "Reloaded 1 of 2 weapons.",
+    "results": [
+      {
+        "index": 0,
+        "weapon_id": "weapon-1",
+        "success": true,
+        "result": {
+          "action": "reload",
+          "weapon_name": "Pulse Laser",
+          "weapon_id": "weapon-1",
+          "ammo_name": "Laser Cell",
+          "ammo_id": "ammo-cell",
+          "current_ammo": 8,
+          "magazine_size": 8,
+          "rounds_discarded": 0,
+          "previous_ammo": "empty"
+        }
+      },
+      {
+        "index": 1,
+        "weapon_id": "weapon-2",
+        "success": false,
+        "error_code": "incompatible_ammo",
+        "error": "Ammo does not match this weapon."
+      }
+    ]
+  }
+}

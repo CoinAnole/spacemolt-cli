@@ -554,6 +554,81 @@ export const reloadFixture = {
   },
 };
 
+export const reloadBulkFixture = {
+  details: {
+    action: 'reload',
+    mode: 'bulk',
+    summary: { total: 2, succeeded: 2, failed: 0 },
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-1',
+        success: true,
+        result: {
+          action: 'reload',
+          weapon_name: 'Pulse Laser',
+          weapon_id: 'weapon-1',
+          ammo_name: 'Laser Cell',
+          ammo_id: 'ammo-cell',
+          current_ammo: 8,
+          magazine_size: 8,
+          rounds_discarded: 2,
+          previous_ammo: 'empty',
+        },
+      },
+      {
+        index: 1,
+        weapon_id: 'weapon-2',
+        success: true,
+        result: {
+          action: 'reload',
+          weapon_name: 'Scrapgun',
+          weapon_id: 'weapon-2',
+          ammo_name: 'Scrap',
+          ammo_id: 'scrap_metal',
+          current_ammo: 1,
+          magazine_size: 1,
+          rounds_discarded: 0,
+        },
+      },
+    ],
+  },
+};
+
+export const reloadBulkMixedFixture = {
+  details: {
+    action: 'reload',
+    mode: 'bulk',
+    summary: { total: 2, succeeded: 1, failed: 1 },
+    message: 'Reloaded 1 of 2 weapons.',
+    results: [
+      {
+        index: 0,
+        weapon_id: 'weapon-1',
+        success: true,
+        result: {
+          action: 'reload',
+          weapon_name: 'Pulse Laser',
+          weapon_id: 'weapon-1',
+          ammo_name: 'Laser Cell',
+          ammo_id: 'ammo-cell',
+          current_ammo: 8,
+          magazine_size: 8,
+          rounds_discarded: 0,
+          previous_ammo: 'empty',
+        },
+      },
+      {
+        index: 1,
+        weapon_id: 'weapon-2',
+        success: false,
+        error_code: 'incompatible_ammo',
+        error: 'Ammo does not match this weapon.',
+      },
+    ],
+  },
+};
+
 export const refuelFixture = {
   action: 'refuel',
   fuel: -697,
@@ -796,6 +871,8 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   repair_target: { command: 'repair', fixture: repairTargetFixture, schemaTarget: 'details' },
   repair_fleet: { command: 'repair', fixture: repairFleetFixture, schemaTarget: 'details' },
   reload: { command: 'reload', fixture: reloadFixture },
+  reload_bulk: { command: 'reload', fixture: reloadBulkFixture, schemaTarget: 'details' },
+  reload_bulk_mixed: { command: 'reload', fixture: reloadBulkMixedFixture, schemaTarget: 'details' },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
   list_ships: { command: 'list_ships', fixture: listShipsFixture },

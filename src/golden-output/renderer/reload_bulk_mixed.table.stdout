@@ -1,0 +1,11 @@
+
+=== Reloaded ===
+2 total | 1 succeeded | 1 failed
+Reloaded 1 of 2 weapons.
+
+=== Results ===
+
+  Index | Weapon                 | OK  | Ammo                   | Magazine | Discarded | Detail                                             
+  ------+------------------------+-----+------------------------+----------+-----------+----------------------------------------------------
+  0     | Pulse Laser (weapon-1) | yes | Laser Cell (ammo-cell) | 8/8      | 0         |                                                    
+  1     | weapon-2               | no  |                        |          |           | incompatible_ammo: Ammo does not match this weapon.
