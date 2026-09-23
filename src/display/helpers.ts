@@ -76,6 +76,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function finiteNumber(value: unknown): number | undefined {
+  if (typeof value === 'bigint') return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
 }
@@ -233,6 +234,7 @@ export function sumNumericField(values: unknown, field: string): number | undefi
   let found = false;
   for (const value of values) {
     if (!isRecord(value)) continue;
+    if (typeof value[field] === 'bigint') return undefined;
     const number = finiteNumber(value[field]);
     if (number === undefined) continue;
     total += number;

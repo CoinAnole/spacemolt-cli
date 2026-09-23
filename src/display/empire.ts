@@ -6,6 +6,7 @@ function numberValue(value: unknown): number | undefined {
 }
 
 function formatNumber(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toLocaleString();
   const number = numberValue(value);
   if (number === undefined) return undefined;
   return number.toLocaleString();

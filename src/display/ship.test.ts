@@ -779,6 +779,28 @@ test('scrap_wreck details-only auto_docked does not print a receipt line or bann
   expect(stdout).not.toContain('[AUTO-DOCKED]');
 });
 
+test('station refuel omits a reconstructed total when market_cost is a bigint', () => {
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      source: 'station',
+      fuel: 10,
+      fuel_now: 20,
+      fuel_max: 100,
+      market_cost: 9007199254740993n,
+      tax_amount: 10,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Refuel Complete ===');
+  expect(stdout).toContain('Fuel tax: 10 cr');
+  expect(stdout).not.toContain('Total spent:');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 function renderRepair(fixture: Record<string, unknown>) {
   return renderStructuredResult('repair', structuredClone(fixture), options, context);
 }

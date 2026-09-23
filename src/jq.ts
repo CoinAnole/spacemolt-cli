@@ -1,3 +1,5 @@
+import { stringifyApiJson } from './json-number.ts';
+
 interface MissingPathContext {
   expr: string;
   requestedKey: string;
@@ -58,6 +60,13 @@ export function evaluateJq(data: unknown, expr: string, options: JqOptions = {})
   if (selectInner !== undefined) return evalSelect(data, selectInner);
 
   if (parseLength(trimmed)) return evalLength(data);
+
+  const comparison = parseComparisonExpression(trimmed);
+  if (comparison) {
+    const left = evaluateJq(data, comparison.left);
+    const right = parseComparisonValue(comparison.right);
+    return compareJqValues(left, right, comparison.operator);
+  }
 
   if (trimmed.startsWith('.') && !hasUnsupportedWhitespace(trimmed)) return evalPath(data, trimmed, options);
 
@@ -366,7 +375,10 @@ function parseComparisonValue(raw: string): unknown {
   if (trimmed === 'true') return true;
   if (trimmed === 'false') return false;
   if (trimmed === 'null') return null;
-  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+    if (!trimmed.includes('.') && !Number.isSafeInteger(Number(trimmed))) return BigInt(trimmed);
+    return Number(trimmed);
+  }
   throw new Error(`Unsupported jq comparison value: "${raw}"`);
 }
 
@@ -665,8 +677,15 @@ function selectFuzzySuggestions(missing: MissingPathContext, suggestions: KeySug
 
 function previewValue(value: unknown): string {
   if (value === undefined) return 'null';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
-  const rendered = JSON.stringify(value);
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return String(value);
+  }
+  const rendered = stringifyApiJson(value);
   if (!rendered) return String(value);
   return rendered.length > 80 ? `${rendered.slice(0, 77)}...` : rendered;
 }
@@ -728,7 +747,7 @@ export function formatJqResult(value: unknown, compact = false): string {
   }
   if (value === undefined) return 'null';
   if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value, null, compact ? 0 : 2);
+    return stringifyApiJson(value, compact ? 0 : 2);
   }
   return String(value);
 }

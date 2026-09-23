@@ -29,6 +29,24 @@ const context = {
   },
 };
 
+test('formats an out-of-range bounty with locale digits', () => {
+  const bounty = 9007199254740993n;
+  const rendered = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      outstanding_bounties: [{ empire: 'solarian', bounty }],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain(`solarian: ${bounty.toLocaleString()} cr`);
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 test('renders personal tax prepaid balance', () => {
   const rendered = renderStructuredResult(
     'get_tax_estimate',

@@ -1854,6 +1854,47 @@ describe('response renderer', () => {
     ]);
   });
 
+  test('renderResponse keeps a cargo quantity above 2^53 in machine output', async () => {
+    const response = {
+      structuredContent: {
+        cargo: [
+          { item_id: 'ore_copper', item_name: 'Copper Ore', quantity: 12, size: 1 },
+          { item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 718, size: 1 },
+          { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 9007199254740993n, size: 1 },
+          { item_id: 'scrap', item_name: 'Scrap', quantity: 0, size: 1 },
+        ],
+      },
+    };
+    const modes = [{ json: true }, { format: 'yaml' as const }, { structured: true }];
+
+    for (const mode of modes) {
+      const capture = fakeContext();
+      const exitCode = await renderResponse(
+        {
+          command: 'get_cargo',
+          displayCommand: 'get_cargo',
+          payload: {},
+          response,
+        },
+        { ...baseOptions, dryRun: true, noTimestamp: true, ...mode },
+        { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+        capture.context,
+      );
+
+      const stdout = capture.text();
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('9007199254740993');
+      expect(stdout).not.toContain('9007199254740992');
+      expect(stdout).toContain('fuel_cell');
+      if (mode.format === 'yaml') {
+        expect(stdout.indexOf('fuel_cell')).toBeLessThan(stdout.indexOf('ore_iron'));
+        expect(stdout.indexOf('ore_iron')).toBeLessThan(stdout.indexOf('ore_copper'));
+        expect(stdout).not.toContain('scrap');
+        expect(stdout).toContain('quantity: 9007199254740993');
+      }
+    }
+  });
+
   test('renderResponse hides empty cargo stacks and sorts non-empty stacks by quantity descending', async () => {
     const capture = fakeContext();
     const exitCode = await renderResponse(

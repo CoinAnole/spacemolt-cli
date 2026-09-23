@@ -5247,6 +5247,40 @@ describe('notification formatting', () => {
       expect(preview.details.some((line) => line.includes('Attacker ship: raider_frigate'))).toBe(true);
       expect(preview.details.some((line) => line.includes('Weapons:'))).toBe(true);
       expect(preview.details.some((line) => line.includes('Damage taken: 120 total'))).toBe(true);
+
+      const hugeSplit = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: {
+          killer_name: 'Raider',
+          combat_log: {
+            total_damage: 120,
+            shield_damage: 9007199254740993n,
+            hull_damage: 10,
+            combat_rounds: 2,
+          },
+        },
+      });
+      const damageLine = hugeSplit.details.find((line) => line.includes('Damage taken'));
+      expect(damageLine).toContain('9007199254740993 shield');
+      expect(damageLine).not.toContain('0 shield');
+      expect(damageLine).not.toContain('9007199254740992');
+
+      const hugeTotal = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'player_died',
+        data: {
+          killer_name: 'Raider',
+          combat_log: {
+            total_damage: 9007199254740993n,
+            shield_damage: 4,
+            hull_damage: 5,
+            combat_rounds: 1,
+          },
+        },
+      });
+      expect(hugeTotal.details.join('\n')).not.toContain('Damage taken');
+      expect(hugeTotal.details.join('\n')).not.toContain('0 shield');
       expect(preview.details.some((line) => line.includes('Location: Gate Alpha in Alfirk'))).toBe(true);
       expect(preview.details.some((line) => line.includes('Ship lost: Dust Devil'))).toBe(true);
       expect(preview.details.some((line) => line.includes('Clone cost: 500 credits'))).toBe(true);
@@ -8267,6 +8301,20 @@ describe('notification formatting', () => {
       });
       expect(preview.tag).toBe('RAID');
       expect(preview.headline).toBe('Outpost: 80/100 HP (-5/tick)');
+
+      const huge = formatNotificationPreview({
+        type: 'base',
+        msg_type: 'base_raid_update',
+        data: {
+          base_name: 'Outpost',
+          current_health: 9007199254740993n,
+          max_health: 100,
+          damage_per_tick: 9007199254740993n,
+        },
+      });
+      expect(huge.headline).toBe('Outpost: 9007199254740993/100 HP (-9007199254740993/tick)');
+      expect(huge.headline).not.toContain('9007199254740992');
+      expect(huge.headline).not.toContain(': 0/');
     });
   });
 
@@ -8945,6 +8993,14 @@ describe('notification formatting', () => {
       expect(levelUp.tag).toBe('LEVEL UP');
       expect(levelUp.headline).toContain('mining is now level 3');
       expect(levelUp.headline).toContain('+50 XP');
+
+      const hugeXp = formatNotificationPreview({
+        msg_type: 'skill_level_up',
+        data: { skill_id: 'mining', new_level: 3, xp_gained: 9007199254740993n },
+      });
+      expect(hugeXp.headline).toContain('+9007199254740993 XP');
+      expect(hugeXp.headline).not.toContain('+0 XP');
+      expect(hugeXp.headline).not.toContain('9007199254740992');
 
       const xp = formatNotificationPreview({
         msg_type: 'skill_xp_gain',

@@ -1,6 +1,7 @@
 import type { SpaceMoltClient } from './api.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import type { CommandError, CommandHandler } from './command-types.ts';
+import { parseApiJson } from './json-number.ts';
 import { type Notification, presentNotifications } from './notification-summary.ts';
 import { displayNotifications } from './notifications.ts';
 import { colorsForPlain } from './output-style.ts';
@@ -210,7 +211,7 @@ function envelopeRecord(value: unknown): Record<string, unknown> | undefined {
   if (isRecord(value)) return value;
   if (typeof value !== 'string') return undefined;
   try {
-    const parsed: unknown = JSON.parse(value);
+    const parsed: unknown = parseApiJson(value);
     return isRecord(parsed) ? parsed : undefined;
   } catch {
     return undefined;

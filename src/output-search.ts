@@ -1,3 +1,4 @@
+import { stringifyApiJson } from './json-number.ts';
 import type { GlobalOptions } from './types.ts';
 
 export interface OutputSearchMatch {
@@ -257,7 +258,7 @@ function matchesKey(matchers: SearchMatcher[], key: string): boolean {
   });
 }
 
-function matchesValue(matchers: SearchMatcher[], value: null | string | number | boolean): boolean {
+function matchesValue(matchers: SearchMatcher[], value: null | string | number | boolean | bigint): boolean {
   const haystack = normalizeSearchText(String(value));
   return matchers.some((matcher) => {
     if (!matcher.scopes.has('value')) return false;
@@ -276,13 +277,26 @@ function appendJqPath(parent: string, key: string): string {
 
 function formatOutputSearchValue(value: unknown): string {
   if (value === null) return 'null';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
-  const rendered = JSON.stringify(value);
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return String(value);
+  }
+  const rendered = stringifyApiJson(value);
   return rendered === undefined ? String(value) : rendered;
 }
 
-function isScalar(value: unknown): value is null | string | number | boolean {
-  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+function isScalar(value: unknown): value is null | string | number | boolean | bigint {
+  return (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

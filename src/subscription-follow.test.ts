@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { SpaceMoltClient } from './api.ts';
 import type { CliEnv, CliRuntimeContext } from './cli-context.ts';
 import { type RunnerDependencies, runInvocation } from './runner.ts';
+import { deduplicatedNotifications } from './subscription-follow.ts';
 import type { APIResponse } from './types.ts';
 
 type FollowCommand = 'subscribe_market' | 'subscribe_observation';
@@ -435,5 +436,15 @@ describe('subscription follow validation', () => {
     expect(result.exitCode).toBe(1);
     expect(result.calls).toEqual([]);
     expect(JSON.parse(result.stderr.join('\n')).error.code).toBe('invalid_follow_mode');
+  });
+
+  test('string notification envelopes preserve integers above 2^53', () => {
+    const notes = deduplicatedNotifications({
+      structuredContent: '{"notifications":[{"type":"system","id":"n1","credits":9007199254740993}]}',
+    } as unknown as APIResponse);
+
+    expect(notes).toHaveLength(1);
+    expect((notes[0] as { credits?: unknown }).credits).toBe(9007199254740993n);
+    expect(String((notes[0] as { credits?: unknown }).credits)).not.toBe('9007199254740992');
   });
 });

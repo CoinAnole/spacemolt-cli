@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry.ts';
 import { type CommandConfig, type CommandFieldSchema, schemaFieldForKey } from './commands.ts';
+import { isUnsafeIntegerToken, parseApiJson, stringifyApiJson } from './json-number.ts';
 import { type OpenApiFieldType, schemaAllowsType, schemaRequiredScalarType } from './openapi-metadata.ts';
 
 type CommandRegistrySource = Pick<CommandRegistrySnapshot, 'commands'>;
@@ -331,7 +332,7 @@ export function parseArgs(args: string[], options: ParseArgsOptions = {}): Comma
         };
       }
       try {
-        const parsedJson = JSON.parse(jsonStr);
+        const parsedJson = parseApiJson(jsonStr);
         if (parsedJson === null || typeof parsedJson !== 'object' || Array.isArray(parsedJson)) {
           return {
             ok: false,
@@ -512,7 +513,7 @@ export function validatePayloadAgainstSchema(
       const values = Array.isArray(value) ? value : [value];
       for (const val of values) {
         if (val === null && schemaAllowsType(fieldSchema.type, 'null')) continue;
-        let numericValue: number | undefined;
+        let numericValue: number | bigint | undefined;
 
         if (typeof val === 'number') {
           if (!Number.isFinite(val) || (requiredScalarType === 'integer' && !Number.isInteger(val))) {
@@ -536,7 +537,8 @@ export function validatePayloadAgainstSchema(
           }
         }
 
-        if (fieldSchema.minimum !== undefined && numericValue < fieldSchema.minimum) {
+        // tsc rejects bigint < number; Bun compares them without rounding.
+        if (fieldSchema.minimum !== undefined && (numericValue as number) < fieldSchema.minimum) {
           errors.push({
             field: key,
             message: schemaMinimumErrorMessage(key, fieldSchema.minimum, val),
@@ -577,7 +579,7 @@ function schemaMinimumErrorMessage(field: string, minimum: number, received: unk
 }
 
 function formatReceivedValue(value: unknown): string {
-  const encoded = JSON.stringify(value);
+  const encoded = stringifyApiJson(value);
   return encoded === undefined ? String(value) : encoded;
 }
 
@@ -644,8 +646,10 @@ function getCommandFieldType(
   return getPayloadConversionSchema(command, registry)[key]?.type;
 }
 
-function parseTypedNumber(value: string, fieldType: string): number | undefined {
-  if (value.trim() === '') return undefined;
+function parseTypedNumber(value: string, fieldType: string): number | bigint | undefined {
+  const trimmed = value.trim();
+  if (trimmed === '') return undefined;
+  if (fieldType === 'integer' && isUnsafeIntegerToken(trimmed)) return BigInt(trimmed);
   const num = Number(value);
   if (!Number.isFinite(num)) return undefined;
   if (fieldType === 'integer' && !Number.isInteger(num)) return undefined;
@@ -656,7 +660,7 @@ function parseJsonStructuredValue(value: string, fieldType: OpenApiFieldType | u
   const trimmed = value.trim();
   if (schemaAllowsType(fieldType, 'array') && trimmed.startsWith('[')) {
     try {
-      const parsed = JSON.parse(trimmed);
+      const parsed = parseApiJson(trimmed);
       return Array.isArray(parsed) ? parsed : undefined;
     } catch {
       return undefined;
@@ -665,7 +669,7 @@ function parseJsonStructuredValue(value: string, fieldType: OpenApiFieldType | u
 
   if (schemaAllowsType(fieldType, 'object') && trimmed.startsWith('{')) {
     try {
-      const parsed = JSON.parse(trimmed);
+      const parsed = parseApiJson(trimmed);
       return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
     } catch {
       return undefined;

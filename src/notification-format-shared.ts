@@ -18,6 +18,10 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+function exactIntegerDigits(value: unknown): string | undefined {
+  return typeof value === 'bigint' ? value.toString() : undefined;
+}
+
 const DEFAULT_COUNT_MAP_LIMIT = 6;
 const DEFAULT_INVENTORY_LIMIT = 6;
 
@@ -678,6 +682,8 @@ function previewSystem(
 function damageLabel(value: unknown, fallback: string | number = 0): string | number {
   const n = finiteNumber(value);
   if (n !== undefined) return n;
+  const digits = exactIntegerDigits(value);
+  if (digits !== undefined) return digits;
   if (typeof value === 'string' && value.trim()) return value;
   return fallback;
 }
@@ -834,9 +840,9 @@ function previewPlayerDied(
 
     const totalDamage = finiteNumber(log.total_damage);
     if (totalDamage !== undefined && totalDamage > 0) {
-      const shield = finiteNumber(log.shield_damage) ?? 0;
-      const hull = finiteNumber(log.hull_damage) ?? 0;
-      const rounds = finiteNumber(log.combat_rounds) ?? 0;
+      const shield = finiteNumber(log.shield_damage) ?? exactIntegerDigits(log.shield_damage) ?? 0;
+      const hull = finiteNumber(log.hull_damage) ?? exactIntegerDigits(log.hull_damage) ?? 0;
+      const rounds = finiteNumber(log.combat_rounds) ?? exactIntegerDigits(log.combat_rounds) ?? 0;
       details.push(
         truncate(
           `Damage taken: ${totalDamage} total (${shield} shield, ${hull} hull) over ${rounds} round${rounds !== 1 ? 's' : ''}`,
@@ -1895,9 +1901,9 @@ function previewBaseRaidUpdate(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  const current = finiteNumber(data.current_health) ?? 0;
-  const max = finiteNumber(data.max_health) ?? 0;
-  const dpt = finiteNumber(data.damage_per_tick) ?? 0;
+  const current = finiteNumber(data.current_health) ?? exactIntegerDigits(data.current_health) ?? 0;
+  const max = finiteNumber(data.max_health) ?? exactIntegerDigits(data.max_health) ?? 0;
+  const dpt = finiteNumber(data.damage_per_tick) ?? exactIntegerDigits(data.damage_per_tick) ?? 0;
   return headlinePreview('RAID', `${scalarOr(data.base_name, 'base')}: ${current}/${max} HP (-${dpt}/tick)`, options);
 }
 

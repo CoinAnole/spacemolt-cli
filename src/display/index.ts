@@ -1,5 +1,6 @@
 import type { CliRuntimeContext } from '../cli-context.ts';
 import { evaluateJq, formatJqResult, jqResultValue } from '../jq.ts';
+import { stringifyApiJson } from '../json-number.ts';
 import {
   filterStructuredOutputBySearch,
   findOutputSearchMatches,
@@ -82,7 +83,7 @@ function isDebug(context?: DisplayContext): boolean {
 }
 
 function stringifyJson(value: unknown, compact: boolean): string {
-  return JSON.stringify(value, null, compact ? 0 : 2);
+  return stringifyApiJson(value, compact ? 0 : 2);
 }
 
 function formatProjection(
@@ -101,12 +102,13 @@ function formatProjection(
   if (format === 'json') return stringifyJson(projection === 'jq' ? jqResultValue(value) : value, compact);
   if (projection === 'field') {
     if (typeof value === 'string') return value;
+    if (typeof value === 'bigint') return value.toString();
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
     if (value === undefined) return 'null';
     return stringifyJson(value, compact);
   }
   if (projection === 'jq') return formatJqResult(value, compact);
-  return JSON.stringify(value);
+  return stringifyApiJson(value);
 }
 
 function isEmptyJqOutput(value: unknown): boolean {
@@ -432,7 +434,7 @@ function displayStructuredResultInternal(
   }
 
   if (compact) {
-    emitLine(JSON.stringify(structuredOutputResult));
+    emitLine(stringifyApiJson(structuredOutputResult));
     return true;
   }
 
@@ -495,7 +497,7 @@ function displayStructuredResultInternal(
   }
 
   emitLine(`\n${c.bright}=== Response ===${c.reset}`);
-  emitLine(JSON.stringify(viewModel, null, 2));
+  emitLine(stringifyApiJson(viewModel, 2));
   return true;
 }
 

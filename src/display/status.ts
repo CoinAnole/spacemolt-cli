@@ -1,3 +1,4 @@
+import { stringifyApiJson } from '../json-number.ts';
 import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
@@ -270,7 +271,7 @@ function formatMissionObjectText(value: unknown): string | undefined {
   const name = value.name ?? value.title ?? value.id ?? value.content ?? value.text ?? value.message;
   if (name !== undefined && name !== null && name !== '') return String(name);
 
-  const json = JSON.stringify(value);
+  const json = stringifyApiJson(value);
   return json === undefined || json === '{}' ? undefined : json;
 }
 

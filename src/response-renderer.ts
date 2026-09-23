@@ -6,6 +6,7 @@ import { buildRequestUrl, type CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
+import { stringifyApiJson } from './json-number.ts';
 import { presentResponseNotifications } from './notification-summary.ts';
 import { displayNotifications } from './notifications.ts';
 import { hasOutputSearch } from './output-search.ts';
@@ -167,7 +168,7 @@ export async function renderResponse(
         const err = writer?.err.bind(writer) ?? console.error;
         err(warning);
       }
-      out(JSON.stringify(outputResponse.structuredContent, null, renderOptions.compact ? 0 : 2));
+      out(stringifyApiJson(outputResponse.structuredContent, renderOptions.compact ? 0 : 2));
       return 0;
     }
     printJsonResponse(outputResponse, renderOptions.compact, writer);
@@ -426,21 +427,40 @@ function applyCargoDisplayFilters(response: APIResponse, payload: Record<string,
   const nextStructuredContent = structuredClone(structuredContent);
   const cargo = nextStructuredContent.cargo as Array<Record<string, unknown>>;
   const matchingCargo = itemsFilter ? cargo.filter((item) => itemIdMatches(item, itemsFilter)) : cargo;
-  const visibleCargo = showEmpty ? matchingCargo : matchingCargo.filter((item) => numericQuantity(item) > 0);
-  const sortedCargo = [...visibleCargo].sort((left, right) => numericQuantity(right) - numericQuantity(left));
+  const visibleCargo = showEmpty ? matchingCargo : matchingCargo.filter((item) => quantityIsPositive(item));
+  const sortedCargo = [...visibleCargo].sort(compareCargoQuantityDesc);
 
   nextStructuredContent.cargo = top === undefined ? sortedCargo : sortedCargo.slice(0, top);
   return { ...response, structuredContent: nextStructuredContent };
 }
 
-function numericQuantity(item: Record<string, unknown>): number {
+function numericQuantity(item: Record<string, unknown>): number | bigint {
   const value = item.quantity;
+  if (typeof value === 'bigint') return value;
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
     const parsed = Number(value);
     if (Number.isFinite(parsed)) return parsed;
   }
   return 0;
+}
+
+function quantityIsPositive(item: Record<string, unknown>): boolean {
+  const quantity = numericQuantity(item);
+  return typeof quantity === 'bigint' ? quantity > 0n : quantity > 0;
+}
+
+function compareCargoQuantityDesc(leftItem: Record<string, unknown>, rightItem: Record<string, unknown>): number {
+  const left = numericQuantity(leftItem);
+  const right = numericQuantity(rightItem);
+  if (typeof left === 'bigint' || typeof right === 'bigint') {
+    if (typeof left === 'bigint' && typeof right === 'bigint') {
+      if (left === right) return 0;
+      return left > right ? -1 : 1;
+    }
+    return typeof left === 'bigint' ? -1 : 1;
+  }
+  return right - left;
 }
 
 function parseBooleanFlag(value: unknown): boolean {

@@ -50,4 +50,12 @@ describe('toYaml', () => {
   test('formats empty collections', () => {
     expect(toYaml({ cargo: [], metadata: {} })).toBe('\ncargo: []\nmetadata: {}');
   });
+
+  test('formats bigint scalars as unquoted digits', () => {
+    expect(toYaml(9007199254740993n)).toBe('9007199254740993');
+    expect(toYaml({ credits: 9007199254740993n, fuel: 40 })).toBe('\ncredits: 9007199254740993\nfuel: 40');
+    expect(toYaml([9007199254740993n])).toBe('\n- 9007199254740993');
+    expect(toYaml({ credits: 9007199254740993n })).not.toContain('"9007199254740993"');
+    expect(toYaml({ credits: 9007199254740993n })).not.toContain('9007199254740992');
+  });
 });

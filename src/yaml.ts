@@ -3,6 +3,7 @@ const INDENT = '  ';
 export function toYaml(value: unknown, level = 0): string {
   if (value === null || value === undefined) return 'null';
   if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'bigint') return value.toString();
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return yamlString(value);
   if (Array.isArray(value)) return yamlArray(value, level);
@@ -70,6 +71,7 @@ function yamlObject(obj: Record<string, unknown>, level: number): string {
 function inlineYaml(value: unknown): string {
   if (value === null || value === undefined) return 'null';
   if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'bigint') return value.toString();
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return yamlString(value);
   if (Array.isArray(value)) {

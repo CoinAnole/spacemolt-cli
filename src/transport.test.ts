@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { UnsafeIntegerSourceError } from './json-number.ts';
 import { requestJson } from './transport.ts';
 
 const originalFetch = globalThis.fetch;
@@ -184,5 +185,76 @@ describe('requestJson', () => {
     expect(response.retryAfterHeader).toBe('4');
     expect(response.data.error?.code).toBe('service_unavailable');
     expect(response.data.error).not.toHaveProperty('retry_after');
+  });
+
+  test('preserves integers above 2^53 from a JSON body', async () => {
+    const raw = '{"structuredContent":{"credits":9007199254740993,"fuel":40}}';
+    globalThis.fetch = (async () => {
+      return new Response(raw, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+
+    const response = await requestJson('https://example.test/api');
+    const credits = response.data.structuredContent?.credits;
+
+    expect(credits).toBe(9007199254740993n);
+    expect(String(credits)).toBe('9007199254740993');
+    expect(String(credits)).not.toBe('9007199254740992');
+    expect(response.data.structuredContent?.fuel).toBe(40);
+  });
+
+  test('re-emits bigint request payload digits', async () => {
+    const calls: Array<{ init?: RequestInit }> = [];
+    globalThis.fetch = (async (_url, init) => {
+      calls.push({ init });
+      return new Response('{"ok":true}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+
+    await requestJson('https://example.test/api', {
+      method: 'POST',
+      payload: { base_reward: 9007199254740993n },
+    });
+
+    expect(calls[0]?.init?.body).toBe('{"base_reward":9007199254740993}');
+    expect(String(calls[0]?.init?.body)).not.toContain('9007199254740992');
+  });
+
+  test('rethrows UnsafeIntegerSourceError without rewriting the message', async () => {
+    const originalParse = JSON.parse;
+    JSON.parse = ((text: string, reviver?: (this: unknown, key: string, value: unknown) => unknown) => {
+      if (!reviver) return originalParse(text);
+      return originalParse(text, function (this: unknown, key, value) {
+        return reviver.call(this, key, value);
+      });
+    }) as typeof JSON.parse;
+
+    globalThis.fetch = (async () => {
+      return new Response('{"structuredContent":{"credits":9007199254740993,"fuel":40}}', {
+        status: 503,
+        headers: { 'content-type': 'application/json', 'Retry-After': '4' },
+      });
+    }) as unknown as typeof fetch;
+
+    const message =
+      'JSON parser did not provide number source text; refusing to round an integer outside the safe range.';
+    let thrown: unknown;
+    try {
+      await requestJson('https://example.test/api');
+    } catch (err) {
+      thrown = err;
+    } finally {
+      JSON.parse = originalParse;
+    }
+
+    expect(thrown).toBeInstanceOf(UnsafeIntegerSourceError);
+    expect(thrown).toBeInstanceOf(Error);
+    if (!(thrown instanceof Error)) throw new Error('expected UnsafeIntegerSourceError');
+    expect(thrown.message).toBe(message);
+    expect(thrown.message).not.toContain('Server returned invalid JSON response');
   });
 });
