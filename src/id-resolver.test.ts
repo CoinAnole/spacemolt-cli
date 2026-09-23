@@ -667,6 +667,234 @@ describe('cached ID payload resolver', () => {
     expect(prepared).toEqual({ type: 'payload', payload: { id: 'weapon-1', target: 'laser_cell' } });
   });
 
+  test('resolves reload weapons ammo names and leaves weapon instance ids literal', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'laser_cell',
+            name: 'Laser Cell',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const prepared = preparePayload(
+      'reload',
+      {
+        weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'Laser Cell' }, { weapon_instance_id: 'Laser Cell' }],
+      },
+      options(),
+      sessionPath,
+    );
+
+    expect(prepared).toEqual({
+      type: 'payload',
+      payload: {
+        weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'laser_cell' }, { weapon_instance_id: 'Laser Cell' }],
+      },
+    });
+  });
+
+  test('resolves reload weapons ammo names from a JSON string and leaves non-objects', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'laser_cell',
+            name: 'Laser Cell',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    expect(
+      preparePayload(
+        'reload',
+        { weapons: '[{"weapon_instance_id":"weapon-1","ammo_item_id":"Laser Cell"}]' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: {
+        weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'laser_cell' }],
+      },
+    });
+
+    expect(
+      preparePayload(
+        'reload',
+        {
+          weapons: [null, 'Laser Cell', { weapon_instance_id: 'weapon-1', ammo_item_id: 'Laser Cell' }],
+        },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: {
+        weapons: [null, 'Laser Cell', { weapon_instance_id: 'weapon-1', ammo_item_id: 'laser_cell' }],
+      },
+    });
+  });
+
+  test('keeps reserved fuel tokens inside reload weapons ammo', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'fuel_cell',
+            name: 'Fuel Cell',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const fuel = preparePayload(
+      'reload',
+      { weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'fuel' }] },
+      options(),
+      sessionPath,
+    );
+    const tankFuel = preparePayload(
+      'reload',
+      { weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'tank_fuel' }] },
+      options(),
+      sessionPath,
+    );
+
+    expect(fuel).toEqual({
+      type: 'payload',
+      payload: { weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'fuel' }] },
+    });
+    expect(tankFuel).toEqual({
+      type: 'payload',
+      payload: { weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'fuel' }] },
+    });
+  });
+
+  test('stops before send when a reload weapons ammo name is ambiguous', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'item',
+            id: 'iron_plate',
+            name: 'Iron Plate',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+          {
+            kind: 'item',
+            id: 'laser_cell',
+            name: 'Laser Cell',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:02:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const stderr: string[] = [];
+    const raw = {
+      weapons: [
+        { weapon_instance_id: 'weapon-1', ammo_item_id: 'iron' },
+        { weapon_instance_id: 'weapon-2', ammo_item_id: 'Laser Cell' },
+      ],
+    };
+
+    const prepared = preparePayload('reload', raw, options({ fuzzyIds: true }), sessionPath, writer([], stderr));
+
+    expect(prepared).toEqual({ type: 'exit', exitCode: 1 });
+    expect(stderr.join('\n')).toContain('weapons[0].ammo_item_id');
+    expect(raw).toEqual({
+      weapons: [
+        { weapon_instance_id: 'weapon-1', ammo_item_id: 'iron' },
+        { weapon_instance_id: 'weapon-2', ammo_item_id: 'Laser Cell' },
+      ],
+    });
+  });
+
+  test('prints JSON error when a reload weapons ammo name is ambiguous', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'ore_iron',
+            name: 'Iron Ore',
+            sourceCommand: 'get_cargo',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'item',
+            id: 'iron_plate',
+            name: 'Iron Plate',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const raw = {
+      weapons: [
+        { weapon_instance_id: 'weapon-1', ammo_item_id: 'iron' },
+        { weapon_instance_id: 'weapon-2', ammo_item_id: 'laser_cell' },
+      ],
+    };
+
+    const prepared = preparePayload(
+      'reload',
+      raw,
+      options({ json: true, fuzzyIds: true }),
+      sessionPath,
+      writer(stdout, stderr),
+    );
+
+    expect(prepared).toEqual({ type: 'exit', exitCode: 1 });
+    expect(stdout).toEqual([]);
+    const parsed = JSON.parse(stderr.join('\n'));
+    expect(parsed.error.code).toBe('ambiguous_cached_id');
+    expect(parsed.error.message).toContain('weapons[0].ammo_item_id');
+    expect(parsed.error.message).toContain('ore_iron');
+    expect(parsed.error.message).toContain('iron_plate');
+    expect(raw.weapons[0]?.ammo_item_id).toBe('iron');
+    expect(raw.weapons[1]?.ammo_item_id).toBe('laser_cell');
+  });
+
   test('does not resolve chat channel target as a player', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

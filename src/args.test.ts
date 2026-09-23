@@ -15,6 +15,7 @@ import {
 import { NOTIFICATION_TYPE_ENUM } from './command-overrides-query-reference';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
 import { COMMANDS } from './commands';
+import { idKindForCommandField } from './id-cache';
 import { createDryRunResponse, getServerPreviewCommand } from './preview';
 
 const internalCommandRegistry = { commands: COMMANDS } satisfies Pick<CommandRegistrySnapshot, 'commands'>;
@@ -445,6 +446,17 @@ describe('normalizeParsedPayload', () => {
       id: 'weapon_1',
       target: 'ammo_light',
     });
+  });
+
+  test('reload weapons entries keep inner weapon and ammo keys', () => {
+    expect(
+      normalizeParsedPayload('reload', {
+        weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'ammo_light' }],
+      }),
+    ).toEqual({
+      weapons: [{ weapon_instance_id: 'weapon-1', ammo_item_id: 'ammo_light' }],
+    });
+    expect(idKindForCommandField('reload', 'weapons')).toBeUndefined();
   });
 
   test('new feature command aliases normalize to API fields', () => {
