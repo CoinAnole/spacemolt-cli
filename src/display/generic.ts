@@ -1,4 +1,5 @@
 import { catalogTruncationWarning } from '../catalog-pagination.ts';
+import { stringifyApiJson } from '../json-number.ts';
 import {
   catalogSkillTableColumns,
   classifyRecipeVenue,
@@ -1121,7 +1122,7 @@ export const genericFormatters = [
 
       emitLine(`\n${c.bright}=== Dry Run: ${previewCommand} ===${c.reset}`);
       emitLine(`${r.method} ${r.url}`);
-      emitLine(`Payload: ${JSON.stringify(payload)}`);
+      emitLine(`Payload: ${stringifyApiJson(payload)}`);
       if (Array.isArray(r.notes)) {
         for (const note of r.notes) emitLine(`- ${note}`);
       }

@@ -1917,6 +1917,29 @@ test('renders dry-run route previews for craft cancellation payloads', () => {
   expect(stdout).not.toContain('=== Craft Quote ===');
 });
 
+test('dry-run route preview payload line keeps integers above 2^53', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      dry_run: true,
+      command: 'craft',
+      method: 'POST',
+      url: 'https://game.spacemolt.com/api/v2/spacemolt/craft',
+      payload: { job_id: 'craft-job-1', base_reward: 9007199254740993n },
+      server_request_sent: false,
+      notes: ['No mutation was sent. This is a client-side route and payload preview.'],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Dry Run: craft ===');
+  expect(stdout).toContain('Payload: {"job_id":"craft-job-1","base_reward":9007199254740993}');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 test('renders queued craft details with job id and output', () => {
   const rendered = renderStructuredResult(
     'craft',

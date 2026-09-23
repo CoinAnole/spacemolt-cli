@@ -711,6 +711,16 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.payload).toEqual({ id: 'ship_1' });
   });
 
+  test('dry-run payload line keeps integers above 2^53', () => {
+    const reward = 9007199254740993n;
+    const response = createDryRunResponse('scrap_ship', { id: 'ship_1', base_reward: reward });
+    const payload = response.structuredContent?.payload as { base_reward?: unknown };
+    expect(payload.base_reward).toBe(reward);
+    expect(String(response.result)).toContain('9007199254740993');
+    expect(String(response.result)).not.toContain('9007199254740992');
+    expect(String(response.result)).toContain('"base_reward":9007199254740993');
+  });
+
   test('rootPath command previews the standalone root endpoint', () => {
     const response = createDryRunResponse('get_mobile_base', {});
 
@@ -2349,6 +2359,54 @@ describe('validateRequiredArgs', () => {
     });
     expect(parseArgs(['shipping_post', 'package-1', 'nova-station', '1']).ok).toBe(true);
     expect(parseArgs([shippingQuote, 'package-1', 'nova-station', 'base_reward=0']).ok).toBe(true);
+  });
+
+  test('shipping_post keeps an unsafe integer base_reward through validation', () => {
+    const reward = 9007199254740993n;
+    const payload = {
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+      base_reward: reward,
+    };
+    expect(validatePayloadAgainstSchema('shipping_post', payload)).toEqual([]);
+    expect(payload.base_reward).toBe(reward);
+
+    const typed = convertPayloadTypes(
+      {
+        package_id: 'package-1',
+        destination_base_id: 'nova-station',
+        base_reward: '9007199254740993',
+      },
+      'shipping_post',
+    );
+    expect(typed.base_reward).toBe(reward);
+    expect(validatePayloadAgainstSchema('shipping_post', typed)).toEqual([]);
+    expect(typed.base_reward).toBe(reward);
+  });
+
+  test('below-minimum unsafe integer formats without throwing', () => {
+    const reward = -9007199254740993n;
+    const payload = {
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+      base_reward: reward,
+    };
+    const errors = validatePayloadAgainstSchema('shipping_post', payload);
+    expect(errors).toEqual([
+      {
+        field: 'base_reward',
+        message: 'Parameter "base_reward" must be at least 1, but received -9007199254740993.',
+        code: 'below_minimum',
+      },
+    ]);
+    expect(payload.base_reward).toBe(reward);
+    expect(errors[0]?.message).not.toContain('9007199254740992');
+  });
+
+  test('--payload-json preserves integers above 2^53', () => {
+    const { payload } = parseOk(['buy', '--payload-json', '{"item_id":"ore_iron","quantity":9007199254740993}']);
+    expect(payload.quantity).toBe(9007199254740993n);
+    expect(String(payload.quantity)).not.toBe('9007199254740992');
   });
 
   test('agentlogs requires category and message; severity defaults to info', () => {

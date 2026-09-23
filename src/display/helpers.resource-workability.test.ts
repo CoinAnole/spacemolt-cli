@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { rawColors } from './ansi.ts';
-import { formatResourceWorkabilitySuffix, withDisplayRenderBuffer } from './helpers.ts';
+import { finiteNumber, formatResourceWorkabilitySuffix, sumNumericField, withDisplayRenderBuffer } from './helpers.ts';
 
 function formatPlain(res: Record<string, unknown>): string {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
@@ -44,6 +44,19 @@ describe('formatResourceWorkabilitySuffix', () => {
 
   test('lock 0', () => {
     expect(formatPlain({ lock_minimum_stock: 0 })).toBe(', lock min 0');
+  });
+
+  test('finiteNumber rejects bigint instead of rounding', () => {
+    expect(finiteNumber(9007199254740993n)).toBeUndefined();
+    expect(finiteNumber(42)).toBe(42);
+    expect(finiteNumber('42')).toBe(42);
+  });
+
+  test('sumNumericField returns undefined when any addend is bigint', () => {
+    expect(sumNumericField([{ quantity: 2 }, { quantity: 3 }], 'quantity')).toBe(5);
+    expect(sumNumericField([{ quantity: 2 }, { quantity: 9007199254740993n }], 'quantity')).toBeUndefined();
+    expect(sumNumericField([{ quantity: 9007199254740993n }, { quantity: 3 }], 'quantity')).toBeUndefined();
+    expect(sumNumericField([null, { quantity: 9007199254740993n }], 'quantity')).toBeUndefined();
   });
 
   test('too_sparse true includes red ANSI when not plain', () => {

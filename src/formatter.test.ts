@@ -89,6 +89,7 @@ import {
   supplyCommissionFixture,
 } from './display/market.fixtures';
 import { facilityListFixture, factionInfoFixture, factionScanPoiFixture } from './display/social.fixtures';
+import { parseApiJson } from './json-number';
 import { renderResponse } from './main';
 import { formatNotificationPreview, tableMessageFromPreview } from './notification-format-shared';
 import type { GlobalOptions } from './types';
@@ -8987,5 +8988,78 @@ describe('get_status top-level structuredContent key order', () => {
 
     expect(originalProjected.stdout.join('\n')).toBe(expectedProjection);
     expect(shuffledProjected.stdout.join('\n')).toBe(expectedProjection);
+  });
+});
+
+const UNSAFE_INTEGER_BODY = '{"structuredContent":{"credits":9007199254740993,"fuel":40}}';
+const UNSAFE_INTEGER_DIGITS = '9007199254740993';
+const ROUNDED_INTEGER_DIGITS = '9007199254740992';
+
+function unsafeIntegerResponse() {
+  return parseApiJson(UNSAFE_INTEGER_BODY) as {
+    structuredContent: { credits: bigint; fuel: number };
+  };
+}
+
+function expectExactIntegerDigits(stdout: string): void {
+  expect(stdout).toContain(UNSAFE_INTEGER_DIGITS);
+  expect(stdout).not.toContain(ROUNDED_INTEGER_DIGITS);
+}
+
+describe('integers above 2^53', () => {
+  test('--json, --yaml, --structured, --field, --fields, --jq, and --search re-emit exact digits', async () => {
+    const response = unsafeIntegerResponse();
+
+    const json = await captureRenderedOutput(response, { json: true });
+    expect(json.exitCode).toBe(0);
+    expect(json.stderr).toBe('');
+    expectExactIntegerDigits(json.stdout);
+    const parsed = parseApiJson(json.stdout) as { structuredContent: { credits: unknown; fuel: unknown } };
+    expect(parsed.structuredContent.credits).toBe(9007199254740993n);
+    expect(parsed.structuredContent.fuel).toBe(40);
+
+    const yaml = await captureRenderedOutput(response, { format: 'yaml' });
+    expect(yaml.exitCode).toBe(0);
+    expectExactIntegerDigits(yaml.stdout);
+    expect(yaml.stdout).toContain('credits: 9007199254740993');
+    expect(yaml.stdout).not.toContain('"9007199254740993"');
+
+    const structured = await captureRenderedOutput(response, { structured: true });
+    expect(structured.exitCode).toBe(0);
+    expect(structured.stderr).toBe('');
+    expectExactIntegerDigits(structured.stdout);
+    const structuredParsed = parseApiJson(structured.stdout) as { credits: unknown; fuel: unknown };
+    expect(structuredParsed.credits).toBe(9007199254740993n);
+    expect(structuredParsed.fuel).toBe(40);
+
+    const field = await captureRenderedOutput(response, { field: 'credits' });
+    expect(field.exitCode).toBe(0);
+    expect(field.stderr).toBe('');
+    expect(field.stdout).toBe(UNSAFE_INTEGER_DIGITS);
+
+    const fields = await captureRenderedOutput(response, { fields: ['credits', 'fuel'] });
+    expect(fields.exitCode).toBe(0);
+    expectExactIntegerDigits(fields.stdout);
+    expect(fields.stdout).toContain('"fuel":40');
+
+    const jqValue = await captureRenderedOutput(response, { jq: '.credits' });
+    expect(jqValue.exitCode).toBe(0);
+    expect(jqValue.stdout).toBe(UNSAFE_INTEGER_DIGITS);
+
+    const jqEqual = await captureRenderedOutput(response, { jq: '.credits == 9007199254740993' });
+    expect(jqEqual.exitCode).toBe(0);
+    expect(jqEqual.stdout).toBe('true');
+
+    const jqRounded = await captureRenderedOutput(response, { jq: '.credits == 9007199254740992' });
+    expect(jqRounded.exitCode).toBe(0);
+    expect(jqRounded.stdout).toBe('false');
+
+    const search = await captureRenderedOutput(response, { outputSearch: UNSAFE_INTEGER_DIGITS });
+    expect(search.exitCode).toBe(0);
+    expect(search.stderr).toBe('');
+    expectExactIntegerDigits(search.stdout);
+
+    const missed = await captureRenderedOutput(response, { outputSearch: ROUNDED_INTEGER_DIGITS });
+    expect(missed.stdout).not.toContain(ROUNDED_INTEGER_DIGITS);
   });
 });

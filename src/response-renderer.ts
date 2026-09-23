@@ -6,6 +6,7 @@ import { buildRequestUrl, type CommandConfig } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
+import { stringifyApiJson } from './json-number.ts';
 import { presentResponseNotifications } from './notification-summary.ts';
 import { displayNotifications } from './notifications.ts';
 import { hasOutputSearch } from './output-search.ts';
@@ -167,7 +168,7 @@ export async function renderResponse(
         const err = writer?.err.bind(writer) ?? console.error;
         err(warning);
       }
-      out(JSON.stringify(outputResponse.structuredContent, null, renderOptions.compact ? 0 : 2));
+      out(stringifyApiJson(outputResponse.structuredContent, renderOptions.compact ? 0 : 2));
       return 0;
     }
     printJsonResponse(outputResponse, renderOptions.compact, writer);

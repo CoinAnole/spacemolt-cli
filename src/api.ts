@@ -1,6 +1,7 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
 import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
 import { getErrorSuggestion, ServiceUnavailableError } from './errors.ts';
+import { stringifyApiJson } from './json-number.ts';
 import { isRateLimitAutoRetryWait, normalizeRateLimitError } from './rate-limit.ts';
 import { getObjectResult, getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { requestWithServiceUnavailableRetry } from './retry-after.ts';
@@ -362,7 +363,7 @@ export class SpaceMoltClient {
       if (requestPayload) {
         const safePayload = { ...requestPayload };
         if (safePayload.password) safePayload.password = '***';
-        this.logger.debug(`${requestMethod === 'GET' ? 'Query' : 'Payload'}: ${JSON.stringify(safePayload)}`);
+        this.logger.debug(`${requestMethod === 'GET' ? 'Query' : 'Payload'}: ${stringifyApiJson(safePayload)}`);
       }
     }
 

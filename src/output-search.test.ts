@@ -94,6 +94,25 @@ describe('output search', () => {
     expect(formatOutputSearchLine(match)).toBe('.ship.modules = [{"slot":"utility","item_id":"fuel_scoop"}]');
   });
 
+  test('finds an integer above 2^53 by its exact digits', () => {
+    const credits = 9007199254740993n;
+    const data = { credits, fuel: 40 };
+    const result = findOutputSearchMatches(data, { outputSearch: '9007199254740993' });
+
+    expect(result).toEqual({
+      ok: true,
+      matches: [{ path: '.credits', value: credits }],
+    });
+    if (!result.ok) throw new Error('expected match');
+    const match = result.matches[0];
+    if (!match) throw new Error('expected at least one match');
+    expect(formatOutputSearchLine(match)).toBe('.credits = 9007199254740993');
+    expect(formatOutputSearchLine(match)).not.toContain('9007199254740992');
+
+    const rounded = findOutputSearchMatches(data, { outputSearchValues: '9007199254740992' });
+    expect(rounded).toEqual({ ok: true, matches: [] });
+  });
+
   test('root scalar search emits dot path', () => {
     const result = findOutputSearchMatches('Fuel Runner', { outputSearch: 'fuel' });
 

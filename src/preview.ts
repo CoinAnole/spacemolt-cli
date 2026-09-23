@@ -1,5 +1,6 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
 import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import { stringifyApiJson } from './json-number.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
 
@@ -143,7 +144,7 @@ function createDryRunResponseFromPreview(command: string, preview: Record<string
     result: [
       `Dry run: ${command}`,
       `${preview.method} ${preview.url}`,
-      `Payload: ${JSON.stringify(preview.payload)}`,
+      `Payload: ${stringifyApiJson(preview.payload)}`,
       ...(Array.isArray(preview.state_sections)
         ? [`State sections: ${preview.state_sections.filter((section) => typeof section === 'string').join(', ')}`]
         : []),

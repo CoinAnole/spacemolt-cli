@@ -14,6 +14,7 @@ import {
 } from './error-details.ts';
 import { getErrorSuggestion, isAuthError, isRetryableError } from './errors.ts';
 import { printCachedIdSuggestions } from './id-cache.ts';
+import { stringifyApiJson } from './json-number.ts';
 import { schemaAllowsType } from './openapi-metadata.ts';
 import { colorsForPlain } from './output-style.ts';
 import { extractErrorWaitSeconds, extractRateLimitMeta } from './rate-limit.ts';
@@ -97,7 +98,7 @@ export function printJsonResponse(response: APIResponse, compact = false, writer
   const write = response.error
     ? (writer?.err.bind(writer) ?? console.error)
     : (writer?.out.bind(writer) ?? console.log);
-  write(JSON.stringify(response, null, compact ? 0 : 2));
+  write(stringifyApiJson(response, compact ? 0 : 2));
 }
 
 export function printJsonError(code: string, message: string, writer?: CliWriter): void {
