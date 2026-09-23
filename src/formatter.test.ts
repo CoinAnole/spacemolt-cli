@@ -8188,6 +8188,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Intercepted: no');
     expect(stdout).toContain('Incapacitated: no');
     expect(stdout).toContain('Intercepting: no');
+    expect(stdout).not.toContain('Latch:');
     expect(stdout).toContain('Webbed: yes');
     expect(stdout).toContain('EM Disrupted: yes (25%, 2 ticks)');
     expect(stdout).toContain('Pirate Skiff');

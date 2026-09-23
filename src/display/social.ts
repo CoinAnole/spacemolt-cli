@@ -589,6 +589,20 @@ function facilityColumns(
   return columns;
 }
 
+const LATCH_STATUS_LINES = {
+  accruing: 'accruing',
+  shields_holding: 'shields_holding (keep shields down)',
+  out_of_range: 'out_of_range (close to point-blank)',
+} as const satisfies Record<string, string>;
+
+// Unknown tokens stay omitted. Indexing the map also hits Object.prototype.
+function formatLatchStatus(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  if (!Object.hasOwn(LATCH_STATUS_LINES, text)) return undefined;
+  return LATCH_STATUS_LINES[text as keyof typeof LATCH_STATUS_LINES];
+}
+
 function emitBattleCombatState(value: unknown): void {
   if (!isRecord(value)) return;
   const canEscape = formatYesNo(value.can_escape);
@@ -600,6 +614,7 @@ function emitBattleCombatState(value: unknown): void {
   const intercepted = formatYesNo(value.intercepted);
   const incapacitated = formatYesNo(value.incapacitated);
   const intercepting = formatYesNo(value.intercepting);
+  const latchStatus = formatLatchStatus(value.latch_status);
   const webbed = formatYesNo(value.webbed);
   const emDisrupted = formatYesNo(value.em_disrupted);
   if (
@@ -611,6 +626,7 @@ function emitBattleCombatState(value: unknown): void {
     intercepted === undefined &&
     incapacitated === undefined &&
     intercepting === undefined &&
+    latchStatus === undefined &&
     webbed === undefined &&
     emDisrupted === undefined
   ) {
@@ -634,6 +650,7 @@ function emitBattleCombatState(value: unknown): void {
     const targetId = identifierText(value.intercepting_target_id);
     emitLine(`Intercepting: ${intercepting}${targetId ? ` (${targetId})` : ''}`);
   }
+  if (latchStatus !== undefined) emitLine(`Latch: ${latchStatus}`);
   if (webbed !== undefined) emitLine(`Webbed: ${webbed}`);
   if (emDisrupted !== undefined) {
     const details = [
