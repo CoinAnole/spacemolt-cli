@@ -3361,19 +3361,11 @@ describe('help output branches', () => {
   });
 
   test('displayError gives trade_in_progress a do-not-retry suggestion', () => {
-    const context: CliRuntimeContext = {
-      env: {},
-      writer: captureWriter().writer,
-      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
-      sleep: () => Promise.resolve(),
-      output: { quiet: false, plain: true },
-    };
-
     const cancel = captureWriter();
     displayError(
       'trade_cancel',
       { code: 'trade_in_progress', message: 'Accept is already committing.' },
-      { context: { ...context, writer: cancel.writer } },
+      { context: displayErrorContext(cancel.writer) },
     );
     const cancelOutput = cancel.stderr.join('\n');
     expect(cancelOutput).toContain('Error [trade_in_progress]: Accept is already committing.');
@@ -3391,7 +3383,7 @@ describe('help output branches', () => {
     displayError(
       'trade_decline',
       { code: 'trade_in_progress', message: 'Accept is already committing.' },
-      { context: { ...context, writer: decline.writer } },
+      { context: displayErrorContext(decline.writer) },
     );
     const declineOutput = decline.stderr.join('\n');
     expect(declineOutput).toContain('Error [trade_in_progress]: Accept is already committing.');
@@ -3409,9 +3401,7 @@ describe('help output branches', () => {
     displayError(
       'trade_cancel',
       { code: 'trade_in_progress', message: 'Accept is already committing.' },
-      {
-        context: { ...context, writer: quiet.writer, output: { quiet: true, plain: true } },
-      },
+      { context: displayErrorContext(quiet.writer, { quiet: true, plain: true }) },
     );
     expect(quiet.stderr.join('\n')).toContain('Error [trade_in_progress]');
     expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
@@ -3421,15 +3411,12 @@ describe('help output branches', () => {
 
   test('displayError gives trade_not_found a get_trades suggestion', () => {
     const capture = captureWriter();
-    const context: CliRuntimeContext = {
-      env: {},
-      writer: capture.writer,
-      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
-      sleep: () => Promise.resolve(),
-      output: { quiet: false, plain: true },
-    };
 
-    displayError('trade_cancel', { code: 'trade_not_found', message: 'Trade not found.' }, { context });
+    displayError(
+      'trade_cancel',
+      { code: 'trade_not_found', message: 'Trade not found.' },
+      { context: displayErrorContext(capture.writer) },
+    );
 
     const output = capture.stderr.join('\n');
     expect(output).toContain('Error [trade_not_found]: Trade not found.');
@@ -3445,7 +3432,7 @@ describe('help output branches', () => {
     displayError(
       'trade_decline',
       { code: 'trade_not_found', message: 'Trade not found.' },
-      { context: { ...context, writer: decline.writer } },
+      { context: displayErrorContext(decline.writer) },
     );
     const declineSuggestion = decline.stderr
       .join('\n')
