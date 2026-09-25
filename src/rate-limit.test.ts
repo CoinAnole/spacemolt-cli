@@ -132,6 +132,10 @@ describe('isRateLimitAutoRetryWait', () => {
         details: { retry_after: 30 },
       }),
     ).toBeUndefined();
+    expect(
+      isRateLimitAutoRetryWait({ code: 'trade_in_progress', message: 'committing', retry_after: 1 }),
+    ).toBeUndefined();
+    expect(isRateLimitAutoRetryWait({ code: 'trade_not_found', message: 'gone', retry_after: 1 })).toBeUndefined();
   });
 });
 

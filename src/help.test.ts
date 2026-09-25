@@ -3343,4 +3343,101 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toMatch(/^ {2}treat_personnel /m);
   });
+
+  test('command search for trade_in_progress finds trade_cancel and trade_decline', () => {
+    const capture = captureWriter();
+    showCommandSearch('trade_in_progress', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}trade cancel /m);
+    expect(output).toMatch(/^ {2}trade decline /m);
+  });
+
+  test('command search for trade_not_found finds trade_cancel and trade_decline', () => {
+    const capture = captureWriter();
+    showCommandSearch('trade_not_found', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}trade cancel /m);
+    expect(output).toMatch(/^ {2}trade decline /m);
+  });
+
+  test('displayError gives trade_in_progress a do-not-retry suggestion', () => {
+    const cancel = captureWriter();
+    displayError(
+      'trade_cancel',
+      { code: 'trade_in_progress', message: 'Accept is already committing.' },
+      { context: displayErrorContext(cancel.writer) },
+    );
+    const cancelOutput = cancel.stderr.join('\n');
+    expect(cancelOutput).toContain('Error [trade_in_progress]: Accept is already committing.');
+    expect(cancelOutput).toContain('Suggestion:');
+    expect(cancelOutput).toContain('Do not retry');
+    expect(cancelOutput).toContain('spacemolt trade_cancel');
+    expect(cancelOutput).toContain('spacemolt trade_decline');
+    expect(cancelOutput).toContain('will complete');
+    expect(cancelOutput).toMatch(/the other side's accept/i);
+    expect(cancelOutput).not.toContain('This error may be retryable.');
+    expect(cancelOutput).not.toContain('This is an authentication error.');
+    expect(cancelOutput).not.toContain('seconds before retrying');
+
+    const decline = captureWriter();
+    displayError(
+      'trade_decline',
+      { code: 'trade_in_progress', message: 'Accept is already committing.' },
+      { context: displayErrorContext(decline.writer) },
+    );
+    const declineOutput = decline.stderr.join('\n');
+    expect(declineOutput).toContain('Error [trade_in_progress]: Accept is already committing.');
+    expect(declineOutput).toContain('Suggestion:');
+    expect(declineOutput).toContain('Do not retry');
+    expect(declineOutput).toContain('spacemolt trade_cancel');
+    expect(declineOutput).toContain('spacemolt trade_decline');
+    expect(declineOutput).toContain('will complete');
+    expect(declineOutput).toMatch(/the other side's accept/i);
+    expect(declineOutput).not.toContain('This error may be retryable.');
+    expect(declineOutput).not.toContain('This is an authentication error.');
+    expect(declineOutput).not.toContain('seconds before retrying');
+
+    const quiet = captureWriter();
+    displayError(
+      'trade_cancel',
+      { code: 'trade_in_progress', message: 'Accept is already committing.' },
+      { context: displayErrorContext(quiet.writer, { quiet: true, plain: true }) },
+    );
+    expect(quiet.stderr.join('\n')).toContain('Error [trade_in_progress]');
+    expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
+    expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
+    expect(quiet.stderr.join('\n')).not.toContain('seconds before retrying');
+  });
+
+  test('displayError gives trade_not_found a get_trades suggestion', () => {
+    const capture = captureWriter();
+
+    displayError(
+      'trade_cancel',
+      { code: 'trade_not_found', message: 'Trade not found.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [trade_not_found]: Trade not found.');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt get_trades');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('seconds before retrying');
+    const suggestion = output.split('\n').find((line) => line.includes('Suggestion:'));
+    expect(suggestion).not.toContain('retry "spacemolt trade_cancel"');
+
+    const decline = captureWriter();
+    displayError(
+      'trade_decline',
+      { code: 'trade_not_found', message: 'Trade not found.' },
+      { context: displayErrorContext(decline.writer) },
+    );
+    const declineSuggestion = decline.stderr
+      .join('\n')
+      .split('\n')
+      .find((line) => line.includes('Suggestion:'));
+    expect(declineSuggestion).toBe(suggestion);
+  });
 });

@@ -353,3 +353,47 @@ describe('insufficient_credits', () => {
     expect(getErrorSuggestion('no_credits', 'craft')).toBe(getErrorSuggestion('no_credits'));
   });
 });
+
+describe('trade_in_progress', () => {
+  test('is not retryable, is not an authentication error, and forbids cancel or decline retries', () => {
+    expect(ERROR_REGISTRY.trade_in_progress?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.trade_in_progress?.auth).toBe(false);
+    expect(isRetryableError('trade_in_progress')).toBe(false);
+    expect(isAuthError('trade_in_progress')).toBe(false);
+    expect(isKnownErrorCode('trade_in_progress')).toBe(true);
+    expect(ERROR_CODES).toContain('trade_in_progress');
+    const suggestion = getErrorSuggestion('trade_in_progress');
+    expect(suggestion).toMatch(/the other side's accept/i);
+    expect(suggestion).toContain('will complete');
+    expect(suggestion).toContain('Do not retry');
+    expect(suggestion).toContain('spacemolt trade_cancel');
+    expect(suggestion).toContain('spacemolt trade_decline');
+    expect(suggestion).not.toMatch(/\bretry (the|this|your|again)\b/i);
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(getErrorSuggestion('trade_in_progress', 'trade_cancel')).toBe(suggestion);
+    expect(getErrorSuggestion('trade_in_progress', 'trade_decline')).toBe(suggestion);
+    expect(ERROR_REGISTRY.trade_in_progress?.commandSuggestions).toBeUndefined();
+    expect(getRelatedCommands('trade_in_progress')).toEqual(['get_trades']);
+  });
+});
+
+describe('trade_not_found', () => {
+  test('is not retryable, is not an authentication error, and points at get_trades', () => {
+    expect(ERROR_REGISTRY.trade_not_found?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.trade_not_found?.auth).toBe(false);
+    expect(isRetryableError('trade_not_found')).toBe(false);
+    expect(isAuthError('trade_not_found')).toBe(false);
+    expect(isKnownErrorCode('trade_not_found')).toBe(true);
+    expect(ERROR_CODES).toContain('trade_not_found');
+    const suggestion = getErrorSuggestion('trade_not_found');
+    expect(suggestion).toContain('spacemolt get_trades');
+    expect(suggestion).toContain('already gone');
+    expect(suggestion).not.toContain('Do not retry');
+    expect(suggestion).not.toMatch(/\bretry (the|this|your|again)\b/i);
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(getErrorSuggestion('trade_not_found', 'trade_cancel')).toBe(suggestion);
+    expect(getErrorSuggestion('trade_not_found', 'trade_decline')).toBe(suggestion);
+    expect(ERROR_REGISTRY.trade_not_found?.commandSuggestions).toBeUndefined();
+    expect(getRelatedCommands('trade_not_found')).toEqual(['get_trades']);
+  });
+});

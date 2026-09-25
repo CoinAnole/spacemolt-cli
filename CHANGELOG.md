@@ -105,6 +105,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `storage view` table output lists durable gifts (`sender`, time, credits, items, ships, note). An explicit empty `gifts` array prints `Gifts: none`. An omitted key prints nothing. `messages` are unchanged. **No parser change.**
 - `dock` table output lists durable gifts after trade fills: `Gifts: N`, the trade-fill truncated suffix when `gifts_truncated` is true, `gifts_note` when non-empty, then one block per returned row. Dock rows follow `GiftNotification` and do not print `ships` or `base_id`. **No parser change.**
 
+### P2P Trading
+
+- `trade_cancel` / `trade_decline` help documents gameserver 0.611.0: `trade_in_progress` means the other side's accept is already committing and the trade will complete — do not retry cancel or decline; `trade_not_found` means the trade is already gone — check `get_trades`. Usage stays `trade_id`. **No parser change.**
+
 ### Fixed
 
 - Whole numbers outside the safe integer range (`|n| <= 2^53-1`) are preserved on v2 HTTP JSON and re-emitted by `--json`, `--yaml`, `--structured`, `--field`, `--fields`, and `--jq`. Notification amounts that used to fall back to `0` (`xp_gained`, damage labels, raid HP) print the digits. Human credit lines and notification `positiveNumber` print those digits as well.
@@ -117,6 +121,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### Errors
 
+- `trade_in_progress` and `trade_not_found` now have local suggestions (gameserver 0.611.0). The server message still prints. `trade_in_progress` says the other side's accept is already committing, the trade will complete, and not to retry `trade_cancel` or `trade_decline`. `trade_not_found` points at `get_trades`. Neither code is auto-retried (auto-retry remains `rate_limited` waits of at most 60 seconds, and HTTP 503). Human output no longer adds "This error may be retryable." for these codes when they carry no wait.
 - `ip_timed_out` suggestion now names `retry_after` (gameserver 0.606.0). Human output already prints `Wait` from envelope or `details.retry_after`, plus `Limit:` / `Scope:` when present. Still not auto-retried.
 - `station_under_attack` now has a local suggestion: wait for the battle to end, then retry the same command. Common when a faction-mate fights in that system (gameserver 0.604.0).
 - `boarding_locked` now has a local suggestion: wait for the boarding latch to clear, then retry the emergency jump device. Flee makes no progress; the emergency warp stabilizer and emergency cloak are skipped silently (gameserver 0.601.2).
