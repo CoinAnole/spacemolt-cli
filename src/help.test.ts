@@ -863,6 +863,8 @@ describe('help output branches', () => {
     expect(output).toContain('Pilot');
     expect(output).toContain('Base');
     expect(output).toContain('Fuel');
+    expect(output).toContain('combat.pirate_destroyed');
+    expect(output).toContain('Credits');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');
     expect(output).toContain('faction.freight_claim_paid');
