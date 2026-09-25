@@ -23,8 +23,8 @@ function giftLines(gift: unknown, ships: boolean): string[] | undefined {
     const text = formatIntegerText(gift.credits);
     if (text !== undefined) lines.push(`  Credits: ${text} cr`);
   }
-  appendNestedLines(lines, 'Items', formatItemLines(gift.items));
-  if (ships) appendNestedLines(lines, 'Ships', formatShipLines(gift.ships));
+  appendNestedLines(lines, 'Items', formatNestedLines(gift.items, formatItemLine));
+  if (ships) appendNestedLines(lines, 'Ships', formatNestedLines(gift.ships, formatShipLine));
   const note = formatNote(gift.message);
   if (note !== undefined) lines.push(`  Note: ${note}`);
   return lines.length ? lines : undefined;
@@ -63,12 +63,12 @@ function formatNote(value: unknown): string | undefined {
   return value.trimEnd();
 }
 
-function formatItemLines(value: unknown): string[] {
+function formatNestedLines(value: unknown, formatRow: (row: Record<string, unknown>) => string | undefined): string[] {
   if (!Array.isArray(value)) return [];
   const lines: string[] = [];
-  for (const item of value) {
-    if (!isRecord(item)) continue;
-    const line = formatItemLine(item);
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const line = formatRow(row);
     if (line) lines.push(line);
   }
   return lines;
@@ -82,17 +82,6 @@ function formatItemLine(item: Record<string, unknown>): string | undefined {
   const quantity = formatIntegerText(item.quantity);
   const label = quantity !== undefined ? `${quantity} ${name}` : name;
   return `${label}${idSuffix}`;
-}
-
-function formatShipLines(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const lines: string[] = [];
-  for (const ship of value) {
-    if (!isRecord(ship)) continue;
-    const line = formatShipLine(ship);
-    if (line) lines.push(line);
-  }
-  return lines;
 }
 
 function formatShipLine(ship: Record<string, unknown>): string | undefined {
