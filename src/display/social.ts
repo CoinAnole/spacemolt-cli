@@ -1328,8 +1328,7 @@ export const socialFormatters = [
         const claimShortfall = claimPaid ? scalarFrom('shortfall') : undefined;
         const stationPaidDisplay = formatActionLogCredits(stationPaid);
         const shortfallDisplay = formatActionLogCredits(claimShortfall);
-        // combat.pirate_destroyed data (untyped ActionLogData): credits_earned.
-        // Gated like shipping.claim_paid — credits_earned is not unique to this log.
+        // credits_earned is a generic key; only combat.pirate_destroyed lifts it
         const pirateDestroyed = eventType === 'combat.pirate_destroyed';
         const creditsEarned = pirateDestroyed ? scalarFrom('credits_earned') : undefined;
         const creditsDisplay = formatActionLogCredits(creditsEarned);
