@@ -708,13 +708,13 @@ test('preserves complete malformed shipping mutation envelopes in the raw fallba
 });
 
 test('renders action-specific settlements and keeps zero amounts visible', () => {
-  const cases: Array<[string, string, Record<string, unknown>]> = [
-    ['shipping_deliver', 'Freight Delivered', { carrier_payout: 15000, claim_paid: 0 }],
-    ['shipping_return', 'Freight Returned', { carrier_payout: 0, shipper_refund: 12500 }],
-    ['shipping_cancel', 'Freight Contract Canceled', { shipper_refund: 0, debt_created: 0 }],
+  const cases: Array<[string, string, Record<string, unknown>, string]> = [
+    ['shipping_deliver', 'Freight Delivered', { carrier_payout: 15000, debt_created: 0 }, 'Debt created: 0 cr'],
+    ['shipping_return', 'Freight Returned', { carrier_payout: 0, shipper_refund: 12500 }, 'Carrier payout: 0 cr'],
+    ['shipping_cancel', 'Freight Contract Canceled', { shipper_refund: 0, debt_created: 0 }, 'Shipper refund: 0 cr'],
   ];
 
-  for (const [command, heading, settlement] of cases) {
+  for (const [command, heading, settlement, zeroLine] of cases) {
     const action = command.slice('shipping_'.length);
     const stdout = output(command, {
       details: {
@@ -730,7 +730,8 @@ test('renders action-specific settlements and keeps zero amounts visible', () =>
       cargo: [],
     });
     expect(stdout).toContain(`=== ${heading} ===`);
-    expect(stdout).toContain('0 cr');
+    expect(stdout).toContain(zeroLine);
+    expect(stdout).not.toContain('Claim paid');
     expect(stdout).not.toContain('=== Response ===');
   }
 });
@@ -792,9 +793,59 @@ test('omits malformed optional carrier and settlement fields without diagnostic 
     },
   });
   expect(stdout).not.toContain('Late delivery');
+  expect(stdout).not.toContain('Claim paid');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('[object Object]');
+});
+
+test('does not print settlement-level claim_paid even when a stale payload sends it', () => {
+  const fixture = {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered', claim_paid: 1250 },
+      carrier_payout: 15000,
+      claim_paid: 500,
+      debt_created: 0,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  };
+  const stdout = output('shipping_deliver', fixture);
+  expect(stdout).toContain('=== Freight Delivered ===');
+  expect(stdout).toContain('Carrier payout: 15,000 cr');
+  expect(stdout).toContain('Debt created: 0 cr');
+  expect(stdout).not.toContain('Claim paid');
+  expect(stdout).not.toContain('=== Response ===');
+
+  const rendered = renderStructuredResult(
+    'shipping_deliver',
+    structuredClone(fixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    details: { claim_paid: number; contract: { claim_paid: number } };
+  };
+  expect(parsed.details.claim_paid).toBe(500);
+  expect(parsed.details.contract.claim_paid).toBe(1250);
+});
+
+test('prints contract-level claim_paid on the full contract view, including zero', () => {
+  const paid = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, claim_paid: 1250 },
+  });
+  expect(paid).toContain('=== Freight Contract ===');
+  expect(paid).toContain('Claim paid: 1,250 cr');
+  expect(paid).not.toContain('=== Response ===');
+
+  const zero = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, claim_paid: 0 },
+  });
+  expect(zero).toContain('Claim paid: 0 cr');
 });
 
 function settlementEnvelope(

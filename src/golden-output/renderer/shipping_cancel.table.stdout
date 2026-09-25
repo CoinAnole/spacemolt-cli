@@ -5,6 +5,5 @@ Status: canceled
 Package: package-relief-1
 Route: earth_station -> nova_central
 Shipper refund: 12,000 cr
-Claim paid: 0 cr
 Debt created: 0 cr
 Terminal reason: Shipper canceled the unaccepted listing.

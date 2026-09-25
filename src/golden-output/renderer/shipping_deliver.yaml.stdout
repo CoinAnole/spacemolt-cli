@@ -40,7 +40,6 @@ details:
     reputation_eligible: true
     carrier_payout: 14500
   carrier_payout: 14500
-  claim_paid: 0
   debt_created: 0
 player:
   username: Marlowe
