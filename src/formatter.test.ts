@@ -2220,6 +2220,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('ship-42');
     expect(stdout).toContain('More entries available.');
     expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('Credits');
   });
 
   test('formats empty notifications without raw JSON fallback', () => {

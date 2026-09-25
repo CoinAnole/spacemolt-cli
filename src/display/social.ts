@@ -1328,6 +1328,10 @@ export const socialFormatters = [
         const claimShortfall = claimPaid ? scalarFrom('shortfall') : undefined;
         const stationPaidDisplay = formatActionLogCredits(stationPaid);
         const shortfallDisplay = formatActionLogCredits(claimShortfall);
+        // credits_earned is a generic key; only combat.pirate_destroyed lifts it
+        const pirateDestroyed = eventType === 'combat.pirate_destroyed';
+        const creditsEarned = pirateDestroyed ? scalarFrom('credits_earned') : undefined;
+        const creditsDisplay = formatActionLogCredits(creditsEarned);
         const row: Record<string, unknown> = {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
@@ -1359,6 +1363,7 @@ export const socialFormatters = [
         };
         if (stationPaidDisplay !== undefined) row.station_paid_display = stationPaidDisplay;
         if (shortfallDisplay !== undefined) row.shortfall_display = shortfallDisplay;
+        if (creditsDisplay !== undefined) row.credits_display = creditsDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [
@@ -1385,6 +1390,7 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['cost_display', 'cost'])) columns.push(['Cost', ['cost_display', 'cost']]);
       if (hasAnyField(rows, ['station_paid_display'])) columns.push(['Station paid', ['station_paid_display']]);
       if (hasAnyField(rows, ['shortfall_display'])) columns.push(['Shortfall', ['shortfall_display']]);
+      if (hasAnyField(rows, ['credits_display'])) columns.push(['Credits', ['credits_display']]);
       if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
         columns.push(['Base', ['base_display', 'base_name', 'base_id']]);
       }

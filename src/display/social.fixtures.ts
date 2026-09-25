@@ -1809,6 +1809,33 @@ export const actionLogFreightEscrowFixture = {
   ],
 };
 
+export const actionLogPirateDestroyedFixture = {
+  category: 'combat',
+  has_more: false,
+  page: 1,
+  page_size: 50,
+  total: 2,
+  total_pages: 1,
+  entries: [
+    {
+      id: 501,
+      created_at: '2026-09-24T16:00:00.000Z',
+      summary: 'Destroyed pirate Corsair.',
+      category: 'combat',
+      event_type: 'combat.pirate_destroyed',
+      data: { credits_earned: 1500 },
+    },
+    {
+      id: 502,
+      created_at: '2026-09-24T16:05:00.000Z',
+      summary: 'Destroyed pirate Skiff.',
+      category: 'combat',
+      event_type: 'combat.pirate_destroyed',
+      data: { credits_earned: 0 },
+    },
+  ],
+};
+
 export const actionLogCursorFixture = {
   event_types: ['faction.production_cycle', 'ship.buy_order_filled'],
   since_id: 100,
@@ -2043,6 +2070,10 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_action_log_freight_escrow: {
     command: 'get_action_log',
     fixture: actionLogFreightEscrowFixture,
+  },
+  get_action_log_pirate_destroyed: {
+    command: 'get_action_log',
+    fixture: actionLogPirateDestroyedFixture,
   },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },

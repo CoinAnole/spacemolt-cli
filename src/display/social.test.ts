@@ -9,6 +9,7 @@ import {
   actionLogFixture,
   actionLogFreightEscrowFixture,
   actionLogPersonnelCaptureFixture,
+  actionLogPirateDestroyedFixture,
   battleLogArenaFixture,
   battleLogBoardingFixture,
   battleLogFixture,
@@ -187,6 +188,21 @@ function claimEntry(
   };
 }
 
+function pirateEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 501,
+    created_at: '2026-09-24T16:00:00.000Z',
+    event_type: 'combat.pirate_destroyed',
+    category: 'combat',
+    summary: 'Destroyed pirate Corsair.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
 function expectNoPrizeOrLocation(header: string | undefined): void {
   expect(header).toBeDefined();
   expect(header).not.toContain('Prize');
@@ -351,6 +367,12 @@ test('omits Pilot, Fuel, Station paid, and Shortfall when existing action-log fi
     expect(columns).not.toContain('Fuel');
     expect(columns).not.toContain('Station paid');
     expect(columns).not.toContain('Shortfall');
+    expect(columns).not.toContain('Credits');
+  }
+
+  for (const fixture of [actionLogFactionRefuelFixture, actionLogFreightEscrowFixture]) {
+    const stdout = renderActionLog(structuredClone(fixture));
+    expect(actionLogHeaderColumns(stdout)).not.toContain('Credits');
   }
 
   const personnel = renderActionLog(structuredClone(actionLogPersonnelCaptureFixture));
@@ -436,6 +458,240 @@ test('keeps Pilot and Fuel columns on mixed action-log pages', () => {
   expect(columns).toContain('Fuel');
   expect(actionLogCell(stdout, 'crafting.completed', 'Pilot')?.trim()).toBe('');
   expect(actionLogCell(stdout, 'crafting.completed', 'Fuel')?.trim()).toBe('');
+});
+
+test('renders combat.pirate_destroyed credits from action-log data', () => {
+  const stdout = renderActionLog(structuredClone(actionLogPirateDestroyedFixture));
+  expect(actionLogHeaderColumns(stdout)).toEqual(['Timestamp', 'Summary', 'Category', 'Event', 'Credits']);
+  expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('1,500cr');
+  expect(actionLogCell(stdout, 'Skiff', 'Credits')).toBe('0cr');
+});
+
+test('omits Credits when combat.pirate_destroyed data has no credits_earned', () => {
+  const fixture = structuredClone(actionLogPirateDestroyedFixture);
+  for (const entry of fixture.entries) {
+    delete (entry.data as { credits_earned?: unknown }).credits_earned;
+  }
+  const deleted = renderActionLog(fixture);
+  expect(actionLogHeaderColumns(deleted)).not.toContain('Credits');
+  expect(actionLogCell(deleted, 'Corsair', 'Event')).toBe('combat.pirate_destroyed');
+
+  const noData = renderActionLog(actionLogPage([pirateEntry(undefined)], 'combat'));
+  expect(actionLogHeaderColumns(noData)).not.toContain('Credits');
+  expect(actionLogCell(noData, 'Corsair', 'Event')).toBe('combat.pirate_destroyed');
+});
+
+test('renders Credits 0 when combat.pirate_destroyed data has credits_earned zero', () => {
+  const zero = renderActionLog(actionLogPage([pirateEntry({ credits_earned: 0 })], 'combat'));
+  expect(actionLogHeaderColumns(zero)).toContain('Credits');
+  expect(actionLogCell(zero, 'Corsair', 'Credits')).toBe('0cr');
+
+  const zeroBigint = renderActionLog(actionLogPage([pirateEntry({ credits_earned: 0n })], 'combat'));
+  expect(actionLogHeaderColumns(zeroBigint)).toContain('Credits');
+  expect(actionLogCell(zeroBigint, 'Corsair', 'Credits')).toBe('0cr');
+});
+
+test('keeps Credits on a mixed action-log page with faction.refuel', () => {
+  const pirate = structuredClone(actionLogPirateDestroyedFixture);
+  const refuel = structuredClone(actionLogFactionRefuelFixture);
+  const corsair = pirate.entries[0];
+  const marlowe = refuel.entries[0];
+  if (!corsair || !marlowe) throw new Error('expected pirate and refuel rows');
+  const stdout = renderActionLog(actionLogPage([corsair, marlowe], 'combat'));
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Credits');
+  expect(columns).toContain('Pilot');
+  expect(columns).toContain('Base');
+  expect(columns).toContain('Fuel');
+  expect(actionLogCell(stdout, 'Corsair', 'Pilot')).toBe('');
+  expect(actionLogCell(stdout, 'Corsair', 'Base')).toBe('');
+  expect(actionLogCell(stdout, 'Corsair', 'Fuel')).toBe('');
+  expect(actionLogCell(stdout, 'Marlowe', 'Credits')).toBe('');
+  expect(actionLogCell(stdout, 'Marlowe', 'Fuel')).toBe('120');
+  expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('1,500cr');
+});
+
+test('does not lift credits_earned off a non-pirate event', () => {
+  const stdout = renderActionLog(
+    actionLogPage(
+      [
+        {
+          id: 410,
+          created_at: '2026-09-23T12:20:00.000Z',
+          summary: 'Crafted a plate.',
+          category: 'crafting',
+          event_type: 'crafting.completed',
+          data: { credits_earned: 1500 },
+        },
+      ],
+      'crafting',
+    ),
+  );
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Credits');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Event')).toBe('crafting.completed');
+  expect(stdout).not.toContain('1,500cr');
+});
+
+test('does not treat a prefix, different case, data event_type, or losing type as pirate_destroyed', () => {
+  const rejected = [
+    { event_type: 'combat.pirate_destroyed.extra' },
+    { event_type: 'COMBAT.PIRATE_DESTROYED' },
+    {
+      event_type: 'crafting.completed',
+      data: { event_type: 'combat.pirate_destroyed', credits_earned: 1500 },
+    },
+    {
+      event_type: 'crafting.completed',
+      type: 'combat.pirate_destroyed',
+      data: { credits_earned: 1500 },
+    },
+  ];
+  for (const extra of rejected) {
+    const stdout = renderActionLog(actionLogPage([pirateEntry({ credits_earned: 1500 }, extra)], 'combat'));
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(extra)).not.toContain('Credits');
+    expect(stdout, JSON.stringify(extra)).not.toContain('1,500cr');
+  }
+});
+
+test('lifts pirate credits from type when event_type is absent', () => {
+  const stdout = renderActionLog(
+    actionLogPage(
+      [
+        {
+          id: 511,
+          created_at: '2026-09-24T16:10:00.000Z',
+          summary: 'Typed pirate.',
+          category: 'combat',
+          type: 'combat.pirate_destroyed',
+          data: { credits_earned: 1500 },
+        },
+      ],
+      'combat',
+    ),
+  );
+  expect(actionLogCell(stdout, 'Typed pirate.', 'Event')).toBe('combat.pirate_destroyed');
+  expect(actionLogCell(stdout, 'Typed pirate.', 'Credits')).toBe('1,500cr');
+});
+
+test('prefers entry-level credits_earned over data.credits_earned', () => {
+  const stdout = renderActionLog(
+    actionLogPage([pirateEntry({ credits_earned: 99 }, { credits_earned: 10 })], 'combat'),
+  );
+  expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('10cr');
+  expect(stdout).not.toContain('99');
+});
+
+test('does not fall through a whitespace entry credits_earned to data', () => {
+  const stdout = renderActionLog(
+    actionLogPage([pirateEntry({ credits_earned: 1500 }, { credits_earned: '   ' })], 'combat'),
+  );
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Credits');
+  expect(stdout).not.toContain('1,500cr');
+});
+
+test('formats out-of-range bigint credits_earned without rounding', () => {
+  const stdout = renderActionLog(actionLogPage([pirateEntry({ credits_earned: 9007199254740993n })], 'combat'));
+  const cell = actionLogCell(stdout, 'Corsair', 'Credits');
+  expect(cell).toBe(`${(9007199254740993n).toLocaleString()}cr`);
+  expect(cell?.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(cell).not.toContain('9007199254740992');
+});
+
+test('formats digit-string credits_earned without rounding', () => {
+  const cases: Array<{ raw: unknown; expected: string; digits?: string }> = [
+    {
+      raw: '9007199254740993',
+      expected: `${BigInt('9007199254740993').toLocaleString()}cr`,
+      digits: '9007199254740993',
+    },
+    { raw: '0', expected: '0cr' },
+    { raw: '+1500', expected: '1,500cr' },
+    { raw: '007', expected: '7cr' },
+    { raw: '-1500', expected: `${BigInt('-1500').toLocaleString()}cr` },
+    { raw: '000', expected: '0cr' },
+    { raw: '-0', expected: '0cr' },
+    { raw: '+0', expected: '0cr' },
+    { raw: '  1500  ', expected: '1,500cr' },
+    { raw: -1500, expected: '-1,500cr' },
+  ];
+  for (const { raw, expected, digits } of cases) {
+    const stdout = renderActionLog(actionLogPage([pirateEntry({ credits_earned: raw })], 'combat'));
+    const cell = actionLogCell(stdout, 'Corsair', 'Credits');
+    expect(cell, String(raw)).toBe(expected);
+    if (digits) expect(cell?.replace(/\D/g, '')).toContain(digits);
+    expect(cell).not.toContain('9007199254740992');
+  }
+});
+
+test('does not format non-integer credits_earned as credits', () => {
+  const badValues: unknown[] = [
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    true,
+    false,
+    'nope',
+    '1e3',
+    Number('9007199254740993'),
+    null,
+    { amount: 1 },
+  ];
+  for (const value of badValues) {
+    const stdout = renderActionLog(actionLogPage([pirateEntry({ credits_earned: value })], 'combat'));
+    expect(actionLogHeaderColumns(stdout), String(value)).not.toContain('Credits');
+    expect(actionLogCell(stdout, 'Corsair', 'Event')).toBe('combat.pirate_destroyed');
+    expect(stdout).not.toContain('1.5');
+    expect(stdout).not.toContain('1,000cr');
+    expect(stdout).not.toContain('9007199254740992');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('[object Object]');
+  }
+});
+
+test('does not parse credits out of the summary', () => {
+  const summaryOnly = renderActionLog(
+    actionLogPage([pirateEntry(undefined, { summary: 'Paid 9999 credits.' })], 'combat'),
+  );
+  expect(actionLogHeaderColumns(summaryOnly)).not.toContain('Credits');
+  expect(summaryOnly).toContain('Paid 9999 credits.');
+  expect(summaryOnly).not.toContain('9,999');
+
+  const withField = renderActionLog(
+    actionLogPage(
+      [
+        pirateEntry(undefined, { summary: 'Paid 9999 credits.', id: 501 }),
+        pirateEntry({ credits_earned: 1500 }, { summary: 'Bounty was 100.', id: 502 }),
+      ],
+      'combat',
+    ),
+  );
+  expect(withField).toContain('Paid 9999 credits.');
+  expect(withField).toContain('Bounty was 100.');
+  expect(actionLogCell(withField, 'Paid 9999 credits.', 'Credits')).toBe('');
+  expect(actionLogCell(withField, 'Bounty was 100.', 'Credits')).toBe('1,500cr');
+  expect(withField).not.toContain('9,999');
+  expect(withField).not.toContain('100cr');
+});
+
+test('inserts Credits after Shortfall and before Base', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      {
+        id: 201,
+        created_at: '2026-09-03T10:00:00.000Z',
+        summary: 'Hired 4 crew and 2 marines at Earth Station.',
+        category: 'ship',
+        event_type: 'ship.recruit_personnel',
+        data: { cost: 900, base_name: 'Earth Station' },
+      },
+      claimEntry({ station_paid: 8000, shortfall: 0 }, { id: 402 }),
+      pirateEntry({ credits_earned: 1500 }, { id: 503 }),
+    ]),
+  );
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Cost', 'Station paid', 'Shortfall', 'Credits', 'Base']);
+  const columns = actionLogHeaderColumns(stdout);
+  const cost = columns.indexOf('Cost');
+  expect(columns.slice(cost, cost + 5)).toEqual(['Cost', 'Station paid', 'Shortfall', 'Credits', 'Base']);
 });
 
 test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
