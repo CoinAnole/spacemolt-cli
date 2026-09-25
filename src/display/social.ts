@@ -91,6 +91,21 @@ function formatCredits(value: unknown): string | undefined {
   return number === undefined ? undefined : `${number}cr`;
 }
 
+const ACTION_LOG_CREDIT_DIGITS = /^[+-]?\d+$/;
+
+function formatActionLogCredits(value: unknown): string | undefined {
+  if (typeof value === 'bigint' || (typeof value === 'number' && Number.isSafeInteger(value))) {
+    const text = formatIntegerText(value);
+    return text === undefined ? undefined : `${text}cr`;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!ACTION_LOG_CREDIT_DIGITS.test(trimmed)) return undefined;
+    return `${BigInt(trimmed).toLocaleString()}cr`;
+  }
+  return undefined;
+}
+
 function formatCycles(value: unknown): string | undefined {
   const number = formatNumber(value);
   if (number === undefined) return undefined;
@@ -1306,7 +1321,14 @@ export const socialFormatters = [
         const username = scalarFrom('username');
         const playerId = scalarFrom('player_id');
         const fuelAmount = scalarFrom('fuel') ?? scalarFrom('faction_fuel') ?? scalarFrom('ally_fuel');
-        return {
+        // shortfall is a generic key; only shipping.claim_paid lifts it
+        const eventType = identifierText(entry.event_type) ?? identifierText(entry.type);
+        const claimPaid = eventType === 'shipping.claim_paid';
+        const stationPaid = claimPaid ? scalarFrom('station_paid') : undefined;
+        const claimShortfall = claimPaid ? scalarFrom('shortfall') : undefined;
+        const stationPaidDisplay = formatActionLogCredits(stationPaid);
+        const shortfallDisplay = formatActionLogCredits(claimShortfall);
+        const row: Record<string, unknown> = {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
           category: entry.category ?? category,
@@ -1335,6 +1357,9 @@ export const socialFormatters = [
           pilot_display: formatActorIdentity(username, playerId),
           fuel_display: formatNumber(fuelAmount),
         };
+        if (stationPaidDisplay !== undefined) row.station_paid_display = stationPaidDisplay;
+        if (shortfallDisplay !== undefined) row.shortfall_display = shortfallDisplay;
+        return row;
       });
       const columns: Array<[string, string[]]> = [
         ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
@@ -1358,6 +1383,8 @@ export const socialFormatters = [
         columns.push(['Marines', ['marines_display', 'marines_recruited', 'marines_treated']]);
       }
       if (hasAnyField(rows, ['cost_display', 'cost'])) columns.push(['Cost', ['cost_display', 'cost']]);
+      if (hasAnyField(rows, ['station_paid_display'])) columns.push(['Station paid', ['station_paid_display']]);
+      if (hasAnyField(rows, ['shortfall_display'])) columns.push(['Shortfall', ['shortfall_display']]);
       if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
         columns.push(['Base', ['base_display', 'base_name', 'base_id']]);
       }

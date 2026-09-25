@@ -7,6 +7,7 @@ import {
   actionLogCursorFixture,
   actionLogFactionRefuelFixture,
   actionLogFixture,
+  actionLogFreightEscrowFixture,
   actionLogPersonnelCaptureFixture,
   battleLogArenaFixture,
   battleLogBoardingFixture,
@@ -148,6 +149,42 @@ function actionLogCell(stdout: string, rowNeedle: string, column: string): strin
   const cells = row.split('|').map((part) => part.trim());
   const index = headers.indexOf(column);
   return index >= 0 ? cells[index] : undefined;
+}
+
+function renderActionLog(fixture: Record<string, unknown>): string {
+  const rendered = renderStructuredResult('get_action_log', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
+  return stdout;
+}
+
+function actionLogPage(entries: Array<Record<string, unknown>>, category = 'shipping'): Record<string, unknown> {
+  return {
+    category,
+    has_more: false,
+    page: 1,
+    page_size: 50,
+    total: entries.length,
+    total_pages: 1,
+    entries,
+  };
+}
+
+function claimEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 401,
+    created_at: '2026-09-23T12:00:00.000Z',
+    event_type: 'shipping.claim_paid',
+    category: 'shipping',
+    summary: 'Insurer paid the claim in full.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
 }
 
 function expectNoPrizeOrLocation(header: string | undefined): void {
@@ -306,22 +343,17 @@ test('renders faction.refuel pilot, base, and fuel from action-log data', () => 
   expect(stdout).not.toMatch(/NaN|undefined|\[object Object\]/);
 });
 
-test('omits Pilot and Fuel columns when existing action-log fixtures lack those data fields', () => {
+test('omits Pilot, Fuel, Station paid, and Shortfall when existing action-log fixtures lack those fields', () => {
   for (const fixture of [actionLogFixture, actionLogCursorFixture, actionLogPersonnelCaptureFixture]) {
-    const stdout = renderStructuredResult('get_action_log', structuredClone(fixture), options, context).stdout.join(
-      '\n',
-    );
+    const stdout = renderActionLog(structuredClone(fixture));
     const columns = actionLogHeaderColumns(stdout);
     expect(columns).not.toContain('Pilot');
     expect(columns).not.toContain('Fuel');
+    expect(columns).not.toContain('Station paid');
+    expect(columns).not.toContain('Shortfall');
   }
 
-  const personnel = renderStructuredResult(
-    'get_action_log',
-    structuredClone(actionLogPersonnelCaptureFixture),
-    options,
-    context,
-  ).stdout.join('\n');
+  const personnel = renderActionLog(structuredClone(actionLogPersonnelCaptureFixture));
   const personnelColumns = actionLogHeaderColumns(personnel);
   expect(personnelColumns).toContain('Base');
   expect(personnelColumns).toContain('Cost');
@@ -404,6 +436,309 @@ test('keeps Pilot and Fuel columns on mixed action-log pages', () => {
   expect(columns).toContain('Fuel');
   expect(actionLogCell(stdout, 'crafting.completed', 'Pilot')?.trim()).toBe('');
   expect(actionLogCell(stdout, 'crafting.completed', 'Fuel')?.trim()).toBe('');
+});
+
+test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
+  const stdout = renderActionLog(structuredClone(actionLogFreightEscrowFixture));
+  expect(actionLogHeaderColumns(stdout)).toEqual([
+    'Timestamp',
+    'Summary',
+    'Category',
+    'Event',
+    'Station paid',
+    'Shortfall',
+  ]);
+  expect(actionLogCell(stdout, 'claim in full', 'Station paid')).toBe('8,000cr');
+  expect(actionLogCell(stdout, 'claim in full', 'Shortfall')).toBe('0cr');
+  expect(actionLogCell(stdout, 'part of the claim', 'Station paid')).toBe('1,500cr');
+  expect(actionLogCell(stdout, 'part of the claim', 'Shortfall')).toBe('6,500cr');
+  expect(actionLogCell(stdout, 'trading.escrow_refunded', 'Event')).toBe('trading.escrow_refunded');
+  expect(actionLogCell(stdout, 'trading.escrow_refunded', 'Station paid')).toBe('');
+  expect(actionLogCell(stdout, 'trading.escrow_refunded', 'Shortfall')).toBe('');
+});
+
+test('omits Station paid and Shortfall when shipping.claim_paid data lacks both keys', () => {
+  const fixture = structuredClone(actionLogFreightEscrowFixture);
+  for (const entry of fixture.entries) {
+    if (!('data' in entry) || entry.data === undefined) continue;
+    const data = entry.data as { station_paid?: unknown; shortfall?: unknown };
+    delete data.station_paid;
+    delete data.shortfall;
+  }
+  const stdout = renderActionLog(fixture);
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).not.toContain('Station paid');
+  expect(columns).not.toContain('Shortfall');
+  expect(actionLogCell(stdout, 'claim in full', 'Event')).toBe('shipping.claim_paid');
+});
+
+test('omits Station paid and Shortfall for faction freight events', () => {
+  const events = [
+    'faction.freight_fee_earned',
+    'faction.freight_premium_earned',
+    'faction.freight_claim_paid',
+    'faction.freight_debt_repaid',
+  ] as const;
+  const stdout = renderActionLog(
+    actionLogPage(
+      events.map((eventType, index) => ({
+        id: 500 + index,
+        created_at: `2026-09-23T13:0${index}:00.000Z`,
+        category: 'faction',
+        event_type: eventType,
+        summary: eventType,
+      })),
+      'faction',
+    ),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).not.toContain('Station paid');
+  expect(columns).not.toContain('Shortfall');
+  for (const eventType of events) {
+    expect(actionLogCell(stdout, eventType, 'Event')).toBe(eventType);
+  }
+});
+
+test('does not lift shortfall or station_paid off a non-claim event', () => {
+  const stdout = renderActionLog(
+    actionLogPage(
+      [
+        {
+          id: 410,
+          created_at: '2026-09-23T12:20:00.000Z',
+          summary: 'Crafted a plate.',
+          category: 'crafting',
+          event_type: 'crafting.completed',
+          data: { shortfall: 5, station_paid: 10 },
+        },
+      ],
+      'crafting',
+    ),
+  );
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Station paid');
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Shortfall');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Event')).toBe('crafting.completed');
+  expect(stdout).not.toContain('10cr');
+  expect(stdout).not.toContain('5cr');
+});
+
+test('does not treat a prefix, different case, data event_type, or losing type as a claim', () => {
+  const rejected = [
+    { event_type: 'shipping.claim_paid.extra' },
+    { event_type: 'SHIPPING.CLAIM_PAID' },
+    {
+      event_type: 'crafting.completed',
+      data: { event_type: 'shipping.claim_paid', station_paid: 10, shortfall: 5 },
+    },
+    {
+      event_type: 'crafting.completed',
+      type: 'shipping.claim_paid',
+      data: { station_paid: 10, shortfall: 5 },
+    },
+  ];
+  for (const extra of rejected) {
+    const stdout = renderActionLog(actionLogPage([claimEntry({ station_paid: 10, shortfall: 5 }, extra)]));
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(extra)).not.toContain('Station paid');
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(extra)).not.toContain('Shortfall');
+  }
+});
+
+test('lifts claim credits from type when event_type is absent', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      {
+        id: 411,
+        created_at: '2026-09-23T12:25:00.000Z',
+        summary: 'Typed claim.',
+        category: 'shipping',
+        type: 'shipping.claim_paid',
+        data: { station_paid: 8000, shortfall: 0 },
+      },
+    ]),
+  );
+  expect(actionLogCell(stdout, 'Typed claim.', 'Event')).toBe('shipping.claim_paid');
+  expect(actionLogCell(stdout, 'Typed claim.', 'Station paid')).toBe('8,000cr');
+  expect(actionLogCell(stdout, 'Typed claim.', 'Shortfall')).toBe('0cr');
+});
+
+test('keeps Station paid and Shortfall on a mixed action-log page', () => {
+  const fixture = structuredClone(actionLogFreightEscrowFixture);
+  const claim = fixture.entries[0];
+  if (!claim) throw new Error('expected claim row');
+  const stdout = renderActionLog(
+    actionLogPage([
+      claim,
+      {
+        id: 1,
+        created_at: '2026-05-23T15:04:05.000Z',
+        summary: 'Completed basic iron smelting.',
+        category: 'crafting',
+        event_type: 'crafting.completed',
+        data: { job_id: 'job-craft-1', mode: 'craft', storage: 'faction' },
+      },
+    ]),
+  );
+  expect(actionLogHeaderColumns(stdout)).toContain('Station paid');
+  expect(actionLogHeaderColumns(stdout)).toContain('Shortfall');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Station paid')).toBe('');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Shortfall')).toBe('');
+  expect(actionLogCell(stdout, 'claim in full', 'Station paid')).toBe('8,000cr');
+});
+
+test('inserts Station paid and Shortfall after Cost and before Base', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      {
+        id: 201,
+        created_at: '2026-09-03T10:00:00.000Z',
+        summary: 'Hired 4 crew and 2 marines at Earth Station.',
+        category: 'ship',
+        event_type: 'ship.recruit_personnel',
+        data: { cost: 900, base_name: 'Earth Station' },
+      },
+      claimEntry({ station_paid: 8000, shortfall: 0 }, { id: 402 }),
+    ]),
+  );
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Cost', 'Station paid', 'Shortfall', 'Base']);
+  const columns = actionLogHeaderColumns(stdout);
+  const cost = columns.indexOf('Cost');
+  expect(columns.slice(cost, cost + 4)).toEqual(['Cost', 'Station paid', 'Shortfall', 'Base']);
+});
+
+test('renders Station paid and Shortfall 0 as 0cr', () => {
+  const fixture = structuredClone(actionLogFreightEscrowFixture);
+  for (const entry of fixture.entries) {
+    if (!('data' in entry) || entry.data === undefined) continue;
+    entry.data.station_paid = 0;
+    entry.data.shortfall = 0;
+  }
+  const stdout = renderActionLog(fixture);
+  expect(actionLogCell(stdout, 'claim in full', 'Station paid')).toBe('0cr');
+  expect(actionLogCell(stdout, 'claim in full', 'Shortfall')).toBe('0cr');
+  expect(actionLogCell(stdout, 'part of the claim', 'Station paid')).toBe('0cr');
+  expect(actionLogCell(stdout, 'part of the claim', 'Shortfall')).toBe('0cr');
+
+  const zeroBigint = renderActionLog(actionLogPage([claimEntry({ station_paid: 0n, shortfall: 0n })]));
+  expect(actionLogCell(zeroBigint, 'shipping.claim_paid', 'Station paid')).toBe('0cr');
+  expect(actionLogCell(zeroBigint, 'shipping.claim_paid', 'Shortfall')).toBe('0cr');
+});
+
+test('shows Station paid and Shortfall only for the key that formatted', () => {
+  const paidOnly = renderActionLog(actionLogPage([claimEntry({ station_paid: 0 })]));
+  expect(actionLogHeaderColumns(paidOnly)).toContain('Station paid');
+  expect(actionLogHeaderColumns(paidOnly)).not.toContain('Shortfall');
+  expect(actionLogCell(paidOnly, 'shipping.claim_paid', 'Station paid')).toBe('0cr');
+
+  const shortOnly = renderActionLog(actionLogPage([claimEntry({ shortfall: 6500 })]));
+  expect(actionLogHeaderColumns(shortOnly)).not.toContain('Station paid');
+  expect(actionLogHeaderColumns(shortOnly)).toContain('Shortfall');
+  expect(actionLogCell(shortOnly, 'shipping.claim_paid', 'Shortfall')).toBe('6,500cr');
+});
+
+test('prefers entry-level station_paid over data.station_paid', () => {
+  const fixture = structuredClone(actionLogFreightEscrowFixture);
+  const entry = fixture.entries[0];
+  if (!entry || !('data' in entry) || entry.data === undefined) throw new Error('expected claim row');
+  Object.assign(entry, { station_paid: 10 });
+  entry.data.station_paid = 99;
+  const stdout = renderActionLog(fixture);
+  expect(actionLogCell(stdout, 'claim in full', 'Station paid')).toBe('10cr');
+  expect(actionLogCell(stdout, 'claim in full', 'Shortfall')).toBe('0cr');
+  expect(stdout).not.toContain('99');
+});
+
+test('does not fall through a whitespace entry station_paid to data', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      claimEntry({ station_paid: 8000, shortfall: 0 }, { station_paid: '   ', summary: 'Whitespace beats data.' }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Station paid');
+  expect(actionLogCell(stdout, 'Whitespace beats data.', 'Shortfall')).toBe('0cr');
+  expect(stdout).not.toContain('8,000cr');
+});
+
+test('formats out-of-range bigint station_paid without rounding', () => {
+  const stdout = renderActionLog(actionLogPage([claimEntry({ station_paid: 9007199254740993n, shortfall: 0n })]));
+  const cell = actionLogCell(stdout, 'shipping.claim_paid', 'Station paid');
+  expect(cell).toBe(`${(9007199254740993n).toLocaleString()}cr`);
+  expect(cell?.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(cell).not.toContain('9007199254740992');
+  expect(actionLogCell(stdout, 'shipping.claim_paid', 'Shortfall')).toBe('0cr');
+});
+
+test('formats digit-string claim credits without rounding', () => {
+  const cases: Array<{ raw: unknown; expected: string; digits?: string }> = [
+    {
+      raw: '9007199254740993',
+      expected: `${BigInt('9007199254740993').toLocaleString()}cr`,
+      digits: '9007199254740993',
+    },
+    { raw: '0', expected: '0cr' },
+    { raw: '+1500', expected: '1,500cr' },
+    { raw: '007', expected: '7cr' },
+    { raw: '-1500', expected: `${BigInt('-1500').toLocaleString()}cr` },
+    { raw: '000', expected: '0cr' },
+    { raw: '-0', expected: '0cr' },
+    { raw: '+0', expected: '0cr' },
+    { raw: '  1500  ', expected: '1,500cr' },
+    { raw: -1500, expected: '-1,500cr' },
+  ];
+  for (const { raw, expected, digits } of cases) {
+    const stdout = renderActionLog(actionLogPage([claimEntry({ station_paid: raw, shortfall: raw })]));
+    const cell = actionLogCell(stdout, 'shipping.claim_paid', 'Station paid');
+    expect(cell, String(raw)).toBe(expected);
+    expect(actionLogCell(stdout, 'shipping.claim_paid', 'Shortfall'), String(raw)).toBe(expected);
+    if (digits) expect(cell?.replace(/\D/g, '')).toContain(digits);
+    expect(cell).not.toContain('9007199254740992');
+  }
+});
+
+test('does not format non-integer station_paid or shortfall as credits', () => {
+  const badValues: unknown[] = [
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    true,
+    false,
+    '',
+    '   ',
+    'nope',
+    '1e3',
+    '0x10',
+    '1.5',
+    '15 00',
+    '+',
+    Number('9007199254740993'),
+    null,
+    undefined,
+    { amount: 1 },
+  ];
+  for (const value of badValues) {
+    const stdout = renderActionLog(actionLogPage([claimEntry({ station_paid: value, shortfall: value })]));
+    const columns = actionLogHeaderColumns(stdout);
+    expect(columns, String(value)).not.toContain('Station paid');
+    expect(columns, String(value)).not.toContain('Shortfall');
+    expect(actionLogCell(stdout, 'shipping.claim_paid', 'Event')).toBe('shipping.claim_paid');
+    expect(stdout).not.toContain('1.5');
+    expect(stdout).not.toContain('1,000cr');
+    expect(stdout).not.toContain('9007199254740992');
+  }
+
+  const mixed = renderActionLog(
+    actionLogPage([
+      claimEntry({ station_paid: 1.5, shortfall: 6500 }, { id: 401, summary: 'Partial numbers.' }),
+      claimEntry({ station_paid: 8000, shortfall: 'nope' }, { id: 402, summary: 'Whole station paid.' }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(mixed)).toContain('Station paid');
+  expect(actionLogHeaderColumns(mixed)).toContain('Shortfall');
+  expect(actionLogCell(mixed, 'Partial numbers.', 'Station paid')).toBe('');
+  expect(actionLogCell(mixed, 'Partial numbers.', 'Shortfall')).toBe('6,500cr');
+  expect(actionLogCell(mixed, 'Whole station paid.', 'Station paid')).toBe('8,000cr');
+  expect(actionLogCell(mixed, 'Whole station paid.', 'Shortfall')).toBe('');
+  expect(mixed).not.toContain('1.5');
+  expect(mixed).not.toContain('nope');
 });
 
 test('renders ranch status as a dashboard with feed and production tables', () => {

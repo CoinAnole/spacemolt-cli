@@ -3229,12 +3229,18 @@ describe('command metadata', () => {
   });
 
   test('get_action_log advertises explicit event arrays and polling cursors', () => {
+    const description =
+      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost); event_type=faction.refuel with faction_id= for faction bunker fuel withdrawals by members and allies (pilot, station, amount — table columns Pilot, Base, Fuel when data carries them). event_type=faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet movements (service fee, insurance premium kept after an accepted contract ends, claim paid from that wallet, and freight debt repaid — station manager, or the owning faction treasury at a player station; pass faction_id= when reading the faction log, the same way as faction.refuel); event_type=shipping.claim_paid for the shipper insurance claim (table columns Station paid and Shortfall when data carries station_paid and shortfall; the shipper still receives the full covered value; not ShipmentContract.claim_paid and not a deliver/return/cancel field); event_type=trading.escrow_refunded for the difference plus extra sales tax returned when modify_order raises a buy over a cheaper sell (that amount is not on the modify_order response). Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll.";
+    const eventTypeDescription =
+      'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; faction.refuel for faction bunker fuel withdrawals — pass faction_id=; other.jettison_dispersed for jettison-container despawn receipts; faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet receipts — pass faction_id= when reading the faction log; shipping.claim_paid for a shipper insurance claim (columns Station paid and Shortfall); trading.escrow_refunded for a modify_order buy-cross refund). Comma-separated on the CLI or --payload-json.';
     expect(COMMANDS.get_action_log).toMatchObject({
       usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
       example:
         'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
       arrayFields: ['event_type'],
     });
+    expect(COMMANDS.get_action_log?.description).toBe(description);
+    expect(COMMANDS.get_action_log?.description).toBe(QUERY_REFERENCE_COMMAND_OVERRIDES.get_action_log?.description);
     expect(COMMANDS.get_action_log?.description).toContain('session.daily_balance');
     expect(COMMANDS.get_action_log?.description).toContain('other.jettison_dispersed');
     expect(COMMANDS.get_action_log?.description).toContain('faction.refuel');
@@ -3242,12 +3248,19 @@ describe('command metadata', () => {
     expect(COMMANDS.get_action_log?.description).toContain('Pilot');
     expect(COMMANDS.get_action_log?.description).toContain('Base');
     expect(COMMANDS.get_action_log?.description).toContain('Fuel');
+    expect(COMMANDS.get_action_log?.description).not.toContain('`');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
     const eventTypeSchema = COMMANDS.get_action_log?.schema?.event_type as { description?: string } | undefined;
+    expect(eventTypeSchema?.description).toBe(eventTypeDescription);
+    expect(eventTypeSchema?.description).toBe(
+      QUERY_REFERENCE_COMMAND_OVERRIDES.get_action_log?.schemaExtensions?.event_type?.description,
+    );
+    expect(eventTypeSchema?.description).toContain('; faction.freight_fee_earned');
     expect(eventTypeSchema?.description).toContain('session.daily_balance');
     expect(eventTypeSchema?.description).toContain('other.jettison_dispersed');
     expect(eventTypeSchema?.description).toContain('faction.refuel');
+    expect(eventTypeSchema?.description).not.toContain('`');
   });
 
   test('bundled generated fallbacks retain route safety suppressions', () => {
