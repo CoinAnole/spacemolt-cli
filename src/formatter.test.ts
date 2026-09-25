@@ -62,6 +62,7 @@ import {
   shipFixture,
   shipRemoteFixture,
   storageFixture,
+  storageViewGiftsFixture,
   storageViewUndockedFixture,
   subscribeMarketFixture,
   subscribeObservationArenaFixture,
@@ -1158,6 +1159,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('nova_terra_central');
     expect(stdout).not.toContain('=== Response ===');
     expect(stdout).not.toContain('=== Storage at');
+    expect(stdout).not.toContain('Gifts');
   });
 
   test('storage view docked response includes locations table', async () => {
@@ -1174,6 +1176,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('earth_station');
     expect(stdout).toContain('Earth Station');
     expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('Gifts');
   });
 
   test('storage view faction without locations keeps faction heading', async () => {
@@ -1197,6 +1200,7 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain('Faction credits: 12,345');
     expect(stdout).not.toContain('=== Locations ===');
     expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('Gifts');
   });
 
   test('storage view undocked faction uses locations-only heading', async () => {
@@ -1443,6 +1447,212 @@ describe('structuredContent output mode precedence', () => {
     expect(stdout).toContain(
       "12 items in faction storage at earth_station (2,162,917 total across 2 stations)\nFuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
     );
+  });
+
+  test('storage view empty gifts array prints Gifts: none and skips messages', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: { ...storageFixture, gifts: [], messages: [] } },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('\n\nGifts: none\n\n=== Locations ===');
+    expect(stdout).not.toContain('Messages');
+    expect(stdout).not.toContain('Gifts (0):');
+  });
+
+  test('storage view non-empty messages stay unprinted', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageFixture,
+          gifts: [],
+          messages: [{ from: 'Ada', body: 'message-body-should-hide', timestamp: '2026-09-23T14:05:00Z' }],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Gifts: none');
+    expect(stdout).not.toContain('message-body-should-hide');
+    expect(stdout).not.toContain('Messages');
+  });
+
+  test('storage view gifts print between ships and locations', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: storageViewGiftsFixture },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    const ships = stdout.indexOf('Ships (');
+    const gifts = stdout.indexOf('Gifts (3):');
+    const ada = stdout.indexOf('From: Ada');
+    const bo = stdout.indexOf('From: Bo');
+    const cleo = stdout.indexOf('From: Cleo');
+    const locations = stdout.indexOf('=== Locations ===');
+    expect(ships).toBeGreaterThanOrEqual(0);
+    expect(ships).toBeLessThan(gifts);
+    expect(gifts).toBeLessThan(ada);
+    expect(ada).toBeLessThan(bo);
+    expect(bo).toBeLessThan(cleo);
+    expect(cleo).toBeLessThan(locations);
+    const boSlice = stdout.slice(bo, cleo);
+    expect(boSlice).toContain('ship-9');
+    expect(boSlice).toContain('Rock Skipper');
+    const cleoSlice = stdout.slice(cleo, locations);
+    expect(cleoSlice).not.toContain('Items:');
+    expect(cleoSlice).not.toContain('Ships:');
+  });
+
+  test('storage view gift heading counts skipped records', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageFixture,
+          gifts: [{ sender: 'Ada', sender_id: 'player-ada', timestamp: '2026-09-23T14:05:00Z', credits: 10 }, {}],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Gifts (2):');
+    expect(stdout.split('\n').filter((line) => line.includes('From:'))).toHaveLength(1);
+  });
+
+  test('storage view non-array gifts print nothing', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: { ...storageFixture, gifts: { sender: 'Ada' } } },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Gifts');
+    expect(stdout).not.toContain('From: Ada');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('locations-only storage view prints gifts after the locations index', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageViewUndockedFixture,
+          gifts: [{ sender: 'Ada', sender_id: 'player-ada', timestamp: '2026-09-23T14:05:00Z', credits: 10 }],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Storage Locations ===');
+    const locations = stdout.indexOf('=== Locations ===');
+    const from = stdout.indexOf('From:');
+    expect(locations).toBeGreaterThanOrEqual(0);
+    expect(locations).toBeLessThan(from);
+    expect(stdout).not.toContain('=== Storage at');
+    const giftBlock = stdout.slice(stdout.indexOf('Gifts ('));
+    expect(giftBlock).not.toContain('Station');
+    expect(giftBlock).not.toContain('earth_station');
+  });
+
+  test('locations-only empty gifts array prints Gifts: none after locations', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      { structuredContent: { ...storageViewUndockedFixture, gifts: [] } },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    const locations = stdout.indexOf('=== Locations ===');
+    const none = stdout.indexOf('Gifts: none');
+    expect(locations).toBeGreaterThanOrEqual(0);
+    expect(none).toBeGreaterThan(locations);
+    expect(stdout).toContain('=== Storage Locations ===');
+    expect(stdout).not.toContain('=== Storage at');
+  });
+
+  test('storage view item filter narrows the items table and keeps gifts', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          ...storageFixture,
+          items: [
+            { item_id: 'iron_ore', item_name: 'Iron Ore', quantity: 718, size: 1 },
+            { item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 },
+          ],
+          gifts: [
+            {
+              sender: 'Ada',
+              sender_id: 'player-ada',
+              timestamp: '2026-09-23T14:05:00Z',
+              items: [{ item_id: 'quest_token', name: 'Quest Token', quantity: 1 }],
+            },
+          ],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { item_id: 'iron_ore' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    const itemsStart = stdout.indexOf('Items (');
+    const giftsStart = stdout.indexOf('Gifts');
+    expect(itemsStart).toBeGreaterThanOrEqual(0);
+    expect(giftsStart).toBeGreaterThan(itemsStart);
+    const itemsTable = stdout.slice(itemsStart, giftsStart);
+    expect(itemsTable).toContain('Iron Ore');
+    expect(itemsTable).not.toContain('Fuel Cell');
+    expect(stdout).toContain('Quest Token');
+    expect(stdout).toContain('From:');
+  });
+
+  test('faction storage with a credit gift still prints the faction heading', async () => {
+    const { stdout, stderr, exitCode } = await captureRenderedOutput(
+      {
+        structuredContent: {
+          base_id: 'earth_station',
+          target: 'faction',
+          credits: 12345,
+          items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 12, size: 1 }],
+          ships: [],
+          gifts: [{ sender: 'Ada', sender_id: 'player-ada', timestamp: '2026-09-23T14:05:00Z', credits: 40 }],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { target: 'faction' } },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Storage');
+    expect(stdout).toContain('From: Ada');
+    expect(stdout).toContain('Credits: 40 cr');
+    expect(stdout.indexOf('=== Faction Storage')).toBeLessThan(stdout.indexOf('From: Ada'));
+  });
+
+  test('storage view gifts json output is the structured content', () => {
+    const rendered = renderStructuredResult('storage_view', storageViewGiftsFixture, globalOptions({ format: 'json' }));
+
+    expect(rendered.success).toBe(true);
+    expect(rendered.stderr).toEqual([]);
+    expect(JSON.parse(rendered.stdout.join('\n'))).toEqual(storageViewGiftsFixture);
+    expect(rendered.stdout.join('\n')).not.toContain('Gifts:');
   });
 
   test('rendered text output uses context clock for timestamps', async () => {

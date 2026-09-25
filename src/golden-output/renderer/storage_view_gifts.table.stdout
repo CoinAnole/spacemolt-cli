@@ -15,7 +15,23 @@ Ships (1):
   -----------+------------+------+-------+-------
   Prospector | prospector |    3 |    10 | ship-1
 
-Gifts: none
+Gifts (3):
+
+  From: Ada (player-ada)
+  When: 2026-09-23 14:05
+  Credits: 1,500 cr
+  Items:
+    12 Fuel Cell (fuel_cell)
+  Note: for the fuel
+
+  From: Bo (player-bo)
+  When: 2026-09-23 15:10
+  Ships:
+    Rock Skipper — Prospector (prospector) ship-9
+
+  From: Cleo (player-cleo)
+  When: 2026-09-23 16:00
+  Credits: 40 cr
 
 === Locations ===
 

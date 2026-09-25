@@ -100,6 +100,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `treat_personnel` help distinguishes active out-of-combat field treatment (`provider=field`) from automatic fleet triage, and names station, Shipboard Sickbay, and Field/Fleet Hospital sources for own-ship vs same-location allied treatment (gameserver 0.603.1). Omit `id` for your ship or faction reserve; pass an allied player at the same POI for remote field treatment; `provider=faction` plus `reserve=true` treats the faction reserve (ManageTreasury). Module names are not CLI grammar: `get_ship` lists the fitted Type id; `inspect` shows Remote medical on the module, or `Capabilities: remote_medical_treatment` on the ship class. **No parser change.**
 
+### Storage
+
+- `storage view` table output lists durable gifts (`sender`, time, credits, items, ships, note). An explicit empty `gifts` array prints `Gifts: none`. An omitted key prints nothing. `messages` are unchanged. **No parser change.**
+
 ### Fixed
 
 - Whole numbers outside the safe integer range (`|n| <= 2^53-1`) are preserved on v2 HTTP JSON and re-emitted by `--json`, `--yaml`, `--structured`, `--field`, `--fields`, and `--jq`. Notification amounts that used to fall back to `0` (`xp_gained`, damage labels, raid HP) print the digits. Human credit lines and notification `positiveNumber` print those digits as well.

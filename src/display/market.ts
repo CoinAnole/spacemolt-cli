@@ -1,3 +1,4 @@
+import { emitGiftEntries } from './gifts.ts';
 import {
   c,
   emitLine,
@@ -84,6 +85,17 @@ function printStorageLocationsTable(locations: Array<Record<string, unknown>>): 
     ['Ships', ['ship_count']],
     ['ID', ['base_id']],
   ]);
+}
+
+function emitStorageGifts(result: Record<string, unknown>): void {
+  if (!Object.hasOwn(result, 'gifts') || !Array.isArray(result.gifts)) return;
+  const gifts = result.gifts;
+  if (gifts.length === 0) {
+    emitLine('\nGifts: none');
+    return;
+  }
+  emitLine(`\n${c.bright}Gifts (${gifts.length}):${c.reset}\n`);
+  emitGiftEntries(gifts, { ships: true });
 }
 
 function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
@@ -1091,9 +1103,11 @@ export const marketFormatters = [
             emitLine(`  ${name} | ${cls} | ${mods} | ${cargo} | ${id}`);
           }
         }
+        emitStorageGifts(r);
       }
       if (isLocationsOnly) {
         printStorageLocationsTable(locations ?? []);
+        emitStorageGifts(r);
       } else if (locations?.length) {
         printStorageLocationsTable(locations);
       }
