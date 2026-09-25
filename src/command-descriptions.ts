@@ -7,7 +7,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   buy_insurance: 'Purchase ship insurance',
   buy_listed_ship: 'Purchase a ship from the exchange',
   cancel_commission: 'Cancel a pending or in-progress ship commission',
-  cancel_order: 'Cancel an active order and return escrow',
+  cancel_order:
+    'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.',
   cancel_ship_listing: 'Remove your ship listing from the exchange',
   captains_log_add: 'Add an entry to your captain log.',
   captains_log_delete: 'Delete a specific entry from your captain log.',
@@ -127,7 +128,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   loot_wreck:
     'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod).',
   mine: 'Mine one cycle at the current POI (asteroid, ice, or gas).',
-  modify_order: 'Change the price on an existing order',
+  modify_order:
+    'Change the price on an existing order. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, modify_order escrows sales tax so a later cancel refunds what you paid.',
   name_drone: 'Set or clear a display name for a drone.',
   name_ship: 'Set or clear a custom name for your active ship',
   petition: 'Send a petition to an empire government.',

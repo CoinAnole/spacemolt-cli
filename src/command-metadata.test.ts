@@ -4117,4 +4117,31 @@ describe('command metadata', () => {
     ]);
     expect(tradeOffer?.seeAlso).toEqual(CORE_COMMAND_OVERRIDES.trade_offer?.seeAlso);
   });
+
+  test('modify_order and cancel_order help document escrow refunds', () => {
+    const modifyOrder =
+      'Change the price on an existing order. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, modify_order escrows sales tax so a later cancel refunds what you paid.';
+    const cancelOrder =
+      'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.';
+    const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_market/modify_order']?.summary ?? '';
+
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.modify_order?.description).toBeUndefined();
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.cancel_order?.description).toBeUndefined();
+    expect(COMMANDS.modify_order?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.modify_order);
+    expect(COMMANDS.modify_order?.description).toBe(modifyOrder);
+    expect(COMMANDS.modify_order?.seeAlso).toEqual(['get_action_log', 'cancel_order']);
+    expect(COMMANDS.modify_order?.aliases?.new_price).toBe('price_each');
+    expect(COMMANDS.modify_order?.aliases?.price).toBe('price_each');
+    expect(generatedSummary).toBe('Change the price on an existing order');
+    expect(generatedSummary).not.toBe(CURATED_COMMAND_DESCRIPTIONS.modify_order);
+    expect(COMMANDS.modify_order?.description).not.toBe(generatedSummary);
+
+    expect(CURATED_COMMAND_DESCRIPTIONS.cancel_order).toBe(COMMANDS.cancel_order?.description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.cancel_order).toBe(cancelOrder);
+    expect(COMMANDS.cancel_order?.seeAlso).toBeUndefined();
+
+    const fullHelp = captureFullHelp();
+    expect(fullHelp).toContain('Update order price');
+    expect(fullHelp).not.toContain('trading.escrow_refunded');
+  });
 });

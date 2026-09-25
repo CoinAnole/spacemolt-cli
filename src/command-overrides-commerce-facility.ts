@@ -406,7 +406,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['order_id'],
   },
   modify_order: {
-    usage: '<order_id> <price_each>  (change price; aliases new_price=... and price=... also accepted)',
+    usage:
+      '<order_id> <price_each>  (change price; aliases new_price=... and price=... also accepted; a crossing buy fills at the sell price and the refund is get_action_log event_type=trading.escrow_refunded)',
+    seeAlso: ['get_action_log', 'cancel_order'],
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/modify_order',
     positionals: ['order_id', 'price_each'],
