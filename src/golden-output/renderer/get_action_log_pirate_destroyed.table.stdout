@@ -1,0 +1,8 @@
+category combat
+
+=== Entries ===
+
+  Timestamp           | Summary                   | Category | Event                   | Credits
+  --------------------+---------------------------+----------+-------------------------+--------
+  2026-09-24 16:00:00 | Destroyed pirate Corsair. | combat   | combat.pirate_destroyed | 1,500cr
+  2026-09-24 16:05:00 | Destroyed pirate Skiff.   | combat   | combat.pirate_destroyed | 0cr    
