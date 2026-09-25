@@ -14,6 +14,7 @@ import {
 } from './catalog-detail.ts';
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
 import { isAliasCopiedDumpKey } from './dock-state.ts';
+import { emitGiftEntries } from './gifts.ts';
 import {
   c,
   commandNameEquals,
@@ -1211,6 +1212,15 @@ export const genericFormatters = [
       emitDockSummaryLine('Open orders', countFromFieldOrArray(r, 'open_orders_count', 'open_orders'));
       const tradeFillSuffix = r.trade_fills_truncated === true ? ' (showing recent, truncated)' : '';
       emitDockSummaryLine('Trade fills', countFromFieldOrArray(r, 'trade_fills_count', 'trade_fills'), tradeFillSuffix);
+
+      const giftSuffix = r.gifts_truncated === true ? ' (showing recent, truncated)' : '';
+      emitDockSummaryLine('Gifts', countFromFieldOrArray(r, 'gifts_count', 'gifts'), giftSuffix);
+      if (typeof r.gifts_note === 'string' && r.gifts_note.trim()) {
+        emitLine(`${c.dim}${r.gifts_note}${c.reset}`);
+      }
+      if (Array.isArray(r.gifts) && r.gifts.length > 0) {
+        emitGiftEntries(r.gifts, { ships: false });
+      }
 
       const unreadChat = sumNumericRecord(r.unread_chat);
       if (unreadChat !== undefined) emitLine(`Unread chat: ${unreadChat.toLocaleString()}`);

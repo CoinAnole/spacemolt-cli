@@ -1,0 +1,29 @@
+
+=== Docked: Earth Station ===
+You dock at Earth Station.
+
+The berth clamps engage and the station traffic board scrolls your name.
+Station condition: Most systems operational. (82%)
+Rent is paused on damaged and dismantling facilities until they return to service.
+
+=== Your facilities ===
+
+  Name              | ID              | Type              | Status      | Rent/cycle    
+  ------------------+-----------------+-------------------+-------------+---------------
+  Ore Refinery      | player-refinery | ore_refinery      | enabled     | 1,200cr       
+  Personal Quarters | player-quarters | personal_quarters | disabled    | 100cr         
+  Personal Hangar   | player-hangar   | personal_hangar   | dismantling | 800cr (paused)
+  Workshop          | player-workshop | workshop          | damaged     | 400cr (paused)
+Gifts: 3 (showing recent, truncated)
+Showing the 2 most recent gifts.
+  From: Ada (player-ada)
+  When: 2026-09-23 14:05
+  Credits: 1,500 cr
+  Items:
+    12 Fuel Cell (fuel_cell)
+  Note: for the fuel
+
+  From: Cleo (player-cleo)
+  When: 2026-09-23 16:00
+  Credits: 40 cr
+Docked at: Earth Station (earth_station)

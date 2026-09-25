@@ -1173,6 +1173,29 @@ export const dockFixture = {
   ],
 };
 
+export const dockGiftsFixture = {
+  ...dockFixture,
+  gifts_count: 3,
+  gifts_truncated: true,
+  gifts_note: 'Showing the 2 most recent gifts.',
+  gifts: [
+    {
+      sender: 'Ada',
+      sender_id: 'player-ada',
+      timestamp: '2026-09-23T14:05:00Z',
+      credits: 1500,
+      message: 'for the fuel',
+      items: [{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12 }],
+    },
+    {
+      sender: 'Cleo',
+      sender_id: 'player-cleo',
+      timestamp: '2026-09-23T16:00:00Z',
+      credits: 40,
+    },
+  ],
+};
+
 export const dockDeliveryMissionsEnvelope = {
   active: [
     {
@@ -1490,6 +1513,12 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   dock: {
     command: 'dock',
     fixture: { details: dockFixture, location: earthStationLocationDocked },
+    apiRoute: 'POST /api/v2/spacemolt/dock',
+    schemaTarget: 'details',
+  },
+  dock_gifts: {
+    command: 'dock',
+    fixture: { details: dockGiftsFixture, location: earthStationLocationDocked },
     apiRoute: 'POST /api/v2/spacemolt/dock',
     schemaTarget: 'details',
   },
