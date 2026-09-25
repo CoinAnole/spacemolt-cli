@@ -1,164 +1,53 @@
 # SpaceMolt CLI Agent Guide
 
-This repository is a Bun-based command-line client for the SpaceMolt v2 API. It sends direct HTTP requests; there is no daemon, WebSocket process, or v1 fallback routing.
-
-## Key Files
-
-- `src/client.ts`: executable entrypoint and public exports.
-- `src/commands.ts`: user-facing commands, aliases, examples, and v2 route overrides.
-- `src/generated/api-commands.ts`: generated route/schema metadata.
-- `src/api-sync.test.ts`: checks local command metadata against the OpenAPI spec.
-- `src/output-golden.test.ts`: exact stdout/stderr golden testing (1054 cases → 2108 committed files) for renderer and CLI output paths.
-- `src/test-support/output-golden.ts`: golden harness, normalization, guardrails (blocks `NaN`/`undefined`/`[object Object]`, `=== Response ===` fallback, enforces stdout/stderr separation).
-- `src/golden-output/`: committed `.stdout` and `.stderr` files (1041 renderer cases from `highValueCommandFixtures` + 13 CLI cases).
-- `src/test-support/fixture-schema-compare.ts` + `scripts/report-fixture-schema-divergences.ts`: compare curated golden fixtures against response schemas in `spacemolt-docs/openapi.json`.
-- `src/version-sync.test.ts`: package, runtime, and README version consistency.
-- `src/args.test.ts`, `src/runner.test.ts`, and related command tests: parser, option, and behavior coverage.
-- `spacemolt-docs/openapi.json`: cached v2 OpenAPI spec.
+Bun CLI for the SpaceMolt v2 API. Direct HTTP only: no daemon, WebSocket process, or v1 fallback.
 
 ## Commands
 
-Use Bun from `PATH`, or `~/.bun/bin/bun` if needed.
+Use Bun from `PATH` or `~/.bun/bin/bun`.
 
 ```bash
 bun install
 bun run src/client.ts <command> [args...]
 bun run src/client.ts sync-api
 bun test
-bun run report:fixture-schemas          # compare golden fixtures vs OpenAPI response schemas
-bun run report:curated-commands         # compare curated commands vs generated OpenAPI command metadata
-bun run report:openapi-consistency      # fuzzy report of schema vs prose/examples, shared schemas, missing documented fields (high-recall, use --only)
+bun run report:fixture-schemas
+bun run report:curated-commands
+bun run report:openapi-consistency
 bun run typecheck
 bun run lint
 bun run build
 ```
 
-Run a focused API metadata check after adding or changing commands:
+After command changes, run `bun test src/api-sync.test.ts`. It reads `spacemolt-docs/openapi.json`. `LIVE_API_SYNC=1` is a single live-spec check, rate-limited to 1/min (`spacemolt-docs/limits.md`). Do not loop or retry it. Prefer the cached spec.
 
-```bash
-bun test src/api-sync.test.ts
-```
+## Key files
 
-The sync test reads `spacemolt-docs/openapi.json` by default. Only use the live spec when network access is intentional:
-
-```bash
-LIVE_API_SYNC=1 bun test src/api-sync.test.ts
-```
-
-Live OpenAPI verification is heavily rate-limited by the server (`spacemolt-docs/limits.md` documents OpenAPI spec fetches as 1/min per IP, with repeated 429s contributing to IP-wide timeout escalation). Treat `LIVE_API_SYNC=1` as an explicit, single-shot check after waiting for the rate-limit window; do not loop or retry it during normal verification. Prefer the cached `spacemolt-docs/openapi.json` for routine local checks.
-
-## Golden Output Tests
-
-The project uses committed golden files for exact output stability of both human-readable (table/text) and machine-readable (`--json`, `--yaml`, `--structured`, compact, `--field`/`--fields`/`--jq`) rendering.
-
-- Run the full suite (renderer + CLI layers):
-  ```bash
-  bun test src/output-golden.test.ts
-  ```
-- 259 high-value fixtures (in `src/display/*.fixtures.ts`) generate 1041 renderer cases (table + json + yaml + compact-json, plus projections) + 13 CLI cases exercising `runInvocation`.
-- All 2108 files live under `src/golden-output/{renderer,cli}/`. Use `UPDATE_GOLDENS=1` only for intentional output changes.
-
-Golden maintenance helpers:
-
-- `UPDATE_GOLDENS=1 GOLDEN_ONLY=renderer/get_status.table bun test src/output-golden.test.ts`
-  updates only matching golden cases.
-- `STRICT_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts`
-  verifies the current fixture/schema drift matches the reviewed baseline (gameserver stamp first, then signatures).
-- `bun test src/test-support/output-golden.test.ts`
-  asserts `generatedAtGameserver` against `GENERATED_API_GAMESERVER_VERSION` without running the full signature comparison.
-- `bun run report:fixture-schemas --update-baseline`
-  restamps `generatedAtGameserver` from bundled metadata and refreshes reviewed signatures.
-  Run this after `generate:api` even when signatures are unchanged; the default suite asserts the stamp.
-  `.github/workflows/update-api-metadata.yml` restamps and commits the baseline when signatures are unchanged, and fails the job (no push) when they change.
-
-To see structural differences between the curated fixtures and the actual response schemas in the OpenAPI spec (informational only — never fails tests):
-
-```bash
-# Standalone reporter (filterable)
-bun run report:fixture-schemas
-bun run report:fixture-schemas --only get_status,view_market,get_cargo
-
-# Or during a golden run
-SHOW_FIXTURE_SCHEMA_DIVERGENCES=1 bun test src/output-golden.test.ts
-```
-
-The reporter resolves the 200 response schema for each command's `apiRoute`, unwraps the common `V2Response` + `structuredContent` envelope, and reports:
-- Fields in the fixture but absent from the schema
-- Fields declared in the schema but not exercised by the fixture
-- Type mismatches (with `integer`/`number` treated as compatible)
-- Required fields omitted from the (intentionally partial) fixture
-
-To see structural differences between curated command overrides and the command configs generated OpenAPI metadata would produce for those same routes (informational only — never fails tests):
-
-```bash
-bun run report:curated-commands
-bun run report:curated-commands --only get_status,view_market,get_cargo
-```
-
-The reporter compares each curated command's `apiRoute` against its generated counterpart and reports:
-- Generated command name differences
-- User-facing metadata differences (`args`, `required`, `usage`, `description`, `category`)
-- Route/default differences
-- Request schema field and metadata differences
-- Curated routes missing from generated OpenAPI metadata
+- `src/client.ts`: entrypoint and public exports.
+- `src/commands.ts`: names, positionals, aliases, examples, route overrides.
+- `src/generated/api-commands.ts`: generated route/schema metadata. Refresh with `bun run generate:api` after OpenAPI changes (committed metadata only).
+- `spacemolt-docs/openapi.json`: cached v2 spec.
+- Golden output: `src/output-golden.test.ts`. Use `UPDATE_GOLDENS=1` only for intentional output changes. Harness, `GOLDEN_ONLY`, baseline, and reporters live in that test and `src/test-support/output-golden.ts`. Restamp the baseline after `generate:api`.
 
 ## Routing
 
-- Most commands map to `POST /api/v2/{tool}/{action}`.
-- Single-endpoint tools use `POST /api/v2/{tool}`; see `SINGLE_ENDPOINT_TOOLS` in `src/commands.ts`.
-- Update `src/commands.ts` for command names, positional arguments, aliases, examples, and route overrides.
-- Regenerate bundled mechanical route/schema metadata with `bun run generate:api` after OpenAPI spec changes. This updates committed metadata only.
-- When the task is only to update the `spacemolt-docs` submodule pointer and regenerate API metadata, use the gameserver version number as the entire commit message, for example `v0.327.2`. Version-named commits may include `src/test-support/fixture-schema-baseline.json`.
-- Runtime dynamic commands come from the user's cached OpenAPI metadata. Refresh that cache with `spacemolt sync-api`.
-- **Storage is a grouped multi-command**, not multi-action: `GROUPED_COMMANDS` includes `storage`; curated flats are `storage_view`, `storage_deposit`, `storage_withdraw`, `storage_loot`, `storage_jettison` (user typing remains `storage <action> …`). There is no `action=` grammar, no omit-action / implicit deposit, and no request-body `action` field. `SUPPRESSED_GENERATED_ROUTE_SIGNATURES` in `src/dynamic-commands.ts` is intentionally empty for storage (routes are claimed by the five curated configs); keep the empty `Set` as an extension point. Related top-level commands (`jettison`, `loot_wreck`, `faction_deposit_credits`, `faction_withdraw_credits`) stay separate. User migration notes live in `README.md`.
-
-## Dynamic API Commands
-
-Curated commands are bundled with friendly names, aliases, examples, and formatting. When a cached OpenAPI spec contains safe v2 routes not covered by curated overrides, the CLI exposes generated fallback commands through help, command search, completion, and dispatch.
-
-Generated command names are derived predictably from routes. For example, `POST /api/v2/spacemolt_shipyard/repair` becomes `shipyard_repair` unless the OpenAPI schema provides an `x-cli-command` override. Later CLI releases may promote generated commands to curated commands.
-
-Prefer `structuredContent` for formatting or automation, falling back to server-rendered `result` only when no structured formatter applies.
+- Most commands are `POST /api/v2/{tool}/{action}`. Single-endpoint tools are `POST /api/v2/{tool}` (`SINGLE_ENDPOINT_TOOLS` in `src/commands.ts`).
+- A docs-submodule plus metadata-only commit message is the gameserver version alone, for example `v0.327.2`. It may include `src/test-support/fixture-schema-baseline.json`.
+- Runtime dynamic commands come from the user's cached OpenAPI metadata (`spacemolt sync-api`). Prefer `structuredContent`; fall back to server-rendered `result` only when no structured formatter applies.
+- Storage is a grouped multi-command. `GROUPED_COMMANDS` includes `storage`. Curated flats: `storage_view`, `storage_deposit`, `storage_withdraw`, `storage_loot`, `storage_jettison`. Users still type `storage <action> …`. There is no `action=` grammar, no implicit deposit, and no request-body `action` field. Keep `SUPPRESSED_GENERATED_ROUTE_SIGNATURES` in `src/dynamic-commands.ts` empty. `jettison`, `loot_wreck`, `faction_deposit_credits`, and `faction_withdraw_credits` stay separate (`README.md`).
 
 ## Sessions
 
-Session state is stored under the platform config directory: `~/Library/Application Support/spacemolt-cli/` on macOS, `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/` on Linux, and `%APPDATA%\spacemolt-cli\` on Windows.
+Config dir: `~/Library/Application Support/spacemolt-cli/` (macOS), `${XDG_CONFIG_HOME:-~/.config}/spacemolt-cli/` (Linux), `%APPDATA%\spacemolt-cli\` (Windows). `config.json` holds preferences including `defaultProfile`. `sessions/<profile>.json` holds the session, player ID, expiry, and login credentials. Do not commit session files.
 
-| File | Purpose |
-| --- | --- |
-| `config.json` | CLI preferences, including `defaultProfile` |
-| `sessions/<profile>.json` | Named profile session, player ID, expiry, and saved login credentials |
+`spacemolt profile default <name>` sets the profile used when `--profile` and `SPACEMOLT_PROFILE` are absent.
 
-Use `spacemolt profile default <name>` to save the profile used when `--profile` and `SPACEMOLT_PROFILE` are absent. Session files contain credentials. Do not commit them.
+Public commands that need `X-Session-Id` but not a logged-in profile go through `PUBLIC_SESSION_COMMANDS` in `src/api.ts` (`SessionManager.createTransientSession()`, no profile auth, no session file). `get_empire_info` is the example. Commands that read or mutate player state use a named profile. New public commands need `src/api.test.ts` (anonymous session, no default profile) and `src/runner.test.ts` (empty `XDG_CONFIG_HOME`).
 
-Some public API commands still require an `X-Session-Id` header even when they do not require a logged-in player profile. For those commands, use the transient anonymous session path in `src/api.ts`: add the command to `PUBLIC_SESSION_COMMANDS` so `SpaceMoltClient` can call `SessionManager.createTransientSession()`, skip profile authentication, and avoid writing a session file when no default profile exists. `get_empire_info` is the current example. Do not use this path for commands that read or mutate player state, because those must use a named profile session and saved credentials.
+## Environment
 
-When adding another public command to this path, cover both layers:
-- `src/api.test.ts`: command creates an anonymous session and sends the API request without creating a default profile.
-- `src/runner.test.ts`: command can parse, execute, and render with an empty `XDG_CONFIG_HOME`.
+`SPACEMOLT_URL`, `SPACEMOLT_PROFILE`, `SPACEMOLT_OUTPUT=json`, `SPACEMOLT_UPDATE_CHECK=true`, `DEBUG=true`. Contributor flags `SHOW_FIXTURE_SCHEMA_DIVERGENCES`, `UPDATE_GOLDENS`, `STRICT_FIXTURE_SCHEMA_DIVERGENCES`, and `LIVE_API_SYNC` are in the golden and sync tests.
 
-## Useful Environment Variables
+## Release
 
-| Variable | Purpose |
-| --- | --- |
-| `SPACEMOLT_URL` | Override the API base URL. Defaults to `https://game.spacemolt.com/api/v2`. |
-| `SPACEMOLT_PROFILE` | Select a named session profile; overridden by `--profile`. |
-| `SPACEMOLT_OUTPUT=json` | Print raw JSON responses. |
-| `SPACEMOLT_UPDATE_CHECK=true` | Enable GitHub release update checks (disabled by default). |
-| `DEBUG=true` | Print verbose request and response diagnostics. |
-| `SHOW_FIXTURE_SCHEMA_DIVERGENCES=1` | When running `bun test src/output-golden.test.ts`, also emit a report comparing curated golden fixtures against OpenAPI response schemas (awareness/diagnostic only). |
-
-## Release Notes
-
-Keep `package.json` version and `VERSION` in `src/runtime.ts` in sync.
-
-User-facing release notes for breaking CLI surface changes live in `CHANGELOG.md`. Earlier versions are in git history (`git show v2.9.0:CHANGELOG.md`) and GitHub Releases. Storage multi-action → group cutover notes live in `README.md`.
-
-The startup update check queries GitHub releases for `CoinAnole/spacemolt-cli` (if enabled via `SPACEMOLT_UPDATE_CHECK=true`), caches results in `~/.config/spacemolt/update-check.json`, and fails silently unless `DEBUG=true`.
-
-## Reference Docs
-
-- Player guide: `spacemolt-docs/skill.md`
-- API v2 spec: `spacemolt-docs/openapi.json`
-- Additional guides: `spacemolt-docs/`
-- Website: https://spacemolt.com
+Keep `package.json` version and `VERSION` in `src/runtime.ts` in sync. Breaking notes go in `CHANGELOG.md`.
