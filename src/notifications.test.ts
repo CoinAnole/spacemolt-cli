@@ -928,6 +928,38 @@ describe('notification formatting', () => {
       data: { type: 'gameplay_tip', message: 'Use scanners.' },
       snippets: ['[TIP]', 'Use scanners.'],
     },
+    {
+      msgType: 'gift_received',
+      data: {
+        sender: 'Alice',
+        sender_id: 'player-alice-9',
+        timestamp: '1999-01-01T00:00:00.000Z',
+        message: 'thanks for the ore',
+        base_id: 'haven_exchange',
+        credits: 1500,
+        items: [
+          { item_id: 'ore_iron', name: 'Iron Ore', quantity: 10 },
+          { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 2 },
+        ],
+        ships: [
+          {
+            ship_id: 'ship-uuid-should-hide',
+            class_id: 'dust_devil',
+            class_name: 'Dust Devil',
+            custom_name: 'Manny',
+          },
+        ],
+      },
+      snippets: [
+        '[GIFT]',
+        'Gift from Alice',
+        'at haven_exchange',
+        '1500 credits',
+        'Iron Ore×10',
+        'Dust Devil "Manny"',
+        'Note: thanks',
+      ],
+    },
     { msgType: 'trade_cancelled', data: { trade_id: 'trade_1' }, snippets: ['[TRADE]', 'Trade cancelled', 'trade_1'] },
     {
       msgType: 'trade_complete',
@@ -9787,6 +9819,7 @@ describe('notification formatting', () => {
           'facility_rent_warning',
           'refueled_by',
           'repaired_by',
+          'gift_received',
         ]),
       );
       expect(types.filter((t) => !hasPreviewHandler(t))).toEqual([]);
@@ -10327,6 +10360,528 @@ describe('notification formatting', () => {
       expect(output).toContain('Haven Exchange tick 901337: 1 item update');
       // Table Message matches the same pure headline (no detail fold for market).
       expect(formatNotificationMessage(notification)).toBe(preview.headline);
+    });
+  });
+
+  describe('gift_received pure preview', () => {
+    const fullBag = {
+      sender: 'Alice',
+      sender_id: 'player-alice-9',
+      timestamp: '1999-01-01T00:00:00.000Z',
+      message: 'thanks for the ore',
+      base_id: 'haven_exchange',
+      credits: 1500,
+      items: [
+        { item_id: 'ore_iron', name: 'Iron Ore', quantity: 10 },
+        { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 2 },
+      ],
+      ships: [
+        {
+          ship_id: 'ship-uuid-should-hide',
+          class_id: 'dust_devil',
+          class_name: 'Dust Devil',
+          custom_name: 'Manny',
+        },
+      ],
+    };
+    const headline =
+      'Gift from Alice at haven_exchange — 1500 credits, 2 items: Iron Ore×10, Fuel Cell×2, 1 ship: Dust Devil "Manny"';
+    const foldedMessage = `${headline}; Note: thanks for the ore`;
+    const printedCell =
+      'Gift from Alice at haven_exchange — 1500 credits, 2 items: Iron Ore×10, Fuel Cell×2, 1 ship: Dust Devil "Manny"; Note...';
+
+    function giftNotification(data: Record<string, unknown>): {
+      type: string;
+      msg_type: string;
+      data: Record<string, unknown>;
+      timestamp: string;
+    } {
+      return {
+        type: 'trade',
+        msg_type: 'gift_received',
+        timestamp: '2026-05-18T12:00:00.000Z',
+        data,
+      };
+    }
+
+    test('full bag headline, folded Message, and printed cell', () => {
+      const notification = giftNotification(fullBag);
+      const preview = formatNotificationPreview(notification);
+      expect(hasPreviewHandler('gift_received')).toBe(true);
+      expect(preview.tag).toBe('GIFT');
+      expect(preview.severity).toBeUndefined();
+      expect(preview.omittedHint).toBeUndefined();
+      expect(preview.headline).toBe(headline);
+      expect(preview.headline.length).toBe(111);
+      expect(preview.details).toEqual(['Note: thanks for the ore']);
+      expect(preview.headline).not.toContain('player-alice-9');
+      expect(preview.headline).not.toContain('1999-01-01');
+      expect(preview.headline).not.toContain('ship-uuid-should-hide');
+      expect(preview.headline).not.toContain('ore_iron');
+      expect(preview.headline).not.toContain('fuel_cell');
+      expect(preview.headline).not.toContain('dust_devil');
+      expect(preview.headline).not.toContain('Use:');
+      expect(preview.details.join('\n')).not.toContain('Use:');
+      expect(preview.headline).not.toContain('"item_id"');
+      expect(preview.headline).not.toContain('"ship_id"');
+      expect(preview.details.join('\n')).not.toContain('"item_id"');
+      expect(preview.details.join('\n')).not.toContain('"ship_id"');
+      expectNoNestedJsonDump(preview.headline);
+      expectNoNestedJsonDump(preview.details.join('\n'));
+
+      const atTableWidth = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(atTableWidth.headline).toBe(headline);
+      expect(atTableWidth.headline.endsWith('…')).toBe(false);
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe(tableMessageFromPreview(atTableWidth));
+      expect(message).toBe(foldedMessage);
+      expect(message.length).toBe(137);
+      expect(message).toContain('thanks for the ore');
+      expect(message).not.toContain('"item_id"');
+      expect(message).not.toContain('"ship_id"');
+      expectNoNestedJsonDump(message);
+
+      const cell = truncateCell(message, 120);
+      expect(cell).toBe(printedCell);
+      expect(cell).toContain('Dust Devil "Manny"');
+      expect(cell).toContain('1500 credits');
+      expect(cell.endsWith('Note...')).toBe(true);
+      expect(cell).not.toContain('thanks');
+    });
+
+    test('75-character note body does not fold into the table Message', () => {
+      const note = 'n'.repeat(75);
+      const notification = giftNotification({ ...fullBag, message: note });
+      const preview = formatNotificationPreview(notification);
+      const atTableWidth = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(preview.details).toEqual([`Note: ${note}`]);
+      expect(preview.details[0]?.length).toBe(81);
+      expect(atTableWidth.details[0]?.length).toBe(81);
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe(headline);
+      expect(message).not.toContain('Note:');
+    });
+
+    test('credit-only gift has no station, item, or ship clause', () => {
+      const notification = giftNotification({ sender: 'Alice', credits: 1500 });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Gift from Alice — 1500 credits');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain(' at ');
+      expect(preview.headline).not.toContain('item');
+      expect(preview.headline).not.toContain('ship');
+      expect(formatNotificationMessage(notification)).toBe(preview.headline);
+    });
+
+    test('credits plus base_id stays a station line without cargo nouns', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({ sender: 'Alice', base_id: 'haven_exchange', credits: 1500 }),
+      );
+      expect(preview.headline).toBe('Gift from Alice at haven_exchange — 1500 credits');
+      expect(preview.headline).toContain(' at haven_exchange');
+      expect(preview.headline).not.toContain('item');
+      expect(preview.headline).not.toContain('ship');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('items at a station with no note have empty details', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          base_id: 'sol_station',
+          items: [{ name: 'Iron Ore', item_id: 'ore_iron', quantity: 10 }],
+        }),
+      );
+      expect(preview.headline).toBe('Gift from Alice at sol_station — 1 item: Iron Ore×10');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('credit-only short note folds and does not invent a station', () => {
+      const notification = giftNotification({ sender: 'Alice', credits: 1500, message: 'thanks' });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Gift from Alice — 1500 credits');
+      expect(preview.details).toEqual(['Note: thanks']);
+      const folded = formatNotificationMessage(notification);
+      expect(folded).toBe('Gift from Alice — 1500 credits; Note: thanks');
+      expect(folded).not.toContain(' at ');
+      expect(folded.length).toBeLessThanOrEqual(120);
+    });
+
+    test('non-positive or non-numeric credits are omitted', () => {
+      for (const credits of [0, -5, 0n, -1n, '1500', '0', '', null]) {
+        const preview = formatNotificationPreview(giftNotification({ sender: 'Alice', credits }));
+        expect(preview.headline).toBe('Gift from Alice');
+        expect(preview.headline).not.toContain('credit');
+      }
+    });
+
+    test('bigint credits and item quantities stay exact digits', () => {
+      const credits = formatNotificationPreview(giftNotification({ sender: 'Alice', credits: 9007199254740993n }));
+      expect(credits.headline.startsWith('Gift from Alice — ')).toBe(true);
+      expect(credits.headline.replace(/\D/g, '')).toContain('9007199254740993');
+      expect(credits.headline).not.toContain('9007199254740992');
+      expect(credits.headline).toContain(' credits');
+      const verboseCredits = formatNotificationPreview(
+        giftNotification({ sender: 'Alice', sender_id: 'player-alice-9', credits: 9007199254740993n }),
+        { verbose: true },
+      );
+      const verboseCreditText = [
+        verboseCredits.headline,
+        ...verboseCredits.details,
+        verboseCredits.omittedHint ?? '',
+      ].join('\n');
+      expect(verboseCreditText).not.toContain('credits=');
+      expect(verboseCredits.headline.replace(/\D/g, '')).toContain('9007199254740993');
+
+      const quantity = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [{ name: 'Iron Ore', item_id: 'ore_iron', quantity: 9007199254740993n }],
+        }),
+      );
+      expect(quantity.headline).toContain('1 item: Iron Ore×');
+      expect(quantity.headline.replace(/\D/g, '')).toContain('9007199254740993');
+      expect(quantity.headline).not.toContain('9007199254740992');
+      expect(quantity.headline).not.toContain('×1');
+    });
+
+    test('empty data stays on the typed gift path', () => {
+      const preview = formatNotificationPreview(giftNotification({}));
+      expect(preview.tag).toBe('GIFT');
+      expect(preview.headline).toBe('Gift from Someone');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toBe('notification');
+      expect(preview.severity).toBeUndefined();
+      expect(preview.omittedHint).toBeUndefined();
+      expect(preview.headline).not.toContain('sender=');
+    });
+
+    test('empty arrays are omitted from the headline and still hinted when verbose', () => {
+      const data = { sender: 'Alice', credits: 1500, items: [], ships: [] };
+      const preview = formatNotificationPreview(giftNotification(data));
+      expect(preview.headline).toBe('Gift from Alice — 1500 credits');
+      expect(preview.headline).not.toContain('item');
+      expect(preview.headline).not.toContain('ship');
+      expect(preview.omittedHint).toBeUndefined();
+      expect(preview.headline).not.toContain('omitted:');
+
+      const verbose = formatNotificationPreview(giftNotification({ items: [], ships: [] }), { verbose: true });
+      expect(verbose.headline).toBe('Gift from Someone');
+      expect(verbose.headline).not.toContain('item');
+      expect(verbose.headline).not.toContain('ship');
+      expect(verbose.omittedHint).toBe('omitted: items, ships');
+    });
+
+    test('malformed item and ship rows are skipped', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: ['junk', null, { quantity: 5 }, { name: '   ', item_id: '  ' }, { name: { nested: true } }],
+          ships: ['nope', null, { class_name: '', class_id: '', ship_id: '' }, { class_name: '  ', class_id: '\n' }],
+        }),
+      );
+      expect(preview.headline).toBe('Gift from Alice');
+      expect(preview.headline).not.toContain('item');
+      expect(preview.headline).not.toContain('ship');
+      expect(preview.headline).not.toContain('[object Object]');
+      expect(preview.headline).not.toContain('"item_id"');
+      expect(preview.headline).not.toContain('"ship_id"');
+
+      const notArrays = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: { name: 'Iron Ore', quantity: 1 },
+          ships: 'Dust Devil',
+        }),
+      );
+      expect(notArrays.headline).toBe('Gift from Alice');
+      expect(notArrays.tag).toBe('GIFT');
+    });
+
+    test('item label prefers name, then item_id', () => {
+      const byName = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [{ name: 'Iron Ore', item_id: 'ore_iron', quantity: 10 }],
+        }),
+      );
+      expect(byName.headline).toBe('Gift from Alice — 1 item: Iron Ore×10');
+      expect(byName.headline).not.toContain('ore_iron');
+      expect(byName.headline).not.toContain('"item_id"');
+
+      const byId = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [{ name: '', item_id: 'ore_iron', quantity: 3 }],
+        }),
+      );
+      expect(byId.headline).toBe('Gift from Alice — 1 item: ore_iron×3');
+      expect(byId.headline).not.toContain('"item_id"');
+    });
+
+    test('empty class_name falls back to class_id and omits ship_id', () => {
+      const plain = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          ships: [{ class_name: '', class_id: 'dust_devil', ship_id: 'ship-uuid-1' }],
+        }),
+      );
+      expect(plain.headline).toBe('Gift from Alice — 1 ship: dust_devil');
+      expect(plain.headline).not.toContain('ship-uuid-1');
+      expect(plain.headline).not.toContain('"');
+      expect(plain.headline).not.toContain('"ship_id"');
+
+      const named = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          ships: [{ class_name: '', class_id: 'dust_devil', ship_id: 'ship-uuid-1', custom_name: 'Manny' }],
+        }),
+      );
+      expect(named.headline).toBe('Gift from Alice — 1 ship: dust_devil "Manny"');
+      expect(named.headline).not.toContain('ship-uuid-1');
+
+      const objectClassName = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          ships: [{ class_name: { nope: true }, class_id: 'hauler', ship_id: 'ship-uuid-2' }],
+        }),
+      );
+      expect(objectClassName.headline).toBe('Gift from Alice — 1 ship: hauler');
+      expect(objectClassName.headline).not.toContain('ship-uuid-2');
+      expect(objectClassName.headline).not.toContain('[object Object]');
+    });
+
+    test('ship_id is the label only when class name and class id are empty', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          ships: [{ class_name: ' ', class_id: '', ship_id: 'ship-uuid-1' }],
+        }),
+      );
+      expect(preview.headline).toBe('Gift from Alice — 1 ship: ship-uuid-1');
+      expect(preview.headline).not.toContain('"ship_id"');
+    });
+
+    test('missing custom_name does not add quotes', () => {
+      for (const ship of [
+        { class_name: 'Dust Devil', class_id: 'dust_devil', ship_id: 'ship-1' },
+        { class_name: 'Dust Devil', class_id: 'dust_devil', ship_id: 'ship-1', custom_name: '' },
+        { class_name: 'Dust Devil', class_id: 'dust_devil', ship_id: 'ship-1', custom_name: '   \n  ' },
+      ]) {
+        const preview = formatNotificationPreview(giftNotification({ sender: 'Alice', ships: [ship] }));
+        expect(preview.headline).toBe('Gift from Alice — 1 ship: Dust Devil');
+        expect(preview.headline).not.toContain('"');
+        expect(preview.headline).not.toContain('ship-1');
+        expect(preview.headline).not.toContain('dust_devil');
+      }
+    });
+
+    test('quantity 0 keeps the label without a times mark and still counts', () => {
+      const alone = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [{ name: 'Iron Ore', item_id: 'ore_iron', quantity: 0 }],
+        }),
+      );
+      expect(alone.headline).toBe('Gift from Alice — 1 item: Iron Ore');
+      expect(alone.headline).not.toContain('×');
+
+      const missing = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [{ name: 'Iron Ore', item_id: 'ore_iron' }],
+        }),
+      );
+      expect(missing.headline).toBe('Gift from Alice — 1 item: Iron Ore');
+      expect(missing.headline).not.toContain('×');
+
+      const negative = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [{ name: 'Iron Ore', item_id: 'ore_iron', quantity: -3 }],
+        }),
+      );
+      expect(negative.headline).toBe('Gift from Alice — 1 item: Iron Ore');
+      expect(negative.headline).not.toContain('×');
+
+      const counted = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [
+            { name: 'Iron Ore', item_id: 'ore_iron', quantity: 0 },
+            { name: 'Fuel Cell', item_id: 'fuel_cell', quantity: 2 },
+          ],
+        }),
+      );
+      expect(counted.headline).toBe('Gift from Alice — 2 items: Iron Ore, Fuel Cell×2');
+    });
+
+    test('duplicate item stacks stay in server order', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [
+            { name: 'Iron Ore', item_id: 'ore_iron', quantity: 1 },
+            { name: 'Iron Ore', item_id: 'ore_iron', quantity: 4 },
+          ],
+        }),
+      );
+      expect(preview.headline).toBe('Gift from Alice — 2 items: Iron Ore×1, Iron Ore×4');
+    });
+
+    test('ship summary caps at two labels', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          ships: [
+            { class_name: 'Dust Devil', class_id: 'dust_devil', ship_id: 's1' },
+            { class_name: 'Hauler', class_id: 'hauler', ship_id: 's2' },
+            { class_name: 'Skiff', class_id: 'skiff', ship_id: 's3' },
+          ],
+        }),
+      );
+      expect(preview.headline).toBe('Gift from Alice — 3 ships: Dust Devil, Hauler, +1 more');
+      expect(preview.headline).not.toContain('Skiff');
+      expect(preview.headline).not.toContain('s1');
+      expect(preview.headline).not.toContain('"');
+    });
+
+    test('item summary caps at three labels in server order', () => {
+      const preview = formatNotificationPreview(
+        giftNotification({
+          sender: 'Alice',
+          items: [
+            { name: 'Water', item_id: 'water', quantity: 1 },
+            { name: 'Iron Ore', item_id: 'ore_iron', quantity: 50 },
+            { name: 'Fuel Cell', item_id: 'fuel_cell', quantity: 2 },
+            { name: 'Copper', item_id: 'ore_copper', quantity: 100 },
+          ],
+        }),
+      );
+      expect(preview.headline).toBe('Gift from Alice — 4 items: Water×1, Iron Ore×50, Fuel Cell×2, +1 more');
+      expect(preview.headline).not.toContain('Copper');
+    });
+
+    test('inline text does not dump nested item or ship ids', () => {
+      const notification = giftNotification({
+        ...fullBag,
+        items: [
+          { item_id: 'ore_iron', name: 'Iron Ore', quantity: 10, extra: { id: 'nested', hull: 1 } },
+          { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 2 },
+        ],
+        ships: [
+          {
+            ship_id: 'ship-uuid-should-hide',
+            class_id: 'dust_devil',
+            class_name: 'Dust Devil',
+            custom_name: 'Manny',
+            extra: { id: 'nested-ship' },
+          },
+        ],
+      });
+      const preview = formatNotificationPreview(notification);
+      const message = formatNotificationMessage(notification);
+      const lines = formatNotification(notification);
+      const text = stripAnsi(lines.join('\n'));
+      expect(text).toContain('[GIFT]');
+      expect(text).not.toContain('[object Object]');
+      expect(text).not.toContain('Use:');
+      expect(text).not.toContain('player-alice-9');
+      expect(text).not.toContain('ship-uuid-should-hide');
+      expect(text).not.toContain('omitted:');
+      for (const value of [preview.headline, preview.details.join('\n'), message, text]) {
+        expect(value).not.toContain('"item_id"');
+        expect(value).not.toContain('"ship_id"');
+        expectNoNestedJsonDump(value);
+      }
+    });
+
+    test('long item list is clipped with the preview ellipsis', () => {
+      const notification = giftNotification({
+        sender: 'Alice',
+        base_id: 'haven_exchange',
+        items: [
+          { name: 'A'.repeat(40), item_id: 'a', quantity: 10 },
+          { name: 'B'.repeat(40), item_id: 'b', quantity: 10 },
+        ],
+      });
+      const wide = formatNotificationPreview(notification);
+      const narrow = formatNotificationPreview(notification, { maxLineLength: 120 });
+      expect(wide.headline.length).toBeGreaterThan(120);
+      expect(wide.headline.length).toBeLessThanOrEqual(200);
+      expect(wide.headline.endsWith('…')).toBe(false);
+      expect(wide.headline).toContain('A'.repeat(40));
+      expect(wide.headline).toContain('B'.repeat(40));
+      expect(narrow.headline.length).toBeLessThanOrEqual(120);
+      expect(narrow.headline.startsWith('Gift from')).toBe(true);
+      expect(narrow.headline.endsWith('…')).toBe(true);
+      expect(narrow.headline).not.toContain('...');
+      expect(narrow.headline).toContain(' at haven_exchange');
+    });
+
+    test('default preview has no omitted hint; verbose keeps the item summary', () => {
+      const data = {
+        sender: 'Alice',
+        items: [{ name: 'Iron Ore', item_id: 'ore_iron', quantity: 10, extra: { nested: true } }],
+      };
+      const preview = formatNotificationPreview(giftNotification(data));
+      expect(preview.omittedHint).toBeUndefined();
+      expect(preview.headline).toContain('1 item: Iron Ore×10');
+      expect(preview.headline).not.toContain('"item_id"');
+      expect(JSON.stringify(preview)).not.toContain('omitted:');
+
+      const verbose = formatNotificationPreview(giftNotification(data), { verbose: true });
+      expect(verbose.headline).toContain('1 item: Iron Ore×10');
+      expect(verbose.headline).not.toContain('"item_id"');
+      expect(verbose.details.join('\n')).not.toContain('"item_id"');
+      expectNoNestedJsonDump(verbose.headline);
+    });
+
+    test('newlines in sender, station, note, and labels stay on one line', () => {
+      const notification = giftNotification({
+        sender: 'Alice\nBob',
+        base_id: 'haven_exchange\nsecret',
+        message: 'thanks\nfor real',
+        credits: 1500,
+        items: [{ name: 'Iron Ore\nHidden', item_id: 'ore\niron', quantity: 10 }],
+        ships: [
+          {
+            class_name: 'Dust Devil\nHidden',
+            class_id: 'dust\ndevil',
+            ship_id: 'ship\n1',
+            custom_name: 'Manny\nExtra',
+          },
+        ],
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe(
+        'Gift from Alice at haven_exchange — 1500 credits, 1 item: Iron Ore×10, 1 ship: Dust Devil "Manny"',
+      );
+      expect(preview.details).toEqual(['Note: thanks']);
+      expect(preview.headline).not.toContain('Bob');
+      expect(preview.headline).not.toContain('secret');
+      expect(preview.headline).not.toContain('Hidden');
+      expect(preview.headline).not.toContain('Extra');
+      expect(preview.headline.includes('\n')).toBe(false);
+      expect(preview.details.every((line) => !line.includes('\n'))).toBe(true);
+      const message = formatNotificationMessage(notification);
+      expect(message.includes('\n')).toBe(false);
+      expect(message).not.toContain('Bob');
+      expect(message).toContain('Note: thanks');
+
+      const lines = formatNotification(notification);
+      expect(lines.every((line) => !line.includes('\n') && !line.includes('\r'))).toBe(true);
+
+      const blankSender = formatNotificationPreview(giftNotification({ sender: '\nAlice', credits: 1500 }));
+      expect(blankSender.headline).toBe('Gift from Someone — 1500 credits');
+      const blankNote = formatNotificationPreview(giftNotification({ sender: 'Alice', message: '\nthanks' }));
+      expect(blankNote.details).toEqual([]);
+      expect(blankNote.headline).toBe('Gift from Alice');
+      const blankStation = formatNotificationPreview(
+        giftNotification({ sender: 'Alice', base_id: '  \n  ', credits: 1500 }),
+      );
+      expect(blankStation.headline).toBe('Gift from Alice — 1500 credits');
+      expect(blankStation.headline).not.toContain(' at ');
     });
   });
 });

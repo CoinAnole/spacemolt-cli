@@ -1713,6 +1713,69 @@ function previewTradeCancelled(
   return headlinePreview('TRADE', `Trade cancelled (ID: ${scalarOr(data.trade_id, 'unknown')})`, options);
 }
 
+function cappedCountSummary(labels: readonly string[], singular: string, cap: number): string | undefined {
+  if (labels.length === 0) return undefined;
+  const shown = labels.slice(0, cap);
+  const noun = labels.length === 1 ? `1 ${singular}` : `${labels.length} ${singular}s`;
+  const suffix = labels.length > shown.length ? `, +${labels.length - shown.length} more` : '';
+  return `${noun}: ${shown.join(', ')}${suffix}`;
+}
+
+function summarizeGiftItems(value: unknown, cap: number): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const labels: string[] = [];
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const label = firstLine(nonEmptyString(row.name) ?? nonEmptyString(row.item_id) ?? '');
+    if (!label) continue;
+    const quantity = positiveNumber(row.quantity);
+    labels.push(quantity !== undefined ? `${label}×${quantity}` : label);
+  }
+  return cappedCountSummary(labels, 'item', cap);
+}
+
+function summarizeGiftShips(value: unknown, cap: number): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const labels: string[] = [];
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const classLabel = firstLine(
+      nonEmptyString(row.class_name) ?? nonEmptyString(row.class_id) ?? nonEmptyString(row.ship_id) ?? '',
+    );
+    if (!classLabel) continue;
+    const customName = firstLine(nonEmptyString(row.custom_name) ?? '');
+    labels.push(customName ? `${classLabel} "${customName}"` : classLabel);
+  }
+  return cappedCountSummary(labels, 'ship', cap);
+}
+
+function previewGiftReceived(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const sender = firstLine(scalarOr(data.sender, 'Someone')) || 'Someone';
+  const baseId = firstLine(nonEmptyString(data.base_id) ?? '');
+  const parts: string[] = [];
+  const credits = positiveNumber(data.credits);
+  if (credits !== undefined) parts.push(`${credits} credits`);
+  const items = summarizeGiftItems(data.items, 3);
+  if (items !== undefined) parts.push(items);
+  const ships = summarizeGiftShips(data.ships, 2);
+  if (ships !== undefined) parts.push(ships);
+
+  let headline = `Gift from ${sender}`;
+  if (baseId) headline += ` at ${baseId}`;
+  if (parts.length > 0) headline += ` — ${parts.join(', ')}`;
+
+  const note = safeScalar(data.message);
+  const noteLine = note !== undefined ? firstLine(String(note)) : '';
+  const details = noteLine ? [`Note: ${noteLine}`] : [];
+  return details.length > 0
+    ? detailPreview('GIFT', headline, details, options)
+    : headlinePreview('GIFT', headline, options);
+}
+
 function previewFriendRequest(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -3220,6 +3283,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   trade_complete: previewTradeComplete,
   trade_declined: previewTradeDeclined,
   trade_cancelled: previewTradeCancelled,
+  gift_received: previewGiftReceived,
   friend_request: previewFriendRequest,
   friend_request_accepted: previewFriendRequestAccepted,
   friend_removed: previewFriendRemoved,
