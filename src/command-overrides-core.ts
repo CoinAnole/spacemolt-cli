@@ -228,12 +228,14 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   trade_decline: {
     usage: '<trade_id>',
+    seeAlso: ['get_trades'],
     category: 'P2P Trading',
     apiRoute: 'POST /api/v2/spacemolt_transfer/trade_decline',
     positionals: ['trade_id'],
   },
   trade_cancel: {
     usage: '<trade_id>',
+    seeAlso: ['get_trades'],
     category: 'P2P Trading',
     apiRoute: 'POST /api/v2/spacemolt_transfer/trade_cancel',
     positionals: ['trade_id'],

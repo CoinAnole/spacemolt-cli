@@ -423,6 +423,23 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_ship', 'sell', 'jettison', 'loot_wreck', 'install_mod'],
   },
+  trade_in_progress: {
+    code: 'trade_in_progress',
+    message: "The other side's accept is already committing.",
+    suggestion:
+      'The other side\'s accept is already committing, so the trade will complete. Do not retry "spacemolt trade_cancel" or "spacemolt trade_decline".',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_trades'],
+  },
+  trade_not_found: {
+    code: 'trade_not_found',
+    message: 'That trade is already gone.',
+    suggestion: 'That trade is already gone. Run "spacemolt get_trades" to list offers that are still pending.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_trades'],
+  },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_REGISTRY);

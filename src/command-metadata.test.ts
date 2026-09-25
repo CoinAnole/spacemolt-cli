@@ -4044,4 +4044,77 @@ describe('command metadata', () => {
     expect(help).toContain('Boarding table Progress');
     expect(help).not.toContain('`');
   });
+
+  test('trade_cancel and trade_decline help document commit races', () => {
+    const tradeCancel =
+      "Withdraw a trade you offered. Nothing moves, and the other player is notified. Fails with trade_in_progress once the other side's accept is already committing — the trade will complete; do not retry trade_cancel. Fails with trade_not_found if the trade is already gone; check get_trades.";
+    const tradeDecline =
+      "Decline a trade offered to you. Nothing moves, and the offerer is notified. Fails with trade_in_progress once the other side's accept is already committing — the trade will complete; do not retry trade_decline. Fails with trade_not_found if the trade is already gone; check get_trades.";
+    const cases = [
+      { command: 'trade_cancel' as const, action: 'cancel', helpName: 'trade cancel', description: tradeCancel },
+      { command: 'trade_decline' as const, action: 'decline', helpName: 'trade decline', description: tradeDecline },
+    ];
+
+    for (const { command, action, helpName, description } of cases) {
+      const config = BUNDLED_COMMAND_REGISTRY.commandGroups.trade?.actions[action]?.config;
+      expect(BUNDLED_COMMAND_REGISTRY.commands[command], command).toBeUndefined();
+      expect(config?.description, command).toBe(description);
+      expect(COMMANDS[command]?.description, command).toBe(description);
+      expect(CURATED_COMMAND_DESCRIPTIONS[command], command).toBe(description);
+      expect(config?.description, command).toBe(CURATED_COMMAND_DESCRIPTIONS[command]);
+      expect(config?.usage, command).toBe('<trade_id>');
+      expect(config?.args, command).toEqual(['trade_id']);
+      expect(config?.required, command).toEqual(['trade_id']);
+      expect(CORE_COMMAND_OVERRIDES[command]?.positionals, command).toEqual(['trade_id']);
+      expect(CORE_COMMAND_OVERRIDES[command]?.description, command).toBeUndefined();
+      expect(CORE_COMMAND_OVERRIDES[command]?.apiRoute, command).toBe(`POST /api/v2/spacemolt_transfer/${command}`);
+      expect(config?.route, command).toEqual({
+        tool: 'spacemolt_transfer',
+        action: command,
+        method: 'POST',
+      });
+      expect(config?.seeAlso, command).toEqual(['get_trades']);
+      expect(description, command).toContain("the other side's accept is already committing");
+      expect(description, command).toContain('the trade will complete');
+      expect(description, command).toContain('trade_in_progress');
+      expect(description, command).toContain('trade_not_found');
+      expect(description, command).toContain('do not retry');
+      expect(description, command).toContain('get_trades');
+      expect(description, command).not.toContain('once the accept is already committing');
+      expect(description, command).not.toContain('once their accept');
+      expect(description, command).not.toContain('`');
+      expect(description, command).not.toContain('delivery=');
+      expect(description, command).not.toMatch(/--[A-Za-z0-9-]+/);
+
+      const help = captureHelp(helpName);
+      expect(help, command).toContain("the other side's accept is already committing");
+      expect(help, command).toContain('the trade will complete');
+      expect(help, command).toContain('trade_in_progress');
+      expect(help, command).toContain('trade_not_found');
+      expect(help, command).toContain('do not retry');
+      expect(help, command).toContain('get_trades');
+      expect(help, command).toContain('Usage:');
+      expect(help, command).toContain('<trade_id>');
+      expect(help, command).toContain('See also: get_trades');
+    }
+
+    expect(captureFullHelp()).not.toContain('trade_in_progress');
+    const tradeAccept = BUNDLED_COMMAND_REGISTRY.commandGroups.trade?.actions.accept?.config;
+    const tradeOffer = BUNDLED_COMMAND_REGISTRY.commandGroups.trade?.actions.offer?.config;
+    expect(tradeAccept?.description).toBe('Accept a trade offer');
+    expect(COMMANDS.trade_accept?.description).toBe('Accept a trade offer');
+    expect(CURATED_COMMAND_DESCRIPTIONS.trade_accept).toBe('Accept a trade offer');
+    expect(tradeOffer?.description).toBe(
+      'Offer a P2P trade. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}.',
+    );
+    expect(COMMANDS.trade_offer?.description).toBe(tradeOffer?.description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.trade_offer).toBe('Offer a trade to another player');
+    expect(CORE_COMMAND_OVERRIDES.trade_offer?.seeAlso).toEqual([
+      'get_trades',
+      'trade_accept',
+      'trade_decline',
+      'trade_cancel',
+    ]);
+    expect(tradeOffer?.seeAlso).toEqual(CORE_COMMAND_OVERRIDES.trade_offer?.seeAlso);
+  });
 });
