@@ -11,6 +11,7 @@ import {
   catalogSkillsOneFixture,
   dockDeliveryMissionsEnvelope,
   dockFixture,
+  dockGiftsFixture,
   dockMissionCargoItems,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
@@ -246,6 +247,148 @@ test('--quiet dock still prints missions, cargo, and Docked at', () => {
   expect(stdout).toContain('=== Active Missions ===');
   expect(stdout).toContain('=== Cargo ===');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+test('dock without gifts does not print a Gifts line', () => {
+  const stdout = renderStructuredResult('dock', structuredClone(dockFixture), options, context).stdout.join('\n');
+  expect(stdout).not.toContain('Gifts:');
+});
+
+test('dock empty gifts array prints Gifts: 0 and no rows', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.gifts = [];
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Gifts: 0');
+  expect(stdout).not.toContain('From:');
+});
+
+test('dock gifts_count 0 prints Gifts: 0 when the array is absent', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.gifts_count = 0;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Gifts: 0');
+  expect(stdout).not.toContain('From:');
+});
+
+test('dock gifts_count without rows prints the count and no gift blocks', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.gifts_count = 4;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Gifts: 4');
+  expect(stdout).not.toContain('From:');
+});
+
+test('dock gifts fixture prints the truncated count, note, and rows before Docked at', () => {
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: structuredClone(dockGiftsFixture), location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Gifts: 3 (showing recent, truncated)');
+  expect(stdout).toContain('Showing the 2 most recent gifts.');
+  expect(stdout).toContain('12 Fuel Cell (fuel_cell)');
+  expect(stdout).toContain('Note: for the fuel');
+  expect(stdout).toContain('Credits: 1,500 cr');
+  expect(stdout).toContain('From: Cleo (player-cleo)');
+  expect(stdout).toContain('Credits: 40 cr');
+  expect(stdout.indexOf('From: Cleo')).toBeLessThan(stdout.indexOf('Docked at:'));
+});
+
+test('dock gifts sit between trade fills and unread chat', () => {
+  const fixture = structuredClone(dockGiftsFixture) as Record<string, unknown>;
+  fixture.trade_fills_count = 242;
+  fixture.trade_fills_truncated = true;
+  fixture.trade_fills = [{ item_name: 'Iron Ore', quantity: 95040, type: 'buy_filled' }];
+  fixture.unread_chat = { system: 42, local: 79, faction: 0, private: 1 };
+  fixture.unread_chat_note = 'You have 122 unread chat message(s).';
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: fixture, location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  const tradeFills = stdout.indexOf('Trade fills:');
+  const gifts = stdout.indexOf('Gifts:');
+  const from = stdout.indexOf('From:');
+  const unreadChat = stdout.indexOf('Unread chat:');
+  expect(tradeFills).toBeGreaterThanOrEqual(0);
+  expect(tradeFills).toBeLessThan(gifts);
+  expect(gifts).toBeLessThan(from);
+  expect(from).toBeLessThan(unreadChat);
+  expect(stdout).toContain('Trade fills: 242 (showing recent, truncated)');
+  expect(stdout).toContain('Unread chat: 122');
+  expect(stdout).toContain('You have 122 unread chat message(s).');
+  expect(stdout).not.toContain('Iron Ore');
+  expect(stdout).not.toContain('buy_filled');
+});
+
+test('dock gifts omit the truncated suffix unless strictly true and skip a blank note', () => {
+  const truncatedFalse = structuredClone(dockGiftsFixture) as Record<string, unknown>;
+  truncatedFalse.gifts_truncated = false;
+  truncatedFalse.gifts_note = ' \t ';
+  const falseStdout = renderStructuredResult('dock', truncatedFalse, options, context).stdout.join('\n');
+  expect(falseStdout).toContain('Gifts: 3');
+  expect(falseStdout).not.toContain('(showing recent, truncated)');
+  expect(falseStdout.split('\n')).not.toContain(' \t ');
+
+  const omitted = structuredClone(dockGiftsFixture) as Record<string, unknown>;
+  delete omitted.gifts_truncated;
+  omitted.gifts_note = '   ';
+  const omittedStdout = renderStructuredResult('dock', omitted, options, context).stdout.join('\n');
+  expect(omittedStdout).toContain('Gifts: 3');
+  expect(omittedStdout).not.toContain('(showing recent, truncated)');
+  expect(omittedStdout.split('\n')).not.toContain('   ');
+});
+
+test('dock prints a gifts note when the count line is absent', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.gifts_note = 'A gift is waiting.';
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).not.toContain('Gifts:');
+  expect(stdout).toContain('A gift is waiting.');
+});
+
+test('dock gift rows do not print ships or base_id', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.gifts = [
+    {
+      sender: 'Ada',
+      sender_id: 'player-ada',
+      timestamp: '2026-09-23T14:05:00Z',
+      ships: [{ ship_id: 'gift-hull-9', class_id: 'prospector', class_name: 'Prospector' }],
+      base_id: 'gift_base_should_hide',
+    },
+  ];
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: fixture, location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('From: Ada (player-ada)');
+  expect(stdout).toContain('When: 2026-09-23 14:05');
+  expect(stdout).not.toContain('gift-hull-9');
+  expect(stdout).not.toContain('gift_base_should_hide');
+  expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+});
+
+test('dock gifts json output keeps gifts and skips the human heading', () => {
+  const envelope = {
+    details: structuredClone(dockGiftsFixture),
+    location: earthStationLocation('earth_station'),
+  };
+  const rendered = renderStructuredResult(
+    'dock',
+    envelope,
+    { ...options, format: 'json' },
+    { ...context, output: { ...context.output, format: 'json' } },
+  );
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const parsed = JSON.parse(stdout) as { details: { gifts?: unknown } };
+  expect(parsed.details.gifts).toEqual(dockGiftsFixture.gifts);
+  expect(stdout).not.toContain('Gifts:');
 });
 
 test('get_location with injected details still uses query dock copy', () => {
