@@ -109,6 +109,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `trade_cancel` / `trade_decline` help documents gameserver 0.611.0: `trade_in_progress` means the other side's accept is already committing and the trade will complete — do not retry cancel or decline; `trade_not_found` means the trade is already gone — check `get_trades`. Usage stays `trade_id`. **No parser change.**
 
+### Exchange
+
+- `modify_order` help states that raising a buy over a cheaper sell fills at the sell price, that the difference plus extra sales tax is `get_action_log event_type=trading.escrow_refunded` and is not on the HTTP response, and that a buy reprice (not only that raise, and not a sell) escrows sales tax so a later cancel refunds what was paid (gameserver 0.611.0). `cancel_order` help says the same sales-tax fact for any buy reprice. Sell cancels are unchanged. **No parser change.**
+
 ### Fixed
 
 - Whole numbers outside the safe integer range (`|n| <= 2^53-1`) are preserved on v2 HTTP JSON and re-emitted by `--json`, `--yaml`, `--structured`, `--field`, `--fields`, and `--jq`. Notification amounts that used to fall back to `0` (`xp_gained`, damage labels, raid HP) print the digits. Human credit lines and notification `positiveNumber` print those digits as well.

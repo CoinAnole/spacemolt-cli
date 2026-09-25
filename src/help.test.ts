@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { CliRuntimeContext, CliWriter } from './cli-context';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
+import { COMMANDS } from './commands';
 import type { PlayerState } from './help';
 import {
   displayError,
@@ -865,6 +866,39 @@ describe('help output branches', () => {
     expect(output).toContain(
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
+  });
+
+  test('showCommandHelp documents modify_order crossing-buy refunds', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('modify_order', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+
+    expect(output).toContain('<order_id>');
+    expect(output).toContain('<price_each>');
+    expect(output).toContain('new_price');
+    expect(output).toContain('See also: get_action_log, cancel_order');
+    expect(output).toContain('trading.escrow_refunded');
+    expect(output).toContain('not a field on this response');
+    expect(output).toContain('On a buy, modify_order escrows sales tax');
+    expect(COMMANDS.modify_order?.description).not.toContain('`');
+  });
+
+  test('showCommandHelp documents cancel_order sales-tax refunds after a buy reprice', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('cancel_order', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    const description = COMMANDS.cancel_order?.description ?? '';
+
+    expect(description).toContain('On a buy order');
+    expect(description).toContain('after modify_order changes the price');
+    expect(description).toContain('Sell cancels still return remaining items');
+    expect(description).toContain('create_buy_order is unchanged');
+    expect(output).toContain('On a buy order');
+    expect(output).toContain('after modify_order changes the price');
+    expect(output).toContain('Sell cancels still return remaining items');
+    expect(output).toContain('create_buy_order is unchanged');
+    expect(output).toContain('order_ids');
+    expect(description).not.toContain('`');
   });
 
   test('showCommandHelp documents view_market filters', () => {
