@@ -1768,6 +1768,47 @@ export const actionLogFactionRefuelFixture = {
   ],
 };
 
+/** Claim and escrow-refund rows. `category: shipping` is a page label, not a request filter. */
+export const actionLogFreightEscrowFixture = {
+  category: 'shipping',
+  has_more: false,
+  page: 1,
+  page_size: 50,
+  total: 3,
+  total_pages: 1,
+  entries: [
+    {
+      id: 401,
+      created_at: '2026-09-23T12:00:00.000Z',
+      summary: 'Insurer paid the claim in full.',
+      category: 'shipping',
+      event_type: 'shipping.claim_paid',
+      data: {
+        station_paid: 8000,
+        shortfall: 0,
+      },
+    },
+    {
+      id: 402,
+      created_at: '2026-09-23T12:05:00.000Z',
+      summary: 'Insurer paid part of the claim.',
+      category: 'shipping',
+      event_type: 'shipping.claim_paid',
+      data: {
+        station_paid: 1500,
+        shortfall: 6500,
+      },
+    },
+    {
+      id: 403,
+      created_at: '2026-09-23T12:10:00.000Z',
+      summary: 'Buy cross refunded the price difference and extra sales tax.',
+      category: 'trading',
+      event_type: 'trading.escrow_refunded',
+    },
+  ],
+};
+
 export const actionLogCursorFixture = {
   event_types: ['faction.production_cycle', 'ship.buy_order_filled'],
   since_id: 100,
@@ -1998,6 +2039,10 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_action_log_faction_refuel: {
     command: 'get_action_log',
     fixture: actionLogFactionRefuelFixture,
+  },
+  get_action_log_freight_escrow: {
+    command: 'get_action_log',
+    fixture: actionLogFreightEscrowFixture,
   },
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },

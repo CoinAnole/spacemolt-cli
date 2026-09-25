@@ -1,0 +1,39 @@
+{
+  "category": "shipping",
+  "has_more": false,
+  "page": 1,
+  "page_size": 50,
+  "total": 3,
+  "total_pages": 1,
+  "entries": [
+    {
+      "id": 401,
+      "created_at": "2026-09-23T12:00:00.000Z",
+      "summary": "Insurer paid the claim in full.",
+      "category": "shipping",
+      "event_type": "shipping.claim_paid",
+      "data": {
+        "station_paid": 8000,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": 402,
+      "created_at": "2026-09-23T12:05:00.000Z",
+      "summary": "Insurer paid part of the claim.",
+      "category": "shipping",
+      "event_type": "shipping.claim_paid",
+      "data": {
+        "station_paid": 1500,
+        "shortfall": 6500
+      }
+    },
+    {
+      "id": 403,
+      "created_at": "2026-09-23T12:10:00.000Z",
+      "summary": "Buy cross refunded the price difference and extra sales tax.",
+      "category": "trading",
+      "event_type": "trading.escrow_refunded"
+    }
+  ]
+}

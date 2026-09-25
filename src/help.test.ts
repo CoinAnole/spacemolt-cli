@@ -863,6 +863,16 @@ describe('help output branches', () => {
     expect(output).toContain('Pilot');
     expect(output).toContain('Base');
     expect(output).toContain('Fuel');
+    expect(output).toContain('faction.freight_fee_earned');
+    expect(output).toContain('faction.freight_premium_earned');
+    expect(output).toContain('faction.freight_claim_paid');
+    expect(output).toContain('faction.freight_debt_repaid');
+    expect(output).toContain('shipping.claim_paid');
+    expect(output).toContain('trading.escrow_refunded');
+    expect(output).toContain('Station paid');
+    expect(output).toContain('Shortfall');
+    expect(output).toContain('station_paid');
+    expect(output).toContain('pass faction_id= when reading the faction log');
     expect(output).toContain(
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
