@@ -152,6 +152,39 @@ export const storageFixture = {
   ],
 };
 
+export const storageViewGiftsFixture = {
+  ...storageFixture,
+  gifts: [
+    {
+      sender: 'Ada',
+      sender_id: 'player-ada',
+      timestamp: '2026-09-23T14:05:00Z',
+      credits: 1500,
+      message: 'for the fuel',
+      items: [{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12 }],
+    },
+    {
+      sender: 'Bo',
+      sender_id: 'player-bo',
+      timestamp: '2026-09-23T15:10:00Z',
+      ships: [
+        {
+          ship_id: 'ship-9',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          custom_name: 'Rock Skipper',
+        },
+      ],
+    },
+    {
+      sender: 'Cleo',
+      sender_id: 'player-cleo',
+      timestamp: '2026-09-23T16:00:00Z',
+      credits: 40,
+    },
+  ],
+};
+
 export const storageViewUndockedFixture = {
   action: 'view_storage',
   base_id: '',
@@ -779,10 +812,15 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   supply_commission: { command: 'supply_commission', fixture: supplyCommissionFixture, schemaTarget: 'details' },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
-  // Explicit storage_view case exercises gifts/messages empty arrays (schema parity).
+  // gifts: [] is the human Gifts: none lock; messages: [] is schema parity only and stays unprinted.
   storage_view: {
     command: 'storage_view',
     fixture: { ...storageFixture, gifts: [], messages: [] },
+    apiRoute: 'POST /api/v2/spacemolt_storage/view',
+  },
+  storage_view_gifts: {
+    command: 'storage_view',
+    fixture: storageViewGiftsFixture,
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
   },
   storage_view_undocked: {
