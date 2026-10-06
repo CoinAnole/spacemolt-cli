@@ -1978,6 +1978,28 @@ describe('help output branches', () => {
     expect(output).toContain('catalog');
   });
 
+  test('help inspect points skills, recipes, and facilities at catalog', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('inspect', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      'Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities.',
+    );
+    expect(output).toContain(
+      'A catalog block on this response uses type items for an item or module, and type ships for a ship class.',
+    );
+    expect(output).toContain(
+      'spacemolt inspect <id>  (package:<id>, item, module, ship class, system, POI, or docked base)',
+    );
+    expect(output).toContain('spacemolt inspect iron_ore');
+    expect(output).toContain('See also:');
+    expect(output).toContain('catalog');
+    expect(output).not.toContain('catalog entry');
+    expect(output).not.toContain('_direct');
+    expect(output).not.toContain('kind=');
+    expect(output).not.toContain('inspect type=');
+  });
+
   test('help catalog_dump documents the public dump cache and mining formulas', () => {
     const capture = captureWriter();
     expect(showCommandHelp('catalog_dump', capture.writer)).toBe(true);

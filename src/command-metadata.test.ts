@@ -2199,6 +2199,67 @@ describe('command metadata', () => {
     expect(help).not.toContain('`');
   });
 
+  test('inspect help points skills, recipes, and facilities at catalog', () => {
+    const description =
+      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint shortage report as get_base, including per-input buy order: yes or no. Sell only buy order: yes rows through the public market; check view_market for depth.';
+
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.description).toBe(description);
+    expect(COMMANDS.inspect?.description).toBe(description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.inspect).toBeUndefined();
+
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.usage).toBe(
+      '<id>  (package:<id>, item, module, ship class, system, POI, or docked base)',
+    );
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.example).toBe('spacemolt inspect iron_ore');
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.discoverWith).toEqual([
+      'get_cargo',
+      'get_system',
+      'catalog',
+      'get_base',
+    ]);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.seeAlso).toEqual([
+      'get_cargo',
+      'get_system',
+      'get_poi',
+      'get_base',
+      'catalog',
+      'craft',
+    ]);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.positionals).toEqual(['id']);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.schemaExtensions).toBeUndefined();
+
+    expect(COMMANDS.inspect?.args).toEqual(['id']);
+    expect(COMMANDS.inspect?.required).toEqual(['id']);
+    expect(COMMANDS.inspect?.usage).not.toContain('type=');
+    expect(Object.keys(COMMANDS.inspect?.schema ?? {})).toEqual(['id']);
+
+    const generated = GENERATED_API_ROUTES['POST /api/v2/spacemolt/inspect'];
+    expect(generated?.summary).toBe(
+      'Inspect a visible package, item, module, ship class, system, POI, or docked base by ID',
+    );
+    expect(generated?.summary).not.toBe(description);
+    expect(generated?.schema?.id?.description).toBe(
+      'Visible package, item, module, ship class, system, POI, or base ID to inspect',
+    );
+    expect(COMMANDS.inspect?.schema?.id?.description).toBe(generated?.schema?.id?.description);
+    expect(JSON.stringify(generated)).not.toContain('_direct');
+
+    const help = captureHelp('inspect');
+    expect(help).toContain(
+      'Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities.',
+    );
+    expect(help).toContain(
+      'A catalog block on this response uses type items for an item or module, and type ships for a ship class.',
+    );
+    expect(help).toContain('spacemolt inspect iron_ore');
+    expect(help).toContain('spacemolt catalog');
+    expect(help).not.toContain('catalog entry');
+    expect(help).not.toContain('_direct');
+    expect(help).not.toContain('kind=');
+    expect(help).not.toContain('inspect type=');
+    expect(help).not.toContain('`');
+  });
+
   test('get_active_missions and get_missions help mention server-issued description', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.get_active_missions).toContain('description');
     expect(CURATED_COMMAND_DESCRIPTIONS.get_missions).toContain('description');
