@@ -1219,7 +1219,7 @@ export const genericFormatters = [
         emitLine(`${c.dim}${r.gifts_note}${c.reset}`);
       }
       if (Array.isArray(r.gifts) && r.gifts.length > 0) {
-        emitGiftEntries(r.gifts, { ships: false });
+        emitGiftEntries(r.gifts);
       }
 
       const unreadChat = sumNumericRecord(r.unread_chat);

@@ -349,14 +349,21 @@ test('dock prints a gifts note when the count line is absent', () => {
   expect(stdout).toContain('A gift is waiting.');
 });
 
-test('dock gift rows do not print ships or base_id', () => {
+test('dock gift rows print ships and omit base_id', () => {
   const fixture = structuredClone(dockFixture) as Record<string, unknown>;
   fixture.gifts = [
     {
       sender: 'Ada',
       sender_id: 'player-ada',
       timestamp: '2026-09-23T14:05:00Z',
-      ships: [{ ship_id: 'gift-hull-9', class_id: 'prospector', class_name: 'Prospector' }],
+      ships: [
+        {
+          ship_id: 'ship-9',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          custom_name: 'Rock Skipper',
+        },
+      ],
       base_id: 'gift_base_should_hide',
     },
   ];
@@ -368,9 +375,33 @@ test('dock gift rows do not print ships or base_id', () => {
   ).stdout.join('\n');
   expect(stdout).toContain('From: Ada (player-ada)');
   expect(stdout).toContain('When: 2026-09-23 14:05');
-  expect(stdout).not.toContain('gift-hull-9');
+  expect(stdout).toContain('Ships:');
+  expect(stdout).toContain('Rock Skipper — Prospector (prospector) ship-9');
+  expect(stdout).not.toContain('Items:');
+  expect(stdout).not.toContain('Credits:');
   expect(stdout).not.toContain('gift_base_should_hide');
   expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+});
+
+test('dock gift rows with an empty ships array print no Ships heading', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.gifts = [
+    {
+      sender: 'Ada',
+      sender_id: 'player-ada',
+      timestamp: '2026-09-23T14:05:00Z',
+      ships: [],
+    },
+  ];
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: fixture, location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('From: Ada (player-ada)');
+  expect(stdout).toContain('When: 2026-09-23 14:05');
+  expect(stdout).not.toContain('Ships:');
 });
 
 test('dock gifts json output keeps gifts and skips the human heading', () => {
