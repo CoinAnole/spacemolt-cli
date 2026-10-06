@@ -1175,9 +1175,9 @@ export const dockFixture = {
 
 export const dockGiftsFixture = {
   ...dockFixture,
-  gifts_count: 3,
+  gifts_count: 4,
   gifts_truncated: true,
-  gifts_note: 'Showing the 2 most recent gifts.',
+  gifts_note: 'Showing the 3 most recent gifts.',
   gifts: [
     {
       sender: 'Ada',
@@ -1186,6 +1186,22 @@ export const dockGiftsFixture = {
       credits: 1500,
       message: 'for the fuel',
       items: [{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 12 }],
+      ships: [
+        {
+          ship_id: 'ship-9',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          custom_name: 'Rock Skipper',
+        },
+        { ship_id: 'ship-10', class_id: 'hauler', class_name: '' },
+      ],
+    },
+    {
+      sender: 'Bo',
+      sender_id: 'player-bo',
+      timestamp: '2026-09-23T15:10:00Z',
+      message: 'parked at this station',
+      ships: [{ ship_id: 'ship-11', class_id: 'prospector', class_name: '', custom_name: 'Rock Skipper' }],
     },
     {
       sender: 'Cleo',

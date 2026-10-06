@@ -285,14 +285,22 @@ test('dock gifts fixture prints the truncated count, note, and rows before Docke
     options,
     context,
   ).stdout.join('\n');
-  expect(stdout).toContain('Gifts: 3 (showing recent, truncated)');
-  expect(stdout).toContain('Showing the 2 most recent gifts.');
+  expect(stdout).toContain('Gifts: 4 (showing recent, truncated)');
+  expect(stdout).toContain('Showing the 3 most recent gifts.');
   expect(stdout).toContain('12 Fuel Cell (fuel_cell)');
   expect(stdout).toContain('Note: for the fuel');
   expect(stdout).toContain('Credits: 1,500 cr');
+  expect(stdout).toContain('Rock Skipper — Prospector (prospector) ship-9');
+  expect(stdout).toContain('hauler ship-10');
+  expect(stdout).toContain('From: Bo (player-bo)');
+  expect(stdout).toContain('Rock Skipper (prospector) ship-11');
+  expect(stdout).toContain('Note: parked at this station');
   expect(stdout).toContain('From: Cleo (player-cleo)');
   expect(stdout).toContain('Credits: 40 cr');
-  expect(stdout.indexOf('From: Cleo')).toBeLessThan(stdout.indexOf('Docked at:'));
+  const cleo = stdout.indexOf('From: Cleo');
+  const docked = stdout.indexOf('Docked at:');
+  expect(cleo).toBeLessThan(docked);
+  expect(stdout.slice(cleo, docked)).not.toContain('Ships:');
 });
 
 test('dock gifts sit between trade fills and unread chat', () => {
@@ -328,7 +336,7 @@ test('dock gifts omit the truncated suffix unless strictly true and skip a blank
   truncatedFalse.gifts_truncated = false;
   truncatedFalse.gifts_note = ' \t ';
   const falseStdout = renderStructuredResult('dock', truncatedFalse, options, context).stdout.join('\n');
-  expect(falseStdout).toContain('Gifts: 3');
+  expect(falseStdout).toContain('Gifts: 4');
   expect(falseStdout).not.toContain('(showing recent, truncated)');
   expect(falseStdout.split('\n')).not.toContain(' \t ');
 
@@ -336,7 +344,7 @@ test('dock gifts omit the truncated suffix unless strictly true and skip a blank
   delete omitted.gifts_truncated;
   omitted.gifts_note = '   ';
   const omittedStdout = renderStructuredResult('dock', omitted, options, context).stdout.join('\n');
-  expect(omittedStdout).toContain('Gifts: 3');
+  expect(omittedStdout).toContain('Gifts: 4');
   expect(omittedStdout).not.toContain('(showing recent, truncated)');
   expect(omittedStdout.split('\n')).not.toContain('   ');
 });
