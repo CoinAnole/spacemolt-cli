@@ -106,7 +106,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Storage
 
 - `storage view` table output lists durable gifts (`sender`, time, credits, items, ships, note). An explicit empty `gifts` array prints `Gifts: none`. An omitted key prints nothing. `messages` are unchanged. **No parser change.**
-- `dock` table output lists durable gifts after trade fills: `Gifts: N`, the trade-fill truncated suffix when `gifts_truncated` is true, `gifts_note` when non-empty, then one block per returned row. Dock rows follow `GiftNotification` and do not print `ships` or `base_id`. **No parser change.**
+- `dock` table output lists durable gifts after trade fills: `Gifts: N`, the trade-fill truncated suffix when `gifts_truncated` is true, `gifts_note` when non-empty, then one block per returned `StorageGift` row. Rows print `ships` with the same ship line as `storage view` when the server sends them (gameserver 0.612.4; `DockResponse.gifts[]` is `StorageGift`). An omitted `ships` key and an explicit empty array print no Ships heading. `base_id` is still omitted on dock because `StorageGift` does not include it. `gift_received` previews still print `base_id`. **No parser change.**
 
 ### P2P Trading
 

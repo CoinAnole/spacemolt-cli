@@ -1,10 +1,10 @@
 import { emitLine, formatIntegerText, isRecord } from './helpers.ts';
 
-export function emitGiftEntries(gifts: unknown, options: { ships: boolean }): void {
+export function emitGiftEntries(gifts: unknown): void {
   if (!Array.isArray(gifts)) return;
   let printed = false;
   for (const gift of gifts) {
-    const lines = giftLines(gift, options.ships);
+    const lines = giftLines(gift);
     if (!lines) continue;
     if (printed) emitLine('');
     printed = true;
@@ -12,7 +12,7 @@ export function emitGiftEntries(gifts: unknown, options: { ships: boolean }): vo
   }
 }
 
-function giftLines(gift: unknown, ships: boolean): string[] | undefined {
+function giftLines(gift: unknown): string[] | undefined {
   if (!isRecord(gift)) return undefined;
   const lines: string[] = [];
   const from = formatFrom(gift);
@@ -24,7 +24,7 @@ function giftLines(gift: unknown, ships: boolean): string[] | undefined {
     if (text !== undefined) lines.push(`  Credits: ${text} cr`);
   }
   appendNestedLines(lines, 'Items', formatNestedLines(gift.items, formatItemLine));
-  if (ships) appendNestedLines(lines, 'Ships', formatNestedLines(gift.ships, formatShipLine));
+  appendNestedLines(lines, 'Ships', formatNestedLines(gift.ships, formatShipLine));
   const note = formatNote(gift.message);
   if (note !== undefined) lines.push(`  Note: ${note}`);
   return lines.length ? lines : undefined;

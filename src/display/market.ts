@@ -95,7 +95,7 @@ function emitStorageGifts(result: Record<string, unknown>): void {
     return;
   }
   emitLine(`\n${c.bright}Gifts (${gifts.length}):${c.reset}\n`);
-  emitGiftEntries(gifts, { ships: true });
+  emitGiftEntries(gifts);
 }
 
 function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
