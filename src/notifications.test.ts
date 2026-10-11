@@ -9216,6 +9216,33 @@ describe('notification formatting', () => {
       expect(preview.details[0]).not.toContain('p5');
     });
 
+    test('four creatures_changed records still name three identities and hide the fourth', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_belt',
+          system_id: 'sol',
+          tick: 42,
+          creatures_changed: [
+            { name: 'Pod 1', creature_id: 'creature-1', species: 'pilot_whale' },
+            { name: 'Pod 2', creature_id: 'creature-2', species: 'pilot_whale' },
+            { name: 'Pod 3', creature_id: 'creature-3', species: 'pilot_whale' },
+            { name: 'Pod 4', creature_id: 'creature-4', species: 'pilot_whale' },
+          ],
+        },
+      });
+
+      const rendered = [preview.headline, ...preview.details].join('\n');
+      expect(preview.details).toEqual([
+        'Creatures — changed 4: Pod 1 [creature-1], Pod 2 [creature-2], Pod 3 [creature-3]; +1 more',
+      ]);
+      expect(rendered).toContain('[creature-1]');
+      expect(rendered).toContain('[creature-3]');
+      expect(rendered).toContain('+1 more');
+      expect(rendered).not.toContain('creature-4');
+      expect(rendered).not.toContain('Pod 4');
+    });
+
     test('metadata-only flags append to the headline without detail lines', () => {
       const preview = formatNotificationPreview({
         msg_type: 'observation_update',

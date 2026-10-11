@@ -1080,7 +1080,6 @@ export const statusFormatters = [
           ? r.arena_npc_count
           : arenaNpcs.length;
       const empireNpcCount = typeof r.empire_npc_count === 'number' ? r.empire_npc_count : npcs.length;
-      const creatureCount = typeof r.creature_count === 'number' ? r.creature_count : creatures.length;
 
       emitLine(`\n${c.bright}=== Nearby ===${c.reset}`);
       emitActiveScanLine(r, command);
@@ -1120,9 +1119,14 @@ export const statusFormatters = [
         if (empireNpcCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${empireNpcCount - NEARBY_TABLE_LIMIT} more`);
       }
 
-      if (creatureCount > 0) {
-        emitLine(`\n${c.green}Creatures (${creatureCount}):${c.reset}`);
-        for (const creature of creatures.slice(0, NEARBY_TABLE_LIMIT)) {
+      const printed = creatures.length;
+      const finiteCount =
+        typeof r.creature_count === 'number' && Number.isFinite(r.creature_count) ? r.creature_count : undefined;
+      const headerCount = finiteCount !== undefined && finiteCount >= printed ? finiteCount : printed;
+      const showSection = printed > 0 || (finiteCount !== undefined && finiteCount > 0);
+      if (showSection) {
+        emitLine(`\n${c.green}Creatures (${headerCount}):${c.reset}`);
+        for (const creature of creatures) {
           const name = creature.name || creature.creature_id || creature.species || 'Unknown';
           const species = creature.species ? ` (${creature.species})` : '';
           const role = creature.role ? ` - ${creature.role}` : '';
@@ -1134,7 +1138,9 @@ export const statusFormatters = [
           const id = creature.creature_id && creature.creature_id !== name ? ` [${creature.creature_id}]` : '';
           emitLine(`  ${name}${id}${species}${role}${hull}${combat}`);
         }
-        if (creatureCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${creatureCount - NEARBY_TABLE_LIMIT} more`);
+        if (finiteCount !== undefined && finiteCount > printed) {
+          emitLine(`  ... and ${finiteCount - printed} more`);
+        }
       }
       emitNearbyPrizes({
         prizes,

@@ -3014,3 +3014,208 @@ test.each([
   expect(stdout).toContain(adultLeviathanLine);
   expect(stdout).not.toContain('=== Active Missions ===');
 });
+
+function herdCreatures(count: number): Array<{ name: string; creature_id: string; species: string }> {
+  return Array.from({ length: count }, (_, index) => {
+    const n = index + 1;
+    return { name: `Pod ${n}`, creature_id: `creature-${n}`, species: 'pilot_whale' };
+  });
+}
+
+function renderNearbyTable(command: string, payload: Record<string, unknown>): string {
+  return renderStructuredResult(command, payload, options, context).stdout.join('\n');
+}
+
+function expectNearbyFormatterEngaged(stdout: string): void {
+  expect(stdout).toContain('Players (0):');
+  expect(stdout).toContain('(No other players at this location)');
+  expect(stdout).not.toContain('=== Response ===');
+}
+
+test('get_nearby prints every returned creature when creature_count matches the list', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: herdCreatures(30),
+    creature_count: 30,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (30):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-30]');
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_nearby remainder is creature_count minus printed rows', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: herdCreatures(30),
+    creature_count: 45,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (45):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-30]');
+  expect(stdout.match(/\.\.\. and/g)).toEqual(['... and']);
+  expect(stdout).toContain('... and 15 more');
+  expect(stdout).not.toContain('... and 35 more');
+  expect(stdout).not.toContain('... and 20 more');
+});
+
+test('get_nearby prints creature rows past the shared nearby table limit', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: herdCreatures(12),
+    creature_count: 12,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (12):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-12]');
+  expect(stdout).not.toContain('... and');
+});
+
+test('subscribe_observation prints every creature when creature_count is absent', () => {
+  const stdout = renderNearbyTable('subscribe_observation', {
+    nearby: [],
+    creatures: herdCreatures(12),
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (12):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-12]');
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_nearby prints every creature when creature_count is deleted', () => {
+  const payload: Record<string, unknown> = {
+    nearby: [],
+    creatures: herdCreatures(12),
+    creature_count: 12,
+  };
+  delete payload.creature_count;
+  const stdout = renderNearbyTable('get_nearby', payload);
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (12):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-12]');
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_nearby stays quiet when creature_count is 0 and the list is empty', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [],
+    creature_count: 0,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).not.toContain('Creatures (');
+});
+
+test('get_nearby prints every creature when creature_count is smaller than the list', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: herdCreatures(12),
+    creature_count: 5,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (12):');
+  expect(stdout).not.toContain('Creatures (5):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-12]');
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_nearby does not treat non-finite or non-numeric creature_count as a total', () => {
+  for (const creature_count of ['30', Number.NaN, Number.POSITIVE_INFINITY, -1]) {
+    const stdout = renderNearbyTable('get_nearby', {
+      nearby: [],
+      creatures: herdCreatures(2),
+      creature_count,
+    });
+
+    expectNearbyFormatterEngaged(stdout);
+    expect(stdout).toContain('Creatures (2):');
+    expect(stdout).not.toContain('Creatures (30)');
+    expect(stdout).not.toContain('Creatures (-1)');
+    expect(stdout).not.toContain('Creatures (NaN)');
+    expect(stdout).not.toContain('Creatures (Infinity)');
+    expect(stdout).toContain('[creature-1]');
+    expect(stdout).toContain('[creature-2]');
+    expect(stdout).not.toContain('... and');
+  }
+});
+
+test('get_nearby prints a fractional unlisted remainder', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: herdCreatures(10),
+    creature_count: 12.5,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (12.5):');
+  expect(stdout).toContain('[creature-1]');
+  expect(stdout).toContain('[creature-10]');
+  expect(stdout.match(/\.\.\. and/g)).toEqual(['... and']);
+  expect(stdout).toContain('... and 2.5 more');
+});
+
+test('get_nearby shows a positive creature_count when creatures is not an array', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creature_count: 30,
+    creatures: 'not-an-array',
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Creatures (30):');
+  expect(stdout).toContain('... and 30 more');
+  expect(stdout).not.toContain('... and 20 more');
+  expect(stdout).not.toContain('[');
+});
+
+test('get_nearby keeps the pirate row cap beside an uncapped creature list', () => {
+  const pirates = Array.from({ length: 12 }, (_, index) => ({
+    pirate_id: `pirate-${index + 1}`,
+    name: `Corsair ${index + 1}`,
+  }));
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    pirates,
+    creatures: herdCreatures(12),
+    creature_count: 12,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Pirates (12):');
+  expect(stdout).toContain('Corsair 10');
+  expect(stdout).not.toContain('Corsair 11');
+  expect(stdout).not.toContain('Corsair 12');
+  expect(stdout).toContain('Creatures (12):');
+  expect(stdout).toContain('[creature-11]');
+  expect(stdout).toContain('[creature-12]');
+  expect(stdout.match(/\.\.\. and/g)).toEqual(['... and']);
+  expect(stdout).toContain('... and 2 more');
+});
+
+test('subscribe_observation human output omits creature brand fields', () => {
+  const stdout = renderStructuredResult(
+    'subscribe_observation',
+    structuredClone(subscribeObservationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Creatures (1):');
+  expect(stdout).toContain('Pilot-Whale Pod [creature-pilot-whale-7]');
+  expect(stdout).not.toContain('cloudbank-ranch');
+  expect(stdout).not.toContain('branded');
+  expect(stdout).not.toContain('=== Response ===');
+});
