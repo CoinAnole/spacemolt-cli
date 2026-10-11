@@ -352,7 +352,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       "[item_id] [category] [company_store=true] [since=...] [--item item_id] [--search text]  (company_store=true narrows to only your faction's Company Store; since=<tick> polls changes)",
     description:
-      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings.",
+      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings. Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.",
     example: 'spacemolt view_market --item ore_iron',
     discoverWith: ['get_status'],
     seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
@@ -375,7 +375,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/subscribe_market',
     description:
-      'Subscribe once and return the current public liquidity snapshot (fuel, contraband, and Company Store excluded). Add --follow to keep polling market notifications every 10 seconds until stopped. Use view_market company_store=true for your Company Store.',
+      'Subscribe once and return the current public liquidity snapshot (fuel, contraband, and Company Store excluded). Add --follow to keep polling market notifications every 10 seconds until stopped. Use view_market company_store=true for your Company Store. Snapshot items include the same category string view_market returns for that item; the table and the one-item book show it, and show nothing when the server omits it.',
     example: 'spacemolt subscribe_market --follow',
     discoverWith: ['view_market'],
     seeAlso: ['view_market', 'unsubscribe_market'],

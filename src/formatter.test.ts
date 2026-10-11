@@ -2700,14 +2700,18 @@ describe('structuredContent formatters', () => {
 
       === Items ===
 
-        Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
-        ----------+-----------+----------+-----------+-----------+-----------
-        Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
-        Fuel Cell | fuel_cell |          |           |           |           
+        Item      | ID        | Category | Best Buy | Buy Depth | Best Sell | Sell Depth
+        ----------+-----------+----------+----------+-----------+-----------+-----------
+        Iron Ore  | ore_iron  | ore      | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
+        Fuel Cell | fuel_cell | fuel     |          |           |           |           
 
       Depth columns show quantity / orders at the best price.
       Use spacemolt view_market <item_id> for full order depth."
     `);
+    expect(stdout).toContain('Depth columns show quantity / orders at the best price.');
+    expect(stdout).toContain('Use spacemolt view_market <item_id> for full order depth.');
+    expect(stdout).toContain('Category');
+    expect(stdout).not.toContain('unknown');
   });
 
   test('formats view_orders with context and fill progress', () => {
@@ -2857,7 +2861,7 @@ describe('structuredContent formatters', () => {
       "
       === Market at earth_station ===
 
-      Iron Ore
+      Iron Ore (ore)
         Buy orders (3):
           15 cr x 500
           15 cr x 75
@@ -2875,12 +2879,148 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('=== Market at haven_exchange ===');
-    expect(stdout).toContain('Iron Ore');
+    expect(stdout).toContain('Iron Ore (ore)');
     expect(stdout).toContain('Buy orders (1):');
     expect(stdout).toContain('9 cr');
     expect(stdout).toContain('Sell orders (1):');
     expect(stdout).toContain('12 cr');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats a mixed subscribe_market summary with a blank category cell', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_market', {
+      action: 'subscribe_market',
+      base_id: 'haven_exchange',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          category: 'ore',
+          sell_orders: [{ price_each: 12, quantity: 40 }],
+          buy_orders: [{ price_each: 9, quantity: 25 }],
+        },
+        {
+          item_id: 'mod_laser',
+          item_name: 'Laser',
+          sell_orders: [{ price_each: 100, quantity: 1 }],
+          buy_orders: [{ price_each: 80, quantity: 2 }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Category'));
+    expect(header).toBeDefined();
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const headers = cells(header ?? '');
+    expect(headers).toEqual(['Item', 'ID', 'Category', 'Best Buy', 'Buy Depth', 'Best Sell', 'Sell Depth']);
+    const categoryIndex = headers.indexOf('Category');
+    const first = stdout.split('\n').find((line) => line.includes('|') && line.includes('Iron Ore'));
+    const second = stdout.split('\n').find((line) => line.includes('|') && line.includes('Laser'));
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    expect(cells(first ?? '')[categoryIndex]).toBe('ore');
+    expect(cells(second ?? '')[categoryIndex]).toBe('');
+    expect(stdout).not.toContain('unknown');
+    expect(stdout).toContain('Depth columns show quantity / orders at the best price.');
+    expect(stdout).toContain('Use spacemolt view_market <item_id> for full order depth.');
+  });
+
+  test('omits the Category column when no subscribe_market summary row has one', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_market', {
+      action: 'subscribe_market',
+      base_id: 'haven_exchange',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          sell_orders: [{ price_each: 12, quantity: 40 }],
+          buy_orders: [{ price_each: 9, quantity: 25 }],
+        },
+        {
+          item_id: 'mod_laser',
+          item_name: 'Laser',
+          sell_orders: [{ price_each: 100, quantity: 1 }],
+          buy_orders: [{ price_each: 80, quantity: 2 }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).toContain('Laser');
+    expect(stdout).toContain('Best Buy');
+    expect(stdout).not.toContain('Category');
+    expect(stdout).not.toContain('unknown');
+    expect(stdout).not.toContain('Iron Ore (');
+  });
+
+  test('omits a missing category on a one-item subscribe book', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_market', {
+      action: 'subscribe_market',
+      base_id: 'haven_exchange',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          sell_orders: [{ price_each: 12, quantity: 40 }],
+          buy_orders: [{ price_each: 9, quantity: 25 }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).not.toContain('Iron Ore (');
+    expect(stdout).toContain('Buy orders (1):');
+    expect(stdout).toContain('Sell orders (1):');
+  });
+
+  test.each([
+    ['blank', '  '],
+    ['non-string', 1],
+  ])('omits a %s category on a one-item subscribe book', (_label, category) => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_market', {
+      action: 'subscribe_market',
+      base_id: 'haven_exchange',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          category,
+          sell_orders: [{ price_each: 12, quantity: 40 }],
+          buy_orders: [{ price_each: 9, quantity: 25 }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore');
+    expect(stdout).not.toContain('Iron Ore (');
+    expect(stdout).toContain('Buy orders (1):');
+    expect(stdout).toContain('Sell orders (1):');
+  });
+
+  test('trims a one-item subscribe category before printing it', () => {
+    const { stdout, stderr } = captureStructuredOutput('subscribe_market', {
+      action: 'subscribe_market',
+      base_id: 'haven_exchange',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          category: '  ore  ',
+          sell_orders: [{ price_each: 12, quantity: 40 }],
+          buy_orders: [{ price_each: 9, quantity: 25 }],
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Iron Ore (ore)');
+    expect(stdout).not.toContain('Iron Ore (  ');
+    expect(stdout).toContain('Buy orders (1):');
+    expect(stdout).toContain('Sell orders (1):');
   });
 
   test('omits malformed single-item market depth numbers instead of printing NaN', () => {
@@ -9145,10 +9285,10 @@ describe('structuredContent formatters', () => {
 
       === Items ===
 
-        Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
-        ----------+-----------+----------+-----------+-----------+-----------
-        Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2
-        Fuel Cell | fuel_cell |          |           |           |
+        Item      | ID        | Category | Best Buy | Buy Depth | Best Sell | Sell Depth
+        ----------+-----------+----------+----------+-----------+-----------+-----------
+        Iron Ore  | ore_iron  | ore      | 15 cr    | 575 / 2   | 18 cr     | 15 / 2
+        Fuel Cell | fuel_cell | fuel     |          |           |           |
 
       Depth columns show quantity / orders at the best price.
       Use spacemolt view_market <item_id> for full order depth."

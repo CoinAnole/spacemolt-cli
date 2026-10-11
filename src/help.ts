@@ -1215,8 +1215,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
 
   ${c.cyan}Market / Exchange:${c.reset}
-    view_market [item_id] [category] [company_store=true]  Order book; company_store=true narrows to only your faction's Company Store
-    subscribe_market                  Subscribe once; --follow for live public liquidity market_update (not Company Store)
+    view_market [item_id] [category] [company_store=true]  Order book; company_store=true narrows to only your faction's Company Store; prints each item's category
+    subscribe_market                  Subscribe once; --follow for live public liquidity market_update (not Company Store); snapshot items include category
     unsubscribe_market                Stop live market updates (manual fallback after interrupted follow)
     view_orders [station_id]          Your orders at station
     create_sell_order <item> <qty> <price>  List items for sale

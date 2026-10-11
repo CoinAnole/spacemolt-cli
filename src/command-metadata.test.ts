@@ -1803,23 +1803,37 @@ describe('command metadata', () => {
     expect(viewMarket?.description).toContain('Company Store');
     expect(viewMarket?.description).not.toContain('or pass company_store=true to show');
     expect(viewMarket?.description).not.toContain('station book');
+    expect(viewMarket?.description).toContain(
+      "Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.",
+    );
     expect(viewMarket?.usage).toContain('narrows to only your faction');
 
     const viewMarketHelp = captureHelp('view_market');
     expect(viewMarketHelp).toContain('[company_store=true]');
     expect(viewMarketHelp).toContain('public plus your faction');
     expect(viewMarketHelp).toContain('narrows to only those private listings');
+    expect(viewMarketHelp).toContain(
+      "Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.",
+    );
   });
 
   test('subscribe_market help teaches public liquidity', () => {
     const subscribe = BUNDLED_COMMAND_REGISTRY.commands.subscribe_market;
     expect(subscribe?.description).toContain('public liquidity');
     expect(subscribe?.description).not.toContain('public-liquidity');
+    expect(subscribe?.description).toContain(
+      'Snapshot items include the same category string view_market returns for that item; the table and the one-item book show it, and show nothing when the server omits it.',
+    );
+    expect(subscribe?.description).not.toContain('market_update');
 
     const subscribeHelp = captureHelp('subscribe_market');
     expect(subscribeHelp).toContain('public liquidity');
     expect(subscribeHelp).toContain('Company Store');
     expect(subscribeHelp).toContain('view_market company_store=true');
+    expect(subscribeHelp).toContain(
+      'Snapshot items include the same category string view_market returns for that item; the table and the one-item book show it, and show nothing when the server omits it.',
+    );
+    expect(subscribeHelp).not.toContain('market_update');
   });
 
   test('faction order help advertises private Company Store listings', () => {
