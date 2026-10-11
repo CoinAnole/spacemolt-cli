@@ -461,7 +461,6 @@ function renderBulkReload(r: Record<string, unknown>): void {
 }
 
 // Finite numbers and bigints only. Absent, null, non-finite, and non-numbers omit.
-// String() is locale-independent: 12 -> "12", 1.5 -> "1.5", 0 -> "0". No grouping, no "cr".
 function formatBareNumber(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
