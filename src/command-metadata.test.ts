@@ -1026,6 +1026,7 @@ describe('command metadata', () => {
     expect(hunt?.usage).toContain('<creature_id>');
     expect(hunt?.description).toContain('wildlife creature');
     expect(hunt?.description).toContain('leviathan');
+    expect(hunt?.description).not.toContain('carrion');
     expect(hunt?.description).toContain('armed faction station');
     expect(hunt?.description).toContain('leviathan_id');
     expect(hunt?.description).toContain('heals slowly out of battle');
@@ -1070,9 +1071,16 @@ describe('command metadata', () => {
     expect(nearby?.description).toContain('actor_id');
     expect(nearby?.description).toContain('prize_id');
     expect(nearby?.description).toContain('claim_prize');
+    expect(nearby?.description).toContain('creature_id');
+    expect(nearby?.description).toContain('stops at 30');
+    expect(nearby?.description).toContain('creature_count');
+    expect(nearby?.description).not.toContain('`');
     expect(nearby?.seeAlso).toEqual(expect.arrayContaining(['scan', 'hunt', 'attack', 'claim_prize']));
     const help = captureHelp('get_nearby');
     expect(help).toContain('intact prizes');
+    expect(help).toContain('creature_id');
+    expect(help).toContain('stops at 30');
+    expect(help).toContain('creature_count');
     expect(help).toContain('primary_color');
     expect(help).toContain('secondary_color');
     expect(help).not.toContain('captor_kind');
@@ -1090,6 +1098,12 @@ describe('command metadata', () => {
     expect(observationHelp).toContain('arena');
     expect(observationHelp).toContain('hull 0');
     expect(observationHelp).toContain('prizes');
+    expect(observationHelp).toContain('creature_id');
+    expect(observationHelp).toContain('stops at 30');
+    expect(observationHelp).toContain('creature_count');
+    expect(observationHelp).toContain('three');
+    expect(observationHelp).toContain('get_nearby');
+    expect(observationHelp).toContain('not a field of this snapshot');
     expect(observationHelp).not.toContain('`');
     expect(observationHelp).toContain('[active_scan=true/false]');
     expect(observationHelp).not.toContain('<args...>');
@@ -1098,6 +1112,12 @@ describe('command metadata', () => {
     expect(COMMANDS.subscribe_observation?.description).toContain('arena');
     expect(COMMANDS.subscribe_observation?.description).toContain('hull 0');
     expect(COMMANDS.subscribe_observation?.description).toContain('prizes');
+    expect(COMMANDS.subscribe_observation?.description).toContain('creature_id');
+    expect(COMMANDS.subscribe_observation?.description).toContain('stops at 30');
+    expect(COMMANDS.subscribe_observation?.description).toContain('creature_count');
+    expect(COMMANDS.subscribe_observation?.description).toContain('three');
+    expect(COMMANDS.subscribe_observation?.description).toContain('get_nearby');
+    expect(COMMANDS.subscribe_observation?.description).toContain('not a field of this snapshot');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
 
     expect(captureHelp('get_battle_summary')).toContain('captor_kind');
@@ -3292,6 +3312,12 @@ describe('command metadata', () => {
     expect(subscribeHelp).not.toContain('shared notification queue');
     expect(subscribeHelp).toContain('re-arms fuel spend');
     expect(subscribeHelp).toContain('subscribed with active_scan=true');
+    expect(subscribeHelp).toContain('creature_id');
+    expect(subscribeHelp).toContain('stops at 30');
+    expect(subscribeHelp).toContain('creature_count');
+    expect(subscribeHelp).toContain('three');
+    expect(subscribeHelp).toContain('get_nearby');
+    expect(subscribeHelp).toContain('not a field of this snapshot');
     expect(subscribeHelp).not.toContain('`');
     expect(subscribeHelp).toContain('[active_scan=true/false]');
     expect(subscribeHelp).not.toContain('<args...>');
@@ -3302,6 +3328,12 @@ describe('command metadata', () => {
     expect(COMMANDS.subscribe_observation?.description).toContain('arena');
     expect(COMMANDS.subscribe_observation?.description).toContain('hull 0');
     expect(COMMANDS.subscribe_observation?.description).toContain('prizes');
+    expect(COMMANDS.subscribe_observation?.description).toContain('creature_id');
+    expect(COMMANDS.subscribe_observation?.description).toContain('stops at 30');
+    expect(COMMANDS.subscribe_observation?.description).toContain('creature_count');
+    expect(COMMANDS.subscribe_observation?.description).toContain('three');
+    expect(COMMANDS.subscribe_observation?.description).toContain('get_nearby');
+    expect(COMMANDS.subscribe_observation?.description).toContain('not a field of this snapshot');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
   });
 
