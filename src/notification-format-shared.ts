@@ -359,12 +359,14 @@ function formatMarketUpdateMessage(data: Record<string, unknown>): string {
   const firstItem = items[0];
   if (!firstItem) return `${station}${tick}: 0 item updates`;
 
+  const category = nonEmptyString(firstItem.category);
   const itemName = firstItem.item_name ?? firstItem.item_id ?? 'unknown item';
+  const itemLabel = category !== undefined ? `${itemName} (${category})` : `${itemName}`;
   const sell = formatDepth('sell', firstItem.sell_orders);
   const buy = formatDepth('buy', firstItem.buy_orders);
   const depth = [sell, buy].filter(Boolean).join(', ') || 'book emptied';
   const remaining = items.length > 1 ? `; +${items.length - 1} more` : '';
-  return `${station}${tick}: ${items.length} item update${plural}; ${itemName} ${depth}${remaining}`;
+  return `${station}${tick}: ${items.length} item update${plural}; ${itemLabel} ${depth}${remaining}`;
 }
 
 function formatCreditsAmount(value: unknown): string | undefined {

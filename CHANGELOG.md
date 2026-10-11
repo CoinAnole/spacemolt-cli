@@ -117,6 +117,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `modify_order` help states that raising a buy over a cheaper sell fills at the sell price, that the difference plus extra sales tax is `get_action_log event_type=trading.escrow_refunded` and is not on the HTTP response, and that a buy reprice (not only that raise, and not a sell) escrows sales tax so a later cancel refunds what was paid (gameserver 0.611.0). `cancel_order` help says the same sales-tax fact for any buy reprice. Sell cancels are unchanged. **No parser change.**
 - `view_market` / `subscribe_market` table output prints each item's `category` (gameserver 0.613.0). Multi-item summaries add a Category column when any row has one. A one-item book prints it on the item line (`Iron Ore (ore)`). The column and the suffix are omitted when the server omits the field — nothing is printed in their place. `analyze_market` insight categories and ship-listing categories are unchanged. Machine output is unchanged aside from fixtures that now include the field the server sends. **No parser change.**
+- `market_update` previews, including `get_notifications` and `subscribe_market --follow`, put that category on the first named item (`Iron Ore (ore)`). +N more is still a count of the other items and does not list their categories. **No parser change.**
 
 ### Fixed
 

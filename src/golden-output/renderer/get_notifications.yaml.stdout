@@ -15,7 +15,7 @@ notifications:
   - id: "notif-market-1"
     type: market
     msg_type: market_update
-    data: {base_id: haven_exchange, base_name: "Haven Exchange", tick: 901337, items: [{item_id: ore_iron, item_name: "Iron Ore", sell_orders: [{price_each: 12, quantity: 40, source: station}], buy_orders: [{price_each: 9, quantity: 25}]}]}
+    data: {base_id: haven_exchange, base_name: "Haven Exchange", tick: 901337, items: [{item_id: ore_iron, item_name: "Iron Ore", category: ore, sell_orders: [{price_each: 12, quantity: 40, source: station}], buy_orders: [{price_each: 9, quantity: 25}]}]}
     timestamp: 2026-05-23T19:03:02.000Z
   - id: "notif-ship-1"
     type: system
