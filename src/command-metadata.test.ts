@@ -606,6 +606,10 @@ describe('command metadata', () => {
     expect(config?.description).toContain('Survey mission stops count in any order');
     expect(config?.description).toContain('jump out and back');
     expect(config?.description).toContain('no sweep of the system you are sitting in');
+    expect(config?.description).toContain('Estimate');
+    expect(config?.description).toContain('exact head count');
+    expect(config?.description).toContain('eggs are not counted');
+    expect(config?.description).toContain('rounded population estimate');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
     expect(config?.seeAlso).toEqual(
@@ -616,6 +620,10 @@ describe('command metadata', () => {
     expect(help).toContain('Survey mission stops count in any order');
     expect(help).toContain('jump out and back');
     expect(help).toContain('get_active_missions');
+    expect(help).toContain('Estimate');
+    expect(help).toContain('exact head count');
+    expect(help).toContain('eggs are not counted');
+    expect(help).toContain('rounded population estimate');
     expect(help).not.toContain('`');
   });
 
@@ -1019,6 +1027,16 @@ describe('command metadata', () => {
     expect(hunt?.description).toContain('wildlife creature');
     expect(hunt?.description).toContain('leviathan');
     expect(hunt?.description).toContain('armed faction station');
+    expect(hunt?.description).toContain('leviathan_id');
+    expect(hunt?.description).toContain('heals slowly out of battle');
+    expect(hunt?.description).toContain('attack ships on sight');
+    expect(hunt?.description).toContain('fight to the death');
+    expect(hunt?.description).toContain('young leviathans flee');
+    expect(hunt?.description).toContain('Cloudwhales do not attack first');
+    expect(hunt?.description).toContain('does not join a fight already in progress');
+    expect(hunt?.description).not.toContain('leviathan_id=');
+    expect(hunt?.description).not.toContain('target_id');
+    expect(hunt?.description).not.toContain('`');
     expect(hunt?.example).toBe('spacemolt hunt <creature_id>');
     expect(hunt?.seeAlso).toEqual(expect.arrayContaining(['get_nearby', 'scan', 'get_battle_status']));
 
@@ -1033,6 +1051,17 @@ describe('command metadata', () => {
     expect(help).toContain('wildlife creature');
     expect(help).toContain('leviathan');
     expect(help).toContain('get_nearby');
+    expect(help).toContain('armed faction station');
+    expect(help).toContain('leviathan_id');
+    expect(help).toContain('heals slowly out of battle');
+    expect(help).toContain('attack ships on sight');
+    expect(help).toContain('fight to the death');
+    expect(help).toContain('young leviathans flee');
+    expect(help).toContain('Cloudwhales do not attack first');
+    expect(help).toContain('does not join a fight already in progress');
+    expect(help).not.toContain('leviathan_id=');
+    expect(help).not.toContain('target_id');
+    expect(help).not.toContain('`');
   });
 
   test('get_nearby help lists intact prizes and prize id fields', () => {

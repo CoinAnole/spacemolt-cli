@@ -137,7 +137,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   hunt: {
     usage: '<creature_id>',
     description:
-      'Hunt a wildlife creature from get_nearby and start a battle with that single creature. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not.',
+      "Hunt a wildlife creature from get_nearby and start a battle with that single creature. The creature_id you pass is the creature id from get_nearby; for a leviathan it is that leviathan's leviathan_id, stable for its whole life and the creature_id to attack while you are at its POI. Damage you deal stays on that leviathan between fights and heals slowly out of battle. Adult Molt, Rainbow, and Hoarfrost Leviathans attack ships on sight and fight to the death; young leviathans flee; Cloudwhales do not attack first. An aggressive stage attacks ships at its POI and does not join a fight already in progress. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not.",
     example: 'spacemolt hunt <creature_id>',
     discoverWith: ['get_nearby', 'survey_system'],
     seeAlso: ['get_nearby', 'scan', 'get_battle_status'],

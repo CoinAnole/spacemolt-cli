@@ -312,7 +312,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   survey_system: {
     description:
-      "Scan the current system for hidden POIs plus a wildlife species census and bloom status. Survey mission stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in.",
+      "Scan the current system for hidden POIs plus a wildlife species census and bloom status. In the Wildlife table, Estimate is a rounded population estimate for ordinary wildlife, and an exact head count for a leviathan species (eggs are not counted). Survey mission stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in.",
     example: 'spacemolt survey_system',
     seeAlso: ['get_nearby', 'hunt', 'get_system', 'get_active_missions'],
     category: 'Query commands',
