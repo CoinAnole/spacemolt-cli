@@ -874,6 +874,9 @@ describe('help output branches', () => {
     expect(output).toContain('Station paid');
     expect(output).toContain('Shortfall');
     expect(output).toContain('station_paid');
+    expect(output).toContain('ID column');
+    expect(output).toContain('entry id 1500 prints 1500, not 1,500');
+    expect(output).toContain('a negative id keeps its minus sign');
     expect(output).toContain('pass faction_id= when reading the faction log');
     expect(output).toContain(
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
