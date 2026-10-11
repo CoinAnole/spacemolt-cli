@@ -891,6 +891,10 @@ describe('help output branches', () => {
     expect(output).toContain('next_since_id');
     expect(output).toContain('Page-based queries return newest-first');
     expect(output).toContain('since_id requests newer entries oldest-first');
+    const description = COMMANDS.get_action_log?.description ?? '';
+    expect(description).toContain('If next_since_id is absent, keep the current cursor.');
+    expect(description).toContain('If archive reads fail, the request returns an error; retry the same since_id.');
+    expect(description).toContain('since_id requests newer entries oldest-first');
     expect(output).toContain('session.daily_balance');
     expect(output).toContain('other.jettison_dispersed');
     expect(output).toContain('faction.refuel');
