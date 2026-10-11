@@ -37,6 +37,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `service_prize` help now documents that stop, resume, and redirect remain claimant-only, while refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station (gameserver 0.603.0). A yard under construction or damaged does not unlock it. Both ships must still be out of combat at the same POI. **No parser change.**
 - `service_prize` help now documents that repair spends any repair item from your cargo, not only a basic repair kit (gameserver 0.609.2). Pass `item_id=<id>` to choose one; omit it and the cheapest repair item in your cargo is used. On refuel, omit `quantity` or pass 0 to transfer the safe maximum fuel. On repair, omit `quantity` or pass 0 to spend one repair item. Usage lists `item_id=`. Arguments stay `prize_id` and `service_action`. **No parser change.**
+- `get_wrecks` table output prints `Carrion: N` when `carrion` is present on a wreck (age-death leviathan body; amount added to the system each wildlife pass, about 1 minute, while the body lasts; feeds scavengers). Omitted when the field is absent. An explicit `0` prints `Carrion: 0`. Loot is still `loot_wreck`. `--json` / `--yaml` / `--structured` stay pass-through (gameserver 0.614.0). **No parser change.**
 
 ### Crafting
 

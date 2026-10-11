@@ -10,3 +10,10 @@ Wreck: wreck-1
     - 10x Iron Ore
   Modules:
     - Pulse Laser I
+
+Wreck: wreck-cloudwhale-age
+  Ship: cloudwhale (Elder Cloudwhale)
+  Salvage value: 40
+  Carrion: 12
+  Expires tick: 13000
+  Expires at: 2026-05-30T00:00:00Z

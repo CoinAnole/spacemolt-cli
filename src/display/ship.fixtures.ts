@@ -410,7 +410,7 @@ export const droneFixture = {
 };
 
 export const wrecksFixture = {
-  count: 1,
+  count: 2,
   wrecks: [
     {
       id: 'wreck-1',
@@ -434,6 +434,22 @@ export const wrecksFixture = {
       created_at: '2026-05-29T00:00:00Z',
       expires_at: '2026-05-29T01:00:00Z',
       expire_tick: 12050,
+    },
+    {
+      id: 'wreck-cloudwhale-age',
+      type: 'carcass',
+      poi_id: 'sol_asteroid_belt',
+      system_id: 'sol',
+      ship_class: 'cloudwhale',
+      victim_id: 'leviathan_cloudwhale_elder_1',
+      victim_name: 'Elder Cloudwhale',
+      cargo: [],
+      modules: [],
+      salvage_value: 40,
+      carrion: 12,
+      created_at: '2026-05-29T00:00:00Z',
+      expires_at: '2026-05-30T00:00:00Z',
+      expire_tick: 13000,
     },
   ],
 };
