@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import {
   convertPayloadTypes,
   getArgNames,
@@ -4235,5 +4237,84 @@ describe('command metadata', () => {
     const fullHelp = captureFullHelp();
     expect(fullHelp).toContain('Update order price');
     expect(fullHelp).not.toContain('trading.escrow_refunded');
+  });
+
+  test('refit_ship help documents a shipyard reset that returns modules and cargo', () => {
+    const description =
+      'Dock at a shipyard and reset the active ship to the current class definition. Hull stats reset and the class default loadout is installed. Installed modules and all cargo go to station storage; they are not destroyed. Free. Irreversible. A response message of already_current means the ship already matches current class stats and the default-loadout version, and nothing is applied. To restore your own fit, withdraw a returned module from station storage, then install_mod.';
+    const seeAlso = ['get_ship', 'storage_view', 'storage_withdraw', 'install_mod'];
+    const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_ship/refit_ship']?.summary ?? '';
+    const config = COMMANDS.refit_ship;
+
+    expect(CORE_COMMAND_OVERRIDES.refit_ship?.description).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.refit_ship?.positionals).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.refit_ship?.example).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.refit_ship?.discoverWith).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.refit_ship?.apiRoute).toBe('POST /api/v2/spacemolt_ship/refit_ship');
+    expect(CORE_COMMAND_OVERRIDES.refit_ship?.seeAlso).toEqual(seeAlso);
+
+    expect(CURATED_COMMAND_DESCRIPTIONS.refit_ship).toBe(description);
+    expect(config?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.refit_ship);
+    expect(config?.description).toBe(description);
+    expect(config?.usage).toBe('(no arguments; dock at a shipyard)');
+    expect(config?.args).toEqual([]);
+    expect(config?.required).toBeUndefined();
+    expect(config?.schema).toEqual({});
+    expect(config?.route).toEqual({ tool: 'spacemolt_ship', action: 'refit_ship', method: 'POST' });
+    expect(config?.seeAlso).toEqual(seeAlso);
+    expect(generatedSummary).toBe('Refit your active ship to its latest class specifications');
+    expect(generatedSummary).not.toBe(CURATED_COMMAND_DESCRIPTIONS.refit_ship);
+    expect(config?.description).not.toBe(generatedSummary);
+
+    for (const related of seeAlso) {
+      expect(registryHasRelatedCommand(related), `refit_ship related command "${related}"`).toBe(true);
+    }
+
+    const copy = [config?.usage ?? '', config?.description ?? '', ...(config?.seeAlso ?? [])].join('\n');
+    expect(copy).not.toContain('`');
+    expect(copy).not.toMatch(/\bstrips?\b/i);
+    expect(copy).not.toMatch(/threshold/i);
+    expect(copy).not.toMatch(/voidborn/i);
+    expect(copy).not.toMatch(/pulse laser/i);
+    expect(copy).not.toMatch(/disruptor/i);
+  });
+
+  test('unreleased changelog documents refit_ship under Ship between Personnel and Storage', () => {
+    const changelog = fs.readFileSync(path.join(import.meta.dir, '..', 'CHANGELOG.md'), 'utf8');
+    const unreleasedStart = changelog.indexOf('## Unreleased');
+    expect(unreleasedStart).toBeGreaterThanOrEqual(0);
+    const afterHeading = changelog.slice(unreleasedStart + '## Unreleased'.length);
+    const nextRelease = afterHeading.search(/\n## /);
+    const unreleased = nextRelease === -1 ? afterHeading : afterHeading.slice(0, nextRelease);
+    const bullets = unreleased.split('\n').filter((line) => line.startsWith('- ') && line.includes('refit_ship'));
+    expect(bullets).toHaveLength(1);
+    const bullet = bullets[0] ?? '';
+
+    expect(bullet).toContain('dock at a shipyard');
+    expect(bullet).toContain('station storage');
+    expect(bullet).toContain('not destroyed');
+    expect(bullet).toContain('free and irreversible');
+    expect(bullet).toContain('response message of already_current');
+    expect(bullet).toContain('default-loadout version');
+    expect(bullet).toContain('nothing is applied');
+    expect(bullet).toContain('**No parser change.**');
+    expect(bullet).not.toMatch(/threshold/i);
+    expect(bullet).not.toMatch(/voidborn/i);
+    expect(bullet).not.toMatch(/pulse laser/i);
+    expect(bullet).not.toMatch(/disruptor/i);
+    expect(bullet).not.toMatch(/0\.612\.7/);
+    expect(bullet).not.toMatch(/gameserver/i);
+    expect(bullet).not.toMatch(/\berror\b/i);
+
+    const headings = [...unreleased.matchAll(/^### (.+)$/gm)];
+    const bulletIndex = unreleased.indexOf(bullet);
+    const owning = headings.filter((match) => (match.index ?? 0) < bulletIndex).at(-1);
+    const personnelIndex = headings.find((match) => match[1] === 'Personnel')?.index ?? -1;
+    const shipIndex = headings.find((match) => match[1] === 'Ship')?.index ?? -1;
+    const storageIndex = headings.find((match) => match[1] === 'Storage')?.index ?? -1;
+    expect(owning?.[1]).toBe('Ship');
+    expect(personnelIndex).toBeGreaterThanOrEqual(0);
+    expect(shipIndex).toBeGreaterThan(personnelIndex);
+    expect(storageIndex).toBeGreaterThan(shipIndex);
   });
 });

@@ -136,7 +136,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   read_note: 'Read a note document contents.',
   recycle: "Queue lossy recycling that consumes a recipe's outputs from station storage.",
   recall_drone: 'Recall a deployed drone back to your bay',
-  refit_ship: 'Refit your active ship to its latest class specifications',
+  refit_ship:
+    'Dock at a shipyard and reset the active ship to the current class definition. Hull stats reset and the class default loadout is installed. Installed modules and all cargo go to station storage; they are not destroyed. Free. Irreversible. A response message of already_current means the ship already matches current class stats and the default-loadout version, and nothing is applied. To restore your own fit, withdraw a returned module from station storage, then install_mod.',
   release_tow: 'Release a towed wreck at your current location',
   recruit_personnel: 'Recruit fit crew and marines at a station personnel service',
   reload:
