@@ -317,6 +317,11 @@ export const c = {
   },
 };
 
+/** Wrap `text` in `code`, honoring the active plain flag. Unlike `c.red`, the text is inside the span. */
+export function colorText(text: string, code: string): string {
+  return colorize(text, code, activePlain);
+}
+
 export function emitLine(message = ''): void {
   requireBuffer().stdout.push(message);
 }

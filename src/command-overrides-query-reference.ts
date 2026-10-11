@@ -200,7 +200,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_commands',
   },
   get_location: {
-    description: 'Show current system, current POI, docking state, nearby players, and nearby NPCs.',
+    description:
+      'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_location',
   },
@@ -355,7 +356,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/session',
   },
   get_state: {
-    description: 'Show a full player status snapshot with location, ship, cargo, and nearby players.',
+    description:
+      'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.',
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_state',
   },

@@ -1,4 +1,5 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
+import { adultLeviathanContact, juvenileLeviathanContact } from './status.fixtures.ts';
 
 export const chatSentFixture = {
   // Client-oriented aliases accepted by the chat_sent formatter (allowed extras vs ChatResponse).
@@ -1970,6 +1971,13 @@ export const factionScanPoiEmptyFixture = {
   },
 };
 
+export const factionScanPoiLeviathansFixture = {
+  details: {
+    ...factionScanPoiDetails,
+    leviathans: [adultLeviathanContact, juvenileLeviathanContact],
+  },
+};
+
 export const factionScanPoiPartialFixture = {
   details: {
     poi_id: 'sol_central',
@@ -2094,6 +2102,11 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   faction_scan_poi_partial: {
     command: 'faction_scan_poi',
     fixture: factionScanPoiPartialFixture,
+    schemaTarget: 'details',
+  },
+  faction_scan_poi_leviathans: {
+    command: 'faction_scan_poi',
+    fixture: factionScanPoiLeviathansFixture,
     schemaTarget: 'details',
   },
   faction_trade_intel_status: { command: 'faction_trade_intel_status', fixture: factionTradeIntelStatusFixture },

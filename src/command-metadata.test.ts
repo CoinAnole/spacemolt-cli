@@ -4317,4 +4317,33 @@ describe('command metadata', () => {
     expect(shipIndex).toBeGreaterThan(personnelIndex);
     expect(storageIndex).toBeGreaterThan(shipIndex);
   });
+
+  test('location, state, and faction scan help name leviathans without changing get_status', () => {
+    const location =
+      'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.';
+    const state =
+      'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.';
+    const scan =
+      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.";
+    const status = 'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.';
+
+    expect(COMMANDS.get_location?.description).toBe(location);
+    expect(COMMANDS.get_state?.description).toBe(state);
+    expect(COMMANDS.faction_scan_poi?.description).toBe(scan);
+    expect(COMMANDS.get_status?.description).toBe(status);
+    expect(COMMANDS.get_status?.description).not.toContain('leviathan');
+    expect(COMMANDS.get_status?.description).not.toContain('creature_id for hunt');
+    expect(COMMANDS.faction_scan_poi?.usage).toBe('<poi_id>  (for a station: station base ID or station POI ID)');
+    expect(COMMANDS.faction_scan_poi?.description).toContain('station base ID or station POI ID');
+
+    for (const description of [location, state, scan]) {
+      expect(description).toContain('leviathan');
+      expect(description).toContain('does not join a fight already in progress');
+      expect(description).toContain('The id is the creature_id for hunt while you are at its POI.');
+      expect(description).not.toContain('joins battle');
+      expect(description).not.toContain('joins the fight');
+      expect(description).not.toContain('dogpile');
+      expect(description).not.toContain('flees');
+    }
+  });
 });

@@ -25,6 +25,7 @@ import {
   pirateCrewLabel,
   printCompactTable,
 } from './helpers.ts';
+import { emitLeviathanContacts } from './leviathans.ts';
 import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
 import { emitNearbyPrizes, emitPrizeRecoveries } from './prizes.ts';
 
@@ -850,6 +851,7 @@ export const statusFormatters = [
         prizeCount: location?.nearby_prize_count ?? r.nearby_prize_count,
         title: 'Nearby Prizes',
       });
+      emitLeviathanContacts(location?.nearby_leviathans, 'Nearby Leviathans');
       emitPrizeRecoveries(r.prize_recoveries);
       return true;
     },
@@ -1247,6 +1249,7 @@ export const statusFormatters = [
           emitLine(`  ... and ${nearbyPirateCount - NEARBY_TABLE_LIMIT} more`);
         }
       }
+      emitLeviathanContacts(loc.nearby_leviathans, 'Nearby Leviathans');
       if (nearbyEmpireNpcCount > 0) {
         emitLine(`\n${c.dim}Nearby NPCs: ${nearbyEmpireNpcCount}${c.reset}`);
       }

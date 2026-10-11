@@ -3545,4 +3545,29 @@ describe('help output branches', () => {
       .find((line) => line.includes('Suggestion:'));
     expect(declineSuggestion).toBe(suggestion);
   });
+
+  test('showCommandHelp names leviathans on location, state, and faction scan but not get_status', () => {
+    const phrases = [
+      'leviathan',
+      'does not join a fight already in progress',
+      'creature_id for hunt while you are at its POI',
+    ];
+    // faction_scan_poi is a grouped action; help prints it as `faction scan_poi`.
+    for (const command of ['get_location', 'get_state', 'faction scan_poi']) {
+      const capture = captureWriter();
+      expect(showCommandHelp(command, capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+      const output = capture.stdout.join('\n');
+      for (const phrase of phrases) expect(output).toContain(phrase);
+    }
+    expect(showCommandHelp('faction_scan_poi', captureWriter().writer, BUNDLED_COMMAND_REGISTRY)).toBe(false);
+
+    const status = captureWriter();
+    expect(showCommandHelp('get_status', status.writer)).toBe(true);
+    const statusOut = status.stdout.join('\n');
+    expect(statusOut).not.toContain('leviathan');
+    expect(statusOut).not.toContain('creature_id for hunt');
+    expect(statusOut).toContain(
+      'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.',
+    );
+  });
 });
