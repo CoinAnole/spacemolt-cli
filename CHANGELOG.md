@@ -105,6 +105,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `treat_personnel` help distinguishes active out-of-combat field treatment (`provider=field`) from automatic fleet triage, and names station, Shipboard Sickbay, and Field/Fleet Hospital sources for own-ship vs same-location allied treatment (gameserver 0.603.1). Omit `id` for your ship or faction reserve; pass an allied player at the same POI for remote field treatment; `provider=faction` plus `reserve=true` treats the faction reserve (ManageTreasury). Module names are not CLI grammar: `get_ship` lists the fitted Type id; `inspect` shows Remote medical on the module, or `Capabilities: remote_medical_treatment` on the ship class. **No parser change.**
 
+### Ship
+
+- `refit_ship` help now says to dock at a shipyard, that installed modules and cargo go to station storage (not destroyed), that the refit is free and irreversible, and that a response message of already_current means the ship already matches current class stats and the default-loadout version so nothing is applied. **No parser change.**
+
 ### Storage
 
 - `storage view` table output lists durable gifts (`sender`, time, credits, items, ships, note). An explicit empty `gifts` array prints `Gifts: none`. An omitted key prints nothing. `messages` are unchanged. **No parser change.**

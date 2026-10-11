@@ -348,7 +348,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     },
   },
   refit_ship: {
-    usage: '(reset ship to class specs, strips modules)',
+    usage: '(no arguments; dock at a shipyard)',
+    seeAlso: ['get_ship', 'storage_view', 'storage_withdraw', 'install_mod'],
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt_ship/refit_ship',
   },

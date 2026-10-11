@@ -763,6 +763,40 @@ describe('help output branches', () => {
     expect(facility.stdout.join('\n')).toContain('buy_ship_license');
   });
 
+  test('showCommandHelp documents refit_ship as a shipyard reset', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('refit_ship', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+
+    expect(output).toContain('Dock at a shipyard');
+    expect(output).toContain('station storage');
+    expect(output).toContain('not destroyed');
+    expect(output).toContain('Free.');
+    expect(output).toContain('Irreversible.');
+    expect(output).toContain('response message of already_current');
+    expect(output).toContain('default-loadout version');
+    expect(output).toContain('nothing is applied');
+    expect(output).toContain('install_mod');
+    expect(output).toContain('Usage:');
+    expect(output).toContain('spacemolt refit_ship (no arguments; dock at a shipyard)');
+    expect(output).toContain('See also: get_ship, storage view, storage withdraw, install_mod');
+    expect(output).toContain('spacemolt server-help refit_ship');
+    expect(output).not.toContain('storage_view');
+    expect(output).not.toContain('storage_withdraw');
+    expect(output).not.toContain('Fields:');
+    expect(output).not.toContain('Arguments:');
+    expect(output).not.toContain('Example:');
+    expect(output).not.toContain('Discover valid IDs');
+    expect(output).not.toMatch(/\bstrips?\b/i);
+    expect(output).not.toMatch(/threshold/i);
+    expect(output).not.toMatch(/voidborn/i);
+    expect(output).not.toMatch(/pulse laser/i);
+    expect(output).not.toMatch(/disruptor/i);
+    expect(output).not.toContain('`');
+    expect(output).not.toMatch(/\berror\b/i);
+    expect(output).not.toContain('fails with');
+  });
+
   test('full help storage section includes standalone storage workflows', () => {
     const capture = captureWriter();
 
