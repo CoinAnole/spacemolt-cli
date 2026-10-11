@@ -43,6 +43,7 @@ export const getNotificationsFixture = {
           {
             item_id: 'ore_iron',
             item_name: 'Iron Ore',
+            category: 'ore',
             sell_orders: [{ price_each: 12, quantity: 40, source: 'station' }],
             buy_orders: [{ price_each: 9, quantity: 25 }],
           },

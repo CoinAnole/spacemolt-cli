@@ -178,10 +178,13 @@ describe('notification formatting', () => {
       // Policy 5 scalar bag: preferred keys as key=value, no nested JSON dump.
       snippets: ['[ODDITY]', 'code=strange', 'count=2'],
     },
-  ])('$name', ({ notification, snippets }) => {
+  ])('$name', ({ name, notification, snippets }) => {
     const output = stripAnsi(formatNotification(notification).join('\n'));
     for (const snippet of snippets) {
       expect(output).toContain(snippet);
+    }
+    if (name === 'market update') {
+      expect(output).not.toContain('Iron Ore (');
     }
   });
 
@@ -996,6 +999,9 @@ describe('notification formatting', () => {
     if (msgType === 'ship_captured') {
       expect(output).not.toContain('get_nearby');
       expect(output).not.toContain('claim_prize');
+    }
+    if (msgType === 'market_update') {
+      expect(output).not.toContain('Iron Ore (');
     }
   });
 
@@ -9936,6 +9942,7 @@ describe('notification formatting', () => {
       name: string;
       notification: Record<string, unknown>;
       snippets: string[];
+      absent?: string[];
     }> = [
       {
         name: 'market_update zero items',
@@ -9945,6 +9952,7 @@ describe('notification formatting', () => {
           data: { base_name: 'Empty Dock', tick: 1, items: [] },
         },
         snippets: ['Empty Dock tick 1: 0 item updates'],
+        absent: ['Iron Ore ('],
       },
       {
         name: 'market_update single item depth',
@@ -9966,6 +9974,29 @@ describe('notification formatting', () => {
           },
         },
         snippets: ['Haven Exchange tick 901337: 1 item update', 'Iron Ore', 'sell 40 @ 12', 'buy 25 @ 9'],
+        absent: ['Iron Ore ('],
+      },
+      {
+        name: 'market_update single item category',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_id: 'haven_exchange',
+            base_name: 'Haven Exchange',
+            tick: 901337,
+            items: [
+              {
+                item_id: 'ore_iron',
+                item_name: 'Iron Ore',
+                category: 'ore',
+                sell_orders: [{ price_each: 12, quantity: 40, source: 'station' }],
+                buy_orders: [{ price_each: 9, quantity: 25 }],
+              },
+            ],
+          },
+        },
+        snippets: ['Haven Exchange tick 901337: 1 item update; Iron Ore (ore) sell 40 @ 12, buy 25 @ 9'],
       },
       {
         name: 'market_update multi item + more',
@@ -9990,6 +10021,54 @@ describe('notification formatting', () => {
           },
         },
         snippets: ['2 item updates', 'Iron Ore', 'sell 40 @ 12, 10 @ 11, +1 more', '+1 more'],
+        absent: ['Iron Ore ('],
+      },
+      {
+        name: 'market_update multi item first category only',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            tick: 901337,
+            items: [
+              {
+                item_name: 'Iron Ore',
+                category: 'ore',
+                sell_orders: [
+                  { price_each: 12, quantity: 40 },
+                  { price_each: 11, quantity: 10 },
+                  { price_each: 10, quantity: 5 },
+                ],
+                buy_orders: [{ price_each: 9, quantity: 25 }],
+              },
+              { item_id: 'ore_copper', category: 'module', sell_orders: [], buy_orders: [] },
+            ],
+          },
+        },
+        snippets: ['Iron Ore (ore)', '+1 more'],
+        absent: ['module'],
+      },
+      {
+        name: 'market_update multi item hides later category when first omits it',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            tick: 901337,
+            items: [
+              {
+                item_name: 'Iron Ore',
+                sell_orders: [{ price_each: 12, quantity: 40 }],
+                buy_orders: [{ price_each: 9, quantity: 25 }],
+              },
+              { item_id: 'ore_copper', category: 'module', sell_orders: [], buy_orders: [] },
+            ],
+          },
+        },
+        snippets: ['Iron Ore sell 40 @ 12, buy 25 @ 9; +1 more'],
+        absent: ['Iron Ore (', 'module'],
       },
       {
         name: 'market_update book emptied',
@@ -10002,6 +10081,70 @@ describe('notification formatting', () => {
           },
         },
         snippets: ['Haven Exchange: 1 item update', 'Iron Ore book emptied'],
+        absent: ['Iron Ore ('],
+      },
+      {
+        name: 'market_update book emptied with category',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            items: [{ item_name: 'Iron Ore', category: 'ore', sell_orders: [], buy_orders: [] }],
+          },
+        },
+        snippets: ['Haven Exchange: 1 item update; Iron Ore (ore) book emptied'],
+      },
+      {
+        name: 'market_update blank category is omitted',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            items: [{ item_name: 'Iron Ore', category: '   ', sell_orders: [], buy_orders: [] }],
+          },
+        },
+        snippets: ['Iron Ore book emptied'],
+        absent: ['Iron Ore (', '()'],
+      },
+      {
+        name: 'market_update numeric category is omitted',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            items: [{ item_name: 'Iron Ore', category: 4, sell_orders: [], buy_orders: [] }],
+          },
+        },
+        snippets: ['Iron Ore book emptied'],
+        absent: ['Iron Ore ('],
+      },
+      {
+        name: 'market_update object category is omitted',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            items: [{ item_name: 'Iron Ore', category: { id: 'ore' }, sell_orders: [], buy_orders: [] }],
+          },
+        },
+        snippets: ['Iron Ore book emptied'],
+        absent: ['Iron Ore ('],
+      },
+      {
+        name: 'market_update trimmed category',
+        notification: {
+          type: 'market',
+          msg_type: 'market_update',
+          data: {
+            base_name: 'Haven Exchange',
+            items: [{ item_name: 'Iron Ore', category: ' ore ', sell_orders: [], buy_orders: [] }],
+          },
+        },
+        snippets: ['Iron Ore (ore) book emptied'],
       },
       {
         name: 'crafting_update jobs path',
@@ -10224,11 +10367,17 @@ describe('notification formatting', () => {
       },
     ];
 
-    test.each(messageSnippetFixtures)('Message: $name', ({ notification, snippets }) => {
+    test.each(messageSnippetFixtures)('Message: $name', ({ notification, snippets, absent }) => {
       expectTableMessageFromPreview(notification);
       const message = formatNotificationMessage(notification);
       for (const snippet of snippets) {
         expect(message).toContain(snippet);
+      }
+      for (const snippet of absent ?? []) {
+        expect(message).not.toContain(snippet);
+      }
+      if (notification.msg_type === 'market_update') {
+        expect(formatNotificationPreview(notification, { maxLineLength: 120 }).details).toEqual([]);
       }
     });
 
@@ -10253,7 +10402,7 @@ describe('notification formatting', () => {
       const marketMsg = formatNotificationMessage(market);
       expect(marketMsg).toContain('Haven Exchange');
       expect(marketMsg).toContain('1 item update');
-      expect(marketMsg).toContain('Iron Ore');
+      expect(marketMsg).toContain('Iron Ore (ore)');
       expect(marketMsg).toContain('sell 40 @ 12');
       expect(marketMsg).toContain('buy 25 @ 9');
 
@@ -10358,7 +10507,9 @@ describe('notification formatting', () => {
       const output = stripAnsi(formatNotification(notification).join('\n'));
       expect(output).toContain(`[MARKET] ${preview.headline}`);
       expect(output).toContain('Haven Exchange tick 901337: 1 item update');
+      expect(output).not.toContain('Iron Ore (');
       // Table Message matches the same pure headline (no detail fold for market).
+      expect(preview.details).toEqual([]);
       expect(formatNotificationMessage(notification)).toBe(preview.headline);
     });
   });
