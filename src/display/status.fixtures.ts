@@ -1,5 +1,27 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
 
+export const adultLeviathanContact = {
+  leviathan_id: 'lev-molt-1',
+  species: 'molt_leviathan',
+  name: 'Adult Molt Leviathan',
+  stage: 'adult',
+  hull: 800,
+  max_hull: 1200,
+  aggressive: true,
+  in_combat: false,
+};
+
+export const juvenileLeviathanContact = {
+  leviathan_id: 'lev-molt-2',
+  species: 'molt_leviathan',
+  name: 'Juvenile Molt Leviathan',
+  stage: 'juvenile',
+  hull: 0,
+  max_hull: 90,
+  aggressive: false,
+  in_combat: true,
+};
+
 const intactPrizeInfo = {
   prize_id: 'prize-dust-1',
   actor_id: 'actor-prize-1',
@@ -78,6 +100,14 @@ export const getLocationResourcesFixture = {
   location: {
     ...getLocationFixture.location,
     resources: [...v2LocationWorkabilityResources],
+  },
+};
+
+export const getLocationLeviathansFixture = {
+  ...getLocationFixture,
+  location: {
+    ...getLocationFixture.location,
+    nearby_leviathans: [adultLeviathanContact],
   },
 };
 
@@ -178,6 +208,14 @@ export const getStatusResourcesFixture = {
   location: {
     ...getStatusFixture.location,
     resources: [...v2LocationWorkabilityResources],
+  },
+};
+
+export const getStateLeviathansFixture = {
+  ...getStatusFixture,
+  location: {
+    ...getStatusFixture.location,
+    nearby_leviathans: [adultLeviathanContact],
   },
 };
 
@@ -1049,6 +1087,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status_over_capacity: { command: 'get_status', fixture: getStatusOverCapacityFixture },
   get_status_resources: { command: 'get_status', fixture: getStatusResourcesFixture },
   get_state_resources: { command: 'get_state', fixture: getStatusResourcesFixture },
+  get_state_leviathans: { command: 'get_state', fixture: getStateLeviathansFixture },
   get_status_detained: { command: 'get_status', fixture: getStatusDetainedFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
   get_player_arena: { command: 'get_player', fixture: playerArenaFixture },
@@ -1060,6 +1099,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   player_profile: { command: 'player_profile', fixture: publicPlayerProfileFixture },
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_location_resources: { command: 'get_location', fixture: getLocationResourcesFixture },
+  get_location_leviathans: { command: 'get_location', fixture: getLocationLeviathansFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_poi_workability: { command: 'get_poi', fixture: poiWorkabilityFixture },

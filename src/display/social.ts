@@ -24,6 +24,7 @@ import {
   sumNumericField,
   withPausedRentSuffix,
 } from './helpers.ts';
+import { emitLeviathanContacts } from './leviathans.ts';
 import { formatPrizeCaptureLocation, prizeFieldText } from './prize-location.ts';
 import { formatZoneMoveReason } from './zone-move-reason.ts';
 
@@ -969,6 +970,7 @@ const SCAN_CONSUMED_KEYS = new Set([
   'contacts',
   'npcs',
   'pirates',
+  'leviathans',
 ]);
 
 const SHIP_ALIAS_DUMP_KEYS = new Set(['fuel_now', 'fuel_max']);
@@ -1131,6 +1133,7 @@ function emitFactionScanPoi(result: Record<string, unknown>): void {
   emitFactionScanContacts(result);
   emitFactionScanNpcs(result);
   emitFactionScanPirates(result);
+  emitLeviathanContacts(nativeField(result, 'leviathans'), 'Leviathans');
   emitFactionScanLeftovers(result);
 }
 

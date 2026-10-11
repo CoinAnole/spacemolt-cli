@@ -38,6 +38,7 @@ import {
   factionScanPoiDetails,
   factionScanPoiEmptyFixture,
   factionScanPoiFixture,
+  factionScanPoiLeviathansFixture,
   factionScanPoiPartialFixture,
   fleetArenaOnlyFixture,
   fleetFixture,
@@ -45,6 +46,7 @@ import {
   ranchSetCullFixture,
   ranchStatusFixture,
 } from './social.fixtures.ts';
+import { adultLeviathanContact, juvenileLeviathanContact } from './status.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -4860,4 +4862,108 @@ test('faction_scan_poi facility line uses station-only and level-only forms', ()
   });
   expect(levelOnly).toContain('Facility: L3');
   expect(levelOnly).not.toContain(' at ');
+});
+
+const adultLeviathanLine = '  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive';
+const juvenileLeviathanLine =
+  '  Juvenile Molt Leviathan [lev-molt-2] (molt_leviathan) - juvenile - hull 0/90 - not aggressive - in combat';
+
+function scanWithLeviathans(leviathans: unknown): Record<string, unknown> {
+  const fixture = structuredClone(factionScanPoiFixture) as { details: Record<string, unknown> };
+  fixture.details.leviathans = leviathans;
+  return fixture;
+}
+
+function scanLeviathanLine(stdout: string, token: string): string | undefined {
+  return stdout.split('\n').find((line) => line.startsWith('  ') && line.includes(token));
+}
+
+test('faction_scan_poi omits leviathans when the key is absent', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiFixture));
+
+  expect(stdout).not.toContain('Leviathans');
+  expect(stdout).not.toContain('Leviathans: none');
+  expect(stdout).toContain('Pirates (1):');
+  expect(stdout).toContain('  Raider (skiff) - raider - Admiral Kael');
+  expect(stdout).toContain('=== Players ===');
+  expect(stdout).toContain('=== Empire NPCs ===');
+});
+
+test('faction_scan_poi omits leviathans when the array is empty', () => {
+  const stdout = renderFactionScan(scanWithLeviathans([]));
+
+  expect(stdout).not.toContain('Leviathans');
+  expect(stdout).not.toContain('Leviathans: none');
+  expect(stdout).toContain('Pirates (1):');
+});
+
+test('faction_scan_poi prints leviathans after pirates', () => {
+  const fixture = structuredClone(factionScanPoiLeviathansFixture) as { details: Record<string, unknown> };
+  fixture.details.foo_bar = 1;
+  const stdout = renderFactionScan(fixture);
+  const piratesIdx = stdout.indexOf('Pirates (1):');
+  const leviathansIdx = stdout.indexOf('Leviathans (2):');
+
+  expect(leviathansIdx).toBeGreaterThan(piratesIdx);
+  expect(scanLeviathanLine(stdout, 'lev-molt-1')).toBe(adultLeviathanLine);
+  expect(scanLeviathanLine(stdout, 'lev-molt-2')).toBe(juvenileLeviathanLine);
+  expect(juvenileLeviathanLine).toContain('hull 0/90');
+  expect(juvenileLeviathanLine).toContain('not aggressive');
+  expect(juvenileLeviathanLine).toContain(' - in combat');
+  expect(stdout).toContain('=== Players ===');
+  expect(stdout).toContain('=== Empire NPCs ===');
+  expect(stdout).toContain('Foo Bar: 1');
+  expect(stdout).not.toContain('Leviathans:');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout.indexOf(adultLeviathanLine)).toBeLessThan(stdout.indexOf(juvenileLeviathanLine));
+});
+
+test('faction_scan_poi prints not aggressive, hull 0, and in combat on one line', () => {
+  const stdout = renderFactionScan(scanWithLeviathans([juvenileLeviathanContact]));
+
+  expect(stdout).toContain('Leviathans (1):');
+  expect(scanLeviathanLine(stdout, 'lev-molt-2')).toBe(juvenileLeviathanLine);
+  expect(scanLeviathanLine(stdout, 'lev-molt-2')?.endsWith(' - in combat')).toBe(true);
+  expect(scanLeviathanLine(stdout, 'lev-molt-2')?.endsWith(' - aggressive')).toBe(false);
+});
+
+test('faction_scan_poi ignores envelope location leviathans', () => {
+  const omitted = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 2,
+      scan_power: 36,
+      hops: 1,
+      message: 'Scan complete.',
+    },
+    location: { nearby_leviathans: [adultLeviathanContact] },
+  });
+  const differ = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 1,
+      scan_power: 8,
+      hops: 0,
+      leviathans: [adultLeviathanContact],
+    },
+    location: { nearby_leviathans: [juvenileLeviathanContact] },
+  });
+
+  expect(omitted).not.toContain('Leviathan');
+  expect(omitted).not.toContain('lev-molt');
+  expect(differ).toContain('lev-molt-1');
+  expect(differ).not.toContain('lev-molt-2');
+  expect(scanLeviathanLine(differ, 'lev-molt-1')).toBe(adultLeviathanLine);
+});
+
+test('faction_scan_poi colors the leviathan heading and leaves contact lines plain', () => {
+  const stdout = renderFactionScan(structuredClone(factionScanPoiLeviathansFixture), scanColorOptions);
+  const adult = scanLeviathanLine(stdout, 'lev-molt-1');
+  const juvenile = scanLeviathanLine(stdout, 'lev-molt-2');
+
+  expect(stdout).toContain('\n\x1b[31mLeviathans (2):\x1b[0m');
+  expect(adult).toBe(adultLeviathanLine);
+  expect(juvenile).toBe(juvenileLeviathanLine);
+  expect(adult).not.toContain('\x1b');
+  expect(juvenile).not.toContain('\x1b');
 });

@@ -3,17 +3,21 @@ import type { GlobalOptions } from '../types.ts';
 import { hexColor } from './ansi.ts';
 import { renderStructuredResult } from './index.ts';
 import {
+  adultLeviathanContact,
   getLocationFixture,
+  getLocationLeviathansFixture,
   getLocationResourcesFixture,
   getMapFixture,
   getMapStarlessFixture,
   getMapSystemFixture,
+  getStateLeviathansFixture,
   getStatusDetainedFixture,
   getStatusFixture,
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   getSystemAgentsFixture,
   jumpSurveyMissionsEnvelope,
+  juvenileLeviathanContact,
   nearbyArenaFixture,
   nearbyArenaFleesFixture,
   nearbyBossFixture,
@@ -2716,4 +2720,297 @@ test('get_system_agents leaves Docked blank when only some agents report it', ()
   expect(agentsHeader(stdout)).toContain('Docked');
   expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('true');
   expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('');
+});
+
+const adultLeviathanLine = '  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive';
+const juvenileLeviathanLine =
+  '  Juvenile Molt Leviathan [lev-molt-2] (molt_leviathan) - juvenile - hull 0/90 - not aggressive - in combat';
+
+function locationWithLeviathans(leviathans: unknown): Record<string, unknown> {
+  const fixture = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  fixture.location.nearby_leviathans = leviathans;
+  return fixture;
+}
+
+function statusWithLeviathans(leviathans: unknown): Record<string, unknown> {
+  const fixture = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
+  fixture.location.nearby_leviathans = leviathans;
+  return fixture;
+}
+
+function leviathanContact(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return { ...adultLeviathanContact, ...overrides };
+}
+
+function renderLocation(fixture: Record<string, unknown>, renderOptions: GlobalOptions = options): string {
+  return renderStructuredResult('get_location', fixture, renderOptions, context).stdout.join('\n');
+}
+
+function leviathanLine(stdout: string, token: string): string | undefined {
+  return stdout.split('\n').find((line) => line.startsWith('  ') && line.includes(token));
+}
+
+test('get_location omits leviathans when the array is empty', () => {
+  const stdout = renderLocation(locationWithLeviathans([]));
+
+  expect(stdout).not.toContain('Nearby Leviathans');
+  expect(stdout).not.toContain('Leviathans: none');
+  expect(stdout).toContain('Nearby Prizes');
+  expect(stdout).toContain('Nearby Pirates (1):');
+  expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
+});
+
+test('get_location omits leviathans when the key is absent', () => {
+  const stdout = renderLocation(structuredClone(getLocationFixture));
+
+  expect(stdout).not.toContain('Nearby Leviathans');
+  expect(stdout).not.toContain('Leviathans: none');
+  expect(stdout).toContain('Nearby Pirates (1):');
+  expect(stdout).toContain('prize-dust-1');
+});
+
+test('get_location prints one aggressive leviathan between pirates and nearby NPCs', () => {
+  const stdout = renderLocation(structuredClone(getLocationLeviathansFixture));
+  const heading = stdout.split('\n').find((line) => line.includes('Nearby Leviathans'));
+
+  expect(heading).toBe('Nearby Leviathans (1):');
+  expect(heading).not.toContain('\x1b');
+  expect(leviathanLine(stdout, 'lev-molt-1')).toBe(adultLeviathanLine);
+  expect(stdout).not.toContain('in combat');
+  expect(stdout).not.toContain('not aggressive');
+  expect(stdout).toContain('Marlowe [SMC] (prospector)');
+  expect(stdout).toContain('prize-dust-1');
+  expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
+  const prizesIdx = stdout.indexOf('Nearby Prizes');
+  const piratesIdx = stdout.indexOf('Nearby Pirates');
+  const leviathansIdx = stdout.indexOf('Nearby Leviathans');
+  const npcsIdx = stdout.indexOf('Nearby NPCs');
+  expect(piratesIdx).toBeGreaterThan(prizesIdx);
+  expect(leviathansIdx).toBeGreaterThan(piratesIdx);
+  expect(npcsIdx).toBeGreaterThan(leviathansIdx);
+});
+
+test('get_location prints two leviathans in server order', () => {
+  const stdout = renderLocation(locationWithLeviathans([adultLeviathanContact, juvenileLeviathanContact]));
+  const adultIdx = stdout.indexOf(adultLeviathanLine);
+  const juvenileIdx = stdout.indexOf(juvenileLeviathanLine);
+
+  expect(stdout).toContain('Nearby Leviathans (2):');
+  expect(adultIdx).toBeGreaterThan(-1);
+  expect(juvenileIdx).toBeGreaterThan(adultIdx);
+  expect(juvenileLeviathanLine).toContain('hull 0/90');
+  expect(juvenileLeviathanLine).toContain('not aggressive');
+  expect(juvenileLeviathanLine).toContain(' - in combat');
+});
+
+test('get_location prints not aggressive as the full token', () => {
+  const stdout = renderLocation(locationWithLeviathans([leviathanContact({ aggressive: false })]));
+  const line = leviathanLine(stdout, 'lev-molt-1');
+
+  expect(line).toBe('  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - not aggressive');
+  expect(line?.endsWith(' - aggressive')).toBe(false);
+});
+
+test('get_location appends in combat only when in_combat is true', () => {
+  const fighting = renderLocation(locationWithLeviathans([leviathanContact({ in_combat: true })]));
+  const truthy = renderLocation(locationWithLeviathans([leviathanContact({ in_combat: 1 })]));
+  const text = renderLocation(locationWithLeviathans([leviathanContact({ in_combat: 'yes' })]));
+
+  expect(leviathanLine(fighting, 'lev-molt-1')).toBe(`${adultLeviathanLine} - in combat`);
+  expect(leviathanLine(fighting, 'lev-molt-1')?.endsWith(' - in combat')).toBe(true);
+  expect(leviathanLine(truthy, 'lev-molt-1')).toBe(adultLeviathanLine);
+  expect(leviathanLine(text, 'lev-molt-1')).not.toContain('in combat');
+});
+
+test('get_location prints hull 0', () => {
+  const stdout = renderLocation(locationWithLeviathans([leviathanContact({ hull: 0, max_hull: 90 })]));
+  const line = leviathanLine(stdout, 'lev-molt-1');
+
+  expect(line).toContain('hull 0/90');
+  expect(line).not.toContain('hull ?/');
+  expect(line).toContain(' - hull ');
+});
+
+test('get_location keeps brackets when the id equals the name', () => {
+  const stdout = renderLocation(
+    locationWithLeviathans([leviathanContact({ name: 'lev-molt-1', leviathan_id: 'lev-molt-1' })]),
+  );
+
+  expect(leviathanLine(stdout, 'lev-molt-1')).toBe(
+    '  lev-molt-1 [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive',
+  );
+});
+
+test('get_location falls back when name or id is missing', () => {
+  const missingName = leviathanContact();
+  delete missingName.name;
+  const missingBoth = leviathanContact();
+  delete missingBoth.name;
+  delete missingBoth.leviathan_id;
+  const whitespaceId = leviathanContact({ name: ' ', leviathan_id: '   ' });
+
+  expect(leviathanLine(renderLocation(locationWithLeviathans([missingName])), 'lev-molt-1')).toBe(
+    '  lev-molt-1 [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive',
+  );
+  const unknown = leviathanLine(renderLocation(locationWithLeviathans([missingBoth])), 'Unknown');
+  expect(unknown).toBe('  Unknown (molt_leviathan) - adult - hull 800/1200 - aggressive');
+  expect(unknown).not.toContain('[');
+  const blankId = leviathanLine(renderLocation(locationWithLeviathans([whitespaceId])), 'Unknown');
+  expect(blankId?.startsWith('  Unknown')).toBe(true);
+  expect(blankId).not.toContain('[');
+});
+
+test('get_location prints ? for non-finite hull sides and does not coerce strings', () => {
+  const both = renderLocation(locationWithLeviathans([leviathanContact({ hull: 'nope', max_hull: Number.NaN })]));
+  const maxOnly = renderLocation(locationWithLeviathans([leviathanContact({ hull: 'nope', max_hull: 90 })]));
+  const numericString = renderLocation(locationWithLeviathans([leviathanContact({ hull: '800', max_hull: 1200 })]));
+  const big = renderLocation(locationWithLeviathans([leviathanContact({ hull: 800n, max_hull: 1200n })]));
+
+  expect(leviathanLine(both, 'lev-molt-1')).toContain('hull ?/?');
+  expect(leviathanLine(maxOnly, 'lev-molt-1')).toContain('hull ?/90');
+  expect(leviathanLine(maxOnly, 'lev-molt-1')).not.toContain('nope');
+  expect(leviathanLine(numericString, 'lev-molt-1')).toContain('hull ?/1200');
+  expect(leviathanLine(numericString, 'lev-molt-1')).not.toContain('hull 800/');
+  expect(leviathanLine(big, 'lev-molt-1')).toContain('hull ?/?');
+  expect(leviathanLine(big, 'lev-molt-1')).not.toContain('1200');
+});
+
+test('get_location omits the aggressive token for non-booleans', () => {
+  const yes = leviathanContact({ aggressive: 'yes' });
+  const missing = leviathanContact();
+  delete missing.aggressive;
+  const yesLine = leviathanLine(renderLocation(locationWithLeviathans([yes])), 'lev-molt-1');
+  const missingLine = leviathanLine(renderLocation(locationWithLeviathans([missing])), 'lev-molt-1');
+  const expected = '  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200';
+
+  expect(yesLine).toBe(expected);
+  expect(yesLine).not.toContain('aggressive');
+  expect(missingLine).toBe(expected);
+  expect(missingLine).not.toContain('not aggressive');
+});
+
+test('get_location trims whitespace-only identity fields', () => {
+  const stdout = renderLocation(
+    locationWithLeviathans([leviathanContact({ name: ' ', leviathan_id: ' lev-molt-1 ', species: ' ', stage: ' ' })]),
+  );
+  const line = leviathanLine(stdout, 'lev-molt-1');
+
+  expect(line).toBe('  lev-molt-1 [lev-molt-1] - hull 800/1200 - aggressive');
+  expect(line).not.toContain('()');
+  expect(line).not.toContain('molt_leviathan');
+  expect(line).not.toContain('adult');
+});
+
+test('get_location does not cap leviathan rows', () => {
+  const rows = Array.from({ length: 11 }, (_, index) =>
+    leviathanContact({
+      leviathan_id: `lev-${index + 1}`,
+      name: `Pod ${index + 1}`,
+      hull: index,
+      max_hull: 10,
+      aggressive: false,
+    }),
+  );
+  const stdout = renderLocation(locationWithLeviathans(rows));
+  const lines = stdout.split('\n').filter((line) => /^ {2}Pod \d+ \[lev-\d+\]/.test(line));
+
+  expect(stdout).toContain('Nearby Leviathans (11):');
+  expect(lines).toHaveLength(11);
+  expect(stdout.indexOf('Pod 1 [')).toBeLessThan(stdout.indexOf('Pod 11 ['));
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_location skips non-record leviathan entries', () => {
+  const mixed = renderLocation(locationWithLeviathans([null, adultLeviathanContact, 'skip', 1]));
+  const junk = renderLocation(locationWithLeviathans([null, 'skip', 1, false]));
+
+  expect(mixed).toContain('Nearby Leviathans (1):');
+  expect(leviathanLine(mixed, 'lev-molt-1')).toBe(adultLeviathanLine);
+  expect(junk).not.toContain('Nearby Leviathans');
+  expect(junk).not.toContain('Leviathans: none');
+});
+
+test('get_location colors the leviathan heading and leaves the contact line plain', () => {
+  const colored = renderLocation(structuredClone(getLocationLeviathansFixture), colorOptions);
+  const plain = renderLocation(structuredClone(getLocationLeviathansFixture));
+  const coloredLine = leviathanLine(colored, 'lev-molt-1');
+  const plainHeading = plain.split('\n').find((line) => line.includes('Nearby Leviathans'));
+
+  expect(colored).toContain('\n\x1b[31mNearby Leviathans (1):\x1b[0m');
+  expect(coloredLine).toBe(adultLeviathanLine);
+  expect(coloredLine).not.toContain('\x1b');
+  expect(plainHeading).toBe('Nearby Leviathans (1):');
+  expect(plainHeading).not.toContain('\x1b');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+] as const)('%s prints location leviathans between prizes and recoveries', (command) => {
+  const stdout = renderStructuredResult(
+    command,
+    structuredClone(
+      command === 'get_state' ? getStateLeviathansFixture : statusWithLeviathans([adultLeviathanContact]),
+    ),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Leviathans (1):');
+  expect(leviathanLine(stdout, 'lev-molt-1')).toBe(adultLeviathanLine);
+  expect(stdout).toContain('Nearby Players: 1');
+  expect(stdout).toContain('  - Ibis (hauler)');
+  expect(stdout).toContain('prize-dust-1');
+  const prizesIdx = stdout.indexOf('Nearby Prizes');
+  const leviathansIdx = stdout.indexOf('Nearby Leviathans');
+  const recoveriesIdx = stdout.indexOf('=== Prize recoveries ===');
+  expect(leviathansIdx).toBeGreaterThan(prizesIdx);
+  expect(recoveriesIdx).toBeGreaterThan(leviathansIdx);
+});
+
+test.each(['get_status', 'get_state'] as const)('%s omits leviathans when the array is empty or absent', (command) => {
+  const empty = renderStructuredResult(command, statusWithLeviathans([]), options, context).stdout.join('\n');
+  const absent = renderStructuredResult(command, structuredClone(getStatusFixture), options, context).stdout.join('\n');
+
+  expect(empty).not.toContain('Nearby Leviathans');
+  expect(empty).not.toContain('Leviathans: none');
+  expect(absent).not.toContain('Nearby Leviathans');
+  expect(absent).not.toContain('Leviathans: none');
+});
+
+test('get_status does not read top-level leviathan arrays', () => {
+  const fixture = structuredClone(getStatusFixture) as Record<string, unknown>;
+  fixture.nearby_leviathans = [adultLeviathanContact];
+  fixture.leviathans = [juvenileLeviathanContact];
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Leviathan');
+  expect(stdout).not.toContain('lev-molt');
+});
+
+test('get_status_summary does not print leviathans', () => {
+  const stdout = renderStructuredResult(
+    'get_status_summary',
+    statusWithLeviathans([adultLeviathanContact]),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Leviathan');
+  expect(stdout).not.toContain('lev-molt');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+] as const)('%s with leviathans still omits the Active Missions appendix', (command) => {
+  const stdout = renderStructuredResult(
+    command,
+    { ...statusWithLeviathans([adultLeviathanContact]), missions: jumpSurveyMissionsEnvelope },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(adultLeviathanLine);
+  expect(stdout).not.toContain('=== Active Missions ===');
 });
