@@ -152,6 +152,22 @@ function actionLogCell(stdout: string, rowNeedle: string, column: string): strin
   return index >= 0 ? cells[index] : undefined;
 }
 
+function actionLogDataIdCells(stdout: string): string[] {
+  const header = actionLogHeader(stdout);
+  if (header === undefined) return [];
+  const idIndex = header
+    .split('|')
+    .map((part) => part.trim())
+    .indexOf('ID');
+  if (idIndex < 0) return [];
+  const cells: string[] = [];
+  for (const line of stdout.split('\n')) {
+    if (line === header || !line.includes('|') || line.includes('---')) continue;
+    cells.push(line.split('|').map((part) => part.trim())[idIndex] ?? '');
+  }
+  return cells;
+}
+
 function renderActionLog(fixture: Record<string, unknown>): string {
   const rendered = renderStructuredResult('get_action_log', fixture, options, context);
   const stdout = rendered.stdout.join('\n');
@@ -237,6 +253,10 @@ test('renders cursor action-log entries in server order with the next polling cu
   expect(stdout.indexOf('Faction production cycle completed.')).toBeLessThan(
     stdout.indexOf('Prospector buy order filled at Nova Terra Central.'),
   );
+  expect(actionLogHeaderColumns(stdout)[0]).toBe('ID');
+  expect(actionLogDataIdCells(stdout)).toEqual(['101', '105']);
+  expect(actionLogCell(stdout, '101', 'ID')).toBe('101');
+  expect(actionLogCell(stdout, '105', 'ID')).toBe('105');
   expect(stdout).toContain('Timestamp');
   expect(stdout).toContain('Summary');
   expect(stdout).toContain('Category');
@@ -273,6 +293,277 @@ test('omits malformed action-log cursors from human output', () => {
     expect(stdout).not.toContain('Next since_id:');
     expect(stdout).toContain('Faction production cycle completed.');
   }
+});
+
+test('prints action-log entry ids in server order', () => {
+  const stdout = renderActionLog(structuredClone(actionLogFixture));
+  expect(actionLogHeaderColumns(stdout)[0]).toBe('ID');
+  expect(actionLogDataIdCells(stdout)).toEqual(['1', '4', '2', '3', '5']);
+  const summaries = ['iron smelting', 'Queued 10', 'Ore Refinery', 'Drone Control', 'Prospector completed'];
+  let last = -1;
+  for (const summary of summaries) {
+    const index = stdout.indexOf(summary);
+    expect(index).toBeGreaterThan(last);
+    last = index;
+  }
+  expect(actionLogCell(stdout, 'iron smelting', 'ID')).toBe('1');
+  expect(actionLogCell(stdout, 'Queued 10', 'ID')).toBe('4');
+  expect(actionLogCell(stdout, 'Ore Refinery', 'ID')).toBe('2');
+  expect(actionLogCell(stdout, 'Drone Control', 'ID')).toBe('3');
+  expect(actionLogCell(stdout, 'Prospector completed', 'ID')).toBe('5');
+  expect(stdout).not.toContain('Next since_id:');
+});
+
+test('puts ID first on action-log fixtures that carry integer ids', () => {
+  for (const fixture of [
+    actionLogFixture,
+    actionLogCursorFixture,
+    actionLogPersonnelCaptureFixture,
+    actionLogFactionRefuelFixture,
+    actionLogFreightEscrowFixture,
+    actionLogPirateDestroyedFixture,
+  ]) {
+    const stdout = renderActionLog(structuredClone(fixture));
+    expect(actionLogHeaderColumns(stdout)[0]).toBe('ID');
+  }
+});
+
+test('omits the ID column when no action-log entry has an integer id', () => {
+  const fixture = structuredClone(actionLogFixture);
+  for (const entry of fixture.entries) {
+    delete (entry as { id?: unknown }).id;
+  }
+  const stdout = renderActionLog(fixture);
+  expect(actionLogHeaderColumns(stdout)).not.toContain('ID');
+  expect(stdout).toContain('Completed basic iron smelting.');
+  expect(stdout).toContain('Queued 10 runs of steel_plate at personal facility.');
+});
+
+test('leaves a blank ID cell when only a sibling entry has an integer id', () => {
+  const fixture = structuredClone(actionLogFixture);
+  delete (fixture.entries[1] as { id?: unknown }).id;
+  const stdout = renderActionLog(fixture);
+  expect(actionLogHeaderColumns(stdout)[0]).toBe('ID');
+  expect(actionLogCell(stdout, 'Queued 10', 'ID')).toBe('');
+  expect(actionLogCell(stdout, 'iron smelting', 'ID')).toBe('1');
+  expect(actionLogDataIdCells(stdout)).toEqual(['1', '', '2', '3', '5']);
+});
+
+function actionLogIdRow(id: unknown, summary: string, includeId = true): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    created_at: '2026-09-24T16:00:00.000Z',
+    event_type: 'skill.level_up',
+    category: 'skill',
+    summary,
+  };
+  if (includeId) row.id = id;
+  return row;
+}
+
+test('prints canonical ungrouped digits for action-log entry ids', () => {
+  const cases: Array<{ id: unknown; expected: string; summary: string }> = [
+    { id: 1500, expected: '1500', summary: 'Safe fifteen hundred.' },
+    { id: 0, expected: '0', summary: 'Zero entry id.' },
+    { id: -1500, expected: '-1500', summary: 'Negative fifteen hundred.' },
+    { id: -0, expected: '0', summary: 'Negative zero number.' },
+    { id: 9007199254740993n, expected: '9007199254740993', summary: 'Bigint past the safe range.' },
+    { id: 0n, expected: '0', summary: 'Zero bigint id.' },
+    { id: -1n, expected: '-1', summary: 'Negative bigint id.' },
+    { id: '9007199254740993', expected: '9007199254740993', summary: 'Digit string past the safe range.' },
+    { id: '  105  ', expected: '105', summary: 'Padded digit string.' },
+    { id: '+1500', expected: '1500', summary: 'Plus digit string.' },
+    { id: '007', expected: '7', summary: 'Padded zeros digit string.' },
+    { id: '-0', expected: '0', summary: 'Negative zero digit string.' },
+    { id: '000', expected: '0', summary: 'Zero digit string.' },
+    { id: '-1500', expected: '-1500', summary: 'Negative digit string.' },
+  ];
+  for (const { id, expected, summary } of cases) {
+    const stdout = renderActionLog(actionLogPage([actionLogIdRow(id, summary)], 'skill'));
+    expect(actionLogHeaderColumns(stdout)[0], summary).toBe('ID');
+    expect(actionLogCell(stdout, summary, 'ID'), summary).toBe(expected);
+    expect(stdout, summary).not.toContain('9007199254740992');
+    expect(actionLogCell(stdout, summary, 'ID'), summary).not.toContain(',');
+  }
+});
+
+test('prints an ungrouped entry id beside grouped credits', () => {
+  const stdout = renderActionLog(
+    actionLogPage(
+      [pirateEntry({ credits_earned: 1500 }, { id: 1500, summary: 'Bounty beside its entry id.' })],
+      'combat',
+    ),
+  );
+  const idCell = actionLogCell(stdout, 'Bounty beside its entry id.', 'ID');
+  expect(idCell).toBe('1500');
+  expect(idCell).not.toContain(',');
+  expect(idCell).not.toContain('1,500');
+  expect(actionLogCell(stdout, 'Bounty beside its entry id.', 'Credits')).toBe('1,500cr');
+});
+
+test('omits the ID column for missing and non-integer action-log ids', () => {
+  const junk: unknown[] = [
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    true,
+    false,
+    'nope',
+    '1e3',
+    '1,500',
+    '1.0',
+    Number('9007199254740993'),
+    { bad: true },
+    ['bad-id'],
+    null,
+    '',
+    '   ',
+  ];
+  for (const value of junk) {
+    const stdout = renderActionLog(actionLogPage([actionLogIdRow(value, 'Non-integer id is omitted.')], 'skill'));
+    expect(actionLogHeaderColumns(stdout), String(value)).not.toContain('ID');
+    expect(stdout, String(value)).not.toContain('1.5');
+    expect(stdout, String(value)).not.toContain('true');
+    expect(stdout, String(value)).not.toContain('false');
+    expect(stdout, String(value)).not.toContain('1,000');
+    expect(stdout, String(value)).not.toContain('1,500');
+    expect(stdout, String(value)).not.toContain('9007199254740992');
+    expect(stdout, String(value)).not.toContain('9007199254740993');
+    expect(stdout, String(value)).not.toContain('NaN');
+    expect(stdout, String(value)).not.toContain('[object Object]');
+    expect(stdout, String(value)).not.toContain('nope');
+    expect(stdout, String(value)).not.toContain('1e3');
+    expect(stdout, String(value)).not.toContain('1.0');
+    expect(stdout, String(value)).not.toContain('bad-id');
+    expect(stdout, String(value)).not.toContain('Infinity');
+  }
+
+  const missing = renderActionLog(actionLogPage([actionLogIdRow(undefined, 'Missing entry id.', false)], 'skill'));
+  expect(actionLogHeaderColumns(missing)).not.toContain('ID');
+  expect(missing).toContain('Missing entry id.');
+});
+
+test('drops a spread id_display that is not the entry id', () => {
+  for (const id of [undefined, 'nope'] as const) {
+    for (const idDisplay of ['1|2', { bad: true }] as const) {
+      const entry = actionLogIdRow(id, 'Poisoned display row.', id !== undefined);
+      entry.id_display = idDisplay;
+      const stdout = renderActionLog(actionLogPage([entry], 'skill'));
+      expect(actionLogHeaderColumns(stdout), `${String(id)} ${JSON.stringify(idDisplay)}`).not.toContain('ID');
+      expect(stdout).not.toContain('1|2');
+      expect(stdout).not.toContain('[object Object]');
+      if (id === 'nope') expect(stdout).not.toContain('nope');
+    }
+  }
+
+  const valid = actionLogIdRow(7, 'Valid id drops poisoned display.');
+  valid.id_display = '1|2';
+  const stdout = renderActionLog(actionLogPage([valid], 'skill'));
+  expect(actionLogCell(stdout, 'Valid id drops poisoned display.', 'ID')).toBe('7');
+  expect(stdout).not.toContain('1|2');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('does not lift data.id into the action-log ID column', () => {
+  const absent = renderActionLog(
+    actionLogPage(
+      [
+        {
+          created_at: '2026-09-24T16:00:00.000Z',
+          event_type: 'skill.level_up',
+          category: 'skill',
+          summary: 'Nested id is not the entry.',
+          data: { id: 99 },
+        },
+      ],
+      'skill',
+    ),
+  );
+  expect(actionLogHeaderColumns(absent)).not.toContain('ID');
+  expect(absent).not.toContain('99');
+
+  const empty = renderActionLog(
+    actionLogPage(
+      [
+        {
+          id: '',
+          created_at: '2026-09-24T16:00:00.000Z',
+          event_type: 'skill.level_up',
+          category: 'skill',
+          summary: 'Empty string id ignores nested id.',
+          data: { id: 99 },
+        },
+      ],
+      'skill',
+    ),
+  );
+  expect(actionLogHeaderColumns(empty)).not.toContain('ID');
+  expect(empty).not.toContain('99');
+
+  const wins = renderActionLog(
+    actionLogPage(
+      [
+        {
+          id: 7,
+          created_at: '2026-09-24T16:00:00.000Z',
+          event_type: 'skill.level_up',
+          category: 'skill',
+          summary: 'Entry id wins over nested id.',
+          data: { id: 99 },
+        },
+      ],
+      'skill',
+    ),
+  );
+  expect(actionLogCell(wins, 'Entry id wins over nested id.', 'ID')).toBe('7');
+  expect(wins).not.toContain('99');
+});
+
+test('prints a negative entry id and still omits a negative next cursor', () => {
+  const row = actionLogIdRow(-1500, 'Negative entry id stays visible.');
+  const stdout = renderActionLog(actionLogPage([row], 'skill'));
+  expect(actionLogCell(stdout, 'Negative entry id stays visible.', 'ID')).toBe('-1500');
+  expect(stdout).not.toContain('Next since_id:');
+
+  const withCursor = renderActionLog({
+    ...actionLogPage([row], 'skill'),
+    next_since_id: -1n,
+  });
+  expect(actionLogCell(withCursor, 'Negative entry id stays visible.', 'ID')).toBe('-1500');
+  expect(withCursor).not.toContain('Next since_id:');
+});
+
+test('prints non-negative bigint action-log cursors and still omits malformed ones', () => {
+  const printed: Array<{ cursor: unknown; line: string }> = [
+    { cursor: 105n, line: 'Next since_id: 105' },
+    { cursor: 0n, line: 'Next since_id: 0' },
+    { cursor: 9007199254740993n, line: 'Next since_id: 9007199254740993' },
+  ];
+  for (const { cursor, line } of printed) {
+    const fixture = structuredClone(actionLogCursorFixture) as Record<string, unknown>;
+    fixture.next_since_id = cursor;
+    const stdout = renderActionLog(fixture);
+    expect(stdout, String(cursor)).toContain(line);
+    expect(stdout, String(cursor)).not.toContain('9007199254740992');
+  }
+
+  for (const cursor of [-1n, Number('9007199254740993'), '105', '  105  ', '+105']) {
+    const fixture = structuredClone(actionLogCursorFixture) as Record<string, unknown>;
+    fixture.next_since_id = cursor;
+    const stdout = renderActionLog(fixture);
+    expect(stdout, String(cursor)).not.toContain('Next since_id:');
+    expect(stdout, String(cursor)).toContain('Faction production cycle completed.');
+    expect(stdout, String(cursor)).not.toContain('9007199254740992');
+  }
+});
+
+test('prints a zero bigint next cursor when the action log has no entries', () => {
+  const stdout = renderActionLog({
+    ...actionLogPage([], 'all'),
+    next_since_id: 0n,
+  });
+  expect(stdout).toContain('(None)');
+  expect(stdout).toContain('Next since_id: 0');
+  expect(stdout).not.toContain('ID');
 });
 
 test('lifts nested craft receipt fields into action-log table columns', () => {
@@ -462,7 +753,7 @@ test('keeps Pilot and Fuel columns on mixed action-log pages', () => {
 
 test('renders combat.pirate_destroyed credits from action-log data', () => {
   const stdout = renderActionLog(structuredClone(actionLogPirateDestroyedFixture));
-  expect(actionLogHeaderColumns(stdout)).toEqual(['Timestamp', 'Summary', 'Category', 'Event', 'Credits']);
+  expect(actionLogHeaderColumns(stdout)).toEqual(['ID', 'Timestamp', 'Summary', 'Category', 'Event', 'Credits']);
   expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('1,500cr');
   expect(actionLogCell(stdout, 'Skiff', 'Credits')).toBe('0cr');
 });
@@ -697,6 +988,7 @@ test('inserts Credits after Shortfall and before Base', () => {
 test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
   const stdout = renderActionLog(structuredClone(actionLogFreightEscrowFixture));
   expect(actionLogHeaderColumns(stdout)).toEqual([
+    'ID',
     'Timestamp',
     'Summary',
     'Category',

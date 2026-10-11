@@ -106,6 +106,23 @@ function formatActionLogCredits(value: unknown): string | undefined {
   return undefined;
 }
 
+const ACTION_LOG_INTEGER_DIGITS = /^[+-]?\d+$/;
+
+/** Canonical decimal digits for an action-log id. No grouping, no cr suffix. */
+function formatActionLogIntegerDigits(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value)) return undefined;
+    return String(value); // -0 becomes "0"
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!ACTION_LOG_INTEGER_DIGITS.test(trimmed)) return undefined;
+    return BigInt(trimmed).toString(); // "007" -> "7", "+1500" -> "1500", "-0" -> "0"
+  }
+  return undefined;
+}
+
 function formatCycles(value: unknown): string | undefined {
   const number = formatNumber(value);
   if (number === undefined) return undefined;
@@ -1361,16 +1378,21 @@ export const socialFormatters = [
           pilot_display: formatActorIdentity(username, playerId),
           fuel_display: formatNumber(fuelAmount),
         };
+        delete row.id_display;
+        const idDisplay = formatActionLogIntegerDigits(entry.id);
+        if (idDisplay !== undefined) row.id_display = idDisplay;
         if (stationPaidDisplay !== undefined) row.station_paid_display = stationPaidDisplay;
         if (shortfallDisplay !== undefined) row.shortfall_display = shortfallDisplay;
         if (creditsDisplay !== undefined) row.credits_display = creditsDisplay;
         return row;
       });
-      const columns: Array<[string, string[]]> = [
+      const columns: Array<[string, string[]]> = [];
+      if (hasAnyField(rows, ['id_display'])) columns.push(['ID', ['id_display']]);
+      columns.push(
         ['Timestamp', ['timestamp_preview', 'created_at', 'timestamp']],
         ['Summary', ['summary', 'message', 'description']],
         ['Category', ['category']],
-      ];
+      );
       if (hasAnyField(rows, ['event_type', 'type'])) columns.push(['Event', ['event_type', 'type']]);
       if (hasAnyField(rows, ['pilot_display'])) columns.push(['Pilot', ['pilot_display']]);
       if (hasAnyField(rows, ['commission_id'])) columns.push(['Commission', ['commission_id']]);
@@ -1403,8 +1425,9 @@ export const socialFormatters = [
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);
       const nextSinceId = r.next_since_id;
-      if (typeof nextSinceId === 'number' && Number.isSafeInteger(nextSinceId) && nextSinceId >= 0) {
-        emitLine(`${c.dim}Next since_id: ${nextSinceId}${c.reset}`);
+      const nextCursor = typeof nextSinceId === 'string' ? undefined : formatActionLogIntegerDigits(nextSinceId);
+      if (nextCursor !== undefined && !nextCursor.startsWith('-')) {
+        emitLine(`${c.dim}Next since_id: ${nextCursor}${c.reset}`);
       }
       return true;
     },
