@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.609.4",
+  "generatedAtGameserver": "v0.613.8",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].difficulty",
@@ -29,6 +29,8 @@
     "citizenship_list|citizenship_list|required-missing|empires[0].has_pending",
     "citizenship_list|citizenship_list|required-missing|empires[1].has_pending",
     "create_faction|create_faction|required-missing|message",
+    "dock_gifts|dock|required-missing|station_condition.satisfied_count",
+    "dock_gifts|dock|required-missing|station_condition.total_service_infra",
     "dock_missions_cargo|dock|required-missing|details.station_condition.satisfied_count",
     "dock_missions_cargo|dock|required-missing|details.station_condition.total_service_infra",
     "dock_missions_cargo|dock|required-missing|location.nearby_prize_count",

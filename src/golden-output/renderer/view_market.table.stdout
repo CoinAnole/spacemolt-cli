@@ -4,10 +4,10 @@
 
 === Items ===
 
-  Item      | ID        | Best Buy | Buy Depth | Best Sell | Sell Depth
-  ----------+-----------+----------+-----------+-----------+-----------
-  Iron Ore  | ore_iron  | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
-  Fuel Cell | fuel_cell |          |           |           |           
+  Item      | ID        | Category | Best Buy | Buy Depth | Best Sell | Sell Depth
+  ----------+-----------+----------+----------+-----------+-----------+-----------
+  Iron Ore  | ore_iron  | ore      | 15 cr    | 575 / 2   | 18 cr     | 15 / 2    
+  Fuel Cell | fuel_cell | fuel     |          |           |           |           
 
 Depth columns show quantity / orders at the best price.
 Use spacemolt view_market <item_id> for full order depth.
