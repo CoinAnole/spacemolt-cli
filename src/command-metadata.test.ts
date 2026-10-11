@@ -1826,6 +1826,30 @@ describe('command metadata', () => {
     expect(actionLogHelp).toContain('Credits');
   });
 
+  test('get_wrecks help documents age-death carrion', () => {
+    const description = BUNDLED_COMMAND_REGISTRY.commands.get_wrecks?.description ?? '';
+    expect(description).toContain('Carrion');
+    expect(description).toContain('died of age');
+    expect(description).toContain('loot_wreck');
+    expect(description).toContain('wildlife pass');
+    expect(description).toContain('omitted when carrion is absent');
+    expect(description).toContain('Carrion: 0');
+    expect(description).toContain('Loot grammar is unchanged');
+    expect(description).toContain('Expires tick');
+    expect(description).not.toContain('`');
+
+    const help = captureHelp('get_wrecks');
+    expect(help).toContain('Carrion');
+    expect(help).toContain('died of age');
+    expect(help).toContain('loot_wreck');
+    expect(help).toContain('wildlife pass');
+    expect(help).toContain('omitted when carrion is absent');
+    expect(help).toContain('Carrion: 0');
+    expect(help).toContain('Loot grammar is unchanged');
+    expect(help).toContain('Expires tick');
+    expect(help).not.toContain('`');
+  });
+
   test('view_market help teaches Company Store narrowing', () => {
     const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
     expect(viewMarket?.description).toContain('public plus your faction');

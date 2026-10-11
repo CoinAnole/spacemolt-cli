@@ -181,7 +181,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_wrecks: {
     description:
-      "List wrecks and jettison containers at the current POI, including cargo and modules (name, type, instance ID). Ship and pirate wrecks persist until looted or salvaged. Jettison containers despawn after 10 minutes; matching cargo settles back into the POI's deposits.",
+      "List wrecks and jettison containers at the current POI, including cargo and modules (name, type, instance ID). Ship and pirate wrecks persist until looted or salvaged. Jettison containers despawn after 10 minutes; matching cargo settles back into the POI's deposits. A leviathan that died of age can leave a body you still loot with loot_wreck; a Cloudwhale age-death body lasts about a day, and Expires tick / Expires at on that wreck are the lifetime. When carrion is present, table output prints Carrion: N (the amount that body adds to the system every wildlife pass, about 1 minute, while it lasts; it feeds the scavengers there). The line is omitted when carrion is absent. An explicit 0 prints Carrion: 0. Loot grammar is unchanged.",
     discoverWith: ['get_status'],
     seeAlso: ['loot_wreck', 'jettison', 'tow_wreck'],
     category: 'Query commands',

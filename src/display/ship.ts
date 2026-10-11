@@ -460,6 +460,13 @@ function renderBulkReload(r: Record<string, unknown>): void {
   printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
 }
 
+// Finite numbers and bigints only. Absent, null, non-finite, and non-numbers omit.
+function formatBareNumber(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
 export const shipFormatters = [
   formatter(
     (r) => {
@@ -838,6 +845,8 @@ export const shipFormatters = [
           emitLine(`\n${c.yellow}Wreck: ${wreckId}${c.reset}`);
           emitLine(`  Ship: ${ship}${victim}`);
           if (w.salvage_value !== undefined) emitLine(`  Salvage value: ${w.salvage_value}`);
+          const carrion = formatBareNumber(w.carrion);
+          if (carrion !== undefined) emitLine(`  Carrion: ${carrion}`);
           if (w.expire_tick !== undefined) {
             emitLine(`  Expires tick: ${w.expire_tick}`);
           } else if (w.ticks_remaining !== undefined) {

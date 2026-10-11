@@ -22,6 +22,7 @@ import {
   shipFixture,
   shipIncapacitatedFixture,
   shipOverCapacityFixture,
+  wrecksFixture,
 } from './ship.fixtures.ts';
 import { emitCargoHold } from './ship.ts';
 
@@ -519,6 +520,132 @@ test('install_mod ship fallback flags over-capacity CPU', () => {
   ).stdout.join('\n');
   expect(stdout).toContain('=== Ship:');
   expect(stdout).toContain('CPU: 40/34 (over capacity)');
+});
+
+function renderGetWrecks(fixture: Record<string, unknown> = wrecksFixture, extraOptions: Partial<GlobalOptions> = {}) {
+  return renderStructuredResult('get_wrecks', structuredClone(fixture), { ...options, ...extraOptions }, context);
+}
+
+function cloneWrecksFixture(): { wrecks: Array<Record<string, unknown>> } {
+  return structuredClone(wrecksFixture) as { wrecks: Array<Record<string, unknown>> };
+}
+
+function wreckAt(fixture: { wrecks: Array<Record<string, unknown>> }, index: number): Record<string, unknown> {
+  const wreck = fixture.wrecks[index];
+  if (!wreck) throw new Error(`wreck ${index} missing`);
+  return wreck;
+}
+
+function wreckSection(stdout: string, id: string): string {
+  const section = stdout.split('Wreck:').find((part) => part.trimStart().startsWith(id));
+  expect(section, id).toBeDefined();
+  return section ?? '';
+}
+
+test('get_wrecks prints carrion on an age-death body and omits it on a ship wreck', () => {
+  const stdout = renderGetWrecks().stdout.join('\n');
+  const lucky = wreckSection(stdout, 'wreck-1');
+  expect(lucky).toContain('Salvage value: 1250');
+  expect(lucky).toContain('Lucky Strike / skiff (Ibis)');
+  expect(lucky).toContain('Cargo:');
+  expect(lucky).toContain('Modules:');
+  expect(lucky).not.toContain('Carrion');
+
+  const cloud = wreckSection(stdout, 'wreck-cloudwhale-age');
+  expect(cloud).toContain('Ship: cloudwhale (Elder Cloudwhale)');
+  expect(cloud).not.toContain(' / ');
+  expect(cloud).toContain('Salvage value: 40');
+  expect(cloud).toContain('  Carrion: 12');
+  expect(cloud).toContain('Expires tick: 13000');
+  expect(cloud).toContain('Expires at: 2026-05-30T00:00:00Z');
+  expect(cloud).toMatch(/Salvage value: 40\n {2}Carrion: 12\n {2}Expires tick: 13000/);
+  expect(cloud).not.toContain('Cargo:');
+  expect(cloud).not.toContain('Modules:');
+  expect(cloud).not.toContain('cr');
+});
+
+test('get_wrecks prints an explicit carrion 0', () => {
+  const fixture = cloneWrecksFixture();
+  wreckAt(fixture, 0).carrion = 0;
+  const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
+  expect(lucky).toContain('  Carrion: 0');
+  expect(lucky).toMatch(/Salvage value: 1250\n {2}Carrion: 0\n {2}Expires tick: 12050/);
+  expect(lucky).not.toContain('0 cr');
+  expect(lucky).not.toContain('Carrion: 0.0');
+});
+
+test('get_wrecks prints fractional and negative carrion without padding', () => {
+  const fraction = cloneWrecksFixture();
+  wreckAt(fraction, 1).carrion = 1.5;
+  const fractionCloud = wreckSection(renderGetWrecks(fraction).stdout.join('\n'), 'wreck-cloudwhale-age');
+  expect(fractionCloud).toContain('  Carrion: 1.5');
+  expect(fractionCloud).not.toContain('1.50');
+  expect(fractionCloud).not.toContain('1,5');
+
+  const negative = cloneWrecksFixture();
+  wreckAt(negative, 1).carrion = -3;
+  const negativeCloud = wreckSection(renderGetWrecks(negative).stdout.join('\n'), 'wreck-cloudwhale-age');
+  expect(negativeCloud).toContain('  Carrion: -3');
+  expect(negativeCloud).not.toContain('Carrion: -3.0');
+});
+
+test('get_wrecks omits carrion when the field is absent', () => {
+  const fixture = cloneWrecksFixture();
+  delete wreckAt(fixture, 1).carrion;
+  const stdout = renderGetWrecks(fixture).stdout.join('\n');
+  const cloud = wreckSection(stdout, 'wreck-cloudwhale-age');
+  expect(cloud).not.toContain('Carrion');
+  expect(cloud).toContain('Salvage value: 40');
+  expect(cloud).toContain('Expires tick: 13000');
+  expect(stdout).not.toContain('Carrion');
+});
+
+test.each([
+  ['undefined', undefined],
+  ['null', null],
+  ['empty string', ''],
+  ['NaN', Number.NaN],
+  ['Infinity', Number.POSITIVE_INFINITY],
+  ['negative Infinity', Number.NEGATIVE_INFINITY],
+  ['boolean', true],
+  ['boolean false', false],
+  ['numeric string', '12'],
+  ['object', { amount: 12 }],
+  ['array', [12]],
+])('get_wrecks omits carrion for %s', (_label, value) => {
+  const fixture = cloneWrecksFixture();
+  wreckAt(fixture, 1).carrion = value;
+  const rendered = renderGetWrecks(fixture);
+  const stdout = rendered.stdout.join('\n');
+  const stderr = rendered.stderr.join('\n');
+  const cloud = wreckSection(stdout, 'wreck-cloudwhale-age');
+  expect(cloud).not.toContain('Carrion');
+  expect(cloud).toContain('Salvage value: 40');
+  expect(stdout).not.toContain('Carrion');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('Infinity');
+  expect(stdout).not.toContain('null');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stderr).not.toContain('NaN');
+});
+
+test('get_wrecks prints bigint carrion with every digit', () => {
+  const fixture = cloneWrecksFixture();
+  wreckAt(fixture, 1).carrion = 9007199254740993n;
+  const cloud = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-cloudwhale-age');
+  expect(cloud).toContain('  Carrion: 9007199254740993');
+  expect(cloud).not.toContain(',');
+  expect(cloud).not.toContain('cr');
+});
+
+test('get_wrecks json passes carrion through without a Carrion label', () => {
+  const stdout = renderGetWrecks(wrecksFixture, { format: 'json' }).stdout.join('\n');
+  const parsed = JSON.parse(stdout) as { count: number; wrecks: Array<Record<string, unknown>> };
+  expect(parsed.count).toBe(2);
+  expect(parsed.wrecks[0]?.carrion).toBeUndefined();
+  expect(parsed.wrecks[1]?.carrion).toBe(12);
+  expect(stdout).toContain('"carrion": 12');
+  expect(stdout).not.toContain('Carrion:');
 });
 
 function renderSellWreck(fixture: Record<string, unknown>) {
