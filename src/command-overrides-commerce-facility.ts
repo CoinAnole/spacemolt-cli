@@ -375,7 +375,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/subscribe_market',
     description:
-      'Subscribe once and return the current public liquidity snapshot (fuel, contraband, and Company Store excluded). Add --follow to keep polling market notifications every 10 seconds until stopped. Use view_market company_store=true for your Company Store. Snapshot items and each market_update include the same category string view_market returns for that item; the table, the one-item book, and --follow show it, and show nothing when the server omits it.',
+      'Subscribe once and return the current public liquidity snapshot. Fuel is excluded from the feed. Contraband is excluded except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Private Company Store orders are excluded. The feed is one payload shared by every subscriber at the station, so it only carries orders everyone may see. Add --follow to keep polling market notifications every 10 seconds until stopped. Use view_market company_store=true for your Company Store. Snapshot items and each market_update include the same category string view_market returns for that item; the table, the one-item book, and --follow show it, and show nothing when the server omits it.',
     example: 'spacemolt subscribe_market --follow',
     discoverWith: ['view_market'],
     seeAlso: ['view_market', 'unsubscribe_market'],
