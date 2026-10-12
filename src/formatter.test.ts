@@ -8198,6 +8198,12 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('  Intel opt-out: no');
     expect(stdout).toContain('=== Faction Facilities ===');
     expect(stdout).toContain('Faction Fuel Bunker');
+    expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+    expect(stdout).toContain('Facilities: 1');
+    expect(stdout).toContain('Faction arrears: 2,400cr');
+    expect(stdout).toContain('Grace remaining: 1 cycle');
+    expect(stdout).toContain('Estimated rent/day: 7,200cr');
+    expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
     expect(stdout).not.toContain('=== Response ===');
   });
 

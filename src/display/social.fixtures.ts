@@ -1456,6 +1456,28 @@ export const factionInfoFixture = {
       faction_service: 'fuel',
     },
   ],
+  faction_rent: {
+    facilities: 1,
+    total_rent_per_cycle: 1200,
+    arrears_owed: 2400,
+    grace_cycles: 1,
+    est_rent_per_day: 7200,
+    note: 'Faction facilities pay rent from the treasury each cycle.',
+  },
+};
+
+const factionInfoOmittedRentFixture: Record<string, unknown> = structuredClone(factionInfoFixture);
+delete factionInfoOmittedRentFixture.faction_rent;
+
+// faction_rent.facilities is not facilities.length; one row and 2 is intentional.
+const factionInfoZeroRentFixture = structuredClone(factionInfoFixture);
+factionInfoZeroRentFixture.faction_rent = {
+  facilities: 2,
+  total_rent_per_cycle: 0,
+  est_rent_per_day: 0,
+  arrears_owed: 2400,
+  grace_cycles: 0,
+  note: 'Billing is paused; arrears remain.',
 };
 
 /** Public web profile from GET /api/factions/{tag} (bare JSON, not v2 faction_info). */
@@ -2086,6 +2108,8 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   read_note: { command: 'read_note', fixture: readNoteFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
   faction_info: { command: 'faction_info', fixture: factionInfoFixture },
+  faction_info_omitted_rent: { command: 'faction_info', fixture: factionInfoOmittedRentFixture },
+  faction_info_zero_rent: { command: 'faction_info', fixture: factionInfoZeroRentFixture },
   faction_profile: { command: 'faction_profile', fixture: publicFactionProfileFixture },
   faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
   faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },

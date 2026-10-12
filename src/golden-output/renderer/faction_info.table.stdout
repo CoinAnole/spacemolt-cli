@@ -15,3 +15,10 @@ Ally access:
   Name                | ID         | Station       | Service | Active
   --------------------+------------+---------------+---------+-------
   Faction Fuel Bunker | facility-1 | earth_station | fuel    | true  
+
+Faction rent bill: 1,200cr/cycle
+Facilities: 1
+Faction arrears: 2,400cr
+Grace remaining: 1 cycle
+Estimated rent/day: 7,200cr
+Faction facilities pay rent from the treasury each cycle.
