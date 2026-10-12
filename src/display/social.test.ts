@@ -35,6 +35,7 @@ import {
   facilityTypesDetailFixture,
   factionFacilityListFixture,
   factionFacilityOwnedFixture,
+  factionInfoFixture,
   factionScanPoiDetails,
   factionScanPoiEmptyFixture,
   factionScanPoiFixture,
@@ -1775,6 +1776,178 @@ test('renders facility list faction rent summary', () => {
   expect(stdout).toContain('Grace remaining: 1 cycle');
   expect(stdout).toContain('Estimated rent/day: 7,200cr');
   expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+});
+
+const factionInfoRentSummary = {
+  facilities: 1,
+  total_rent_per_cycle: 1200,
+  arrears_owed: 2400,
+  grace_cycles: 1,
+  est_rent_per_day: 7200,
+  note: 'Faction facilities pay rent from the treasury each cycle.',
+};
+
+function factionInfoWithRent(): Record<string, unknown> {
+  const fixture = structuredClone(factionInfoFixture) as Record<string, unknown>;
+  fixture.faction_rent = structuredClone(factionInfoRentSummary);
+  return fixture;
+}
+
+function renderFactionInfo(fixture: Record<string, unknown>, format?: GlobalOptions['format']): string {
+  return renderStructuredResult(
+    'faction_info',
+    fixture,
+    format ? { ...options, format } : options,
+    context,
+  ).stdout.join('\n');
+}
+
+test('faction_info prints faction_rent after the facilities table', () => {
+  const stdout = renderFactionInfo(factionInfoWithRent());
+  const tableTitle = stdout.indexOf('=== Faction Facilities ===');
+  const lines = [
+    'Faction rent bill: 1,200cr/cycle',
+    'Facilities: 1',
+    'Faction arrears: 2,400cr',
+    'Grace remaining: 1 cycle',
+    'Estimated rent/day: 7,200cr',
+    'Faction facilities pay rent from the treasury each cycle.',
+  ];
+  let cursor = tableTitle;
+  for (const line of lines) {
+    const index = stdout.indexOf(line, cursor);
+    expect(index).toBeGreaterThan(cursor);
+    cursor = index + line.length;
+  }
+
+  expect(stdout.indexOf('Faction rent bill:')).toBeGreaterThan(tableTitle);
+  expect(stdout).toContain('  Facilities: no');
+  expect(stdout).toContain('=== Faction:');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('103,200cr');
+  expect(stdout).not.toContain('Personal rent bill');
+});
+
+test('faction_info omits the rent summary when faction_rent is absent', () => {
+  const fixture = structuredClone(factionInfoFixture) as Record<string, unknown>;
+  delete fixture.faction_rent;
+  const stdout = renderFactionInfo(fixture);
+
+  expect(stdout).not.toContain('Faction rent bill');
+  expect(stdout).not.toContain('Faction arrears');
+  expect(stdout).not.toContain('Grace remaining');
+  expect(stdout).not.toContain('Estimated rent/day');
+  expect(stdout).not.toMatch(/^Facilities: /m);
+  expect(stdout).toContain('=== Faction:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info prints nothing for null or non-record faction_rent', () => {
+  for (const factionRent of [null, '1200']) {
+    const fixture = structuredClone(factionInfoFixture) as Record<string, unknown>;
+    fixture.faction_rent = factionRent;
+    const stdout = renderFactionInfo(fixture);
+
+    expect(stdout).not.toContain('Faction rent bill');
+    expect(stdout).not.toContain('Faction arrears');
+    expect(stdout).not.toContain('Grace remaining');
+    expect(stdout).not.toContain('Estimated rent/day');
+    expect(stdout).not.toMatch(/^Facilities: /m);
+    expect(stdout).not.toContain('1200');
+    expect(stdout).toContain('=== Faction:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('faction_info prints explicit zero arrears and skips omitted grace and empty notes', () => {
+  const fixture = factionInfoWithRent();
+  const rent = fixture.faction_rent as Record<string, unknown>;
+  rent.arrears_owed = 0;
+  let stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('Faction arrears: 0cr');
+
+  delete rent.arrears_owed;
+  stdout = renderFactionInfo(fixture);
+  expect(stdout).not.toContain('Faction arrears');
+
+  rent.grace_cycles = 0;
+  stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('Grace remaining: 0 cycles');
+
+  delete rent.grace_cycles;
+  stdout = renderFactionInfo(fixture);
+  expect(stdout).not.toContain('Grace remaining');
+
+  rent.note = '';
+  stdout = renderFactionInfo(fixture);
+  expect(stdout).not.toContain('Faction facilities pay rent from the treasury each cycle.');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info pluralizes grace cycles', () => {
+  const singular = factionInfoWithRent();
+  (singular.faction_rent as Record<string, unknown>).grace_cycles = 1;
+  expect(renderFactionInfo(singular)).toContain('Grace remaining: 1 cycle');
+
+  const plural = factionInfoWithRent();
+  (plural.faction_rent as Record<string, unknown>).grace_cycles = 2;
+  const stdout = renderFactionInfo(plural);
+  expect(stdout).toContain('Grace remaining: 2 cycles');
+  expect(stdout).not.toContain('Grace remaining: 2 cycle\n');
+});
+
+test('faction_info prints faction_rent when the facilities array is absent', () => {
+  const fixture = factionInfoWithRent();
+  delete fixture.facilities;
+  const stdout = renderFactionInfo(fixture);
+
+  expect(stdout).toContain('=== Faction:');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+  expect(stdout).toContain('Facilities: 1');
+  expect(stdout).toContain('Faction arrears: 2,400cr');
+  expect(stdout).toContain('Grace remaining: 1 cycle');
+  expect(stdout).toContain('Estimated rent/day: 7,200cr');
+  expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+  expect(stdout).not.toContain('=== Faction Facilities ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info does not invent a personal rent bill from rent or player_rent', () => {
+  const fixture = factionInfoWithRent();
+  fixture.rent = {
+    facilities: 1,
+    total_rent_per_cycle: 400,
+    arrears_owed: 100,
+    est_rent_per_day: 2400,
+    note: 'Personal facilities pay rent from your wallet each cycle.',
+  };
+  fixture.player_rent = {
+    facilities: 1,
+    total_rent_per_cycle: 400,
+    arrears_owed: 100,
+    est_rent_per_day: 2400,
+    note: 'Personal facilities pay rent from your wallet each cycle.',
+  };
+  const stdout = renderFactionInfo(fixture);
+
+  expect(stdout).toContain('=== Faction:');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Personal rent bill');
+  expect(stdout).toContain('Faction rent bill:');
+});
+
+test('faction_info json passes faction_rent through without the table summary', () => {
+  const stdout = renderFactionInfo(factionInfoWithRent(), 'json');
+  const parsed = JSON.parse(stdout) as { faction_rent: Record<string, number> };
+
+  expect(stdout).toContain('"faction_rent"');
+  expect(parsed.faction_rent.facilities).toBe(1);
+  expect(parsed.faction_rent.total_rent_per_cycle).toBe(1200);
+  expect(parsed.faction_rent.arrears_owed).toBe(2400);
+  expect(parsed.faction_rent.grace_cycles).toBe(1);
+  expect(parsed.faction_rent.est_rent_per_day).toBe(7200);
+  expect(stdout).not.toContain('Faction rent bill');
 });
 
 test('facility_list prints personal and faction rent bills from separate sources', () => {

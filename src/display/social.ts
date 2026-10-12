@@ -1470,6 +1470,7 @@ export const socialFormatters = [
           ['Active', ['active', 'enabled', 'status']],
         ]);
       }
+      emitRentSummary('Faction rent bill', 'Faction arrears', r.faction_rent);
       return true;
     },
     { commands: ['faction_info'] },

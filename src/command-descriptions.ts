@@ -52,7 +52,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling).',
   faction_facility_owned: 'List faction facilities across all stations.',
   faction_get_invites: 'View pending faction invitations',
-  faction_info: 'View faction details',
+  faction_info:
+    'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned.',
   faction_intel_status: 'View faction intel coverage statistics',
   faction_invite: 'Invite a player to your faction',
   faction_kick: 'Kick a player from your faction',

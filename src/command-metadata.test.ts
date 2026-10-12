@@ -1870,6 +1870,47 @@ describe('command metadata', () => {
     expect(help).not.toContain('`');
   });
 
+  test('faction info help documents faction_rent omit versus zero', () => {
+    const description =
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned.';
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.info?.config;
+    expect(config?.description).toBe(description);
+    expect(config?.description).toContain('faction_rent');
+    expect(config?.description).toContain('0cr/cycle');
+    expect(config?.description).toContain('omitted');
+    expect(config?.description).toContain('faction facility_owned');
+    expect(config?.description).not.toContain('`');
+    expect(config?.description).not.toContain('faction_info');
+    expect(config?.description).not.toContain('faction_facility_owned');
+    expect(config?.description).not.toContain('Estimated rent/day');
+
+    expect(COMMANDS.faction_info?.description).toBe(description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.faction_info).toBe(description);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_info?.description).toBe(description);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_info?.positionals).toEqual(['faction_id']);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_info?.apiRoute).toBe('POST /api/v2/spacemolt_faction/info');
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_info?.seeAlso).toEqual([
+      'faction_profile',
+      'faction_list',
+      'get_faction_achievements',
+      'faction_facility_owned',
+    ]);
+    expect(config?.args).toEqual(['faction_id']);
+
+    const help = captureHelp('faction info');
+    expect(help).toContain('faction_rent');
+    expect(help).toContain('0cr/cycle');
+    expect(help).toContain('omitted');
+    expect(help).toContain('faction facility_owned');
+    expect(help).toContain('See also:');
+    expect(help).toContain('faction facility_owned');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('faction_info');
+    expect(help).not.toContain('faction_facility_owned');
+    expect(help).not.toContain('Estimated rent/day');
+    expect(help).not.toContain('faction facility_list');
+  });
+
   test('view_market help teaches Company Store narrowing', () => {
     const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
     expect(viewMarket?.description).toContain('public plus your faction');
