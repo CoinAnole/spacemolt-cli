@@ -3550,6 +3550,89 @@ describe('help output branches', () => {
     expect(declineSuggestion).toBe(suggestion);
   });
 
+  test('displayError gives transaction_uncertain a do-not-retry suggestion', () => {
+    const error = { code: 'transaction_uncertain', message: 'Transfer outcome is not confirmed.' };
+    const suggestions = new Map<string, string | undefined>();
+    for (const command of ['faction_deposit_credits', 'faction deposit_credits', 'mine'] as const) {
+      const capture = captureWriter();
+      displayError(command, error, { context: displayErrorContext(capture.writer) });
+      const output = capture.stderr.join('\n');
+      expect(output).toContain('Error [transaction_uncertain]: Transfer outcome is not confirmed.');
+      expect(output).not.toContain('This error may be retryable.');
+      expect(output).not.toContain('This is an authentication error.');
+      expect(output).not.toContain('seconds before retrying');
+      if (command === 'mine') {
+        expect(output).toContain('Next:');
+        expect(output).toContain('get_status');
+      } else {
+        expect(output).not.toContain('Next:');
+      }
+      const suggestion = output.split('\n').find((line) => line.includes('Suggestion:'));
+      expect(suggestion).toContain('may already be committed');
+      expect(suggestion).toContain('Do not retry');
+      expect(suggestion).toContain('Mutations resume automatically');
+      expect(suggestion).toContain('spacemolt get_action_log');
+      expect(suggestion).toContain('faction_id=');
+      expect(suggestion).toContain('Do not send the transfer again');
+      expect(suggestion).not.toContain('get_status');
+      suggestions.set(command, suggestion);
+    }
+    expect(suggestions.get('mine')).toBe(suggestions.get('faction_deposit_credits'));
+    expect(suggestions.get('mine')).toBe(suggestions.get('faction deposit_credits'));
+
+    const quiet = captureWriter();
+    displayError('faction_deposit_credits', error, {
+      context: displayErrorContext(quiet.writer, { quiet: true, plain: true }),
+    });
+    const quietOutput = quiet.stderr.join('\n');
+    expect(quietOutput).toContain('Error [transaction_uncertain]');
+    expect(quietOutput).not.toContain('Suggestion:');
+    expect(quietOutput).not.toContain('This error may be retryable.');
+    expect(quietOutput).not.toContain('seconds before retrying');
+  });
+
+  test('displayError gives accounting_pending a paused-mutations suggestion', () => {
+    const error = { code: 'accounting_pending', message: 'Mutations are paused.' };
+    const suggestions = new Map<string, string | undefined>();
+    for (const command of ['faction_deposit_credits', 'faction deposit_credits', 'mine'] as const) {
+      const capture = captureWriter();
+      displayError(command, error, { context: displayErrorContext(capture.writer) });
+      const output = capture.stderr.join('\n');
+      expect(output).toContain('Error [accounting_pending]: Mutations are paused.');
+      expect(output).not.toContain('This error may be retryable.');
+      expect(output).not.toContain('This is an authentication error.');
+      expect(output).not.toContain('seconds before retrying');
+      if (command === 'mine') {
+        expect(output).toContain('Next:');
+        expect(output).toContain('get_status');
+      } else {
+        expect(output).not.toContain('Next:');
+      }
+      const suggestion = output.split('\n').find((line) => line.includes('Suggestion:'));
+      expect(suggestion).toContain('Gameplay mutations are paused');
+      expect(suggestion).toContain('Do not retry');
+      expect(suggestion).toContain('Do not retry the original uncertain transfer');
+      expect(suggestion).not.toContain('Do not send the transfer again');
+      expect(suggestion).toContain('Mutations resume automatically');
+      expect(suggestion).toContain('spacemolt get_action_log');
+      expect(suggestion).toContain('faction_id=');
+      expect(suggestion).not.toContain('get_status');
+      suggestions.set(command, suggestion);
+    }
+    expect(suggestions.get('mine')).toBe(suggestions.get('faction_deposit_credits'));
+    expect(suggestions.get('mine')).toBe(suggestions.get('faction deposit_credits'));
+
+    const quiet = captureWriter();
+    displayError('faction_deposit_credits', error, {
+      context: displayErrorContext(quiet.writer, { quiet: true, plain: true }),
+    });
+    const quietOutput = quiet.stderr.join('\n');
+    expect(quietOutput).toContain('Error [accounting_pending]');
+    expect(quietOutput).not.toContain('Suggestion:');
+    expect(quietOutput).not.toContain('This error may be retryable.');
+    expect(quietOutput).not.toContain('seconds before retrying');
+  });
+
   test('showCommandHelp names leviathans on location, state, and faction scan but not get_status', () => {
     const phrases = [
       'leviathan',

@@ -397,3 +397,69 @@ describe('trade_not_found', () => {
     expect(getRelatedCommands('trade_not_found')).toEqual(['get_trades']);
   });
 });
+
+describe('transaction_uncertain', () => {
+  test('is not retryable, is not an authentication error, and forbids retrying the transfer', () => {
+    expect(ERROR_REGISTRY.transaction_uncertain?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.transaction_uncertain?.auth).toBe(false);
+    expect(isRetryableError('transaction_uncertain')).toBe(false);
+    expect(isAuthError('transaction_uncertain')).toBe(false);
+    expect(isKnownErrorCode('transaction_uncertain')).toBe(true);
+    expect(ERROR_CODES).toContain('transaction_uncertain');
+    expect(ERROR_REGISTRY.transaction_uncertain?.message).toBe('The transfer may already be committed.');
+    const suggestion = getErrorSuggestion('transaction_uncertain');
+    expect(suggestion).toContain('may already be committed');
+    expect(suggestion).toContain('Do not retry');
+    expect(suggestion).toContain('retry it');
+    expect(suggestion).toContain('Mutations resume automatically');
+    expect(suggestion).toContain('spacemolt get_action_log');
+    expect(suggestion).toContain('faction_id=');
+    expect(suggestion).toContain('Do not send the transfer again');
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(suggestion).not.toContain('get_status');
+    expect(suggestion).not.toContain('before retrying');
+    expect(suggestion).not.toContain('retry the same command');
+    expect(suggestion).not.toContain('then retry');
+    expect(getErrorSuggestion('transaction_uncertain', 'faction_deposit_credits')).toBe(suggestion);
+    expect(getErrorSuggestion('transaction_uncertain', 'faction deposit_credits')).toBe(suggestion);
+    expect(getErrorSuggestion('transaction_uncertain', 'storage deposit')).toBe(suggestion);
+    expect(getErrorSuggestion('transaction_uncertain', 'mine')).toBe(suggestion);
+    expect(ERROR_REGISTRY.transaction_uncertain?.commandSuggestions).toBeUndefined();
+    expect(getRelatedCommands('transaction_uncertain')).toEqual(['get_action_log']);
+    expect(isRetryableError('insufficient_credits')).toBe(true);
+  });
+});
+
+describe('accounting_pending', () => {
+  test('is not retryable, is not an authentication error, and forbids retrying the original transfer', () => {
+    expect(ERROR_REGISTRY.accounting_pending?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.accounting_pending?.auth).toBe(false);
+    expect(isRetryableError('accounting_pending')).toBe(false);
+    expect(isAuthError('accounting_pending')).toBe(false);
+    expect(isKnownErrorCode('accounting_pending')).toBe(true);
+    expect(ERROR_CODES).toContain('accounting_pending');
+    expect(ERROR_REGISTRY.accounting_pending?.message).toBe(
+      'Gameplay mutations are paused during transfer reconciliation.',
+    );
+    const suggestion = getErrorSuggestion('accounting_pending');
+    expect(suggestion).toContain('Gameplay mutations are paused');
+    expect(suggestion).toContain('Do not retry');
+    expect(suggestion).toContain('Do not retry the original uncertain transfer');
+    expect(suggestion).not.toContain('Do not send the transfer again');
+    expect(suggestion).not.toContain('retry it');
+    expect(suggestion).toContain('Mutations resume automatically');
+    expect(suggestion).toContain('spacemolt get_action_log');
+    expect(suggestion).toContain('faction_id=');
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(suggestion).not.toContain('get_status');
+    expect(suggestion).not.toContain('before retrying');
+    expect(suggestion).not.toContain('retry the same command');
+    expect(suggestion).not.toContain('then retry');
+    expect(getErrorSuggestion('accounting_pending', 'faction_deposit_credits')).toBe(suggestion);
+    expect(getErrorSuggestion('accounting_pending', 'faction deposit_credits')).toBe(suggestion);
+    expect(getErrorSuggestion('accounting_pending', 'storage deposit')).toBe(suggestion);
+    expect(getErrorSuggestion('accounting_pending', 'mine')).toBe(suggestion);
+    expect(ERROR_REGISTRY.accounting_pending?.commandSuggestions).toBeUndefined();
+    expect(getRelatedCommands('accounting_pending')).toEqual(['get_action_log']);
+  });
+});
