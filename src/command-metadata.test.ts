@@ -3567,21 +3567,69 @@ describe('command metadata', () => {
     expect(failures).toEqual([]);
   });
 
-  test('all command schema minima are finite and belong to numeric fields', () => {
+  test('all command schema minima and maxima are finite and belong to numeric fields', () => {
     const failures: string[] = [];
 
     for (const [command, config] of Object.entries(BUNDLED_COMMAND_REGISTRY.commands)) {
       for (const [field, schema] of Object.entries(config.schema ?? {})) {
-        if (schema.minimum === undefined) continue;
-        if (!Number.isFinite(schema.minimum)) failures.push(`${command}.${field}: minimum must be finite`);
         const requiredScalarType = schemaRequiredScalarType(schema.type);
-        if (requiredScalarType !== 'integer' && requiredScalarType !== 'number') {
-          failures.push(`${command}.${field}: minimum requires integer or number type`);
+        if (schema.minimum !== undefined) {
+          if (!Number.isFinite(schema.minimum)) failures.push(`${command}.${field}: minimum must be finite`);
+          if (requiredScalarType !== 'integer' && requiredScalarType !== 'number') {
+            failures.push(`${command}.${field}: minimum requires integer or number type`);
+          }
+        }
+        if (schema.maximum !== undefined) {
+          if (!Number.isFinite(schema.maximum)) failures.push(`${command}.${field}: maximum must be finite`);
+          if (requiredScalarType !== 'integer' && requiredScalarType !== 'number') {
+            failures.push(`${command}.${field}: maximum requires integer or number type`);
+          }
         }
       }
     }
 
     expect(failures).toEqual([]);
+  });
+
+  test('list_battles is a standalone public route on the bundled registry', () => {
+    const route = {
+      tool: 'public',
+      action: 'battles',
+      method: 'GET' as const,
+      rootPath: 'api/battles',
+      publicUnauthenticated: true,
+      bareResponse: true,
+    };
+    const config = BUNDLED_COMMAND_REGISTRY.commands.list_battles;
+    const listed = BUNDLED_COMMAND_REGISTRY.allCommands.list_battles;
+    expect(config?.route).toEqual(route);
+    expect(listed && 'route' in listed ? listed.route : undefined).toEqual(route);
+    expect(BUNDLED_COMMAND_REGISTRY.apiRoutes.list_battles).toEqual(route);
+    expect(COMMANDS.list_battles?.route).toEqual(route);
+    expect(config?.category).toBe('Battle');
+    expect(config?.args).toBeUndefined();
+    expect(config?.schema?.limit).toMatchObject({ type: 'integer', minimum: 1, maximum: 100 });
+    expect(config?.schema?.offset).toMatchObject({ type: 'integer', minimum: 0 });
+    expect(config?.schema?.offset?.maximum).toBeUndefined();
+    expect(config?.schema?.category?.enum).toBeUndefined();
+    expect(config?.schema?.category?.type).toBe('string');
+    expect(config?.schema?.captured?.type).toBe('boolean');
+
+    const maxima: string[] = [];
+    for (const [command, entry] of Object.entries(BUNDLED_COMMAND_REGISTRY.commands)) {
+      for (const [field, schema] of Object.entries(entry.schema ?? {})) {
+        if (schema.maximum !== undefined) maxima.push(`${command}.${field}`);
+      }
+    }
+    for (const group of Object.values(BUNDLED_COMMAND_REGISTRY.commandGroups)) {
+      if (!group) continue;
+      for (const action of Object.values(group.actions)) {
+        for (const [field, schema] of Object.entries(action.config.schema ?? {})) {
+          if (schema.maximum !== undefined) maxima.push(`${action.command}.${field}`);
+        }
+      }
+    }
+    expect(maxima).toEqual(['list_battles.limit']);
   });
 
   test('all curated commands can parse minimal args and build dry-run route previews', () => {

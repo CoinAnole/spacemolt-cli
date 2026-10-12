@@ -153,6 +153,45 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       battle_id: 'id',
     },
   },
+  list_battles: {
+    usage: '[search=name] [category=pirate|pvp|police|wildlife|arena] [limit=1-100] [offset=0] [captured=true]',
+    description:
+      "List public battles. No login. GET /api/battles. This is public history. A capture row is not the caller's prize. Call claim_prize only with a prize_id from a capture you took. Arena rows omit prize fields. Omitting category uses the server's default feed. captured=true lists only battles in which a ship was captured by boarding; paging and totals reflect that filter. captured=false is not a negative filter and is not sent. Wildlife are not boarding captures, so do not combine category=wildlife with captured=true. If you do, the server returns battle history temporarily unavailable. The CLI retries only through the existing 503 policy and then stops. Page with limit (1-100; omit for the server default of 20) and offset. search matches participant names only. It is a case-insensitive substring of a participant name, not a system, faction tag, or ship class. An interrupted hunt is left off this list; read one battle with get_battle_summary. Do not poll. This uses the public web/data API budget, 60 requests per minute per IP (public_api). See limits.md. catalog_dump is a separate 1 request per minute endpoint and is not this budget.",
+    example:
+      'spacemolt list_battles; spacemolt list_battles captured=true; spacemolt list_battles category=arena captured=true; spacemolt list_battles search=Probe offset=20 limit=20; spacemolt list_battles category=wildlife limit=20; spacemolt list_battles --captured --limit 20',
+    seeAlso: ['get_battle_summary', 'get_battle_log', 'claim_prize'],
+    category: 'Battle',
+    route: {
+      tool: 'public',
+      action: 'battles',
+      method: 'GET',
+      rootPath: 'api/battles',
+      publicUnauthenticated: true,
+      bareResponse: true,
+    },
+    schemaExtensions: {
+      search: {
+        type: 'string',
+        description: 'Case-insensitive substring of a participant name. Not a system, faction tag, or ship class.',
+      },
+      category: {
+        type: 'string',
+        description:
+          'Category token. Omit to use the server default feed. Wildlife are not boarding captures; do not combine category=wildlife with captured=true. Case-sensitive.',
+      },
+      limit: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 100,
+        description: 'Page size. Omit for the server default of 20.',
+      },
+      offset: { type: 'integer', minimum: 0, description: 'Rows to skip. 0 is the first page.' },
+      captured: {
+        type: 'boolean',
+        description: 'When true, only battles in which a ship was captured by boarding. false is not sent.',
+      },
+    },
+  },
   get_battle_log: {
     usage: '<battle_id> [tick_start] [limit] [tick_end]',
     description:

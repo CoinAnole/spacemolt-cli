@@ -322,6 +322,81 @@ describe('SpaceMoltClient', () => {
     expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
   });
 
+  test('list_battles is a public GET with a shaped query and no session', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-list-battles-'));
+    const env = { XDG_CONFIG_HOME: tempDir };
+    const sessionCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const commandCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const sessionManager = new SessionManager({
+      apiBase: 'https://game.test/api/v2',
+      env,
+      transport: (async (url: string, requestOptions?: JsonRequestOptions) => {
+        sessionCalls.push({ url, options: requestOptions });
+        throw new Error('session should not be created for public unauthenticated commands');
+      }) as typeof import('./transport.ts').requestJson,
+    });
+    const client = new SpaceMoltClient({
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: true,
+        debug: false,
+        plain: false,
+        quiet: true,
+        format: 'table',
+        compact: false,
+      },
+      sessionStore: sessionManager,
+      transport: {
+        async requestJson<T>(url: string, requestOptions?: JsonRequestOptions) {
+          commandCalls.push({ url, options: requestOptions });
+          return {
+            status: 200,
+            data: { battles: null, has_more: false, total: 0 } as T,
+          };
+        },
+      },
+    });
+
+    const payload = {
+      captured: true,
+      limit: 20,
+      offset: 20,
+      category: 'arena',
+      search: 'Probe',
+    };
+    const result = await client.execute('list_battles', payload);
+
+    expect(sessionCalls).toEqual([]);
+    expect(commandCalls).toEqual([
+      {
+        url: 'https://game.test/api/battles?captured=true&limit=20&offset=20&category=arena&search=Probe',
+        options: {
+          method: 'GET',
+          sessionId: undefined,
+          payload: undefined,
+        },
+      },
+    ]);
+    expect(payload).toEqual({
+      captured: true,
+      limit: 20,
+      offset: 20,
+      category: 'arena',
+      search: 'Probe',
+    });
+    expect(result).toEqual({
+      structuredContent: { battles: null, has_more: false, total: 0 },
+    });
+    expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+
+    const dropped = { captured: 'true', category: 'PVP', search: ' Probe ' };
+    await client.execute('list_battles', dropped);
+    expect(dropped).toEqual({ captured: 'true', category: 'PVP', search: ' Probe ' });
+    expect(commandCalls[1]?.url).toBe('https://game.test/api/battles?category=PVP&search=Probe');
+    expect(commandCalls[1]?.options?.sessionId).toBeUndefined();
+    expect(commandCalls[1]?.options?.method).toBe('GET');
+  });
+
   test('player_profile normalizes bare public error bodies', async () => {
     const client = new SpaceMoltClient({
       config: {

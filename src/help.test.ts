@@ -2057,6 +2057,53 @@ describe('help output branches', () => {
     expect(output).toContain("--jq '.skills[] | {id,name,description}'");
   });
 
+  test('help list_battles documents public history without a login', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.list_battles;
+    const listed = BUNDLED_COMMAND_REGISTRY.allCommands.list_battles;
+    const description = config?.description ?? '';
+    expect(listed && 'description' in listed ? listed.description : undefined).toBe(description);
+    expect(description).toContain(
+      "This is public history. A capture row is not the caller's prize. Call claim_prize only with a prize_id from a capture you took.",
+    );
+    expect(description).toContain("Omitting category uses the server's default feed");
+    expect(description).toContain('Wildlife are not boarding captures');
+    expect(description).toContain('do not combine category=wildlife with captured=true');
+    expect(description).toContain('battle history temporarily unavailable');
+    expect(description).toContain('existing 503 policy');
+    expect(description).toContain('participant names only');
+    expect(description).not.toContain('pirate, pvp, and police');
+    expect(description).not.toContain('not wildlife or arena');
+    expect(description).not.toContain('Do not use that pair as the example');
+    expect(description).not.toContain('`');
+    expect(config?.example).toContain('list_battles captured=true');
+    expect(config?.example).toContain('category=arena captured=true');
+    expect(config?.example).toContain('search=Probe offset=20 limit=20');
+    expect(config?.example).toContain('category=wildlife limit=20');
+    expect(config?.example).not.toContain('category=wildlife captured=true');
+    expect(config?.seeAlso).toEqual(['get_battle_summary', 'get_battle_log', 'claim_prize']);
+    expect(config?.usage).toContain('[category=pirate|pvp|police|wildlife|arena]');
+
+    const capture = captureWriter();
+    expect(showCommandHelp('list_battles', capture.writer, undefined, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      "This is public history. A capture row is not the caller's prize. Call claim_prize only with a prize_id from a capture you took.",
+    );
+    expect(output).toContain("Omitting category uses the server's default feed");
+    expect(output).toContain('Wildlife are not boarding captures');
+    expect(output).toContain('do not combine category=wildlife with captured=true');
+    expect(output).toContain('battle history temporarily unavailable');
+    expect(output).toContain('existing 503 policy');
+    expect(output).toContain('participant names only');
+    expect(output).toContain('spacemolt list_battles [search=name] [category=pirate|pvp|police|wildlife|arena]');
+    expect(output).toContain('See also: get_battle_summary, get_battle_log, claim_prize');
+    expect(output).not.toContain('pirate, pvp, and police');
+    expect(output).not.toContain('not wildlife or arena');
+    expect(output).not.toContain('Do not use that pair as the example');
+    expect(output).not.toContain('category=wildlife captured=true');
+    expect(output).not.toContain('`');
+  });
+
   test('showFullHelp includes cache sections near command discovery', () => {
     const capture = captureWriter();
 
@@ -3170,6 +3217,56 @@ describe('help output branches', () => {
     expect(output).toContain('30');
     expect(output).toContain('300');
     expect(output).not.toContain('Query rate limited');
+    expect(output).toContain('Session limits are');
+  });
+
+  test('displayError uses the public web budget for a public_api rate limit', () => {
+    const capture = captureWriter();
+    displayError(
+      'list_battles',
+      {
+        code: 'rate_limited',
+        message: 'Too many requests in the current window',
+        limit: 'public_api',
+        scope: 'per_ip',
+        retry_after: 12,
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    const messageAt = output.indexOf('Too many requests in the current window');
+    expect(messageAt).toBeGreaterThanOrEqual(0);
+    expect(messageAt).toBeLessThan(output.indexOf('Suggestion:'));
+    expect(output).toContain(
+      'Public web/data API: 60 requests per minute for this IP (public_api), not the session budget of 30 mutations and 300 queries. Wait the stated time. catalog_dump is a separate 1/min endpoint. 50 rejections/min from this IP still trigger an IP-wide timeout.',
+    );
+    expect(output).toContain('30 mutations and 300 queries');
+    expect(output).not.toContain('Session limits are');
+    expect(output).toContain('Limit: public_api (per_ip)');
+
+    const sessionLimit = captureWriter();
+    displayError(
+      'get_status',
+      { code: 'rate_limited', message: 'Too many requests in the current window', limit: 'game_query' },
+      { context: displayErrorContext(sessionLimit.writer) },
+    );
+    expect(sessionLimit.stderr.join('\n')).toContain('Session limits are');
+
+    const fromDetails = captureWriter();
+    displayError(
+      'list_battles',
+      {
+        code: 'rate_limited',
+        message: 'Slow down',
+        details: { limit: 'public_api' },
+      },
+      { context: displayErrorContext(fromDetails.writer) },
+    );
+    const detailsOutput = fromDetails.stderr.join('\n');
+    expect(detailsOutput.indexOf('Slow down')).toBeLessThan(detailsOutput.indexOf('Suggestion:'));
+    expect(detailsOutput).toContain('Public web/data API:');
+    expect(detailsOutput).not.toContain('Session limits are');
   });
 
   test('displayError prints Limit from top-level limit and scope', () => {

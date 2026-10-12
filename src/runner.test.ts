@@ -1149,6 +1149,43 @@ describe('runInvocation option isolation', () => {
     ]);
   });
 
+  test('public list_battles renders without a configured profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-public-list-battles-'));
+    const calls: Array<{ command: string; payload: Record<string, unknown> }> = [];
+    const execute = async (command: string, payload: Record<string, unknown>) => {
+      calls.push({ command, payload });
+      return { structuredContent: { battles: null, has_more: false, total: 0 } };
+    };
+    const client = {
+      config: {
+        apiBase: 'https://game.test/api/v2',
+        jsonOutput: false,
+        debug: false,
+        plain: false,
+        quiet: false,
+        format: 'table',
+        compact: false,
+      },
+      execute,
+      executeCommandConfig: async (command: string, _config: unknown, payload: Record<string, unknown>) =>
+        execute(command, payload),
+    } as unknown as SpaceMoltClient;
+
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const exitCode = await runInvocation(
+      ['--structured', 'list_battles', 'captured=true', 'limit=20'],
+      client,
+      fakeContext(stdout, stderr, { XDG_CONFIG_HOME: configHome }),
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({ battles: null, has_more: false, total: 0 });
+    expect(calls).toEqual([{ command: 'list_battles', payload: { captured: true, limit: 20 } }]);
+    expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'sessions'))).toBe(false);
+  });
+
   test('server-help renders through a transient anonymous session without a configured profile', async () => {
     const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-server-help-render-'));
     const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_URL: 'https://game.test/api/v2' };

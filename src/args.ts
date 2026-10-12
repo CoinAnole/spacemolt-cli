@@ -424,6 +424,7 @@ export interface ValidationError {
     | 'invalid_integer'
     | 'invalid_number'
     | 'below_minimum'
+    | 'above_maximum'
     | 'invalid_boolean'
     | 'invalid_field_type'
     | 'file_read_error'
@@ -545,6 +546,13 @@ export function validatePayloadAgainstSchema(
             code: 'below_minimum',
           });
         }
+        if (fieldSchema.maximum !== undefined && (numericValue as number) > fieldSchema.maximum) {
+          errors.push({
+            field: key,
+            message: schemaMaximumErrorMessage(key, fieldSchema.maximum, val),
+            code: 'above_maximum',
+          });
+        }
       }
     }
 
@@ -576,6 +584,10 @@ function schemaTypeErrorMessage(field: string, expectedType: string, received: u
 
 function schemaMinimumErrorMessage(field: string, minimum: number, received: unknown): string {
   return `Parameter "${field}" must be at least ${minimum}, but received ${formatReceivedValue(received)}.`;
+}
+
+function schemaMaximumErrorMessage(field: string, maximum: number, received: unknown): string {
+  return `Parameter "${field}" must be at most ${maximum}, but received ${formatReceivedValue(received)}.`;
 }
 
 function formatReceivedValue(value: unknown): string {
