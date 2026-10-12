@@ -249,17 +249,17 @@ function attachListBattlesQuery(
   if (!structured || structured.dry_run === true) return response;
 
   const next = structuredClone(structured);
-  // An empty object still marks a live human render. Bare fixtures omit the key.
+  // An empty object still marks a live human render.
   next.list_battles_query = listBattlesHumanQuery(commandRun.payload ?? {});
   return { ...response, structuredContent: next };
 }
 
 function listBattlesHumanQuery(payload: Record<string, unknown>): Record<string, unknown> {
-  const sanitized = sanitizeListBattlesPayload({ ...payload });
+  const sanitized = sanitizeListBattlesPayload(payload);
   const query: Record<string, unknown> = {};
   if (sanitized.captured === true) query.captured = true;
-  if (typeof sanitized.category === 'string' && sanitized.category !== '') query.category = sanitized.category;
-  if (typeof sanitized.search === 'string' && sanitized.search !== '') query.search = sanitized.search;
+  if (typeof sanitized.category === 'string') query.category = sanitized.category;
+  if (typeof sanitized.search === 'string') query.search = sanitized.search;
   if (typeof sanitized.limit === 'number' && Number.isFinite(sanitized.limit)) query.limit = sanitized.limit;
   if (typeof sanitized.offset === 'number' && Number.isFinite(sanitized.offset)) query.offset = sanitized.offset;
   return query;

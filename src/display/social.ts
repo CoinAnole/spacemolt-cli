@@ -267,22 +267,15 @@ function captureTableColumns(includeTick: boolean, rows: Array<Record<string, un
   return columns;
 }
 
-function listBattleSystem(row: Record<string, unknown>): unknown {
-  if (row.system_name !== undefined && row.system_name !== null && row.system_name !== '') return row.system_name;
-  if (row.system_id !== undefined && row.system_id !== null && row.system_id !== '') return row.system_id;
-  return undefined;
-}
-
 function formatTopDamageCell(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   return `${value.username ?? '?'} (${value.damage ?? '?'})`;
 }
 
-function listBattleRows(battles: unknown[]): Array<Record<string, unknown>> {
-  return battles.filter(isRecord).map((row) => ({
+function listBattleRows(battles: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return battles.map((row) => ({
     ...row,
     ended_display: formatTimestampPreview(row.ended_at),
-    system_display: listBattleSystem(row),
     winning_side_display: formatWinningSide(row.winning_side),
     top_damage_display: formatTopDamageCell(row.top_damage),
     station_display: formatYesNo(row.has_station),
@@ -291,28 +284,24 @@ function listBattleRows(battles: unknown[]): Array<Record<string, unknown>> {
 
 function listBattleColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
   const columns: Array<[string, string[]]> = [];
-  const add = (label: string, key: string, present = hasAnyField(rows, [key])) => {
-    if (present) columns.push([label, [key]]);
+  const add = (label: string, keys: string[], present = hasAnyField(rows, keys)) => {
+    if (present) columns.push([label, keys]);
   };
-  add('Ended', 'ended_display', hasAnyField(rows, ['ended_at']));
-  add('System', 'system_display');
-  add('Category', 'category');
-  add('Status', 'status');
-  add('Outcome', 'outcome');
-  add('Side', 'winning_side_display');
-  add('Pilots', 'participant_count');
-  add('Ticks', 'duration_ticks');
-  add('Destroyed', 'ships_destroyed');
-  add('Captured', 'ships_captured');
-  add('Damage', 'total_damage');
-  add(
-    'Top',
-    'top_damage_display',
-    rows.some((row) => isRecord(row.top_damage)),
-  );
-  add('Station', 'station_display', hasAnyField(rows, ['has_station']));
-  add('Origin', 'origin_poi');
-  add('ID', 'battle_id');
+  add('Ended', ['ended_display']);
+  add('System', ['system_name', 'system_id']);
+  add('Category', ['category']);
+  add('Status', ['status']);
+  add('Outcome', ['outcome']);
+  add('Side', ['winning_side_display']);
+  add('Pilots', ['participant_count']);
+  add('Ticks', ['duration_ticks']);
+  add('Destroyed', ['ships_destroyed']);
+  add('Captured', ['ships_captured']);
+  add('Damage', ['total_damage']);
+  add('Top', ['top_damage_display']);
+  add('Station', ['station_display'], hasAnyField(rows, ['has_station']));
+  add('Origin', ['origin_poi']);
+  add('ID', ['battle_id']);
   return columns;
 }
 
@@ -2173,7 +2162,7 @@ export const socialFormatters = [
       const rowCount = Array.isArray(result.battles) ? result.battles.length : 0;
       emitLine(listBattlesHeader(rowCount, result));
       if (rowCount === 0) {
-        // formatCompactTable prints (None) when rows.length is 0.
+        // An empty page prints one sentence and does not call printCompactTable.
         emitLine(listBattlesEmptyLine(result.total));
         return true;
       }
@@ -2183,7 +2172,6 @@ export const socialFormatters = [
         const rows = listBattleRows(battles);
         const columns = listBattleColumns(rows);
         if (columns.length > 0) {
-          // Default width is 32; boarding ids are 33 characters.
           printCompactTable('Battles', rows, columns, { maxCellWidth: 64 });
         }
         const captureRows = listBattleCaptureRows(battles);
