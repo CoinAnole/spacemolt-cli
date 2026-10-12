@@ -9,6 +9,12 @@ import type { APIResponse, JsonResponse } from './types.ts';
 const SERVICE_UNAVAILABLE_MESSAGE =
   'The authentication provider is temporarily unreachable. Wait and retry; do not change your password.';
 
+function flatUnavailableText(error: unknown): string | undefined {
+  if (typeof error !== 'string') return undefined;
+  const trimmed = error.trim();
+  return trimmed || undefined;
+}
+
 export type ParsedRetryAfter = { kind: 'delta'; seconds: number } | { kind: 'date'; seconds: number };
 
 /** Tagged parse so 503 and rate-limit wrappers can disagree on past dates and missing headers. */
@@ -65,7 +71,8 @@ export async function requestWithServiceUnavailableRetry(
     const waitSeconds = retryAfterWaitSeconds(response.retryAfterHeader, opts.now());
     const waitCeil = Math.ceil(waitSeconds);
     opts.onRetryWait?.(waitCeil);
-    opts.warn?.(`[UNAVAILABLE] Authentication provider unreachable. Waiting ${waitCeil} seconds before retry...`);
+    const lead = flatUnavailableText(response.data.error) ?? 'Authentication provider unreachable';
+    opts.warn?.(`[UNAVAILABLE] ${lead}. Waiting ${waitCeil} seconds before retry...`);
     await opts.sleep(waitCeil * 1000);
   }
 }
@@ -75,6 +82,15 @@ export function withExhaustedServiceUnavailable(
   nowMs: number,
 ): JsonResponse<APIResponse> {
   const retryAfter = retryAfterWaitSeconds(response.retryAfterHeader, nowMs);
+  const flat = flatUnavailableText(response.data.error);
+  if (flat) {
+    return {
+      ...response,
+      data: {
+        error: { code: flat, message: flat, retry_after: retryAfter },
+      },
+    };
+  }
   const message = response.data.error?.message?.trim() || SERVICE_UNAVAILABLE_MESSAGE;
   return {
     ...response,

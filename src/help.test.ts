@@ -2206,6 +2206,26 @@ describe('help output branches', () => {
     expect(output.toLowerCase()).not.toContain('authentication error');
   });
 
+  test('displayError does not append the password suggestion for a flat 503 string code', () => {
+    const capture = captureWriter();
+    displayError(
+      'travel',
+      {
+        code: 'battle history temporarily unavailable',
+        message: 'battle history temporarily unavailable',
+        retry_after: 5,
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [battle history temporarily unavailable]');
+    expect(output).toContain('Wait 5.0 seconds before retrying.');
+    expect(output).not.toContain('Do not change your password');
+    expect(output).not.toContain('Suggestion:');
+    expect(output).not.toContain('service_unavailable');
+  });
+
   test('displayError gives invalid_payload a parameter spelling suggestion', () => {
     const capture = captureWriter();
     const context: CliRuntimeContext = {
