@@ -2,7 +2,7 @@ import { defaultClient, type SpaceMoltClient } from './api.ts';
 import { defaultCatalogDumpCacheDir, loadCatalogDump } from './catalog-dump-cache.ts';
 import { catalogTruncationWarning } from './catalog-pagination.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
-import { buildRequestUrl, type CommandConfig } from './commands.ts';
+import { buildRequestUrl, type CommandConfig, sanitizeListBattlesPayload } from './commands.ts';
 import { displayResult } from './display/index.ts';
 import { displayError, printJsonResponse } from './help.ts';
 import { cacheIdsFromResponse, idKindForCommandField, loadIdCacheSync, printCachedIdSuggestions } from './id-cache.ts';
@@ -224,13 +224,45 @@ function prepareHumanDisplay(
   const displayResponse = enrichStorageViewDisplayResponse(commandRun, response, commandRun.response);
 
   if (!isStorageCarrierLoad(commandRun, displayResponse)) {
-    return { command: commandRun.displayCommand, response: displayResponse };
+    return {
+      command: commandRun.displayCommand,
+      response: attachListBattlesQuery(commandRun, displayResponse, displayOptions.options),
+    };
   }
 
   return {
     command: 'storage_carrier_load',
     response: enrichCarrierLoadDisplayResponse(commandRun, displayResponse, displayOptions.sessionPath),
   };
+}
+
+function attachListBattlesQuery(
+  commandRun: CommandRunResult,
+  response: APIResponse,
+  options: GlobalOptions,
+): APIResponse {
+  if (commandRun.command !== 'list_battles') return response;
+  if (options.dryRun || options.compact || options.structured || options.json) return response;
+  const format = options.format ?? 'table';
+  if (format !== 'table' && format !== 'text') return response;
+  const structured = getStructuredResult(response);
+  if (!structured || structured.dry_run === true) return response;
+
+  const next = structuredClone(structured);
+  // An empty object still marks a live human render. Bare fixtures omit the key.
+  next.list_battles_query = listBattlesHumanQuery(commandRun.payload ?? {});
+  return { ...response, structuredContent: next };
+}
+
+function listBattlesHumanQuery(payload: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = sanitizeListBattlesPayload({ ...payload });
+  const query: Record<string, unknown> = {};
+  if (sanitized.captured === true) query.captured = true;
+  if (typeof sanitized.category === 'string' && sanitized.category !== '') query.category = sanitized.category;
+  if (typeof sanitized.search === 'string' && sanitized.search !== '') query.search = sanitized.search;
+  if (typeof sanitized.limit === 'number' && Number.isFinite(sanitized.limit)) query.limit = sanitized.limit;
+  if (typeof sanitized.offset === 'number' && Number.isFinite(sanitized.offset)) query.offset = sanitized.offset;
+  return query;
 }
 
 function shouldUseGetStatusSummary(commandRun: CommandRunResult, displayOptions: HumanDisplayOptions): boolean {

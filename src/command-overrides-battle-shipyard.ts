@@ -144,7 +144,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'View the aggregate result of a battle by ID (active or completed). Public captures print Kind (player, pirate, or npc) when captor_kind is present; historical rows may omit it.',
     example: 'spacemolt get_battle_summary <battle_id>',
-    discoverWith: ['get_battle_status', 'get_battle_log'],
+    discoverWith: ['get_battle_status', 'get_battle_log', 'list_battles'],
     seeAlso: ['get_battle_log', 'get_battle_status'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/summary',
@@ -197,7 +197,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages. Boarding Event plundered (cargo taken, hull left).',
     example: 'spacemolt get_battle_log <battle_id>',
-    discoverWith: ['get_battle_summary', 'get_battle_status'],
+    discoverWith: ['get_battle_summary', 'get_battle_status', 'list_battles'],
     seeAlso: ['get_battle_summary', 'get_battle_status'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/log',

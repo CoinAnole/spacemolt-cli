@@ -36,6 +36,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Battle
 
 - `list_battles` lists public battle history with no login (`GET /api/battles`). Page with `limit` (1-100; omit for the server default of 20) and `offset`. `captured=true` lists only boarding captures. Public history is not a prize. Do not poll. `public_api` (60 requests per minute for this IP) is not the session budget of 30 mutations and 300 queries.
+- `list_battles` table output shows one row per public battle: ended time, system, category, status, outcome, winning side, pilots, ticks, ships destroyed, ships captured, damage, top damage, station, origin POI, and battle id. The header repeats `captured`, `category`, and `search` when those were sent. A null or empty page prints `No battles.` when the total is 0 or omitted, and `No battles on this page.` when the total is greater than 0. Arena capture rows omit prize and location columns. A wildlife row prints its `origin_poi`. When more rows exist, the next line repeats the command at the next offset. **No parser change.**
 
 ### Salvage & Tow
 

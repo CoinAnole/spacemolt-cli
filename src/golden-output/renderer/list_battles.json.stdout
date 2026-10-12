@@ -1,0 +1,81 @@
+{
+  "battles": [
+    {
+      "battle_id": "a1b2c3d4e5f6789012345678abcdef01",
+      "system_id": "sol",
+      "system_name": "Sol",
+      "category": "pvp",
+      "status": "completed",
+      "outcome": "side_1_victory",
+      "winning_side": 1,
+      "ended_at": "2026-10-11T23:54:11Z",
+      "participant_count": 3,
+      "duration_ticks": 14,
+      "ships_destroyed": 1,
+      "destroyed_names": [
+        "Rust Bucket"
+      ],
+      "ships_captured": 1,
+      "total_damage": 5100,
+      "top_damage": {
+        "username": "Marlowe",
+        "damage": 5100
+      },
+      "has_station": true,
+      "player_names": [
+        "Marlowe",
+        "Ibis"
+      ],
+      "sides": [
+        {
+          "side_id": 1,
+          "participants": [
+            "Marlowe",
+            "Ibis"
+          ]
+        }
+      ],
+      "captures": [
+        {
+          "ship_id": "e1b2c3d4e5f6789012345678abcdef05",
+          "ship_class": "skiff",
+          "captor_username": "Marlowe",
+          "captor_id": "player-1",
+          "former_owner_username": "Corsair-7",
+          "former_owner_id": "pirate-1",
+          "boarding_operation_id": "boarding_a1b2c3d4e5f6789012345678",
+          "prize_id": "f1b2c3d4e5f6789012345678abcdef06",
+          "prize_poi_id": "sol_cloudbank",
+          "prize_poi_name": "Cloudbank",
+          "prize_system_id": "sol",
+          "prize_system_name": "Sol"
+        }
+      ]
+    },
+    {
+      "battle_id": "b1b2c3d4e5f6789012345678abcdef02",
+      "system_id": "proxima",
+      "system_name": "Proxima",
+      "category": "police",
+      "status": "completed",
+      "outcome": null,
+      "winning_side": -1,
+      "ended_at": "2026-10-11T23:40:00Z",
+      "participant_count": 2,
+      "duration_ticks": 6,
+      "ships_destroyed": 0,
+      "destroyed_names": [
+        "Skiff"
+      ],
+      "ships_captured": null,
+      "total_damage": 0,
+      "top_damage": {
+        "username": "Ibis",
+        "damage": 0
+      },
+      "has_station": false
+    }
+  ],
+  "has_more": true,
+  "total": 928
+}

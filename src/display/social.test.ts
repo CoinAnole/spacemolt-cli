@@ -44,6 +44,11 @@ import {
   fleetArenaOnlyFixture,
   fleetFixture,
   forumThreadFixture,
+  listBattlesArenaCaptureFixture,
+  listBattlesEmptyFixture,
+  listBattlesFixture,
+  listBattlesPastEndFixture,
+  listBattlesWildlifeFixture,
   ranchSetCullFixture,
   ranchStatusFixture,
 } from './social.fixtures.ts';
@@ -5139,4 +5144,425 @@ test('faction_scan_poi colors the leviathan heading and leaves contact lines pla
   expect(juvenile).toBe(juvenileLeviathanLine);
   expect(adult).not.toContain('\x1b');
   expect(juvenile).not.toContain('\x1b');
+});
+
+const LIST_BATTLE_VICTORY_ID = 'a1b2c3d4e5f6789012345678abcdef01';
+const LIST_BATTLE_DRAW_ID = 'b1b2c3d4e5f6789012345678abcdef02';
+const LIST_BATTLE_WILDLIFE_ID = 'c1b2c3d4e5f6789012345678abcdef03';
+const LIST_BATTLE_ARENA_ID = 'd1b2c3d4e5f6789012345678abcdef04';
+const LIST_BATTLE_SHIP_ID = 'e1b2c3d4e5f6789012345678abcdef05';
+const LIST_BATTLE_PRIZE_ID = 'f1b2c3d4e5f6789012345678abcdef06';
+const LIST_BATTLE_BOARDING_ID = 'boarding_a1b2c3d4e5f6789012345678';
+
+function renderListBattles(fixture: Record<string, unknown>, extra: Partial<GlobalOptions> = {}): string {
+  const rendered = renderStructuredResult('list_battles', structuredClone(fixture), { ...options, ...extra }, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  return stdout;
+}
+
+function listBattlesTable(stdout: string): string {
+  return stdout.split('=== Captures ===')[0] ?? stdout;
+}
+
+function listBattlesHeaderLine(stdout: string): string | undefined {
+  return listBattlesTable(stdout)
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('ID'));
+}
+
+function listBattlesColumns(stdout: string): string[] {
+  return (listBattlesHeaderLine(stdout) ?? '')
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function listBattlesCell(stdout: string, rowNeedle: string, column: string): string | undefined {
+  const section = listBattlesTable(stdout);
+  const header = listBattlesHeaderLine(section);
+  const row = section
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes(rowNeedle) && !line.includes('---'));
+  if (!header || !row) return undefined;
+  const headers = header.split('|').map((part) => part.trim());
+  const cells = row.split('|').map((part) => part.trim());
+  const index = headers.indexOf(column);
+  return index >= 0 ? cells[index] : undefined;
+}
+
+function listBattlePage(
+  count: number,
+  query?: Record<string, unknown>,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    battles: Array.from({ length: count }, (_, index) => ({
+      battle_id: `row-${index}`,
+      status: 'completed',
+      category: 'pvp',
+    })),
+    has_more: true,
+    total: 928,
+    ...(query === undefined ? {} : { list_battles_query: query }),
+    ...extra,
+  };
+}
+
+test('list_battles bare page prints the public table without filters or a next line', () => {
+  const stdout = renderListBattles(listBattlesFixture);
+  const columns = listBattlesColumns(stdout);
+
+  expect(stdout).toContain('Public battles: 2 of 928 (more)');
+  expect(stdout).not.toContain('Public battles (');
+  expect(stdout).not.toContain('Next:');
+  expect(stdout).not.toContain('list_battles_query');
+  expect(stdout).not.toContain('(None)');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(columns).toEqual([
+    'Ended',
+    'System',
+    'Category',
+    'Status',
+    'Outcome',
+    'Side',
+    'Pilots',
+    'Ticks',
+    'Destroyed',
+    'Captured',
+    'Damage',
+    'Top',
+    'Station',
+    'ID',
+  ]);
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'Ended')).toBe('2026-10-11 23:54:11');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'System')).toBe('Sol');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'Side')).toBe('1');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'Destroyed')).toBe('1');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'Captured')).toBe('1');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'Top')).toBe('Marlowe (5100)');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'Station')).toBe('yes');
+  expect(listBattlesCell(stdout, LIST_BATTLE_VICTORY_ID, 'ID')).toBe(LIST_BATTLE_VICTORY_ID);
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Outcome')).toBe('');
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Side')).toBe('');
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Destroyed')).toBe('0');
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Captured')).toBe('');
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Damage')).toBe('0');
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Top')).toBe('Ibis (0)');
+  expect(listBattlesCell(stdout, LIST_BATTLE_DRAW_ID, 'Station')).toBe('no');
+  expect(listBattlesTable(stdout)).not.toContain('Rust Bucket');
+  expect(listBattlesTable(stdout)).not.toContain('Skiff');
+  expect(listBattlesTable(stdout)).not.toContain('=== Sides ===');
+  expect(stdout).not.toContain('...');
+  expect(stdout).toContain(LIST_BATTLE_SHIP_ID);
+  expect(stdout).toContain(LIST_BATTLE_PRIZE_ID);
+  expect(stdout).toContain(LIST_BATTLE_BOARDING_ID);
+  expect(stdout).not.toContain(`${LIST_BATTLE_BOARDING_ID.slice(0, 29)}...`);
+
+  const captures = sectionAfter(stdout, 'Captures');
+  const captureHeaderLine = captureHeader(captures);
+  expect(captureHeaderLine).toContain('Battle');
+  expect(captureHeaderLine).toContain('Prize');
+  expect(captureHeaderLine).toContain('Location');
+  expect(captureCell(captures, LIST_BATTLE_SHIP_ID, 'Battle')).toBe(LIST_BATTLE_VICTORY_ID);
+  expect(captureCell(captures, LIST_BATTLE_SHIP_ID, 'Prize')).toBe(LIST_BATTLE_PRIZE_ID);
+  expect(captureCell(captures, LIST_BATTLE_SHIP_ID, 'Location')).toBe('Cloudbank (Sol)');
+  expect(captureCell(captures, LIST_BATTLE_SHIP_ID, 'Boarding')).toBe(LIST_BATTLE_BOARDING_ID);
+});
+
+test('list_battles omits Ended, Outcome, Side, Captured, Top, and Station when nothing on the page is displayable', () => {
+  const stdout = renderListBattles({
+    battles: [
+      {
+        battle_id: 'omit-a',
+        system_id: 'sol',
+        status: 'completed',
+        outcome: null,
+        winning_side: -1,
+        ships_captured: null,
+        ships_destroyed: 0,
+        total_damage: 0,
+        top_damage: null,
+      },
+      {
+        battle_id: 'omit-b',
+        status: 'completed',
+        outcome: '',
+        winning_side: '-1',
+        ships_captured: null,
+        top_damage: null,
+      },
+    ],
+    has_more: false,
+    total: 2,
+  });
+  const columns = listBattlesColumns(stdout);
+
+  expect(columns).not.toContain('Ended');
+  expect(columns).not.toContain('Outcome');
+  expect(columns).not.toContain('Side');
+  expect(columns).not.toContain('Captured');
+  expect(columns).not.toContain('Top');
+  expect(columns).not.toContain('Station');
+  expect(columns).not.toContain('Origin');
+  expect(columns).toContain('System');
+  expect(columns).toContain('Destroyed');
+  expect(columns).toContain('Damage');
+  expect(listBattlesCell(stdout, 'omit-a', 'System')).toBe('sol');
+  expect(listBattlesCell(stdout, 'omit-a', 'Destroyed')).toBe('0');
+  expect(listBattlesCell(stdout, 'omit-a', 'Damage')).toBe('0');
+  expect(listBattlesCell(stdout, 'omit-b', 'System')).toBe('');
+  expect(stdout).not.toContain('-1');
+  expect(stdout).not.toContain('null');
+  expect(stdout).not.toContain('=== Captures ===');
+});
+
+test('list_battles shows Side for 2 or 3 and leaves a blank cell on the draw', () => {
+  const stdout = renderListBattles({
+    battles: [
+      { battle_id: 'side-2', winning_side: 2, status: 'completed' },
+      { battle_id: 'side-3', winning_side: 3, status: 'completed' },
+      { battle_id: 'side-draw', winning_side: -1, status: 'completed' },
+    ],
+    has_more: false,
+    total: 3,
+  });
+
+  expect(listBattlesCell(stdout, 'side-2', 'Side')).toBe('2');
+  expect(listBattlesCell(stdout, 'side-3', 'Side')).toBe('3');
+  expect(listBattlesCell(stdout, 'side-draw', 'Side')).toBe('');
+  expect(stdout).not.toContain('-1');
+});
+
+test('list_battles shows Captured for a number and leaves a blank cell for null', () => {
+  const stdout = renderListBattles({
+    battles: [
+      { battle_id: 'cap-num', ships_captured: 2, status: 'completed' },
+      { battle_id: 'cap-zero', ships_captured: 0, status: 'completed' },
+      { battle_id: 'cap-blank', ships_captured: null, status: 'completed' },
+    ],
+    has_more: false,
+    total: 3,
+  });
+
+  expect(listBattlesCell(stdout, 'cap-num', 'Captured')).toBe('2');
+  expect(listBattlesCell(stdout, 'cap-zero', 'Captured')).toBe('0');
+  expect(listBattlesCell(stdout, 'cap-blank', 'Captured')).toBe('');
+  expect(stdout).not.toContain('null');
+});
+
+test('list_battles prefers system_name and formats Top with missing username or damage', () => {
+  const named = renderListBattles({
+    battles: [
+      {
+        battle_id: 'sys-name',
+        system_id: 'sol',
+        system_name: 'Sol',
+        status: 'completed',
+        top_damage: { username: 'Marlowe' },
+      },
+    ],
+    has_more: false,
+    total: 1,
+  });
+  expect(listBattlesCell(named, 'sys-name', 'System')).toBe('Sol');
+  expect(listBattlesCell(named, 'sys-name', 'Top')).toBe('Marlowe (?)');
+
+  const idOnly = renderListBattles({
+    battles: [{ battle_id: 'sys-id', system_id: 'sol', status: 'completed', top_damage: { damage: 12 } }],
+    has_more: false,
+    total: 1,
+  });
+  expect(listBattlesCell(idOnly, 'sys-id', 'System')).toBe('sol');
+  expect(listBattlesCell(idOnly, 'sys-id', 'Top')).toBe('? (12)');
+});
+
+test('list_battles prints station yes or no and omits the column when the key is absent', () => {
+  const shown = renderListBattles({
+    battles: [
+      { battle_id: 'station-yes', has_station: true, status: 'completed' },
+      { battle_id: 'station-no', has_station: false, status: 'completed' },
+      { battle_id: 'station-missing', status: 'completed' },
+    ],
+    has_more: false,
+    total: 3,
+  });
+  expect(listBattlesCell(shown, 'station-yes', 'Station')).toBe('yes');
+  expect(listBattlesCell(shown, 'station-no', 'Station')).toBe('no');
+  expect(listBattlesCell(shown, 'station-missing', 'Station')).toBe('');
+
+  const omitted = renderListBattles({
+    battles: [{ battle_id: 'station-none', status: 'completed' }],
+    has_more: false,
+    total: 1,
+  });
+  expect(listBattlesColumns(omitted)).not.toContain('Station');
+});
+
+test('list_battles wildlife row prints origin and active status without Ended', () => {
+  const stdout = renderListBattles(listBattlesWildlifeFixture);
+  const columns = listBattlesColumns(stdout);
+
+  expect(stdout).toContain('Public battles: 1 of 1');
+  expect(stdout).not.toContain('(more)');
+  expect(stdout).not.toContain('Next:');
+  expect(columns).not.toContain('Ended');
+  expect(columns).not.toContain('Outcome');
+  expect(columns).not.toContain('Side');
+  expect(columns).not.toContain('Captured');
+  expect(columns).toContain('Origin');
+  expect(listBattlesCell(stdout, LIST_BATTLE_WILDLIFE_ID, 'Status')).toBe('active');
+  expect(listBattlesCell(stdout, LIST_BATTLE_WILDLIFE_ID, 'Category')).toBe('wildlife');
+  expect(listBattlesCell(stdout, LIST_BATTLE_WILDLIFE_ID, 'Origin')).toBe('aster_deep_belt');
+  expect(listBattlesCell(stdout, LIST_BATTLE_WILDLIFE_ID, 'Destroyed')).toBe('0');
+  expect(listBattlesCell(stdout, LIST_BATTLE_WILDLIFE_ID, 'Damage')).toBe('0');
+  expect(stdout).not.toContain('=== Captures ===');
+  expect(stdout).not.toContain('(None)');
+});
+
+test('list_battles arena capture table omits Prize and Location', () => {
+  const stdout = renderListBattles(listBattlesArenaCaptureFixture);
+  const captures = sectionAfter(stdout, 'Captures');
+  const header = captureHeader(captures);
+
+  expect(listBattlesCell(stdout, LIST_BATTLE_ARENA_ID, 'Side')).toBe('3');
+  expect(listBattlesCell(stdout, LIST_BATTLE_ARENA_ID, 'Destroyed')).toBe('0');
+  expect(listBattlesCell(stdout, LIST_BATTLE_ARENA_ID, 'Top')).toBe('Probe (400)');
+  expect(listBattlesTable(stdout)).not.toContain('Kestrel');
+  expectNoPrizeOrLocation(header);
+  expect(header).not.toContain('Kind');
+  expect(header).toContain('Battle');
+  expect(captureCell(captures, LIST_BATTLE_SHIP_ID, 'Boarding')).toBe(LIST_BATTLE_BOARDING_ID);
+  expect(stdout).not.toContain('claim_prize');
+  expect(stdout).not.toContain('...');
+  expect(stdout).not.toContain('Next:');
+});
+
+test('list_battles empty and past-the-end pages do not print an empty table', () => {
+  const empty = renderListBattles(listBattlesEmptyFixture);
+  expect(empty).toContain('Public battles: 0 of 0');
+  expect(empty).toContain('No battles.');
+  expect(empty).not.toContain('No battles on this page.');
+  expect(empty).not.toContain('(None)');
+  expect(empty).not.toContain('=== Battles ===');
+  expect(empty).not.toContain('=== Captures ===');
+  expect(empty).not.toContain('Next:');
+
+  const past = renderListBattles(listBattlesPastEndFixture);
+  expect(past).toContain('Public battles: 0 of 4');
+  expect(past).toContain('No battles on this page.');
+  expect(past).not.toContain('No battles.\n');
+  expect(past).not.toContain('(None)');
+  expect(past).not.toContain('=== Battles ===');
+
+  const noTotal = renderListBattles({ battles: [], has_more: false });
+  expect(noTotal).toContain('Public battles: 0');
+  expect(noTotal).toContain('No battles.');
+  expect(noTotal).not.toContain(' of ');
+  expect(noTotal).not.toContain('(None)');
+});
+
+test('list_battles echoes filters in parenthesis order and computes the next offset from returned rows', () => {
+  const bare = renderListBattles(listBattlePage(2));
+  expect(bare).toContain('Public battles: 2 of 928 (more)');
+  expect(bare).not.toContain('Public battles (');
+  expect(bare).not.toContain('Next:');
+
+  const liveEmpty = renderListBattles(listBattlePage(2, {}));
+  expect(liveEmpty).toContain('Public battles: 2 of 928 (more)');
+  expect(liveEmpty).not.toContain('Public battles (');
+  expect(liveEmpty).toContain('Next: spacemolt list_battles offset=2');
+
+  const captured = renderListBattles(listBattlePage(1, { captured: true }));
+  expect(captured).toContain('Public battles (captured): 1 of 928 (more)');
+  expect(captured).toContain('Next: spacemolt list_battles offset=1 captured=true');
+  expect(captured).not.toContain('limit=');
+
+  const filtered = renderListBattles(
+    listBattlePage(20, {
+      search: 'Probe',
+      category: 'arena',
+      captured: true,
+      limit: 20,
+      offset: 20,
+    }),
+  );
+  expect(filtered).toContain('Public battles (captured, category=arena, search=Probe): 20 of 928 (more)');
+  expect(filtered.split('\n')[0]).not.toContain('limit=');
+  expect(filtered.split('\n')[0]).not.toContain('offset=');
+  expect(filtered).toContain(
+    'Next: spacemolt list_battles search=Probe category=arena limit=20 offset=40 captured=true',
+  );
+  expect(filtered).not.toContain('list_battles_query');
+
+  const shortPage = renderListBattles(listBattlePage(1, { limit: 20, offset: 0 }));
+  expect(shortPage).toContain('Next: spacemolt list_battles limit=20 offset=1');
+  expect(shortPage).not.toContain('offset=20');
+
+  const negativeOffset = renderListBattles(listBattlePage(2, { offset: -5, limit: 20 }));
+  expect(negativeOffset).toContain('Next: spacemolt list_battles limit=20 offset=2');
+
+  const done = renderListBattles(listBattlePage(1, { captured: true, category: 'arena' }, { has_more: false }));
+  expect(done).toContain('Public battles (captured, category=arena): 1 of 928');
+  expect(done).not.toContain('(more)');
+  expect(done).not.toContain('Next:');
+
+  const nullPage = renderListBattles({
+    battles: null,
+    has_more: true,
+    total: 0,
+    list_battles_query: { captured: true, offset: 40 },
+  });
+  expect(nullPage).toContain('Public battles (captured): 0 of 0 (more)');
+  expect(nullPage).toContain('No battles.');
+  expect(nullPage).not.toContain('Next:');
+  expect(nullPage).not.toContain('(None)');
+});
+
+test('list_battles prints an ungrouped total and keeps battles null in json and yaml', () => {
+  const stdout = renderListBattles({
+    battles: [{ battle_id: 'big', status: 'active', category: 'wildlife' }],
+    has_more: true,
+    total: 1525902,
+  });
+  expect(stdout).toContain('Public battles: 1 of 1525902 (more)');
+  expect(stdout).not.toContain('1,525,902');
+
+  const json = renderStructuredResult(
+    'list_battles',
+    structuredClone(listBattlesEmptyFixture),
+    { ...options, format: 'json' },
+    context,
+  );
+  expect(JSON.parse(json.stdout.join('\n'))).toEqual({ battles: null, has_more: false, total: 0 });
+
+  const yaml = renderStructuredResult(
+    'list_battles',
+    structuredClone(listBattlesPastEndFixture),
+    { ...options, format: 'yaml' },
+    context,
+  );
+  const yamlText = yaml.stdout.join('\n');
+  expect(yamlText).toContain('battles: null');
+  expect(yamlText).not.toContain('list_battles_query');
+  expect(yamlText).not.toContain('[]');
+});
+
+test('list_battles formatter ignores a dry-run preview and other commands that share has_more', () => {
+  const preview = renderListBattles({
+    dry_run: true,
+    command: 'list_battles',
+    method: 'GET',
+    url: 'https://game.spacemolt.com/api/battles',
+    payload: { captured: true, limit: 20 },
+    server_request_sent: false,
+    notes: ['No mutation was sent. This is a client-side route and payload preview.'],
+  });
+  expect(preview).toContain('=== Response ===');
+  expect(preview).toContain('https://game.spacemolt.com/api/battles');
+  expect(preview).not.toContain('Public battles');
+  expect(preview).not.toContain('No battles');
+
+  const log = renderStructuredResult('get_battle_log', { battles: null, has_more: true, total: 4 }, options, context);
+  expect(log.stdout.join('\n')).not.toContain('Public battles');
 });

@@ -2185,4 +2185,138 @@ describe('response renderer', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  const listBattleEcho = {
+    battles: [
+      {
+        battle_id: 'a1b2c3d4e5f6789012345678abcdef01',
+        category: 'pirate',
+        status: 'completed',
+      },
+    ],
+    has_more: true,
+    total: 2,
+  };
+
+  async function renderListBattlesHuman(
+    payload: Record<string, unknown>,
+    structuredContent: Record<string, unknown>,
+    optionOverrides: Partial<GlobalOptions> = {},
+  ): Promise<string> {
+    const capture = fakeContext();
+    const response = { structuredContent: structuredClone(structuredContent) };
+    const exitCode = await renderResponse(
+      {
+        command: 'list_battles',
+        displayCommand: 'list_battles',
+        payload,
+        response,
+      },
+      { ...baseOptions, noTimestamp: true, plain: true, ...optionOverrides },
+      { config: { profile: 'pilot' } } as unknown as SpaceMoltClient,
+      capture.context,
+    );
+    expect(exitCode).toBe(0);
+    expect(response.structuredContent).not.toHaveProperty('list_battles_query');
+    return capture.text();
+  }
+
+  test('renderResponse list_battles echoes a trimmed category on the header and next line', async () => {
+    const output = await renderListBattlesHuman({ category: 'pirate ' }, listBattleEcho);
+
+    expect(output).toContain('Public battles (category=pirate): 1 of 2 (more)');
+    expect(output).toContain('Next: spacemolt list_battles category=pirate offset=1');
+    expect(output).not.toContain('list_battles_query');
+
+    const searched = await renderListBattlesHuman({ category: 'pirate ', search: ' Probe ' }, listBattleEcho);
+    expect(searched).toContain('Public battles (category=pirate, search=Probe): 1 of 2 (more)');
+    expect(searched).toContain('Next: spacemolt list_battles search=Probe category=pirate offset=1');
+    expect(searched).not.toContain('search= Probe');
+
+    const cased = await renderListBattlesHuman({ category: 'PVP', captured: false }, listBattleEcho);
+    expect(cased).toContain('Public battles (category=PVP): 1 of 2 (more)');
+    expect(cased).toContain('Next: spacemolt list_battles category=PVP offset=1');
+    expect(cased).not.toContain('category=pvp');
+    expect(cased).not.toContain('captured=true');
+
+    const live = await renderListBattlesHuman({}, listBattleEcho);
+    expect(live).toContain('Public battles: 1 of 2 (more)');
+    expect(live).not.toContain('Public battles (');
+    expect(live).toContain('Next: spacemolt list_battles offset=1');
+
+    const text = await renderListBattlesHuman({ category: 'pirate ' }, listBattleEcho, { format: 'text' });
+    expect(text).toContain('Public battles (category=pirate): 1 of 2 (more)');
+    expect(text).toContain('Next: spacemolt list_battles category=pirate offset=1');
+  });
+
+  test('renderResponse list_battles does not attach the query echo for json, structured, yaml, or compact', async () => {
+    const json = JSON.parse(
+      await renderListBattlesHuman(
+        { category: 'pirate ' },
+        { battles: null, has_more: false, total: 0 },
+        { json: true },
+      ),
+    );
+    expect(json.structuredContent).toEqual({ battles: null, has_more: false, total: 0 });
+    expect(json.structuredContent).not.toHaveProperty('list_battles_query');
+
+    const structured = JSON.parse(
+      await renderListBattlesHuman(
+        { category: 'pirate ' },
+        { battles: null, has_more: false, total: 4 },
+        { structured: true },
+      ),
+    );
+    expect(structured).toEqual({ battles: null, has_more: false, total: 4 });
+    expect(structured).not.toHaveProperty('list_battles_query');
+
+    const yaml = await renderListBattlesHuman({ category: 'pirate ' }, listBattleEcho, { format: 'yaml' });
+    expect(yaml).toContain('battles:');
+    expect(yaml).not.toContain('list_battles_query');
+    expect(yaml).not.toContain('Public battles');
+
+    const compact = await renderListBattlesHuman({ category: 'pirate ' }, listBattleEcho, { compact: true });
+    expect(compact).not.toContain('list_battles_query');
+    expect(compact).not.toContain('Public battles');
+    expect(compact).toContain('"battles"');
+  });
+
+  test('renderResponse list_battles human dry-run stays the generic preview', async () => {
+    const client = { config: { profile: 'pilot' } } as unknown as SpaceMoltClient;
+    const payload = { captured: true, limit: 20, offset: 0, category: 'pirate ' };
+    const commandConfig = BUNDLED_COMMAND_REGISTRY.commands.list_battles;
+    expect(commandConfig).toBeDefined();
+    const options = { ...baseOptions, dryRun: true, noTimestamp: true, plain: true };
+    const run = await runCommand('list_battles', payload, options, client, commandConfig);
+
+    expect(run.response.structuredContent?.dry_run).toBe(true);
+    expect(String(run.response.result)).toContain('Dry run: list_battles');
+    expect(String(run.response.result)).toContain('GET https://game.spacemolt.com/api/battles');
+    expect(run.response.structuredContent).not.toHaveProperty('list_battles_query');
+
+    const capture = fakeContext();
+    const exitCode = await renderResponse(run, options, client, capture.context);
+    const output = capture.text();
+
+    expect(exitCode).toBe(0);
+    expect(output).toContain('=== Response ===');
+    expect(output).toContain('"method": "GET"');
+    expect(output).toContain('https://game.spacemolt.com/api/battles');
+    expect(output).toContain('"payload"');
+    expect(output).not.toContain('Public battles');
+    expect(output).not.toContain('No battles');
+    expect(output).not.toContain('Dry run:');
+    expect(output).not.toContain('=== Dry Run:');
+    expect(output).not.toContain('list_battles_query');
+    expect(run.response.structuredContent).not.toHaveProperty('list_battles_query');
+
+    const jsonCapture = fakeContext();
+    const jsonExit = await renderResponse(run, { ...options, json: true }, client, jsonCapture.context);
+    const parsed = JSON.parse(jsonCapture.text());
+    expect(jsonExit).toBe(0);
+    expect(parsed.result).toContain('Dry run: list_battles');
+    expect(parsed.structuredContent.method).toBe('GET');
+    expect(parsed.structuredContent.url).toBe('https://game.spacemolt.com/api/battles');
+    expect(parsed.structuredContent).not.toHaveProperty('list_battles_query');
+  });
 });
