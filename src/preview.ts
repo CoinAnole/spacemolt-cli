@@ -1,5 +1,12 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
-import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import {
+  applyPathParams,
+  buildRequestUrl,
+  type CommandConfig,
+  sanitizeListBattlesPayload,
+  V2_TOOL_MAP,
+  type V2Route,
+} from './commands.ts';
 import { stringifyApiJson } from './json-number.ts';
 import { API_BASE } from './runtime.ts';
 import type { APIResponse } from './types.ts';
@@ -84,7 +91,8 @@ function buildRoutePreview(
     };
   }
 
-  const requestPayload = mapping.defaults ? { ...mapping.defaults, ...payload } : payload;
+  const mergedPayload = mapping.defaults ? { ...mapping.defaults, ...payload } : payload;
+  const requestPayload = command === 'list_battles' ? sanitizeListBattlesPayload(mergedPayload) : mergedPayload;
   let url: string;
   let residualPayload: Record<string, unknown>;
   try {

@@ -1387,7 +1387,7 @@ export function displayError(
     }
   }
   if (!quiet) {
-    const help = hasServerCode ? getContextualErrorSuggestion(code, message, command) : undefined;
+    const help = hasServerCode ? getContextualErrorSuggestion(code, message, command, error) : undefined;
     if (help) err(`\n${colors.cyan}Suggestion:${colors.reset} ${help}`);
     if (hasServerCode && isRetryableError(code) && retryAfter === undefined) {
       err(`${colors.dim}This error may be retryable.${colors.reset}`);
@@ -1401,9 +1401,17 @@ export function displayError(
   }
 }
 
-function getContextualErrorSuggestion(code: string, message: string, command?: string): string | undefined {
+function getContextualErrorSuggestion(
+  code: string,
+  message: string,
+  command?: string,
+  error?: unknown,
+): string | undefined {
   if (isAmbiguousStorageBucketError(message)) {
     return 'Storage Extension bucket name is ambiguous. Run "spacemolt storage view target=faction" to see bucket IDs, then pass the bucket id.';
+  }
+  if (code === 'rate_limited' && extractRateLimitMeta(error).limit === 'public_api') {
+    return 'Public web/data API: 60 requests per minute for this IP (public_api), not the session budget of 30 mutations and 300 queries. Wait the stated time. catalog_dump is a separate 1/min endpoint. 50 rejections/min from this IP still trigger an IP-wide timeout.';
   }
   return getErrorSuggestion(code, command);
 }

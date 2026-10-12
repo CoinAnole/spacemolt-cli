@@ -755,6 +755,25 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.payload).toEqual({});
   });
 
+  test('list_battles dry-run previews GET /api/battles and shapes the query payload', () => {
+    const raw = { captured: false, category: 'pirate ', search: '  ', limit: 20, offset: 0 };
+    const response = createDryRunResponse('list_battles', raw);
+
+    expect(raw).toEqual({ captured: false, category: 'pirate ', search: '  ', limit: 20, offset: 0 });
+    expect(response.structuredContent?.server_request_sent).toBe(false);
+    expect(response.structuredContent?.method).toBe('GET');
+    expect(response.structuredContent?.url).toBe('https://game.spacemolt.com/api/battles');
+    expect(response.structuredContent?.payload).toEqual({ category: 'pirate', limit: 20, offset: 0 });
+    expect(response.structuredContent?.payload).not.toHaveProperty('captured');
+    expect(response.structuredContent?.payload).not.toHaveProperty('search');
+    expect(String(response.result)).toContain('GET https://game.spacemolt.com/api/battles');
+    expect(String(response.result)).not.toContain('?');
+
+    const cased = createDryRunResponse('list_battles', { category: 'PVP', captured: 'true' });
+    expect(cased.structuredContent?.url).toBe('https://game.spacemolt.com/api/battles');
+    expect(cased.structuredContent?.payload).toEqual({ category: 'PVP' });
+  });
+
   test('player_profile dry-run without name returns missing path parameter error', () => {
     const response = createDryRunResponse('player_profile', {});
 
@@ -2110,6 +2129,65 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
         },
       ],
     });
+  });
+
+  test('list_battles validates limit, offset, and captured before HTTP', () => {
+    expect(parseArgs(['list_battles', 'limit=0'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'limit',
+          message: 'Parameter "limit" must be at least 1, but received "0".',
+          code: 'below_minimum',
+        },
+      ],
+    });
+    expect(parseArgs(['list_battles', 'offset=-1'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'offset',
+          message: 'Parameter "offset" must be at least 0, but received "-1".',
+          code: 'below_minimum',
+        },
+      ],
+    });
+    expect(parseArgs(['list_battles', 'limit=101'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'limit',
+          message: 'Parameter "limit" must be at most 100, but received "101".',
+          code: 'above_maximum',
+        },
+      ],
+    });
+    expect(parseArgs(['list_battles', 'limit=abc'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'limit',
+          message: 'Parameter "limit" must be an integer, but received "abc".',
+          code: 'invalid_integer',
+        },
+      ],
+    });
+    expect(parseArgs(['list_battles', 'captured=yes'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'captured',
+          message: 'Parameter "captured" must be a boolean, but received "yes". Did you mean "true"?',
+          code: 'invalid_boolean',
+        },
+      ],
+    });
+    expect(parseOk(['list_battles', 'limit=100', 'offset=0', 'captured=false']).payload).toEqual({
+      limit: '100',
+      offset: '0',
+      captured: 'false',
+    });
+    expect(parseOk(['list_battles', 'offset=100000']).payload).toEqual({ offset: '100000' });
   });
 
   test('battle summary and log normalize battle_id to id and convert integers', () => {

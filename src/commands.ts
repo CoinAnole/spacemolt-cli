@@ -38,6 +38,7 @@ export interface CommandFieldSchema {
   description?: string;
   positionalIndex?: number;
   minimum?: number;
+  maximum?: number;
 }
 
 export interface CommandConfig {
@@ -256,6 +257,19 @@ export function applyPathParams(
     }
   }
   return { url: nextUrl, residualPayload };
+}
+
+export function sanitizeListBattlesPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...payload };
+  if (next.captured !== true) delete next.captured;
+  for (const key of ['search', 'category'] as const) {
+    const value = next[key];
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed) delete next[key];
+    else next[key] = trimmed;
+  }
+  return next;
 }
 
 function generatedArgs(generated?: GeneratedApiRoute): string[] | undefined {

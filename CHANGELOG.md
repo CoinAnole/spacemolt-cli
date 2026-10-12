@@ -33,6 +33,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `claim_prize` help notes that the prize sits at the battle origin POI, which can differ from your current POI. `discoverWith` no longer lists `get_nearby`.
 - `get_battle_summary` / `get_battle_log` capture tables print optional Prize and Location columns when those fields are present.
 
+### Battle
+
+- `list_battles` lists public battle history with no login (`GET /api/battles`). Page with `limit` (1-100; omit for the server default of 20) and `offset`. `captured=true` lists only boarding captures. Public history is not a prize. Do not poll. `public_api` (60 requests per minute for this IP) is not the session budget of 30 mutations and 300 queries.
+
 ### Salvage & Tow
 
 - `service_prize` help now documents that stop, resume, and redirect remain claimant-only, while refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station (gameserver 0.603.0). A yard under construction or damaged does not unlock it. Both ships must still be out of combat at the same POI. **No parser change.**

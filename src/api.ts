@@ -1,5 +1,12 @@
 import { applyCommandPayloadTransforms, applyPayloadTransforms, reservedRoutingActionError } from './args.ts';
-import { applyPathParams, buildRequestUrl, type CommandConfig, V2_TOOL_MAP, type V2Route } from './commands.ts';
+import {
+  applyPathParams,
+  buildRequestUrl,
+  type CommandConfig,
+  sanitizeListBattlesPayload,
+  V2_TOOL_MAP,
+  type V2Route,
+} from './commands.ts';
 import { getErrorSuggestion, ServiceUnavailableError } from './errors.ts';
 import { stringifyApiJson } from './json-number.ts';
 import { isRateLimitAutoRetryWait, normalizeRateLimitError } from './rate-limit.ts';
@@ -243,6 +250,9 @@ export class SpaceMoltClient {
 
     if (mapping.defaults) {
       payload = { ...mapping.defaults, ...payload };
+    }
+    if (command === 'list_battles') {
+      payload = sanitizeListBattlesPayload(payload);
     }
 
     let url: string;
