@@ -53,7 +53,9 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   faction_info: {
     category: 'Factions',
-    seeAlso: ['faction_profile', 'faction_list', 'get_faction_achievements'],
+    description:
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned.',
+    seeAlso: ['faction_profile', 'faction_list', 'get_faction_achievements', 'faction_facility_owned'],
     apiRoute: 'POST /api/v2/spacemolt_faction/info',
     positionals: ['faction_id'],
   },

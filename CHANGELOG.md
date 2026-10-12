@@ -49,6 +49,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `faction_facility_list` table output prints the same `faction_rent` summary when the server includes it. Omitted when the faction owns no facilities at that station — no second `faction_facility_owned` call required to see the bill (gameserver 0.606.2). **No parser change.**
 - Rent summaries (`facility_list` personal/faction bills included) print the required `facilities` count.
 - `facility_owned` (`spacemolt facility owned`) table output prints `Personal rent bill` / `Arrears` from `rent`. **No parser change.** Not a JSON break — `rent` was already nested.
+- `faction info` table output prints `faction_rent` when the server sends it (gameserver 0.615.0), in `emitRentSummary` order: Faction rent bill, Facilities, Faction arrears when sent, Grace remaining when sent, Estimated rent/day, then the note when sent. Same lines as `facility list` and `faction facility_owned`. An omitted key prints nothing (non-members, or a faction that owns no facilities). Explicit `0` prints `0cr/cycle`. No second `faction facility_owned` call. Help names `faction_rent` and points at `faction facility_owned` for the per-facility breakdown. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
 
 ### Query
 
