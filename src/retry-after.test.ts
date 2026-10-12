@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { requestWithServiceUnavailableRetry, retryAfterWaitSeconds } from './retry-after.ts';
+import type { APIResponse } from './types.ts';
 
 const NOW_MS = Date.parse('Wed, 21 Oct 2015 07:28:00 GMT');
 
@@ -141,5 +142,75 @@ describe('requestWithServiceUnavailableRetry', () => {
     expect(calls).toBe(1);
     expect(sleeps).toEqual([]);
     expect(result.data.error?.code).toBe('service_unavailable');
+  });
+
+  test('flat string 503 quotes the trimmed text on three banners and the exhausted error', async () => {
+    const sleeps: number[] = [];
+    const warnings: string[] = [];
+    let calls = 0;
+    const result = await requestWithServiceUnavailableRetry(
+      async () => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          data: { error: '  battle history temporarily unavailable  ' } as unknown as APIResponse,
+        };
+      },
+      {
+        sleep: async (ms) => {
+          sleeps.push(ms);
+        },
+        now: () => NOW_MS,
+        warn: (message) => {
+          warnings.push(message);
+        },
+      },
+    );
+
+    const banner = '[UNAVAILABLE] battle history temporarily unavailable. Waiting 5 seconds before retry...';
+    expect(calls).toBe(4);
+    expect(sleeps).toEqual([5000, 5000, 5000]);
+    expect(warnings).toEqual([banner, banner, banner]);
+    expect(result.status).toBe(503);
+    expect(result.data.error).toEqual({
+      code: 'battle history temporarily unavailable',
+      message: 'battle history temporarily unavailable',
+      retry_after: 5,
+    });
+    expect(warnings.join('\n')).not.toContain('Authentication provider unreachable');
+    expect(warnings.join('\n')).not.toContain('Do not change your password');
+    expect(JSON.stringify(result.data.error)).not.toContain('Do not change your password');
+    expect(JSON.stringify(result.data.error)).not.toContain('service_unavailable');
+  });
+
+  test('blank string 503 keeps the auth banner and service_unavailable code', async () => {
+    const warnings: string[] = [];
+    let calls = 0;
+    const result = await requestWithServiceUnavailableRetry(
+      async () => {
+        calls += 1;
+        return {
+          status: 503,
+          ok: false,
+          retryAfterHeader: '2',
+          data: { error: '   ' } as unknown as APIResponse,
+        };
+      },
+      {
+        sleep: async () => {},
+        now: () => NOW_MS,
+        warn: (message) => {
+          warnings.push(message);
+        },
+        maxRetries: 1,
+      },
+    );
+
+    expect(calls).toBe(2);
+    expect(warnings).toEqual(['[UNAVAILABLE] Authentication provider unreachable. Waiting 2 seconds before retry...']);
+    expect(result.data.error?.code).toBe('service_unavailable');
+    expect(result.data.error?.message).toContain('do not change your password');
+    expect(result.data.error?.retry_after).toBe(2);
   });
 });
