@@ -2026,6 +2026,137 @@ export const factionScanPoiPartialFixture = {
   },
 };
 
+export const listBattlesFixture = {
+  battles: [
+    {
+      battle_id: 'a1b2c3d4e5f6789012345678abcdef01',
+      system_id: 'sol',
+      system_name: 'Sol',
+      category: 'pvp',
+      status: 'completed',
+      outcome: 'side_1_victory',
+      winning_side: 1,
+      ended_at: '2026-10-11T23:54:11Z',
+      participant_count: 3,
+      duration_ticks: 14,
+      ships_destroyed: 1,
+      destroyed_names: ['Rust Bucket'],
+      ships_captured: 1,
+      total_damage: 5100,
+      top_damage: { username: 'Marlowe', damage: 5100 },
+      has_station: true,
+      player_names: ['Marlowe', 'Ibis'],
+      sides: [{ side_id: 1, participants: ['Marlowe', 'Ibis'] }],
+      captures: [
+        {
+          ship_id: 'e1b2c3d4e5f6789012345678abcdef05',
+          ship_class: 'skiff',
+          captor_username: 'Marlowe',
+          captor_id: 'player-1',
+          former_owner_username: 'Corsair-7',
+          former_owner_id: 'pirate-1',
+          boarding_operation_id: 'boarding_a1b2c3d4e5f6789012345678',
+          prize_id: 'f1b2c3d4e5f6789012345678abcdef06',
+          prize_poi_id: 'sol_cloudbank',
+          prize_poi_name: 'Cloudbank',
+          prize_system_id: 'sol',
+          prize_system_name: 'Sol',
+        },
+      ],
+    },
+    {
+      battle_id: 'b1b2c3d4e5f6789012345678abcdef02',
+      system_id: 'proxima',
+      system_name: 'Proxima',
+      category: 'police',
+      status: 'completed',
+      outcome: null,
+      winning_side: -1,
+      ended_at: '2026-10-11T23:40:00Z',
+      participant_count: 2,
+      duration_ticks: 6,
+      ships_destroyed: 0,
+      destroyed_names: ['Skiff'],
+      ships_captured: null,
+      total_damage: 0,
+      top_damage: { username: 'Ibis', damage: 0 },
+      has_station: false,
+    },
+  ],
+  has_more: true,
+  total: 928,
+};
+
+export const listBattlesEmptyFixture = {
+  battles: null,
+  has_more: false,
+  total: 0,
+};
+
+export const listBattlesPastEndFixture = {
+  battles: null,
+  has_more: false,
+  total: 4,
+};
+
+export const listBattlesWildlifeFixture = {
+  battles: [
+    {
+      battle_id: 'c1b2c3d4e5f6789012345678abcdef03',
+      system_id: 'aster',
+      system_name: 'Aster',
+      category: 'wildlife',
+      status: 'active',
+      outcome: null,
+      winning_side: -1,
+      participant_count: 1,
+      duration_ticks: 3,
+      ships_destroyed: 0,
+      ships_captured: null,
+      total_damage: 0,
+      origin_poi: 'aster_deep_belt',
+    },
+  ],
+  has_more: false,
+  total: 1,
+};
+
+export const listBattlesArenaCaptureFixture = {
+  battles: [
+    {
+      battle_id: 'd1b2c3d4e5f6789012345678abcdef04',
+      system_id: 'sol',
+      system_name: 'Sol',
+      category: 'arena',
+      status: 'completed',
+      outcome: 'victory',
+      winning_side: 3,
+      ended_at: '2026-10-11T22:00:00Z',
+      participant_count: 2,
+      duration_ticks: 9,
+      ships_destroyed: 0,
+      destroyed_names: ['Kestrel'],
+      ships_captured: 1,
+      total_damage: 400,
+      top_damage: { username: 'Probe', damage: 400 },
+      has_station: false,
+      captures: [
+        {
+          ship_id: 'e1b2c3d4e5f6789012345678abcdef05',
+          ship_class: 'fighter',
+          captor_username: 'Probe',
+          captor_id: 'player-probe',
+          former_owner_username: 'Kestrel',
+          former_owner_id: 'player-kestrel',
+          boarding_operation_id: 'boarding_a1b2c3d4e5f6789012345678',
+        },
+      ],
+    },
+  ],
+  has_more: false,
+  total: 1,
+};
+
 export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   chat: { command: 'chat', fixture: chatSentFixture },
   facility_owned: { command: 'facility_owned', fixture: facilityOwnedFixture },
@@ -2069,6 +2200,11 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_battle_summary_captures_kind: { command: 'get_battle_summary', fixture: battleSummaryCapturesKindFixture },
   get_battle_summary_captures_prize: { command: 'get_battle_summary', fixture: battleSummaryCapturesPrizeFixture },
   get_battle_summary_interrupted: { command: 'get_battle_summary', fixture: battleSummaryInterruptedFixture },
+  list_battles: { command: 'list_battles', fixture: listBattlesFixture },
+  list_battles_empty: { command: 'list_battles', fixture: listBattlesEmptyFixture },
+  list_battles_past_end: { command: 'list_battles', fixture: listBattlesPastEndFixture },
+  list_battles_wildlife: { command: 'list_battles', fixture: listBattlesWildlifeFixture },
+  list_battles_arena_capture: { command: 'list_battles', fixture: listBattlesArenaCaptureFixture },
   get_battle_log: { command: 'get_battle_log', fixture: battleLogFixture },
   get_battle_log_arena: { command: 'get_battle_log', fixture: battleLogArenaFixture },
   get_battle_log_hunt: { command: 'get_battle_log', fixture: battleLogHuntFixture },

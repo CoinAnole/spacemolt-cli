@@ -360,6 +360,37 @@ describe('id cache', () => {
     expect(cargoHints).toContainEqual(expect.objectContaining({ kind: 'item', id: 'ore_iron' }));
   });
 
+  test('list_battles envelope extracts no id hints', () => {
+    const hints = extractIdHints(
+      'list_battles',
+      {
+        battles: [
+          {
+            battle_id: 'a1b2c3d4e5f6789012345678abcdef01',
+            system_id: 'sol',
+            system_name: 'Sol',
+            origin_poi: 'sol_belt',
+            player_names: ['Marlowe'],
+            destroyed_names: ['Rust Bucket'],
+            captures: [
+              {
+                ship_id: 'e1b2c3d4e5f6789012345678abcdef05',
+                captor_id: 'player-1',
+                captor_username: 'Marlowe',
+                prize_id: 'f1b2c3d4e5f6789012345678abcdef06',
+              },
+            ],
+          },
+        ],
+        has_more: true,
+        total: 1525902,
+      },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(hints).toEqual([]);
+  });
+
   test('resolves package: inspect form to bare cached package_id', () => {
     const hints = [
       {

@@ -267,6 +267,101 @@ function captureTableColumns(includeTick: boolean, rows: Array<Record<string, un
   return columns;
 }
 
+function formatTopDamageCell(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  return `${value.username ?? '?'} (${value.damage ?? '?'})`;
+}
+
+function listBattleRows(battles: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return battles.map((row) => ({
+    ...row,
+    ended_display: formatTimestampPreview(row.ended_at),
+    winning_side_display: formatWinningSide(row.winning_side),
+    top_damage_display: formatTopDamageCell(row.top_damage),
+    station_display: formatYesNo(row.has_station),
+  }));
+}
+
+function listBattleColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
+  const columns: Array<[string, string[]]> = [];
+  const add = (label: string, keys: string[], present = hasAnyField(rows, keys)) => {
+    if (present) columns.push([label, keys]);
+  };
+  add('Ended', ['ended_display']);
+  add('System', ['system_name', 'system_id']);
+  add('Category', ['category']);
+  add('Status', ['status']);
+  add('Outcome', ['outcome']);
+  add('Side', ['winning_side_display']);
+  add('Pilots', ['participant_count']);
+  add('Ticks', ['duration_ticks']);
+  add('Destroyed', ['ships_destroyed']);
+  add('Captured', ['ships_captured']);
+  add('Damage', ['total_damage']);
+  add('Top', ['top_damage_display']);
+  add('Station', ['station_display'], hasAnyField(rows, ['has_station']));
+  add('Origin', ['origin_poi']);
+  add('ID', ['battle_id']);
+  return columns;
+}
+
+function listBattleCaptureRows(battles: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  for (const battle of battles) {
+    if (!Array.isArray(battle.captures) || battle.captures.length === 0) continue;
+    const captures = battle.captures.filter(isRecord);
+    if (captures.length === 0) continue;
+    for (const row of captureIdentityRows(captures)) {
+      rows.push({ ...row, battle_id: battle.battle_id });
+    }
+  }
+  return rows;
+}
+
+function ungroupedInteger(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isInteger(value)) return String(value);
+  return undefined;
+}
+
+function listBattlesFilterText(query: Record<string, unknown>): string | undefined {
+  const parts: string[] = [];
+  if (query.captured === true) parts.push('captured');
+  if (typeof query.category === 'string' && query.category !== '') parts.push(`category=${query.category}`);
+  if (typeof query.search === 'string' && query.search !== '') parts.push(`search=${query.search}`);
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+function listBattlesHeader(rowCount: number, result: Record<string, unknown>): string {
+  const query = isRecord(result.list_battles_query) ? result.list_battles_query : undefined;
+  const filters = query ? listBattlesFilterText(query) : undefined;
+  const label = filters ? `Public battles (${filters})` : 'Public battles';
+  const total = ungroupedInteger(result.total);
+  const counts = total === undefined ? String(rowCount) : `${rowCount} of ${total}`;
+  const more = result.has_more === true ? ' (more)' : '';
+  return `${label}: ${counts}${more}`;
+}
+
+function listBattlesNextLine(result: Record<string, unknown>, rowCount: number): string | undefined {
+  if (!isRecord(result.list_battles_query) || result.has_more !== true || rowCount <= 0) return undefined;
+  const query = result.list_battles_query;
+  const args: string[] = [];
+  if (typeof query.search === 'string' && query.search !== '') args.push(`search=${query.search}`);
+  if (typeof query.category === 'string' && query.category !== '') args.push(`category=${query.category}`);
+  if (typeof query.limit === 'number' && Number.isFinite(query.limit)) args.push(`limit=${query.limit}`);
+  const offset = query.offset;
+  // Count returned rows, not the requested limit, so a short page does not skip.
+  const base = typeof offset === 'number' && Number.isInteger(offset) && offset >= 0 ? offset : 0;
+  args.push(`offset=${base + rowCount}`);
+  if (query.captured === true) args.push('captured=true');
+  return `Next: spacemolt list_battles ${args.join(' ')}`;
+}
+
+function listBattlesEmptyLine(total: unknown): string {
+  if (typeof total === 'number' && total > 0) return 'No battles on this page.';
+  return 'No battles.';
+}
+
 function boardingStatusColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
   // Live boarding is BoardingPublicStatus (no event).
   const columns: Array<[string, string[]]> = [
@@ -2057,6 +2152,43 @@ export const socialFormatters = [
       return true;
     },
     { commands: ['get_battle_summary'] },
+  ),
+
+  formatter(
+    (result, command) => {
+      if (!commandNameEquals(command, 'list_battles')) return false;
+      if (!('battles' in result) && !('has_more' in result) && !('total' in result)) return false;
+
+      const rowCount = Array.isArray(result.battles) ? result.battles.length : 0;
+      emitLine(listBattlesHeader(rowCount, result));
+      if (rowCount === 0) {
+        // An empty page prints one sentence and does not call printCompactTable.
+        emitLine(listBattlesEmptyLine(result.total));
+        return true;
+      }
+
+      const battles = (result.battles as unknown[]).filter(isRecord);
+      if (battles.length > 0) {
+        const rows = listBattleRows(battles);
+        const columns = listBattleColumns(rows);
+        if (columns.length > 0) {
+          printCompactTable('Battles', rows, columns, { maxCellWidth: 64 });
+        }
+        const captureRows = listBattleCaptureRows(battles);
+        if (captureRows.length > 0) {
+          printCompactTable(
+            'Captures',
+            captureRows,
+            [['Battle', ['battle_id']], ...captureTableColumns(false, captureRows)],
+            { maxCellWidth: 64 },
+          );
+        }
+      }
+      const next = listBattlesNextLine(result, rowCount);
+      if (next) emitLine(next);
+      return true;
+    },
+    { commands: ['list_battles'] },
   ),
 
   // Battle log (tick-by-tick compact replay)

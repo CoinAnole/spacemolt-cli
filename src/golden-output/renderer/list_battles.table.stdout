@@ -1,0 +1,14 @@
+Public battles: 2 of 928 (more)
+
+=== Battles ===
+
+  Ended               | System  | Category | Status    | Outcome        | Side | Pilots | Ticks | Destroyed | Captured | Damage | Top            | Station | ID                              
+  --------------------+---------+----------+-----------+----------------+------+--------+-------+-----------+----------+--------+----------------+---------+---------------------------------
+  2026-10-11 23:54:11 | Sol     | pvp      | completed | side_1_victory | 1    | 3      | 14    | 1         | 1        | 5100   | Marlowe (5100) | yes     | a1b2c3d4e5f6789012345678abcdef01
+  2026-10-11 23:40:00 | Proxima | police   | completed |                |      | 2      | 6     | 0         |          | 0      | Ibis (0)       | no      | b1b2c3d4e5f6789012345678abcdef02
+
+=== Captures ===
+
+  Battle                           | Ship                             | Class | Captor             | Former owner         | Boarding                          | Prize                            | Location       
+  ---------------------------------+----------------------------------+-------+--------------------+----------------------+-----------------------------------+----------------------------------+----------------
+  a1b2c3d4e5f6789012345678abcdef01 | e1b2c3d4e5f6789012345678abcdef05 | skiff | Marlowe (player-1) | Corsair-7 (pirate-1) | boarding_a1b2c3d4e5f6789012345678 | f1b2c3d4e5f6789012345678abcdef06 | Cloudbank (Sol)

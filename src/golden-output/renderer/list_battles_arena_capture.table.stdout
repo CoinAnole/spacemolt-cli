@@ -1,0 +1,13 @@
+Public battles: 1 of 1
+
+=== Battles ===
+
+  Ended               | System | Category | Status    | Outcome | Side | Pilots | Ticks | Destroyed | Captured | Damage | Top         | Station | ID                              
+  --------------------+--------+----------+-----------+---------+------+--------+-------+-----------+----------+--------+-------------+---------+---------------------------------
+  2026-10-11 22:00:00 | Sol    | arena    | completed | victory | 3    | 2      | 9     | 0         | 1        | 400    | Probe (400) | no      | d1b2c3d4e5f6789012345678abcdef04
+
+=== Captures ===
+
+  Battle                           | Ship                             | Class   | Captor               | Former owner             | Boarding                         
+  ---------------------------------+----------------------------------+---------+----------------------+--------------------------+----------------------------------
+  d1b2c3d4e5f6789012345678abcdef04 | e1b2c3d4e5f6789012345678abcdef05 | fighter | Probe (player-probe) | Kestrel (player-kestrel) | boarding_a1b2c3d4e5f6789012345678
