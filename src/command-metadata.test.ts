@@ -1934,20 +1934,29 @@ describe('command metadata', () => {
   });
 
   test('subscribe_market help teaches public liquidity', () => {
+    const description =
+      'Subscribe once and return the current public liquidity snapshot. Fuel is excluded from the feed. Contraband is excluded except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Private Company Store orders are excluded. The feed is one payload shared by every subscriber at the station, so it only carries orders everyone may see. Add --follow to keep polling market notifications every 10 seconds until stopped. Use view_market company_store=true for your Company Store. Snapshot items and each market_update include the same category string view_market returns for that item; the table, the one-item book, and --follow show it, and show nothing when the server omits it.';
     const subscribe = BUNDLED_COMMAND_REGISTRY.commands.subscribe_market;
+    expect(subscribe?.description).toBe(description);
     expect(subscribe?.description).toContain('public liquidity');
     expect(subscribe?.description).not.toContain('public-liquidity');
     expect(subscribe?.description).toContain(
       'Snapshot items and each market_update include the same category string view_market returns for that item; the table, the one-item book, and --follow show it, and show nothing when the server omits it.',
     );
+    expect(subscribe?.description).not.toContain('fuel, contraband, and Company Store excluded');
+    expect(subscribe?.description).not.toContain('incremental diff');
 
     const subscribeHelp = captureHelp('subscribe_market');
+    expect(subscribeHelp).toContain(description);
     expect(subscribeHelp).toContain('public liquidity');
+    expect(subscribeHelp).not.toContain('public-liquidity');
     expect(subscribeHelp).toContain('Company Store');
     expect(subscribeHelp).toContain('view_market company_store=true');
     expect(subscribeHelp).toContain(
       'Snapshot items and each market_update include the same category string view_market returns for that item; the table, the one-item book, and --follow show it, and show nothing when the server omits it.',
     );
+    expect(subscribeHelp).not.toContain('fuel, contraband, and Company Store excluded');
+    expect(subscribeHelp).not.toContain('incremental diff');
   });
 
   test('faction order help advertises private Company Store listings', () => {
