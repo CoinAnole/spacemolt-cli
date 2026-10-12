@@ -440,6 +440,24 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_trades'],
   },
+  transaction_uncertain: {
+    code: 'transaction_uncertain',
+    message: 'The transfer may already be committed.',
+    suggestion:
+      'This transfer may already be committed. Do not retry it. The server pauses gameplay mutations and reconciles the exact action-log receipt. Mutations resume automatically. After they resume, run "spacemolt get_action_log" for that receipt (pass faction_id= for a faction transfer). Do not send the transfer again.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_action_log'],
+  },
+  accounting_pending: {
+    code: 'accounting_pending',
+    message: 'Gameplay mutations are paused during transfer reconciliation.',
+    suggestion:
+      'Gameplay mutations are paused while a transfer is reconciled. Do not retry the original uncertain transfer. Mutations resume automatically. After they resume, run "spacemolt get_action_log" to read the receipt (pass faction_id= for a faction transfer).',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_action_log'],
+  },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_REGISTRY);
