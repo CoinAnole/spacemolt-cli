@@ -1,0 +1,24 @@
+
+=== Faction: Drift Matrix [DMX7] ===
+ID: faction-1
+Leader: DriftMiner-7
+Members: 20
+Owned Stations: 2
+Treasury: 12345
+Ally access:
+  Fuel: yes
+  Facilities: no
+  Intel opt-out: no
+
+=== Faction Facilities ===
+
+  Name                | ID         | Station       | Service | Active
+  --------------------+------------+---------------+---------+-------
+  Faction Fuel Bunker | facility-1 | earth_station | fuel    | true  
+
+Faction rent bill: 0cr/cycle
+Facilities: 2
+Faction arrears: 2,400cr
+Grace remaining: 0 cycles
+Estimated rent/day: 0cr
+Billing is paused; arrears remain.
