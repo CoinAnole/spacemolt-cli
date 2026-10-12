@@ -1912,7 +1912,10 @@ describe('command metadata', () => {
   });
 
   test('view_market help teaches Company Store narrowing', () => {
+    const description =
+      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings. since=<tick> asks for an incremental diff. Fuel is excluded from incremental diffs, and so is contraband except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.";
     const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
+    expect(viewMarket?.description).toBe(description);
     expect(viewMarket?.description).toContain('public plus your faction');
     expect(viewMarket?.description).toContain('best price');
     expect(viewMarket?.description).toContain('narrows');
@@ -1922,15 +1925,22 @@ describe('command metadata', () => {
     expect(viewMarket?.description).toContain(
       "Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.",
     );
+    expect(viewMarket?.description).not.toContain('fuel, contraband, and Company Store excluded');
+    expect(viewMarket?.description).not.toContain('Private Company Store orders are excluded');
+    expect(viewMarket?.description).not.toContain('Fuel is excluded from the feed.');
     expect(viewMarket?.usage).toContain('narrows to only your faction');
 
     const viewMarketHelp = captureHelp('view_market');
+    expect(viewMarketHelp).toContain(description);
     expect(viewMarketHelp).toContain('[company_store=true]');
     expect(viewMarketHelp).toContain('public plus your faction');
     expect(viewMarketHelp).toContain('narrows to only those private listings');
     expect(viewMarketHelp).toContain(
       "Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.",
     );
+    expect(viewMarketHelp).not.toContain('fuel, contraband, and Company Store excluded');
+    expect(viewMarketHelp).not.toContain('Private Company Store orders are excluded');
+    expect(viewMarketHelp).not.toContain('Fuel is excluded from the feed.');
   });
 
   test('subscribe_market help teaches public liquidity', () => {
